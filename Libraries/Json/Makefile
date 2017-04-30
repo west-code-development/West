@@ -17,7 +17,7 @@ json_module.o
 #TLDEPS= bindir mods libs pw
 
 #all : title tldeps libjson.a
-all : title libjson.a copy
+all : title libjson.a
 
 #tldeps:
 #	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
@@ -25,9 +25,6 @@ all : title libjson.a copy
 libjson.a : $(JSON_OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
-
-copy : 
-	- cp libjson.a ../
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L

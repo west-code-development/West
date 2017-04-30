@@ -2,7 +2,9 @@
 
 default: all
 
-all: modules_do \
+all: \
+libraries_do \
+modules_do \
 tools_do \
 fft_kernel_do \
 coulomb_kernel_do \
@@ -14,6 +16,11 @@ wstat_do \
 wfreq_do \
 westpp_do
 
+
+libraries_do:
+	if test -d Libraries ; then \
+	( cd Libraries ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 modules_do:
 	if test -d Modules ; then \
@@ -70,7 +77,9 @@ westpp_do:
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-clean: modules_undo \
+clean: \
+libraries_undo \
+modules_undo \
 tools_undo \
 fft_kernel_undo \
 coulomb_kernel_undo \
@@ -81,6 +90,11 @@ io_kernel_undo \
 wstat_undo \
 wfreq_undo \
 westpp_undo
+
+libraries_undo:
+	if test -d Libraries ; then \
+	( cd Libraries ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
 
 modules_undo:
 	if test -d Modules ; then \

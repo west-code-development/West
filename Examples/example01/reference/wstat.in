@@ -1,0 +1,10 @@
+&input_west
+ qe_prefix   = 'sih4',
+ west_prefix = 'sih4',
+ outdir      = '/Users/marco/Work/WEST_PROJECT/QE_BEFORE_RELEASE/tempdir/',
+/
+&wstat_control
+ wstat_calculation = 'S'
+ n_pdep_eigen      = 10
+ trev_pdep         = 1.d-5 
+/

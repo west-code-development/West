@@ -1,0 +1,8 @@
+eig_distribute.o : ../../Modules/io_global.o
+eig_distribute.o : ../../Modules/kind.o
+eig_distribute.o : ../../Modules/mp.o
+eig_distribute.o : ../../Modules/mp_global.o
+eig_distribute.o : ../../West/Tools/io_push.o
+report_parallel_status.o : ../../Modules/io_global.o
+report_parallel_status.o : ../../Modules/mp_global.o
+report_parallel_status.o : ../../West/Tools/io_push.o

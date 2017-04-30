@@ -1,0 +1,30 @@
+&control
+ calculation  = 'scf'
+ restart_mode = 'from_scratch'
+ pseudo_dir   = '/Users/marco/Work/WEST_PROJECT/QE_BEFORE_RELEASE/pseudo/'
+ outdir       = '/Users/marco/Work/WEST_PROJECT/QE_BEFORE_RELEASE/tempdir/'
+ prefix       = 'sih4'
+ wf_collect   = .TRUE.
+/
+&system
+ ibrav     = 1
+ celldm(1) = 20
+ nat       = 5
+ ntyp      = 2
+ ecutwfc   = 25.0
+ nbnd      = 10
+/
+&electrons
+ conv_thr = 1.d-12
+ diago_full_acc = .TRUE.
+/
+ATOMIC_SPECIES
+Si 28.0855   Si.pz-vbc.UPF
+H  1.00794   H.pz-vbc.UPF
+ATOMIC_POSITIONS angstrom
+Si      0.0000   0.0000  0.0000
+H       0.8544   0.8544  0.8544
+H      -0.8544  -0.8544  0.8544
+H      -0.8544   0.8544 -0.8544
+H       0.8544  -0.8544 -0.8544
+K_POINTS {gamma}

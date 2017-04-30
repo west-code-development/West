@@ -1,0 +1,251 @@
+input_description -distribution {Quantum Espresso} -package West -program wfreq.x {
+
+    toc {}
+
+    intro {
+
+	Typical run:
+	===============================================================================
+
+        export MPI_TASKS=12
+        export NIMAGE=2
+
+        mpirun -n $MPI_TASKS wfreq.x -nimage $NIMAGE < wfreq.in > wfreq.out
+
+
+	Structure of the input data (wfreq.in):
+	===============================================================================
+
+	&INPUT_WEST
+	  qe_prefix="pwscf"
+	  west_prefix="west"
+	  outdir="./"
+	/
+	&WSTAT_CONTROL
+	  wstat_calculation="S"
+          n_pdep_eigen=4
+	/
+	&WFREQ_CONTROL
+	  wfreq_calculation="XWGQ"
+          n_pdep_eigen_to_use=2
+          qp_bandrange(1)=1
+          qp_bandrange(2)=2
+          macropol_calculation="N"
+          n_lanczos=20
+          n_imfreq=10
+          n_refreq=10
+          ecut_imfreq=100.0
+          ecut_refreq=2.0
+	/
+    
+    }
+
+    #
+    # NAMELIST &WSTAT_CONTROL
+    #
+
+    namelist WSTAT_CONTROL {
+
+	var wstat_calculation -type CHARACTER {
+	    status { REQUIRED }
+	    default { 'S' }
+            options {
+	      info {  Available options are: }
+                opt -val 'S' { Start from scratch. }
+                opt -val 'R' { Restart from an interrupted run. You should restart with the 
+same number of cores. }
+	    }
+	}
+						   
+	var n_pdep_eigen -type INTEGER {
+	    status { REQUIRED }
+	    default { '4' }
+	    info { Number of PDEP eigenpotentials. }
+	}
+						   
+	var n_pdep_times -type INTEGER {
+	    status { OPTIONAL }
+	    default { 4 }
+	    info { Maximum dimension of the search space = n_pdep_eigen * n_pdep_times. }
+	}
+						   
+	var n_pdep_maxiter -type INTEGER {
+	    status { OPTIONAL }
+	    default { 100 }
+	    info { Maximum number of iterations in PDEP. }
+	}
+						   
+	var n_dfpt_maxiter -type INTEGER {
+	    status { OPTIONAL }
+	    default { 250 }
+	    info { Maximum number of iterations in DFPT. }
+	}
+						   
+	var n_pdep_read_from_file -type INTEGER {
+	    status { OPTIONAL }
+	    default { 0 }
+	    info { Number of PDEP eigenpotentials that can be read from file. }
+	}
+
+	var trev_pdep -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D-3 }
+	    info { Absolute convergence threshold in the PDEP eigenvalues. }
+	}
+
+	var trev_pdep_rel -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D-1 }
+	    info { Relative convergence threshold in the PDEP eigenvalues. }
+	}
+
+	var tr2_dfpt -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D-12 }
+	    info { Convergence threshold in DFPT. Note that in the first PDEP iterations 
+a reduced threshold for DFPT could be used by the code in order to speed up the computation. }
+	}
+
+	var l_minimize_exx_if_active -type LOGICAL { 
+	    status { OPTIONAL }
+	    default { .FALSE. }
+	    info { If (.TRUE.), then the exx term in the Hamiltonian is reduced as much as possible. }
+	}
+
+	var l_kinetic_only -type LOGICAL { 
+	    status { OPTIONAL }
+	    default { .FALSE. }
+	    info { If (.TRUE.), then only the kinetic term in the Hamiltonian is kept. }
+	}
+
+	var l_use_ecutrho -type LOGICAL { 
+	    status { OPTIONAL }
+	    default { .FALSE. }
+	    info { If (.TRUE.), then the eigenpotentials are represented with ecutrho instead of ecutwfc. }
+	}
+
+    }
+
+
+    #
+    # NAMELIST &WFREQ_CONTROL
+    #
+
+    namelist WFREQ_CONTROL {
+
+	var wfreq_calculation -type CHARACTER {
+	    status { REQUIRED }
+	    default { 'XWGQ' }
+            options {
+	    info { Available options are: }
+            opt -val 'XWGQ' { Compute the QP corrections. }
+	    opt -val 'XwGQ' { Compute the QP corrections, restart from an interrupted / just read W run. }
+	    opt -val 'XwgQ' { Compute the QP corrections, restart from an interrupted / just read G run. } 
+            opt -val 'X'    { Compute the HF corrections. }
+	    opt -val 'XWO'  { Compute the optical properties. }
+	    opt -val 'XWGQP' { Compute the QP corrections, and plot spectral functions. } 
+	    opt -val 'XWGQOP'  { Compute all. }
+            }
+	}
+
+	var n_pdep_eigen_to_use -type INTEGER {
+	    status { REQUIRED }
+	    default { 2 }
+	    info { Number of PDEP eigenvectors to use in Wfreq. They are read from previous Wstat run. 
+This value cannot exceed n_pdep_eigen (defined in wstat_control) and is used 
+to check the convergence of the calculation. } 
+	}
+
+        dimension qp_bandrange -start 1 -end 2 -type INTEGER {
+	    status { REQUIRED }
+	    default { 1,2 }
+	    info { Compute the QP corrections from band qp_bandrange(1) to band qp_bandrange(2). }
+	}
+
+	var macropol_calculation -type CHARACTER {
+	    status { REQUIRED }
+	    default { 'N' }
+            options {
+	    info { Available options are: }
+            opt -val 'N' { None. Choice valid for isolated systems. }
+            opt -val 'C' { Include long-wavelength limit. Choice valid for condensed systems. }
+            }
+	}
+
+	var n_lanczos -type INTEGER {
+	    status { REQUIRED }
+	    default { 20 }
+	    info { Number of Lanczos chains. }
+	}
+
+	var n_imfreq -type INTEGER {
+	    status { REQUIRED }
+	    default { 10 }
+	    info { Number of frequecies used to sample the imaginary frequency axis in [0,ecut_imfreq]. }
+	}
+
+	var n_refreq -type INTEGER {
+	    status { REQUIRED }
+	    default { 10 }
+	    info { Number of frequecies used to sample the real frequency axis in [0,ecut_refreq]. }
+	}
+
+	var ecut_imfreq -type REAL {
+	    status { REQUIRED }
+	    default { 1.D0 Ry }
+	    info { Cutoff for the imaginary frequencies. }
+	}
+
+	var ecut_refreq -type REAL {
+	    status { REQUIRED }
+	    default { 2.D0 Ry }
+	    info { Cutoff for the real frequencies. }
+	}
+
+	var wfreq_eta -type REAL {
+	    status { OPTIONAL }
+	    default { 0.003675D0 Ry }
+	    info { Pole shift. }
+	}
+
+	var n_secant_maxiter -type INTEGER {
+	    status { OPTIONAL }
+	    default { 1 }
+	    info { Maximum number of iterations in the secant solver. }
+	}
+
+	var trev_secant -type REAL {
+	    status { OPTIONAL }
+	    default { 0.003675D0 Ry }
+	    info { Convergence threshold for the secant solver. }
+	}
+
+	var l_enable_lanczos -type LOGICAL {
+	    status { OPTIONAL }
+	    default { .TRUE. }
+	    info { IF (.FALSE.), then Lanczos solvers are turned off. }
+	}
+
+	var o_restart_time -type REAL {
+	    status { OPTIONAL }
+	    default { 0.D0 min }
+	    info { IF ( o_restart_time == 0 ) A checkpoint is written at every iteration of the W and G loops. 
+IF ( o_restart_time >  0 ) A checkpoint is written every o_restart_time minutes in the W and G loops. 
+IF ( o_restart_time <  0 ) A checkpoint is NEVER written in the W and G loops. Restart will not be possible. }
+	}
+
+	dimension ecut_spectralf -start 1 -end 2 -type REAL {
+	    status { OPTIONAL }
+	    default { -2.D0 Ry, 2.D0 Ry }
+	    info { Cutoff for the real frequencies. }
+	}
+
+	var n_spectralf -type INTEGER {
+	    status { OPTIONAL }
+	    default { 10 }
+	    info { Number of frequecies used to plot the spectral function, sampling 
+the interval [-ecut_spectralf(1),ecut_spectralf(2)]. }
+	}
+
+    }
+}

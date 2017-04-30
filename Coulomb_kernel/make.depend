@@ -1,0 +1,13 @@
+store_sqvc.o : ../../Modules/cell_base.o
+store_sqvc.o : ../../Modules/constants.o
+store_sqvc.o : ../../Modules/io_global.o
+store_sqvc.o : ../../Modules/kind.o
+store_sqvc.o : ../../Modules/recvec.o
+store_sqvc.o : ../../PW/src/exx.o
+store_sqvc.o : ../../PW/src/pwcom.o
+store_vspx.o : ../../Modules/cell_base.o
+store_vspx.o : ../../Modules/constants.o
+store_vspx.o : ../../Modules/kind.o
+store_vspx.o : ../../Modules/recvec.o
+store_vspx.o : ../../PW/src/exx.o
+store_vspx.o : ../../PW/src/pwcom.o

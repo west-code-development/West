@@ -1,0 +1,228 @@
+input_description -distribution {Quantum Espresso} -package West -program westpp.x {
+
+    toc {}
+
+    intro {
+
+	Typical run:
+	===============================================================================
+
+        export MPI_TASKS=12
+        export NIMAGE=2
+
+        mpirun -n $MPI_TASKS westpp.x -nimage $NIMAGE < westpp.in > westpp.out
+
+
+	Structure of the input data (westpp.in):
+	===============================================================================
+
+	&INPUT_WEST
+	  qe_prefix="pwscf"
+	  west_prefix="west"
+	  outdir="./"
+	/
+	&WSTAT_CONTROL
+	  wstat_calculation="S"
+          n_pdep_eigen=4
+	/
+	&WESTPP_CONTROL
+	  westpp_calculation="E"
+          westpp_n_pdep_eigen_to_read = 4
+          westpp_range(1) = 1
+          westpp_range(2) = 3
+          westpp_format="xyz"
+	/
+    
+    }
+
+    #
+    # namelist INPUT_WEST
+    #
+
+    namelist INPUT_WEST {
+	
+	var qe_prefix -type CHARACTER {
+            status { REQUIRED } 
+	    default { 'pwscf' }
+	    info { Prefix prepended to the QuantumEspresso save folder. }
+	}
+	
+	var west_prefix -type CHARACTER { 
+            status { REQUIRED } 
+	    default { 'west' }
+	    info { Prefix prepended to the WEST save and restart folders. }
+	}
+	
+	var outdir -type CHARACTER { 
+            status { REQUIRED } 
+	    default { 
+		Value of the ESPRESSO_TMPDIR environment variable if set;
+		current directory ('./') otherwise 
+	    }
+	    info { Input, temporary, output files are found in this directory. }
+	}
+
+    }
+
+    #
+    # NAMELIST &WSTAT_CONTROL
+    #
+
+    namelist WSTAT_CONTROL {
+
+	var wstat_calculation -type CHARACTER {
+	    status { REQUIRED }
+	    default { 'S' }
+            options {
+	      info {  Available options are: }
+                opt -val 'S' { Start from scratch. }
+                opt -val 'R' { Restart from an interrupted run. You should restart with the 
+same number of cores. }
+	    }
+	}
+						   
+	var n_pdep_eigen -type INTEGER {
+	    status { REQUIRED }
+	    default { '4' }
+	    info { Number of PDEP eigenpotentials. }
+	}
+						   
+	var n_pdep_times -type INTEGER {
+	    status { OPTIONAL }
+	    default { 4 }
+	    info { Maximum dimension of the search space = n_pdep_eigen * n_pdep_times. }
+	}
+						   
+	var n_pdep_maxiter -type INTEGER {
+	    status { OPTIONAL }
+	    default { 100 }
+	    info { Maximum number of iterations in PDEP. }
+	}
+						   
+	var n_dfpt_maxiter -type INTEGER {
+	    status { OPTIONAL }
+	    default { 250 }
+	    info { Maximum number of iterations in DFPT. }
+	}
+						   
+	var n_pdep_read_from_file -type INTEGER {
+	    status { OPTIONAL }
+	    default { 0 }
+	    info { Number of PDEP eigenpotentials that can be read from file. }
+	}
+
+	var trev_pdep -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D-3 }
+	    info { Absolute convergence threshold in the PDEP eigenvalues. }
+	}
+
+	var trev_pdep_rel -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D-1 }
+	    info { Relative convergence threshold in the PDEP eigenvalues. }
+	}
+
+	var tr2_dfpt -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D-12 }
+	    info { Convergence threshold in DFPT. Note that in the first PDEP iterations 
+a reduced threshold for DFPT could be used by the code in order to speed up the computation. }
+	}
+
+	var l_minimize_exx_if_active -type LOGICAL { 
+	    status { OPTIONAL }
+	    default { .FALSE. }
+	    info { If (.TRUE.), then the exx term in the Hamiltonian is reduced as much as possible. }
+	}
+
+	var l_kinetic_only -type LOGICAL { 
+	    status { OPTIONAL }
+	    default { .FALSE. }
+	    info { If (.TRUE.), then only the kinetic term in the Hamiltonian is kept. }
+	}
+
+	var l_use_ecutrho -type LOGICAL { 
+	    status { OPTIONAL }
+	    default { .FALSE. }
+	    info { If (.TRUE.), then the eigenpotentials are represented with ecutrho instead of ecutwfc. }
+	}
+
+    }
+
+
+    #
+    # NAMELIST &WESTPP_CONTROL
+    #
+
+    namelist WESTPP_CONTROL {
+
+	var westpp_calculation -type CHARACTER {
+	    status { REQUIRED }
+	    default { 'R' }
+            options { 
+	    info { Available options are: } 
+              opt -val 'R' { Output rho, the electronic density. }
+              opt -val 'W' { Output the electronic wavefunctions. }
+              opt -val 'E' { Output the eigenpotentials. }
+              opt -val 'S' { Output the screened exchange constant. }
+            }
+	}
+
+        dimension westpp_range -start 1 -end 2 -type INTEGER {
+	    status { OPTIONAL }
+	    default { 1,2 }
+	    info { Range for W, E, and S run. }
+	}
+
+	var westpp_format -type CHARACTER {
+	    status { OPTIONAL }
+	    default { 'C' }
+            options { 
+            info { Available options for the output fortmat are: } 
+              opt -val 'c' { Cube. }
+              opt -val 'x' { Planar avarge yz. }
+              opt -val 'y' { Planar avarge xz. }
+              opt -val 'z' { Planar avarge xy. }
+              opt -val 's' { Spherical average. }
+            }
+	}
+
+	var westpp_sign -type LOGICAL {
+	    status { OPTIONAL }
+	    default { .FALSE. }
+	    info { IF (.TRUE.), then the sign of the wavefunction/eigenpotential is kept in the output file. }
+	}
+
+	var westpp_n_pdep_eigen_to_use -type INTEGER {
+	    status { OPTIONAL }
+	    default { 1 }
+	    info { Number PDEP eigenpotentials to read/use. }
+	}
+
+	dimension westpp_r0 -start 1 -end 3 -type REAL {
+	    status { OPTIONAL }
+	    default { (/ 0.D0, 0.D0, 0.D0 /) a.u. }
+	    info { Position of the center (in a.u.) for spherical average plot. }
+	}
+
+	var westpp_nr -type INTEGER {
+	    status { OPTIONAL }
+	    default { 100 }
+	    info { Number of points in the spherical average plot. }
+	}
+
+	var westpp_rmax -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D0 a.u. }
+	    info { Max radius for the spherical average plot. }
+	}
+
+	var westpp_epsinfty -type REAL {
+	    status { OPTIONAL }
+	    default { 1.D0 }
+	    info { Macroscopic dielectric constant for the S run. }
+	}
+
+    }
+}

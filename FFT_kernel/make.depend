@@ -1,0 +1,7 @@
+fft_at_gamma.o : ../../Modules/fft_base.o
+fft_at_gamma.o : ../../Modules/kind.o
+fft_at_gamma.o : ../../Modules/recvec.o
+fft_at_k.o : ../../Modules/fft_base.o
+fft_at_k.o : ../../Modules/kind.o
+fft_at_k.o : ../../Modules/recvec.o
+fft_at_k.o : ../../PW/src/pwcom.o

@@ -1,0 +1,73 @@
+# environment_variables -- settings for running West examples
+
+
+######## YOU MAY NEED TO EDIT THIS FILE TO MATCH YOUR CONFIGURATION ########
+
+# BIN_DIR = path of compiled executables
+#     Usually this is $PREFIX/bin, where $PREFIX is the root of the
+#     Quantum ESPRESSO source tree.
+# PSEUDO_DIR = path of pseudopotentials required by the examples
+#     if required pseudopotentials are not found in $PSEUDO_DIR, 
+#     example scripts will try to download them from NETWORK_PSEUDO
+# TMP_DIR = temporary directory to be used by the examples
+#     Make sure that it is writable by you and that it doesn't contain
+#     any valuable data (EVERYTHING THERE WILL BE DESTROYED)
+
+# The following should be good for most cases 
+
+PREFIX=`cd ../../.. ; pwd`
+BIN_DIR=$PREFIX/bin
+PSEUDO_DIR=$PREFIX/pseudo
+# Beware: everything in $TMP_DIR will be destroyed !
+TMP_DIR=$PREFIX/tempdir
+
+# There should be no need to change anything below this line
+
+NETWORK_PSEUDO=http://www.quantum-espresso.org/wp-content/uploads/upf_files/
+
+
+# wget or curl needed if some PP has to be downloaded from web site
+# script wizard will surely find a better way to find what is available
+if test "`which curl`" = "" ; then
+   if test "`which wget`" = "" ; then
+      echo "wget or curl not found: will not be able to download missing PP"
+   else
+      WGET="wget -O"
+      # echo "wget found"
+   fi
+else
+   WGET="curl -o"
+   # echo "curl found"
+fi
+
+# To run the WEST programs on a parallel machine, you may have to
+# add the appropriate commands (poe, mpirun, mpprun...) and/or options
+# (specifying number of processors, pools...) before and after the
+# executable's name.  That depends on how your machine is configured.
+# For example on an IBM SP4:
+#
+#     poe             pw.x -procs 4              < file.in > file.out
+#     ^^^ PARA_PREFIX      ^^^^^^^^ PARA_POSTFIX
+#
+# To run on a single processor, you can usually leave them empty.
+# BEWARE: most tests and examples are devised to be run serially or on
+# a small number of processors; do not use tests and examples to benchmark
+# parallelism, do not run on too many processors
+
+PARA_PREFIX="mpirun -n 2"
+#
+# available flags: 
+#                  -nimage  : Number of images
+#
+PARA_POSTFIX=""
+
+# function to test the exit status of a job
+check_failure () {
+    # usage: check_failure $?
+    if test $1 != 0
+    then
+        $ECHO "Error condition encountered during test: exit status = $1"
+        $ECHO "Aborting"
+        exit 1
+    fi
+}

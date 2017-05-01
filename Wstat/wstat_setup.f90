@@ -50,36 +50,5 @@ SUBROUTINE wstat_setup
   CALL my_mkdir( wstat_dirname )
   !
   n_pdep_basis = n_pdep_eigen * n_pdep_times
-  CALL json_read2()
   !
 END SUBROUTINE
-
-
-SUBROUTINE json_read2()
-
-        use json_module
-        use kinds, ONLY : DP
-
-        implicit none
-
-        type(json_file) :: json
-        type(json_value),pointer :: p, inp
-        logical :: found
-        integer :: i,j,k
-        REAL(DP) :: r
-
-        ! initialize the class
-        call json%initialize()
-
-        ! read the file
-        !call json%load_file(filename = './example2.json')
-
-        ! add some data to inputs:
-        call json%add('inputs.r2', 45.d0 )
-        call json%add('outputs.r2', 45.d0 )
-
-        call json%print_file('./ex.json')
-
-        ! clean up
-        call json%destroy()
-END SUBROUTINE 

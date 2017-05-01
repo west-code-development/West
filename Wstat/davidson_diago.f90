@@ -1095,9 +1095,9 @@ SUBROUTINE output_a_report(iteration)
       !
       CALL json%initialize()
       !
-      CALL json%add('output.iprt',       out_tab(1,1) )
-      CALL json%add('output.eigenvalue', out_tab(1,2) )
-      CALL json%add('output.conv',       out_tab(1,3) )
+      CALL json%add('output.iprt',       1 )
+      CALL json%add('output.eigenvalue', 45.d0 )
+      CALL json%add('output.conv',       30.d0 )
       !
       CALL json%print_file( 'o-wstat.'//TRIM(ADJUSTL(pref))//'.json' )
       !

@@ -1075,7 +1075,7 @@ SUBROUTINE output_a_report(iteration)
    TYPE(json_file) :: json
    INTEGER,INTENT(IN) :: iteration
    CHARACTER(LEN=9) :: pref
-   INTEGER :: ip
+   INTEGER :: ip, ierr
    REAL(DP) :: out_tab(n_pdep_eigen,3)
    !
    DO ip=1,n_pdep_eigen
@@ -1099,7 +1099,9 @@ SUBROUTINE output_a_report(iteration)
       CALL json%add('output.eigenvalue', 45.d0 )
       CALL json%add('output.conv',       30.d0 )
       !
-      CALL json%print_file( 'o-wstat.'//TRIM(ADJUSTL(pref))//'.json' )
+      OPEN(UNIT=4000,FILE="o-wstat."//TRIM(ADJUSTL(pref))//".tab",IOSTAT=ierr) 
+      CALL json%print_file( 4000 )
+      CLOSE( 4000, IOSTAT=ierr )
       !
       CALL json%destroy()
       !

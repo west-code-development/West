@@ -1064,6 +1064,7 @@ END SUBROUTINE
 !
 SUBROUTINE output_a_report(iteration)
    !
+   USE json_module
    USE kinds,        ONLY : DP
    USE westcom,      ONLY : n_pdep_eigen,ev,conv
    USE west_io ,     ONLY : serial_table_output
@@ -1071,6 +1072,7 @@ SUBROUTINE output_a_report(iteration)
    !
    IMPLICIT NONE
    !
+   TYPE(json_file) :: json
    INTEGER,INTENT(IN) :: iteration
    CHARACTER(LEN=9) :: pref
    INTEGER :: ip
@@ -1087,7 +1089,21 @@ SUBROUTINE output_a_report(iteration)
    ELSE
       pref='converged'
    ENDIF
-   CALL serial_table_output(mpime==root,4000,'wstat.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
+   !CALL serial_table_output(mpime==root,4000,'wstat.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
+   !
+   IF( mpime == root ) THEN 
+      !
+      CALL json%initialize()
+      !
+      CALL json%add('output.iprt',       out_tab(1:n_pdep_eigen,1) )
+      CALL json%add('output.eigenvalue', out_tab(1:n_pdep_eigen,2) )
+      CALL json%add('output.conv',       out_tab(1:n_pdep_eigen,3) )
+      !
+      CALL json%print_file( 'o-wstat.'//TRIM(ADJUSTL(pref))//'.json' )
+      !
+      CALL json%destroy()
+      !
+   ENDIF 
    !
 END SUBROUTINE
 !

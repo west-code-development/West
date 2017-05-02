@@ -1064,9 +1064,9 @@ END SUBROUTINE
 !
 SUBROUTINE output_a_report(iteration)
    !
-   USE json_module
+   USE json_module,  ONLY : json_file
    USE kinds,        ONLY : DP
-   USE westcom,      ONLY : n_pdep_eigen,ev,conv
+   USE westcom,      ONLY : n_pdep_eigen,ev,conv,wstat_output_dir
    USE west_io ,     ONLY : serial_table_output
    USE mp_world,     ONLY : mpime,root
    !
@@ -1076,13 +1076,20 @@ SUBROUTINE output_a_report(iteration)
    INTEGER,INTENT(IN) :: iteration
    CHARACTER(LEN=9) :: pref
    INTEGER :: ip, ierr
-   REAL(DP) :: out_tab(n_pdep_eigen,3)
+   !REAL(DP) :: out_tab(n_pdep_eigen,3)
    !
+   INTEGER,ALLOCATABLE :: ipert(:), converged(:)
+   !
+   ALLOCATE( ipert(n_pdep_eigen), converged(n_pdep_eigen) )
+   !
+   converged = 0
    DO ip=1,n_pdep_eigen
-      out_tab(ip,1) = REAL(ip,DP)
-      out_tab(ip,2) = ev(ip)
-      out_tab(ip,3) = 0._DP
-      IF(conv(ip)) out_tab(ip,3) = 1._DP
+      !out_tab(ip,1) = REAL(ip,DP)
+      ipert(ip) = ip 
+      !out_tab(ip,2) = ev(ip)
+      !out_tab(ip,3) = 0._DP
+      !IF(conv(ip)) out_tab(ip,3) = 1._DP
+      IF(conv(ip)) converged(ip) = 1
    ENDDO
    IF(iteration>=0) THEN 
       WRITE(pref,"('itr_',i5.5)") iteration
@@ -1095,17 +1102,19 @@ SUBROUTINE output_a_report(iteration)
       !
       CALL json%initialize()
       !
-      CALL json%add('output.iprt',       1 )
-      CALL json%add('output.eigenvalue', 45.d0 )
-      CALL json%add('output.conv',       30.d0 )
+      CALL json%add('output.iprt',       ipert     ( 1:n_pdep_eigen ) )
+      CALL json%add('output.eigenvalue', ev        ( 1:n_pdep_eigen ) )
+      CALL json%add('output.conv',       converged ( 1:n_pdep_eigen ) )
       !
-      OPEN(UNIT=4000,FILE="o-wstat."//TRIM(ADJUSTL(pref))//".tab",IOSTAT=ierr) 
+      OPEN(UNIT=4000,FILE=TRIM(ADJUSTL(wstat_output_dir))//"/o-wstat."//TRIM(ADJUSTL(pref))//".json",IOSTAT=ierr) 
       CALL json%print_file( 4000 )
       CLOSE( 4000, IOSTAT=ierr )
       !
       CALL json%destroy()
       !
    ENDIF 
+   !
+   DEALLOCATE( ipert, converged ) 
    !
 END SUBROUTINE
 !

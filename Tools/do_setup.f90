@@ -49,6 +49,7 @@ SUBROUTINE do_setup
   CALL init_pw_arrays(nbnd)
   CALL set_iks_l2g()
   !
+  CALL set_dirs()
   !
   IF ( lsda ) THEN
      IF ( INT( nelup ) == 0 .AND. INT( neldw ) == 0 ) THEN

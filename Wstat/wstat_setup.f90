@@ -14,8 +14,9 @@
 SUBROUTINE wstat_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,wstat_dirname,west_prefix,&
-                                   & n_pdep_basis,n_pdep_eigen,n_pdep_times,isz,l_use_ecutrho
+  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,&
+                                   & n_pdep_basis,n_pdep_eigen,n_pdep_times,isz,l_use_ecutrho,&
+                                   & wstat_save_dir, wstat_output_dir, wstat_restart_dir
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : npw,npwx
@@ -46,8 +47,10 @@ SUBROUTINE wstat_setup
   !
   CALL set_nbndocc()
   !
-  wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
-  CALL my_mkdir( wstat_dirname )
+  !wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
+  CALL my_mkdir( wstat_save_dir )
+  CALL my_mkdir( wstat_output_dir )
+  !CALL my_mkdir( wstat_restart_dir )
   !
   n_pdep_basis = n_pdep_eigen * n_pdep_times
   !

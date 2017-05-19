@@ -69,6 +69,8 @@ MODULE westin
   CHARACTER(LEN=256) :: outdir
   CHARACTER(LEN=256) :: qe_prefix
   !
+  CHARACTER(LEN=256) :: main_input_file, main_output_file
+  !
 END MODULE  
 !
 !

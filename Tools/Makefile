@@ -15,6 +15,7 @@ exx_go.o \
 exx_ungo.o \
 report_dynamical_memory.o \
 io_push.o \
+parse_command_arguments.o \
 set_dirs.o \
 do_setup.o \
 linear_algebra_kernel.o \

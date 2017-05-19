@@ -33,7 +33,8 @@ SUBROUTINE wstat_readin()
   !
   CALL start_clock('wstat_readin')
   !
-  CALL fetch_namelist(2,(/1,2/))
+  !CALL fetch_namelist(2,(/1,2/))
+  CALL fetch_input(2,(/1,2/))
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

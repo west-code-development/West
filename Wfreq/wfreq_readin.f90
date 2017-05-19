@@ -32,7 +32,8 @@ SUBROUTINE wfreq_readin()
   !
   CALL start_clock('wfreq_readin')
   !
-  CALL fetch_namelist(3,(/1,2,3/))
+  !CALL fetch_namelist(3,(/1,2,3/))
+  CALL fetch_input(3,(/1,2,3/))
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

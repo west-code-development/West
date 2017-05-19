@@ -18,6 +18,7 @@ IO_KERNEL_OBJS = \
 mpiio.o \
 my_mkdir.o \
 fetch_namelist.o \
+fetch_input.o \
 cubefile.o \
 pdep_io.o \
 pdep_db.o \

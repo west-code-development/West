@@ -14,7 +14,7 @@
 SUBROUTINE parse_command_arguments( )
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : main_input_file, main_output_file
+  USE westcom,                ONLY : main_input_file !, main_output_file
   !
   IMPLICIT NONE
   !

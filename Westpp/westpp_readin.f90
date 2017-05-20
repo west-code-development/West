@@ -33,7 +33,7 @@ SUBROUTINE westpp_readin()
   CALL start_clock('westpp_readin')
   !
   !CALL fetch_namelist(3,(/1,2,4/))
-  CALL fetch_input(3,(/1,2,4/))
+  CALL fetch_input(3,(/1,2,4/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

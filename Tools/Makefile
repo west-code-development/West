@@ -13,12 +13,14 @@ IFLAGS=
 
 TOOLS_OBJS = \
 io_push.o \
+strings.o \
 fetch_input.o \
+set_dirs.o \
+west_print_clocks.o \
 exx_go.o \
 exx_ungo.o \
 report_dynamical_memory.o \
 parse_command_arguments.o \
-set_dirs.o \
 do_setup.o \
 linear_algebra_kernel.o \
 human_readable_time.o \

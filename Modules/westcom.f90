@@ -65,11 +65,12 @@ MODULE westin
   !
   SAVE
   !
+  CHARACTER(LEN=256) :: outdir             ! main directory 
   CHARACTER(LEN=256) :: west_prefix
-  CHARACTER(LEN=256) :: outdir
   CHARACTER(LEN=256) :: qe_prefix
-  !
-  CHARACTER(LEN=256) :: main_input_file, main_output_file
+  CHARACTER(LEN=256) :: savedir            ! outdir/west_prefix.code.save
+  CHARACTER(LEN=256) :: main_input_file    ! input file (json format)
+  CHARACTER(LEN=256) :: logfile            ! savedir/logfile.json 
   !
 END MODULE  
 !
@@ -102,7 +103,6 @@ MODULE wstat_center
   ! Common workspace
   !
   COMPLEX(DP) :: alphapv_dfpt
-  !CHARACTER(LEN=256) :: wstat_dirname
   CHARACTER(LEN=256) :: wstat_save_dir
   CHARACTER(LEN=256) :: wstat_output_dir
   CHARACTER(LEN=256) :: wstat_restart_dir

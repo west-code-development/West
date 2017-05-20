@@ -31,9 +31,10 @@ CONTAINS
   !
   SUBROUTINE west_environment_start( code )
     !
-    USE kinds,           ONLY: DP
-    USE io_files,        ONLY: crash_file, nd_nmbr
-    USE mp_images,       ONLY: me_image, my_image_id, root_image, nimage
+    USE kinds,           ONLY : DP
+    USE io_files,        ONLY : crash_file, nd_nmbr
+    USE mp_images,       ONLY : me_image, my_image_id, root_image, nimage
+    USE westcom,         ONLY : savedir, logfile, outdir, west_prefix 
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
@@ -42,6 +43,7 @@ CONTAINS
     CHARACTER(LEN=6), EXTERNAL :: int_to_char
     INTEGER :: ios, crashunit
     INTEGER, EXTERNAL :: find_free_unit
+    CHARACTER(LEN=9),EXTERNAL :: to_lower_case
     !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash
@@ -53,7 +55,11 @@ CONTAINS
     ! Input from (-i), output from (-o)
     !
     CALL parse_command_arguments()
-    CALL fetch_input(1,(/1/))
+    CALL fetch_input(1,(/1/),.FALSE.)
+    !
+    savedir = TRIM(outdir) // trim(west_prefix) // "." // TRIM(to_lower_case(code)) // ".save/"
+    CALL my_mkdir( savedir )
+    logfile = TRIM(savedir) // "logfile.json"
     !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
     ! ... use ".TRUE."  to enable clocks
@@ -144,6 +150,7 @@ CONTAINS
     USE global_version,  ONLY : version_number, svn_revision
     USE west_version,    ONLY : west_version_number, west_svn_revision
     USE mp_world,        ONLY : mpime,root 
+    USE westcom,         ONLY : logfile
     !
     ! I/O
     !
@@ -191,8 +198,7 @@ CONTAINS
        CALL json%add('init.qeversion', TRIM(version_number) )
        IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('init.qesvn', TRIM(svn_revision) )
        !
-       !OPEN(UNIT=4000,FILE=TRIM(ADJUSTL(west_output_dir))//"/summary.json")
-       OPEN( NEWUNIT=iunit,FILE="summary.json" )
+       OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
        CALL json%print_file( iunit )
        CLOSE( iunit )
        !
@@ -237,6 +243,7 @@ CONTAINS
      USE mp_global,        ONLY : nimage,npool,nbgrp,nproc_image,nproc_pool,nproc_bgrp 
      USE mp_world,         ONLY : nproc,mpime,root 
      USE io_push,          ONLY : io_push_title,io_push_bar
+     USE westcom,          ONLY : logfile 
      !
      IMPLICIT NONE
      !
@@ -283,7 +290,7 @@ CONTAINS
        !
        CALL json%initialize()
        !
-       CALL json%load_file(filename='summary.json')
+       CALL json%load_file(filename=TRIM(logfile))
        !
        CALL json%add('parallel.nranks', nproc )
        CALL json%add('parallel.nimage', nimage )
@@ -295,7 +302,7 @@ CONTAINS
        CALL json%add('parallel.nthreads', nth )
 #endif
        !
-       OPEN( NEWUNIT=iunit,FILE="summary.json" )
+       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
        CALL json%print_file( iunit )
        CLOSE( iunit )
        !

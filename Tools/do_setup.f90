@@ -14,6 +14,7 @@
 SUBROUTINE do_setup
   !-----------------------------------------------------------------------
   !
+  USE json_module,            ONLY : json_file
   USE pwcom,                  ONLY : npw,nbnd,nkstot,xk,wk,nspin,nelec,nelup,neldw,et,wg,&
                                    & lspinorb,domag,lsda,isk,nks,two_fermi_energies,ngk
   USE fixed_occ,              ONLY : tfixed_occ,f_inp
@@ -33,9 +34,13 @@ SUBROUTINE do_setup
   USE gvect,                  ONLY : ngm_g, ngm
   USE gvecw,                  ONLY : ecutwfc
   USE io_push
+  USE westcom,                ONLY : logfile  
+  USE mp_world,               ONLY : mpime, root
   !
   IMPLICIT NONE
   !
+  TYPE(json_file) :: json
+  INTEGER :: iunit
   INTEGER :: auxi,ib
   INTEGER :: ipol,ik, npwx_g, nkbl, nkl, nkr, iks, ike, spin 
   INTEGER, ALLOCATABLE :: ngk_g(:)
@@ -50,6 +55,11 @@ SUBROUTINE do_setup
   CALL set_iks_l2g()
   !
   CALL set_dirs()
+  !
+  IF( mpime == root ) THEN 
+     CALL json%initialize()
+     CALL json%load_file(filename=TRIM(logfile))
+  ENDIF
   !
   IF ( lsda ) THEN
      IF ( INT( nelup ) == 0 .AND. INT( neldw ) == 0 ) THEN
@@ -75,12 +85,16 @@ SUBROUTINE do_setup
   !
   CALL io_push_title('System Overview')
   CALL io_push_value('gamma_only',gamma_only,20)
+  IF( mpime == root ) CALL json%add('system.gamma_only',gamma_only)
   CALL io_push_value('ecutwfc [Ry]',ecutwfc,20)
+  IF( mpime == root ) CALL json%add('system.ecutwfc',ecutwfc)
   CALL io_push_es0('omega [au^3]',omega,20)
+  IF( mpime == root ) CALL json%add('system.omega',omega)
   IF ( gamma_only ) THEN
      auxi = npw
      CALL mp_sum(auxi,intra_bgrp_comm)
      CALL io_push_value('glob. #G',auxi,20)
+     IF( mpime == root ) CALL json%add('system.globg',auxi)
   ELSE
      ALLOCATE( ngk_g(nkstot) )
      !npool = nproc_image / nproc_pool
@@ -98,21 +112,33 @@ SUBROUTINE do_setup
      ngk_g = ngk_g / nbgrp
      npwx_g = MAXVAL( ngk_g(1:nkstot) )
      CALL io_push_value('glob. #PW',npwx_g,20)
+     IF( mpime == root ) CALL json%add('system.globpw',npwx_g)
      DEALLOCATE( ngk_g )
   ENDIF
   CALL io_push_value('nbnd',nbnd,20)
+  IF( mpime == root ) CALL json%add('system.nbnd',nbnd)
   CALL io_push_value('nkstot',nkstot,20)
+  IF( mpime == root ) CALL json%add('system.nkstot',nkstot)
   CALL io_push_value('nspin',nspin,20)
+  IF( mpime == root ) CALL json%add('system.nspin',nspin)
   CALL io_push_value('nelec',nelec,20)
+  IF( mpime == root ) CALL json%add('system.nelec',nelec)
   IF(nspin == 2) THEN
      CALL io_push_value('nelup',nelup,20)
+     IF( mpime == root ) CALL json%add('system.nelup',nelup)
      CALL io_push_value('neldw',neldw,20)
+     IF( mpime == root ) CALL json%add('system.neldw',neldw)
   ENDIF
   CALL io_push_value('npol',npol,20)
+  IF( mpime == root ) CALL json%add('system.npol',npol)
   CALL io_push_value('lsda',lsda,20)
+  IF( mpime == root ) CALL json%add('system.lsda',lsda)
   CALL io_push_value('noncolin',noncolin,20)
+  IF( mpime == root ) CALL json%add('system.noncolin',noncolin)
   CALL io_push_value('lspinorb',lspinorb,20)
+  IF( mpime == root ) CALL json%add('system.lspinorb',lspinorb)
   CALL io_push_value('domag',domag,20)
+  IF( mpime == root ) CALL json%add('system.domag',domag)
   CALL io_push_bar
   !
   alat = celldm(1)
@@ -165,6 +191,13 @@ SUBROUTINE do_setup
      ENDDO
      WRITE( stdout, * )
   END IF
+  !
+  IF( mpime == root ) THEN
+     OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
+     CALL json%print_file( iunit )
+     CLOSE( iunit )
+     CALL json%destroy()
+  ENDIF 
   !
   CALL stop_clock('do_setup')
   !

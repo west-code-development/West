@@ -350,9 +350,10 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   !
   IF ( verbose ) THEN
      !
-     CALL json%initialize()
-     !
-     CALL json%load_file(filename=TRIM(logfile))
+     IF( mpime == root ) THEN 
+        CALL json%initialize()
+        CALL json%load_file(filename=TRIM(logfile))
+     ENDIF
      !
      IF ( ANY(driver(:)==1) ) THEN
         !
@@ -367,9 +368,11 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         !
         CALL io_push_bar()
         !
-        CALL json%add('input.input_west.qe_prefix',TRIM(qe_prefix))
-        CALL json%add('input.input_west.west_prefix',TRIM(west_prefix))
-        CALL json%add('input.input_west.outdir',TRIM(outdir))
+        IF( mpime == root ) THEN 
+           CALL json%add('input.input_west.qe_prefix',TRIM(qe_prefix))
+           CALL json%add('input.input_west.west_prefix',TRIM(west_prefix))
+           CALL json%add('input.input_west.outdir',TRIM(outdir))
+        ENDIF
         !
      ENDIF
      !
@@ -395,18 +398,20 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         !
         CALL io_push_bar()
         !
-        CALL json%add('input.wstat_control.wstat_calculation',TRIM(wstat_calculation))
-        CALL json%add('input.wstat_control.n_pdep_eigen',n_pdep_eigen)
-        CALL json%add('input.wstat_control.n_pdep_times',n_pdep_times)
-        CALL json%add('input.wstat_control.n_pdep_maxiter',n_pdep_maxiter)
-        CALL json%add('input.wstat_control.n_dfpt_maxiter',n_dfpt_maxiter)
-        CALL json%add('input.wstat_control.n_pdep_read_from_file',n_pdep_read_from_file)
-        CALL json%add('input.wstat_control.trev_pdep',trev_pdep)
-        CALL json%add('input.wstat_control.trev_pdep_rel',trev_pdep_rel)
-        CALL json%add('input.wstat_control.tr2_dfpt',tr2_dfpt)
-        CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
-        CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
-        CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
+        IF( mpime == root ) THEN 
+           CALL json%add('input.wstat_control.wstat_calculation',TRIM(wstat_calculation))
+           CALL json%add('input.wstat_control.n_pdep_eigen',n_pdep_eigen)
+           CALL json%add('input.wstat_control.n_pdep_times',n_pdep_times)
+           CALL json%add('input.wstat_control.n_pdep_maxiter',n_pdep_maxiter)
+           CALL json%add('input.wstat_control.n_dfpt_maxiter',n_dfpt_maxiter)
+           CALL json%add('input.wstat_control.n_pdep_read_from_file',n_pdep_read_from_file)
+           CALL json%add('input.wstat_control.trev_pdep',trev_pdep)
+           CALL json%add('input.wstat_control.trev_pdep_rel',trev_pdep_rel)
+           CALL json%add('input.wstat_control.tr2_dfpt',tr2_dfpt)
+           CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
+           CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
+           CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
+        ENDIF
         !
      ENDIF
      !
@@ -440,24 +445,26 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         !
         CALL io_push_bar()
         !
-        CALL json%add('input.wfreq_control.wfreq_calculation',TRIM(wfreq_calculation))
-        CALL json%add('input.wfreq_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
-        CALL json%add('input.wfreq_control.qp_bandrange',qp_bandrange)
-        CALL json%add('input.wfreq_control.macropol_calculation',macropol_calculation)
-        CALL json%add('input.wfreq_control.n_lanczos',n_lanczos)
-        CALL json%add('input.wfreq_control.n_imfreq',n_imfreq)
-        CALL json%add('input.wfreq_control.n_refreq',n_refreq)
-        CALL json%add('input.wfreq_control.ecut_imfreq',ecut_imfreq)
-        CALL json%add('input.wfreq_control.ecut_refreq',ecut_refreq)
-        CALL json%add('input.wfreq_control.wfreq_eta',wfreq_eta)
-        CALL json%add('input.wfreq_control.n_secant_maxiter',n_secant_maxiter)
-        CALL json%add('input.wfreq_control.trev_secant',trev_secant)
-        CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
-        CALL json%add('input.wfreq_control.l_enable_gwetot',l_enable_gwetot)
-        CALL json%add('input.wfreq_control.div_kind_hf',div_kind_hf)
-        CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
-        CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
-        CALL json%add('input.wfreq_control.n_spectralf',n_spectralf)
+        IF( mpime == root ) THEN 
+           CALL json%add('input.wfreq_control.wfreq_calculation',TRIM(wfreq_calculation))
+           CALL json%add('input.wfreq_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
+           CALL json%add('input.wfreq_control.qp_bandrange',qp_bandrange)
+           CALL json%add('input.wfreq_control.macropol_calculation',macropol_calculation)
+           CALL json%add('input.wfreq_control.n_lanczos',n_lanczos)
+           CALL json%add('input.wfreq_control.n_imfreq',n_imfreq)
+           CALL json%add('input.wfreq_control.n_refreq',n_refreq)
+           CALL json%add('input.wfreq_control.ecut_imfreq',ecut_imfreq)
+           CALL json%add('input.wfreq_control.ecut_refreq',ecut_refreq)
+           CALL json%add('input.wfreq_control.wfreq_eta',wfreq_eta)
+           CALL json%add('input.wfreq_control.n_secant_maxiter',n_secant_maxiter)
+           CALL json%add('input.wfreq_control.trev_secant',trev_secant)
+           CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
+           CALL json%add('input.wfreq_control.l_enable_gwetot',l_enable_gwetot)
+           CALL json%add('input.wfreq_control.div_kind_hf',div_kind_hf)
+           CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
+           CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
+           CALL json%add('input.wfreq_control.n_spectralf',n_spectralf)
+        ENDIF
         !
      ENDIF
      !
@@ -483,23 +490,26 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         !
         CALL io_push_bar()
         !
-        CALL json%add('input.westpp_control.westpp_calculation',TRIM(westpp_calculation))
-        CALL json%add('input.westpp_control.westpp_range',westpp_range)
-        CALL json%add('input.westpp_control.westpp_format',TRIM(westpp_format))
-        CALL json%add('input.westpp_control.westpp_sign',westpp_sign)
-        CALL json%add('input.westpp_control.westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use)
-        CALL json%add('input.westpp_control.westpp_r0',westpp_r0)
-        CALL json%add('input.westpp_control.westpp_nr',westpp_nr)
-        CALL json%add('input.westpp_control.westpp_rmax',westpp_rmax)
-        CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
+        IF( mpime == root ) THEN 
+           CALL json%add('input.westpp_control.westpp_calculation',TRIM(westpp_calculation))
+           CALL json%add('input.westpp_control.westpp_range',westpp_range)
+           CALL json%add('input.westpp_control.westpp_format',TRIM(westpp_format))
+           CALL json%add('input.westpp_control.westpp_sign',westpp_sign)
+           CALL json%add('input.westpp_control.westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use)
+           CALL json%add('input.westpp_control.westpp_r0',westpp_r0)
+           CALL json%add('input.westpp_control.westpp_nr',westpp_nr)
+           CALL json%add('input.westpp_control.westpp_rmax',westpp_rmax)
+           CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
+        ENDIF
         !
      ENDIF
      !
-     OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
-     CALL json%print_file( iunit )
-     CLOSE( iunit )
-     !
-     CALL json%destroy()
+     IF( mpime == root ) THEN 
+        OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
+        CALL json%print_file( iunit )
+        CLOSE( iunit )
+        CALL json%destroy()
+     ENDIF
      !
   ENDIF
   !

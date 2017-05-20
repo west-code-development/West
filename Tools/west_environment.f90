@@ -122,23 +122,58 @@ CONTAINS
   !
   SUBROUTINE west_environment_end( code )
     !
+    USE json_module,     ONLY : json_file
+    USE mp_world,        ONLY : mpime,root
+    USE westcom,         ONLY : logfile 
+    !
+    IMPLICIT NONE 
+    !
     CHARACTER(LEN=*), INTENT(IN) :: code
+    INTEGER :: iunit
+    TYPE(json_file) :: json 
+    CHARACTER(LEN=9)  :: cdate, ctime
+    CHARACTER(LEN=80) :: time_str
     !
     IF ( meta_ionode ) WRITE( stdout, * )
     !
     CALL stop_clock(  TRIM(code) )
     CALL print_clock( TRIM(code) )
     !
-    CALL west_closing_message( )
+    CALL date_and_tim( cdate, ctime )
+    !
+    time_str = 'This run was terminated on:  ' // ctime // ' ' // cdate
+    !
+    IF( meta_ionode ) THEN
+       WRITE( stdout,*)
+       WRITE( stdout,3334) time_str
+       WRITE( stdout,3335)
+    END IF
     !
     IF( meta_ionode ) THEN
        WRITE( stdout,'(A)')      '   JOB DONE.'
        WRITE( stdout,3335)
     END IF
+3334 FORMAT(3X,A60,/)
 3335 FORMAT('=',78('-'),'=')
     FLUSH(stdout)
     !
-    RETURN
+    IF( mpime == root ) THEN
+      !
+      CALL json%initialize()
+      CALL json%load_file(filename=TRIM(logfile))
+      !
+      CALL json%add('run.completed', .TRUE. )
+      CALL json%add('run.endtime', TRIM(ctime) )
+      CALL json%add('run.enddate', TRIM(cdate) )
+      !
+      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+      CALL json%print_file( iunit )
+      CLOSE( iunit )
+      !
+      CALL json%destroy()
+      !
+    ENDIF 
+    !
   END SUBROUTINE
   !
   !
@@ -188,15 +223,15 @@ CONTAINS
        !
        CALL json%initialize()
        !
-       CALL json%add('init.date', TRIM(cdate) )
-       CALL json%add('init.time', TRIM(ctime) )
-       CALL json%add('init.program', TRIM(code) )
-       CALL json%add('init.version', TRIM(west_version_number) )
+       CALL json%add('run.startdate', TRIM(cdate) )
+       CALL json%add('run.starttime', TRIM(ctime) )
+       CALL json%add('run.software.program', TRIM(code) )
+       CALL json%add('run.software.version', TRIM(west_version_number) )
        IF( TRIM (west_svn_revision) /= "unknown" ) CALL json%add('init.svn', TRIM(west_svn_revision) )
-       CALL json%add('init.website',"http://www.west-code.org")
-       CALL json%add('init.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
-       CALL json%add('init.qeversion', TRIM(version_number) )
-       IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('init.qesvn', TRIM(svn_revision) )
+       CALL json%add('run.software.website',"http://www.west-code.org")
+       CALL json%add('run.software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
+       CALL json%add('run.software.qeversion', TRIM(version_number) )
+       IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('run.software.qesvn', TRIM(svn_revision) )
        !
        OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
        CALL json%print_file( iunit )
@@ -207,29 +242,6 @@ CONTAINS
     ENDIF 
     !
   END SUBROUTINE 
-  !
-  ! 
-  !
-  SUBROUTINE west_closing_message( )
-    !
-    CHARACTER(LEN=9)  :: cdate, ctime
-    CHARACTER(LEN=80) :: time_str
-    !
-    CALL date_and_tim( cdate, ctime )
-    !
-    time_str = 'This run was terminated on:  ' // ctime // ' ' // cdate
-    !
-    IF( meta_ionode ) THEN
-       WRITE( stdout,*)
-       WRITE( stdout,3334) time_str
-       WRITE( stdout,3335)
-    END IF
-    !
-3334 FORMAT(3X,A60,/)
-3335 FORMAT('=',78('-'),'=')
-    !
-    RETURN
-  END SUBROUTINE
   !
   !
   !

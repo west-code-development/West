@@ -5,16 +5,18 @@ include ../../make.inc
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
+          $(MOD_FLAG)../Libraries/Json \
           $(MOD_FLAG)../Modules \
           $(MOD_FLAG).
 IFLAGS=
 
 
 TOOLS_OBJS = \
+io_push.o \
+fetch_input.o \
 exx_go.o \
 exx_ungo.o \
 report_dynamical_memory.o \
-io_push.o \
 parse_command_arguments.o \
 set_dirs.o \
 do_setup.o \
@@ -36,7 +38,7 @@ read_pwout.o \
 bar.o  
 
 PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Json/libjson.a
 
 TLDEPS= bindir mods libs pw
 

@@ -50,6 +50,11 @@ CONTAINS
     CALL remove_stack_limit ( )
 #endif
     !
+    ! Input from (-i), output from (-o)
+    !
+    CALL parse_command_arguments()
+    CALL fetch_input(1,(/1/))
+    !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
     ! ... use ".TRUE."  to enable clocks
     !
@@ -134,9 +139,11 @@ CONTAINS
   !
   SUBROUTINE west_opening_message( code )
     !
+    USE json_module,     ONLY : json_file
     USE io_global,       ONLY : stdout
     USE global_version,  ONLY : version_number, svn_revision
     USE west_version,    ONLY : west_version_number, west_svn_revision
+    USE mp_world,        ONLY : mpime,root 
     !
     ! I/O
     !
@@ -144,6 +151,8 @@ CONTAINS
     !
     ! Workspace
     !
+    TYPE(json_file) :: json
+    INTEGER :: iunit
     CHARACTER(LEN=9)  :: cdate, ctime
     !
     CALL date_and_tim( cdate, ctime )
@@ -168,7 +177,29 @@ CONTAINS
        WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM (version_number)
     ENDIF
     !
-    RETURN
+    IF( mpime == root ) THEN 
+       !
+       CALL json%initialize()
+       !
+       CALL json%add('init.date', TRIM(cdate) )
+       CALL json%add('init.time', TRIM(ctime) )
+       CALL json%add('init.program', TRIM(code) )
+       CALL json%add('init.version', TRIM(west_version_number) )
+       IF( TRIM (west_svn_revision) /= "unknown" ) CALL json%add('init.svn', TRIM(west_svn_revision) )
+       CALL json%add('init.website',"http://www.west-code.org")
+       CALL json%add('init.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
+       CALL json%add('init.qeversion', TRIM(version_number) )
+       IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('init.qesvn', TRIM(svn_revision) )
+       !
+       !OPEN(UNIT=4000,FILE=TRIM(ADJUSTL(west_output_dir))//"/summary.json")
+       OPEN( NEWUNIT=iunit,FILE="summary.json" )
+       CALL json%print_file( iunit )
+       CLOSE( iunit )
+       !
+       CALL json%destroy()
+       !
+    ENDIF 
+    !
   END SUBROUTINE 
   !
   ! 
@@ -201,9 +232,10 @@ CONTAINS
      !
      ! ... Report the mpi/openmp status
      !
+     USE json_module,      ONLY : json_file
      USE io_global,        ONLY : stdout
      USE mp_global,        ONLY : nimage,npool,nbgrp,nproc_image,nproc_pool,nproc_bgrp 
-     USE mp_world,         ONLY : nproc 
+     USE mp_world,         ONLY : nproc,mpime,root 
      USE io_push,          ONLY : io_push_title,io_push_bar
      !
      IMPLICIT NONE
@@ -213,6 +245,8 @@ CONTAINS
 #endif
      !
      INTEGER :: nth, ncores 
+     TYPE(json_file) :: json
+     INTEGER :: iunit
      !
 #if defined(__OPENMP)
      nth = omp_get_max_threads()
@@ -244,6 +278,30 @@ CONTAINS
      WRITE(stdout, "(5x, '#prc = ',i12)") ncores
      CALL io_push_bar()
 #endif
+    !
+    IF( mpime == root ) THEN 
+       !
+       CALL json%initialize()
+       !
+       CALL json%load_file(filename='summary.json')
+       !
+       CALL json%add('parallel.nranks', nproc )
+       CALL json%add('parallel.nimage', nimage )
+       CALL json%add('parallel.npool', npool )
+       CALL json%add('parallel.nbgrp', nbgrp )
+       CALL json%add('parallel.nrg', nproc_bgrp )
+       CALL json%add('parallel.nproc', ncores )
+#if defined(__OPENMP)
+       CALL json%add('parallel.nthreads', nth )
+#endif
+       !
+       OPEN( NEWUNIT=iunit,FILE="summary.json" )
+       CALL json%print_file( iunit )
+       CLOSE( iunit )
+       !
+       CALL json%destroy()
+       !
+    ENDIF 
      !
   END SUBROUTINE
   !

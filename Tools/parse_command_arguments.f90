@@ -19,11 +19,11 @@ SUBROUTINE parse_command_arguments( )
   IMPLICIT NONE
   !
   INTEGER :: nargs, iiarg
-  LOGICAL :: ifound, ofound
+  LOGICAL :: ifound !, ofound
   CHARACTER(LEN=256) :: string
   !
   ifound = .FALSE.
-  ofound = .FALSE.
+  !ofound = .FALSE.
   !
   nargs = command_argument_count()
   string = ' '
@@ -37,16 +37,17 @@ SUBROUTINE parse_command_arguments( )
         ifound =.TRUE.
      ENDIF
      !
-     IF ( .NOT. ofound .AND. TRIM( string ) == '-o' ) THEN
-        CALL get_command_argument( ( iiarg + 1 ) , main_output_file )
-        ofound =.TRUE.
-     ENDIF
+     !IF ( .NOT. ofound .AND. TRIM( string ) == '-o' ) THEN
+     !   CALL get_command_argument( ( iiarg + 1 ) , main_output_file )
+     !   ofound =.TRUE.
+     !ENDIF
      !
-     IF( ifound .AND. ofound ) EXIT 
+     !IF( ifound .AND. ofound ) EXIT 
+     IF( ifound ) EXIT 
      !
   ENDDO
   !
   IF( .NOT. ifound ) CALL errore('parse_cmd','Cannot find input file (-i)',1)
-  IF( .NOT. ofound ) CALL errore('parse_cmd','Cannot find output file (-o)',1)
+  !IF( .NOT. ofound ) CALL errore('parse_cmd','Cannot find output file (-o)',1)
   !
 END SUBROUTINE

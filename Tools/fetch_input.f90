@@ -14,7 +14,7 @@
 SUBROUTINE fetch_input( num_drivers, driver )
   !-----------------------------------------------------------------------
   !
-  USE json_module
+  USE json_module,      ONLY : json_file
   USE pwcom
   USE westcom
   USE io_files,         ONLY : tmp_dir, prefix
@@ -47,19 +47,18 @@ SUBROUTINE fetch_input( num_drivers, driver )
   ! 
   CALL start_clock('fetch_input')
   !
-  ! Input from (-i), output from (-o) 
-  !
-  CALL parse_command_arguments()
-  !
   ! PRESETS
   !
   ! ** input_west **
+  IF ( ANY(driver(:)==1) ) THEN
      qe_prefix = 'pwscf'
      west_prefix = 'west'
      CALL get_environment_variable( 'ESPRESSO_TMPDIR', outdir )
      IF ( trim( outdir ) == ' ' ) outdir = './'
+  ENDIF
   !
   ! ** wstat_control **
+  IF ( ANY(driver(:)==2) ) THEN
      wstat_calculation        = 'S'
      n_pdep_eigen             = 1
      n_pdep_times             = 4
@@ -72,8 +71,10 @@ SUBROUTINE fetch_input( num_drivers, driver )
      l_kinetic_only           = .false.
      l_minimize_exx_if_active = .false. 
      l_use_ecutrho            = .false.
+  ENDIF
   !
   ! ** wfreq_control **
+  IF ( ANY(driver(:)==3) ) THEN
      wfreq_calculation       = 'XWGQ'
      n_pdep_eigen_to_use     = 2
      qp_bandrange            = (/ 1, 2 /)
@@ -92,8 +93,10 @@ SUBROUTINE fetch_input( num_drivers, driver )
      o_restart_time          = 0._DP
      ecut_spectralf          = (/ -2._DP, 2._DP /)
      n_spectralf             = 10
+  ENDIF
   ! 
   ! ** westpp_control **
+  IF ( ANY(driver(:)==4) ) THEN
      westpp_calculation         = 'r'
      westpp_range               = (/ 1, 2 /)
      westpp_format              = 'C'
@@ -103,6 +106,7 @@ SUBROUTINE fetch_input( num_drivers, driver )
      westpp_nr                  = 100
      westpp_rmax                = 1.d0
      westpp_epsinfty            = 1.d0
+  ENDIF
   !
   ! READ the input
   !
@@ -111,7 +115,6 @@ SUBROUTINE fetch_input( num_drivers, driver )
      !
      CALL json%initialize()
      CALL json%load_file( filename = main_input_file )
-     ! if (json%failed())
      !
      IF ( ANY(driver(:)==1) ) THEN 
         CALL json%get('input_west.qe_prefix', cval, found)

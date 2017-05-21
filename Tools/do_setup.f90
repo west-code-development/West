@@ -20,7 +20,7 @@ SUBROUTINE do_setup
   USE fixed_occ,              ONLY : tfixed_occ,f_inp
   USE kinds,                  ONLY : DP
   USE mp,                     ONLY : mp_sum
-  USE mp_global,              ONLY : intra_bgrp_comm,npool,nbgrp
+  USE mp_global,              ONLY : intra_bgrp_comm,npool,nbgrp,nproc_bgrp,me_bgrp
   USE mp_pools,               ONLY : intra_pool_comm, inter_pool_comm, &
                                      my_pool_id, nproc_pool, kunit
   USE io_global,              ONLY : stdout
@@ -42,11 +42,12 @@ SUBROUTINE do_setup
   TYPE(json_file) :: json
   INTEGER :: iunit
   INTEGER :: auxi,ib
-  INTEGER :: ipol,ik, npwx_g, nkbl, nkl, nkr, iks, ike, spin 
+  INTEGER :: ipol,ik, npwx_g, nkbl, nkl, nkr, iks, ike, spin, ip
+  INTEGER,ALLOCATABLE :: ngm_i(:), npw_i(:) 
   INTEGER, ALLOCATABLE :: ngk_g(:)
   REAL(DP) :: xkg(3)
   REAL(DP) :: alat
-  CHARACTER(LEN=6) :: cik
+  CHARACTER(LEN=6) :: cik, cip
   !
   CALL start_clock('do_setup')
   !
@@ -83,6 +84,26 @@ SUBROUTINE do_setup
   ENDIF
   !
   ! SYSTEM OVERVIEW
+  !
+  ALLOCATE( npw_i(0:nproc_bgrp-1), ngm_i(0:nproc_bgrp-1) )
+  npw_i = 0 
+  ngm_i = 0
+  npw_i(me_bgrp) = npw
+  ngm_i(me_bgrp) = ngm
+  CALL mp_sum( npw_i, intra_bgrp_comm ) 
+  CALL mp_sum( ngm_i, intra_bgrp_comm ) 
+  IF( mpime == root ) THEN
+     DO ip = 0, nproc_bgrp-1 
+        WRITE(cip,'(i6)') ip+1
+        CALL json%add('system.basis.npw.proc('//TRIM(ADJUSTL(cip))//')',npw_i(ip))
+        CALL json%add('system.basis.ngm.proc('//TRIM(ADJUSTL(cip))//')',ngm_i(ip))
+        CALL json%add('system.basis.npw.min',MINVAL(npw_i(:)))
+        CALL json%add('system.basis.npw.max',MAXVAL(npw_i(:)))
+        CALL json%add('system.basis.ngm.min',MINVAL(ngm_i(:)))
+        CALL json%add('system.basis.ngm.max',MAXVAL(ngm_i(:)))
+     ENDDO
+  ENDIF
+  DEALLOCATE( npw_i, ngm_i ) 
   !
   CALL io_push_title('System Overview')
   CALL io_push_value('gamma_only',gamma_only,20)

@@ -31,7 +31,7 @@ SUBROUTINE do_setup
   USE cell_base,              ONLY : omega,celldm,at
   USE fft_base,               ONLY : dfftp,dffts
   USE gvecs,                  ONLY : ngms_g, ngms
-  USE gvect,                  ONLY : ngm_g, ngm
+  USE gvect,                  ONLY : ngm_g, ngm, ecutrho
   USE gvecw,                  ONLY : ecutwfc
   USE io_push
   USE westcom,                ONLY : logfile  
@@ -99,8 +99,10 @@ SUBROUTINE do_setup
         CALL json%add('system.basis.ngm.proc('//TRIM(ADJUSTL(cip))//')',ngm_i(ip))
         CALL json%add('system.basis.npw.min',MINVAL(npw_i(:)))
         CALL json%add('system.basis.npw.max',MAXVAL(npw_i(:)))
+        CALL json%add('system.basis.npw.sum',SUM(npw_i(:)))
         CALL json%add('system.basis.ngm.min',MINVAL(ngm_i(:)))
         CALL json%add('system.basis.ngm.max',MAXVAL(ngm_i(:)))
+        CALL json%add('system.basis.ngm.sum',SUM(ngm_i(:)))
      ENDDO
   ENDIF
   DEALLOCATE( npw_i, ngm_i ) 
@@ -110,33 +112,35 @@ SUBROUTINE do_setup
   IF( mpime == root ) CALL json%add('system.basis.gamma_only',gamma_only)
   CALL io_push_value('ecutwfc [Ry]',ecutwfc,20)
   IF( mpime == root ) CALL json%add('system.basis.ecutwfc:ry',ecutwfc)
+  CALL io_push_value('ecutrho [Ry]',ecutrho,20)
+  IF( mpime == root ) CALL json%add('system.basis.ecutrho:ry',ecutrho)
   CALL io_push_es0('omega [au^3]',omega,20)
   IF( mpime == root ) CALL json%add('system.cell.omega:au',omega)
-  IF ( gamma_only ) THEN
-     auxi = npw
-     CALL mp_sum(auxi,intra_bgrp_comm)
-     CALL io_push_value('glob. #G',auxi,20)
-     IF( mpime == root ) CALL json%add('system.basis.globg',auxi)
-  ELSE
-     ALLOCATE( ngk_g(nkstot) )
-     !npool = nproc_image / nproc_pool
-     nkbl = nkstot / kunit
-     nkl = kunit * ( nkbl / npool )
-     nkr = ( nkstot - nkl * npool ) / kunit
-     IF ( my_pool_id < nkr ) nkl = nkl + kunit
-     iks = nkl*my_pool_id + 1
-     IF ( my_pool_id >= nkr ) iks = iks + nkr*kunit
-     ike = iks + nkl - 1
-     ngk_g = 0
-     ngk_g(iks:ike) = ngk(1:nks)
-     CALL mp_sum( ngk_g, inter_pool_comm )
-     CALL mp_sum( ngk_g, intra_pool_comm )
-     ngk_g = ngk_g / nbgrp
-     npwx_g = MAXVAL( ngk_g(1:nkstot) )
-     CALL io_push_value('glob. #PW',npwx_g,20)
-     IF( mpime == root ) CALL json%add('system.basis.globpw',npwx_g)
-     DEALLOCATE( ngk_g )
-  ENDIF
+! IF ( gamma_only ) THEN
+!    auxi = npw
+!    CALL mp_sum(auxi,intra_bgrp_comm)
+!    CALL io_push_value('glob. #G',auxi,20)
+!    IF( mpime == root ) CALL json%add('system.basis.globg',auxi)
+! ELSE
+!    ALLOCATE( ngk_g(nkstot) )
+!    !npool = nproc_image / nproc_pool
+!    nkbl = nkstot / kunit
+!    nkl = kunit * ( nkbl / npool )
+!    nkr = ( nkstot - nkl * npool ) / kunit
+!    IF ( my_pool_id < nkr ) nkl = nkl + kunit
+!    iks = nkl*my_pool_id + 1
+!    IF ( my_pool_id >= nkr ) iks = iks + nkr*kunit
+!    ike = iks + nkl - 1
+!    ngk_g = 0
+!    ngk_g(iks:ike) = ngk(1:nks)
+!    CALL mp_sum( ngk_g, inter_pool_comm )
+!    CALL mp_sum( ngk_g, intra_pool_comm )
+!    ngk_g = ngk_g / nbgrp
+!    npwx_g = MAXVAL( ngk_g(1:nkstot) )
+!    CALL io_push_value('glob. #PW',npwx_g,20)
+!    IF( mpime == root ) CALL json%add('system.basis.globpw',npwx_g)
+!    DEALLOCATE( ngk_g )
+! ENDIF
   CALL io_push_value('nbnd',nbnd,20)
   IF( mpime == root ) CALL json%add('system.electron.nbnd',nbnd)
   CALL io_push_value('nkstot',nkstot,20)
@@ -165,25 +169,15 @@ SUBROUTINE do_setup
   !
   alat = celldm(1)
   !
-  WRITE( stdout, '(/5x,"sFFT G-space: ",i8," G-vectors", 5x, &
-       &               "R-space: (",i4,",",i4,",",i4,")")') &
-       &         ngms_g, dffts%nr1, dffts%nr2, dffts%nr3
-  WRITE( stdout, '( 5x,"dFFT G-space: ",i8," G-vectors", 5x, &
-       &               "R-space: (",i4,",",i4,",",i4,")")') &
-       &         ngm_g, dfftp%nr1, dfftp%nr2, dfftp%nr3
+  WRITE( stdout, '(/5x,"sFFT : (",i4,",",i4,",",i4,")")') dffts%nr1, dffts%nr2, dffts%nr3
+  WRITE( stdout, '(/5x,"pFFT : (",i4,",",i4,",",i4,")")') dfftp%nr1, dfftp%nr2, dfftp%nr3
   WRITE( stdout, '(/5x,"Cell [a.u.]          = ",3f14.6)') alat*at(1,1:3)
   WRITE( stdout, '( 5x,"                     = ",3f14.6)') alat*at(2,1:3)
   WRITE( stdout, '( 5x,"                     = ",3f14.6)') alat*at(3,1:3)
   WRITE( stdout, '( 5x," ")')
   IF( mpime == root ) THEN 
-     CALL json%add('system.basis.sFFT.ngm',ngms_g)
-     CALL json%add('system.basis.sFFT.nr1',dffts%nr1)
-     CALL json%add('system.basis.sFFT.nr2',dffts%nr2)
-     CALL json%add('system.basis.sFFT.nr3',dffts%nr3)
-     CALL json%add('system.basis.dFFT.ngm',ngm_g)
-     CALL json%add('system.basis.dFFT.nr1',dfftp%nr1)
-     CALL json%add('system.basis.dFFT.nr2',dfftp%nr2)
-     CALL json%add('system.basis.dFFT.nr3',dfftp%nr3)
+     CALL json%add('system.basis.sFFT',(/ dffts%nr1, dffts%nr2, dffts%nr3 /) )
+     CALL json%add('system.basis.pFFT',(/ dfftp%nr1, dfftp%nr2, dfftp%nr3 /) )
      CALL json%add('system.cell.a1:au',alat*at(1:3,1))
      CALL json%add('system.cell.a2:au',alat*at(1:3,2))
      CALL json%add('system.cell.a3:au',alat*at(1:3,3))

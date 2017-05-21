@@ -123,7 +123,8 @@ CONTAINS
   SUBROUTINE west_environment_end( code )
     !
     USE json_module,     ONLY : json_file
-    USE mp_world,        ONLY : mpime,root
+    USE mp_world,        ONLY : mpime,root,world_comm
+    USE mp,              ONLY : mp_barrier
     USE westcom,         ONLY : logfile 
     !
     IMPLICIT NONE 
@@ -133,6 +134,7 @@ CONTAINS
     TYPE(json_file) :: json 
     CHARACTER(LEN=9)  :: cdate, ctime
     CHARACTER(LEN=80) :: time_str
+    LOGICAL :: found
     !
     IF ( meta_ionode ) WRITE( stdout, * )
     !
@@ -162,9 +164,9 @@ CONTAINS
       CALL json%initialize()
       CALL json%load_file(filename=TRIM(logfile))
       !
-      CALL json%add('run.completed', .TRUE. )
-      CALL json%add('run.endtime', TRIM(ctime) )
-      CALL json%add('run.enddate', TRIM(cdate) )
+      CALL json%update('run.job.completed', .TRUE., found)
+      CALL json%add('run.job.endtime', TRIM(ctime) )
+      CALL json%add('run.job.enddate', TRIM(cdate) )
       !
       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
       CALL json%print_file( iunit )
@@ -172,7 +174,9 @@ CONTAINS
       !
       CALL json%destroy()
       !
-    ENDIF 
+    ENDIF
+    !
+    CALL mp_barrier(world_comm) 
     !
   END SUBROUTINE
   !
@@ -223,8 +227,9 @@ CONTAINS
        !
        CALL json%initialize()
        !
-       CALL json%add('run.startdate', TRIM(cdate) )
-       CALL json%add('run.starttime', TRIM(ctime) )
+       CALL json%add('run.job.startdate', TRIM(cdate) )
+       CALL json%add('run.job.starttime', TRIM(ctime) )
+       CALL json%add('run.job.completed', .FALSE. )
        CALL json%add('run.software.program', TRIM(code) )
        CALL json%add('run.software.version', TRIM(west_version_number) )
        IF( TRIM (west_svn_revision) /= "unknown" ) CALL json%add('init.svn', TRIM(west_svn_revision) )

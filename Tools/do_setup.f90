@@ -46,6 +46,7 @@ SUBROUTINE do_setup
   INTEGER, ALLOCATABLE :: ngk_g(:)
   REAL(DP) :: xkg(3)
   REAL(DP) :: alat
+  CHARACTER(LEN=6) :: cik
   !
   CALL start_clock('do_setup')
   !
@@ -85,16 +86,16 @@ SUBROUTINE do_setup
   !
   CALL io_push_title('System Overview')
   CALL io_push_value('gamma_only',gamma_only,20)
-  IF( mpime == root ) CALL json%add('system.gamma_only',gamma_only)
+  IF( mpime == root ) CALL json%add('system.basis.gamma_only',gamma_only)
   CALL io_push_value('ecutwfc [Ry]',ecutwfc,20)
-  IF( mpime == root ) CALL json%add('system.ecutwfc',ecutwfc)
+  IF( mpime == root ) CALL json%add('system.basis.ecutwfc:ry',ecutwfc)
   CALL io_push_es0('omega [au^3]',omega,20)
-  IF( mpime == root ) CALL json%add('system.omega',omega)
+  IF( mpime == root ) CALL json%add('system.cell.omega:au',omega)
   IF ( gamma_only ) THEN
      auxi = npw
      CALL mp_sum(auxi,intra_bgrp_comm)
      CALL io_push_value('glob. #G',auxi,20)
-     IF( mpime == root ) CALL json%add('system.globg',auxi)
+     IF( mpime == root ) CALL json%add('system.basis.globg',auxi)
   ELSE
      ALLOCATE( ngk_g(nkstot) )
      !npool = nproc_image / nproc_pool
@@ -112,33 +113,33 @@ SUBROUTINE do_setup
      ngk_g = ngk_g / nbgrp
      npwx_g = MAXVAL( ngk_g(1:nkstot) )
      CALL io_push_value('glob. #PW',npwx_g,20)
-     IF( mpime == root ) CALL json%add('system.globpw',npwx_g)
+     IF( mpime == root ) CALL json%add('system.basis.globpw',npwx_g)
      DEALLOCATE( ngk_g )
   ENDIF
   CALL io_push_value('nbnd',nbnd,20)
-  IF( mpime == root ) CALL json%add('system.nbnd',nbnd)
+  IF( mpime == root ) CALL json%add('system.electron.nbnd',nbnd)
   CALL io_push_value('nkstot',nkstot,20)
-  IF( mpime == root ) CALL json%add('system.nkstot',nkstot)
+  IF( mpime == root ) CALL json%add('system.electron.nkstot',nkstot)
   CALL io_push_value('nspin',nspin,20)
-  IF( mpime == root ) CALL json%add('system.nspin',nspin)
+  IF( mpime == root ) CALL json%add('system.electron.nspin',nspin)
   CALL io_push_value('nelec',nelec,20)
-  IF( mpime == root ) CALL json%add('system.nelec',nelec)
+  IF( mpime == root ) CALL json%add('system.electron.nelec',nelec)
   IF(nspin == 2) THEN
      CALL io_push_value('nelup',nelup,20)
-     IF( mpime == root ) CALL json%add('system.nelup',nelup)
+     IF( mpime == root ) CALL json%add('system.electron.nelup',nelup)
      CALL io_push_value('neldw',neldw,20)
-     IF( mpime == root ) CALL json%add('system.neldw',neldw)
+     IF( mpime == root ) CALL json%add('system.electron.neldw',neldw)
   ENDIF
   CALL io_push_value('npol',npol,20)
-  IF( mpime == root ) CALL json%add('system.npol',npol)
+  IF( mpime == root ) CALL json%add('system.electron.npol',npol)
   CALL io_push_value('lsda',lsda,20)
-  IF( mpime == root ) CALL json%add('system.lsda',lsda)
+  IF( mpime == root ) CALL json%add('system.electron.lsda',lsda)
   CALL io_push_value('noncolin',noncolin,20)
-  IF( mpime == root ) CALL json%add('system.noncolin',noncolin)
+  IF( mpime == root ) CALL json%add('system.electron.noncolin',noncolin)
   CALL io_push_value('lspinorb',lspinorb,20)
-  IF( mpime == root ) CALL json%add('system.lspinorb',lspinorb)
+  IF( mpime == root ) CALL json%add('system.electron.lspinorb',lspinorb)
   CALL io_push_value('domag',domag,20)
-  IF( mpime == root ) CALL json%add('system.domag',domag)
+  IF( mpime == root ) CALL json%add('system.electron.domag',domag)
   CALL io_push_bar
   !
   alat = celldm(1)
@@ -153,44 +154,44 @@ SUBROUTINE do_setup
   WRITE( stdout, '( 5x,"                     = ",3f14.6)') alat*at(2,1:3)
   WRITE( stdout, '( 5x,"                     = ",3f14.6)') alat*at(3,1:3)
   WRITE( stdout, '( 5x," ")')
+  IF( mpime == root ) THEN 
+     CALL json%add('system.basis.sFFT.ngm',ngms_g)
+     CALL json%add('system.basis.sFFT.nr1',dffts%nr1)
+     CALL json%add('system.basis.sFFT.nr2',dffts%nr2)
+     CALL json%add('system.basis.sFFT.nr3',dffts%nr3)
+     CALL json%add('system.basis.dFFT.ngm',ngm_g)
+     CALL json%add('system.basis.dFFT.nr1',dfftp%nr1)
+     CALL json%add('system.basis.dFFT.nr2',dfftp%nr2)
+     CALL json%add('system.basis.dFFT.nr3',dfftp%nr3)
+     CALL json%add('system.cell.a1:au',alat*at(1:3,1))
+     CALL json%add('system.cell.a2:au',alat*at(1:3,2))
+     CALL json%add('system.cell.a3:au',alat*at(1:3,3))
+     CALL json%add('system.cell.alat:au',alat)
+  ENDIF
   !
-  IF ( gamma_only ) THEN
-     WRITE( stdout, '(5x,"number of ks points=",i6)') nkstot
-     WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
-     DO ik = 1, nkstot
-        WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') ik, &
-             (xk (ipol, ik) , ipol = 1, 3) , wk (ik)
+  WRITE( stdout, '(5x,"number of ks points=",i6)') nkstot
+  IF( mpime == root ) CALL json%add('system.kpt.nkstot',nkstot)
+  WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
+  DO ik = 1, nkstot
+     WRITE( cik, '(i6)') ik 
+     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') ik, &
+          (xk (ipol, ik) , ipol = 1, 3) , wk (ik)
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',xkg(1:3))
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',wk(ik))
+  ENDDO
+  WRITE( stdout, '(/23x,"cryst. coord.")')
+  DO ik = 1, nkstot
+     WRITE( cik, '(i6)') ik 
+     DO ipol = 1, 3
+        xkg(ipol) = at(1,ipol)*xk(1,ik) + at(2,ipol)*xk(2,ik) + &
+                    at(3,ipol)*xk(3,ik)
+        ! xkg are the component in the crystal RL basis
      ENDDO
-     WRITE( stdout, '(/23x,"cryst. coord.")')
-     DO ik = 1, nkstot
-        DO ipol = 1, 3
-           xkg(ipol) = at(1,ipol)*xk(1,ik) + at(2,ipol)*xk(2,ik) + &
-                       at(3,ipol)*xk(3,ik)
-           ! xkg are the component in the crystal RL basis
-        ENDDO
-        WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
-             ik, (xkg (ipol) , ipol = 1, 3) , wk (ik)
-     ENDDO
-     WRITE( stdout, * )
-  ELSE
-     WRITE( stdout, '(5x,"number of ks points=",i6)') nkstot
-     WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
-     DO ik = 1, nkstot
-        WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') ik, &
-             (xk (ipol, ik) , ipol = 1, 3) , wk (ik)
-     ENDDO
-     WRITE( stdout, '(/23x,"cryst. coord.")')
-     DO ik = 1, nkstot
-        DO ipol = 1, 3
-           xkg(ipol) = at(1,ipol)*xk(1,ik) + at(2,ipol)*xk(2,ik) + &
-                       at(3,ipol)*xk(3,ik)
-           ! xkg are the component in the crystal RL basis
-        ENDDO
-        WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
-             ik, (xkg (ipol) , ipol = 1, 3) , wk (ik)
-     ENDDO
-     WRITE( stdout, * )
-  END IF
+     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
+          ik, (xkg (ipol) , ipol = 1, 3) , wk (ik)
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',xkg(1:3))
+  ENDDO
+  WRITE( stdout, * )
   !
   IF( mpime == root ) THEN
      OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )

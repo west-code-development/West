@@ -20,6 +20,7 @@ SUBROUTINE west_print_clocks( )
   USE mytime,        ONLY : nclock, clock_label, cputime, walltime, &
                         notrunning, called, t0cpu, t0wall
   USE westcom,       ONLY : logfile
+  USE mp_world,      ONLY : mpime, root
   !
   IMPLICIT NONE
   !
@@ -29,9 +30,10 @@ SUBROUTINE west_print_clocks( )
   INTEGER :: iunit, nmax
   REAL(DP), EXTERNAL :: scnds, cclock
   !
-  CALL json%initialize()
-  !
-  CALL json%load_file(filename=TRIM(logfile))
+  IF( mpime == root ) THEN 
+     CALL json%initialize()
+     CALL json%load_file(filename=TRIM(logfile))
+  ENDIF
   !
   DO n = 1, nclock
      !
@@ -56,17 +58,21 @@ SUBROUTINE west_print_clocks( )
      !
      nmax = called(n)
      !
-     CALL json%add('timing.'//TRIM(clock_label(n))//'.cpu',elapsed_cpu_time)
-     CALL json%add('timing.'//TRIM(clock_label(n))//'.wall',elapsed_wall_time)
-     CALL json%add('timing.'//TRIM(clock_label(n))//'.nocalls',nmax)
+     IF( mpime == root ) THEN
+        CALL json%add('timing.'//TRIM(clock_label(n))//'.cpu',elapsed_cpu_time)
+        CALL json%add('timing.'//TRIM(clock_label(n))//'.wall',elapsed_wall_time)
+        CALL json%add('timing.'//TRIM(clock_label(n))//'.nocalls',nmax)
+     ENDIF
      !
   ENDDO
   !
-  OPEN( NEWUNIT=iunit,FILE=TRIM(logfile))
-  CALL json%print_file( iunit )
-  CLOSE( iunit )
-  !
-  CALL json%destroy()
+  IF( mpime == root ) THEN
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile))
+     CALL json%print_file( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+  ENDIF
   !
   !
 END SUBROUTINE

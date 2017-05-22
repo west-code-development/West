@@ -33,6 +33,7 @@ SUBROUTINE west_print_clocks( )
   IF( mpime == root ) THEN 
      CALL json%initialize()
      CALL json%load_file(filename=TRIM(logfile))
+     CALL json%add('timing.unit','s')
   ENDIF
   !
   DO n = 1, nclock

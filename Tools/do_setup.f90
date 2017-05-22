@@ -115,7 +115,8 @@ SUBROUTINE do_setup
   CALL io_push_value('ecutrho [Ry]',ecutrho,20)
   IF( mpime == root ) CALL json%add('system.basis.ecutrho:ry',ecutrho)
   CALL io_push_es0('omega [au^3]',omega,20)
-  IF( mpime == root ) CALL json%add('system.cell.omega:au',omega)
+  IF( mpime == root ) CALL json%add('system.cell.units','a.u.')
+  IF( mpime == root ) CALL json%add('system.cell.omega',omega)
 ! IF ( gamma_only ) THEN
 !    auxi = npw
 !    CALL mp_sum(auxi,intra_bgrp_comm)
@@ -178,10 +179,10 @@ SUBROUTINE do_setup
   IF( mpime == root ) THEN 
      CALL json%add('system.basis.sFFT',(/ dffts%nr1, dffts%nr2, dffts%nr3 /) )
      CALL json%add('system.basis.pFFT',(/ dfftp%nr1, dfftp%nr2, dfftp%nr3 /) )
-     CALL json%add('system.cell.a1:au',alat*at(1:3,1))
-     CALL json%add('system.cell.a2:au',alat*at(1:3,2))
-     CALL json%add('system.cell.a3:au',alat*at(1:3,3))
-     CALL json%add('system.cell.alat:au',alat)
+     CALL json%add('system.cell.a1',alat*at(1:3,1))
+     CALL json%add('system.cell.a2',alat*at(1:3,2))
+     CALL json%add('system.cell.a3',alat*at(1:3,3))
+     CALL json%add('system.cell.alat',alat)
   ENDIF
   !
   WRITE( stdout, '(5x,"number of ks points=",i6)') nkstot

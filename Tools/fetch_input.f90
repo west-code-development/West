@@ -44,6 +44,8 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   CHARACTER(LEN=:),ALLOCATABLE :: cval
   REAL(DP) :: rval 
   INTEGER :: ival 
+  INTEGER,ALLOCATABLE :: ivec(:)
+  REAL(DP),ALLOCATABLE :: rvec(:)
   LOGICAL :: lval 
   INTEGER :: iunit
   ! 
@@ -159,10 +161,10 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         IF( found ) wfreq_calculation = cval  
         CALL json%get('wfreq_control.n_pdep_eigen_to_use', ival, found) 
         IF( found ) n_pdep_eigen_to_use = ival  
-        CALL json%get('wfreq_control.qp_bandrange(1)', rval, found) 
-        IF( found ) qp_bandrange(1) = rval  
-        CALL json%get('wfreq_control.qp_bandrange(2)', rval, found) 
-        IF( found ) qp_bandrange(2) = rval  
+        CALL json%get('wfreq_control.qp_bandrange', ivec, found) 
+        IF( found ) qp_bandrange(1:2) = ivec(:) 
+!        CALL json%get('wfreq_control.qp_bandrange(2)', rval, found) 
+!        IF( found ) qp_bandrange(2) = rval  
         CALL json%get('wfreq_control.macropol_calculation', cval, found) 
         IF( found ) macropol_calculation = cval  
         CALL json%get('wfreq_control.n_lanczos', ival, found) 
@@ -189,10 +191,10 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         IF( found ) div_kind_hf = ival  
         CALL json%get('wfreq_control.o_restart_time', rval, found) 
         IF( found ) o_restart_time = rval  
-        CALL json%get('wfreq_control.ecut_spectralf(1)', rval, found) 
-        IF( found ) ecut_spectralf(1) = rval  
-        CALL json%get('wfreq_control.ecut_spectralf(2)', rval, found) 
-        IF( found ) ecut_spectralf(2) = rval  
+        CALL json%get('wfreq_control.ecut_spectralf', rvec, found) 
+        IF( found ) ecut_spectralf(1:2) = rvec(1:2)  
+!        CALL json%get('wfreq_control.ecut_spectralf(2)', rval, found) 
+!        IF( found ) ecut_spectralf(2) = rval  
         CALL json%get('wfreq_control.n_spectralf', ival, found) 
         IF( found ) n_spectralf = ival  
      ENDIF
@@ -200,22 +202,22 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      IF ( ANY(driver(:)==4) ) THEN 
         CALL json%get('westpp_control.westpp_calculation', cval, found) 
         IF( found ) westpp_calculation = cval
-        CALL json%get('westpp_control.westpp_range(1)', rval, found) 
-        IF( found ) westpp_range(1) = rval  
-        CALL json%get('westpp_control.westpp_range(2)', rval, found) 
-        IF( found ) westpp_range(2) = rval  
+        CALL json%get('westpp_control.westpp_range', rvec, found) 
+        IF( found ) westpp_range(1:2) = rvec(1:2)  
+!        CALL json%get('westpp_control.westpp_range(2)', rval, found) 
+!        IF( found ) westpp_range(2) = rval  
         CALL json%get('westpp_control.westpp_format', cval, found) 
         IF( found ) westpp_format = cval
         CALL json%get('westpp_control.westpp_sign', lval, found) 
         IF( found ) westpp_sign = lval  
         CALL json%get('westpp_control.westpp_n_pdep_eigen_to_use', ival, found) 
         IF( found ) westpp_n_pdep_eigen_to_use = ival  
-        CALL json%get('westpp_control.westpp_r0(1)', rval, found) 
-        IF( found ) westpp_r0(1) = rval  
-        CALL json%get('westpp_control.westpp_r0(2)', rval, found) 
-        IF( found ) westpp_r0(2) = rval  
-        CALL json%get('westpp_control.westpp_r0(3)', rval, found) 
-        IF( found ) westpp_r0(3) = rval  
+        CALL json%get('westpp_control.westpp_r0', rvec, found) 
+        IF( found ) westpp_r0(1:3) = rvec(1:3)
+!        CALL json%get('westpp_control.westpp_r0(2)', rval, found) 
+!        IF( found ) westpp_r0(2) = rval  
+!        CALL json%get('westpp_control.westpp_r0(3)', rval, found) 
+!        IF( found ) westpp_r0(3) = rval  
         CALL json%get('westpp_control.westpp_nr', ival, found) 
         IF( found ) westpp_nr = ival  
         CALL json%get('westpp_control.westpp_rmax', rval, found) 
@@ -456,6 +458,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         CALL json%print_file( iunit )
         CLOSE( iunit )
         CALL json%destroy()
+        !
      ENDIF
      !
   ENDIF

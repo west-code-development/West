@@ -45,6 +45,7 @@ MODULE pdep_db
       USE pdep_io,              ONLY : pdep_merge_and_write_G 
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert 
+      USE json_module,          ONLY : json_file 
       !
       IMPLICIT NONE
       !
@@ -55,6 +56,9 @@ MODULE pdep_db
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iunout,global_j,local_j
       INTEGER :: ierr
+
+      TYPE(json_file) :: json 
+      INTEGER :: iunit      
       !
       ! MPI BARRIER
       !
@@ -65,71 +69,20 @@ MODULE pdep_db
       CALL start_clock('pdep_db')
       time_spent(1)=get_clock('pdep_db')
       !
-      ! 1)  CREATE THE INPUT FILE
-      !
       IF ( mpime == root ) THEN
          !
-         ! ... open XML descriptor
+         CALL json%initialize()
          !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_save_dir ) // '/' // TRIM("input-file.xml") , BINARY=.FALSE.,IERR=ierr )
+         CALL add_intput_parameters_to_json_file( 2,(/1,2/) , json )
+         ! 
+         CALL json%add('eigenvalues.ev',ev(1:n_pdep_eigen))
          !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      CALL errore( 'pdep_db', 'cannot open input-file.xml for writing', ierr )
-      !
-      IF ( mpime == root ) THEN  
+         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_save_dir ) // '/' // TRIM('wstat-save.json') )
+         CALL json%print_file( iunit )
+         CLOSE( iunit )
+         CALL json%destroy()
          !
-         CALL iotk_write_begin( iunout, "WSTAT_CONTROL" )
-         !
-         CALL iotk_write_dat( iunout, "wstat_calculation"        , wstat_calculation)
-         CALL iotk_write_dat( iunout, "n_pdep_eigen"             , n_pdep_eigen)
-         CALL iotk_write_dat( iunout, "n_pdep_times"             , n_pdep_times)
-         CALL iotk_write_dat( iunout, "n_pdep_maxiter"           , n_pdep_maxiter)
-         CALL iotk_write_dat( iunout, "n_dfpt_maxiter"           , n_dfpt_maxiter)
-         CALL iotk_write_dat( iunout, "n_pdep_read_from_file"    , n_pdep_read_from_file)
-         CALL iotk_write_dat( iunout, "trev_pdep"                , trev_pdep)
-         CALL iotk_write_dat( iunout, "trev_pdep_rel"            , trev_pdep_rel)
-         CALL iotk_write_dat( iunout, "tr2_dfpt"                 , tr2_dfpt)
-         CALL iotk_write_dat( iunout, "l_kinetic_only"           , l_kinetic_only)
-         CALL iotk_write_dat( iunout, "l_minimize_exx_if_active" , l_minimize_exx_if_active)
-         CALL iotk_write_dat( iunout, "l_use_ecutrho"            , l_use_ecutrho)
-         !
-         CALL iotk_write_end( iunout, "WSTAT_CONTROL"  )
-         !
-         ! ... close XML descriptor
-         !
-         CALL iotk_close_write( iunout )
-         !
-      END IF
-      !
-      ! 2) CREATE THE EIGENVALUE FILE
-      !
-      IF ( mpime == root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_save_dir ) // '/' // TRIM("dbs_eigenvalues.xml"),BINARY=.FALSE.,IERR=ierr)
-         !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      CALL errore( 'pdep_db', 'cannot open dbs_eigenvalues.xml file for writing', ierr )
-      !
-      IF ( mpime == root ) THEN  
-         !
-         CALL iotk_write_begin( iunout, "EIGENVALUES" )
-         CALL iotk_write_dat( iunout, "ndim", n_pdep_eigen )
-         CALL iotk_write_dat( iunout, "ev", ev(1:n_pdep_eigen))
-         CALL iotk_write_end( iunout, "EIGENVALUES" )
-         !
-         ! ... close XML descriptor
-         !
-         CALL iotk_close_write( iunout )
-         !
-      END IF
+      ENDIF
       !
       ! 3) CREATE THE EIGENVECTOR FILES
       !
@@ -180,6 +133,7 @@ MODULE pdep_db
       USE pdep_io,             ONLY : pdep_read_G_and_distribute
       USE io_push,             ONLY : io_push_bar
       USE distribution_center, ONLY : pert
+      USE json_module,          ONLY : json_file 
       !
       IMPLICIT NONE
       !
@@ -194,6 +148,8 @@ MODULE pdep_db
       INTEGER :: tmp_n_pdep_eigen
       INTEGER :: dime, iun, global_j, local_j
       REAL(DP),ALLOCATABLE :: tmp_ev(:)
+      LOGICAL :: found
+      TYPE(json_file) :: json 
       !
       ! MPI BARRIER
       !
@@ -211,29 +167,16 @@ MODULE pdep_db
       !
       ! 1)  READ THE INPUT FILE
       !
-      ierr = 0
       !
-      IF ( mpime==root ) THEN
+      IF ( mpime == root ) THEN
          !
-         ! ... open XML descriptor
+         CALL json%initialize()
+         CALL json%load_file( filename = TRIM( dirname ) // '/' // TRIM('wstat-save.json') )
+         ! 
+         CALL json%get('input.wstat_control.n_pdep_eigen', tmp_n_pdep_eigen, found) 
+         CALL json%get('eigenvalues.ev', tmp_ev, found) 
          !
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'input-file.xml' ), IERR = ierr )
-         !
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      IF ( ierr /=0 ) CALL errore( 'pdep_db', 'cannot open input-file.xml file for reading', ierr )
-      !
-      IF ( mpime==root ) THEN
-         !
-         CALL iotk_scan_begin( iun, "WSTAT_CONTROL" )
-         CALL iotk_scan_dat( iun, "n_pdep_eigen"         , tmp_n_pdep_eigen)
-         CALL iotk_scan_end( iun, "WSTAT_CONTROL"  )
-         !
-         ! ... close XML descriptor
-         !
-         CALL iotk_close_read( iun )
+         CALL json%destroy()
          !
       ENDIF
       !
@@ -248,41 +191,8 @@ MODULE pdep_db
          n_eigen_to_get = MIN(tmp_n_pdep_eigen,nglob_to_be_read)
       ENDIF
       !
-      ! 2)  READ THE EIGENVALUES FILE
-      !
       IF(.NOT.ALLOCATED(ev)) ALLOCATE(ev(n_eigen_to_get))
-      !
-      ierr = 0
-      !
-      IF ( mpime==root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'dbs_eigenvalues.xml' ), IERR = ierr )
-         !
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      IF ( ierr /=0 ) CALL errore( 'pdep_db', 'cannot open dbs_eigenvalues.xml file for reading', ierr )
-      !
-      IF ( mpime==root ) THEN
-         !
-         CALL iotk_scan_begin( iun, "EIGENVALUES" )
-         CALL iotk_scan_dat( iun, "ndim"     , dime)
-         ALLOCATE(tmp_ev(dime))
-         CALL iotk_scan_dat( iun, "ev"     , tmp_ev)
-         CALL iotk_scan_end( iun, "EIGENVALUES"  )
-         !
-         ! ... close XML descriptor
-         !
-         CALL iotk_close_read( iun )
-         ev(1:nglob_to_be_read) = tmp_ev(1:nglob_to_be_read)
-         DEALLOCATE(tmp_ev)
-         !
-      ENDIF
-      !
+      IF ( mpime==root ) ev(1:nglob_to_be_read) = tmp_ev(1:nglob_to_be_read)
       CALL mp_bcast( ev, root, world_comm )
       !
       ! 3)  READ THE EIGENVECTOR FILES

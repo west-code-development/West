@@ -29,11 +29,11 @@ SUBROUTINE west_print_clocks( )
   TYPE(json_file) :: json
   INTEGER :: iunit, nmax
   REAL(DP), EXTERNAL :: scnds, cclock
+  CHARACTER(20),EXTERNAL :: human_readable_time
   !
   IF( mpime == root ) THEN 
      CALL json%initialize()
      CALL json%load_file(filename=TRIM(logfile))
-     CALL json%add('timing.unit','s')
   ENDIF
   !
   DO n = 1, nclock
@@ -60,8 +60,10 @@ SUBROUTINE west_print_clocks( )
      nmax = called(n)
      !
      IF( mpime == root ) THEN
-        CALL json%add('timing.'//TRIM(clock_label(n))//'.cpu',elapsed_cpu_time)
-        CALL json%add('timing.'//TRIM(clock_label(n))//'.wall',elapsed_wall_time)
+        CALL json%add('timing.'//TRIM(clock_label(n))//'.cpu:sec',elapsed_cpu_time)
+        CALL json%add('timing.'//TRIM(clock_label(n))//'.cpu:hum',TRIM(human_readable_time(elapsed_cpu_time)))
+        CALL json%add('timing.'//TRIM(clock_label(n))//'.wall:sec',elapsed_wall_time)
+        CALL json%add('timing.'//TRIM(clock_label(n))//'.wall:hum',TRIM(human_readable_time(elapsed_wall_time)))
         CALL json%add('timing.'//TRIM(clock_label(n))//'.nocalls',nmax)
      ENDIF
      !
@@ -75,5 +77,30 @@ SUBROUTINE west_print_clocks( )
      CALL json%destroy()
   ENDIF
   !
+END SUBROUTINE
+!
+!-----------------------------------------------------------------------
+SUBROUTINE get_clock_called( label, ncalls )
+  !----------------------------------------------------------------------------
+  !
+  USE mytime,        ONLY : nclock, clock_label, called
+  !
+  IMPLICIT NONE
+  !
+  CHARACTER(LEN=*), INTENT(IN) :: label
+  INTEGER, INTENT(OUT) :: ncalls
+  !
+  INTEGER :: n
+  !
+  ncalls = 0 
+  !
+  DO n = 1, nclock
+     !
+     IF( label /= clock_label(n) ) CYCLE 
+     !
+     ncalls = called(n)
+     EXIT
+     !
+  ENDDO
   !
 END SUBROUTINE

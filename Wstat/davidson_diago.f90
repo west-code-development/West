@@ -77,7 +77,10 @@ SUBROUTINE davidson_diago_gamma ( )
   !
   INTEGER :: il1,il2,ig1,ig2,i
   REAL(DP) :: time_spent(2)
+  INTEGER :: sternop_ncalls(2)
   CHARACTER(LEN=8) :: iter_label
+  REAL(DP) :: pccg_res_tr2
+  INTEGER :: dfpt_dim, diago_dim
   !
   REAL(DP), EXTERNAL :: GET_CLOCK
   !
@@ -89,6 +92,7 @@ SUBROUTINE davidson_diago_gamma ( )
   !
   CALL start_clock( 'chidiago' )
   time_spent(1)=get_clock( 'chidiago' )
+  CALL get_clock_called( 'stern' , sternop_ncalls(1) )
   !
   ! ... DISTRIBUTE nvecx
   !
@@ -165,10 +169,12 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      CALL do_mgs( dvg, 1, nvec)
      !
+     dfpt_dim = nbase
+     diago_dim = nbase
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, &
          & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 1/2')")&
-         & 'starting', nbase, nbase
+         & 'starting', dfpt_dim, diago_dim
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
      ! Apply operator with DFPT
@@ -182,7 +188,8 @@ SUBROUTINE davidson_diago_gamma ( )
         mloc = mloc + 1
      ENDDO
      !
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), -1._DP ) 
+     pccg_res_tr2 = -1._DP
+     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      dav_iter = -1
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
@@ -199,10 +206,12 @@ SUBROUTINE davidson_diago_gamma ( )
      dvg = dng
      CALL do_mgs( dvg, 1, nvec)
      !
+     dfpt_dim = nbase
+     diago_dim = nbase
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, &
          & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 2/2')")&
-         & 'starting', nbase, nbase
+         & 'starting', dfpt_dim, diago_dim
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
      ! Apply operator with DFPT
@@ -216,7 +225,8 @@ SUBROUTINE davidson_diago_gamma ( )
         mloc = mloc + 1
      ENDDO
      !
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), MIN(0.01_DP,1000000._DP*tr2_dfpt) ) 
+     pccg_res_tr2 = MIN(0.01_DP,1000000._DP*tr2_dfpt)
+     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      ! 
      ! </ EXTRA STEP >
      !
@@ -228,11 +238,12 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
+     CALL get_clock_called( 'stern' , sternop_ncalls(2) )
      ev(1:nvec) = ew(1:nvec)
      !
      ! Write the eigenvalues & time spent
      !
-     CALL output_ev_and_time(nvec,ev,time_spent)
+     CALL output_ev_and_time(nvec,ev,conv,time_spent,sternop_ncalls,pccg_res_tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
      dav_iter = 0
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
@@ -247,12 +258,15 @@ SUBROUTINE davidson_diago_gamma ( )
   iterate: DO kter = 1, n_pdep_maxiter
      !
      time_spent(1) = get_clock( 'chidiago' )
+     CALL get_clock_called( 'stern' , sternop_ncalls(1) )
      !
      dav_iter = dav_iter + 1
      !
+     dfpt_dim = notcnv
+     diago_dim = nbase+notcnv
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, "(   5x,'#     Iteration = | ', i8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
-         &dav_iter, notcnv, nbase+notcnv
+         &dav_iter, dfpt_dim, diago_dim
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
      ALLOCATE( ishift( nvecx ), STAT=ierr )
@@ -306,7 +320,8 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! Apply operator with DFPT
      !
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), tr2_dfpt ) 
+     pccg_res_tr2 = tr2_dfpt
+     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      !
      ! ... update the reduced hamiltonian
      !
@@ -323,6 +338,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
+     CALL get_clock_called( 'stern' , sternop_ncalls(2) )
      !
      ! ... test for convergence
      !
@@ -336,7 +352,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! Write the eigenvalues & time spent
      !
-     CALL output_ev_and_time(nvec,ev,time_spent)
+     CALL output_ev_and_time(nvec,ev,conv,time_spent,sternop_ncalls,pccg_res_tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
      !
      ! ... if overall convergence has been achieved, or the dimension of
      ! ... the reduced basis set is becoming too large, or in any case if
@@ -358,7 +374,7 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            CALL pdep_db_write( )
            CALL wstat_restart_clear()
-           CALL output_a_report(-1)
+           !CALL output_a_report(-1)
            !
            WRITE(iter_label,'(i8)') kter
            CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps") 
@@ -405,7 +421,7 @@ SUBROUTINE davidson_diago_gamma ( )
      END IF
      !
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
-     CALL output_a_report(dav_iter)
+     !CALL output_a_report(dav_iter)
      !
   END DO iterate
   !
@@ -475,7 +491,10 @@ SUBROUTINE davidson_diago_k ( )
   !
   INTEGER :: il1,il2,ig1,ig2,i
   REAL(DP) :: time_spent(2)
+  INTEGER :: sternop_ncalls(2)
   CHARACTER(LEN=8) :: iter_label
+  REAL(DP) :: pccg_res_tr2
+  INTEGER :: dfpt_dim, diago_dim
   !
   REAL(DP), EXTERNAL :: GET_CLOCK
   !
@@ -487,6 +506,7 @@ SUBROUTINE davidson_diago_k ( )
   !
   CALL start_clock( 'chidiago' )
   time_spent(1)=get_clock( 'chidiago' )
+  CALL get_clock_called( 'stern' , sternop_ncalls(1) )
   !
   ! ... DISTRIBUTE nvecx
   !
@@ -563,10 +583,12 @@ SUBROUTINE davidson_diago_k ( )
      !
      CALL do_mgs( dvg, 1, nvec)
      !
+     dfpt_dim = nbase
+     diago_dim = nbase
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, &
          & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 1/2')")&
-         & 'starting', nbase, nbase
+         & 'starting', dfpt_dim, diago_dim
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
      ! Apply operator with DFPT
@@ -580,7 +602,8 @@ SUBROUTINE davidson_diago_k ( )
         mloc = mloc + 1
      ENDDO
      !
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), -1._DP ) 
+     pccg_res_tr2 = -1._DP
+     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      dav_iter = -1
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
@@ -597,10 +620,12 @@ SUBROUTINE davidson_diago_k ( )
      dvg = dng
      CALL do_mgs( dvg, 1, nvec)
      !
+     dfpt_dim = nbase
+     diago_dim = nbase
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, &
          & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 2/2')")&
-         & 'starting', nbase, nbase
+         & 'starting', dfpt_dim, diago_dim
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
      ! Apply operator with DFPT
@@ -614,7 +639,8 @@ SUBROUTINE davidson_diago_k ( )
         mloc = mloc + 1
      ENDDO
      !
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), MIN(0.01_DP,1000000._DP*tr2_dfpt) ) 
+     pccg_res_tr2 = MIN(0.01_DP,1000000._DP*tr2_dfpt)
+     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      ! 
      ! </ EXTRA STEP >
      !
@@ -626,11 +652,12 @@ SUBROUTINE davidson_diago_k ( )
      !
      CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
+     CALL get_clock_called( 'stern' , sternop_ncalls(2) )
      ev(1:nvec) = ew(1:nvec)
      !
      ! Write the eigenvalues & time spent
      !
-     CALL output_ev_and_time(nvec,ev,time_spent)
+     CALL output_ev_and_time(nvec,ev,conv,time_spent,sternop_ncalls,pccg_res_tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
      dav_iter = 0
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
@@ -645,9 +672,12 @@ SUBROUTINE davidson_diago_k ( )
   iterate: DO kter = 1, n_pdep_maxiter
      !
      time_spent(1) = get_clock( 'chidiago' )
+     CALL get_clock_called( 'stern' , sternop_ncalls(1) )
      !
      dav_iter = dav_iter + 1
      !
+     dfpt_dim = notcnv
+     diago_dim = nbase+notcnv
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, "(   5x,'#     Iteration = | ', i8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
          &dav_iter, notcnv, nbase+notcnv
@@ -704,7 +734,8 @@ SUBROUTINE davidson_diago_k ( )
      !
      ! Apply operator with DFPT
      !
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), tr2_dfpt ) 
+     pccg_res_tr2 = tr2_dfpt
+     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      !
      ! ... update the reduced hamiltonian
      !
@@ -721,6 +752,7 @@ SUBROUTINE davidson_diago_k ( )
      !
      CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
+     CALL get_clock_called( 'stern' , sternop_ncalls(2) )
      !
      ! ... test for convergence
      !
@@ -734,7 +766,7 @@ SUBROUTINE davidson_diago_k ( )
      !
      ! Write the eigenvalues & time spent
      !
-     CALL output_ev_and_time(nvec,ev,time_spent)
+     CALL output_ev_and_time(nvec,ev,conv,time_spent,sternop_ncalls,pccg_res_tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
      !
      ! ... if overall convergence has been achieved, or the dimension of
      ! ... the reduced basis set is becoming too large, or in any case if
@@ -756,7 +788,7 @@ SUBROUTINE davidson_diago_k ( )
            !
            CALL pdep_db_write( )
            CALL wstat_restart_clear()
-           CALL output_a_report(-1)
+           !CALL output_a_report(-1)
            !
            WRITE(iter_label,'(i8)') kter
            CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps") 
@@ -802,7 +834,7 @@ SUBROUTINE davidson_diago_k ( )
      END IF
      !
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
-     CALL output_a_report(dav_iter)
+     !!CALL output_a_report(dav_iter)
      !
   END DO iterate
   !
@@ -1062,90 +1094,145 @@ END SUBROUTINE
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
-SUBROUTINE output_a_report(iteration)
+!SUBROUTINE output_a_report(iteration)
+!   !
+!   USE json_module,  ONLY : json_file
+!   USE kinds,        ONLY : DP
+!   USE westcom,      ONLY : n_pdep_eigen,ev,conv,wstat_output_dir,logfile
+!   USE west_io ,     ONLY : serial_table_output
+!   USE mp_world,     ONLY : mpime,root
+!   !
+!   IMPLICIT NONE
+!   !
+!   TYPE(json_file) :: json
+!   INTEGER,INTENT(IN) :: iteration
+!   CHARACTER(LEN=9) :: pref
+!   INTEGER :: ip, ierr, iunit
+!   !REAL(DP) :: out_tab(n_pdep_eigen,3)
+!   !
+!   INTEGER,ALLOCATABLE :: converged(:)
+!   !
+!   ALLOCATE( converged(n_pdep_eigen) )
+!   !
+!   converged = 0
+!   DO ip=1,n_pdep_eigen
+!      !out_tab(ip,1) = REAL(ip,DP)
+!      !ipert(ip) = ip 
+!      !out_tab(ip,2) = ev(ip)
+!      !out_tab(ip,3) = 0._DP
+!      !IF(conv(ip)) out_tab(ip,3) = 1._DP
+!      IF(conv(ip)) converged(ip) = 1
+!   ENDDO
+!   IF(iteration>=0) THEN 
+!      WRITE(pref,"('itr_',i5.5)") iteration
+!   ELSE
+!      pref='converged'
+!   ENDIF
+!   !CALL serial_table_output(mpime==root,4000,'wstat.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
+!   !
+!   IF( mpime == root ) THEN 
+!      !
+!      CALL json%initialize()
+!      !
+!      CALL json%load_file(filename=TRIM(logfile))
+!      !
+!      CALL json%add('output.davitr'//TRIM(pref)//.'egvl',  ev        ( 1:n_pdep_eigen ) )
+!      CALL json%add('output.davitr'//TRIM(pref)//.'conv',  converged ( 1:n_pdep_eigen ) )
+!      !
+!      !OPEN(UNIT=4000,FILE=TRIM(ADJUSTL(wstat_output_dir))//"/o-wstat."//TRIM(ADJUSTL(pref))//".json",IOSTAT=ierr) 
+!      !CALL json%print_file( 4000 )
+!      !CLOSE( 4000, IOSTAT=ierr )
+!      !
+!      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+!      CALL json%print_file( iunit )
+!      CLOSE( iunit )
+!      !
+!      CALL json%destroy()
+!      !
+!   ENDIF 
+!   !
+!   !DEALLOCATE( iprt ) 
+!   DEALLOCATE( converged ) 
+!   !
+!END SUBROUTINE
+!
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!
+SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
    !
-   USE json_module,  ONLY : json_file
-   USE kinds,        ONLY : DP
-   USE westcom,      ONLY : n_pdep_eigen,ev,conv,wstat_output_dir
-   USE west_io ,     ONLY : serial_table_output
-   USE mp_world,     ONLY : mpime,root
+   USE json_module,          ONLY : json_file
+   USE kinds,                ONLY : DP
+   USE io_global,            ONLY : stdout
+   USE io_push,              ONLY : io_push_title,io_push_bar
+   USE mp_world,             ONLY : mpime, root
+   USE westcom,              ONLY : logfile
    !
    IMPLICIT NONE
    !
    TYPE(json_file) :: json
-   INTEGER,INTENT(IN) :: iteration
-   CHARACTER(LEN=9) :: pref
-   INTEGER :: ip, ierr
-   !REAL(DP) :: out_tab(n_pdep_eigen,3)
-   !
-   INTEGER,ALLOCATABLE :: ipert(:), converged(:)
-   !
-   ALLOCATE( ipert(n_pdep_eigen), converged(n_pdep_eigen) )
-   !
-   converged = 0
-   DO ip=1,n_pdep_eigen
-      !out_tab(ip,1) = REAL(ip,DP)
-      ipert(ip) = ip 
-      !out_tab(ip,2) = ev(ip)
-      !out_tab(ip,3) = 0._DP
-      !IF(conv(ip)) out_tab(ip,3) = 1._DP
-      IF(conv(ip)) converged(ip) = 1
-   ENDDO
-   IF(iteration>=0) THEN 
-      WRITE(pref,"('itr_',i5.5)") iteration
-   ELSE
-      pref='converged'
-   ENDIF
-   !CALL serial_table_output(mpime==root,4000,'wstat.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
-   !
-   IF( mpime == root ) THEN 
-      !
-      CALL json%initialize()
-      !
-      CALL json%add('output.iprt',       ipert     ( 1:n_pdep_eigen ) )
-      CALL json%add('output.eigenvalue', ev        ( 1:n_pdep_eigen ) )
-      CALL json%add('output.conv',       converged ( 1:n_pdep_eigen ) )
-      !
-      OPEN(UNIT=4000,FILE=TRIM(ADJUSTL(wstat_output_dir))//"/o-wstat."//TRIM(ADJUSTL(pref))//".json",IOSTAT=ierr) 
-      CALL json%print_file( 4000 )
-      CLOSE( 4000, IOSTAT=ierr )
-      !
-      CALL json%destroy()
-      !
-   ENDIF 
-   !
-   DEALLOCATE( ipert, converged ) 
-   !
-END SUBROUTINE
-!
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!
-SUBROUTINE output_ev_and_time(nvec,ev,time)
-   !
-   USE kinds,                ONLY : DP
-   USE io_global,            ONLY : stdout
-   USE io_push,              ONLY : io_push_title,io_push_bar
-   !
-   IMPLICIT NONE
-   !
    INTEGER,INTENT(IN) :: nvec
-   REAL(DP),INTENT(IN) :: ev(nvec)
+   REAL(DP),INTENT(IN) :: ev_(nvec)
+   LOGICAL,INTENT(IN) :: conv_(nvec)
    REAL(DP),INTENT(IN) :: time(2)
+   INTEGER,INTENT(IN) :: sternop(2)
+   REAL(DP),INTENT(IN) :: tr2
+   INTEGER,INTENT(IN) :: dav_iter, notcnv, dfpt_dim, diago_dim
    !
-   INTEGER :: i,j
+   INTEGER :: i,j, ip
    CHARACTER(20),EXTERNAL :: human_readable_time
+   CHARACTER(LEN=6) :: cdav
+   INTEGER :: ndav,iunit
+   LOGICAL :: found
    !
    WRITE(stdout,'(7X,a)') ' '
    DO i = 1, INT( nvec / 9 )
-      WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*(i-1)+1,9*i)
+      WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
    ENDDO
-   IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*INT(nvec/9)+1,nvec)
+   IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
    WRITE(stdout,'(7X,a)') ' '
    CALL io_push_bar()
    WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
    TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
    CALL io_push_bar()
+   !
+   IF( mpime == root ) THEN 
+      !
+      CALL json%initialize()
+      !
+      CALL json%load_file(filename=TRIM(logfile))
+      !
+      CALL json%get('output.ndav', ndav, found )
+      !
+      IF( found ) THEN 
+         ndav = ndav+1
+      ELSE 
+         ndav = 1
+      ENDIF
+      !
+      WRITE(cdav,'(i6)') ndav
+      !
+      CALL json%update('output.ndav', ndav, found )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').ev',  ev_        ( 1:nvec ) )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_ ( 1:nvec ) )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2) )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))) )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))) )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', sternop(2)-sternop(1) )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2 )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim )
+      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
+      !
+      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+      CALL json%print_file( iunit )
+      CLOSE( iunit )
+      !
+      CALL json%destroy()
+      !
+   ENDIF 
    !
 END SUBROUTINE

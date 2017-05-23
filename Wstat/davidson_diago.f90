@@ -45,7 +45,7 @@ SUBROUTINE davidson_diago_gamma ( )
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwq0x,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged 
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE write_xml,            ONLY : wstat_xml_dump
+!  USE write_xml,            ONLY : wstat_xml_dump
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm
@@ -425,7 +425,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
   END DO iterate
   !
-  CALL wstat_xml_dump( )
+!  CALL wstat_xml_dump( )
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
@@ -459,7 +459,7 @@ SUBROUTINE davidson_diago_k ( )
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwq0x,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged 
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE write_xml,            ONLY : wstat_xml_dump
+!  USE write_xml,            ONLY : wstat_xml_dump
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm
@@ -838,7 +838,7 @@ SUBROUTINE davidson_diago_k ( )
      !
   END DO iterate
   !
-  CALL wstat_xml_dump( )
+!  CALL wstat_xml_dump( )
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
@@ -1203,7 +1203,7 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
       !
       CALL json%load_file(filename=TRIM(logfile))
       !
-      CALL json%get('output.ndav', ndav, found )
+      CALL json%get('davidson.ndav', ndav, found )
       !
       IF( found ) THEN 
          ndav = ndav+1
@@ -1213,19 +1213,19 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
       !
       WRITE(cdav,'(i6)') ndav
       !
-      CALL json%update('output.ndav', ndav, found )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').ev',  ev_        ( 1:nvec ) )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_ ( 1:nvec ) )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2) )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))) )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))) )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', sternop(2)-sternop(1) )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2 )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim )
-      CALL json%add('output.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
+      CALL json%update('davidson.ndav', ndav, found )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').ev',  ev_        ( 1:nvec ) )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_ ( 1:nvec ) )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2) )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))) )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))) )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', sternop(2)-sternop(1) )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2 )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim )
+      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
       !
       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
       CALL json%print_file( iunit )

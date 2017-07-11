@@ -347,14 +347,19 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      sigma_sc_eks      = sigma_cor_in
      CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
      !
-     WRITE(stdout,"(/,5X)") 
+     WRITE(stdout,"(5X)")  
      CALL io_push_bar()
-     WRITE(stdout,"(5X,'Iter: ',i6.6,', QP energies [eV]')") 0
+     WRITE(stdout,"(5X,'Iter: ',i6.6)") 0 
+     WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
      CALL io_push_bar()
-     WRITE(stdout,"(5X,6f14.6)") en(:,:,2) * rytoev
+     DO iks = 1, nks
+        DO ib = qp_bandrange(1), qp_bandrange(2)
+           WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, en(ib,iks,2) * rytoev, .false. 
+        ENDDO
+     ENDDO
      CALL io_push_bar()
      !
-     ! nth step of the secan solver
+     ! nth step of the secant solver
      !
      l_conv = .FALSE.
      notconv = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
@@ -382,13 +387,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            ENDDO
         ENDDO
         !
-        WRITE(stdout,"(/,5X)") 
-        CALL io_push_bar()
-        WRITE(stdout,"(5X,'Iter: ',i6.6,', QP energies [eV]')") ifixed
-        CALL io_push_bar()
-        WRITE(stdout,"(5X,6f14.6)") qp_energy(:,:) * rytoev
-        CALL io_push_bar()
-        !
         ! Estimate l_conv
         !
         DO iks = 1, nks
@@ -396,6 +394,18 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               l_conv(ib,iks) = ( ABS( qp_energy(ib,iks) - en(ib,iks,2) ) < trev_secant ) 
            ENDDO
         ENDDO
+        !
+        WRITE(stdout,"(5X)")  
+        CALL io_push_bar()
+        WRITE(stdout,"(5X,'Iter: ',i6.6)") ifixed
+        WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
+        CALL io_push_bar()
+        DO iks = 1, nks
+           DO ib = qp_bandrange(1), qp_bandrange(2)
+              WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, qp_energy(ib,iks) * rytoev, l_conv(ib,iks) 
+           ENDDO
+        ENDDO
+        CALL io_push_bar()
         !
         ! Count the number of notconverged QP energies
         !
@@ -422,9 +432,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            EXIT
            !
         ELSE
-           CALL io_push_bar()
-           WRITE(stdout,'(5x,"Number of unconverged QP. = ",i12)') notconv
-           CALL io_push_bar()
+           !CALL io_push_bar()
+           !WRITE(stdout,'(5x,"Number of unconverged QP. = ",i12)') notconv
+           !CALL io_push_bar()
            CALL output_eqp_report(ifixed,en(:,:,2),qp_energy,sc(:,:,2))
            !
         ENDIF
@@ -881,14 +891,19 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      sigma_sc_eks      = sigma_cor_in
      CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
      !
-     WRITE(stdout,"(/,5X)") 
+     WRITE(stdout,"(5X)")  
      CALL io_push_bar()
-     WRITE(stdout,"(5X,'Iter: ',i6.6,', QP energies [eV]')") 0
+     WRITE(stdout,"(5X,'Iter: ',i6.6)") 0 
+     WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
      CALL io_push_bar()
-     WRITE(stdout,"(5X,6f14.6)") en(:,:,2) * rytoev
+     DO iks = 1, nks
+        DO ib = qp_bandrange(1), qp_bandrange(2)
+           WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, en(ib,iks,2) * rytoev, .false. 
+        ENDDO
+     ENDDO
      CALL io_push_bar()
      !
-     ! nth step of the secan solver
+     ! nth step of the secant solver
      !
      l_conv = .FALSE.
      notconv = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
@@ -916,13 +931,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            ENDDO
         ENDDO
         !
-        WRITE(stdout,"(/,5X)") 
-        CALL io_push_bar()
-        WRITE(stdout,"(5X,'Iter: ',i6.6,', QP energies [eV]')") ifixed
-        CALL io_push_bar()
-        WRITE(stdout,"(5X,6f14.6)") qp_energy(:,:) * rytoev
-        CALL io_push_bar()
-        !
         ! Estimate l_conv
         !
         DO iks = 1, nks
@@ -930,6 +938,18 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
               l_conv(ib,iks) = ( ABS( qp_energy(ib,iks) - en(ib,iks,2) ) < trev_secant ) 
            ENDDO
         ENDDO
+        !
+        WRITE(stdout,"(5X)")  
+        CALL io_push_bar()
+        WRITE(stdout,"(5X,'Iter: ',i6.6)") ifixed
+        WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
+        CALL io_push_bar()
+        DO iks = 1, nks
+           DO ib = qp_bandrange(1), qp_bandrange(2)
+              WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, qp_energy(ib,iks) * rytoev, l_conv(ib,iks) 
+           ENDDO
+        ENDDO
+        CALL io_push_bar()
         !
         ! Count the number of notconverged QP energies
         !
@@ -954,9 +974,9 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            CALL io_push_title("CONVERGENCE ACHIEVED !!!")
            EXIT
         ELSE
-           CALL io_push_bar()
-           WRITE(stdout,'(5x,"Number of unconverged QP. = ",i12)') notconv
-           CALL io_push_bar()
+           !CALL io_push_bar()
+           !WRITE(stdout,'(5x,"Number of unconverged QP. = ",i12)') notconv
+           !CALL io_push_bar()
            CALL output_eqp_report(ifixed,en(:,:,2),qp_energy,sc(:,:,2))
         ENDIF
         !

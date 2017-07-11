@@ -81,7 +81,8 @@ MODULE pdep_io
          OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
          WRITE( iunit, '(a)' ) '{'
          WRITE( iunit, '(a,i0,a)' ) '"meta" : { "readme" : "eigenpotential", "type" : "complex double", "space" : "G", "ndim" : ', & 
-                               ndim, ', "code" : "base64", '//TRIM(endian)//' }, "data" : ' 
+                               ndim, ', "code" : "base64", '//TRIM(endian)//' }'
+         WRITE( iunit, '(a)') ', "data" : ' 
          WRITE( iunit, '(a)' ) '"'//charbase64//'"'
          WRITE( iunit, '(a)' ) '}'
          CLOSE( iunit ) 
@@ -126,9 +127,10 @@ MODULE pdep_io
       TYPE(json_file) :: json
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr,ig
+      CHARACTER(LEN=1000) :: line
       CHARACTER(LEN=:),ALLOCATABLE :: charbase64
       CHARACTER(LEN=:),ALLOCATABLE :: endian
-      INTEGER :: nbytes, ndim, iunit
+      INTEGER :: nbytes, ndim, iunit, nlen
       LOGICAL :: found, isle
       !
       ! Resume all components 
@@ -143,16 +145,35 @@ MODULE pdep_io
          !
          ndim = npwq0_g
          nbytes = SIZEOF(tmp_vec(1)) * ndim
+         nlen = lenbase64(nbytes)
          !CALL get_lenbase64( nbytes, lenbase64 ) 
          !ALLOCATE(CHARACTER(LEN=lenbase64) :: charbase64)
          !
          IF(me_bgrp==root_bgrp) THEN 
             !
-            CALL json%initialize()
-            CALL json%load_file( filename = TRIM(fname) )
+            ALLOCATE(CHARACTER(LEN=(nlen+2)) :: charbase64)
             !
+            OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
+            READ( iunit, * ) 
+            READ( iunit, '(a)' ) line 
+            READ( iunit, * ) 
+            READ( iunit, '(a)' ) charbase64
+            CLOSE( iunit )
+            CALL base64_decode_complex(charbase64(2:(nlen+1)), ndim, tmp_vec(1:ndim)) 
+            !
+            CALL json%load_from_string("{"//TRIM(line)//"}")
             CALL json%get('meta.islittleendian', isle, found)
-            CALL json%get('data', charbase64, found)
+            !
+          ! CALL json%initialize()
+          ! CALL json%load_file( filename = TRIM(fname) )
+          ! !
+          ! CALL json%get('meta.islittleendian', isle, found)
+          ! CALL json%get('data', charbase64, found)
+          ! !
+            CALL json%destroy()
+          ! CALL base64_decode_complex(charbase64, ndim, tmp_vec(1:ndim)) 
+            !
+            DEALLOCATE( charbase64 )
             !
             ! ... open XML descriptor
             !
@@ -163,11 +184,7 @@ MODULE pdep_io
             !CALL iotk_scan_end( iun, 'PDEP_GSPACE' )
             !CALL iotk_close_read( iun )
             !
-            CALL json%destroy()
-            !
-            CALL base64_decode_complex(charbase64, ndim, tmp_vec(1:ndim)) 
             IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
-            DEALLOCATE( charbase64 )
             !
          END IF
          !

@@ -15,10 +15,12 @@ MODULE pdep_io
   !----------------------------------------------------------------------------
   !
   USE iotk_module
-  USE kinds,       ONLY : DP
-  USE mp_global,   ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
-  USE westcom,     ONLY : npwq0, npwq0_g, npwq0x
-  USE gvect,       ONLY : ig_l2g
+  USE kinds,        ONLY : DP
+  USE mp_global,    ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
+  USE westcom,      ONLY : npwq0, npwq0_g, npwq0x
+  USE gvect,        ONLY : ig_l2g
+  USE json_module,  ONLY : json_file
+  USE base64_module 
   !
   IMPLICIT NONE
   !
@@ -40,10 +42,12 @@ MODULE pdep_io
       CHARACTER(*), INTENT(IN) :: fname
       COMPLEX(DP), INTENT(IN) :: pdepg(npwq0x)
       !
-      ! Scratch
+      ! Workspace
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr
+      CHARACTER(LEN=:),ALLOCATABLE :: charbase64
+      INTEGER :: nbytes, ndim, iunit
       !
       !
       IF(my_pool_id.NE.0) RETURN
@@ -62,14 +66,33 @@ MODULE pdep_io
          !
          ! ... open XML descriptor
          !
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_write( iun, FILE = TRIM(fname), BINARY = .TRUE.)
-         CALL iotk_write_begin( iun, 'PDEP_GSPACE' )
-         CALL iotk_write_dat( iun, "ndim" , npwq0_g )
-         CALL iotk_write_dat( iun, "pdep" , tmp_vec(1:npwq0_g) )
-         CALL iotk_write_end( iun, 'PDEP_GSPACE' )
+         ndim = npwq0_g
+         nbytes = SIZEOF(tmp_vec(1)) * ndim
+!         CALL get_lenbase64( nbytes, lenbase64 ) 
+         ALLOCATE(CHARACTER(LEN=lenbase64(nbytes)) :: charbase64)
+         !IF (lbigendian) CALL base64_bytesswap_complex(nbytes,tmp_vec(1:ndim))
+         CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64) 
          !
-         CALL iotk_close_write( iun )
+         OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
+         IF( isbigendian() ) THEN 
+            WRITE( iunit, '(a,i0,a)'  ) '{ "ndim" : ', ndim, ', "isbigendian" : true, "kind" : "complex", "array" :'
+         ELSE
+            WRITE( iunit, '(a,i0,a)'  ) '{ "ndim" : ', ndim, ', "isbigendian" : false, "kind" : "complex", "array" :'
+         ENDIF
+         WRITE( iunit, '(a)' ) '"'//charbase64//'"'
+         WRITE( iunit, '(a)' ) '}'
+         CLOSE( iunit ) 
+         !
+         DEALLOCATE( charbase64 )
+         !  
+         !CALL iotk_free_unit( iun, ierr )
+         !CALL iotk_open_write( iun, FILE = TRIM(fname), BINARY = .TRUE.)
+         !CALL iotk_write_begin( iun, 'PDEP_GSPACE' )
+         !CALL iotk_write_dat( iun, "ndim" , npwq0_g )
+         !CALL iotk_write_dat( iun, "pdep" , tmp_vec(1:npwq0_g) )
+         !CALL iotk_write_end( iun, 'PDEP_GSPACE' )
+         !
+         !CALL iotk_close_write( iun )
          !
       END IF
       !
@@ -88,36 +111,59 @@ MODULE pdep_io
       USE mp_wave,      ONLY : splitwf
       USE mp,           ONLY : mp_bcast
       USE mp_global,    ONLY : intra_bgrp_comm
+      USE base64_module
       !
       ! I/O
       !    
       CHARACTER(*), INTENT(IN) :: fname
       COMPLEX(DP), INTENT(OUT) :: pdepg(npwq0x)
       !
-      ! Scratch
+      ! Workspace
       !
+      TYPE(json_file) :: json
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr,ig
+      CHARACTER(LEN=:),ALLOCATABLE :: charbase64
+      INTEGER :: nbytes, ndim, iunit
+      LOGICAL :: found, isbe
       !
       ! Resume all components 
       !
       ALLOCATE( tmp_vec(npwq0_g) )
       tmp_vec=0._DP
       pdepg=0._DP
+      !
       IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
          !
          ! ONLY ROOT W/IN BGRP READS
          !
+         ndim = npwq0_g
+         nbytes = SIZEOF(tmp_vec(1)) * ndim
+         !CALL get_lenbase64( nbytes, lenbase64 ) 
+         !ALLOCATE(CHARACTER(LEN=lenbase64) :: charbase64)
+         !
          IF(me_bgrp==root_bgrp) THEN 
+            !
+            CALL json%initialize()
+            CALL json%load_file( filename = TRIM(fname) )
+            !
+            CALL json%get('isbigendian', isbe, found)
+            CALL json%get('array', charbase64, found)
             !
             ! ... open XML descriptor
             !
-            CALL iotk_free_unit( iun, ierr )
-            CALL iotk_open_read( iun, FILE = TRIM(fname), BINARY = .TRUE., IERR = ierr)
-            CALL iotk_scan_begin( iun, 'PDEP_GSPACE' )
-            CALL iotk_scan_dat( iun, "pdep" , tmp_vec(1:npwq0_g) )
-            CALL iotk_scan_end( iun, 'PDEP_GSPACE' )
-            CALL iotk_close_read( iun )
+            !CALL iotk_free_unit( iun, ierr )
+            !CALL iotk_open_read( iun, FILE = TRIM(fname), BINARY = .TRUE., IERR = ierr)
+            !CALL iotk_scan_begin( iun, 'PDEP_GSPACE' )
+            !CALL iotk_scan_dat( iun, "pdep" , tmp_vec(1:npwq0_g) )
+            !CALL iotk_scan_end( iun, 'PDEP_GSPACE' )
+            !CALL iotk_close_read( iun )
+            !
+            CALL json%destroy()
+            !
+            CALL base64_decode_complex(charbase64, ndim, tmp_vec(1:ndim)) 
+            IF (isbigendian() .NEQV. isbe) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
+            DEALLOCATE( charbase64 )
             !
          END IF
          !

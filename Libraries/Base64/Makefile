@@ -7,19 +7,10 @@ MODFLAGS= $(MOD_FLAG).
 IFLAGS=
 
 BASE64_OBJS = \
-Base64.o \
-Base64Transcoder.o \
-Base64Module.o
+cbase64.o \
+base64module.o
 
-.SUFFIXES : .o .c .f .f90 .C 
-.C.o:
-	$(CC) $(CFLAGS) -c $< -lsdtc++ 
-
-#all : title tldeps libbase64.a
 all : title libbase64.a
-
-#tldeps:
-#	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 libbase64.a : $(BASE64_OBJS)
 	$(AR) $(ARFLAGS) $@ $?

@@ -35,6 +35,7 @@ CONTAINS
     USE io_files,        ONLY : crash_file, nd_nmbr
     USE mp_images,       ONLY : me_image, my_image_id, root_image, nimage
     USE westcom,         ONLY : savedir, logfile, outdir, west_prefix 
+    USE base64_module,   ONLY : base64_init 
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
@@ -111,12 +112,16 @@ CONTAINS
        !
     END IF
     !
+    ! Initialize base64 tables  
+    CALL base64_init() 
+    !
     CALL west_opening_message( code )
 #if defined(__MPI)
     CALL report_parallel_status ( )
 #else
     CALL errore(TRIM(code), 'West need MPI to run', 1 ) 
 #endif
+    !
   END SUBROUTINE
   !
   !
@@ -190,6 +195,7 @@ CONTAINS
     USE west_version,    ONLY : west_version_number, west_svn_revision
     USE mp_world,        ONLY : mpime,root 
     USE westcom,         ONLY : logfile
+    USE base64_module,   ONLY : isbigendian  
     !
     ! I/O
     !
@@ -223,6 +229,12 @@ CONTAINS
        WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM (version_number)
     ENDIF
     !
+    IF( isbigendian() ) THEN 
+       WRITE( stdout, '(/5X,"I/O is Big Endian",A)') "" 
+    ELSE
+       WRITE( stdout, '(/5X,"I/O is Little Endian",A)') ""
+    ENDIF 
+    !
     IF( mpime == root ) THEN 
        !
        CALL json%initialize()
@@ -237,6 +249,7 @@ CONTAINS
        CALL json%add('run.software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
        CALL json%add('run.software.qeversion', TRIM(version_number) )
        IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('run.software.qesvn', TRIM(svn_revision) )
+       CALL json%add('run.io.isbigendian', isbigendian() )
        !
        OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
        CALL json%print_file( iunit )

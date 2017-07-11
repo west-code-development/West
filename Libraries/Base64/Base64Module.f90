@@ -11,75 +11,77 @@
 ! Huihuo Zheng
 !
 !-------------------------------------------------------------------
-module Base64_module
+module base64_module
   !-------------------------------------------------------------------
   !
   USE, INTRINSIC :: ISO_C_Binding,   ONLY  : C_DOUBLE, C_DOUBLE_COMPLEX, C_CHAR, C_SIGNED_CHAR, C_PTR, C_NULL_PTR, C_INT
   !
   IMPLICIT NONE
   !
-  TYPE Base64_type
-     TYPE(C_PTR) :: object = C_NULL_PTR
-  END TYPE Base64_type
+  SAVE
+  !
+  INTEGER :: ICHAR
+  LOGICAL, PARAMETER :: lbigendian = ( ICHAR( TRANSFER(1,'a') ) == 0 )
   !
   INTERFACE
      !
-     FUNCTION C_Base64__new() RESULT(this) BIND(C, NAME="Base64__new") 
+     SUBROUTINE base64_init() BIND(C, NAME="b64init") 
        IMPORT
-       TYPE(C_PTR) :: this
-     END FUNCTION C_Base64__new
+     END SUBROUTINE
      !
-     FUNCTION C_Base64__delete(this) BIND (C, NAME="Base64__delete") 
-       IMPORT
-       TYPE(C_PTR), VALUE :: this
-     END FUNCTION C_Base64__delete
-     !
-     SUBROUTINE C_Base64__encode_double(this, from, n, to) BIND(C, NAME="Base64__encode_double")
+     SUBROUTINE base64_encode_double(from, n, to) BIND(C, NAME="encode_double")
        IMPORT 
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        REAL(C_DOUBLE), INTENT(IN) :: from(*)
        CHARACTER(C_CHAR), INTENT(OUT) :: to(*)
-       TYPE(C_PTR), VALUE :: this
-     END SUBROUTINE C_Base64__encode_double
+     END SUBROUTINE
      !
-     SUBROUTINE C_Base64__decode_double(this, from, n, to) BIND(C, NAME="Base64__decode_double")
+     SUBROUTINE base64_decode_double(from, n, to) BIND(C, NAME="decode_double")
        IMPORT 
        INTEGER(C_int), VALUE, INTENT(IN) :: n
        REAL(C_DOUBLE), INTENT(IN) :: to(*)
        CHARACTER(C_CHAR), INTENT(OUT) :: from(*)
-       TYPE(C_PTR), VALUE :: this
-     END SUBROUTINE C_Base64__decode_double
+     END SUBROUTINE
      !
-     SUBROUTINE C_Base64__encode_complex(this, from, n, to) BIND(C, NAME="Base64__encode_complex")
+     SUBROUTINE base64_encode_complex(from, n, to) BIND(C, NAME="encode_complex")
        IMPORT 
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        COMPLEX(C_DOUBLE_COMPLEX), INTENT(IN) :: from(*)
        CHARACTER(C_CHAR), INTENT(OUT) :: to(*)
-       TYPE(C_PTR), VALUE :: this
-     END SUBROUTINE C_Base64__encode_complex
+     END SUBROUTINE
      !
-     SUBROUTINE C_Base64__decode_complex(this, from, n, to) BIND(C, NAME="Base64__decode_complex")
+     SUBROUTINE base64_decode_complex(from, n, to) BIND(C, NAME="decode_complex")
        IMPORT
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        COMPLEX(C_DOUBLE_COMPLEX), INTENT(IN) :: to(*)
        CHARACTER(C_CHAR), INTENT(OUT) :: from(*)
-       TYPE(C_PTR), VALUE :: this
-     END SUBROUTINE C_Base64__decode_complex
+     END SUBROUTINE
      !
-     SUBROUTINE C_Base64__byteswap_complex(this, n, to) BIND(C, NAME="Base64__byteswap_complex") 
+     SUBROUTINE base64_byteswap_complex(n, to) BIND(C, NAME="byteswap_complex") 
        IMPORT
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        COMPLEX(C_DOUBLE_COMPLEX), INTENT(INOUT) :: to(*)
-       TYPE(C_PTR), VALUE :: this
-     END SUBROUTINE C_Base64__byteswap_complex  
+     END SUBROUTINE  
      !   
-     SUBROUTINE C_Base64__byteswap_double(this, n, to) BIND(C, NAME="Base64__byteswap_double") 
+     SUBROUTINE base64_byteswap_double(n, to) BIND(C, NAME="byteswap_double") 
        IMPORT 
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        REAL(C_DOUBLE), INTENT(INOUT) :: to(*)
-       TYPE(C_PTR), VALUE :: this
-     END SUBROUTINE C_Base64__byteswap_double
+     END SUBROUTINE
      !
   END INTERFACE
+  !
+  CONTAINS 
+     !
+     INTEGER FUNCTION lenbase64( nbytes )
+        IMPLICIT NONE 
+        INTEGER,INTENT(IN) :: nbytes
+        lenbase64 = ( ( nbytes + 2 ) / 3 ) * 4
+     END FUNCTION
+     !
+     LOGICAL FUNCTION isbigendian( )
+        IMPLICIT NONE 
+        isbigendian = lbigendian
+     END FUNCTION
   !
 END MODULE

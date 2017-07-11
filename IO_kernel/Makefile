@@ -6,6 +6,7 @@ include ../../make.inc
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
           $(MOD_FLAG)../Libraries/Json \
+          $(MOD_FLAG)../Libraries/Base64 \
           $(MOD_FLAG)../Modules \
           $(MOD_FLAG)../Tools \
           $(MOD_FLAG)../FFT_kernel \
@@ -27,7 +28,7 @@ wfreq_io.o \
 wfreq_restart.o  
 
 PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Json/libjson.a
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a
 
 TLDEPS= bindir mods libs pw
 

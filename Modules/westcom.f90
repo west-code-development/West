@@ -104,7 +104,6 @@ MODULE wstat_center
   !
   COMPLEX(DP) :: alphapv_dfpt
   CHARACTER(LEN=256) :: wstat_save_dir
-  CHARACTER(LEN=256) :: wstat_output_dir
   CHARACTER(LEN=256) :: wstat_restart_dir
   LOGICAL :: l_is_wstat_converged
   !

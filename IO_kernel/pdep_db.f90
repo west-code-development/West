@@ -41,7 +41,6 @@ MODULE pdep_db
                                      & n_steps_write_restart,n_pdep_restart_from_itr,n_pdep_read_from_file,trev_pdep, &
                                      & tr2_dfpt,l_deflate,l_kinetic_only,ev,dvg,west_prefix,trev_pdep_rel, &
                                      & l_minimize_exx_if_active,l_use_ecutrho,wstat_save_dir 
-      !USE eig_distribute,       ONLY : local_npert,pdep_distr_l2g
       USE pdep_io,              ONLY : pdep_merge_and_write_G 
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert 
@@ -56,13 +55,21 @@ MODULE pdep_db
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iunout,global_j,local_j
       INTEGER :: ierr
-
+      CHARACTER(12) :: eigenpot_filename(n_pdep_eigen)
+      !
       TYPE(json_file) :: json 
       INTEGER :: iunit      
       !
       ! MPI BARRIER
       !
       CALL mp_barrier(world_comm)
+      !
+      ! SET FILENAMES
+      !
+      DO global_j = 1, n_pdep_eigen
+         WRITE(my_label,'(i6.6)') global_j
+         eigenpot_filename(global_j) = "E"//TRIM(ADJUSTL(my_label))//".json" 
+      ENDDO
       !
       ! TIMING
       !
@@ -75,7 +82,8 @@ MODULE pdep_db
          !
          CALL add_intput_parameters_to_json_file( 2,(/1,2/) , json )
          ! 
-         CALL json%add('eigenvalues.ev',ev(1:n_pdep_eigen))
+         CALL json%add('output.eigenval',ev(1:n_pdep_eigen))
+         CALL json%add('output.eigenpot',eigenpot_filename(1:n_pdep_eigen))
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_save_dir ) // '/' // TRIM('wstat-save.json') )
          CALL json%print_file( iunit )
@@ -91,10 +99,9 @@ MODULE pdep_db
          ! local -> global
          !
          global_j = pert%l2g(local_j)
-         WRITE(my_label,'(i6.6)') global_j
          IF(global_j>n_pdep_eigen) CYCLE
          ! 
-         fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_save_dir ) // "/"//TRIM(eigenpot_filename(global_j))
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
          !
       ENDDO
@@ -133,7 +140,7 @@ MODULE pdep_db
       USE pdep_io,             ONLY : pdep_read_G_and_distribute
       USE io_push,             ONLY : io_push_bar
       USE distribution_center, ONLY : pert
-      USE json_module,          ONLY : json_file 
+      USE json_module,         ONLY : json_file 
       !
       IMPLICIT NONE
       !
@@ -149,7 +156,8 @@ MODULE pdep_db
       INTEGER :: dime, iun, global_j, local_j
       REAL(DP),ALLOCATABLE :: tmp_ev(:)
       LOGICAL :: found
-      TYPE(json_file) :: json 
+      TYPE(json_file) :: json
+      CHARACTER(12),ALLOCATABLE :: eigenpot_filename(:) 
       !
       ! MPI BARRIER
       !
@@ -174,7 +182,8 @@ MODULE pdep_db
          CALL json%load_file( filename = TRIM( dirname ) // '/' // TRIM('wstat-save.json') )
          ! 
          CALL json%get('input.wstat_control.n_pdep_eigen', tmp_n_pdep_eigen, found) 
-         CALL json%get('eigenvalues.ev', tmp_ev, found) 
+         CALL json%get('output.eigenval', tmp_ev, found)
+         CALL json%get('output.eigenpot', eigenpot_filename, found) 
          !
          CALL json%destroy()
          !
@@ -195,6 +204,11 @@ MODULE pdep_db
       IF ( mpime==root ) ev(1:nglob_to_be_read) = tmp_ev(1:nglob_to_be_read)
       CALL mp_bcast( ev, root, world_comm )
       !
+      IF( mpime /= root ) THEN 
+         ALLOCATE( eigenpot_filename(1:tmp_n_pdep_eigen) )
+      ENDIF
+      CALL mp_bcast(eigenpot_filename,root,world_comm)
+      !
       ! 3)  READ THE EIGENVECTOR FILES
       !
       IF(.NOT.ALLOCATED(dvg)) THEN
@@ -207,10 +221,9 @@ MODULE pdep_db
          ! local -> global
          !
          global_j = pert%l2g(local_j)
-         WRITE(my_label,'(i6.6)') global_j
          IF(global_j>n_eigen_to_get) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/E"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( dirname ) // "/"//TRIM(eigenpot_filename(global_j))
          CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
          !
       ENDDO

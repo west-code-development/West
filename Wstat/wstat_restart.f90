@@ -213,9 +213,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
-         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dng(:,local_j))
          !
       ENDDO
@@ -412,9 +412,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
-         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dng(:,local_j))
          !
       ENDDO
@@ -468,9 +468,9 @@ MODULE wstat_restart
          CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'vr.dat' ) )
          DO ip=1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
-            fname="V"//TRIM(ADJUSTL(my_label))//".dat"
+            fname="V"//TRIM(ADJUSTL(my_label))//".json"
             CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
-            fname="N"//TRIM(ADJUSTL(my_label))//".dat"
+            fname="N"//TRIM(ADJUSTL(my_label))//".json"
             CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
          ENDDO
          ierr =  f_rmdir( TRIM( dirname ) )
@@ -928,9 +928,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
-         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_read_G_and_distribute(fname,dng(:,local_j))
          !
       ENDDO

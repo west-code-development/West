@@ -195,7 +195,7 @@ CONTAINS
     USE west_version,    ONLY : west_version_number, west_svn_revision
     USE mp_world,        ONLY : mpime,root 
     USE westcom,         ONLY : logfile
-    USE base64_module,   ONLY : isbigendian  
+    USE base64_module,   ONLY : islittleendian  
     !
     ! I/O
     !
@@ -229,10 +229,10 @@ CONTAINS
        WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM (version_number)
     ENDIF
     !
-    IF( isbigendian() ) THEN 
-       WRITE( stdout, '(/5X,"I/O is Big Endian",A)') "" 
+    IF( islittleendian() ) THEN 
+       WRITE( stdout, '(/5X,"I/O is Little Endian",A)') "" 
     ELSE
-       WRITE( stdout, '(/5X,"I/O is Little Endian",A)') ""
+       WRITE( stdout, '(/5X,"I/O is Big Endian",A)') ""
     ENDIF 
     !
     IF( mpime == root ) THEN 
@@ -249,7 +249,7 @@ CONTAINS
        CALL json%add('run.software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
        CALL json%add('run.software.qeversion', TRIM(version_number) )
        IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('run.software.qesvn', TRIM(svn_revision) )
-       CALL json%add('run.io.isbigendian', isbigendian() )
+       CALL json%add('run.io.islittleendian', islittleendian() )
        !
        OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
        CALL json%print_file( iunit )

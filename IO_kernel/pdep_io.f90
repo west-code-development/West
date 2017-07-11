@@ -48,6 +48,7 @@ MODULE pdep_io
       INTEGER :: iun,ierr
       CHARACTER(LEN=:),ALLOCATABLE :: charbase64
       INTEGER :: nbytes, ndim, iunit
+      CHARACTER(LEN=30) :: endian
       !
       !
       IF(my_pool_id.NE.0) RETURN
@@ -68,17 +69,19 @@ MODULE pdep_io
          !
          ndim = npwq0_g
          nbytes = SIZEOF(tmp_vec(1)) * ndim
-!         CALL get_lenbase64( nbytes, lenbase64 ) 
          ALLOCATE(CHARACTER(LEN=lenbase64(nbytes)) :: charbase64)
-         !IF (lbigendian) CALL base64_bytesswap_complex(nbytes,tmp_vec(1:ndim))
          CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64) 
          !
-         OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-         IF( isbigendian() ) THEN 
-            WRITE( iunit, '(a,i0,a)'  ) '{ "ndim" : ', ndim, ', "isbigendian" : true, "kind" : "complex", "array" :'
+         IF( islittleendian() ) THEN 
+            endian = '"islittleendian" : true'
          ELSE
-            WRITE( iunit, '(a,i0,a)'  ) '{ "ndim" : ', ndim, ', "isbigendian" : false, "kind" : "complex", "array" :'
-         ENDIF
+            endian = '"islittleendian" : false'
+         ENDIF  
+         !
+         OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
+         WRITE( iunit, '(a)' ) '{'
+         WRITE( iunit, '(a,i0,a)' ) '"meta" : { "readme" : "eigenpotential", "type" : "complex double", "space" : "G", "ndim" : ', & 
+                               ndim, ', "code" : "base64", '//TRIM(endian)//' }, "data" : ' 
          WRITE( iunit, '(a)' ) '"'//charbase64//'"'
          WRITE( iunit, '(a)' ) '}'
          CLOSE( iunit ) 
@@ -124,8 +127,9 @@ MODULE pdep_io
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr,ig
       CHARACTER(LEN=:),ALLOCATABLE :: charbase64
+      CHARACTER(LEN=:),ALLOCATABLE :: endian
       INTEGER :: nbytes, ndim, iunit
-      LOGICAL :: found, isbe
+      LOGICAL :: found, isle
       !
       ! Resume all components 
       !
@@ -147,8 +151,8 @@ MODULE pdep_io
             CALL json%initialize()
             CALL json%load_file( filename = TRIM(fname) )
             !
-            CALL json%get('isbigendian', isbe, found)
-            CALL json%get('array', charbase64, found)
+            CALL json%get('meta.islittleendian', isle, found)
+            CALL json%get('data', charbase64, found)
             !
             ! ... open XML descriptor
             !
@@ -162,7 +166,7 @@ MODULE pdep_io
             CALL json%destroy()
             !
             CALL base64_decode_complex(charbase64, ndim, tmp_vec(1:ndim)) 
-            IF (isbigendian() .NEQV. isbe) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
+            IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
             DEALLOCATE( charbase64 )
             !
          END IF

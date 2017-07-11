@@ -29,7 +29,6 @@ SUBROUTINE solve_hf()
   USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,current_k
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
   USE io_files,             ONLY : tmp_dir
-  USE pdep_io,              ONLY : pdep_read_G_and_distribute 
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE noncollin_module,     ONLY : noncolin,npol 
   USE constants,            ONLY : rytoev

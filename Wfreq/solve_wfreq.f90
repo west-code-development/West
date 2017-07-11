@@ -300,7 +300,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               ! Exhume dbs eigenvalue
               !
               WRITE(my_label_b,'(i6.6)') glob_ip
-              fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".dat"
+              fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
               CALL pdep_read_G_and_distribute(fname,pertg)
               !
               ! Multiply by sqvc
@@ -876,7 +876,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               ! Exhume dbs eigenvalue
               !
               WRITE(my_label_b,'(i6.6)') glob_ip
-              fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".dat"
+              fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
               CALL pdep_read_G_and_distribute(fname,pertg)
               !
               ! Multiply by sqvc

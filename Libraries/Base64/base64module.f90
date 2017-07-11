@@ -79,9 +79,9 @@ module base64_module
         lenbase64 = ( ( nbytes + 2 ) / 3 ) * 4
      END FUNCTION
      !
-     LOGICAL FUNCTION isbigendian( )
+     LOGICAL FUNCTION islittleendian( )
         IMPLICIT NONE 
-        isbigendian = lbigendian
+        islittleendian = (.NOT.lbigendian)
      END FUNCTION
   !
 END MODULE

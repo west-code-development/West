@@ -231,6 +231,7 @@ MODULE pdep_db
       ! MPI BARRIER
       !
       CALL mp_barrier( world_comm )
+      DEALLOCATE( eigenpot_filename ) 
       !
       ! TIMING
       !

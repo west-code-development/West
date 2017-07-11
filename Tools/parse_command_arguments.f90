@@ -20,7 +20,7 @@ SUBROUTINE parse_command_arguments( )
   !
   INTEGER :: nargs, iiarg
   LOGICAL :: ifound !, ofound
-  CHARACTER(LEN=256) :: string
+  CHARACTER(LEN=512) :: string
   !
   ifound = .FALSE.
   !ofound = .FALSE.

@@ -27,7 +27,6 @@ SUBROUTINE westpp_readin()
   !
   ! Workspace
   !
-  CHARACTER(LEN=256), EXTERNAL :: trimcheck
   INTEGER :: iunit =5, ios
   !
   CALL start_clock('westpp_readin')

@@ -14,7 +14,7 @@
 SUBROUTINE westpp_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,westpp_dirname,&
+  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,westpp_save_dir,&
                                    & n_imfreq,nbnd_occ,l_macropol,macropol_calculation,&
                                    & n_refreq,isz,qp_bandrange,westpp_calculation,westpp_n_pdep_eigen_to_use
   USE mp,                     ONLY : mp_max
@@ -46,8 +46,7 @@ SUBROUTINE westpp_setup
   !
   CALL set_nbndocc()
   !
-  westpp_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.westpp.save'
-  CALL my_mkdir( westpp_dirname )
+  CALL my_mkdir( westpp_save_dir )
   !
   DO i = 1, 8
      IF( westpp_calculation(i:i) == 'r' .OR. westpp_calculation(i:i) == 'R' ) THEN 

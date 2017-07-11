@@ -20,7 +20,7 @@ SUBROUTINE do_wfc2 ( )
   USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,npw,npwx,lsda,nkstot,&
                                   & current_k,ngk
   USE io_push,               ONLY : io_push_title,io_push_bar
-  USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation,westpp_range,westpp_dirname 
+  USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation,westpp_range,westpp_save_dir 
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE mp,                    ONLY : mp_bcast
   USE fft_base,              ONLY : dfftp,dffts
@@ -39,7 +39,7 @@ SUBROUTINE do_wfc2 ( )
   !
   INTEGER :: i1,i2, ipol, ir, local_j, global_j, i, ig, iks, ibnd, local_ib, global_ib
   REAL(DP),ALLOCATABLE :: auxr(:)
-  CHARACTER(LEN=256)    :: fname
+  CHARACTER(LEN=512)    :: fname
   TYPE(bar_type) :: barra
   CHARACTER(LEN=6) :: labelb,labelk
   !
@@ -104,7 +104,7 @@ SUBROUTINE do_wfc2 ( )
         !
         WRITE(labelb,'(i6.6)') global_ib 
         WRITE(labelk,'(i6.6)') iks 
-        fname = TRIM( westpp_dirname ) // "/wfcK"//TRIM(labelk)//"B"//TRIM(labelb)
+        fname = TRIM( westpp_save_dir ) // "/wfcK"//TRIM(labelk)//"B"//TRIM(labelb)
         CALL dump_r( auxr, fname )
         !
         CALL update_bar_type( barra,'westpp', 1 )

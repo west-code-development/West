@@ -48,7 +48,7 @@ MODULE pdep_db
       !
       IMPLICIT NONE
       !
-      CHARACTER(LEN=256)    :: fname
+      CHARACTER(LEN=512)    :: fname
       CHARACTER(LEN=6)      :: my_label
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -132,7 +132,7 @@ MODULE pdep_db
     SUBROUTINE pdep_db_read( nglob_to_be_read )
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwq0x
+      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwq0x,wstat_save_dir
       USE io_global,           ONLY : stdout 
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root
@@ -146,7 +146,7 @@ MODULE pdep_db
       !
       INTEGER, INTENT(IN) :: nglob_to_be_read  
       !
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       CHARACTER(LEN=6)      :: my_label
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -169,17 +169,13 @@ MODULE pdep_db
       !
       time_spent(1)=get_clock('pdep_db')
       !
-      ! ... the main db directory
-      !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
-      !
       ! 1)  READ THE INPUT FILE
       !
       !
       IF ( mpime == root ) THEN
          !
          CALL json%initialize()
-         CALL json%load_file( filename = TRIM( dirname ) // '/' // TRIM('wstat-save.json') )
+         CALL json%load_file( filename = TRIM( wstat_save_dir ) // '/' // TRIM('wstat-save.json') )
          ! 
          CALL json%get('input.wstat_control.n_pdep_eigen', tmp_n_pdep_eigen, found) 
          CALL json%get('output.eigenval', tmp_ev, found)

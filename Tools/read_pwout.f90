@@ -48,7 +48,6 @@ SUBROUTINE read_pwout() ! to be sync'd with PW/src/read_file.f90
   IMPLICIT NONE 
   INTEGER :: ierr
   LOGICAL :: exst
-  CHARACTER( 256 )  :: dirname
   !
   !
   ierr = 0 

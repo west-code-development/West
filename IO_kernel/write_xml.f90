@@ -30,7 +30,7 @@ MODULE write_xml
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout 
       USE io_push,              ONLY : io_push_bar
-      USE westcom,              ONLY : wstat_save_dir, l_is_wstat_converged, ev
+      USE westcom,              ONLY : wfreq_save_dir, wstat_save_dir, l_is_wstat_converged, ev
       USE westcom,              ONLY : qe_prefix, west_prefix, outdir 
       USE westcom,              ONLY : wstat_calculation, n_pdep_eigen, n_pdep_times, n_pdep_maxiter, n_dfpt_maxiter, &
                                      & n_pdep_read_from_file, trev_pdep, trev_pdep_rel, tr2_dfpt, l_minimize_exx_if_active, & 
@@ -219,8 +219,8 @@ MODULE write_xml
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout 
       USE io_push,              ONLY : io_push_bar
-      USE westcom,              ONLY : wfreq_dirname, l_is_wstat_converged, ev, iks_l2g
-      USE westcom,              ONLY : qe_prefix, west_prefix, outdir 
+      USE westcom,              ONLY : l_is_wstat_converged, ev, iks_l2g
+      USE westcom,              ONLY : wfreq_save_dir, qe_prefix, west_prefix, outdir 
       USE westcom,              ONLY : wstat_calculation, n_pdep_eigen, n_pdep_times, n_pdep_maxiter, n_dfpt_maxiter, &
                                      & n_pdep_read_from_file, trev_pdep, trev_pdep_rel, tr2_dfpt, l_minimize_exx_if_active, & 
                                      & l_kinetic_only, l_use_ecutrho
@@ -283,7 +283,7 @@ MODULE write_xml
          !
          CALL iotk_free_unit( iunout, ierr )
          !
-         CALL iotk_open_write( iunout, FILE = TRIM( wfreq_dirname ) // '/' // TRIM("wfreq.xml") , &
+         CALL iotk_open_write( iunout, FILE = TRIM( wfreq_save_dir ) // '/' // TRIM("wfreq.xml") , &
          & ROOT="wfreq",BINARY=.FALSE.,SKIP_HEAD=.TRUE.,IERR=ierr )
          !
       END IF
@@ -467,7 +467,7 @@ MODULE write_xml
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
       WRITE(stdout, "(5x, 'wfreq.xml file written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_dirname )  
+      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )  
       CALL io_push_bar()
       !
     END SUBROUTINE

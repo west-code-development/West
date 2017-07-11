@@ -22,7 +22,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   USE mp,               ONLY : mp_bcast
   USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
-  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c256 
+  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
   !
   IMPLICIT NONE
   !
@@ -39,8 +39,8 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   INTEGER :: iiarg, nargs
   INTEGER :: numsp
   LOGICAL :: found
-  CHARACTER (LEN=256) :: input_file
-  CHARACTER(LEN=256), EXTERNAL :: trimcheck
+  CHARACTER (LEN=512) :: input_file
+  CHARACTER(LEN=512), EXTERNAL :: trimcheck
   CHARACTER(LEN=:),ALLOCATABLE :: cval
   REAL(DP) :: rval 
   INTEGER :: ival 
@@ -359,9 +359,9 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         CALL io_push_title("I/O Summary : input_west")
         !
         numsp = 14
-        CALL io_push_c256('qe_prefix',qe_prefix,numsp)
-        CALL io_push_c256('west_prefix',qe_prefix,numsp)
-        CALL io_push_c256('outdir',outdir,numsp)
+        CALL io_push_c512('qe_prefix',qe_prefix,numsp)
+        CALL io_push_c512('west_prefix',qe_prefix,numsp)
+        CALL io_push_c512('outdir',outdir,numsp)
         !
         CALL io_push_bar()
         !
@@ -479,7 +479,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   USE mp,               ONLY : mp_bcast
   USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
-  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c256 
+  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
   !
   IMPLICIT NONE
   !

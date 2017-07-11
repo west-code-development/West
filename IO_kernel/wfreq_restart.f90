@@ -60,7 +60,7 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bks_type),INTENT(IN) :: bks
-      CHARACTER(LEN=256),INTENT(IN) :: dirname, fname
+      CHARACTER(LEN=512),INTENT(IN) :: dirname, fname
       INTEGER :: iunout
       !
       ! Workspace
@@ -116,7 +116,7 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bks_type),INTENT(OUT) :: bks
-      CHARACTER(LEN=256),INTENT(IN) :: dirname, fname
+      CHARACTER(LEN=512),INTENT(IN) :: dirname, fname
       INTEGER :: iunout
       !
       ! Workspace
@@ -178,7 +178,7 @@ MODULE wfreq_restart
       !
       ! I/O
       !
-      CHARACTER(LEN=256),INTENT(IN) :: dirname, fname
+      CHARACTER(LEN=512),INTENT(IN) :: dirname, fname
       !
       ! Workspace
       !
@@ -222,7 +222,7 @@ MODULE wfreq_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       CHARACTER(29) :: my_label
       CHARACTER(33) :: my_label2
       INTEGER :: local_j,global_j
@@ -327,7 +327,7 @@ MODULE wfreq_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       CHARACTER(29) :: my_label
       CHARACTER(33) :: my_label2
       INTEGER :: local_j,global_j
@@ -434,7 +434,7 @@ MODULE wfreq_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -532,7 +532,7 @@ MODULE wfreq_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -629,7 +629,7 @@ MODULE wfreq_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -673,7 +673,7 @@ MODULE wfreq_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time

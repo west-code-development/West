@@ -66,7 +66,7 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
   LOGICAL :: exst,exst_mem
   LOGICAL :: l_dost
   !
-  CHARACTER(LEN=256) :: title
+  CHARACTER(LEN=512) :: title
   !
   CALL mp_barrier( world_comm )
   !

@@ -47,7 +47,6 @@ SUBROUTINE init_pw_arrays(ncalbec)
   INTEGER,INTENT(IN) :: ncalbec
   !
   INTEGER :: i, l, nt, kpoint, ik
-  CHARACTER(256) :: filint
 !  REAL(DP) :: rhotot
   LOGICAL :: exst,exst_mem
   !

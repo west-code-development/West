@@ -14,7 +14,7 @@
 SUBROUTINE wfreq_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,wfreq_dirname,&
+  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,wfreq_save_dir,&
                                    & n_pdep_eigen_to_use,n_imfreq,nbnd_occ,l_macropol,macropol_calculation,&
                                    & n_refreq,isz,qp_bandrange,wfreq_calculation
   USE westcom,                ONLY : sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
@@ -56,8 +56,7 @@ SUBROUTINE wfreq_setup
   !
   CALL set_nbndocc()
   !
-  wfreq_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wfreq.save'
-  CALL my_mkdir( wfreq_dirname )
+  CALL my_mkdir( wfreq_save_dir )
   !
   pert = idistribute()
   CALL pert%init(n_pdep_eigen_to_use,'i','npdep',.TRUE.)

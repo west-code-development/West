@@ -46,7 +46,7 @@ MODULE wfreq_io
     USE mp_images,           ONLY : nimage,my_image_id,inter_image_comm
     USE mp,                  ONLY : mp_sum
     USE control_flags,       ONLY : gamma_only 
-    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mod_mpiio,           ONLY : mp_master_creates_and_preallocates
     !
     IMPLICIT NONE
@@ -61,7 +61,7 @@ MODULE wfreq_io
     INTEGER :: ib, ii
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     INTEGER :: nmode
     !
     IF( gamma_only ) THEN 
@@ -75,9 +75,9 @@ MODULE wfreq_io
        !
        WRITE(c_glob_ib, '(i5.5)') ib
        !
-       fname = TRIM( wfreq_dirname )//"/w_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+       fname = TRIM( wfreq_save_dir )//"/w_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
        CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob * 1 )   
-       fname = TRIM( wfreq_dirname )//"/w_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+       fname = TRIM( wfreq_save_dir )//"/w_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
        CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob*idistr%nglob*nmode ) 
        !
     ENDDO
@@ -93,7 +93,7 @@ MODULE wfreq_io
     USE mp_images,           ONLY : nimage,my_image_id,inter_image_comm
     USE mp,                  ONLY : mp_sum
     USE control_flags,       ONLY : gamma_only 
-    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mod_mpiio,           ONLY : mp_master_creates_and_preallocates
     !
     IMPLICIT NONE
@@ -108,7 +108,7 @@ MODULE wfreq_io
     INTEGER :: ib, ii
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     INTEGER :: nmode
     !
     IF( gamma_only ) THEN 
@@ -122,9 +122,9 @@ MODULE wfreq_io
        !
        WRITE(c_glob_ib, '(i5.5)') ib
        !
-       fname = TRIM( wfreq_dirname )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+       fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
        CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob * 1 )   ! check nmode   
-       fname = TRIM( wfreq_dirname )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+       fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
        CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob*idistr%nglob*nmode ) 
        !
     ENDDO
@@ -140,7 +140,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos ) 
     !
     USE kinds,               ONLY : DP
-    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mp_global,           ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
     USE mp,                  ONLY : mp_bcast
     USE mod_mpiio,           ONLY : mp_write_dmsg_at
@@ -159,17 +159,17 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/w_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/w_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset ) 
     !
-    fname = TRIM( wfreq_dirname )//"/w_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/w_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_write_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
     !
   END SUBROUTINE
@@ -183,7 +183,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,        ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mp_global,      ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
     USE mp,             ONLY : mp_bcast
     USE mod_mpiio,      ONLY : mp_read_dmsg_at
@@ -202,17 +202,17 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/w_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/w_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
     !
-    fname = TRIM( wfreq_dirname )//"/w_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/w_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_read_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
     !
   END SUBROUTINE
@@ -226,7 +226,7 @@ MODULE wfreq_io
     ! WHAT?       ... lambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : n_pdep_eigen_to_use,wfreq_dirname
+    USE westcom,        ONLY : n_pdep_eigen_to_use,wfreq_save_dir
     USE mp_global,      ONLY : my_image_id,inter_image_comm,me_image,root_image
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -243,11 +243,11 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=6) :: c_glob_ifreq
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     ! 
     !
     WRITE(c_glob_ifreq,'(i6.6)') glob_ifreq
-    fname = TRIM( wfreq_dirname )//"/w_imF"//c_glob_ifreq//".dat"
+    fname = TRIM( wfreq_save_dir )//"/w_imF"//c_glob_ifreq//".dat"
     !
     IF ( my_image_id == 0 ) THEN
        !
@@ -285,7 +285,7 @@ MODULE wfreq_io
     ! WHAT?       ... lambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : n_pdep_eigen_to_use,wfreq_dirname
+    USE westcom,        ONLY : n_pdep_eigen_to_use,wfreq_save_dir
     USE mp_global,      ONLY : my_image_id,inter_image_comm
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -302,10 +302,10 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=6) :: c_glob_ifreq
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     ! 
     WRITE(c_glob_ifreq,'(i6.6)') glob_ifreq
-    fname = TRIM( wfreq_dirname )//"/w_imF"//c_glob_ifreq//".dat"
+    fname = TRIM( wfreq_save_dir )//"/w_imF"//c_glob_ifreq//".dat"
     !
     !
     IF ( my_image_id == 0 ) THEN
@@ -347,7 +347,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos ) 
     !
     USE kinds,               ONLY : DP
-    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mp_global,           ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
     USE mp,                  ONLY : mp_bcast
     USE mod_mpiio,           ONLY : mp_write_dmsg_at
@@ -366,17 +366,17 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset ) 
     !
-    fname = TRIM( wfreq_dirname )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_write_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset ) 
     !
   END SUBROUTINE
@@ -390,7 +390,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos ) 
     !
     USE kinds,               ONLY : DP
-    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mp_global,           ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
     USE mp,                  ONLY : mp_bcast
     USE mod_mpiio,           ONLY : mp_write_dmsg_at,mp_write_zmsg_at
@@ -409,17 +409,17 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset ) 
     !
-    fname = TRIM( wfreq_dirname )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_write_zmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset ) 
     !
   END SUBROUTINE
@@ -433,7 +433,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,        ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mp_global,      ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
     USE mp,             ONLY : mp_bcast
     USE mod_mpiio,      ONLY : mp_read_dmsg_at
@@ -452,17 +452,17 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
     !
-    fname = TRIM( wfreq_dirname )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_read_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
     !
   END SUBROUTINE
@@ -476,7 +476,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_dirname
+    USE westcom,        ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
     USE mp_global,      ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
     USE mp,             ONLY : mp_bcast
     USE mod_mpiio,      ONLY : mp_read_dmsg_at,mp_read_zmsg_at
@@ -495,17 +495,17 @@ MODULE wfreq_io
     !
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
     !
-    fname = TRIM( wfreq_dirname )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     CALL mp_read_zmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
     !
   END SUBROUTINE
@@ -518,7 +518,7 @@ MODULE wfreq_io
     ! WHAT?       ... overlap( no1, no2 ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : iks_l2g,wfreq_dirname
+    USE westcom,        ONLY : iks_l2g,wfreq_save_dir
     USE mp_world,       ONLY : mpime,root,world_comm 
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -538,14 +538,14 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     !
     IF ( mpime == root ) THEN
        !
@@ -581,7 +581,7 @@ MODULE wfreq_io
     ! WHAT?       ... overlap( no1, no2 ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : iks_l2g,wfreq_dirname
+    USE westcom,        ONLY : iks_l2g,wfreq_save_dir
     USE mp_world,       ONLY : mpime,root,world_comm 
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -601,14 +601,14 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     !
     IF ( mpime == root ) THEN
        !
@@ -644,7 +644,7 @@ MODULE wfreq_io
     ! WHAT?       ... overlap( no1, no2 ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : iks_l2g,wfreq_dirname
+    USE westcom,        ONLY : iks_l2g,wfreq_save_dir
     USE mp_world,       ONLY : mpime,root,world_comm 
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -664,14 +664,14 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     !
     IF ( mpime == root ) THEN
        !
@@ -709,7 +709,7 @@ MODULE wfreq_io
     ! WHAT?       ... overlap( no1, no2 ) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : iks_l2g,wfreq_dirname
+    USE westcom,        ONLY : iks_l2g,wfreq_save_dir
     USE mp_world,       ONLY : mpime,root,world_comm 
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -729,14 +729,14 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_dirname )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+    fname = TRIM( wfreq_save_dir )//"/over_"//labellina//"_K"//c_glob_iks//"B"//c_glob_ib//".dat"
     !
     IF ( mpime == root ) THEN
        !
@@ -774,7 +774,7 @@ MODULE wfreq_io
     ! WHAT?       ... sigma_hf(nb, nk) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : wfreq_dirname
+    USE westcom,        ONLY : wfreq_save_dir
     USE mp_world,       ONLY : mpime,root,world_comm 
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -789,11 +789,11 @@ MODULE wfreq_io
     ! Workspace
     !
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     !
-    fname = TRIM( wfreq_dirname )//"/hf.dat"
+    fname = TRIM( wfreq_save_dir )//"/hf.dat"
     !
     IF ( mpime == root ) THEN
        !
@@ -829,7 +829,7 @@ MODULE wfreq_io
     ! WHAT?       ... sigma_hf(nb, nk) 
     !
     USE kinds,          ONLY : DP
-    USE westcom,        ONLY : iks_l2g,wfreq_dirname
+    USE westcom,        ONLY : iks_l2g,wfreq_save_dir
     USE mp_world,       ONLY : mpime,root,world_comm 
     USE mp,             ONLY : mp_bcast
     USE iotk_module
@@ -844,11 +844,11 @@ MODULE wfreq_io
     ! Workspace
     !
     INTEGER :: iunout, ierr
-    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=512) :: fname
     !
     ! Generate the filename
     ! 
-    fname = TRIM( wfreq_dirname )//"/hf.dat"
+    fname = TRIM( wfreq_save_dir )//"/hf.dat"
     !
     IF ( mpime == root ) THEN
        !

@@ -37,7 +37,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE kinds,                ONLY : DP 
   USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq0,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
-                                 & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwq0x,fftdriver
+                                 & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwq0x,fftdriver, wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
@@ -73,7 +73,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ! Workspace
   !
   INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ipol,m
-  CHARACTER(LEN=256)    :: wstat_dirname, fname
+  CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
@@ -130,10 +130,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ALLOCATE( zmatr( mypara%nglob, mypara%nloc, rfr%nloc) )
   dmati = 0._DP
   zmatr = 0._DP
-  !
-  ! Remember the directory name
-  !
-  wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
   !
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bks, dmati, zmatr, mypara%nglob, mypara%nloc )
@@ -300,7 +296,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               ! Exhume dbs eigenvalue
               !
               WRITE(my_label_b,'(i6.6)') glob_ip
-              fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
+              fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
               CALL pdep_read_G_and_distribute(fname,pertg)
               !
               ! Multiply by sqvc
@@ -611,7 +607,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE kinds,                ONLY : DP 
   USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq0,l_macropol,iks_l2g,z_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
-                                 & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwq0x,fftdriver
+                                 & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwq0x,fftdriver, wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
@@ -647,7 +643,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! Workspace
   !
   INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ipol,m
-  CHARACTER(LEN=256)    :: wstat_dirname, fname
+  CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
@@ -704,10 +700,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ALLOCATE( zmatr( mypara%nglob, mypara%nloc, rfr%nloc) )
   zmati = 0._DP
   zmatr = 0._DP
-  !
-  ! Remember the directory name
-  !
-  wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
   !
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bks, zmati, zmatr, mypara%nglob, mypara%nloc )
@@ -876,7 +868,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               ! Exhume dbs eigenvalue
               !
               WRITE(my_label_b,'(i6.6)') glob_ip
-              fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
+              fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
               CALL pdep_read_G_and_distribute(fname,pertg)
               !
               ! Multiply by sqvc

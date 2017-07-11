@@ -15,11 +15,15 @@ SUBROUTINE set_dirs( )
   !-----------------------------------------------------------------------
   !
   USE io_files,               ONLY : tmp_dir
-  USE westcom,                ONLY : west_prefix, wstat_save_dir, wstat_restart_dir
+  USE westcom,                ONLY : west_prefix, wstat_save_dir, wstat_restart_dir, &
+                                     westpp_save_dir, wfreq_save_dir, wfreq_restart_dir
   !
   IMPLICIT NONE
   !
   wstat_save_dir    = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
   wstat_restart_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.restart'
+  wfreq_save_dir    = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wfreq.save'
+  wfreq_restart_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wfreq.restart'
+  westpp_save_dir   = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.westpp.save' 
   !
 END SUBROUTINE

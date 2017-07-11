@@ -21,7 +21,7 @@ SUBROUTINE fetch_namelist(num_namelists,driver)
   USE mp,               ONLY : mp_bcast
   USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
-  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c256 
+  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
   !
   IMPLICIT NONE
   !
@@ -32,7 +32,7 @@ SUBROUTINE fetch_namelist(num_namelists,driver)
   !
   ! Workspace
   !
-  CHARACTER(LEN=256), EXTERNAL :: trimcheck
+  CHARACTER(LEN=512), EXTERNAL :: trimcheck
   INTEGER :: iunit=5
   INTEGER :: i
   INTEGER :: numsp
@@ -127,9 +127,9 @@ SUBROUTINE fetch_namelist(num_namelists,driver)
      CALL io_push_title("I/O Summary : input_west")
      !
      numsp = 14
-     CALL io_push_c256('qe_prefix',qe_prefix,numsp)
-     CALL io_push_c256('west_prefix',qe_prefix,numsp)
-     CALL io_push_c256('outdir',outdir,numsp)
+     CALL io_push_c512('qe_prefix',qe_prefix,numsp)
+     CALL io_push_c512('west_prefix',qe_prefix,numsp)
+     CALL io_push_c512('outdir',outdir,numsp)
      !
      CALL io_push_bar()
      !

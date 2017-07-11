@@ -28,7 +28,6 @@ SUBROUTINE wstat_readin()
   !
   ! Workspace
   !
-  CHARACTER(LEN=256), EXTERNAL :: trimcheck
   INTEGER :: iunit =5, ios
   !
   CALL start_clock('wstat_readin')

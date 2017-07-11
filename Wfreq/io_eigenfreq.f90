@@ -35,7 +35,7 @@ MODULE io_eigenfreq
       USE mp,                   ONLY : mp_bcast
       USE mp_global,            ONLY : my_image_id
       USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : wfreq_dirname 
+      USE westcom,              ONLY : wfreq_save_dir
       !
       IMPLICIT NONE
       !
@@ -43,13 +43,13 @@ MODULE io_eigenfreq
       INTEGER,INTENT(IN) :: ind
       INTEGER,INTENT(IN) :: ne
       !
-      CHARACTER(LEN=256)    :: fname
+      CHARACTER(LEN=512)    :: fname
       CHARACTER(LEN=6)      :: my_label
       INTEGER :: iunout
       INTEGER :: ierr
       !
       WRITE(my_label,'(i6.6)') ind
-      fname = TRIM( wfreq_dirname ) // "/EVF"//TRIM(ADJUSTL(my_label))//".dat"
+      fname = TRIM( wfreq_save_dir ) // "/EVF"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF ( my_image_id == 0 ) THEN
          !
@@ -86,7 +86,7 @@ MODULE io_eigenfreq
       USE mp,                   ONLY : mp_bcast
       USE mp_global,            ONLY : my_image_id,inter_image_comm
       USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : wfreq_dirname 
+      USE westcom,              ONLY : wfreq_save_dir 
       !
       IMPLICIT NONE
       !
@@ -94,13 +94,13 @@ MODULE io_eigenfreq
       INTEGER,INTENT(IN) :: ind
       INTEGER,INTENT(IN) :: ne
       !
-      CHARACTER(LEN=256)    :: fname
+      CHARACTER(LEN=512)    :: fname
       CHARACTER(LEN=6)      :: my_label
       INTEGER :: iunout
       INTEGER :: ierr
       !
       WRITE(my_label,'(i6.6)') ind
-      fname = TRIM( wfreq_dirname ) // "/EVF"//TRIM(ADJUSTL(my_label))//".dat"
+      fname = TRIM( wfreq_save_dir ) // "/EVF"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF ( my_image_id == 0 ) THEN
          !

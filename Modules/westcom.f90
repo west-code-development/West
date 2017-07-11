@@ -65,12 +65,12 @@ MODULE westin
   !
   SAVE
   !
-  CHARACTER(LEN=256) :: outdir             ! main directory 
-  CHARACTER(LEN=256) :: west_prefix
-  CHARACTER(LEN=256) :: qe_prefix
-  CHARACTER(LEN=256) :: savedir            ! outdir/west_prefix.code.save
-  CHARACTER(LEN=256) :: main_input_file    ! input file (json format)
-  CHARACTER(LEN=256) :: logfile            ! savedir/logfile.json 
+  CHARACTER(LEN=512) :: outdir             ! main directory 
+  CHARACTER(LEN=512) :: west_prefix
+  CHARACTER(LEN=512) :: qe_prefix
+  CHARACTER(LEN=512) :: savedir            ! outdir/west_prefix.code.save
+  CHARACTER(LEN=512) :: main_input_file    ! input file (json format)
+  CHARACTER(LEN=512) :: logfile            ! savedir/logfile.json 
   !
 END MODULE  
 !
@@ -103,8 +103,8 @@ MODULE wstat_center
   ! Common workspace
   !
   COMPLEX(DP) :: alphapv_dfpt
-  CHARACTER(LEN=256) :: wstat_save_dir
-  CHARACTER(LEN=256) :: wstat_restart_dir
+  CHARACTER(LEN=512) :: wstat_save_dir
+  CHARACTER(LEN=512) :: wstat_restart_dir
   LOGICAL :: l_is_wstat_converged
   !
 END MODULE 
@@ -139,7 +139,8 @@ MODULE wfreq_center
   !
   ! Common workspace
   !
-  CHARACTER(LEN=256) :: wfreq_dirname
+  CHARACTER(LEN=512) :: wfreq_save_dir
+  CHARACTER(LEN=512) :: wfreq_restart_dir
   LOGICAL,PARAMETER :: l_skip_nl_part_of_hcomr=.FALSE.
   LOGICAL :: l_macropol
   !
@@ -201,7 +202,7 @@ MODULE westpp_center
   !
   ! Common workspace
   !
-  CHARACTER(LEN=256) :: westpp_dirname
+  CHARACTER(LEN=512) :: westpp_save_dir
   !
 END MODULE
 !

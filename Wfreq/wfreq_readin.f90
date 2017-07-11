@@ -27,7 +27,6 @@ SUBROUTINE wfreq_readin()
   !
   ! Workspace
   !
-  CHARACTER(LEN=256), EXTERNAL :: trimcheck
   INTEGER :: iunit =5, ios
   !
   CALL start_clock('wfreq_readin')

@@ -47,7 +47,6 @@ SUBROUTINE wstat_setup
   !
   CALL set_nbndocc()
   !
-  !wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
   CALL my_mkdir( wstat_save_dir )
   !
   n_pdep_basis = n_pdep_eigen * n_pdep_times

@@ -58,7 +58,7 @@ MODULE wstat_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -257,7 +257,7 @@ MODULE wstat_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -449,7 +449,7 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: dirname,fname
       INTEGER :: ierr,ip
       CHARACTER(6) :: my_label
       !
@@ -507,7 +507,7 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=256) :: dirname
+      CHARACTER(LEN=512) :: dirname
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -565,7 +565,7 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=256) :: dirname
+      CHARACTER(LEN=512) :: dirname
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -912,7 +912,7 @@ MODULE wstat_restart
       INTEGER :: global_j, local_j, group_j
       INTEGER :: npw_g,ierr
       CHARACTER(6) :: my_label
-      CHARACTER(LEN=256) :: fname
+      CHARACTER(LEN=512) :: fname
       INTEGER :: iun
       !
       IF(.NOT.ALLOCATED(dvg)) ALLOCATE(dvg(npwq0x,pert%nlocx))

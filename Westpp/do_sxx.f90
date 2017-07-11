@@ -20,7 +20,7 @@ SUBROUTINE do_sxx ( )
   USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,npw,npwx,lsda,nkstot,&
                                   & current_k,ngk,et
   USE io_push,               ONLY : io_push_title,io_push_bar
-  USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,westpp_dirname,nbnd_occ,iks_l2g,westpp_epsinfty,dvg,ev,&
+  USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,westpp_save_dir,nbnd_occ,iks_l2g,westpp_epsinfty,dvg,ev,&
                                   & npwq0,npwq0x,fftdriver
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE mp,                    ONLY : mp_bcast,mp_sum

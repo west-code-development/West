@@ -20,7 +20,7 @@ SUBROUTINE do_eigenpot2 ( )
   USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,npw,npwx,lsda,nkstot,&
                                   & current_k,ngk
   USE io_push,               ONLY : io_push_title,io_push_bar
-  USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation,westpp_range,westpp_dirname,fftdriver,&
+  USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation,westpp_range,westpp_save_dir,fftdriver,&
                                   & npwq0,npwq0x,dvg 
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE mp,                    ONLY : mp_bcast
@@ -40,7 +40,7 @@ SUBROUTINE do_eigenpot2 ( )
   !
   INTEGER :: i1,i2, ipol, ir, local_j, global_j, i, ig, iks, ibnd, local_ib, global_ib
   REAL(DP),ALLOCATABLE :: auxr(:)
-  CHARACTER(LEN=256)    :: fname
+  CHARACTER(LEN=512)    :: fname
   TYPE(bar_type) :: barra
   CHARACTER(LEN=6) :: labelq,labeli
   !
@@ -78,7 +78,7 @@ SUBROUTINE do_eigenpot2 ( )
      !
      WRITE(labeli,'(i6.6)') global_j 
      WRITE(labelq,'(i6.6)') 1 
-     fname = TRIM( westpp_dirname ) // "/eigQ"//TRIM(labelq)//"I"//TRIM(labeli)
+     fname = TRIM( westpp_save_dir ) // "/eigQ"//TRIM(labelq)//"I"//TRIM(labeli)
      CALL dump_r( auxr, fname)
      !
      CALL update_bar_type( barra,'westpp', 1 )

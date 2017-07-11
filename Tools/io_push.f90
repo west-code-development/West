@@ -123,18 +123,18 @@ MODULE io_push
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE io_push_c256(l_desc_in,c256,numa)
+    SUBROUTINE io_push_c512(l_desc_in,c512,numa)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
       CHARACTER(LEN=*) :: l_desc_in
       INTEGER,INTENT(IN) :: numa
-      CHARACTER(LEN=256),INTENT(IN) :: c256
+      CHARACTER(LEN=512),INTENT(IN) :: c512
       CHARACTER(LEN=numa) :: l_desc_out
       !
       WRITE(l_desc_out,'(a)') ADJUSTL(TRIM(l_desc_in))
       !
-      WRITE(stdout,'(5x,a," = ",a)') l_desc_out, TRIM(c256)
+      WRITE(stdout,'(5x,a," = ",a)') l_desc_out, TRIM(c512)
       !
     END SUBROUTINE
     !

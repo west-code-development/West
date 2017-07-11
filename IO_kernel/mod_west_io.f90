@@ -1091,7 +1091,7 @@ MODULE west_io
       REAL(DP),INTENT(IN) :: d2dummy(nrow,ncol)
       !
       INTEGER :: ierr,i,j
-      CHARACTER(LEN=128) :: format_string
+      CHARACTER(LEN=512) :: format_string
       REAL(DP) :: help(ncol)
       !
       IF(.NOT.lproc) RETURN

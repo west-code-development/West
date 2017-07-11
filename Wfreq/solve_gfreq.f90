@@ -36,7 +36,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   USE kinds,                ONLY : DP 
   USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq0,qp_bandrange,iks_l2g,&
-                                 & wfreq_dirname,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwq0x,fftdriver
+                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwq0x,fftdriver, &
+                                 & wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm,inter_pool_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout, ionode
@@ -71,7 +72,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iks,m,im
-  CHARACTER(LEN=256)    :: wstat_dirname, fname
+  CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
@@ -94,10 +95,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   CALL deallocate_bec_type( becp ) 
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
-  !
-  ! Remember the directory names
-  !
-  wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
@@ -211,7 +208,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            ! Exhume dbs eigenvalue
            !
            WRITE(my_label_b,'(i6.6)') glob_ip
-           fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
+           fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
            CALL pdep_read_G_and_distribute(fname,pertg)
            !
            ! Multiply by sqvc
@@ -339,7 +336,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   USE kinds,                ONLY : DP 
   USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq0,qp_bandrange,iks_l2g,&
-                                 & wfreq_dirname,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwq0x,fftdriver
+                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwq0x,fftdriver, &
+                                 & wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm,inter_pool_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout, ionode
@@ -374,7 +372,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! Workspace
   !
   INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iks,m,im
-  CHARACTER(LEN=256)    :: wstat_dirname, fname
+  CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
@@ -398,10 +396,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   CALL deallocate_bec_type( becp ) 
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
-  !
-  ! Remember the directory names
-  !
-  wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.save'
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
@@ -516,7 +510,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            ! Exhume dbs eigenvalue
            !
            WRITE(my_label_b,'(i6.6)') glob_ip
-           fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
+           fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
            CALL pdep_read_G_and_distribute(fname,pertg)
            !
            ! Multiply by sqvc

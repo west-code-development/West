@@ -60,7 +60,7 @@ CONTAINS
     !
     savedir = TRIM(outdir) // trim(west_prefix) // "." // TRIM(to_lower_case(code)) // ".save/"
     CALL my_mkdir( savedir )
-    logfile = TRIM(savedir) // "logfile.json"
+    logfile = TRIM(savedir) // TRIM(to_lower_case(code))//"-logfile.json"
     !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
     ! ... use ".TRUE."  to enable clocks

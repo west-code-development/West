@@ -443,26 +443,26 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ! Output it per k-point
      !
-     ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
-     !
-     DO iks=1,nks
-        DO ib = qp_bandrange(1), qp_bandrange(2)
-           out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
-           out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 3) = (et(ib,iks)+sigma_hf(ib,iks)) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 4) = qp_energy(ib,iks) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 5) = (qp_energy(ib,iks) - et(ib,iks) ) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 6) = REAL(  sigma_cor_out(ib,iks), KIND=DP ) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 7) = AIMAG( sigma_cor_out(ib,iks) ) * rytoev
-        ENDDO
-        WRITE(myglobk,'(i5.5)') iks_l2g(iks)
-        !
-        CALL serial_table_output(mpime==root,4000,'eqp_K'//myglobk,out_tab,&
-           & qp_bandrange(2)-qp_bandrange(1)+1,7,&
-           & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
-     ENDDO
-     !
-     DEALLOCATE( out_tab )  
+!    ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
+!    !
+!    DO iks=1,nks
+!       DO ib = qp_bandrange(1), qp_bandrange(2)
+!          out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
+!          out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 3) = (et(ib,iks)+sigma_hf(ib,iks)) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 4) = qp_energy(ib,iks) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 5) = (qp_energy(ib,iks) - et(ib,iks) ) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 6) = REAL(  sigma_cor_out(ib,iks), KIND=DP ) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 7) = AIMAG( sigma_cor_out(ib,iks) ) * rytoev
+!       ENDDO
+!       WRITE(myglobk,'(i5.5)') iks_l2g(iks)
+!       !
+!       CALL serial_table_output(mpime==root,4000,'eqp_K'//myglobk,out_tab,&
+!          & qp_bandrange(2)-qp_bandrange(1)+1,7,&
+!          & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
+!    ENDDO
+!    !
+!    DEALLOCATE( out_tab )  
      DEALLOCATE( sigma_cor_in )
      DEALLOCATE( sigma_cor_out )
      DEALLOCATE( z_in )
@@ -979,29 +979,29 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      IF( notconv .NE. 0 ) THEN 
         CALL io_push_title("CONVERGENCE **NOT** ACHIEVED !!!")
      ENDIF
-     !
-     ! Output it per k-point
-     !
-     ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
-     !
-     DO iks=1,nks
-        DO ib = qp_bandrange(1), qp_bandrange(2)
-           out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
-           out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 3) = (et(ib,iks)+sigma_hf(ib,iks)) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 4) = qp_energy(ib,iks) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 5) = (qp_energy(ib,iks) - et(ib,iks) ) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 6) = REAL(  sigma_cor_out(ib,iks), KIND=DP ) * rytoev
-           out_tab( ib - qp_bandrange(1) + 1, 7) = AIMAG( sigma_cor_out(ib,iks) ) * rytoev
-        ENDDO
-        WRITE(myglobk,'(i5.5)') iks_l2g(iks)
-        !
-        CALL serial_table_output(mpime==root,4000,'eqp_K'//myglobk,out_tab,&
-           & qp_bandrange(2)-qp_bandrange(1)+1,7,&
-           & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
-     ENDDO
-     !
-     DEALLOCATE( out_tab )  
+!    !
+!    ! Output it per k-point
+!    !
+!    ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
+!    !
+!    DO iks=1,nks
+!       DO ib = qp_bandrange(1), qp_bandrange(2)
+!          out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
+!          out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 3) = (et(ib,iks)+sigma_hf(ib,iks)) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 4) = qp_energy(ib,iks) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 5) = (qp_energy(ib,iks) - et(ib,iks) ) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 6) = REAL(  sigma_cor_out(ib,iks), KIND=DP ) * rytoev
+!          out_tab( ib - qp_bandrange(1) + 1, 7) = AIMAG( sigma_cor_out(ib,iks) ) * rytoev
+!       ENDDO
+!       WRITE(myglobk,'(i5.5)') iks_l2g(iks)
+!       !
+!       CALL serial_table_output(mpime==root,4000,'eqp_K'//myglobk,out_tab,&
+!          & qp_bandrange(2)-qp_bandrange(1)+1,7,&
+!          & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
+!    ENDDO
+!    !
+!    DEALLOCATE( out_tab )  
      DEALLOCATE( sigma_cor_in )
      DEALLOCATE( sigma_cor_out )
      DEALLOCATE( z_in )

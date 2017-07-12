@@ -65,26 +65,26 @@ SUBROUTINE solve_hf()
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
   !
   CALL writeout_solvehf( sigma_hf(qp_bandrange(1),1), qp_bandrange(2)-qp_bandrange(1)+1, nks  )
-  !
-  ! Output it per k-point
-  !
-  ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,6))
-  DO iks=1,nks
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
-        out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
-        out_tab( ib - qp_bandrange(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
-        out_tab( ib - qp_bandrange(1) + 1, 4) = sigma_vxcl(ib,iks) * rytoev
-        out_tab( ib - qp_bandrange(1) + 1, 5) = sigma_vxcnl(ib,iks) * rytoev
-        out_tab( ib - qp_bandrange(1) + 1, 6) = ( et(ib,iks) + sigma_hf(ib,iks) ) * rytoev
-     ENDDO
-     WRITE(myglobk,'(i5.5)') iks_l2g(iks)
-     !
-     CALL serial_table_output(mpime==root,4000,'ehf_K'//myglobk,out_tab,&
-     & qp_bandrange(2)-qp_bandrange(1)+1,6,&
-     & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))
-  ENDDO
-  DEALLOCATE(out_tab)
+! !
+! ! Output it per k-point
+! !
+! ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,6))
+! DO iks=1,nks
+!    DO ib = qp_bandrange(1), qp_bandrange(2)
+!       out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
+!       out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
+!       out_tab( ib - qp_bandrange(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
+!       out_tab( ib - qp_bandrange(1) + 1, 4) = sigma_vxcl(ib,iks) * rytoev
+!       out_tab( ib - qp_bandrange(1) + 1, 5) = sigma_vxcnl(ib,iks) * rytoev
+!       out_tab( ib - qp_bandrange(1) + 1, 6) = ( et(ib,iks) + sigma_hf(ib,iks) ) * rytoev
+!    ENDDO
+!    WRITE(myglobk,'(i5.5)') iks_l2g(iks)
+!    !
+!    CALL serial_table_output(mpime==root,4000,'ehf_K'//myglobk,out_tab,&
+!    & qp_bandrange(2)-qp_bandrange(1)+1,6,&
+!    & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))
+! ENDDO
+! DEALLOCATE(out_tab)
   !
   ! Compute the exact exchange energy (used to calculate total GW energy) 
   !

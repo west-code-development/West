@@ -347,18 +347,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      sigma_sc_eks      = sigma_cor_in
      CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
      !
-     WRITE(stdout,"(5X)")  
-     CALL io_push_bar()
-     WRITE(stdout,"(5X,'Iter: ',i6.6)") 0 
-     WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
-     CALL io_push_bar()
-     DO iks = 1, nks
-        DO ib = qp_bandrange(1), qp_bandrange(2)
-           WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, en(ib,iks,2) * rytoev, .false. 
-        ENDDO
-     ENDDO
-     CALL io_push_bar()
-     !
      ! nth step of the secant solver
      !
      l_conv = .FALSE.
@@ -395,17 +383,17 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            ENDDO
         ENDDO
         !
-        WRITE(stdout,"(5X)")  
-        CALL io_push_bar()
-        WRITE(stdout,"(5X,'Iter: ',i6.6)") ifixed
-        WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
-        CALL io_push_bar()
-        DO iks = 1, nks
-           DO ib = qp_bandrange(1), qp_bandrange(2)
-              WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, qp_energy(ib,iks) * rytoev, l_conv(ib,iks) 
-           ENDDO
-        ENDDO
-        CALL io_push_bar()
+       !WRITE(stdout,"(5X)")  
+       !CALL io_push_bar()
+       !WRITE(stdout,"(5X,'Iter: ',i6.6)") ifixed
+       !WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
+       !CALL io_push_bar()
+       !DO iks = 1, nks
+       !   DO ib = qp_bandrange(1), qp_bandrange(2)
+       !      WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, qp_energy(ib,iks) * rytoev, l_conv(ib,iks) 
+       !   ENDDO
+       !ENDDO
+       !CALL io_push_bar()
         !
         ! Count the number of notconverged QP energies
         !
@@ -426,9 +414,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         !
         IF( notconv == 0 ) THEN 
            ! 
-           CALL output_eqp_report(-1,en(:,:,2),qp_energy,sc(:,:,2))
            CALL io_push_title("CONVERGENCE ACHIEVED !!!")
-           !
+           CALL output_eqp_report(-1,en(:,:,2),qp_energy,sc(:,:,2))
            EXIT
            !
         ELSE
@@ -891,17 +878,17 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      sigma_sc_eks      = sigma_cor_in
      CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
      !
-     WRITE(stdout,"(5X)")  
-     CALL io_push_bar()
-     WRITE(stdout,"(5X,'Iter: ',i6.6)") 0 
-     WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
-     CALL io_push_bar()
-     DO iks = 1, nks
-        DO ib = qp_bandrange(1), qp_bandrange(2)
-           WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, en(ib,iks,2) * rytoev, .false. 
-        ENDDO
-     ENDDO
-     CALL io_push_bar()
+    !WRITE(stdout,"(5X)")  
+    !CALL io_push_bar()
+    !WRITE(stdout,"(5X,'Iter: ',i6.6)") 0 
+    !WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
+    !CALL io_push_bar()
+    !DO iks = 1, nks
+    !   DO ib = qp_bandrange(1), qp_bandrange(2)
+    !      WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, en(ib,iks,2) * rytoev, .false. 
+    !   ENDDO
+    !ENDDO
+    !CALL io_push_bar()
      !
      ! nth step of the secant solver
      !
@@ -939,17 +926,17 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            ENDDO
         ENDDO
         !
-        WRITE(stdout,"(5X)")  
-        CALL io_push_bar()
-        WRITE(stdout,"(5X,'Iter: ',i6.6)") ifixed
-        WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
-        CALL io_push_bar()
-        DO iks = 1, nks
-           DO ib = qp_bandrange(1), qp_bandrange(2)
-              WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, qp_energy(ib,iks) * rytoev, l_conv(ib,iks) 
-           ENDDO
-        ENDDO
-        CALL io_push_bar()
+       !WRITE(stdout,"(5X)")  
+       !CALL io_push_bar()
+       !WRITE(stdout,"(5X,'Iter: ',i6.6)") ifixed
+       !WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
+       !CALL io_push_bar()
+       !DO iks = 1, nks
+       !   DO ib = qp_bandrange(1), qp_bandrange(2)
+       !      WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, qp_energy(ib,iks) * rytoev, l_conv(ib,iks) 
+       !   ENDDO
+       !ENDDO
+       !CALL io_push_bar()
         !
         ! Count the number of notconverged QP energies
         !
@@ -970,8 +957,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         !
         IF( notconv == 0 ) THEN 
            ! 
-           CALL output_eqp_report(-1,en(:,:,2),qp_energy,sc(:,:,2))
            CALL io_push_title("CONVERGENCE ACHIEVED !!!")
+           CALL output_eqp_report(-1,en(:,:,2),qp_energy,sc(:,:,2))
            EXIT
         ELSE
            !CALL io_push_bar()
@@ -1120,11 +1107,13 @@ END SUBROUTINE
 SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bandrange
+  USE westcom,              ONLY : qp_bandrange,trev_secant
   USE pwcom,                ONLY : nks,et
   USE constants,            ONLY : rytoev
   USE west_io,              ONLY : serial_table_output
   USE mp_world,             ONLY : mpime,root
+  USE io_global,            ONLY : stdout
+  USE io_push,              ONLY : io_push_title,io_push_bar
   ! 
   IMPLICIT NONE
   !
@@ -1141,6 +1130,25 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   INTEGER :: contatore
   REAL(DP) :: out_tabella(nks*(qp_bandrange(2)-qp_bandrange(1)+1),7)
   INTEGER :: ib, iks
+  CHARACTER(LEN=4) :: symb
+  !
+  ! STDOUT
+  !
+  WRITE(stdout,"(5X)")  
+  CALL io_push_bar()
+  IF( iteration >= 0 ) WRITE(stdout,"(5X,'Iter: ',i6.6)") iteration 
+  WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
+  CALL io_push_bar()
+  DO iks = 1, nks
+     DO ib = qp_bandrange(1), qp_bandrange(2)
+        symb='  no'
+        IF( (iteration .NE. 0) .AND. (ABS(en2(ib,iks)-en1(ib,iks)) < trev_secant) ) symb=' yes'
+        WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,1X,a)") iks, ib, en2(ib,iks) * rytoev, symb
+     ENDDO
+  ENDDO
+  CALL io_push_bar()
+  !
+  ! LOGFILE 
   !
   contatore=0
   DO iks=1,nks

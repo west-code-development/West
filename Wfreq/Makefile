@@ -22,7 +22,6 @@ IFLAGS=
 WFREQ_OBJS = \
 wfreq_readin.o \
 wfreq_setup.o \
-io_eigenfreq.o \
 diago_lanczos.o \
 solve_deflated_lanczos_w_full_ortho.o \
 get_brak_hyper_parallel.o \
@@ -36,6 +35,7 @@ solve_hf.o \
 calc_corr.o \
 solve_qp.o \
 wfreq.o
+#io_eigenfreq.o
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a

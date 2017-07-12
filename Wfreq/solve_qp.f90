@@ -478,25 +478,25 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ALLOCATE( en(qp_bandrange(1):qp_bandrange(2),nks,1) ) 
      ALLOCATE( sc(qp_bandrange(1):qp_bandrange(2),nks,1) )
-     ALLOCATE( un(qp_bandrange(1):qp_bandrange(2),nks) )
+     !ALLOCATE( un(qp_bandrange(1):qp_bandrange(2),nks) )
      !
-     IF( mpime == 0 ) THEN 
-        k = 0 
-        DO iks=1,nks
-           WRITE(iks_label,"(i5.5)") iks
-           DO ib = qp_bandrange(1), qp_bandrange(2)
-              WRITE(ib_label,"(i5.5)") ib
-              fname = "o-eqp_K"//TRIM(iks_label)//"_B"//TRIM(ib_label)//".tab"
-              k = k + 1
-              un(ib,iks) = 10000+k
-              OPEN( UNIT=un(ib,iks), FILE=TRIM(fname))
-              WRITE( un(ib,iks),"(a)") '#        E[eV]         E-EKS  Re{S(E)}-Vxc      Im{S(E)}          A(E)'
-           ENDDO  
-           fname = "o-eqp_K"//TRIM(iks_label)//"_summed.tab"
-           OPEN( UNIT=10000-iks, FILE=TRIM(fname))
-           WRITE( 10000-iks,"(a)") '#        E[eV]          A(E)'
-        ENDDO
-     ENDIF 
+   ! IF( mpime == 0 ) THEN 
+   !    k = 0 
+   !    DO iks=1,nks
+   !       WRITE(iks_label,"(i5.5)") iks
+   !       DO ib = qp_bandrange(1), qp_bandrange(2)
+   !          WRITE(ib_label,"(i5.5)") ib
+   !          fname = "o-eqp_K"//TRIM(iks_label)//"_B"//TRIM(ib_label)//".tab"
+   !          k = k + 1
+   !          un(ib,iks) = 10000+k
+   !          OPEN( UNIT=un(ib,iks), FILE=TRIM(fname))
+   !          WRITE( un(ib,iks),"(a)") '#        E[eV]         E-EKS  Re{S(E)}-Vxc      Im{S(E)}          A(E)'
+   !       ENDDO  
+   !       fname = "o-eqp_K"//TRIM(iks_label)//"_summed.tab"
+   !       OPEN( UNIT=10000-iks, FILE=TRIM(fname))
+   !       WRITE( 10000-iks,"(a)") '#        E[eV]          A(E)'
+   !    ENDDO
+   ! ENDIF 
      !
      DO glob_ifreq = 1, n_spectralf
         sigma_freq(glob_ifreq) = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) &
@@ -511,43 +511,43 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1) 
            ENDDO
         ENDDO
-        IF( mpime == 0 ) THEN 
-           DO iks=1,nks
-              summed_sf=0._DP
-              DO ib = qp_bandrange(1), qp_bandrange(2)
-                 WRITE( un(ib,iks),"(5f14.6)") en(ib,iks,1)*rytoev, &
-                 & (en(ib,iks,1)-et(ib,iks))*rytoev, &
-                 & (DBLE(sc(ib,iks,1))+sigma_hf(ib,iks))*rytoev, &
-                 & AIMAG(sc(ib,iks,1))*rytoev, &
-                 & ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2+&
-                 &AIMAG(sc(ib,iks,1))**2)/pi/rytoev
-                 IF( ib <= nbnd_occ(iks) ) THEN 
-                    summed_sf=summed_sf+ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2&
-                    &+AIMAG(sc(ib,iks,1))**2)/pi
-                 ENDIF
-              ENDDO
-              WRITE( 10000-iks,"(2f14.6)") en(qp_bandrange(1),iks,1)*rytoev,summed_sf/rytoev
-           ENDDO
-        ENDIF
+       !IF( mpime == 0 ) THEN 
+       !   DO iks=1,nks
+       !      summed_sf=0._DP
+       !      DO ib = qp_bandrange(1), qp_bandrange(2)
+       !         WRITE( un(ib,iks),"(5f14.6)") en(ib,iks,1)*rytoev, &
+       !         & (en(ib,iks,1)-et(ib,iks))*rytoev, &
+       !         & (DBLE(sc(ib,iks,1))+sigma_hf(ib,iks))*rytoev, &
+       !         & AIMAG(sc(ib,iks,1))*rytoev, &
+       !         & ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2+&
+       !         &AIMAG(sc(ib,iks,1))**2)/pi/rytoev
+       !         IF( ib <= nbnd_occ(iks) ) THEN 
+       !            summed_sf=summed_sf+ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2&
+       !            &+AIMAG(sc(ib,iks,1))**2)/pi
+       !         ENDIF
+       !      ENDDO
+       !      WRITE( 10000-iks,"(2f14.6)") en(qp_bandrange(1),iks,1)*rytoev,summed_sf/rytoev
+       !   ENDDO
+       !ENDIF
         CALL update_bar_type(barra,'qplot',1)
      ENDDO
      !
-     IF( mpime == 0 ) THEN 
-        DO iks=1,nks
-           DO ib = qp_bandrange(1), qp_bandrange(2)
-              CLOSE( un(ib,iks) )
-           ENDDO 
-           CLOSE(10000-iks)
-        ENDDO
-     ENDIF 
+    !IF( mpime == 0 ) THEN 
+    !   DO iks=1,nks
+    !      DO ib = qp_bandrange(1), qp_bandrange(2)
+    !         CLOSE( un(ib,iks) )
+    !      ENDDO 
+    !      CLOSE(10000-iks)
+    !   ENDDO
+    !ENDIF 
      !
      CALL stop_bar_type(barra,'qplot')
      !
      DEALLOCATE( en )
      DEALLOCATE( sc )  
-     DEALLOCATE( un )  
+     !DEALLOCATE( un )  
      !
-     CALL io_push_title('Done, take a look at the o-eqp_K*_B*.tab file(s) .')
+     !CALL io_push_title('Done, take a look at the o-eqp_K*_B*.tab file(s) .')
      ! 
   ENDIF 
   !
@@ -1017,25 +1017,25 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      !
      ALLOCATE( en(qp_bandrange(1):qp_bandrange(2),nks,1) ) 
      ALLOCATE( sc(qp_bandrange(1):qp_bandrange(2),nks,1) )
-     ALLOCATE( un(qp_bandrange(1):qp_bandrange(2),nks) )
+     !ALLOCATE( un(qp_bandrange(1):qp_bandrange(2),nks) )
      !
-     IF( mpime == 0 ) THEN 
-        k = 0 
-        DO iks=1,nks
-           WRITE(iks_label,"(i5.5)") iks
-           DO ib = qp_bandrange(1), qp_bandrange(2)
-              WRITE(ib_label,"(i5.5)") ib
-              fname = "o-eqp_K"//TRIM(iks_label)//"_B"//TRIM(ib_label)//".tab"
-              k = k + 1
-              un(ib,iks) = 10000+k
-              OPEN( UNIT=un(ib,iks), FILE=TRIM(fname))
-              WRITE( un(ib,iks),"(a)") '#        E[eV]         E-EKS  Re{S(E)}-Vxc      Im{S(E)}          A(E)'
-           ENDDO  
-           fname = "o-eqp_K"//TRIM(iks_label)//"_summed.tab"
-           OPEN( UNIT=10000-iks, FILE=TRIM(fname))
-           WRITE( 10000-iks,"(a)") '#        E[eV]          A(E)'
-        ENDDO
-     ENDIF
+    !IF( mpime == 0 ) THEN 
+    !   k = 0 
+    !   DO iks=1,nks
+    !      WRITE(iks_label,"(i5.5)") iks
+    !      DO ib = qp_bandrange(1), qp_bandrange(2)
+    !         WRITE(ib_label,"(i5.5)") ib
+    !         fname = "o-eqp_K"//TRIM(iks_label)//"_B"//TRIM(ib_label)//".tab"
+    !         k = k + 1
+    !         un(ib,iks) = 10000+k
+    !         OPEN( UNIT=un(ib,iks), FILE=TRIM(fname))
+    !         WRITE( un(ib,iks),"(a)") '#        E[eV]         E-EKS  Re{S(E)}-Vxc      Im{S(E)}          A(E)'
+    !      ENDDO  
+    !      fname = "o-eqp_K"//TRIM(iks_label)//"_summed.tab"
+    !      OPEN( UNIT=10000-iks, FILE=TRIM(fname))
+    !      WRITE( 10000-iks,"(a)") '#        E[eV]          A(E)'
+    !   ENDDO
+    !ENDIF
      !
      DO glob_ifreq = 1, n_spectralf
         sigma_freq(glob_ifreq) = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) &
@@ -1050,43 +1050,43 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1) 
            ENDDO
         ENDDO
-        IF( mpime == 0 ) THEN 
-           DO iks=1,nks
-              summed_sf=0._DP
-              DO ib = qp_bandrange(1), qp_bandrange(2)
-                 WRITE( un(ib,iks),"(5f14.6)") en(ib,iks,1)*rytoev, &
-                 & (en(ib,iks,1)-et(ib,iks))*rytoev, &
-                 & (DBLE(sc(ib,iks,1))+sigma_hf(ib,iks))*rytoev, &
-                 & AIMAG(sc(ib,iks,1))*rytoev, &
-                 & ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2+&
-                 &AIMAG(sc(ib,iks,1))**2)/pi/rytoev
-                 IF( ib <= nbnd_occ(iks) ) THEN 
-                    summed_sf=summed_sf+ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2&
-                    &+AIMAG(sc(ib,iks,1))**2)/pi
-                 ENDIF
-              ENDDO
-              WRITE( 10000-iks,"(2f14.6)") en(qp_bandrange(1),iks,1)*rytoev,summed_sf/rytoev
-           ENDDO
-        ENDIF
+       !IF( mpime == 0 ) THEN 
+       !   DO iks=1,nks
+       !      summed_sf=0._DP
+       !      DO ib = qp_bandrange(1), qp_bandrange(2)
+       !         WRITE( un(ib,iks),"(5f14.6)") en(ib,iks,1)*rytoev, &
+       !         & (en(ib,iks,1)-et(ib,iks))*rytoev, &
+       !         & (DBLE(sc(ib,iks,1))+sigma_hf(ib,iks))*rytoev, &
+       !         & AIMAG(sc(ib,iks,1))*rytoev, &
+       !         & ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2+&
+       !         &AIMAG(sc(ib,iks,1))**2)/pi/rytoev
+       !         IF( ib <= nbnd_occ(iks) ) THEN 
+       !            summed_sf=summed_sf+ABS(AIMAG(sc(ib,iks,1)))/((en(ib,iks,1)-et(ib,iks)-sigma_hf(ib,iks)-DBLE(sc(ib,iks,1)))**2&
+       !            &+AIMAG(sc(ib,iks,1))**2)/pi
+       !         ENDIF
+       !      ENDDO
+       !      WRITE( 10000-iks,"(2f14.6)") en(qp_bandrange(1),iks,1)*rytoev,summed_sf/rytoev
+       !   ENDDO
+       !ENDIF
         CALL update_bar_type(barra,'qplot',1)
      ENDDO
      !
-     IF( mpime == 0 ) THEN 
-        DO iks=1,nks
-           DO ib = qp_bandrange(1), qp_bandrange(2)
-              CLOSE( un(ib,iks) )
-           ENDDO 
-           CLOSE(10000-iks)
-        ENDDO
-     ENDIF 
+    !IF( mpime == 0 ) THEN 
+    !   DO iks=1,nks
+    !      DO ib = qp_bandrange(1), qp_bandrange(2)
+    !         CLOSE( un(ib,iks) )
+    !      ENDDO 
+    !      CLOSE(10000-iks)
+    !   ENDDO
+    !ENDIF 
      !
      CALL stop_bar_type(barra,'qplot')
      !
      DEALLOCATE( en )
      DEALLOCATE( sc )  
-     DEALLOCATE( un )
+     !DEALLOCATE( un )
      !
-     CALL io_push_title('Done, take a look at the o-eqp_K*_B*.tab file(s) .')
+     !CALL io_push_title('Done, take a look at the o-eqp_K*_B*.tab file(s) .')
      ! 
   ENDIF 
   !

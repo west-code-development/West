@@ -14,14 +14,14 @@
 SUBROUTINE wfreq_readin()
   !-----------------------------------------------------------------------
   !
-  USE pwcom
-  USE westcom
   USE ions_base,        ONLY : nat
   USE uspp,             ONLY : okvan
   USE io_files,         ONLY : tmp_dir, prefix
   USE io_global,        ONLY : stdout
   USE noncollin_module, ONLY : noncolin
   USE mp,               ONLY : mp_bcast
+  USE gvecs,            ONLY : doublegrid
+  USE spin_orb,         ONLY : domag
   !
   IMPLICIT NONE
   !

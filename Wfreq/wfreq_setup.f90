@@ -22,7 +22,7 @@ SUBROUTINE wfreq_setup
   USE westcom,                ONLY : 
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
-  USE pwcom,                  ONLY : npw,nbnd,nks
+  USE pwcom,                  ONLY : nbnd,nks
   USE kinds,                  ONLY : DP
   USE gvect,                  ONLY : gstart,g,ig_l2g
   USE io_files,               ONLY : tmp_dir

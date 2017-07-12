@@ -14,8 +14,6 @@
 SUBROUTINE wstat_readin()
   !-----------------------------------------------------------------------
   !
-  USE pwcom
-  USE westcom
   USE ions_base,        ONLY : nat
   USE uspp,             ONLY : okvan
   USE io_files,         ONLY : tmp_dir, prefix
@@ -23,6 +21,8 @@ SUBROUTINE wstat_readin()
   USE noncollin_module, ONLY : noncolin
   USE mp,               ONLY : mp_bcast
   USE mp_world,         ONLY : nproc,mpime,root
+  USE gvecs,            ONLY : doublegrid
+  USE spin_orb,         ONLY : domag
   !
   IMPLICIT NONE
   !

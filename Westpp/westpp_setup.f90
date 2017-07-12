@@ -19,7 +19,7 @@ SUBROUTINE westpp_setup
                                    & n_refreq,isz,qp_bandrange,westpp_calculation,westpp_n_pdep_eigen_to_use
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
-  USE pwcom,                  ONLY : npw,nbnd
+  USE pwcom,                  ONLY : nbnd
   USE kinds,                  ONLY : DP
   USE gvect,                  ONLY : gstart,g,ig_l2g
   USE io_files,               ONLY : tmp_dir

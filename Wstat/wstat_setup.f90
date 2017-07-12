@@ -19,7 +19,6 @@ SUBROUTINE wstat_setup
                                    & wstat_save_dir, wstat_restart_dir
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
-  USE pwcom,                  ONLY : npw,npwx
   USE kinds,                  ONLY : DP
   USE gvect,                  ONLY : gstart,g,ig_l2g,ngm,ngmx
   USE constants,              ONLY : e2,fpi

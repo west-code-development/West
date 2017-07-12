@@ -14,7 +14,6 @@
 MODULE pdep_io
   !----------------------------------------------------------------------------
   !
-  USE iotk_module
   USE kinds,        ONLY : DP
   USE mp_global,    ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
   USE westcom,      ONLY : npwq0, npwq0_g, npwq0x
@@ -65,8 +64,6 @@ MODULE pdep_io
       !
       IF(me_bgrp==root_bgrp) THEN 
          !
-         ! ... open XML descriptor
-         !
          ndim = npwq0_g
          nbytes = SIZEOF(tmp_vec(1)) * ndim
          ALLOCATE(CHARACTER(LEN=lenbase64(nbytes)) :: charbase64)
@@ -88,15 +85,6 @@ MODULE pdep_io
          CLOSE( iunit ) 
          !
          DEALLOCATE( charbase64 )
-         !  
-         !CALL iotk_free_unit( iun, ierr )
-         !CALL iotk_open_write( iun, FILE = TRIM(fname), BINARY = .TRUE.)
-         !CALL iotk_write_begin( iun, 'PDEP_GSPACE' )
-         !CALL iotk_write_dat( iun, "ndim" , npwq0_g )
-         !CALL iotk_write_dat( iun, "pdep" , tmp_vec(1:npwq0_g) )
-         !CALL iotk_write_end( iun, 'PDEP_GSPACE' )
-         !
-         !CALL iotk_close_write( iun )
          !
       END IF
       !
@@ -146,8 +134,6 @@ MODULE pdep_io
          ndim = npwq0_g
          nbytes = SIZEOF(tmp_vec(1)) * ndim
          nlen = lenbase64(nbytes)
-         !CALL get_lenbase64( nbytes, lenbase64 ) 
-         !ALLOCATE(CHARACTER(LEN=lenbase64) :: charbase64)
          !
          IF(me_bgrp==root_bgrp) THEN 
             !
@@ -160,29 +146,11 @@ MODULE pdep_io
             READ( iunit, '(a)' ) charbase64
             CLOSE( iunit )
             CALL base64_decode_complex(charbase64(2:(nlen+1)), ndim, tmp_vec(1:ndim)) 
+            DEALLOCATE( charbase64 )
             !
             CALL json%load_from_string("{"//TRIM(line)//"}")
             CALL json%get('meta.islittleendian', isle, found)
-            !
-          ! CALL json%initialize()
-          ! CALL json%load_file( filename = TRIM(fname) )
-          ! !
-          ! CALL json%get('meta.islittleendian', isle, found)
-          ! CALL json%get('data', charbase64, found)
-          ! !
             CALL json%destroy()
-          ! CALL base64_decode_complex(charbase64, ndim, tmp_vec(1:ndim)) 
-            !
-            DEALLOCATE( charbase64 )
-            !
-            ! ... open XML descriptor
-            !
-            !CALL iotk_free_unit( iun, ierr )
-            !CALL iotk_open_read( iun, FILE = TRIM(fname), BINARY = .TRUE., IERR = ierr)
-            !CALL iotk_scan_begin( iun, 'PDEP_GSPACE' )
-            !CALL iotk_scan_dat( iun, "pdep" , tmp_vec(1:npwq0_g) )
-            !CALL iotk_scan_end( iun, 'PDEP_GSPACE' )
-            !CALL iotk_close_read( iun )
             !
             IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
             !

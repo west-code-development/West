@@ -45,7 +45,6 @@ SUBROUTINE davidson_diago_gamma ( )
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwq0x,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged 
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-!  USE write_xml,            ONLY : wstat_xml_dump
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm
@@ -425,7 +424,6 @@ SUBROUTINE davidson_diago_gamma ( )
      !
   END DO iterate
   !
-!  CALL wstat_xml_dump( )
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
@@ -459,7 +457,6 @@ SUBROUTINE davidson_diago_k ( )
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwq0x,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged 
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-!  USE write_xml,            ONLY : wstat_xml_dump
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm
@@ -838,7 +835,6 @@ SUBROUTINE davidson_diago_k ( )
      !
   END DO iterate
   !
-!  CALL wstat_xml_dump( )
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )

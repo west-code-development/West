@@ -14,7 +14,6 @@
 MODULE pdep_db
   !----------------------------------------------------------------------------
   !
-  USE iotk_module
   USE kinds,     ONLY : DP
   USE io_files,  ONLY : tmp_dir
   !
@@ -32,7 +31,6 @@ MODULE pdep_db
     SUBROUTINE pdep_db_write( )
       !------------------------------------------------------------------------
       !
-      USE xml_io_base,          ONLY : create_directory
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp_global,            ONLY : my_image_id

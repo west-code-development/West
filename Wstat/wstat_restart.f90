@@ -41,7 +41,7 @@ MODULE wstat_restart
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,dvg,dng
+      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,dvg,dng,wstat_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE pdep_io,              ONLY : pdep_merge_and_write_G 
       USE distribution_center,  ONLY : pert
@@ -58,7 +58,7 @@ MODULE wstat_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=512) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -73,8 +73,7 @@ MODULE wstat_restart
       !
       ! MKDIR 
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.restart'
-      CALL my_mkdir( dirname )
+      CALL my_mkdir( wstat_restart_dir )
       !
       CALL start_clock('wstat_restart')
       time_spent(1)=get_clock('wstat_restart')
@@ -86,7 +85,8 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("summary.xml") , BINARY = .FALSE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("summary.xml") , &
+         BINARY = .FALSE., IERR = ierr )
          !
       END IF
       !
@@ -114,7 +114,8 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("eig.xml") , BINARY = .FALSE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("eig.xml"), &
+         BINARY = .FALSE., IERR = ierr )
          !
       END IF
       !
@@ -140,7 +141,7 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("hr.dat") , BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("hr.dat"), BINARY = .TRUE., IERR = ierr )
          !
       END IF
       !
@@ -175,7 +176,7 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("vr.dat") , BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("vr.dat") , BINARY = .TRUE., IERR = ierr )
          !
       END IF
       !
@@ -213,9 +214,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
+         fname = TRIM( wstat_restart_dir ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
-         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
+         fname = TRIM( wstat_restart_dir ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dng(:,local_j))
          !
       ENDDO
@@ -228,7 +229,7 @@ MODULE wstat_restart
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( wstat_restart_dir )  
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -240,7 +241,7 @@ MODULE wstat_restart
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,dvg,dng
+      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,dvg,dng,wstat_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE pdep_io,              ONLY : pdep_merge_and_write_G 
       USE distribution_center,  ONLY : pert
@@ -257,7 +258,7 @@ MODULE wstat_restart
       ! Workspace
       !
       INTEGER :: ierr
-      CHARACTER(LEN=512) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -272,8 +273,7 @@ MODULE wstat_restart
       !
       ! MKDIR 
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.restart'
-      CALL my_mkdir( dirname )
+      CALL my_mkdir( wstat_restart_dir )
       !
       CALL start_clock('wstat_restart')
       time_spent(1)=get_clock('wstat_restart')
@@ -285,7 +285,8 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("summary.xml") , BINARY = .FALSE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("summary.xml"), &
+         BINARY = .FALSE., IERR = ierr )
          !
       END IF
       !
@@ -313,7 +314,8 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("eig.xml") , BINARY = .FALSE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("eig.xml"), &
+         BINARY = .FALSE., IERR = ierr )
          !
       END IF
       !
@@ -339,7 +341,7 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("hr.dat") , BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("hr.dat") , BINARY = .TRUE., IERR = ierr )
          !
       END IF
       !
@@ -374,7 +376,7 @@ MODULE wstat_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM("vr.dat") , BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("vr.dat") , BINARY = .TRUE., IERR = ierr )
          !
       END IF
       !
@@ -412,9 +414,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
+         fname = TRIM( wstat_restart_dir ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
-         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
+         fname = TRIM( wstat_restart_dir ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_merge_and_write_G(fname,dng(:,local_j))
          !
       ENDDO
@@ -427,7 +429,7 @@ MODULE wstat_restart
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( wstat_restart_dir )  
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -441,7 +443,7 @@ MODULE wstat_restart
       USE mp_world,             ONLY : root,mpime,world_comm
       USE mp,                   ONLY : mp_barrier,mp_bcast
       USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,west_prefix
+      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,west_prefix,wstat_restart_dir
       USE wrappers,             ONLY : f_rmdir
       USE io_files,             ONLY : delete_if_present
       !
@@ -449,7 +451,7 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=512) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       INTEGER :: ierr,ip
       CHARACTER(6) :: my_label
       !
@@ -459,21 +461,19 @@ MODULE wstat_restart
       !
       ! ... clear the main restart directory
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.restart'
-      !
       IF(mpime==root) THEN
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'summary.xml' ) )
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'eig.xml' ) )
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'hr.dat' ) )
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'vr.dat' ) )
+         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.xml' ) )
+         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'eig.xml' ) )
+         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ) )
+         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ) )
          DO ip=1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
             fname="V"//TRIM(ADJUSTL(my_label))//".json"
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
             fname="N"//TRIM(ADJUSTL(my_label))//".json"
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
          ENDDO
-         ierr =  f_rmdir( TRIM( dirname ) )
+         ierr =  f_rmdir( TRIM( wstat_restart_dir ) )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm)
@@ -492,7 +492,7 @@ MODULE wstat_restart
       !
       USE mp_global,           ONLY : world_comm
       USE mp,                  ONLY : mp_barrier
-      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis
+      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis,wstat_restart_dir
       USE io_global,           ONLY : stdout 
       USE distribution_center, ONLY : pert
       !
@@ -507,7 +507,6 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=512) :: dirname
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -520,15 +519,13 @@ MODULE wstat_restart
       CALL start_clock('wstat_restart')
       time_spent(1)=get_clock('wstat_restart')
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.restart'
+      CALL read_restart1_( dav_iter, notcnv, nbase )
       !
-      CALL read_restart1_( dirname, dav_iter, notcnv, nbase )
+      CALL read_restart2_( ew )
       !
-      CALL read_restart2_( dirname, ew )
+      CALL read_restart3d_( hr_distr, vr_distr )
       !
-      CALL read_restart3d_( dirname, hr_distr, vr_distr )
-      !
-      CALL read_restart4_( dirname, nbase )
+      CALL read_restart4_( nbase )
       !
       ! BARRIER
       !
@@ -539,7 +536,7 @@ MODULE wstat_restart
       !
       WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( wstat_restart_dir )  
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -550,7 +547,7 @@ MODULE wstat_restart
       !
       USE mp_global,           ONLY : world_comm
       USE mp,                  ONLY : mp_barrier
-      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis
+      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis,wstat_restart_dir
       USE io_global,           ONLY : stdout 
       USE distribution_center, ONLY : pert
       !
@@ -565,7 +562,6 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=512) :: dirname
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -578,15 +574,13 @@ MODULE wstat_restart
       CALL start_clock('wstat_restart')
       time_spent(1)=get_clock('wstat_restart')
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.restart'
+      CALL read_restart1_( dav_iter, notcnv, nbase )
       !
-      CALL read_restart1_( dirname, dav_iter, notcnv, nbase )
+      CALL read_restart2_( ew )
       !
-      CALL read_restart2_( dirname, ew )
+      CALL read_restart3z_( hr_distr, vr_distr )
       !
-      CALL read_restart3z_( dirname, hr_distr, vr_distr )
-      !
-      CALL read_restart4_( dirname, nbase )
+      CALL read_restart4_( nbase )
       !
       ! BARRIER
       !
@@ -597,17 +591,17 @@ MODULE wstat_restart
       !
       WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( wstat_restart_dir )  
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart1_( dirname, dav_iter, notcnv, nbase )
+    SUBROUTINE read_restart1_( dav_iter, notcnv, nbase )
       !------------------------------------------------------------------------
       !
-      USE westcom,       ONLY : conv,n_pdep_eigen,n_pdep_basis
+      USE westcom,       ONLY : conv,n_pdep_eigen,n_pdep_basis,wstat_restart_dir
       USE mp_world,      ONLY : world_comm,mpime,root
       USE mp,            ONLY : mp_bcast
       !
@@ -619,14 +613,13 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=*), INTENT(IN)  :: dirname
       INTEGER :: ierr,iun
       !
       ierr = 0
       !
       IF ( mpime==root ) THEN
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'summary.xml' ), IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.xml' ), IERR = ierr )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm )
@@ -655,10 +648,10 @@ MODULE wstat_restart
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart2_( dirname, ew )
+    SUBROUTINE read_restart2_( ew )
       !------------------------------------------------------------------------
       !
-      USE westcom,       ONLY : ev,n_pdep_eigen,n_pdep_basis
+      USE westcom,       ONLY : ev,n_pdep_eigen,n_pdep_basis,wstat_restart_dir
       USE mp_world,      ONLY : world_comm,mpime,root
       USE mp,            ONLY : mp_bcast
       !
@@ -670,14 +663,13 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=*), INTENT(IN)  :: dirname
       INTEGER :: ierr,iun
       !
       ierr = 0
       !
       IF ( mpime==root ) THEN
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'eig.xml' ), IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'eig.xml' ), IERR = ierr )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm )
@@ -702,10 +694,10 @@ MODULE wstat_restart
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart3d_( dirname, hr_distr, vr_distr )
+    SUBROUTINE read_restart3d_( hr_distr, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : n_pdep_eigen,n_pdep_basis
+      USE westcom,              ONLY : n_pdep_eigen,n_pdep_basis,wstat_restart_dir
       USE mp_world,             ONLY : world_comm,mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
       USE distribution_center,  ONLY : pert
@@ -717,7 +709,6 @@ MODULE wstat_restart
       !  
       REAL(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       REAL(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
-      CHARACTER(LEN=*), INTENT(IN)  :: dirname
       !
       ! Workspace
       !
@@ -730,7 +721,7 @@ MODULE wstat_restart
       !
       IF ( mpime==root ) THEN
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm )
@@ -765,7 +756,7 @@ MODULE wstat_restart
       !
       IF ( mpime==root ) THEN
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm )
@@ -800,10 +791,10 @@ MODULE wstat_restart
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart3z_( dirname, hr_distr, vr_distr )
+    SUBROUTINE read_restart3z_( hr_distr, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : n_pdep_eigen,n_pdep_basis
+      USE westcom,             ONLY : n_pdep_eigen,n_pdep_basis,wstat_restart_dir
       USE mp_world,            ONLY : world_comm,mpime,root
       USE mp,                  ONLY : mp_bcast,mp_get
       USE distribution_center, ONLY : pert
@@ -815,7 +806,6 @@ MODULE wstat_restart
       !  
       COMPLEX(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       COMPLEX(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
-      CHARACTER(LEN=*), INTENT(IN)  :: dirname
       !
       ! Workspace
       !
@@ -828,7 +818,7 @@ MODULE wstat_restart
       !
       IF ( mpime==root ) THEN
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm )
@@ -863,7 +853,7 @@ MODULE wstat_restart
       !
       IF ( mpime==root ) THEN
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( dirname ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm )
@@ -898,15 +888,14 @@ MODULE wstat_restart
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart4_( dirname, nbase )
+    SUBROUTINE read_restart4_( nbase )
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : dvg,dng,npwq0x
+      USE westcom,             ONLY : dvg,dng,npwq0x,wstat_restart_dir
       USE mp_global,           ONLY : my_image_id
       USE pdep_io,             ONLY : pdep_read_G_and_distribute
       USE distribution_center, ONLY : pert
       !
-      CHARACTER(LEN=*), INTENT(IN)  :: dirname
       INTEGER, INTENT(IN) :: nbase
       !
       INTEGER :: global_j, local_j, group_j
@@ -928,9 +917,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
+         fname = TRIM( wstat_restart_dir ) // "/V"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
-         fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
+         fname = TRIM( wstat_restart_dir ) // "/N"//TRIM(ADJUSTL(my_label))//".json"
          CALL pdep_read_G_and_distribute(fname,dng(:,local_j))
          !
       ENDDO

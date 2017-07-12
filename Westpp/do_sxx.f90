@@ -36,9 +36,10 @@ SUBROUTINE do_sxx ( )
   USE gvect,                 ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
   USE cell_base,             ONLY : omega,at,alat
   USE noncollin_module,      ONLY : noncolin,npol 
-  USE west_io,               ONLY : serial_table_output
+  !USE west_io,               ONLY : serial_table_output
   USE mp_world,              ONLY : mpime,root
   USE constants,             ONLY : rytoev
+  USE json_module,           ONLY : json_file
   !
   IMPLICIT NONE
   !
@@ -53,10 +54,12 @@ SUBROUTINE do_sxx ( )
   REAL(DP),ALLOCATABLE :: sigma_sxx( :, : ) 
   REAL(DP) :: peso
   REAL(DP), EXTERNAL :: DDOT
-  CHARACTER(LEN=5) :: myglobk
+  CHARACTER(LEN=6) :: myglobk
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   COMPLEX(DP),ALLOCATABLE :: zproj(:,:)
   REAL(DP),ALLOCATABLE :: dproj(:,:)
+  TYPE(json_file) :: json
+  INTEGER :: iunit
   !
   ALLOCATE( mysqvc(npwq0) )
   CALL store_sqvc(mysqvc,npwq0,1,mydiv)
@@ -208,22 +211,44 @@ SUBROUTINE do_sxx ( )
   !
   ! Output it per k-point
   !
-  ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,5))
+  IF(mpime==root) CALL json%initialize()
+  !
+  ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,4))
+  !
   DO iks=1,nks
      DO ib = westpp_range(1), westpp_range(2)
         out_tab( ib - westpp_range(1) + 1, 1) = REAL( ib, KIND=DP) 
         out_tab( ib - westpp_range(1) + 1, 2) = et(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) * rytoev
-        out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
+        !out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
      ENDDO
-     WRITE(myglobk,'(i5.5)') iks_l2g(iks)
+     WRITE(myglobk,'(i6.6)') iks_l2g(iks)
      !
-     CALL serial_table_output(mpime==root,4000,'sxx_K'//myglobk,out_tab,&
-     & westpp_range(2)-westpp_range(1)+1,5,&
-     & (/'      band','    E0[eV]','    Sx[eV]','   Sxx[eV]','    Sxx/Sx'/))
+     !CALL serial_table_output(mpime==root,4000,'sxx_K'//myglobk,out_tab,&
+     !& westpp_range(2)-westpp_range(1)+1,5,&
+     !& (/'      band','    E0[eV]','    Sx[eV]','   Sxx[eV]','    Sxx/Sx'/))
+     !
+     IF(mpime==root) THEN 
+        !
+        CALL json%add('K'//TRIM(myglobk)//'.bandmap',out_tab(:,1))
+        CALL json%add('K'//TRIM(myglobk)//'.eks',out_tab(:,2))
+        CALL json%add('K'//TRIM(myglobk)//'.sx',out_tab(:,3))
+        CALL json%add('K'//TRIM(myglobk)//'.sxx',out_tab(:,4))
+        !
+     ENDIF
   ENDDO
   DEALLOCATE(out_tab)
+  !
+  IF( mpime == root ) THEN 
+     !
+     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//"/sxx.json" )
+     CALL json%print_file( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
   !
   DEALLOCATE( sigma_exx )
   DEALLOCATE( sigma_sxx ) 

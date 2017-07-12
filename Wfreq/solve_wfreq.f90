@@ -1176,9 +1176,9 @@ END SUBROUTINE
 SUBROUTINE output_eps_head( )
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : d_head_ifr,z_head_ifr,z_head_rfr,refreq_list,l_macropol,imfreq_list
+  USE westcom,              ONLY : d_head_ifr,z_head_ifr,z_head_rfr,refreq_list,l_macropol,imfreq_list,wfreq_save_dir
   USE constants,            ONLY : rytoev,fpi
-  USE west_io,              ONLY : serial_table_output
+  !USE west_io,              ONLY : serial_table_output
   USE mp_world,             ONLY : mpime,root
   USE distribution_center,  ONLY : ifr,rfr
   USE mp,                   ONLY : mp_sum
@@ -1188,6 +1188,7 @@ SUBROUTINE output_eps_head( )
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
+  USE json_module,          ONLY : json_file
   ! 
   IMPLICIT NONE
   !
@@ -1201,12 +1202,16 @@ SUBROUTINE output_eps_head( )
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
   CHARACTER(20),EXTERNAL :: human_readable_time
+  TYPE(json_file) :: json
+  INTEGER :: iunit
   !
   IF(l_macropol) THEN 
      !
      CALL io_push_title("(O)ptics") 
      !
      CALL start_bar_type ( barra, 'optics', rfr%nloc )
+     !
+     time_spent(1) = get_clock( 'optics' ) 
      !
      ! head_rfr
      !
@@ -1236,49 +1241,45 @@ SUBROUTINE output_eps_head( )
         !
      ENDDO
      !
+     CALL stop_bar_type( barra, 'optics' )
+     !
      CALL mp_sum( out_tabella, intra_bgrp_comm ) 
      !
-     time_spent(1) = get_clock( 'optics' ) 
+     !CALL serial_table_output(mpime==root,4000,'optics',out_tabella,&
+     !& rfr%nglob,8,&
+     !& (/'     E[eV]','      eps1','      eps2','      EELF','         n','         k','      Refl',' pol[au^3]'/))
      !
-     CALL serial_table_output(mpime==root,4000,'optics',out_tabella,&
-     & rfr%nglob,8,&
-     & (/'     E[eV]','      eps1','      eps2','      EELF','         n','         k','      Refl',' pol[au^3]'/))
+     IF( mpime == root ) THEN 
+        !
+        CALL json%initialize()
+        !
+        CALL json%add("e",out_tabella(:,1))
+        CALL json%add("eps1",out_tabella(:,2))
+        CALL json%add("eps2",out_tabella(:,3))
+        CALL json%add("EELF",out_tabella(:,4))
+        CALL json%add("n",out_tabella(:,5))
+        CALL json%add("k",out_tabella(:,6))
+        CALL json%add("refl",out_tabella(:,7))
+        CALL json%add("pol",out_tabella(:,8))
+        !
+        OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/optics.json" )
+        CALL json%print_file( iunit )
+        CLOSE( iunit )
+        !
+        CALL json%destroy()
+        !
+     ENDIF
      !
      time_spent(2) = get_clock( 'optics' ) 
      !
-     DEALLOCATE( out_tabella )
-     !
-     CALL stop_bar_type( barra, 'optics' )
-     !
      WRITE(stdout,'(  5x," ")')
      CALL io_push_bar()
-     WRITE(stdout, "(5x, 'File o-optics.dat written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+     WRITE(stdout, "(5x, 'File ',a,' written in ',a20)") TRIM(wfreq_save_dir)//"/optics.json",&
+     & human_readable_time(time_spent(2)-time_spent(1))
      CALL io_push_bar()
-!    !
-!    ! head_ifr
-!    !
-!    ALLOCATE( out_tabella(ifr%nglob,3) )
-!    !
-!    out_tabella = 0._DP
-!    DO ifreq = 1, ifr%nloc 
-!       glob_ifreq = ifr%l2g(ifreq)
-!       out_tabella( glob_ifreq, 1 ) = imfreq_list( ifreq )*rytoev
-!       IF( gamma_only ) THEN 
-!          out_tabella( glob_ifreq, 2 ) = d_head_ifr( ifreq )
-!          out_tabella( glob_ifreq, 3 ) = 0._DP
-!       ELSE
-!          out_tabella( glob_ifreq, 2 ) = REAL( z_head_ifr( ifreq ), KIND=DP )
-!          out_tabella( glob_ifreq, 3 ) = AIMAG( z_head_ifr( ifreq ) )
-!       ENDIF
-!    ENDDO
-!    CALL mp_sum( out_tabella, intra_bgrp_comm ) 
-!    !
-!    CALL serial_table_output(mpime==root,4000,'eps.head_ifr',out_tabella,&
-!    & ifr%nglob,3,&
-!    & (/'     E[eV]','       ReE','       ImE'/))
-!    !
-!    DEALLOCATE( out_tabella )
-!    !
+     ! 
+     DEALLOCATE( out_tabella )
+     !
   ENDIF
   !
 END SUBROUTINE

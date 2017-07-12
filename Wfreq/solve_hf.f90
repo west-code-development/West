@@ -32,7 +32,7 @@ SUBROUTINE solve_hf()
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE noncollin_module,     ONLY : noncolin,npol 
   USE constants,            ONLY : rytoev
-  USE west_io,              ONLY : serial_table_output
+  !USE west_io,              ONLY : serial_table_output
   USE distribution_center,  ONLY : pert
   USE funct,                ONLY : get_exx_fraction,dft_is_hybrid
   USE klist,                ONLY : wk

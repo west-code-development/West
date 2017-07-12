@@ -11,25 +11,27 @@
 ## Marco Govoni
 ##
 
+from __future__ import print_function
+
 ##
 ## Header 
 ##
 
 def header() : 
    import datetime
-   print " _    _ _____ _____ _____            "        
-   print "| |  | |  ___/  ___|_   _|           "
-   print "| |  | | |__ \ `--.  | |_ __  _   _  "
-   print "| |/\| |  __| `--. \ | | '_ \| | | | "
-   print "\  /\  / |___/\__/ / | | |_) | |_| | "
-   print " \/  \/\____/\____/  \_/ .__/ \__, | "
-   print "                       | |     __/ | "
-   print "                       |_|    |___/  "
-   print "*** <WEST> ***"
-   print "WEST version     : 2.0.0"
-   print "Today            : ", datetime.datetime.today() 
-   print "*** </WEST> ***"
-   print " "
+   print(" _    _ _____ _____ _____            ")       
+   print("| |  | |  ___/  ___|_   _|           ")
+   print("| |  | | |__ \ `--.  | |_ __  _   _  ")
+   print("| |/\| |  __| `--. \ | | '_ \| | | | ")
+   print("\  /\  / |___/\__/ / | | |_) | |_| | ")
+   print(" \/  \/\____/\____/  \_/ .__/ \__, | ")
+   print("                       | |     __/ | ")
+   print("                       |_|    |___/  ")
+   print("*** <WEST> ***")
+   print("WEST version     : 3.0.0")
+   print("Today            : ", datetime.datetime.today())
+   print("*** </WEST> ***")
+   print(" ")
 
 ##
 ## Versions 
@@ -39,12 +41,12 @@ def versions() :
    import numpy as np
    import scipy as sp
    import matplotlib as mpl
-   print "*** <VERSIONS> ***"
-   print "Numpy version      :", np.__version__
-   print "Scipy version      :", sp.__version__
-   print "MatPlotLib version :", mpl.__version__
-   print "*** </VERSION> ***"
-   print " "
+   print("*** <VERSIONS> ***")
+   print("Numpy version      :", np.__version__)
+   print("Scipy version      :", sp.__version__)
+   print("MatPlotLib version :", mpl.__version__)
+   print("*** </VERSION> ***")
+   print(" ")
 
 ##
 ## Footer
@@ -52,9 +54,9 @@ def versions() :
 
 def footer() : 
    import datetime
-   print "*** <END> ***"
-   print "Job done : ", datetime.datetime.today()
-   print "*** </END> ***"
+   print("*** <END> ***")
+   print("Job done : ", datetime.datetime.today())
+   print("*** </END> ***")
 
 ##
 ## Constants
@@ -92,7 +94,7 @@ class CubeFile:
     #
     def read(self):
         import numpy as np
-        print 'Reading Cube File : ', self.fname 
+        print('Reading Cube File : ', self.fname) 
         # read
         file_handle = open(self.fname, 'r')
         lines_list = file_handle.readlines()
@@ -136,13 +138,13 @@ class CubeFile:
     #
     def show_content(self):
         import numpy as np
-        print 'File : ', self.fname 
-        print self.nat, self.shift[0], self.shift[1], self.shift[2]
+        print('File : ', self.fname) 
+        print(self.nat, self.shift[0], self.shift[1], self.shift[2])
         for i in range(3) : 
-            print self.n[i], self.acell[i,0:3]
+            print(self.n[i], self.acell[i,0:3])
         for ia in range(self.nat) : 
-            print atomic_symbol[int(self.atsymbol[ia])], self.atcharge[ia], self.atpos[ia,0:3]
-        print self.nspec, self.spec_list
+            print(atomic_symbol[int(self.atsymbol[ia])], self.atcharge[ia], self.atpos[ia,0:3])
+        print(self.nspec, self.spec_list)
     #
     def interpolate(self,pts):
         import numpy as np
@@ -199,7 +201,7 @@ class EnergyFile:
     #
     def read(self):
         import numpy as np
-        print 'Reading Energy File : ', self.fname 
+        print('Reading Energy File : ', self.fname) 
         # read
         file_handle = open(self.fname, 'r')
         lines_list = file_handle.readlines()
@@ -222,16 +224,16 @@ class EnergyFile:
     #
     def show_content(self):
         import numpy as np
-        print 'File : ', self.fname 
-        print 'Detected no. energies : ', self.ne 
+        print('File : ', self.fname)
+        print('Detected no. energies : ', self.ne) 
         if ( self.has_names ) :
-           print '[Energy, Sigma, Weight], Name'
+           print('[Energy, Sigma, Weight], Name')
            for ie in range(self.ne) :
-               print self.e[ie,0:], self.name[ie]
+               print(self.e[ie,0:], self.name[ie])
         else :
-           print '[Energy, Sigma, Weight]'
+           print('[Energy, Sigma, Weight]')
            for ie in range(self.ne) :
-               print self.e[ie,0:]
+               print(self.e[ie,0:])
     #
     def crunch_datain(self):
         import numpy as np
@@ -260,7 +262,7 @@ class EnergyFile:
                       self.plot[ie,ipt] = float( my_line[1] )
                       ipt += 1 
         else :
-           print 'No data input'
+           print('No data input')
 
 ##
 ## Plot DOS
@@ -287,17 +289,17 @@ def plot_dos(energy_file_name,output_file_name,erange) :
     header()
     versions()
     #
-    print "*** <INPUT> ***"
-    print "Energy file name     : ", energy_file_name 
-    print "Output file name     : ", output_file_name 
-    print "erange               : ", erange
-    print "*** </INPUT> ***"
-    print " "
+    print("*** <INPUT> ***")
+    print("Energy file name     : ", energy_file_name) 
+    print("Output file name     : ", output_file_name)
+    print("erange               : ", erange)
+    print("*** </INPUT> ***")
+    print(" ")
     # 
-    print "*** <DOS> ***"
+    print("*** <DOS> ***")
     #
     npte = int((erange[1]-erange[0])/erange[2]) + 1
-    print "Using npte : ", npte 
+    print("Using npte : ", npte)
     #
     en = EnergyFile(energy_file_name)
     en.show_content()
@@ -309,13 +311,13 @@ def plot_dos(energy_file_name,output_file_name,erange) :
         for ix in range(npte) : 
             dos_axis[ix] += gaussian( e_axis[ix], en.e[ie,0], en.e[ie,1] ) * en.e[ie,2] 
     #
-    print "Requested (emin,emax) : ", erange[0], erange[1]
-    print "Detected  (emin,emax) : ", np.min(en.e[:,0]), np.max(en.e[:,0])
+    print("Requested (emin,emax) : ", erange[0], erange[1])
+    print("Detected  (emin,emax) : ", np.min(en.e[:,0]), np.max(en.e[:,0]))
     #
-    print "*** </DOS> ***"
-    print " "
+    print("*** </DOS> ***")
+    print(" ")
     #
-    print "*** <PLOT> ***"
+    print("*** <PLOT> ***")
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1)
@@ -325,12 +327,12 @@ def plot_dos(energy_file_name,output_file_name,erange) :
     plt.xlabel('En (eV)')
     plt.ylabel('DOS')
     plt.savefig(output_file_name)
-    print "output written in : ", output_file_name
-    print "waiting for user to close image preview..."
+    print("output written in : ", output_file_name)
+    print("waiting for user to close image preview...")
     plt.show()
     fig.clear()
-    print "*** </PLOT> ***"
-    print " "
+    print("*** </PLOT> ***")
+    print(" ")
     #
     footer()
 
@@ -359,18 +361,18 @@ def plot_2dslice(cube_file_name,output_file_name,mesh2d,slice_direction,const,ad
     header()
     versions()
     #
-    print "*** <INPUT> ***"
-    print "Cube file name   : ", cube_file_name 
-    print "Output file name : ", output_file_name 
-    print "mesh2d           : ", mesh2d
-    print "Slice direction  : ", slice_direction
-    print "Cut (a.u.)       : ", const 
-    print "add_atoms        : ", add_atoms 
-    print "*** </INPUT> ***"
-    print " "
+    print("*** <INPUT> ***")
+    print("Cube file name   : ", cube_file_name)
+    print("Output file name : ", output_file_name) 
+    print("mesh2d           : ", mesh2d)
+    print("Slice direction  : ", slice_direction)
+    print("Cut (a.u.)       : ", const)
+    print("add_atoms        : ", add_atoms) 
+    print("*** </INPUT> ***")
+    print(" ")
     #
-    print "*** <SLICING> ***"
-    print "using point (x,y) : ", mesh2d
+    print("*** <SLICING> ***")
+    print("using point (x,y) : ", mesh2d)
     #
     label = [ 'x', 'y', 'z' ]
     #
@@ -384,7 +386,7 @@ def plot_2dslice(cube_file_name,output_file_name,mesh2d,slice_direction,const,ad
        dir_x = 0 
        dir_y = 1 
     #
-    print "along direction   : ", label[slice_direction]
+    print("along direction   : ", label[slice_direction])
     #
     cube = CubeFile(cube_file_name)
     #
@@ -406,11 +408,11 @@ def plot_2dslice(cube_file_name,output_file_name,mesh2d,slice_direction,const,ad
     #
     cmap = cube.get_slice(mesh2d,xmap,ymap,zmap)
     #
-    print "generated X,Y,C maps"
-    print "*** </SLICING> ***"
-    print " "
+    print("generated X,Y,C maps")
+    print("*** </SLICING> ***")
+    print(" ")
     #  
-    print "*** <PLOT> ***"
+    print("*** <PLOT> ***")
     import matplotlib.pyplot as plt
     import matplotlib.cm as cm
     fig = plt.figure()
@@ -437,12 +439,12 @@ def plot_2dslice(cube_file_name,output_file_name,mesh2d,slice_direction,const,ad
            plt.text(xau, yau, atomic_symbol[cube.atsymbol[iat]], fontsize = 11, color = 'r', horizontalalignment='center', verticalalignment='center')
            ax.add_patch(circ)
     plt.savefig(output_file_name)
-    print "output written in : ", output_file_name
-    print "waiting for user to close image preview..."
+    print("output written in : ", output_file_name)
+    print("waiting for user to close image preview...")
     plt.show()
     fig.clear()
-    print "*** </PLOT> ***"
-    print " "
+    print("*** </PLOT> ***")
+    print(" ")
     #
     footer()
 
@@ -464,13 +466,13 @@ def plot_species_abundancy(cube_file_name,output_file_name) :
     header()
     versions()
     #
-    print "*** <INPUT> ***"
-    print "Cube file name       : ", cube_file_name 
-    print "Output file name     : ", output_file_name 
-    print "*** </INPUT> ***"
-    print " "
+    print("*** <INPUT> ***")
+    print("Cube file name       : ", cube_file_name) 
+    print("Output file name     : ", output_file_name) 
+    print("*** </INPUT> ***")
+    print(" ")
     #
-    print "*** <ABUNDANCIES> ***"
+    print("*** <ABUNDANCIES> ***")
     #
     cube = CubeFile(cube_file_name)
     #
@@ -495,10 +497,10 @@ def plot_species_abundancy(cube_file_name,output_file_name) :
         for j in range( 4*cube.n[2]+1 ) : 
             spec_z[ispec,j] += gaussian( z_axis[j], cube.atpos[iat,2], 0.25) 
     #
-    print "*** </ABUNDANCIES> ***"
-    print " "
+    print("*** </ABUNDANCIES> ***")
+    print(" ")
     #
-    print "*** <PLOT> ***"
+    print("*** <PLOT> ***")
     import matplotlib.pyplot as plt
     import matplotlib.cm as cm
 #
@@ -540,12 +542,12 @@ def plot_species_abundancy(cube_file_name,output_file_name) :
     plt.legend(loc=1,prop={'size':6})
 # 
     plt.savefig(output_file_name)
-    print "output written in : ", output_file_name
-    print "waiting for user to close image preview..."
+    print("output written in : ", output_file_name)
+    print("waiting for user to close image preview...")
     plt.show()
     fig.clear()
-    print "*** </PLOT> ***"
-    print " "
+    print("*** </PLOT> ***")
+    print(" ")
     #
     footer()
 
@@ -574,25 +576,25 @@ def plot_ldos(energy_file_name,output_file_name,erange) :
     header()
     versions()
     #
-    print "*** <INPUT> ***"
-    print "Energy file name     : ", energy_file_name 
-    print "Output file name     : ", output_file_name 
-    print "erange               : ", erange
-    print "*** </INPUT> ***"
-    print " "
+    print("*** <INPUT> ***")
+    print("Energy file name     : ", energy_file_name)
+    print("Output file name     : ", output_file_name)
+    print("erange               : ", erange)
+    print("*** </INPUT> ***")
+    print(" ")
     #
-    print "*** <LDOS> ***"
+    print("*** <LDOS> ***")
     #
     npte = int((erange[1]-erange[0])/erange[2]) + 1
-    print "Using npte : ", npte 
+    print("Using npte : ", npte) 
     # 
     en = EnergyFile(energy_file_name)
     en.show_content()
     #
     e_axis = np.linspace(erange[0], erange[1], npte, endpoint=True)
     #
-    print "Requested (emin,emax) : ", erange[0], erange[1]
-    print "Detected  (emin,emax) : ", np.min(en.e[:,0]), np.max(en.e[:,0])
+    print("Requested (emin,emax) : ", erange[0], erange[1])
+    print("Detected  (emin,emax) : ", np.min(en.e[:,0]), np.max(en.e[:,0]))
     #
     en.crunch_datain()
     #
@@ -611,17 +613,17 @@ def plot_ldos(energy_file_name,output_file_name,erange) :
     #
     from scipy import interpolate
     for ie in range(en.ne) :
-        print ie+1, "/", en.ne
+        print(ie+1, "/", en.ne)
         for i in range(ntimes*en.npt-1) :
             tck = interpolate.splrep(en.axis[:], en.plot[ie,:], s=0, per=True)
             f   = interpolate.splev(x_axis, tck)
             for j in range(npte-1) :
                 cmap[i,j] += f[i] * gaussian( e_axis[j], en.e[ie,0], en.e[ie,1] ) * en.e[ie,2] 
     #
-    print "*** </LDOS> ***"
-    print " "
+    print("*** </LDOS> ***")
+    print(" ")
     #
-    print "*** <PLOT> ***"
+    print("*** <PLOT> ***")
     import matplotlib.pyplot as plt
     import matplotlib.cm as cm
 #
@@ -639,11 +641,11 @@ def plot_ldos(energy_file_name,output_file_name,erange) :
 #
 #
     plt.savefig(output_file_name)
-    print "output written in : ", output_file_name
-    print "waiting for user to close image preview..."
+    print("output written in : ", output_file_name)
+    print("waiting for user to close image preview...")
     plt.show()
     fig.clear()
-    print "*** </PLOT> ***"
-    print " "
+    print("*** </PLOT> ***")
+    print(" ")
     #
     footer()

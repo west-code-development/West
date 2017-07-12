@@ -175,7 +175,7 @@ MODULE wfreq_center
   COMPLEX(DP),ALLOCATABLE :: sigma_sc_eks    (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_sc_eqplin (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_sc_eqpsec (:,:)
-  INTEGER,ALLOCATABLE     :: sigma_diff      (:,:)
+  REAL(DP),ALLOCATABLE     :: sigma_diff      (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_spectralf (:,:,:)
   REAL(DP),ALLOCATABLE    :: sigma_freq      (:)
   !

@@ -55,7 +55,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
-  USE write_xml,            ONLY : wfreq_xml_dump
+  USE wfreq_db,             ONLY : wfreq_db_write
   !
   IMPLICIT NONE
   !
@@ -568,7 +568,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   DEALLOCATE( sigma_hf )
   !
-  CALL wfreq_xml_dump( )
+  CALL wfreq_db_write( )
   !
   CALL stop_clock( "solve_qp" )
   !
@@ -600,7 +600,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
-  USE write_xml,            ONLY : wfreq_xml_dump
+  USE wfreq_db,             ONLY : wfreq_db_write
   !
   IMPLICIT NONE
   !
@@ -1109,7 +1109,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   DEALLOCATE( sigma_hf )
   !
-  CALL wfreq_xml_dump( )
+  CALL wfreq_db_write( )
   !
   CALL stop_clock( "solve_qp" )
   !

@@ -22,7 +22,7 @@ fetch_namelist.o \
 cubefile.o \
 pdep_io.o \
 pdep_db.o \
-write_xml.o \
+wfreq_db.o \
 mod_west_io.o \
 wfreq_io.o \
 wfreq_restart.o  

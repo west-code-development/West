@@ -15,9 +15,9 @@ SUBROUTINE set_isz( isz_mode, isz )
   !-----------------------------------------------------------------------
   !
   USE kinds,                  ONLY : DP
-  USE cell_base,              ONLY : omega
+  USE cell_base,              ONLY : omega,tpiba2
   USE constants,              ONLY : pi,fpi
-  USE pwcom,                  ONLY : tpiba2,npw
+  USE pwcom,                  ONLY : npw
   USE gvect,                  ONLY : g,gstart
   USE mp,                     ONLY : mp_sum
   USE mp_global,              ONLY : intra_bgrp_comm

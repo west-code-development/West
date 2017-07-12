@@ -15,7 +15,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
-  USE pwcom
   USE westcom
   USE io_files,         ONLY : tmp_dir, prefix
   USE io_global,        ONLY : stdout

@@ -16,9 +16,8 @@ SUBROUTINE write_wfc_spav ( iu, fname, wfc, r0, nr, rmax )
   !
   ! r0 and rmax are in a.u 
   !
-  USE pwcom,                 ONLY : npw,npwx,tpiba,alat
   USE kinds,                 ONLY : DP
-  USE cell_base,             ONLY : celldm, at, bg, omega
+  USE cell_base,             ONLY : celldm, at, bg, omega, tpiba, alat
   USE ions_base,             ONLY : nat, tau, atm, ityp
   USE mp_global,             ONLY : me_bgrp,root_bgrp,intra_bgrp_comm
   USE mp,                    ONLY : mp_sum

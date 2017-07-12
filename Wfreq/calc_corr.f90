@@ -23,7 +23,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : tpi,fpi,rytoev,e2,pi
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
+  USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
   USE westcom,              ONLY : qp_bandrange,isz,&
                                  & nbnd_occ,l_enable_lanczos,&
                                  & n_lanczos,iks_l2g,l_macropol,&
@@ -224,7 +224,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : tpi,fpi,rytoev,e2,pi
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
+  USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
   USE westcom,              ONLY : qp_bandrange,isz,&
                                  & nbnd_occ,l_enable_lanczos,&
                                  & n_lanczos,iks_l2g,l_macropol,&

@@ -14,7 +14,6 @@
 SUBROUTINE write_wfc_1D_r ( dfft, iu, fname, wfc_distr, ipol)
   ! -------------------------------------------------------------------
   !
-  USE pwcom,                 ONLY : npw,npwx
   USE kinds,                 ONLY : DP
   USE cell_base,             ONLY : celldm, at, bg, omega
   USE ions_base,             ONLY : nat, tau, atm, ityp

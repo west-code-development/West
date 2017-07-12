@@ -269,7 +269,6 @@ SUBROUTINE store_vcspecial_H(vc_tmp,numg)
  !
  USE kinds,     ONLY : DP
  USE cell_base, ONLY : tpiba, at,omega
- USE pwcom,     ONLY : npw,npwx
  USE gvect,     ONLY : g,gstart
  USE constants, ONLY : fpi, e2, pi
  USE exx,       ONLY : exxdiv 

@@ -468,8 +468,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      DEALLOCATE( z_in )
      DEALLOCATE( qp_energy )
      !
-     CALL io_push_title('Done, take a look at the o-eqp_K*.tab file(s) .')
-     !
   ENDIF
   !
   IF( l_generate_plot ) THEN
@@ -1009,8 +1007,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      DEALLOCATE( z_in )
      DEALLOCATE( qp_energy )
      !
-     CALL io_push_title('Done, take a look at the o-eqp_K*.tab file(s) .')
-     !
   ENDIF
   !
   IF( l_generate_plot ) THEN
@@ -1107,13 +1103,14 @@ END SUBROUTINE
 SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bandrange,trev_secant
+  USE westcom,              ONLY : qp_bandrange,trev_secant,logfile,iks_l2g
   USE pwcom,                ONLY : nks,et
   USE constants,            ONLY : rytoev
-  USE west_io,              ONLY : serial_table_output
+  !USE west_io,              ONLY : serial_table_output
   USE mp_world,             ONLY : mpime,root
   USE io_global,            ONLY : stdout
   USE io_push,              ONLY : io_push_title,io_push_bar
+  USE json_module,          ONLY : json_file
   ! 
   IMPLICIT NONE
   !
@@ -1131,6 +1128,10 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   REAL(DP) :: out_tabella(nks*(qp_bandrange(2)-qp_bandrange(1)+1),7)
   INTEGER :: ib, iks
   CHARACTER(LEN=4) :: symb
+  TYPE(json_file) :: json
+  CHARACTER(LEN=6) :: my_label_k,my_label_b,citr
+  INTEGER :: secitr, iunit
+  LOGICAL :: found
   !
   ! STDOUT
   !
@@ -1150,27 +1151,66 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   !
   ! LOGFILE 
   !
-  contatore=0
-  DO iks=1,nks
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        contatore = contatore + 1
-        out_tabella(contatore,1) = REAL(iks,KIND=DP)
-        out_tabella(contatore,2) = REAL(ib,KIND=DP)
-        out_tabella(contatore,3) = et(ib,iks)*rytoev
-        out_tabella(contatore,4) = en1(ib,iks)*rytoev
-        out_tabella(contatore,5) = REAL( sc1(ib,iks), KIND=DP) *rytoev
-        out_tabella(contatore,6) = en2(ib,iks)*rytoev
-        out_tabella(contatore,7) = (en2(ib,iks)-en1(ib,iks))*rytoev
-     ENDDO
-  ENDDO
+ !contatore=0
+ !DO iks=1,nks
+ !   DO ib = qp_bandrange(1), qp_bandrange(2)
+ !      contatore = contatore + 1
+ !      out_tabella(contatore,1) = REAL(iks,KIND=DP)
+ !      out_tabella(contatore,2) = REAL(ib,KIND=DP)
+ !      out_tabella(contatore,3) = et(ib,iks)*rytoev
+ !      out_tabella(contatore,4) = en1(ib,iks)*rytoev
+ !      out_tabella(contatore,5) = REAL( sc1(ib,iks), KIND=DP) *rytoev
+ !      out_tabella(contatore,6) = en2(ib,iks)*rytoev
+ !      out_tabella(contatore,7) = (en2(ib,iks)-en1(ib,iks))*rytoev
+ !   ENDDO
+ !ENDDO
+ !!
+ !IF(iteration>=0) THEN 
+ !   WRITE(prefisso,"('itr_',i5.5)") iteration
+ !ELSE
+ !   prefisso='converged'
+ !ENDIF
+ !CALL serial_table_output(mpime==root,4000,'eqp.'//TRIM(ADJUSTL(prefisso)),out_tabella,&
+ !& nks*(qp_bandrange(2)-qp_bandrange(1)+1),7,&
+ !& (/'       iks','        ib','   Eks[eV]','   Ein[eV]','Sc_Ein[eV]','  Eout[eV]',' Diff.[eV]'/))
   !
-  IF(iteration>=0) THEN 
-     WRITE(prefisso,"('itr_',i5.5)") iteration
-  ELSE
-     prefisso='converged'
-  ENDIF
-  CALL serial_table_output(mpime==root,4000,'eqp.'//TRIM(ADJUSTL(prefisso)),out_tabella,&
-  & nks*(qp_bandrange(2)-qp_bandrange(1)+1),7,&
-  & (/'       iks','        ib','   Eks[eV]','   Ein[eV]','Sc_Ein[eV]','  Eout[eV]',' Diff.[eV]'/))
+  IF( mpime == root ) THEN 
+     !
+     CALL json%initialize()
+     !
+     CALL json%load_file(filename=TRIM(logfile))
+     !
+     CALL json%get('eqp.secitr',secitr, found )
+     !
+     IF( found ) THEN 
+        secitr = secitr+1
+     ELSE 
+        secitr = 1
+     ENDIF
+     !
+     WRITE(citr,'(i6)') secitr
+     !
+     CALL json%update('eqp.secitr', secitr, found )
+     !
+     DO iks = 1, nks 
+        WRITE( my_label_k, '(i6.6)') iks_l2g(iks)
+        DO ib = qp_bandrange(1), qp_bandrange(2) 
+           WRITE( my_label_b, '(i6.6)') ib
+           CALL json%add('eqp.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.ein('//TRIM(ADJUSTL(citr))//')',&
+           & en1(ib,iks)*rytoev)
+           CALL json%add('eqp.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.eout('//TRIM(ADJUSTL(citr))//')',&
+           & en2(ib,iks)*rytoev)
+           CALL json%add('eqp.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sc_ein('//TRIM(ADJUSTL(citr))//')',&
+           & REAL(sc1(ib,iks))*rytoev)
+        ENDDO
+     ENDDO
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print_file( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF 
   !
 END SUBROUTINE

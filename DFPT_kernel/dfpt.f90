@@ -18,7 +18,7 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
   USE io_global,             ONLY : stdout
   USE wvfct,                 ONLY : nbnd,g2kin,et
   USE fft_base,              ONLY : dfftp,dffts
-  USE gvect,                 ONLY : nl,gstart,ig_l2g
+  USE gvect,                 ONLY : nl,gstart,ig_l2g,g,ngm
   USE wavefunctions_module,  ONLY : evc,psic
   USE gvecs,                 ONLY : ngms
   USE gvecw,                 ONLY : gcutw
@@ -29,8 +29,9 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
   USE buffers,               ONLY : get_buffer
   USE noncollin_module,      ONLY : noncolin,npol
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,omega,npw,npwx,lsda,nkstot,&
+  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,igk_k,xk,npw,npwx,lsda,nkstot,&
                                   & current_k,ngk
+  USE cell_base,             ONLY : tpiba2,omega
   USE control_flags,         ONLY : gamma_only, io_level
   USE io_files,              ONLY : tmp_dir, nwordwfc, iunwfc, diropn
   USE uspp,                  ONLY : nkb, vkb, okvan

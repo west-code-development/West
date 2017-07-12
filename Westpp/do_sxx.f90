@@ -17,8 +17,7 @@ SUBROUTINE do_sxx ( )
   USE kinds,                 ONLY : DP
   USE uspp,                  ONLY : vkb,nkb
   USE io_global,             ONLY : stdout
-  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,npw,npwx,lsda,nkstot,&
-                                  & current_k,ngk,et
+  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,igk_k,xk,npw,npwx,lsda,nkstot,current_k,ngk,et
   USE io_push,               ONLY : io_push_title,io_push_bar
   USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,westpp_save_dir,nbnd_occ,iks_l2g,westpp_epsinfty,dvg,ev,&
                                   & npwq0,npwq0x,fftdriver
@@ -35,7 +34,7 @@ SUBROUTINE do_sxx ( )
   USE control_flags,         ONLY : gamma_only 
   USE gvecs,                 ONLY : ngms
   USE gvect,                 ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
-  USE cell_base,             ONLY : tpiba2,omega,tpiba,at,alat
+  USE cell_base,             ONLY : omega,at,alat
   USE noncollin_module,      ONLY : noncolin,npol 
   USE west_io,               ONLY : serial_table_output
   USE mp_world,              ONLY : mpime,root

@@ -41,6 +41,7 @@ SUBROUTINE init_pw_arrays(ncalbec)
                                      &deallocate_exx,exxinit,vexx
   USE westcom,                ONLY : iuwfc,lrwfc
   USE gvecw,                  ONLY : gcutw
+  USE gvecs,                  ONLY : doublegrid
   !
   IMPLICIT NONE
   !

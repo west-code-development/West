@@ -17,7 +17,7 @@ SUBROUTINE do_eigenpot2 ( )
   USE kinds,                 ONLY : DP
   USE uspp,                  ONLY : vkb,nkb
   USE io_global,             ONLY : stdout
-  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,lsda,nkstot,&
+  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,igk_k,xk,lsda,nkstot,&
                                   & current_k,ngk
   USE io_push,               ONLY : io_push_title,io_push_bar
   USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation,westpp_range,westpp_save_dir,fftdriver,&

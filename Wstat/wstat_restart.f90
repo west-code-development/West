@@ -14,9 +14,8 @@
 MODULE wstat_restart
   !----------------------------------------------------------------------------
   !
-  USE iotk_module
-  USE kinds,     ONLY : DP
-  USE io_files,  ONLY : tmp_dir
+  USE kinds,       ONLY : DP
+  USE json_module, ONLY : json_file
   !
   IMPLICIT NONE
   !
@@ -67,6 +66,9 @@ MODULE wstat_restart
       INTEGER :: im
       REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
       !
+      TYPE(json_file) :: json 
+      INTEGER :: iunit      
+      !
       ! BARRIER
       !
       CALL mp_barrier(world_comm)
@@ -82,125 +84,43 @@ MODULE wstat_restart
       !
       IF ( mpime == root ) THEN
          !
-         ! ... open XML descriptor
+         CALL json%initialize()
+         ! 
+         CALL json%add('dav_iter',dav_iter)
+         CALL json%add('notcnv',notcnv)
+         CALL json%add('nbase',nbase)
+         CALL json%add('conv',conv(:))
+         CALL json%add('ev',ev(:))
+         CALL json%add('ew',ew(:))
          !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("summary.xml") , &
-         BINARY = .FALSE., IERR = ierr )
+         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
+         CALL json%print_file( iunit )
+         CLOSE( iunit )
+         CALL json%destroy()
          !
-      END IF
+      ENDIF
       !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
-      !
-      IF ( mpime == root ) THEN  
-         !
-         CALL iotk_write_begin( iunout, "R-SUMMARY" )
-         CALL iotk_write_dat( iunout, "dav_iter", dav_iter)
-         CALL iotk_write_dat( iunout, "notcnv", notcnv)
-         CALL iotk_write_dat( iunout, "nbase", nbase)
-         CALL iotk_write_dat( iunout, "conv", conv(:))
-         CALL iotk_write_end( iunout, "R-SUMMARY"  )
-         !
-         CALL iotk_close_write( iunout )
-         !
-      END IF
-      !
-      ! CREATE THE EIG FILE
-      !
-      IF ( mpime == root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("eig.xml"), &
-         BINARY = .FALSE., IERR = ierr )
-         !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
-      !
-      IF ( mpime == root ) THEN  
-         !
-         CALL iotk_write_begin( iunout, "RESTART_EIG" )
-         CALL iotk_write_dat( iunout, "ev", ev(:))
-         CALL iotk_write_dat( iunout, "ew", ew(:))
-         CALL iotk_write_end( iunout, "RESTART_EIG"  )
-         !
-         CALL iotk_close_write( iunout )
-         !
-      END IF
-      !
-      ! CREATE THE HR FILE
-      !
-      IF ( mpime == root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("hr.dat"), BINARY = .TRUE., IERR = ierr )
-         !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
+      ! CREATE THE HR, VR FILE
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+      !
+      IF ( mpime == root ) THEN
+         !
+         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('hr_vr.bin'), FORM='unformatted' )
+         !
+      ENDIF
+      !
       DO im = 0, nimage-1
          !
          IF(me_bgrp==0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_write_begin( iunout, "RESTART_HR_"//TRIM(my_label) )
-            CALL iotk_write_dat( iunout, "hr", tmp_distr(:,:))
-            CALL iotk_write_end( iunout, "RESTART_HR"//TRIM(my_label) )
-            !
-         END IF
-         !
-      ENDDO
-      !
-      IF ( mpime == root ) CALL iotk_close_write( iunout )
-      !
-      DEALLOCATE( tmp_distr )
-      !
-      ! CREATE THE VR FILE
-      !
-      IF ( mpime == root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("vr.dat") , BINARY = .TRUE., IERR = ierr )
-         !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
-      !
-      ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
-      DO im = 0, nimage-1
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
          IF(me_bgrp==0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_write_begin( iunout, "RESTART_VR_"//TRIM(my_label) )
-            CALL iotk_write_dat( iunout, "vr", tmp_distr(:,:))
-            CALL iotk_write_end( iunout, "RESTART_VR"//TRIM(my_label) )
-            !
-         END IF
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
       ENDDO
       !
-      IF ( mpime == root ) CALL iotk_close_write( iunout )
+      IF ( mpime == root ) CLOSE( iunit ) 
       !
       DEALLOCATE( tmp_distr )
       !
@@ -267,6 +187,9 @@ MODULE wstat_restart
       INTEGER :: im
       COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
       !
+      TYPE(json_file) :: json 
+      INTEGER :: iunit      
+      !
       ! BARRIER
       !
       CALL mp_barrier(world_comm)
@@ -282,127 +205,115 @@ MODULE wstat_restart
       !
       IF ( mpime == root ) THEN
          !
-         ! ... open XML descriptor
+         CALL json%initialize()
+         ! 
+         CALL json%add('dav_iter',dav_iter)
+         CALL json%add('notcnv',notcnv)
+         CALL json%add('nbase',nbase)
+         CALL json%add('conv',conv(:))
+         CALL json%add('ev',ev(:))
+         CALL json%add('ew',ew(:))
          !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("summary.xml"), &
-         BINARY = .FALSE., IERR = ierr )
+         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
+         CALL json%print_file( iunit )
+         CLOSE( iunit )
+         CALL json%destroy()
          !
-      END IF
+      ENDIF
       !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
-      !
-      IF ( mpime == root ) THEN  
-         !
-         CALL iotk_write_begin( iunout, "R-SUMMARY" )
-         CALL iotk_write_dat( iunout, "dav_iter", dav_iter)
-         CALL iotk_write_dat( iunout, "notcnv", notcnv)
-         CALL iotk_write_dat( iunout, "nbase", nbase)
-         CALL iotk_write_dat( iunout, "conv", conv(:))
-         CALL iotk_write_end( iunout, "R-SUMMARY"  )
-         !
-         CALL iotk_close_write( iunout )
-         !
-      END IF
-      !
-      ! CREATE THE EIG FILE
-      !
-      IF ( mpime == root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("eig.xml"), &
-         BINARY = .FALSE., IERR = ierr )
-         !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
-      !
-      IF ( mpime == root ) THEN  
-         !
-         CALL iotk_write_begin( iunout, "RESTART_EIG" )
-         CALL iotk_write_dat( iunout, "ev", ev(:))
-         CALL iotk_write_dat( iunout, "ew", ew(:))
-         CALL iotk_write_end( iunout, "RESTART_EIG"  )
-         !
-         CALL iotk_close_write( iunout )
-         !
-      END IF
-      !
-      ! CREATE THE HR FILE
-      !
-      IF ( mpime == root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("hr.dat") , BINARY = .TRUE., IERR = ierr )
-         !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
+      ! CREATE THE HR, VR FILE
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+      !
+      IF ( mpime == root ) THEN
+         !
+         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('hr_vr.bin'), FORM='unformatted' )
+         !
+      ENDIF
+      !
       DO im = 0, nimage-1
          !
          IF(me_bgrp==0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_write_begin( iunout, "RESTART_HR_"//TRIM(my_label) )
-            CALL iotk_write_dat( iunout, "hr", tmp_distr(:,:))
-            CALL iotk_write_end( iunout, "RESTART_HR"//TRIM(my_label) )
-            !
-         END IF
-         !
-      ENDDO
-      !
-      IF ( mpime == root ) CALL iotk_close_write( iunout )
-      !
-      DEALLOCATE( tmp_distr )
-      !
-      ! CREATE THE VR FILE
-      !
-      IF ( mpime == root ) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("vr.dat") , BINARY = .TRUE., IERR = ierr )
-         !
-      END IF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
-      !
-      ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
-      DO im = 0, nimage-1
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
          IF(me_bgrp==0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_write_begin( iunout, "RESTART_VR_"//TRIM(my_label) )
-            CALL iotk_write_dat( iunout, "vr", tmp_distr(:,:))
-            CALL iotk_write_end( iunout, "RESTART_VR"//TRIM(my_label) )
-            !
-         END IF
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
       ENDDO
       !
-      IF ( mpime == root ) CALL iotk_close_write( iunout )
+      IF ( mpime == root ) CLOSE( iunit ) 
       !
       DEALLOCATE( tmp_distr )
+     !!
+     !! CREATE THE HR FILE
+     !!
+     !IF ( mpime == root ) THEN
+     !   !
+     !   ! ... open XML descriptor
+     !   !
+     !   CALL iotk_free_unit( iunout, ierr )
+     !   CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("hr.dat") , BINARY = .TRUE., IERR = ierr )
+     !   !
+     !END IF
+     !!
+     !CALL mp_bcast( ierr, root, world_comm )
+     !!
+     !CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
+     !!
+     !ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+     !DO im = 0, nimage-1
+     !   !
+     !   IF(me_bgrp==0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
+     !   WRITE(my_label,'(i6.6)') im
+     !   !
+     !   IF ( mpime == root ) THEN  
+     !      !
+     !      CALL iotk_write_begin( iunout, "RESTART_HR_"//TRIM(my_label) )
+     !      CALL iotk_write_dat( iunout, "hr", tmp_distr(:,:))
+     !      CALL iotk_write_end( iunout, "RESTART_HR"//TRIM(my_label) )
+     !      !
+     !   END IF
+     !   !
+     !ENDDO
+     !!
+     !IF ( mpime == root ) CALL iotk_close_write( iunout )
+     !!
+     !DEALLOCATE( tmp_distr )
+     !!
+     !! CREATE THE VR FILE
+     !!
+     !IF ( mpime == root ) THEN
+     !   !
+     !   ! ... open XML descriptor
+     !   !
+     !   CALL iotk_free_unit( iunout, ierr )
+     !   CALL iotk_open_write( iunout, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM("vr.dat") , BINARY = .TRUE., IERR = ierr )
+     !   !
+     !END IF
+     !!
+     !CALL mp_bcast( ierr, root, world_comm )
+     !!
+     !CALL errore( 'wstat_restart', 'cannot open restart file for writing', ierr )
+     !!
+     !ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+     !DO im = 0, nimage-1
+     !   !
+     !   IF(me_bgrp==0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
+     !   WRITE(my_label,'(i6.6)') im
+     !   !
+     !   IF ( mpime == root ) THEN  
+     !      !
+     !      CALL iotk_write_begin( iunout, "RESTART_VR_"//TRIM(my_label) )
+     !      CALL iotk_write_dat( iunout, "vr", tmp_distr(:,:))
+     !      CALL iotk_write_end( iunout, "RESTART_VR"//TRIM(my_label) )
+     !      !
+     !   END IF
+     !   !
+     !ENDDO
+     !!
+     !IF ( mpime == root ) CALL iotk_close_write( iunout )
+     !!
+     !DEALLOCATE( tmp_distr )
       !
       ! CREATE THE EIGENVECTOR FILES
       !
@@ -462,10 +373,8 @@ MODULE wstat_restart
       ! ... clear the main restart directory
       !
       IF(mpime==root) THEN
-         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.xml' ) )
-         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'eig.xml' ) )
-         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ) )
-         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ) )
+         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.json' ) )
+         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ) )
          DO ip=1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
             fname="V"//TRIM(ADJUSTL(my_label))//".json"
@@ -519,9 +428,7 @@ MODULE wstat_restart
       CALL start_clock('wstat_restart')
       time_spent(1)=get_clock('wstat_restart')
       !
-      CALL read_restart1_( dav_iter, notcnv, nbase )
-      !
-      CALL read_restart2_( ew )
+      CALL read_restart12_( dav_iter, notcnv, nbase, ew )
       !
       CALL read_restart3d_( hr_distr, vr_distr )
       !
@@ -574,9 +481,7 @@ MODULE wstat_restart
       CALL start_clock('wstat_restart')
       time_spent(1)=get_clock('wstat_restart')
       !
-      CALL read_restart1_( dav_iter, notcnv, nbase )
-      !
-      CALL read_restart2_( ew )
+      CALL read_restart12_( dav_iter, notcnv, nbase, ew )
       !
       CALL read_restart3z_( hr_distr, vr_distr )
       !
@@ -598,10 +503,10 @@ MODULE wstat_restart
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart1_( dav_iter, notcnv, nbase )
+    SUBROUTINE read_restart12_( dav_iter, notcnv, nbase, ew )
       !------------------------------------------------------------------------
       !
-      USE westcom,       ONLY : conv,n_pdep_eigen,n_pdep_basis,wstat_restart_dir
+      USE westcom,       ONLY : conv,n_pdep_eigen,n_pdep_basis,wstat_restart_dir,ev
       USE mp_world,      ONLY : world_comm,mpime,root
       USE mp,            ONLY : mp_bcast
       !
@@ -610,32 +515,38 @@ MODULE wstat_restart
       ! I/O
       !  
       INTEGER,INTENT(OUT) :: dav_iter, notcnv, nbase
+      REAL(DP),INTENT(OUT) :: ew(n_pdep_basis)
       !
       ! Workspace
       !
       INTEGER :: ierr,iun
+      LOGICAL :: found
+      TYPE(json_file) :: json
+      REAL(DP),ALLOCATABLE :: rvals(:)
+      LOGICAL,ALLOCATABLE :: lvals(:)
+      INTEGER :: ival 
       !
       ierr = 0
       !
       IF ( mpime==root ) THEN
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.xml' ), IERR = ierr )
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
-      !
-      IF ( mpime==root ) THEN
          !
-         CALL iotk_scan_begin( iun, "R-SUMMARY" )
-         CALL iotk_scan_dat( iun, "dav_iter", dav_iter)
-         CALL iotk_scan_dat( iun, "notcnv", notcnv)
-         CALL iotk_scan_dat( iun, "nbase", nbase)
-         CALL iotk_scan_dat( iun, "conv", conv(1:n_pdep_eigen))
-         CALL iotk_scan_end( iun, "R-SUMMARY"  )
+         CALL json%initialize()
+         CALL json%load_file( filename = TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
+         ! 
+         CALL json%get('dav_iter', ival, found) 
+         IF( found ) dav_iter = ival
+         CALL json%get('notcnv', ival, found)
+         IF( found ) notcnv = ival
+         CALL json%get('nbase', ival, found) 
+         IF( found ) nbase = ival
+         CALL json%get('conv', lvals, found) 
+         IF( found ) conv(1:n_pdep_eigen) = lvals(1:n_pdep_eigen)
+         CALL json%get('ev', rvals, found) 
+         IF( found ) ev(:) = rvals(:)
+         CALL json%get('ew', rvals, found) 
+         IF( found ) ew(1:n_pdep_basis) = rvals(1:n_pdep_basis)
          !
-         CALL iotk_close_read( iun )
+         CALL json%destroy()
          !
       ENDIF
       !
@@ -643,49 +554,6 @@ MODULE wstat_restart
       CALL mp_bcast( notcnv, root, world_comm )
       CALL mp_bcast( nbase, root, world_comm )
       CALL mp_bcast( conv, root, world_comm )
-      !
-    END SUBROUTINE
-    !
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE read_restart2_( ew )
-      !------------------------------------------------------------------------
-      !
-      USE westcom,       ONLY : ev,n_pdep_eigen,n_pdep_basis,wstat_restart_dir
-      USE mp_world,      ONLY : world_comm,mpime,root
-      USE mp,            ONLY : mp_bcast
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !  
-      REAL(DP),INTENT(OUT) :: ew(n_pdep_basis)
-      !
-      ! Workspace
-      !
-      INTEGER :: ierr,iun
-      !
-      ierr = 0
-      !
-      IF ( mpime==root ) THEN
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'eig.xml' ), IERR = ierr )
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
-      !
-      IF ( mpime==root ) THEN
-         !
-         CALL iotk_scan_begin( iun, "RESTART_EIG" )
-         CALL iotk_scan_dat( iun, "ev", ev(:))
-         CALL iotk_scan_dat( iun, "ew", ew(:))
-         CALL iotk_scan_end( iun, "RESTART_EIG"  )
-         !
-         CALL iotk_close_read( iun )
-         !
-      ENDIF
       !
       CALL mp_bcast( ev, root, world_comm )
       CALL mp_bcast( ew, root, world_comm )
@@ -715,77 +583,97 @@ MODULE wstat_restart
       INTEGER :: ierr,iun
       INTEGER :: im
       REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
-      CHARACTER(6) :: my_label
-      !
-      ierr = 0
-      !
-      IF ( mpime==root ) THEN
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+      !
+      IF( mpime == root ) OPEN( UNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
+      !
       DO im = 0, nimage-1
          !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_scan_begin( iun, "RESTART_HR_"//TRIM(my_label) )
-            CALL iotk_scan_dat( iun, "hr", tmp_distr(:,:))
-            CALL iotk_scan_end( iun, "RESTART_HR"//TRIM(my_label) )
-            !
-         END IF
-         !
+         IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
          IF(me_bgrp==0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
-         !CALL mp_bcast( tmp_distr, root, world_comm )
-         !IF( my_image_id == im ) hr_distr = tmp_distr
+         !
+         IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
+         IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
-      DEALLOCATE(tmp_distr)
       !
-      IF ( mpime==root ) CALL iotk_close_read( iun )
+      IF( mpime == root ) CLOSE( iun )
+      !
+      DEALLOCATE(tmp_distr)
       !
       CALL mp_bcast( hr_distr, 0, intra_image_comm )
-      !
-      ierr = 0
-      !
-      IF ( mpime==root ) THEN
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
-      !
-      ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
-      DO im = 0, nimage-1
-         !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_scan_begin( iun, "RESTART_VR_"//TRIM(my_label) )
-            CALL iotk_scan_dat( iun, "vr", tmp_distr(:,:))
-            CALL iotk_scan_end( iun, "RESTART_VR"//TRIM(my_label) )
-            !
-         END IF
-         !
-         IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
-         !CALL mp_bcast( tmp_distr, root, world_comm )
-         !IF( my_image_id == im ) vr_distr = tmp_distr
-         !
-      ENDDO
-      DEALLOCATE(tmp_distr)
-      !
-      IF ( mpime==root ) CALL iotk_close_read( iun )
-      !
       CALL mp_bcast( vr_distr, 0, intra_image_comm )
+!     !
+!     ierr = 0
+!     !
+!     IF ( mpime==root ) THEN
+!        CALL iotk_free_unit( iun, ierr )
+!        CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
+!     ENDIF
+!     !
+!     CALL mp_bcast( ierr, root, world_comm )
+!     !
+!     IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
+!     !
+!     ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+!     DO im = 0, nimage-1
+!        !
+!        WRITE(my_label,'(i6.6)') im
+!        !
+!        IF ( mpime == root ) THEN  
+!           !
+!           CALL iotk_scan_begin( iun, "RESTART_HR_"//TRIM(my_label) )
+!           CALL iotk_scan_dat( iun, "hr", tmp_distr(:,:))
+!           CALL iotk_scan_end( iun, "RESTART_HR"//TRIM(my_label) )
+!           !
+!        END IF
+!        !
+!        IF(me_bgrp==0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+!        !CALL mp_bcast( tmp_distr, root, world_comm )
+!        !IF( my_image_id == im ) hr_distr = tmp_distr
+!        !
+!     ENDDO
+!     DEALLOCATE(tmp_distr)
+!     !
+!     IF ( mpime==root ) CALL iotk_close_read( iun )
+!     !
+!     CALL mp_bcast( hr_distr, 0, intra_image_comm )
+!     !
+!     ierr = 0
+!     !
+!     IF ( mpime==root ) THEN
+!        CALL iotk_free_unit( iun, ierr )
+!        CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
+!     ENDIF
+!     !
+!     CALL mp_bcast( ierr, root, world_comm )
+!     !
+!     IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
+!     !
+!     ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+!     DO im = 0, nimage-1
+!        !
+!        WRITE(my_label,'(i6.6)') im
+!        !
+!        IF ( mpime == root ) THEN  
+!           !
+!           CALL iotk_scan_begin( iun, "RESTART_VR_"//TRIM(my_label) )
+!           CALL iotk_scan_dat( iun, "vr", tmp_distr(:,:))
+!           CALL iotk_scan_end( iun, "RESTART_VR"//TRIM(my_label) )
+!           !
+!        END IF
+!        !
+!        IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+!        !CALL mp_bcast( tmp_distr, root, world_comm )
+!        !IF( my_image_id == im ) vr_distr = tmp_distr
+!        !
+!     ENDDO
+!     DEALLOCATE(tmp_distr)
+!     !
+!     IF ( mpime==root ) CALL iotk_close_read( iun )
+!     !
+!     CALL mp_bcast( vr_distr, 0, intra_image_comm )
       !
     END SUBROUTINE
     !
@@ -812,78 +700,99 @@ MODULE wstat_restart
       INTEGER :: ierr,iun
       INTEGER :: im
       COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
-      CHARACTER(6) :: my_label
-      !
-      ierr = 0
-      !
-      IF ( mpime==root ) THEN
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
+      !CHARACTER(6) :: my_label
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+      !
+      IF( mpime == root ) OPEN( UNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
+      !
       DO im = 0, nimage-1
          !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_scan_begin( iun, "RESTART_HR_"//TRIM(my_label) )
-            CALL iotk_scan_dat( iun, "hr", tmp_distr(:,:))
-            CALL iotk_scan_end( iun, "RESTART_HR"//TRIM(my_label) )
-            !
-         END IF
-         !
+         IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
          IF(me_bgrp==0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
-         !CALL mp_bcast( tmp_distr, root, world_comm )
-         !IF( my_image_id == im ) hr_distr = tmp_distr
+         !
+         IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
+         IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
-      DEALLOCATE(tmp_distr)
       !
-      IF ( mpime==root ) CALL iotk_close_read( iun )
+      IF( mpime == root ) CLOSE( iun )
+      !
+      DEALLOCATE(tmp_distr)
       !
       CALL mp_bcast( hr_distr, 0, intra_image_comm )
-      !
-      ierr = 0
-      !
-      IF ( mpime==root ) THEN
-         CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
-      ENDIF
-      !
-      CALL mp_bcast( ierr, root, world_comm )
-      !
-      IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
-      !
-      ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
-      DO im = 0, nimage-1
-         !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF ( mpime == root ) THEN  
-            !
-            CALL iotk_scan_begin( iun, "RESTART_VR_"//TRIM(my_label) )
-            CALL iotk_scan_dat( iun, "vr", tmp_distr(:,:))
-            CALL iotk_scan_end( iun, "RESTART_VR"//TRIM(my_label) )
-            !
-         END IF
-         !
-         IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
-         !CALL mp_bcast( tmp_distr, root, world_comm )
-         !IF( my_image_id == im ) vr_distr = tmp_distr
-         !
-      ENDDO
-      DEALLOCATE(tmp_distr)
-      !
-      IF ( mpime==root ) CALL iotk_close_read( iun )
-      !
       CALL mp_bcast( vr_distr, 0, intra_image_comm )
-      !
+!     !
+!     ierr = 0
+!     !
+!     IF ( mpime==root ) THEN
+!        CALL iotk_free_unit( iun, ierr )
+!        CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr.dat' ), BINARY = .TRUE., IERR = ierr )
+!     ENDIF
+!     !
+!     CALL mp_bcast( ierr, root, world_comm )
+!     !
+!     IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
+!     !
+!     ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+!     DO im = 0, nimage-1
+!        !
+!        WRITE(my_label,'(i6.6)') im
+!        !
+!        IF ( mpime == root ) THEN  
+!           !
+!           CALL iotk_scan_begin( iun, "RESTART_HR_"//TRIM(my_label) )
+!           CALL iotk_scan_dat( iun, "hr", tmp_distr(:,:))
+!           CALL iotk_scan_end( iun, "RESTART_HR"//TRIM(my_label) )
+!           !
+!        END IF
+!        !
+!        IF(me_bgrp==0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+!        !CALL mp_bcast( tmp_distr, root, world_comm )
+!        !IF( my_image_id == im ) hr_distr = tmp_distr
+!        !
+!     ENDDO
+!     DEALLOCATE(tmp_distr)
+!     !
+!     IF ( mpime==root ) CALL iotk_close_read( iun )
+!     !
+!     CALL mp_bcast( hr_distr, 0, intra_image_comm )
+!     !
+!     ierr = 0
+!     !
+!     IF ( mpime==root ) THEN
+!        CALL iotk_free_unit( iun, ierr )
+!        CALL iotk_open_read( iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'vr.dat' ), BINARY = .TRUE., IERR = ierr )
+!     ENDIF
+!     !
+!     CALL mp_bcast( ierr, root, world_comm )
+!     !
+!     IF ( ierr /=0 ) CALL errore( 'wstat_restart', 'cannot open restart file for reading', ierr )
+!     !
+!     ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
+!     DO im = 0, nimage-1
+!        !
+!        WRITE(my_label,'(i6.6)') im
+!        !
+!        IF ( mpime == root ) THEN  
+!           !
+!           CALL iotk_scan_begin( iun, "RESTART_VR_"//TRIM(my_label) )
+!           CALL iotk_scan_dat( iun, "vr", tmp_distr(:,:))
+!           CALL iotk_scan_end( iun, "RESTART_VR"//TRIM(my_label) )
+!           !
+!        END IF
+!        !
+!        IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+!        !CALL mp_bcast( tmp_distr, root, world_comm )
+!        !IF( my_image_id == im ) vr_distr = tmp_distr
+!        !
+!     ENDDO
+!     DEALLOCATE(tmp_distr)
+!     !
+!     IF ( mpime==root ) CALL iotk_close_read( iun )
+!     !
+!     CALL mp_bcast( vr_distr, 0, intra_image_comm )
+!     !
     END SUBROUTINE
     !
     !

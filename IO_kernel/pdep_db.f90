@@ -15,7 +15,6 @@ MODULE pdep_db
   !----------------------------------------------------------------------------
   !
   USE kinds,     ONLY : DP
-  USE io_files,  ONLY : tmp_dir
   !
   IMPLICIT NONE
   !

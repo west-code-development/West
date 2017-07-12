@@ -16,7 +16,7 @@ MODULE west_version
   !
   SAVE
   !
-  CHARACTER (LEN=6)  :: west_version_number = '2.0.1'
+  CHARACTER (LEN=6)  :: west_version_number = '3.0.0'
   CHARACTER (LEN=12) :: west_svn_revision = 'unknown'
   !
 END MODULE 

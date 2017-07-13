@@ -271,7 +271,7 @@ class EnergyFile:
 def plot_dos(energy_file_name,output_file_name,erange) : 
     #
     ### USER DEFINITION ###
-    #energy_file_name      = 'energy.dat'
+    #energy_file_name      = ['en1.dat', 'en2.dat']
     #output_file_name      = 'dos.png'
     #erange                = [40.,60.,0.01] eV
     ### END ##############
@@ -301,18 +301,28 @@ def plot_dos(energy_file_name,output_file_name,erange) :
     npte = int((erange[1]-erange[0])/erange[2]) + 1
     print("Using npte : ", npte)
     #
-    en = EnergyFile(energy_file_name)
-    en.show_content()
-    #
     e_axis = np.linspace(erange[0], erange[1], npte, endpoint=True)
-    dos_axis = np.zeros ( (npte) )
     #
-    for ie in range(en.ne) :
-        for ix in range(npte) : 
-            dos_axis[ix] += gaussian( e_axis[ix], en.e[ie,0], en.e[ie,1] ) * en.e[ie,2] 
+    dos_axis = {}
+    emin = []
+    emax = []
+    ymax = []
+    for ifile in energy_file_name : 
+       dos_axis[ifile] = np.zeros ( (npte) )
+       en = EnergyFile(ifile)
+       en.show_content()
+       #
+       emin.append( np.min(en.e[:,0]) )
+       emax.append( np.max(en.e[:,0]) )
+       #
+       for ie in range(en.ne) :
+          for ix in range(npte) : 
+             dos_axis[ifile][ix] += gaussian( e_axis[ix], en.e[ie,0], en.e[ie,1] ) * en.e[ie,2] 
+       #
+       ymax.append( np.max(dos_axis[ifile][:]) )
     #
     print("Requested (emin,emax) : ", erange[0], erange[1])
-    print("Detected  (emin,emax) : ", np.min(en.e[:,0]), np.max(en.e[:,0]))
+    print("Detected  (emin,emax) : ", np.min(emin), np.max(emax))
     #
     print("*** </DOS> ***")
     print(" ")
@@ -321,12 +331,15 @@ def plot_dos(energy_file_name,output_file_name,erange) :
     import matplotlib.pyplot as plt
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1)
-    dos_plot = ax.plot(e_axis,dos_axis)
+    for ifile in energy_file_name : 
+       dos_plot = ax.plot(e_axis,dos_axis[ifile],label=ifile)
+       
     plt.xlim([erange[0],erange[1]])
-    plt.ylim([0,np.max(dos_axis[:])])
+    plt.ylim([0,np.max(ymax[:])])
     plt.xlabel('En (eV)')
     plt.ylabel('DOS')
     plt.savefig(output_file_name)
+    plt.legend()
     print("output written in : ", output_file_name)
     print("waiting for user to close image preview...")
     plt.show()

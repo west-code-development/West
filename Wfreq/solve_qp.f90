@@ -1180,7 +1180,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      !
      CALL json%load_file(filename=TRIM(logfile))
      !
-     CALL json%get('eqp.secitr',secitr, found )
+     CALL json%get('exec.Q.secitr',secitr, found )
      !
      IF( found ) THEN 
         secitr = secitr+1
@@ -1190,17 +1190,17 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      !
      WRITE(citr,'(i6)') secitr
      !
-     CALL json%update('eqp.secitr', secitr, found )
+     CALL json%update('exec.Q.secitr', secitr, found )
      !
      DO iks = 1, nks 
         WRITE( my_label_k, '(i6.6)') iks_l2g(iks)
         DO ib = qp_bandrange(1), qp_bandrange(2) 
            WRITE( my_label_b, '(i6.6)') ib
-           CALL json%add('eqp.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.ein('//TRIM(ADJUSTL(citr))//')',&
+           CALL json%add('exec.Q.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.ein('//TRIM(ADJUSTL(citr))//')',&
            & en1(ib,iks)*rytoev)
-           CALL json%add('eqp.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.eout('//TRIM(ADJUSTL(citr))//')',&
+           CALL json%add('exec.Q.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.eout('//TRIM(ADJUSTL(citr))//')',&
            & en2(ib,iks)*rytoev)
-           CALL json%add('eqp.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sc_ein('//TRIM(ADJUSTL(citr))//')',&
+           CALL json%add('exec.Q.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sc_ein('//TRIM(ADJUSTL(citr))//')',&
            & REAL(sc1(ib,iks))*rytoev)
         ENDDO
      ENDDO

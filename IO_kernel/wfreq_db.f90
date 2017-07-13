@@ -34,7 +34,7 @@ MODULE wfreq_db
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp_global,            ONLY : my_image_id
       USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : wfreq_save_dir,iks_l2g,qp_bandrange,wfreq_calculation,n_spectralf, &
+      USE westcom,              ONLY : wfreq_save_dir,iks_l2g,qp_bandrange,wfreq_calculation,n_spectralf,logfile, &
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
                                      & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_freq,sigma_spectralf
       USE pwcom,                ONLY : npw,nbnd,nkstot,nspin,nelec,nelup,neldw,lspinorb,domag,lsda,nks,et
@@ -70,7 +70,7 @@ MODULE wfreq_db
          !
          CALL json%initialize()
          !
-         CALL add_intput_parameters_to_json_file( 3,(/1,2,3/) , json )
+         CALL json%load_file(filename=TRIM(logfile))
          !
          l_generate_plot = .FALSE.
          l_optics = .FALSE.
@@ -129,7 +129,7 @@ MODULE wfreq_db
             !
          ENDDO
          !
-         OPEN( NEWUNIT=iunit, FILE=TRIM( wfreq_save_dir ) // '/' // TRIM('wfreq-save.json') )
+         OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
          CALL json%print_file( iunit )
          CLOSE( iunit )
          CALL json%destroy()
@@ -147,7 +147,7 @@ MODULE wfreq_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'Database written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
       WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )  
       CALL io_push_bar()
       !

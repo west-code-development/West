@@ -20,7 +20,7 @@ SUBROUTINE do_sxx ( )
   USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,igk_k,xk,npw,npwx,lsda,nkstot,current_k,ngk,et
   USE io_push,               ONLY : io_push_title,io_push_bar
   USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,westpp_save_dir,nbnd_occ,iks_l2g,westpp_epsinfty,dvg,ev,&
-                                  & npwq0,npwq0x,fftdriver
+                                  & npwq0,npwq0x,fftdriver,logfile
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE mp,                    ONLY : mp_bcast,mp_sum
   USE fft_base,              ONLY : dfftp,dffts
@@ -36,7 +36,6 @@ SUBROUTINE do_sxx ( )
   USE gvect,                 ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
   USE cell_base,             ONLY : omega,at,alat
   USE noncollin_module,      ONLY : noncolin,npol 
-  !USE west_io,               ONLY : serial_table_output
   USE mp_world,              ONLY : mpime,root
   USE constants,             ONLY : rytoev
   USE json_module,           ONLY : json_file
@@ -211,9 +210,20 @@ SUBROUTINE do_sxx ( )
   !
   ! Output it per k-point
   !
-  IF(mpime==root) CALL json%initialize()
+  IF(mpime==root) THEN
+     CALL json%initialize()
+     CALL json%load_file(filename=TRIM(logfile))
+  ENDIF
   !
-  ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,4))
+  ! STDOUT
+  !
+  WRITE(stdout,"(5X)")  
+  CALL io_push_bar()
+  WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a,1X,a,1X,a)") &
+  & 'K     ', 'B     ', '      Eks [eV]', '       Sx [eV]', '      Sxx [eV]', '        Sxx/Sx'
+  CALL io_push_bar()
+  !
+  ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,5))
   !
   DO iks=1,nks
      DO ib = westpp_range(1), westpp_range(2)
@@ -221,7 +231,9 @@ SUBROUTINE do_sxx ( )
         out_tab( ib - westpp_range(1) + 1, 2) = et(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) * rytoev
-        !out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
+        out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
+        WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,1X,1f14.6,1X,1f14.6,1X,1f14.6)") &
+        & iks, ib, et(ib,iks)*rytoev, sigma_exx(ib,iks)*rytoev, sigma_sxx(ib,iks)*rytoev, sigma_sxx(ib,iks)/sigma_exx(ib,iks)
      ENDDO
      WRITE(myglobk,'(i6.6)') iks_l2g(iks)
      !
@@ -231,18 +243,20 @@ SUBROUTINE do_sxx ( )
      !
      IF(mpime==root) THEN 
         !
-        CALL json%add('K'//TRIM(myglobk)//'.bandmap',out_tab(:,1))
-        CALL json%add('K'//TRIM(myglobk)//'.eks',out_tab(:,2))
-        CALL json%add('K'//TRIM(myglobk)//'.sx',out_tab(:,3))
-        CALL json%add('K'//TRIM(myglobk)//'.sxx',out_tab(:,4))
+        CALL json%add('output.S.K'//TRIM(myglobk)//'.bandmap',out_tab(:,1))
+        CALL json%add('output.S.K'//TRIM(myglobk)//'.eks',out_tab(:,2))
+        CALL json%add('output.S.K'//TRIM(myglobk)//'.sx',out_tab(:,3))
+        CALL json%add('output.S.K'//TRIM(myglobk)//'.sxx',out_tab(:,4))
+        CALL json%add('output.S.K'//TRIM(myglobk)//'.fraction',out_tab(:,5))
         !
      ENDIF
   ENDDO
   DEALLOCATE(out_tab)
+  CALL io_push_bar()
   !
   IF( mpime == root ) THEN 
      !
-     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//"/sxx.json" )
+     OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
      CALL json%print_file( iunit )
      CLOSE( iunit )
      !

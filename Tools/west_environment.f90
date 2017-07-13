@@ -60,7 +60,7 @@ CONTAINS
     !
     savedir = TRIM(outdir) // trim(west_prefix) // "." // TRIM(to_lower_case(code)) // ".save/"
     CALL my_mkdir( savedir )
-    logfile = TRIM(savedir) // TRIM(to_lower_case(code))//"-logfile.json"
+    logfile = TRIM(savedir) // TRIM(to_lower_case(code))//".json"
     !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
     ! ... use ".TRUE."  to enable clocks
@@ -169,9 +169,9 @@ CONTAINS
       CALL json%initialize()
       CALL json%load_file(filename=TRIM(logfile))
       !
-      CALL json%update('run.job.completed', .TRUE., found)
-      CALL json%add('run.job.endtime', TRIM(ctime) )
-      CALL json%add('run.job.enddate', TRIM(cdate) )
+      CALL json%update('runjob.completed', .TRUE., found)
+      CALL json%add('runjob.endtime', TRIM(ctime) )
+      CALL json%add('runjob.enddate', TRIM(cdate) )
       !
       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
       CALL json%print_file( iunit )
@@ -239,17 +239,18 @@ CONTAINS
        !
        CALL json%initialize()
        !
-       CALL json%add('run.job.startdate', TRIM(cdate) )
-       CALL json%add('run.job.starttime', TRIM(ctime) )
-       CALL json%add('run.job.completed', .FALSE. )
-       CALL json%add('run.software.program', TRIM(code) )
-       CALL json%add('run.software.version', TRIM(west_version_number) )
-       IF( TRIM (west_svn_revision) /= "unknown" ) CALL json%add('init.svn', TRIM(west_svn_revision) )
-       CALL json%add('run.software.website',"http://www.west-code.org")
-       CALL json%add('run.software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
-       CALL json%add('run.software.qeversion', TRIM(version_number) )
-       IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('run.software.qesvn', TRIM(svn_revision) )
-       CALL json%add('run.io.islittleendian', islittleendian() )
+       CALL json%add('runjob.startdate', TRIM(cdate) )
+       CALL json%add('runjob.starttime', TRIM(ctime) )
+       CALL json%add('runjob.completed', .FALSE. )
+       CALL json%add('software.package', "WEST" )
+       CALL json%add('software.program', TRIM(code) )
+       CALL json%add('software.version', TRIM(west_version_number) )
+       IF( TRIM (west_svn_revision) /= "unknown" ) CALL json%add('software.westsvn', TRIM(west_svn_revision) )
+       CALL json%add('software.website',"http://www.west-code.org")
+       CALL json%add('software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
+       CALL json%add('software.qeversion', TRIM(version_number) )
+       IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('software.qesvn', TRIM(svn_revision) )
+       CALL json%add('config.io.islittleendian', islittleendian() )
        !
        OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
        CALL json%print_file( iunit )

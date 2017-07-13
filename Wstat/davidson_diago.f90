@@ -1199,7 +1199,7 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
       !
       CALL json%load_file(filename=TRIM(logfile))
       !
-      CALL json%get('davidson.ndav', ndav, found )
+      CALL json%get('exec.ndav', ndav, found )
       !
       IF( found ) THEN 
          ndav = ndav+1
@@ -1209,19 +1209,19 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
       !
       WRITE(cdav,'(i6)') ndav
       !
-      CALL json%update('davidson.ndav', ndav, found )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').ev',  ev_        ( 1:nvec ) )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_ ( 1:nvec ) )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2) )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))) )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))) )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', sternop(2)-sternop(1) )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2 )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim )
-      CALL json%add('davidson.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
+      CALL json%update('exec.ndav', ndav, found )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').ev',  ev_        ( 1:nvec ) )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_ ( 1:nvec ) )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2) )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))) )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))) )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', sternop(2)-sternop(1) )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2 )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim )
+      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
       !
       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
       CALL json%print_file( iunit )

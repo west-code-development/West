@@ -37,7 +37,7 @@ MODULE pdep_db
       USE westcom,              ONLY : wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_maxiter,n_dfpt_maxiter, &
                                      & n_steps_write_restart,n_pdep_restart_from_itr,n_pdep_read_from_file,trev_pdep, &
                                      & tr2_dfpt,l_deflate,l_kinetic_only,ev,dvg,west_prefix,trev_pdep_rel, &
-                                     & l_minimize_exx_if_active,l_use_ecutrho,wstat_save_dir 
+                                     & l_minimize_exx_if_active,l_use_ecutrho,wstat_save_dir,logfile 
       USE pdep_io,              ONLY : pdep_merge_and_write_G 
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert 
@@ -77,12 +77,12 @@ MODULE pdep_db
          !
          CALL json%initialize()
          !
-         CALL add_intput_parameters_to_json_file( 2,(/1,2/) , json )
+         CALL json%load_file(filename=TRIM(logfile))
          ! 
          CALL json%add('output.eigenval',ev(1:n_pdep_eigen))
          CALL json%add('output.eigenpot',eigenpot_filename(1:n_pdep_eigen))
          !
-         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_save_dir ) // '/' // TRIM('wstat-save.json') )
+         OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
          CALL json%print_file( iunit )
          CLOSE( iunit )
          CALL json%destroy()
@@ -114,7 +114,7 @@ MODULE pdep_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'Database written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
       WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )  
       CALL io_push_bar()
       !
@@ -143,7 +143,7 @@ MODULE pdep_db
       !
       INTEGER, INTENT(IN) :: nglob_to_be_read  
       !
-      CHARACTER(LEN=512) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       CHARACTER(LEN=6)      :: my_label
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -172,7 +172,7 @@ MODULE pdep_db
       IF ( mpime == root ) THEN
          !
          CALL json%initialize()
-         CALL json%load_file( filename = TRIM( wstat_save_dir ) // '/' // TRIM('wstat-save.json') )
+         CALL json%load_file( filename = TRIM( wstat_save_dir ) // '/' // TRIM('wstat.json') )
          ! 
          CALL json%get('input.wstat_control.n_pdep_eigen', tmp_n_pdep_eigen, found) 
          CALL json%get('output.eigenval', tmp_ev, found)
@@ -216,7 +216,7 @@ MODULE pdep_db
          global_j = pert%l2g(local_j)
          IF(global_j>n_eigen_to_get) CYCLE
          ! 
-         fname = TRIM( dirname ) // "/"//TRIM(eigenpot_filename(global_j))
+         fname = TRIM( wstat_save_dir ) // "/"//TRIM(eigenpot_filename(global_j))
          CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
          !
       ENDDO
@@ -233,8 +233,8 @@ MODULE pdep_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'Database read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, 'SAVE read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )  
       WRITE(stdout, "(5x, 'Eigen. found : ',i12)") n_eigen_to_get
       CALL io_push_bar()
       !

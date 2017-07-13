@@ -46,7 +46,7 @@ MODULE pdep_io
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr
       CHARACTER(LEN=:),ALLOCATABLE :: charbase64
-      INTEGER :: nbytes, ndim, iunit
+      INTEGER :: nbytes, ndim, iunit, nlen
       CHARACTER(LEN=30) :: endian
       !
       !
@@ -66,7 +66,8 @@ MODULE pdep_io
          !
          ndim = npwq0_g
          nbytes = SIZEOF(tmp_vec(1)) * ndim
-         ALLOCATE(CHARACTER(LEN=lenbase64(nbytes)) :: charbase64)
+         nlen = lenbase64(nbytes)
+         ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
          CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64) 
          !
          IF( islittleendian() ) THEN 

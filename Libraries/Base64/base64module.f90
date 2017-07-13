@@ -21,7 +21,6 @@ module base64_module
   SAVE
   !
   INTEGER :: ICHAR
-  LOGICAL, PARAMETER :: lbigendian = ( ICHAR( TRANSFER(1,'a') ) == 0 )
   !
   INTERFACE
      !
@@ -81,7 +80,7 @@ module base64_module
      !
      LOGICAL FUNCTION islittleendian( )
         IMPLICIT NONE 
-        islittleendian = (.NOT.lbigendian)
+        islittleendian = (.NOT.( ICHAR( TRANSFER(1,'a') ) == 0 ))
      END FUNCTION
   !
 END MODULE

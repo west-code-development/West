@@ -20,8 +20,6 @@ module base64_module
   !
   SAVE
   !
-  INTEGER :: ICHAR
-  !
   INTERFACE
      !
      SUBROUTINE base64_init() BIND(C, NAME="b64init") 
@@ -80,6 +78,7 @@ module base64_module
      !
      LOGICAL FUNCTION islittleendian( )
         IMPLICIT NONE 
+        INTEGER :: ICHAR
         islittleendian = (.NOT.( ICHAR( TRANSFER(1,'a') ) == 0 ))
      END FUNCTION
   !

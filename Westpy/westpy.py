@@ -662,3 +662,96 @@ def plot_ldos(energy_file_name,output_file_name,erange) :
     print(" ")
     #
     footer()
+
+#
+# plot frequency analysis
+# 
+def plot_frequency_analysis(fname,output_file_name,kpoint,band,xr=[-15,0]) :
+    #
+    ### USER DEFINITION ###
+    #fname  = 'wfreq.json'
+    #output_file_name = 'freq.png'
+    #kpoint = 1
+    #band = 1
+    #xr = [-15,0]
+    ### END ##############
+    #
+    import json 
+    import numpy as np
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    #
+    header()
+    versions()
+    #
+    print("*** <INPUT> ***")
+    print("Input file name      : ", fname) 
+    print("Output file name     : ", output_file_name)
+    print("kpoint               : ", kpoint)
+    print("band                 : ", band)
+    print("Energy range         : ", xr)
+    print("*** </INPUT> ***")
+    print(" ")
+    # 
+    with open(fname) as text_file:
+       data = json.loads(text_file.read())
+    #
+    print("*** <PLOT> ***")
+    #
+    bandoffset = data["output"]["Q"]["bandmap"][0]
+    #
+    eDFT        = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["eks"][band-bandoffset]
+    eGWlin      = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["eqpLin"][band-bandoffset]
+    eGWsec      = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["eqpSec"][band-bandoffset]
+    sigmac_eDFT = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["sigmac_eks"]["re"][band-bandoffset]
+    sigmax      = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["sigmax"][band-bandoffset]
+    vxcl        = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["vxcl"][band-bandoffset]
+    vxcnl       = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["vxcnl"][band-bandoffset]
+    z           = data["output"]["Q"]["K"+str(kpoint).zfill(6)]["z"][band-bandoffset]
+    #
+    print("eDFT        :", eDFT )
+    print("eGWlin      :", eGWlin )
+    print("eGWsec      :", eGWsec )
+    print("sigmac_eDFT :", sigmac_eDFT )
+    print("sigmax      :", sigmax )
+    print("vxcl        :", vxcl )
+    print("vxcnl       :", vxcnl )
+    print("z           :", z )
+    #
+    x=np.asarray(data["output"]["P"]["freqlist"])
+    #
+    sigmac=np.asarray(data["output"]["P"]["K"+str(kpoint).zfill(6)]["B"+str(band).zfill(6)]["sigmac"]["re"])
+    sigma=sigmac+sigmax-vxcl-vxcnl
+    #
+    y=x-eDFT
+    #
+    ylin=(1.-1./z)*(x-eDFT)+sigmax+sigmac_eDFT-vxcl-vxcnl
+    #
+    fig = plt.figure(1)
+    ax = fig.add_subplot(1,1,1)
+    #
+    ax.hlines(0, np.min(x), np.max(x), color='black')
+    ax.plot(x, sigma, 'b-', label="$\Sigma(E)-V_{xc}$")
+    ax.plot(x, y, 'r-', label="$E-\epsilon^{DFT}$")
+    ax.plot(x, ylin, 'g-', label="$Z[\Sigma(\epsilon^{DFT})-V_{xc}]$")
+    ax.axvline(x=eDFT, color='k', linestyle='--')
+    ax.axvline(x=eGWlin, color='g', linestyle='--')
+    ax.axvline(x=eGWsec, color='orange', linestyle='--')
+    #
+    plt.xlim(xr)
+    #
+    plt.xlabel('Energy (eV)')
+    plt.ylabel('Energy (eV)')
+    #
+    plt.savefig(output_file_name)
+    #
+    plt.legend()
+    plt.title("frequency analysis")
+    print("output written in : ", output_file_name)
+    print("waiting for user to close image preview...")
+    plt.show()
+    fig.clear()
+    print("*** </PLOT> ***")
+    print(" ")
+    #
+    footer()

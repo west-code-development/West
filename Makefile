@@ -14,7 +14,8 @@ dfpt_kernel_do \
 io_kernel_do \
 wstat_do \
 wfreq_do \
-westpp_do
+westpp_do \
+westpy_do
 
 
 libraries_do:
@@ -77,6 +78,11 @@ westpp_do:
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
+westpy_do:
+	if test -d Westpy ; then \
+	( cd Westpy ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+
 clean: \
 libraries_undo \
 modules_undo \
@@ -89,7 +95,8 @@ dfpt_kernel_undo \
 io_kernel_undo \
 wstat_undo \
 wfreq_undo \
-westpp_undo
+westpp_undo \
+westpy_undo
 
 libraries_undo:
 	if test -d Libraries ; then \
@@ -149,6 +156,11 @@ wfreq_undo:
 westpp_undo:
 	if test -d Westpp ; then \
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
+
+westpy_undo:
+	if test -d Westpy ; then \
+	( cd Westpy ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
 doc:

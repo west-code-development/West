@@ -95,7 +95,7 @@ MODULE wfreq_db
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl', sigma_vxcnl(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.hf', sigma_hf(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(qp_bandrange(1):qp_bandrange(2),iks))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', et(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)

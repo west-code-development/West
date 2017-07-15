@@ -45,7 +45,6 @@ CONTAINS
     CHARACTER(LEN=6), EXTERNAL :: int_to_char
     INTEGER :: ios, crashunit
     INTEGER, EXTERNAL :: find_free_unit
-!    CHARACTER(LEN=9),EXTERNAL :: to_lower_case
     !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash

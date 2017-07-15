@@ -38,7 +38,7 @@ PURE FUNCTION to_lower_case (str) RESULT (string)
    !
    IMPLICIT NONE
    CHARACTER(*), INTENT(IN) :: str
-   CHARACTER(LEN(str))      :: string
+   CHARACTER(LEN=LEN(str)), INTENT(OUT) :: string
    !
    INTEGER :: ic, i
    !

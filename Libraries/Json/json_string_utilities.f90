@@ -739,28 +739,32 @@
 !
 !  Returns lowercase version of the `CK` string.
 
-    !pure elemental function lowercase_string(str) result(s_lower) DOES NOT COMPILE ON BGQ
-    function lowercase_string(str) result(s_lower)
+!  !pure elemental function lowercase_string(str) result(s_lower) DOES NOT COMPILE ON BGQ
+   pure function lowercase_string(str) result(s_lower)
 
-    implicit none
+   implicit none
 
-    character(kind=CK,len=*),intent(in) :: str      !! input string
-    character(kind=CK,len=(len(str)))   :: s_lower  !! lowercase version of the string
+!  !character(kind=CK,len=*),intent(in) :: str      !! input string
+!  !character(kind=CK,len=(len(str)))   :: s_lower  !! lowercase version of the string
+   character(len=*),intent(in) :: str      !! input string
+   character(len=(len(str)))   :: s_lower  !! lowercase version of the string
 
-    integer :: i  !! counter
-    integer :: n  !! length of input string
+   integer :: i  !! counter
+   integer :: n  !! length of input string
 
-    s_lower = CK_''
-    n = len_trim(str)
+   s_lower = CK_''
+   n = len_trim(str)
 
-    if (n>0) then
-        !do concurrent (i=1:n) DOES NOT COMPILE ON BGQ
-        do i=1,n
-            s_lower(i:i) = lowercase_character(str(i:i))
-        end do
-    end if
+   if (n>0) then
+       !do concurrent (i=1:n) DOES NOT COMPILE ON BGQ
+       do i=1,n
+           s_lower(i:i) = lowercase_character(str(i:i))
+       end do
+   end if
 
-    end function lowercase_string
+   end function lowercase_string
+
+
 !*****************************************************************************************
 
 !*****************************************************************************************

@@ -36,6 +36,7 @@ CONTAINS
     USE mp_images,       ONLY : me_image, my_image_id, root_image, nimage
     USE westcom,         ONLY : savedir, logfile, outdir, west_prefix 
     USE base64_module,   ONLY : base64_init 
+    USE json_string_utilities, ONLY : lowercase_string
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
@@ -44,7 +45,7 @@ CONTAINS
     CHARACTER(LEN=6), EXTERNAL :: int_to_char
     INTEGER :: ios, crashunit
     INTEGER, EXTERNAL :: find_free_unit
-    CHARACTER(LEN=9),EXTERNAL :: to_lower_case
+!    CHARACTER(LEN=9),EXTERNAL :: to_lower_case
     !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash
@@ -58,9 +59,9 @@ CONTAINS
     CALL parse_command_arguments()
     CALL fetch_input(1,(/1/),.FALSE.)
     !
-    savedir = TRIM(outdir) // trim(west_prefix) // "." // TRIM(to_lower_case(code)) // ".save/"
+    savedir = TRIM(outdir) // trim(west_prefix) // "." // TRIM(lowercase_string(code)) // ".save/"
     CALL my_mkdir( savedir )
-    logfile = TRIM(savedir) // TRIM(to_lower_case(code))//".json"
+    logfile = TRIM(savedir) // TRIM(lowercase_string(code))//".json"
     !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
     ! ... use ".TRUE."  to enable clocks

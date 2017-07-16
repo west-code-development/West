@@ -10,33 +10,60 @@ input_description -distribution {Quantum Espresso} -package West -program wfreq.
         export MPI_TASKS=12
         export NIMAGE=2
 
-        mpirun -n $MPI_TASKS wfreq.x -nimage $NIMAGE < wfreq.in > wfreq.out
+        mpirun -n $MPI_TASKS wfreq.x -nimage $NIMAGE -i wfreq.in
 
 
 	Structure of the input data (wfreq.in):
 	===============================================================================
 
-	&INPUT_WEST
-	  qe_prefix="pwscf"
-	  west_prefix="west"
-	  outdir="./"
-	/
-	&WSTAT_CONTROL
-	  wstat_calculation="S"
-          n_pdep_eigen=4
-	/
-	&WFREQ_CONTROL
-	  wfreq_calculation="XWGQ"
-          n_pdep_eigen_to_use=2
-          qp_bandrange(1)=1
-          qp_bandrange(2)=2
-          macropol_calculation="N"
-          n_lanczos=20
-          n_imfreq=10
-          n_refreq=10
-          ecut_imfreq=100.0
-          ecut_refreq=2.0
-	/
+
+        {
+           "input_west": {
+              "qe_prefix": "pwscf",
+              "west_prefix": "west",
+              "outdir": "./"
+           },
+           "wstat_control": {
+              "wstat_calculation": "S",
+              "n_pdep_eigen": 10
+           },
+           "wfreq_control": {
+              "wfreq_calculation": "XWGQ",
+              "n_pdep_eigen_to_use": 10,
+              "qp_bandrange": [1,2],
+              "macropol_calculation": "N",
+              "n_lanczos": 30,
+              "n_imfreq": 100,
+              "n_refreq": 250,
+              "ecut_imfreq": 100.0,
+              "ecut_refreq": 2.0,
+              "n_secant_maxiter": 10
+           }
+        }
+
+
+
+#	&INPUT_WEST
+#	  qe_prefix="pwscf"
+#	  west_prefix="west"
+#	  outdir="./"
+#	/
+#	&WSTAT_CONTROL
+#	  wstat_calculation="S"
+#          n_pdep_eigen=4
+#	/
+#	&WFREQ_CONTROL
+#	  wfreq_calculation="XWGQ"
+#          n_pdep_eigen_to_use=2
+#          qp_bandrange(1)=1
+#          qp_bandrange(2)=2
+#          macropol_calculation="N"
+#          n_lanczos=20
+#          n_imfreq=10
+#          n_refreq=10
+#          ecut_imfreq=100.0
+#          ecut_refreq=2.0
+#	/
     
     }
 

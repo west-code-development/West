@@ -10,21 +10,33 @@ input_description -distribution {Quantum Espresso} -package West -program wstat.
         export MPI_TASKS=12
         export NIMAGE=2
 
-        mpirun -n $MPI_TASKS wstat.x -nimage $NIMAGE < wstat.in > wstat.out
+        mpirun -n $MPI_TASKS wstat.x -nimage $NIMAGE -i wstat.in
 
 
 	Structure of the input data (wstat.in):
 	===============================================================================
 
-	&INPUT_WEST
-	  qe_prefix="pwscf"
-	  west_prefix="west"
-	  outdir="./"
-	/
-	&WSTAT_CONTROL
-	  wstat_calculation="S"
-          n_pdep_eigen=4
-	/
+        {
+           "input_west": {
+              "qe_prefix": "pwscf",
+              "west_prefix": "west",
+              "outdir": "./"
+           },
+           "wstat_control": {
+              "wstat_calculation": "S",
+              "n_pdep_eigen": 10
+           }
+        }
+
+#	&INPUT_WEST
+#	  qe_prefix="pwscf"
+#	  west_prefix="west"
+#	  outdir="./"
+#	/
+#	&WSTAT_CONTROL
+#	  wstat_calculation="S"
+#          n_pdep_eigen=4
+#	/
     
     }
 

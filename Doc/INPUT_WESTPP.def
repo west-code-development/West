@@ -10,7 +10,7 @@ input_description -distribution {Quantum Espresso} -package West -program westpp
         export MPI_TASKS=12
         export NIMAGE=2
 
-        mpirun -n $MPI_TASKS westpp.x -nimage $NIMAGE -i westpp.in
+        mpirun -n $MPI_TASKS westpp.x -nimage $NIMAGE -i westpp.in > westpp.out
 
 
 	Structure of the input data (westpp.in):

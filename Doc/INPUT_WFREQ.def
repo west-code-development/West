@@ -10,7 +10,7 @@ input_description -distribution {Quantum Espresso} -package West -program wfreq.
         export MPI_TASKS=12
         export NIMAGE=2
 
-        mpirun -n $MPI_TASKS wfreq.x -nimage $NIMAGE -i wfreq.in
+        mpirun -n $MPI_TASKS wfreq.x -nimage $NIMAGE -i wfreq.in > wfreq.out
 
 
 	Structure of the input data (wfreq.in):

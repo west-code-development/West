@@ -33,7 +33,7 @@ SUBROUTINE do_sxx ( )
   USE distribution_center,   ONLY : pert
   USE control_flags,         ONLY : gamma_only 
   USE gvecs,                 ONLY : ngms
-  USE gvect,                 ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
+  USE gvect,                 ONLY : g,nl,gstart,ngm_g,ngm
   USE cell_base,             ONLY : omega,at,alat
   USE noncollin_module,      ONLY : noncolin,npol 
   USE mp_world,              ONLY : mpime,root

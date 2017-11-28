@@ -1168,7 +1168,7 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   USE kinds,                ONLY : DP
   USE random_numbers,       ONLY : randy
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
-  USE westcom,              ONLY : dvg,npwqx,npwq,igq_q,igq_l2g
+  USE westcom,              ONLY : dvg,npwqx,npwq,igq_q
   USE constants,            ONLY : tpi
   USE cell_base,            ONLY : tpiba2
   USE mp,                   ONLY : mp_barrier
@@ -1221,8 +1221,8 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
         qq(:) = q(:) + g(:,ig)
         gnorm2 = (qq(1)**2 + qq(2)**2 + qq(3)**2) * tpiba2
         IF ( gnorm2 < 1.d-8 ) CYCLE
-        rr = random_num_debug(1,igq_l2g(ig,iq))
-        arg = tpi * random_num_debug(2,igq_l2g(ig,iq))
+        rr = random_num_debug(1,ig_l2g(igq_q(ig,iq)))
+        arg = tpi * random_num_debug(2,ig_l2g(igq_q(ig,iq)))
         amat(ig,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / &
                       (  ( q(1)+g(1,igq_q(ig,iq)) )*( q(1)+g(1,igq_q(ig,iq)) ) + &
                          ( q(2)+g(2,igq_q(ig,iq)) )*( q(2)+g(2,igq_q(ig,iq)) ) + &

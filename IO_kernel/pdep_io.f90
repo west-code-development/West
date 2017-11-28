@@ -17,7 +17,7 @@ MODULE pdep_io
   USE kinds,        ONLY : DP
   USE mp_global,    ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm,&
                            & intra_pool_comm
-  USE westcom,      ONLY : npwq, npwq_g, npwqx, ngq, ngq_g, npwqx, igq_l2g, igq_l2g_kdip
+  USE westcom,      ONLY : npwq, npwq_g, npwqx, ngq, ngq_g, npwqx, igq_l2g_kdip
   USE gvect,        ONLY : ig_l2g
   USE json_module,  ONLY : json_file
   USE base64_module 

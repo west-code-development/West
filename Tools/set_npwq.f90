@@ -15,7 +15,7 @@ SUBROUTINE set_npwq()
   !-----------------------------------------------------------------------
   !
   USE kinds,           ONLY : DP
-  USE westcom,         ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,igq_l2g,igq_l2g_kdip, &
+  USE westcom,         ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q, &
                               & l_use_ecutrho,fftdriver
   USE mp,              ONLY : mp_max, mp_sum
   USE mp_global,       ONLY : intra_bgrp_comm, inter_bgrp_comm, nbgrp, inter_pool_comm, intra_pool_comm
@@ -32,8 +32,9 @@ SUBROUTINE set_npwq()
   !
   INTEGER, EXTERNAL :: n_plane_waves
   REAL(DP), ALLOCATABLE :: gq2kin(:)
-  INTEGER :: iq
+  INTEGER :: iq, ig
   INTEGER :: npwqx_g
+  INTEGER, ALLOCATABLE :: igq_l2g(:)
   !
   IF ( gamma_only ) THEN
      !
@@ -62,13 +63,15 @@ SUBROUTINE set_npwq()
      ALLOCATE( gq2kin(npwqx) )
      ALLOCATE( ngq(q_grid%nps) )
      ALLOCATE( igq_q(npwqx,q_grid%nps) )
-     ALLOCATE( igq_l2g(npwqx,q_grid%nps) )
+     !ALLOCATE( igq_l2g(npwqx,q_grid%nps) )
      igq_q(:,:) = 0
-     igq_l2g(:,:) = 0
+     !igq_l2g(:,:) = 0
      DO iq = 1, q_grid%nps
         CALL gq_sort( q_grid%xp_cart(:,iq), ngm, g, gcutw, ngq(iq), igq_q(:,iq), gq2kin )
-        CALL gq_l2gmap( ngm, ig_l2g(1), ngq(iq), igq_q(1,iq), igq_l2g(1,iq) )
+        !CALL gq_l2gmap( ngm, ig_l2g(1), ngq(iq), igq_q(1,iq), igq_l2g(1,iq) )
      ENDDO
+     !
+     DEALLOCATE(gq2kin)
      !
      ! ... compute the global number of q+G vectors for each q-point
      !
@@ -83,7 +86,13 @@ SUBROUTINE set_npwq()
      !
      ! ... compute the maximum G vector index among all q+G in processors
      !
-     npwq_g = MAXVAL( igq_l2g(:,:) )
+     npwq_g = 0 
+     DO iq = 1, q_grid%nps
+        DO ig = 1, ngq(iq)
+           npwq_g = MAX( npwq_g, ig_l2g(igq_q(ig,iq)) )
+        ENDDO
+     ENDDO
+     !npwq_g = MAXVAL( igq_l2g(:,:) )
      !
      CALL mp_max( npwq_g, inter_bgrp_comm )
      CALL mp_max( npwq_g, intra_bgrp_comm )
@@ -98,10 +107,13 @@ SUBROUTINE set_npwq()
      igq_l2g_kdip(:,:) = 0
      !
      DO iq = 1, q_grid%nps
-        CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g(1,iq), igq_l2g_kdip(1,iq) ) 
+        ALLOCATE( igq_l2g(ngq(iq)) )
+        DO ig = 1, ngq(iq)
+           igq_l2g(ig) = ig_l2g( igq_q(ig,iq) ) 
+        ENDDO 
+        CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip(1,iq) )
+        DEALLOCATE( igq_l2g ) 
      ENDDO
-     !
-     DEALLOCATE(gq2kin)
      !
   ENDIF
   !
@@ -179,31 +191,31 @@ SUBROUTINE gq_sort( q, ngm, g, ecut, ngq, igq, gq )
 END SUBROUTINE
 !
 !----------------------------------------------------------------------------
-SUBROUTINE gq_l2gmap( ngm, ig_l2g, ngk, igk, igk_l2g )
-  !----------------------------------------------------------------------------
-  !
-  ! ... This subroutine maps local G+k index to the global G vector index
-  ! ... the mapping is used to collect wavefunctions subsets distributed
-  ! ... across processors.
-  ! ... Written by Carlo Cavazzoni
-  !
-  IMPLICIT NONE
-  !
-  ! ... Here the dummy variables
-  !
-  INTEGER, INTENT(IN)  :: ngm, ngk, igk(ngk), ig_l2g(ngm)
-  INTEGER, INTENT(OUT) :: igk_l2g(ngk)
-  INTEGER              :: ig
-  !
-  ! ... input: mapping between local and global G vector index
-  !
-  DO ig = 1, ngk
-     !
-     igk_l2g(ig) = ig_l2g(igk(ig))
-     !
-  END DO
-  !
-END SUBROUTINE
+!SUBROUTINE gq_l2gmap( ngm, ig_l2g, ngk, igk, igk_l2g )
+!  !----------------------------------------------------------------------------
+!  !
+!  ! ... This subroutine maps local G+k index to the global G vector index
+!  ! ... the mapping is used to collect wavefunctions subsets distributed
+!  ! ... across processors.
+!  ! ... Written by Carlo Cavazzoni
+!  !
+!  IMPLICIT NONE
+!  !
+!  ! ... Here the dummy variables
+!  !
+!  INTEGER, INTENT(IN)  :: ngm, ngk, igk(ngk), ig_l2g(ngm)
+!  INTEGER, INTENT(OUT) :: igk_l2g(ngk)
+!  INTEGER              :: ig
+!  !
+!  ! ... input: mapping between local and global G vector index
+!  !
+!  DO ig = 1, ngk
+!     !
+!     igk_l2g(ig) = ig_l2g(igk(ig))
+!     !
+!  END DO
+!  !
+!END SUBROUTINE
 !
 !-----------------------------------------------------------------------
 SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )

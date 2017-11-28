@@ -22,7 +22,7 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   USE io_global,            ONLY : stdout, ionode
   USE io_files,             ONLY : nwordwfc, iunwfc
   USE scf,                  ONLY : rho, rho_core, rhog_core
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
+  USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
   USE gvecs,                ONLY : ngms
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,omega,tpiba,at,alat
@@ -226,7 +226,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   USE io_global,            ONLY : stdout, ionode
   USE io_files,             ONLY : nwordwfc, iunwfc
   USE scf,                  ONLY : rho, rho_core, rhog_core
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
+  USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
   USE gvecs,                ONLY : ngms
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,omega,tpiba,at,alat

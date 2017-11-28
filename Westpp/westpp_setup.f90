@@ -21,7 +21,7 @@ SUBROUTINE westpp_setup
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : nbnd
   USE kinds,                  ONLY : DP
-  USE gvect,                  ONLY : gstart,g,ig_l2g
+  USE gvect,                  ONLY : gstart,g
   USE io_files,               ONLY : tmp_dir
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband
   USE class_idistribute,      ONLY : idistribute

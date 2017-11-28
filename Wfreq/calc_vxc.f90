@@ -22,7 +22,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE io_global,            ONLY : stdout, ionode
   USE io_files,             ONLY : nwordwfc, iunwfc
   USE scf,                  ONLY : rho, rho_core, rhog_core
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
+  USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2
   USE fft_base,             ONLY : dfftp,dffts

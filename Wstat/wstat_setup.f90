@@ -20,7 +20,7 @@ SUBROUTINE wstat_setup
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE kinds,                  ONLY : DP
-  USE gvect,                  ONLY : gstart,g,ig_l2g,ngm,ngmx
+  USE gvect,                  ONLY : gstart,g,ngm,ngmx
   USE constants,              ONLY : e2,fpi
   USE cell_base,              ONLY : tpiba2
   USE io_files,               ONLY : tmp_dir

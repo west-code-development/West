@@ -18,7 +18,7 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
   USE io_global,             ONLY : stdout
   USE wvfct,                 ONLY : nbnd,g2kin,et
   USE fft_base,              ONLY : dfftp,dffts
-  USE gvect,                 ONLY : nl,gstart,ig_l2g,g,ngm
+  USE gvect,                 ONLY : nl,gstart,g,ngm
   USE wavefunctions_module,  ONLY : evc,psic
   USE gvecs,                 ONLY : ngms
   USE gvecw,                 ONLY : gcutw
@@ -337,7 +337,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   USE io_global,             ONLY : stdout
   USE wvfct,                 ONLY : nbnd,g2kin,et
   USE fft_base,              ONLY : dfftp,dffts
-  USE gvect,                 ONLY : nl,nl,gstart,ig_l2g,g,ngm
+  USE gvect,                 ONLY : nl,nl,gstart,g,ngm
   USE wavefunctions_module,  ONLY : evc,psic
   USE gvecs,                 ONLY : ngms,nls
   USE gvecw,                 ONLY : gcutw

@@ -42,7 +42,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout,ionode
-  USE gvect,                ONLY : g,ngm,gstart,ig_l2g
+  USE gvect,                ONLY : g,ngm,gstart
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,bg,omega
   USE fft_base,             ONLY : dffts
@@ -616,7 +616,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout,ionode
-  USE gvect,                ONLY : g,ngm,gstart,ig_l2g
+  USE gvect,                ONLY : g,ngm,gstart
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,bg,omega
   USE fft_base,             ONLY : dffts

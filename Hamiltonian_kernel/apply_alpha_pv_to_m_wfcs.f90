@@ -63,8 +63,6 @@ SUBROUTINE apply_alpha_pv_to_m_wfcs(nbndval,m,f,g,alpha)
      !
   ENDIF
   !
-  ! alpha * sum_ibnd {| evc_ibnd > < evc_ibnd |} | f > = alpha * P_v | f >
-  !
   CALL ZGEMM('N','N',npwx*npol,m,nbndval,alpha,evc,npwx*npol,ps_c,nbndval,(1._DP,0._DP),g,npwx*npol)
   !
   IF( gamma_only ) THEN

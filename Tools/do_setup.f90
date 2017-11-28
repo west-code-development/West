@@ -34,20 +34,22 @@ SUBROUTINE do_setup
   USE gvect,                  ONLY : ngm_g, ngm, ecutrho
   USE gvecw,                  ONLY : ecutwfc
   USE io_push
-  USE westcom,                ONLY : logfile  
+  USE westcom,                ONLY : logfile
   USE mp_world,               ONLY : mpime, root
+  USE class_bz_grid,          ONLY : bz_grid
+  USE types_bz_grid,          ONLY : k_grid, q_grid, kmq_grid, kpq_grid
   !
   IMPLICIT NONE
   !
   TYPE(json_file) :: json
   INTEGER :: iunit
   INTEGER :: auxi,ib
-  INTEGER :: ipol,ik, npwx_g, nkbl, nkl, nkr, iks, ike, spin, ip
+  INTEGER :: ipol,ik,iq,npwx_g, nkbl, nkl, nkr, iks, ike, spin, ip
   INTEGER,ALLOCATABLE :: ngm_i(:), npw_i(:) 
   INTEGER, ALLOCATABLE :: ngk_g(:)
-  REAL(DP) :: xkg(3)
+!  REAL(DP) :: xkg(3)
   REAL(DP) :: alat
-  CHARACTER(LEN=6) :: cik, cip
+  CHARACTER(LEN=6) :: cik, ciq, cip
   !
   CALL start_clock('do_setup')
   !
@@ -57,6 +59,26 @@ SUBROUTINE do_setup
   CALL set_iks_l2g()
   !
   CALL set_dirs()
+  !
+  ! INIT K, Q GRIDS
+  !
+  k_grid = bz_grid()
+  CALL k_grid%init('K')
+  !
+  IF ( .NOT. gamma_only ) THEN
+     ! initialize q-point grid
+     q_grid = bz_grid()
+     CALL q_grid%init('Q')
+     IF (q_grid%np1 /= k_grid%np1 .OR. q_grid%np2 /= k_grid%np2 .OR. q_grid%np3 /= k_grid%np3) THEN
+        CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
+     ENDIF
+     ! initialize (k-q) grid
+     kmq_grid = bz_grid()
+     CALL kmq_grid%init_kq( k_grid, q_grid, -1 )
+     ! initialize (k-q) grid
+     kpq_grid = bz_grid()
+     CALL kpq_grid%init_kq( k_grid, q_grid, +1 )
+  ENDIF
   !
   IF( mpime == root ) THEN 
      CALL json%initialize()
@@ -185,29 +207,75 @@ SUBROUTINE do_setup
      CALL json%add('system.cell.alat',alat)
   ENDIF
   !
-  WRITE( stdout, '(5x,"number of ks points=",i6)') nkstot
-  IF( mpime == root ) CALL json%add('system.kpt.nkstot',nkstot)
+!  WRITE( stdout, '(5x,"number of ks points=",i6)') nkstot
+!  IF( mpime == root ) CALL json%add('system.kpt.nkstot',nkstot)
+!  WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
+!  DO ik = 1, nkstot
+!     WRITE( cik, '(i6)') ik 
+!     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') ik, &
+!          (xk (ipol, ik) , ipol = 1, 3) , wk (ik)
+!     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',xk(1:3))
+!     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',wk(ik))
+!  ENDDO
+!  WRITE( stdout, '(/23x,"cryst. coord.")')
+!  DO ik = 1, nkstot
+!     WRITE( cik, '(i6)') ik 
+!     DO ipol = 1, 3
+!        xkg(ipol) = at(1,ipol)*xk(1,ik) + at(2,ipol)*xk(2,ik) + &
+!                    at(3,ipol)*xk(3,ik)
+!        ! xkg are the component in the crystal RL basis
+!     ENDDO
+!     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
+!          ik, (xkg (ipol) , ipol = 1, 3) , wk (ik)
+!     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',xkg(1:3))
+!  ENDDO
+  WRITE( stdout, '(5x,"number of ks points = ",i6)') k_grid%nps
+  IF( mpime == root ) CALL json%add('system.kpt.nkstot',k_grid%nps)
   WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
-  DO ik = 1, nkstot
-     WRITE( cik, '(i6)') ik 
+  DO ik = 1, k_grid%nps
+     WRITE( cik, '(i6)') ik
      WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') ik, &
-          (xk (ipol, ik) , ipol = 1, 3) , wk (ik)
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',xkg(1:3))
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',wk(ik))
+          (k_grid%xp_cart(ipol,ik) , ipol = 1, 3) , k_grid%wp(ik)
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',k_grid%xp_cart(1:3,ik))
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',k_grid%wp(ik))
   ENDDO
   WRITE( stdout, '(/23x,"cryst. coord.")')
-  DO ik = 1, nkstot
-     WRITE( cik, '(i6)') ik 
-     DO ipol = 1, 3
-        xkg(ipol) = at(1,ipol)*xk(1,ik) + at(2,ipol)*xk(2,ik) + &
-                    at(3,ipol)*xk(3,ik)
-        ! xkg are the component in the crystal RL basis
-     ENDDO
+  DO ik = 1, k_grid%nps
+     WRITE( cik, '(i6)') ik
      WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
-          ik, (xkg (ipol) , ipol = 1, 3) , wk (ik)
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',xkg(1:3))
+          ik, (k_grid%xp_cryst(ipol,ik) , ipol = 1, 3) , k_grid%wp(ik)
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',k_grid%xp_cryst(1:3,ik))
   ENDDO
-  WRITE( stdout, * )
+  !
+  ! q-point grid
+  !
+  IF (.NOT. gamma_only ) THEN
+     WRITE( stdout, * )
+     WRITE( stdout, '(5x,"number of q points = ",i6)') q_grid%nps
+     IF( mpime == root ) CALL json%add('system.qpt.nqtot',q_grid%nps)
+     WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
+     DO iq = 1, q_grid%nps
+        WRITE( ciq, '(i6)') iq
+        WRITE( stdout, '(8x,"q(",i5,") = (",3f12.7,")")') iq, &
+             (q_grid%xp_cart(ipol, iq) , ipol = 1, 3)
+        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').cartcoord:tpiba',q_grid%xp_cart(1:3,iq))
+     ENDDO
+     WRITE( stdout, '(/23x,"cryst. coord.")')
+     DO iq = 1, q_grid%nps
+        WRITE( ciq, '(i6)') iq
+        WRITE( stdout, '(8x,"q(",i5,") = (",3f12.7,")")') &
+             iq, (q_grid%xp_cryst(ipol,iq) , ipol = 1, 3)
+        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').crystcoord',q_grid%xp_cryst(1:3,iq))
+     ENDDO
+     WRITE(stdout, '(/5x,"setup uniform grid of", i3, " q-points centered on each k-point")') kmq_grid%nps
+     WRITE( stdout, '(5x,"(k-q)-points:")')
+     WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")' )
+     DO ik = 1, kmq_grid%nps
+        WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,")")') ik, &
+            (kmq_grid%xp_cart(ipol, ik) , ipol = 1, 3)
+     ENDDO
+  ENDIF
+  !
   !
   IF( mpime == root ) THEN
      OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
@@ -215,6 +283,7 @@ SUBROUTINE do_setup
      CLOSE( iunit )
      CALL json%destroy()
   ENDIF 
+  !
   !
   CALL stop_clock('do_setup')
   !

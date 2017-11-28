@@ -100,7 +100,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
      IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
-     !npw = ngk(iks)
+     npw = ngk(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !

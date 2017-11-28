@@ -27,6 +27,8 @@ dfpt.o : ../../West/FFT_kernel/fft_at_k.o
 dfpt.o : ../../West/Modules/westcom.o
 dfpt.o : ../../West/Tools/bar.o
 dfpt.o : ../../West/Tools/io_push.o
+dfpt.o : ../../West/Tools/types_bz_grid.o
+dfpt.o : ../../PW/src/exx.o
 linsolve_sternheimer_m_wfcts.o : ../../Modules/control_flags.o
 linsolve_sternheimer_m_wfcts.o : ../../Modules/kind.o
 linsolve_sternheimer_m_wfcts.o : ../../Modules/mp.o

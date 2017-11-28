@@ -25,15 +25,15 @@ MODULE west_io
 #endif
   !
   INTERFACE serial_data_write
-    MODULE PROCEDURE serial_i0_data_write, serial_i1_data_write, serial_i2_data_write, serial_i3_data_write, & 
-                     serial_d0_data_write, serial_d1_data_write, serial_d2_data_write, serial_d3_data_write, &
-                     serial_z0_data_write, serial_z1_data_write, serial_z2_data_write, serial_z3_data_write
+    MODULE PROCEDURE serial_i0_data_write,serial_i1_data_write,serial_i2_data_write,serial_i3_data_write,serial_i4_data_write, &
+                     serial_d0_data_write,serial_d1_data_write,serial_d2_data_write,serial_d3_data_write,serial_d4_data_write, &
+                     serial_z0_data_write,serial_z1_data_write,serial_z2_data_write,serial_z3_data_write,serial_z4_data_write
   END INTERFACE
   !
   INTERFACE serial_data_read
-    MODULE PROCEDURE serial_i0_data_read, serial_i1_data_read, serial_i2_data_read, serial_i3_data_read, & 
-                     serial_d0_data_read, serial_d1_data_read, serial_d2_data_read, serial_d3_data_read, &
-                     serial_z0_data_read, serial_z1_data_read, serial_z2_data_read, serial_z3_data_read
+    MODULE PROCEDURE serial_i0_data_read, serial_i1_data_read, serial_i2_data_read, serial_i3_data_read, serial_i4_data_read, &
+                     serial_d0_data_read, serial_d1_data_read, serial_d2_data_read, serial_d3_data_read, serial_d4_data_read, &
+                     serial_z0_data_read, serial_z1_data_read, serial_z2_data_read, serial_z3_data_read, serial_z4_data_read
   END INTERFACE
   !
   INTERFACE parallel_data_write
@@ -188,6 +188,42 @@ MODULE west_io
       !
     END SUBROUTINE
     !
+    ! WRITE I4
+    !
+    SUBROUTINE serial_i4_data_write(lproc,iunit,fname,i4dummy,n,m,l,q)
+      LOGICAL,INTENT(IN) :: lproc
+      INTEGER,INTENT(IN) :: iunit
+      CHARACTER(*),INTENT(IN) :: fname
+      INTEGER,INTENT(IN) :: n,m,l,q
+      INTEGER,INTENT(IN) :: i4dummy(n,m,l,q)
+      !
+      INTEGER :: ierr
+      INTEGER :: i,j,k,p
+      !
+      IF(.NOT.lproc) RETURN
+      !
+      ierr = 0
+      !
+      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      WRITE(iunit,'("Shape: (",i14,",",i14,",",i14,",",i14,")")') n,m,l,q
+      DO p=1,q
+         DO k=1,l
+            DO j=1,m
+               DO i=1,n
+                  WRITE(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i4dummy(i,j,k,p)
+               ENDDO
+               WRITE(iunit,*) ''
+            ENDDO
+            WRITE(iunit,*) ''
+         ENDDO
+         WRITE(iunit,*) ''
+      ENDDO
+      CLOSE(iunit,IOSTAT=ierr)
+      ! 
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
+    END SUBROUTINE
+    !
     ! WRITE D0
     !
     SUBROUTINE serial_d0_data_write(lproc,iunit,fname,d0dummy)
@@ -291,6 +327,32 @@ MODULE west_io
       !
     END SUBROUTINE
     !
+    ! WRITE D4
+    !
+    SUBROUTINE serial_d4_data_write(lproc,iunit,fname,d4dummy,n,m,l,q)
+      LOGICAL,INTENT(IN) :: lproc
+      INTEGER,INTENT(IN) :: iunit
+      CHARACTER(*),INTENT(IN) :: fname
+      INTEGER,INTENT(IN) :: n,m,l,q
+      REAL(DP),INTENT(IN) :: d4dummy(n,m,l,q)
+      !
+      INTEGER :: ierr
+      INTEGER(8) :: unf_recl
+      !
+      IF(.NOT.lproc) RETURN
+      !
+      ierr = 0
+      !
+      unf_recl = DIRECT_IO_FACTOR * INT(n*m*l*q, KIND=KIND(unf_recl))
+      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+           & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
+      WRITE(iunit,REC=1,IOSTAT=ierr) d4dummy
+      CLOSE(iunit,IOSTAT=ierr)
+      ! 
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+    END SUBROUTINE
+    !
     ! WRITE Z0 
     !
     SUBROUTINE serial_z0_data_write(lproc,iunit,fname,z0dummy)
@@ -388,6 +450,32 @@ MODULE west_io
       OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z3dummy
+      CLOSE(iunit,IOSTAT=ierr)
+      ! 
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+    END SUBROUTINE
+    !
+    ! WRITE Z4
+    !
+    SUBROUTINE serial_z4_data_write(lproc,iunit,fname,z4dummy,n,m,l,q)
+      LOGICAL,INTENT(IN) :: lproc
+      INTEGER,INTENT(IN) :: iunit
+      CHARACTER(*),INTENT(IN) :: fname
+      INTEGER,INTENT(IN) :: n,m,l,q
+      COMPLEX(DP),INTENT(IN),TARGET :: z4dummy(n,m,l,q)
+      !
+      INTEGER(8) :: unf_recl
+      INTEGER :: ierr
+      !
+      IF(.NOT.lproc) RETURN
+      !
+      ierr = 0
+      !
+      unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l*q, KIND=KIND(unf_recl))
+      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+           & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
+      WRITE(iunit,REC=1,IOSTAT=ierr) z4dummy
       CLOSE(iunit,IOSTAT=ierr)
       ! 
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
@@ -513,6 +601,42 @@ MODULE west_io
       !
     END SUBROUTINE
     !
+    ! READ I4
+    !
+    SUBROUTINE serial_i4_data_read(lproc,iunit,fname,i4dummy,n,m,l,q)
+      LOGICAL,INTENT(IN) :: lproc
+      INTEGER,INTENT(IN) :: iunit
+      CHARACTER(*),INTENT(IN) :: fname
+      INTEGER,INTENT(IN) :: n,m,l,q
+      INTEGER,INTENT(OUT) :: i4dummy(n,m,l,q)
+      !
+      INTEGER :: ierr
+      INTEGER :: i,j,k,p
+      !
+      IF(.NOT.lproc) RETURN
+      !
+      ierr = 0
+      !
+      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      READ(iunit,*)
+      DO p=1,q
+         DO k=1,l
+            DO j=1,m
+               DO i=1,n
+                  READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i4dummy(i,j,k,p)
+               ENDDO
+               READ(iunit,*) 
+            ENDDO
+            READ(iunit,*) 
+         ENDDO
+         READ(iunit,*) 
+      ENDDO
+      CLOSE(iunit,IOSTAT=ierr)
+      ! 
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
+    END SUBROUTINE
+    !
     ! READ D0
     !
     SUBROUTINE serial_d0_data_read(lproc,iunit,fname,d0dummy)
@@ -616,6 +740,32 @@ MODULE west_io
       !
     END SUBROUTINE
     !
+    ! READ D4
+    !
+    SUBROUTINE serial_d4_data_read(lproc,iunit,fname,d4dummy,n,m,l,q)
+      LOGICAL,INTENT(IN) :: lproc
+      INTEGER,INTENT(IN) :: iunit
+      CHARACTER(*),INTENT(IN) :: fname
+      INTEGER,INTENT(IN) :: n,m,l,q
+      REAL(DP),INTENT(OUT) :: d4dummy(n,m,l,q)
+      !
+      INTEGER :: ierr
+      INTEGER(8) :: unf_recl
+      !
+      IF(.NOT.lproc) RETURN
+      !
+      ierr = 0
+      !
+      unf_recl = DIRECT_IO_FACTOR * INT(n*m*l*q, KIND=KIND(unf_recl))
+      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+         & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
+      READ(iunit,REC=1,IOSTAT=ierr) d4dummy
+      CLOSE(iunit,IOSTAT=ierr)
+      ! 
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+    END SUBROUTINE
+    !
     ! READ Z0
     !
     SUBROUTINE serial_z0_data_read(lproc,iunit,fname,z0dummy)
@@ -713,6 +863,32 @@ MODULE west_io
       OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z3dummy
+      CLOSE(iunit,IOSTAT=ierr)
+      ! 
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+    END SUBROUTINE
+    !
+    ! READ Z4
+    !
+    SUBROUTINE serial_z4_data_read(lproc,iunit,fname,z4dummy,n,m,l,q)
+      LOGICAL,INTENT(IN) :: lproc
+      INTEGER,INTENT(IN) :: iunit
+      CHARACTER(*),INTENT(IN) :: fname
+      INTEGER,INTENT(IN) :: n,m,l,q
+      COMPLEX(DP),INTENT(OUT),TARGET :: z4dummy(n,m,l,q)
+      !
+      INTEGER(8) :: unf_recl
+      INTEGER :: ierr
+      !
+      IF(.NOT.lproc) RETURN
+      !
+      ierr = 0
+      !
+      unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l*q, KIND=KIND(unf_recl))
+      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+         & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
+      READ(iunit,REC=1,IOSTAT=ierr) z4dummy
       CLOSE(iunit,IOSTAT=ierr)
       ! 
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)

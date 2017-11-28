@@ -14,12 +14,11 @@
 SUBROUTINE wfreq_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,wfreq_save_dir,&
+  USE westcom,                ONLY : alphapv_dfpt,npwq,npwqx,sqvc,west_prefix,wfreq_save_dir,&
                                    & n_pdep_eigen_to_use,n_imfreq,nbnd_occ,l_macropol,macropol_calculation,&
-                                   & n_refreq,isz,qp_bandrange,wfreq_calculation
+                                   & n_refreq,isz,qp_bandrange,wfreq_calculation, fftdriver
   USE westcom,                ONLY : sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
                                      & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf
-  USE westcom,                ONLY : 
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : nbnd,nks
@@ -45,11 +44,7 @@ SUBROUTINE wfreq_setup
   !
   alphapv_dfpt = get_alpha_pv()
   !
-  CALL set_npwq0()
-  !
-  ALLOCATE(sqvc(npwq0))
-  !
-  CALL store_sqvc(sqvc,npwq0,1,isz)
+  CALL set_npwq()
   !
   IF(qp_bandrange(1)>nbnd) CALL errore('wfreq_setup','Err: qp_bandrange(1)>nbnd', 1) 
   IF(qp_bandrange(2)>nbnd) CALL errore('wfreq_setup','Err: qp_bandrange(2)>nbnd', 1) 

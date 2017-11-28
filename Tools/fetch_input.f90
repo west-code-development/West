@@ -71,9 +71,12 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      trev_pdep                = 1.d-3
      trev_pdep_rel            = 1.d-1
      tr2_dfpt                 = 1.d-12
-     l_kinetic_only           = .false.
-     l_minimize_exx_if_active = .false. 
-     l_use_ecutrho            = .false.
+     l_kinetic_only           = .FALSE.
+     l_minimize_exx_if_active = .FALSE. 
+     l_use_ecutrho            = .FALSE.
+     nq1                     = 0
+     nq2                     = 0
+     nq3                     = 0
   ENDIF
   !
   ! ** wfreq_control **
@@ -153,6 +156,12 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         IF( found ) l_minimize_exx_if_active = lval  
         CALL json%get('wstat_control.l_use_ecutrho', lval, found) 
         IF( found ) l_use_ecutrho = lval  
+        CALL json%get('wstat_control.nq1', ival, found) 
+        IF( found ) nq1 = ival  
+        CALL json%get('wstat_control.nq2', ival, found) 
+        IF( found ) nq2 = ival  
+        CALL json%get('wstat_control.nq3', ival, found) 
+        IF( found ) nq3 = ival  
      ENDIF
      !
      IF ( ANY(driver(:)==3) ) THEN 
@@ -255,6 +264,9 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      CALL mp_bcast(l_kinetic_only,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
      CALL mp_bcast(l_use_ecutrho,root,world_comm)
+     CALL mp_bcast(nq1,root,world_comm)
+     CALL mp_bcast(nq2,root,world_comm)
+     CALL mp_bcast(nq3,root,world_comm)
      !
      ! CHECKS 
      !
@@ -297,6 +309,9 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
+     CALL mp_bcast(nq1,root,world_comm)
+     CALL mp_bcast(nq2,root,world_comm)
+     CALL mp_bcast(nq3,root,world_comm)
      !
      ! CHECKS 
      !
@@ -385,6 +400,11 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         CALL io_push_value('l_kinetic_only',l_kinetic_only,numsp)
         CALL io_push_value('l_minimize_exx_if_active',l_minimize_exx_if_active,numsp)
         CALL io_push_value('l_use_ecutrho',l_use_ecutrho,numsp)
+        IF ( nq1 * nq2 * nq3 >= 1 )THEN
+           CALL io_push_value('nq1',nq1,numsp)
+           CALL io_push_value('nq2',nq2,numsp)
+           CALL io_push_value('nq3',nq3,numsp)
+        ENDIF
         !
         CALL io_push_bar()
         !
@@ -512,6 +532,9 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
         CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
+        CALL json%add('input.wstat_control.nq1', nq1) 
+        CALL json%add('input.wstat_control.nq2', nq2) 
+        CALL json%add('input.wstat_control.nq3', nq3) 
         !
      ENDIF
      !

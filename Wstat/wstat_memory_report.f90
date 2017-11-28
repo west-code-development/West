@@ -25,7 +25,7 @@ SUBROUTINE wstat_memory_report()
   USE control_flags,  ONLY : isolve, nmix, gamma_only, lscf
   USE mp_global,      ONLY : np_ortho
   USE mp_world,       ONLY : mpime,root
-  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwq0x,logfile
+  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwqx,logfile
   USE distribution_center,  ONLY : pert
   USE noncollin_module,      ONLY : noncolin,npol
   USE json_module,    ONLY : json_file
@@ -98,15 +98,15 @@ SUBROUTINE wstat_memory_report()
   WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
-  mem_partial = DBLE(complex_size*npwq0x*pert%nlocx)/DBLE(Mb)
+  mem_partial = DBLE(complex_size*npwqx*pert%nlocx)/DBLE(Mb)
   WRITE( stdout, '(5x,"[MEM] dvg                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwq0x, pert%nlocx
+     mem_partial, npwqx, pert%nlocx
   IF( mpime == root ) CALL json%add( 'memory.dvg', mem_partial ) 
   mem_tot = mem_tot + mem_partial
   !
-  mem_partial = DBLE(complex_size*npwq0x*pert%nlocx)/DBLE(Mb)
+  mem_partial = DBLE(complex_size*npwqx*pert%nlocx)/DBLE(Mb)
   WRITE( stdout, '(5x,"[MEM] dng                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwq0x, pert%nlocx
+     mem_partial, npwqx, pert%nlocx
   IF( mpime == root ) CALL json%add( 'memory.dng', mem_partial ) 
   mem_tot = mem_tot + mem_partial
   !
@@ -180,6 +180,7 @@ SUBROUTINE wstat_memory_report()
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE( stdout, '(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
+  WRITE(stdout,*)
   !
   IF( mpime == root ) THEN 
      !

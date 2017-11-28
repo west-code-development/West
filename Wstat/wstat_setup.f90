@@ -14,7 +14,7 @@
 SUBROUTINE wstat_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,&
+  USE westcom,                ONLY : alphapv_dfpt,npwq,west_prefix,&
                                    & n_pdep_basis,n_pdep_eigen,n_pdep_times,isz,l_use_ecutrho,&
                                    & wstat_save_dir, wstat_restart_dir
   USE mp,                     ONLY : mp_max
@@ -24,11 +24,10 @@ SUBROUTINE wstat_setup
   USE constants,              ONLY : e2,fpi
   USE cell_base,              ONLY : tpiba2
   USE io_files,               ONLY : tmp_dir
+  USE control_flags,          ONLY : gamma_only
   !
   IMPLICIT NONE
   !
-  REAL(DP) :: q(3)
-  REAL(DP) :: qq
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: ig
   !
@@ -38,11 +37,7 @@ SUBROUTINE wstat_setup
   !
   alphapv_dfpt = get_alpha_pv()
   !
-  CALL set_npwq0()
-  !
-  ALLOCATE(sqvc(npwq0))
-  !
-  CALL store_sqvc(sqvc,npwq0,1,isz)
+  CALL set_npwq()
   !
   CALL set_nbndocc()
   !

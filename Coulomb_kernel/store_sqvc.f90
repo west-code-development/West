@@ -11,11 +11,12 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
+SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
  !-----------------------------------------------------------------------
  !
  ! This routine computes results of applying sqVc to a potential
  ! associated with vector q. Coulomb cutoff technique can be used
+ ! Used for gamma_only case
  !
  USE kinds,                ONLY : DP
  USE io_global,            ONLY : stdout
@@ -27,9 +28,11 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
  USE mp,                   ONLY : mp_sum
  USE mp_global,            ONLY : intra_bgrp_comm
  USE mp_world,             ONLY : mpime,world_comm,nproc
- USE gvecw,                ONLY : ecutwfc
+ USE gvecw,                ONLY : ecutwfc, gcutw
  USE control_flags,        ONLY : gamma_only
  USE random_numbers,       ONLY : randy
+ USE class_bz_grid,        ONLY : bz_grid
+ USE types_bz_grid,        ONLY : q_grid
  !
  IMPLICIT NONE
  !
@@ -39,6 +42,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
  REAL(DP),INTENT(OUT) :: sqvc_tmp(numg)
  INTEGER,INTENT(IN) :: singularity_removal_mode
  REAL(DP),INTENT(OUT) :: div
+ LOGICAL,INTENT(IN) :: printout_div
  !
  ! Workspace
  !
@@ -46,13 +50,25 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
  INTEGER :: ig, ipol, iq1, iq2, iq3, i1, i2, i3
  LOGICAL :: on_double_grid
  REAL(DP),PARAMETER :: eps=1.d-6
+ REAL(DP),PARAMETER :: eps_qdiv=1.d-8
  REAL(DP) :: grid_factor = 8.d0/7.d0
+! REAL(DP) :: grid_factor = 1.0_DP
  TYPE(vcut_type)   :: vcut
  LOGICAL :: try_ort_div=.TRUE.,i_am_ort 
  REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp 
  REAL(DP) :: intcounter
  !
  CALL start_clock('storesqvc')
+ !
+ IF ( gamma_only ) THEN
+    nq(1)=1._DP
+    nq(2)=1._DP
+    nq(3)=1._DP
+ ELSE
+    nq(1) = REAL( q_grid%np1, KIND=DP )
+    nq(2) = REAL( q_grid%np2, KIND=DP )
+    nq(3) = REAL( q_grid%np3, KIND=DP )
+ ENDIF
  !
  ! ======
  !  BODY
@@ -74,9 +90,6 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
     !
     ! In this case we use Gygi-Baldereschi method
     !
-    nq(1)=1._DP
-    nq(2)=1._DP
-    nq(3)=1._DP
     !
     sqvc_tmp(1)=0._DP
     DO ig = gstart,numg
@@ -98,10 +111,6 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
     !
     ! In this case we use CUT_WS
     ! 
-    !
-    nq(1)=1._DP
-    nq(2)=1._DP
-    nq(3)=1._DP
     ecutvcut = 0.7_DP
     !
     ! build the superperiodicity direct lattice
@@ -136,8 +145,9 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
     !
     ! In this case we use the spherical region 
     !
-    div = ( (6._DP * pi * pi / omega )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
-    WRITE(stdout,"(5X,'Spherical div        = ',es14.6)") div 
+    div = ( (6._DP * pi * pi / ( omega*nq(1)*nq(2)*nq(3) ) )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
+    !
+    IF ( printout_div ) WRITE(stdout,"(5X,'Spherical div        = ',es14.6)") div 
     !
     IF( try_ort_div ) THEN
        !  
@@ -157,7 +167,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
           DO i2 = 1, 3
              IF( i1 == i2 ) CYCLE
              IF( ABS( prod(i1,i2)) > 1.d-8 ) THEN 
-                WRITE(stdout,"(5X,'Warning: non orthorombic RL')") 
+                IF ( printout_div ) WRITE(stdout,"(5X,'Warning: non orthorombic RL')") 
                 i_am_ort = .FALSE.
              ENDIF
           ENDDO
@@ -168,9 +178,10 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
           edge(1) = SQRT(prod(1,1)) / 2._DP 
           edge(2) = SQRT(prod(2,2)) / 2._DP 
           edge(3) = SQRT(prod(3,3)) / 2._DP 
+          edge(:) = edge(:) / nq(:)
           !
           qhelp = MIN( edge(1),edge(2),edge(3)  )  
-          vbz = tpi**3 / omega
+          vbz = tpi**3 / ( omega*nq(1)*nq(2)*nq(3) )
           vhelp = fpi / 3._DP * qhelp**3
           !
           rand=randy(mpime)
@@ -196,7 +207,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
           div = div / REAL(nproc,KIND=DP)
           CALL mp_sum(div,world_comm)
           !
-          WRITE(stdout,"(5X,'Orthorombic div      = ',es14.6)") div 
+          IF ( printout_div ) WRITE(stdout,"(5X,'Orthorombic div      = ',es14.6)") div 
           !
        ENDIF
        !
@@ -208,22 +219,19 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
     !
     alpha = 10._DP / ecutwfc
     !
-    nq(1)=1._DP
-    nq(2)=1._DP
-    nq(3)=1._DP
-    !
     dq(1)=1._DP/nq(1)
     dq(2)=1._DP/nq(2)
     dq(3)=1._DP/nq(3)
     !
     div = 0._DP
     !
-    DO iq1=1,1,INT(nq(1))
-       DO iq2=1,1,INT(nq(2))
-          DO iq3=1,1,INT(nq(3))
+    DO iq1=1,INT(nq(1))
+       DO iq2=1,INT(nq(2))
+          DO iq3=1,INT(nq(3))
              xq(:) = bg(:,1)*(iq1-1)*dq(1) + bg(:,2)*(iq2-1)*dq(2) + bg(:,3)*(iq3-1)*dq(3)
              !
-             DO ig = gstart,numg
+             !DO ig = gstart,numg
+             DO ig = 1,numg
                 q(:) = g(:,ig) + xq(:)
                 gnorm2 = SUM(q(:)**2) * tpiba2
                 on_double_grid = .TRUE.
@@ -231,7 +239,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
                    x = 0.5_DP*( q(1)*at(1,ipol)+q(2)*at(2,ipol)+q(3)*at(3,ipol) )*nq(ipol)
                    on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
                 ENDDO
-                IF(.NOT.on_double_grid) THEN 
+                IF( .NOT.on_double_grid .AND. gnorm2 > eps_qdiv ) THEN 
                    div = div - EXP( -alpha * gnorm2 ) / gnorm2
                 ENDIF
              ENDDO
@@ -245,10 +253,10 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
     IF( gamma_only ) THEN
        div = div * grid_factor * e2 * fpi / omega * 2._DP
     ELSE
-       div = div * grid_factor * e2 * fpi / omega
+       div = div * grid_factor * e2 * fpi / (omega* nq(1)*nq(2)*nq(3)) 
     ENDIF
     ! 
-    div = div + nq(1)*nq(2)*nq(3) * e2 / SQRT( alpha * pi )
+    div = div + e2 / SQRT( alpha * pi )
     !
  CASE(3)
     !
@@ -262,10 +270,155 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div)
  !
 END SUBROUTINE
 !
-!------------------------------------------------------------------
+!
+!
+!---------------------------------------------------------------------------------
+SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
+  !-------------------------------------------------------------------------------
+  !
+  ! This routine computes results of applying sqVc to a potential
+  ! associated with vector q.
+  !
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE constants,            ONLY : fpi, e2, tpi, pi
+  USE cell_base,            ONLY : tpiba2,tpiba,omega,at,alat,bg
+  USE gvect,                ONLY : g, gstart
+  USE mp,                   ONLY : mp_sum
+  USE mp_global,            ONLY : intra_bgrp_comm
+  USE mp_world,             ONLY : mpime,world_comm,nproc
+  USE gvecw,                ONLY : ecutwfc
+  USE gvect,                ONLY : g, gstart
+  USE westcom,              ONLY : igq_q
+  USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
+                                  vcut_get,  vcut_spheric_get, vcut_destroy
+  USE random_numbers,       ONLY : randy
+  USE class_bz_grid,        ONLY : bz_grid
+  USE types_bz_grid,        ONLY : q_grid
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  INTEGER, INTENT(IN) :: numg
+  REAL(DP), INTENT(OUT) :: sqvc_tmp(numg)
+  INTEGER, INTENT(IN) :: singularity_removal_mode
+  INTEGER, INTENT(IN) :: iq
+  LOGICAL, INTENT(IN) :: l_use_igq
+  !
+  ! Workspace
+  !
+  REAL(DP) :: gnorm2,nq(3),q(3),qq(3),ecutvcut,atws(3,3),alpha,x
+  INTEGER :: ig, ipol, i1, i2, i3
+  LOGICAL :: on_double_grid
+  REAL(DP),PARAMETER :: eps=1.d-6
+  REAL(DP), PARAMETER :: eps_qdiv = 1.d-8
+  REAL(DP) :: grid_factor = 8.d0/7.d0
+! REAL(DP) :: grid_factor = 1.0_DP
+  TYPE(vcut_type)   :: vcut
+  LOGICAL :: try_ort_div=.TRUE.,i_am_ort 
+  REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp 
+  REAL(DP) :: intcounter
+  !
+  CALL start_clock( 'storesqvcq' )
+  !
+  nq(1) = REAL( q_grid%np1, KIND=DP )
+  nq(2) = REAL( q_grid%np2, KIND=DP )
+  nq(3) = REAL( q_grid%np3, KIND=DP )
+  !
+  q(:) = q_grid%xp_cart(:,iq)
+  !
+  ! =======
+  !  BODY
+  ! =======
+  !
+  SELECT CASE(singularity_removal_mode)
+     !
+  CASE(1)
+     !
+     ! In this case we use the spherical region 
+     !
+     DO ig = 1,numg
+        IF (l_use_igq) THEN
+           qq(:) = q(:) + g(:,igq_q(ig,iq))
+        ELSE
+           qq(:) = q(:) + g(:,ig)
+        ENDIF
+        gnorm2 = SUM(qq(:)**2) * tpiba2
+        IF ( gnorm2 < eps_qdiv ) THEN
+           sqvc_tmp(ig) = 0._DP
+        ELSE
+           sqvc_tmp(ig) = SQRT(e2*fpi/gnorm2)
+        ENDIF
+     ENDDO
+     !
+  CASE(2)
+     !
+     ! In this case we use Gygi-Baldereschi method
+     !
+     DO ig = 1,numg
+        IF (l_use_igq) THEN
+           qq(:) = q(:) + g(:,igq_q(ig,iq))
+        ELSE
+           qq(:) = q(:) + g(:,ig)
+        ENDIF
+        gnorm2 = SUM(qq(:)**2) * tpiba2
+        on_double_grid = .TRUE.
+        DO ipol = 1,3
+           x = 0.5_DP*( qq(1)*at(1,ipol)+qq(2)*at(2,ipol)+qq(3)*at(3,ipol) )*nq(ipol)
+           on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
+        ENDDO
+        IF( on_double_grid .OR. gnorm2 < eps_qdiv ) THEN
+           sqvc_tmp(ig)=0._DP
+        ELSE
+           sqvc_tmp(ig)=SQRT(e2*fpi*grid_factor/gnorm2)
+        ENDIF
+     ENDDO
+     !
+  CASE(3)
+     !
+     ! In this case we use CUT_WS
+     ! 
+     !
+     ecutvcut = 0.7_DP
+     !
+     ! build the superperiodicity direct lattice
+     !
+     atws = alat * at
+     !
+     DO ipol=1,3
+        atws(:,ipol) = atws(:,ipol) * nq(ipol)
+     ENDDO
+     !
+     CALL vcut_init( vcut, atws, ecutvcut )
+     !
+     DO ig = 1,numg
+        !
+        IF (l_use_igq) THEN
+           qq(:) = (q(:) + g(:,igq_q(ig,iq))) * tpiba
+        ELSE
+           qq(:) = (q(:) + g(:,ig)) * tpiba
+        ENDIF
+        !
+        sqvc_tmp( ig ) = DSQRT( vcut_get(vcut,qq) )
+        !
+     ENDDO
+     !
+     CALL vcut_destroy(vcut)
+     !
+  END SELECT
+  !
+  CALL stop_clock( 'storesqvcq' )
+  !
+END SUBROUTINE
+!
+!
+!
+!----------------------------------------------------------------------------
 SUBROUTINE store_vcspecial_H(vc_tmp,numg)
+!----------------------------------------------------------------------------
  !
- ! vcspecail_H
+ ! vcspecial_H
  !
  USE kinds,     ONLY : DP
  USE cell_base, ONLY : tpiba, at,omega

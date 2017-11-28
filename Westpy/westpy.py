@@ -73,6 +73,20 @@ def gaussian(x, mu, sig):
     return 1./(np.sqrt(2.*np.pi)*sig)*np.exp(-np.power((x - mu)/sig, 2.)/2)
 
 ##
+## Rescale y axis 
+##
+
+def correct_limit(ax, x, y):   
+    import numpy as np
+    # ax: axes object handle
+    #  x: data for entire x-axes
+    #  y: data for entire y-axes
+    # assumption: you have already set the x-limit as desired
+    lims = ax.get_xlim()
+    i = np.where( (x > lims[0]) &  (x < lims[1]) )[0]
+    ax.set_ylim( y[i].min(), y[i].max() ) 
+
+##
 ## CubeFile
 ##
 
@@ -731,14 +745,15 @@ def plot_frequency_analysis(fname,output_file_name,kpoint,band,xr=[-15,0]) :
     ax = fig.add_subplot(1,1,1)
     #
     ax.hlines(0, np.min(x), np.max(x), color='black')
-    ax.plot(x, sigma, 'b-', label="$\Sigma(E)-V_{xc}$")
     ax.plot(x, y, 'r-', label="$E-\epsilon^{DFT}$")
-    ax.plot(x, ylin, 'g-', label="$Z[\Sigma(\epsilon^{DFT})-V_{xc}]$")
-    ax.axvline(x=eDFT, color='k', linestyle='--')
-    ax.axvline(x=eGWlin, color='g', linestyle='--')
-    ax.axvline(x=eGWsec, color='orange', linestyle='--')
+    ax.axvline(x=eDFT, color='k', linestyle='--',label="$\epsilon^{DFT}$")
+    ax.plot(x, sigma, 'b-', label=r"$\langle \Sigma(E)-V_{xc} \rangle$")
+    ax.axvline(x=eGWsec, color='b', linestyle='--',label="$E_{GW-full}$")
+    ax.plot(x, ylin, 'g-', label=r"$Z\langle\Sigma(\epsilon^{DFT})-V_{xc}\rangle$")
+    ax.axvline(x=eGWlin, color='g', linestyle='--',label="$E_{GW-linear}$")
     #
     plt.xlim(xr)
+    correct_limit(ax,x,sigma)
     #
     plt.xlabel('Energy (eV)')
     plt.ylabel('Energy (eV)')
@@ -746,7 +761,8 @@ def plot_frequency_analysis(fname,output_file_name,kpoint,band,xr=[-15,0]) :
     plt.savefig(output_file_name)
     #
     plt.legend()
-    plt.title("frequency analysis")
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.title("Frequency Analysis : "+ "K"+str(kpoint).zfill(6) + " B"+str(band).zfill(6))
     print("output written in : ", output_file_name)
     print("waiting for user to close image preview...")
     plt.show()

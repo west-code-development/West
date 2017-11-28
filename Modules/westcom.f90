@@ -20,10 +20,13 @@ MODULE scratch_area
   !
   ! Coulomb
   REAL(DP),ALLOCATABLE :: sqvc(:)
-  INTEGER              :: npwq0,npwq0x,npwq0_g
+  INTEGER              :: npwq,npwqx,npwq_g
   CHARACTER(LEN=6)     :: fftdriver
   !INTEGER,ALLOCATABLE  :: q0ig_l2g(:)
   INTEGER,ALLOCATABLE  :: iks_l2g(:)
+  !
+  REAL(DP), ALLOCATABLE :: sqvc_q0(:)
+  REAL(DP), ALLOCATABLE :: sqvc_q(:,:)
   !
   ! DBS
   REAL(DP),ALLOCATABLE    :: ev(:)
@@ -35,10 +38,23 @@ MODULE scratch_area
   ! BANDS
   INTEGER,ALLOCATABLE :: nbnd_occ(:) 
   !
+  ! Q-POINTS
+  INTEGER :: current_iq
+  LOGICAL :: l_gammaq        
+  INTEGER, ALLOCATABLE :: ngq(:)
+  INTEGER, ALLOCATABLE :: igq_q(:,:)
+  INTEGER, ALLOCATABLE :: ngq_g(:)
+  INTEGER, ALLOCATABLE :: igq_l2g(:,:)
+  INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:)
+  !
   ! EPSILON
   REAL(DP),ALLOCATABLE    :: d_epsm1_ifr(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_ifr(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr(:,:,:)
+  !
+  ! EPSILON with q-points
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:)
   !
   ! CORRELATION
   REAL(DP),ALLOCATABLE    :: d_head_ifr(:)
@@ -50,6 +66,12 @@ MODULE scratch_area
   REAL(DP),ALLOCATABLE    :: d_diago(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_head_rfr(:)
   COMPLEX(DP),ALLOCATABLE :: z_body_rfr(:,:,:,:) 
+  !
+  ! CORRELATION with q-points
+  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)
   !
   ! I/O 
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
@@ -99,6 +121,9 @@ MODULE wstat_center
   LOGICAL :: l_kinetic_only
   LOGICAL :: l_minimize_exx_if_active
   LOGICAL :: l_use_ecutrho
+  INTEGER :: nq1
+  INTEGER :: nq2
+  INTEGER :: nq3
   !
   ! Common workspace
   !
@@ -124,6 +149,7 @@ MODULE wfreq_center
   INTEGER :: n_imfreq
   INTEGER :: n_refreq
   INTEGER :: qp_bandrange(2)
+  INTEGER :: qp_krange(2)
   REAL(DP) :: ecut_imfreq
   REAL(DP) :: ecut_refreq
   REAL(DP) :: wfreq_eta

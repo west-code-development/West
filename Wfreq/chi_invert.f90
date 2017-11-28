@@ -139,7 +139,7 @@ END SUBROUTINE
 SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   !-----------------------------------------------------------------------
   !
-  ! For each frequency I calculate X, ky, head and lambda
+  ! For each frequency and q-point I calculate X, ky, head and lambda
   !
   ! X = (1-B)^{-1}
   ! temph = X * wh
@@ -154,7 +154,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   !
   USE kinds,                 ONLY : DP 
   USE linear_algebra_kernel, ONLY : matinvrs_zge 
-  USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol
+  USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol,l_gammaq
   USE io_files,              ONLY : tmp_dir
   !
   ! I/O
@@ -188,7 +188,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
      ENDDO
   ENDDO
   !
-  IF(l_macropol) THEN
+  IF(l_macropol .AND. l_gammaq) THEN
      !
      f = Zzero
      DO i1 = 1, 3
@@ -219,7 +219,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   !
   CALL matinvrs_zge(n_pdep_eigen_to_use,x)
   !
-  IF( l_macropol) THEN
+  IF(l_macropol .AND. l_gammaq) THEN
      !
      ! temph = X * wh
      ALLOCATE( temph(n_pdep_eigen_to_use,3) )
@@ -251,7 +251,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   CALL ZGEMM( 'N', 'N', n_pdep_eigen_to_use, n_pdep_eigen_to_use, n_pdep_eigen_to_use, Zone, x, n_pdep_eigen_to_use, &
   & body, n_pdep_eigen_to_use, Zzero, lambda, n_pdep_eigen_to_use )
   !
-  IF( l_macropol ) THEN
+  IF( l_macropol .AND. l_gammaq ) THEN
      CALL ZGEMM( 'N', 'N', n_pdep_eigen_to_use, n_pdep_eigen_to_use, 3, Zone/(3._DP*ky), temph, &
      & n_pdep_eigen_to_use, templ, 3, Zone, lambda, n_pdep_eigen_to_use )
      DEALLOCATE( temph )

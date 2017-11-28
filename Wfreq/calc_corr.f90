@@ -227,23 +227,26 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
   USE westcom,              ONLY : qp_bandrange,isz,&
                                  & nbnd_occ,l_enable_lanczos,&
-                                 & n_lanczos,iks_l2g,l_macropol,&
-                                 & z_head_ifr,z_head_rfr,z_body1_ifr,z_body2_ifr,d_diago,z_body_rfr
+                                 & n_lanczos,iks_l2g,l_macropol,l_gammaq,&
+                                 & z_head_ifr,z_head_rfr,z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
+  USE class_bz_grid,        ONLY : bz_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid, kmq_grid
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  COMPLEX(DP),INTENT(OUT) :: sigma_corr( qp_bandrange(1):qp_bandrange(2), nks )  ! The correlation self-energy, imaginary part is lifetime.  
-  REAL(DP),INTENT(IN) :: energy( qp_bandrange(1):qp_bandrange(2), nks )          ! The energy variable
+  COMPLEX(DP),INTENT(OUT) :: sigma_corr( qp_bandrange(1):qp_bandrange(2), k_grid%nps )  ! The correlation self-energy,
+                                                                                        ! imaginary part is lifetime.  
+  REAL(DP),INTENT(IN) :: energy( qp_bandrange(1):qp_bandrange(2), k_grid%nps )          ! The energy variable
   LOGICAL,INTENT(IN) :: l_verbose
   !
   ! Workspace
   !
-  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip
+  INTEGER :: iks,iq,ikqs,ib,ifreq,glob_ifreq,il,im,glob_im,ip
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -256,6 +259,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   COMPLEX(DP) :: residues_b,residues_h
   LOGICAL :: this_is_a_pole
   !
+  TYPE(bz_grid) :: k1_grid,q_grid_aux
+  !
   ! PRINT TITLE of CALC
   !
   IF(l_verbose) CALL io_push_title('Sigma_C')
@@ -263,6 +268,11 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   ! BARRIER : ALL 
   !
   CALL mp_barrier( world_comm )
+  !
+!  k1_grid = bz_grid()
+!  CALL k1_grid%init('K')
+!  q_grid_aux = bz_grid()
+!  CALL q_grid_aux%init_q( k_grid, k1_grid )
   !
   ! ZERO
   !
@@ -275,56 +285,62 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Integrating along the IM axis...")') 
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_i', barra_load )
   !
   ! LOOP 
   !
-  DO iks = 1, nks   ! KPOINT-SPIN
-     !
-     nbndval = nbnd_occ(iks)
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
-        ! HEAD PART
-        !
         partial_h = 0._DP
-        ! 
-        IF(l_macropol) THEN
+        partial_b = 0._DP
+        !
+        DO iq = 1, q_grid%nps   ! Q-POINT
+           !
+           ikqs = kmq_grid%index_kq(iks,iq)
+           l_gammaq = q_grid%l_gammap(iq)
+           nbndval = nbnd_occ(ikqs)
+           !
+           ! HEAD PART
+           !
+           IF(l_macropol .AND. l_gammaq) THEN
+              !
+              DO ifreq = 1,ifr%nloc
+                 enrg = et(ib,iks) - energy(ib,iks)
+                 partial_h = partial_h + z_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
+              ENDDO
+              !
+           ENDIF
+           !
+           ! BODY 1st part : poles of H
            !
            DO ifreq = 1,ifr%nloc
-              enrg = et(ib,iks) - energy(ib,iks)
-              partial_h = partial_h + z_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
-           ENDDO
-           !
-        ENDIF
-        !
-        ! BODY 1st part : poles of H
-        !
-        partial_b = 0._DP 
-        !
-        DO ifreq = 1,ifr%nloc
-           DO im = 1, aband%nloc
-              glob_im = aband%l2g(im)
-              enrg = et(glob_im,iks) - energy(ib,iks)
-              partial_b = partial_b + z_body1_ifr(im,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
-           ENDDO
-        ENDDO
-        !
-        ! BODY 2nd part : Lanczos
-        !
-        IF( l_enable_lanczos ) THEN
-           !
-           DO ifreq = 1,ifr%nloc
-              DO ip = 1, pert%nloc
-                 DO il = 1, n_lanczos
-                    enrg = d_diago(il,ip,ib,iks) - energy(ib,iks)
-                    partial_b = partial_b + z_body2_ifr(il,ip,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
-                 ENDDO
+              DO im = 1, aband%nloc
+                 glob_im = aband%l2g(im)
+                 enrg = et(glob_im,ikqs) - energy(ib,iks)
+                 partial_b = partial_b + z_body1_ifr_q(im,ifreq,ib,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%wp(iq)
               ENDDO
            ENDDO
            !
-        ENDIF
+           !
+           ! BODY 2nd part : Lanczos
+           !
+           IF( l_enable_lanczos ) THEN
+              !
+              DO ifreq = 1,ifr%nloc
+                 DO ip = 1, pert%nloc
+                    DO il = 1, n_lanczos
+                       enrg = d_diago_q(il,ip,ib,iks,iq) - energy(ib,iks)
+                       partial_b = partial_b + z_body2_ifr_q(il,ip,ifreq,ib,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%wp(iq)
+                    ENDDO
+                 ENDDO
+              ENDDO
+              !
+           ENDIF
+           !
+        ENDDO ! iq
         !
         CALL mp_sum( partial_h, intra_bgrp_comm) 
         CALL mp_sum( partial_b, intra_bgrp_comm) 
@@ -347,14 +363,13 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")') 
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP 
   !
-  DO iks = 1, nks
+  DO iks = 1, k_grid%nps
      !
-     nbndval = nbnd_occ(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -363,36 +378,44 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         residues_b = 0._DP
         residues_h = 0._DP
         !
-        DO im = 1,aband%nloc
+        DO iq = 1, q_grid%nps
            !
-           glob_im = aband%l2g(im)
+           ikqs = kmq_grid%index_kq(iks,iq)
+           nbndval = nbnd_occ(ikqs)
+           l_gammaq = q_grid%l_gammap(iq)
            !
-           this_is_a_pole=.false.
-           IF( glob_im <= nbndval ) THEN
-              segno = -1._DP
-              IF( et(glob_im,iks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
-           ELSE
-              segno = 1._DP
-              IF( et(glob_im,iks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
-           ENDIF  
-           !
-           IF( this_is_a_pole ) THEN
+           DO im = 1,aband%nloc
               !
-              CALL retrieve_glob_freq( et(glob_im,iks) - enrg, glob_ifreq )
+              glob_im = aband%l2g(im)
               !
-              DO ifreq = 1, rfr%nloc 
-                 !
-                 IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
-                 !
-                 IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + segno * z_head_rfr(ifreq)
-                 !
-                 residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
-                 ! 
-              ENDDO
+              this_is_a_pole=.false.
+              IF( glob_im <= nbndval ) THEN ! poles inside G+
+                 segno = -1._DP
+                 IF( et(glob_im,ikqs) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
+              ELSE ! poles inside G-
+                 segno = 1._DP
+                 IF( et(glob_im,ikqs) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
+              ENDIF  
               !
-           ENDIF 
+              IF( this_is_a_pole ) THEN
+                 !
+                 CALL retrieve_glob_freq( et(glob_im,ikqs) - enrg, glob_ifreq )
+                 !
+                 DO ifreq = 1, rfr%nloc 
+                    !
+                    IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
+                    !
+                    IF(glob_im==ib.AND.l_macropol.AND.l_gammaq) residues_h = residues_h + segno * z_head_rfr(ifreq)
+                    !
+                    residues_b = residues_b + segno * z_body_rfr_q( im, ifreq, ib, iks, iq )*q_grid%wp(iq)
+                    ! 
+                 ENDDO
+                 !
+              ENDIF 
+              !
+           ENDDO ! im
            !
-        ENDDO ! im
+        ENDDO ! iq
         !
         CALL mp_sum( residues_h, intra_bgrp_comm )
         CALL mp_sum( residues_h, inter_image_comm )
@@ -405,7 +428,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         !
      ENDDO ! ib  
      !
-  ENDDO ! ik
+  ENDDO ! iks
   !
   IF(l_verbose) CALL stop_bar_type( barra, 'sigmac_r' )
   !

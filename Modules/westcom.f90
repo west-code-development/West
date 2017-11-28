@@ -39,7 +39,7 @@ MODULE scratch_area
   INTEGER, ALLOCATABLE :: igq_q(:,:)        ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq ) 
   INTEGER, ALLOCATABLE :: ngq_g(:)          ! equivalent of ngk_g(:) --> ex. ngk_g(iq) = TOTAL number of PW for (q+G) (global in iq)  
   ! INTEGER, ALLOCATABLE :: igq_l2g(:,:)      ! equivalent of igk_l2g(:,:) --> ex. iqq_l2g(ig,iq) => correspondence between the local (q+G) index and the global G index 
-  INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:) ! equivalent of igk_l2g_kdip(:,:) --> ex. iqq_l2g_kdip(ig,iq) => correspondence between the global order of (q+G) and the local index for (q+G).
+  ! INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:) ! equivalent of igk_l2g_kdip(:,:) --> ex. iqq_l2g_kdip(ig,iq) => correspondence between the global order of (q+G) and the local index for (q+G).
   !
   ! EPSILON
   REAL(DP),ALLOCATABLE    :: d_epsm1_ifr(:,:,:)

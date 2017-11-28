@@ -17,7 +17,7 @@ MODULE pdep_io
   USE kinds,        ONLY : DP
   USE mp_global,    ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm,&
                            & intra_pool_comm
-  USE westcom,      ONLY : npwq, npwq_g, npwqx, ngq, ngq_g, npwqx, igq_l2g_kdip
+  USE westcom,      ONLY : npwq, npwq_g, npwqx, ngq, ngq_g, npwqx !, igq_l2g_kdip
   USE gvect,        ONLY : ig_l2g
   USE json_module,  ONLY : json_file
   USE base64_module 
@@ -50,6 +50,8 @@ MODULE pdep_io
       CHARACTER(LEN=:),ALLOCATABLE :: charbase64
       INTEGER :: nbytes, ndim, igwx, iunit, nlen
       CHARACTER(LEN=30) :: endian
+      INTEGER :: npwqx_g 
+      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
       !
       !
       IF (PRESENT(iq)) THEN
@@ -57,14 +59,31 @@ MODULE pdep_io
          ! Resume all components 
          !
          ndim = ngq_g(iq)
-         npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
+         !
+         ! <NEW>
+         !
+         npwqx_g = MAXVAL( ngq_g(:) )
+         ALLOCATE( igq_l2g_kdip(npwqx_g) )
+         igq_l2g_kdip(:) = 0
+         !
+         ALLOCATE( igq_l2g(ngq(iq)) )
+         DO ig = 1, ngq(iq)
+            igq_l2g(ig) = ig_l2g( igq_q(ig,iq) )
+         ENDDO
+         CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip )
+         DEALLOCATE( igq_l2g )
+         !
+         ! </NEW>
+         ! 
+!         npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
 !         CALL mp_max(npwq_g,intra_pool_comm)
-         CALL mp_max(npwq_g,intra_bgrp_comm)
+!         CALL mp_max(npwq_g,intra_bgrp_comm)
          !
          ALLOCATE( tmp_vec(npwq_g) )
          tmp_vec=0._DP
          !
-         CALL mergewf( pdepg(:), tmp_vec, npwq, igq_l2g_kdip(:,iq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+         CALL mergewf( pdepg(:), tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+         DEALLOCATE( igq_l2g_kdip ) 
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
@@ -169,15 +188,17 @@ MODULE pdep_io
       CHARACTER(LEN=:),ALLOCATABLE :: endian
       INTEGER :: nbytes, ndim, igwx, iunit, nlen
       LOGICAL :: found, isle
+      INTEGER :: npwqx_g
+      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
       !
       IF ( PRESENT(iq) ) THEN
          !
          ! Resume all components 
          !
          ndim = ngq_g(iq)
-         npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
+!         npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
 !         CALL mp_max(npwq_g,intra_pool_comm)
-         CALL mp_max(npwq_g,intra_bgrp_comm)
+!         CALL mp_max(npwq_g,intra_bgrp_comm)
          !
          ALLOCATE( tmp_vec(npwq_g) )
          tmp_vec=0._DP
@@ -211,7 +232,24 @@ MODULE pdep_io
                !
             END IF
             !
-            CALL splitwf( pdepg, tmp_vec, npwq, igq_l2g_kdip(:,iq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+            !
+            ! <NEW>
+            !
+            npwqx_g = MAXVAL( ngq_g(:) )
+            ALLOCATE( igq_l2g_kdip(npwqx_g) )
+            igq_l2g_kdip(:) = 0
+            !
+            ALLOCATE( igq_l2g(ngq(iq)) )
+            DO ig = 1, ngq(iq)
+               igq_l2g(ig) = ig_l2g( igq_q(ig,iq) )
+            ENDDO
+            CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip )
+            DEALLOCATE( igq_l2g )
+            !
+            ! </NEW>
+            ! 
+            CALL splitwf( pdepg, tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+            DEALLOCATE( igq_l2g_kdip ) 
             !
          ENDIF
          !

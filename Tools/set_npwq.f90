@@ -15,8 +15,7 @@ SUBROUTINE set_npwq()
   !-----------------------------------------------------------------------
   !
   USE kinds,           ONLY : DP
-  USE westcom,         ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q, &
-                              & l_use_ecutrho,fftdriver
+  USE westcom,         ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,l_use_ecutrho,fftdriver
   USE mp,              ONLY : mp_max, mp_sum
   USE mp_global,       ONLY : intra_bgrp_comm, inter_bgrp_comm, nbgrp, inter_pool_comm, intra_pool_comm
   USE gvect,           ONLY : ig_l2g,ngm,ngmx,g
@@ -33,8 +32,8 @@ SUBROUTINE set_npwq()
   INTEGER, EXTERNAL :: n_plane_waves
   REAL(DP), ALLOCATABLE :: gq2kin(:)
   INTEGER :: iq, ig
-  INTEGER :: npwqx_g
-  INTEGER, ALLOCATABLE :: igq_l2g(:)
+!  INTEGER :: npwqx_g
+!  INTEGER, ALLOCATABLE :: igq_l2g(:)
   !
   IF ( gamma_only ) THEN
      !
@@ -79,10 +78,10 @@ SUBROUTINE set_npwq()
      !
      ngq_g = 0
      ngq_g(:) = ngq(:)
-     CALL mp_sum( ngq_g, inter_bgrp_comm )
+     !CALL mp_sum( ngq_g, inter_pool_comm )
+     !CALL mp_sum( ngq_g, intra_pool_comm )
      CALL mp_sum( ngq_g, intra_bgrp_comm )
-     !
-     ngq_g = ngq_g / nbgrp
+     !ngq_g = ngq_g / nbgrp
      !
      ! ... compute the maximum G vector index among all q+G in processors
      !
@@ -94,30 +93,31 @@ SUBROUTINE set_npwq()
      ENDDO
      !npwq_g = MAXVAL( igq_l2g(:,:) )
      !
-     CALL mp_max( npwq_g, inter_bgrp_comm )
+     !CALL mp_max( npwq_g, intra_pool_comm )
      CALL mp_max( npwq_g, intra_bgrp_comm )
      !
      ! ... compute the maximum number of G vectors among all q-points
      !
-     npwqx_g = MAXVAL( ngq_g(1:q_grid%nps) )
+!     npwqx_g = MAXVAL( ngq_g(1:q_grid%nps) )
      !
      ! ... define a further l2g map
      !
-     ALLOCATE( igq_l2g_kdip(npwqx_g, q_grid%nps) )
-     igq_l2g_kdip(:,:) = 0
-     !
-     DO iq = 1, q_grid%nps
-        ALLOCATE( igq_l2g(ngq(iq)) )
-        DO ig = 1, ngq(iq)
-           igq_l2g(ig) = ig_l2g( igq_q(ig,iq) ) 
-        ENDDO 
-        CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip(1,iq) )
-        DEALLOCATE( igq_l2g ) 
-     ENDDO
+!     ALLOCATE( igq_l2g_kdip(npwqx_g, q_grid%nps) )
+!     igq_l2g_kdip(:,:) = 0
+!     !
+!     DO iq = 1, q_grid%nps
+!        ALLOCATE( igq_l2g(ngq(iq)) )
+!        DO ig = 1, ngq(iq)
+!           igq_l2g(ig) = ig_l2g( igq_q(ig,iq) ) 
+!        ENDDO 
+!        CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip(1,iq) )
+!        DEALLOCATE( igq_l2g ) 
+!     ENDDO
      !
   ENDIF
   !
 END SUBROUTINE
+!
 !
 !----------------------------------------------------------------------------
 SUBROUTINE gq_sort( q, ngm, g, ecut, ngq, igq, gq )
@@ -263,7 +263,6 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
         ngg = ngg + 1
         !
         igwk_(ngg) = ig
-
         !
      END IF
      !

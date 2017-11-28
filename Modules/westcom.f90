@@ -35,11 +35,11 @@ MODULE scratch_area
   INTEGER,ALLOCATABLE :: nbnd_occ(:) 
   !
   ! Q-POINTS
-  INTEGER, ALLOCATABLE :: ngq(:)               ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for q-point iq (global in iq)
-  INTEGER, ALLOCATABLE :: igq_q(:,:)           ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq ) 
-  INTEGER, ALLOCATABLE :: ngq_g(:)             ! equivalent of ngk_g(:) --> ex. ngk_g(iq) = TOTAL number of PW for q-point iq (global in iq)  
-  INTEGER, ALLOCATABLE :: igq_l2g(:,:)         ! equivalent of igk_l2g(:,:) --> ex. iqq_l2g(ig,iq) = global PW index (G+q) of for local PW index (G+q) (global in iq) 
-  INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:)    ! to be understood  
+  INTEGER, ALLOCATABLE :: ngq(:)            ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for (q+G) (global in iq)
+  INTEGER, ALLOCATABLE :: igq_q(:,:)        ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq ) 
+  INTEGER, ALLOCATABLE :: ngq_g(:)          ! equivalent of ngk_g(:) --> ex. ngk_g(iq) = TOTAL number of PW for (q+G) (global in iq)  
+  INTEGER, ALLOCATABLE :: igq_l2g(:,:)      ! equivalent of igk_l2g(:,:) --> ex. iqq_l2g(ig,iq) => correspondence between the local (q+G) index and the global G index 
+  INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:) ! equivalent of igk_l2g_kdip(:,:) --> ex. iqq_l2g_kdip(ig,iq) => correspondence between the local (q+G) index and the global (q+G) index
   !
   ! EPSILON
   REAL(DP),ALLOCATABLE    :: d_epsm1_ifr(:,:,:)
@@ -47,8 +47,8 @@ MODULE scratch_area
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr(:,:,:)
   !
   ! EPSILON with q-points
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:)  ! EPSILON + iq  (global in iq) 
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:)  ! EPSILON + iq  (global in iq) 
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:) ! EPSILON + iq  (global in iq) 
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq  (global in iq) 
   !
   ! CORRELATION
   REAL(DP),ALLOCATABLE    :: d_head_ifr(:)
@@ -62,10 +62,10 @@ MODULE scratch_area
   COMPLEX(DP),ALLOCATABLE :: z_body_rfr(:,:,:,:) 
   !
   ! CORRELATION with q-points
-  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)     ! CORRELATION + iq  (global in iq)
-  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
-  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)         ! CORRELATION + iq  (global in iq)
-  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)     ! CORRELATION + iq  (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:) ! CORRELATION + iq  (global in iq)
+  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)       ! CORRELATION + iq  (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
   !
   ! I/O 
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)

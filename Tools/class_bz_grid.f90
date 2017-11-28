@@ -54,7 +54,7 @@ MODULE class_bz_grid
       USE cell_base,        ONLY : at, bg
       USE klist,            ONLY : xk, wk, nkstot
       USE start_k,          ONLY : nk1, nk2, nk3
-      USE westcom,          ONLY : nq1, nq2, nq3
+      USE westcom,          ONLY : nq
       !
       IMPLICIT NONE
       !
@@ -97,23 +97,23 @@ MODULE class_bz_grid
          !
       CASE ( 'Q', 'q')
          !
-         grid%np1 = nq1
-         grid%np2 = nq2
-         grid%np3 = nq3
+         grid%np1 = nq(1)
+         grid%np2 = nq(2)
+         grid%np3 = nq(3)
          !
-         grid%nps = nq1 * nq2 * nq3
+         grid%nps = nq(1) * nq(2) * nq(3)
          !
          ALLOCATE ( grid%xp_cryst(3,grid%nps) )
          ALLOCATE ( grid%xp_cart(3,grid%nps) )
          ALLOCATE ( grid%wp(grid%nps) )
          !
-         dq1 = 1._DP / DBLE(nq1)
-         dq2 = 1._DP / DBLE(nq2)
-         dq3 = 1._DP / DBLE(nq3)
+         dq1 = 1._DP / DBLE(nq(1))
+         dq2 = 1._DP / DBLE(nq(2))
+         dq3 = 1._DP / DBLE(nq(3))
          iq = 0
-         DO iq1 = 1, nq1
-            DO iq2 = 1, nq2
-               DO iq3 = 1, nq3
+         DO iq1 = 1, nq(1)
+            DO iq2 = 1, nq(2)
+               DO iq3 = 1, nq(3)
                   iq = iq + 1
                   grid%xp_cryst(1,iq) = DBLE( iq1 - 1 ) * dq1
                   grid%xp_cryst(2,iq) = DBLE( iq2 - 1 ) * dq2
@@ -262,7 +262,7 @@ MODULE class_bz_grid
       USE cell_base,        ONLY : at, bg
       USE klist,            ONLY : xk, wk, nkstot
       USE pwcom,            ONLY : nspin
-      USE westcom,          ONLY : nq1, nq2, nq3
+      USE westcom,          ONLY : nq
       !
       IMPLICIT NONE
       !
@@ -286,18 +286,18 @@ MODULE class_bz_grid
       !
       nks = kgrid%nps
       nks1 = k1grid%nps
-      temp_nqs = nq1*nq2*nq3
+      temp_nqs = nq(1)*nq(2)*nq(3)
       !
       ALLOCATE( temp_xq(3,temp_nqs), temp_wq(temp_nqs) )
       ALLOCATE( new_iq(temp_nqs), temp_index_iq(temp_nqs) )
       !
-      dq1 = 1._DP / DBLE(nq1)
-      dq2 = 1._DP / DBLE(nq2)
-      dq3 = 1._DP / DBLE(nq3)
+      dq1 = 1._DP / DBLE(nq(1))
+      dq2 = 1._DP / DBLE(nq(2))
+      dq3 = 1._DP / DBLE(nq(3))
       iq = 0
-      DO iq1 = 1, nq1
-         DO iq2 = 1, nq2
-            DO iq3 = 1, nq3
+      DO iq1 = 1, nq(1)
+         DO iq2 = 1, nq(2)
+            DO iq3 = 1, nq(3)
                iq = iq + 1
                temp_xq(1,iq) = DBLE( iq1 - 1 ) * dq1
                temp_xq(2,iq) = DBLE( iq2 - 1 ) * dq2
@@ -305,7 +305,7 @@ MODULE class_bz_grid
             ENDDO
          ENDDO
       ENDDO
-      temp_wq = 1 / DBLE(nq1*nq2*nq3)
+      temp_wq = 1 / DBLE(nq(1)*nq(2)*nq(3))
       !
       ALLOCATE( qgrid%index_q(nks,nks) )
       ALLOCATE( qgrid%g0(3,nks,nks) )

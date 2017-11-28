@@ -341,7 +341,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE kinds,                ONLY : DP 
   USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver, &
-                                 & wstat_save_dir,l_gammaq,ngq,igq_q,isz
+                                 & wstat_save_dir,ngq,igq_q,isz
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm,inter_pool_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout, ionode
@@ -498,12 +498,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !
-           l_gammaq = q_grid_aux%l_gammap(iq)
            npwq = ngq(iq)
            !
            ! compute Coulomb potential
            !
-           IF (l_gammaq) THEN
+           IF ( q_grid_aux%l_gammap(iq) ) THEN
               CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
            ELSE
               CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)

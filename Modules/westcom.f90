@@ -18,15 +18,11 @@ MODULE scratch_area
   !
   SAVE
   !
-  ! Coulomb
+  ! COULOMB
   REAL(DP),ALLOCATABLE :: sqvc(:)
   INTEGER              :: npwq,npwqx,npwq_g
   CHARACTER(LEN=6)     :: fftdriver
-  !INTEGER,ALLOCATABLE  :: q0ig_l2g(:)
   INTEGER,ALLOCATABLE  :: iks_l2g(:)
-  !
-  REAL(DP), ALLOCATABLE :: sqvc_q0(:)
-  REAL(DP), ALLOCATABLE :: sqvc_q(:,:)
   !
   ! DBS
   REAL(DP),ALLOCATABLE    :: ev(:)
@@ -39,13 +35,11 @@ MODULE scratch_area
   INTEGER,ALLOCATABLE :: nbnd_occ(:) 
   !
   ! Q-POINTS
-  INTEGER :: current_iq
-  LOGICAL :: l_gammaq        
-  INTEGER, ALLOCATABLE :: ngq(:)
-  INTEGER, ALLOCATABLE :: igq_q(:,:)
-  INTEGER, ALLOCATABLE :: ngq_g(:)
-  INTEGER, ALLOCATABLE :: igq_l2g(:,:)
-  INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:)
+  INTEGER, ALLOCATABLE :: ngq(:)               ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for q-point iq (global in iq)
+  INTEGER, ALLOCATABLE :: igq_q(:,:)           ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq ) 
+  INTEGER, ALLOCATABLE :: ngq_g(:)             ! equivalent of ngk_g(:) --> ex. ngk_g(iq) = TOTAL number of PW for q-point iq (global in iq)  
+  INTEGER, ALLOCATABLE :: igq_l2g(:,:)         ! equivalent of igk_l2g(:,:) --> ex. iqq_l2g(ig,iq) = global PW index (G+q) of for local PW index (G+q) (global in iq) 
+  INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:)    ! to be understood  
   !
   ! EPSILON
   REAL(DP),ALLOCATABLE    :: d_epsm1_ifr(:,:,:)
@@ -53,8 +47,8 @@ MODULE scratch_area
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr(:,:,:)
   !
   ! EPSILON with q-points
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:)  ! EPSILON + iq  (global in iq) 
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:)  ! EPSILON + iq  (global in iq) 
   !
   ! CORRELATION
   REAL(DP),ALLOCATABLE    :: d_head_ifr(:)
@@ -68,10 +62,10 @@ MODULE scratch_area
   COMPLEX(DP),ALLOCATABLE :: z_body_rfr(:,:,:,:) 
   !
   ! CORRELATION with q-points
-  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:)
-  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)     ! CORRELATION + iq  (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
+  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)         ! CORRELATION + iq  (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)     ! CORRELATION + iq  (global in iq)
   !
   ! I/O 
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
@@ -121,9 +115,7 @@ MODULE wstat_center
   LOGICAL :: l_kinetic_only
   LOGICAL :: l_minimize_exx_if_active
   LOGICAL :: l_use_ecutrho
-  INTEGER :: nq1
-  INTEGER :: nq2
-  INTEGER :: nq3
+  INTEGER :: nq(3)
   !
   ! Common workspace
   !
@@ -149,7 +141,6 @@ MODULE wfreq_center
   INTEGER :: n_imfreq
   INTEGER :: n_refreq
   INTEGER :: qp_bandrange(2)
-  INTEGER :: qp_krange(2)
   REAL(DP) :: ecut_imfreq
   REAL(DP) :: ecut_refreq
   REAL(DP) :: wfreq_eta

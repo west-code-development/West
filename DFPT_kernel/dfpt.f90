@@ -355,11 +355,11 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   USE control_flags,         ONLY : gamma_only, io_level
   USE io_files,              ONLY : tmp_dir, nwordwfc, iunwfc, diropn
   USE uspp,                  ONLY : nkb, vkb, okvan
-  USE westcom,               ONLY : sqvc,nbnd_occ,iuwfc,lrwfc,l_gammaq,npwqx,npwq,igq_q
+  USE westcom,               ONLY : sqvc,nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q
   USE io_push,               ONLY : io_push_title
   USE mp_world,              ONLY : mpime,world_comm
   USE class_bz_grid,         ONLY : bz_grid
-  USE types_bz_grid,              ONLY : kmq_grid
+  USE types_bz_grid,         ONLY : kmq_grid,q_grid
   !
   IMPLICIT NONE
   !
@@ -632,7 +632,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
      !
   ENDDO ! K-POINT and SPIN
   !
-  IF ( l_gammaq ) THEN
+  IF ( q_grid%l_gammap(iq) ) THEN
      IF ( gstart == 2 ) dng(1,1:m) = CMPLX( 0._DP, 0._DP, KIND=DP )
   ENDIF
   !

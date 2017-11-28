@@ -64,7 +64,6 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   REAL(DP) :: peso
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
-  INTEGER :: nq1, nq2, nq3         ! integers defining the X integration mesh
   REAL(DP),ALLOCATABLE :: mysqvc(:)
   REAL(DP) :: q(3)
   REAL(DP) :: ecutvcut
@@ -274,7 +273,6 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   REAL(DP) :: peso
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
-  INTEGER :: nq1, nq2, nq3         ! integers defining the X integration mesh
   REAL(DP),ALLOCATABLE :: mysqvc(:)
   REAL(DP) :: q(3)
   LOGICAL :: l_gammaq

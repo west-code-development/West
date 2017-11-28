@@ -36,7 +36,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   USE kinds,                ONLY : DP 
   USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
-                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,l_gammaq,isz,&
+                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,isz,&
                                  & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime
@@ -160,7 +160,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      CALL start_bar_type ( barra, 'wlanczos', barra_load )
   ENDIF
   !
-  l_gammaq = .TRUE.
   CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
   !
   ! LOOP 
@@ -609,7 +608,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,z_epsm1_ifr_q,l_gammaq,&
+  USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,z_epsm1_ifr_q,&
                                  &  z_epsm1_rfr_q,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir,&
                                  & ngq, igq_q, isz
@@ -679,6 +678,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: zmati_q(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr_q(:,:,:,:)
   LOGICAL :: l_iks_skip, l_iv_skip
+  LOGICAL :: l_gammaq
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
@@ -960,9 +960,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
               ELSE
                  !
-                 ipol = glob_ip-n_pdep_eigen_to_use
-                 !
-                 IF (l_gammaq) dvpsi(:,ip) = phi(:,ipol) * DSQRT(fpi * e2)
+                 IF (l_gammaq) THEN 
+                    ipol = glob_ip-n_pdep_eigen_to_use
+                    dvpsi(:,ip) = phi(:,ipol) * DSQRT(fpi * e2)
+                 ENDIF
                  !
               ENDIF
               !
@@ -1186,7 +1187,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         CALL mp_sum( zmatilda, inter_image_comm )
         ! 
-        CALL chi_invert_complex( zmatilda, zhead, zlambda, mypara%nglob)
+        CALL chi_invert_complex( zmatilda, zhead, zlambda, mypara%nglob, l_gammaq)
         !
         DO ip = 1, pert%nloc
            glob_ip = pert%l2g(ip)
@@ -1225,13 +1226,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ENDDO
         !
         CALL mp_sum( zmatilda, inter_image_comm ) 
-        CALL chi_invert_complex( zmatilda, zhead, zlambda, mypara%nglob)
+        CALL chi_invert_complex( zmatilda, zhead, zlambda, mypara%nglob, l_gammaq)
         !
         DO ip = 1, pert%nloc
            glob_ip = pert%l2g(ip)
            z_epsm1_rfr_q(1:n_pdep_eigen_to_use,ip,ifreq,iq) = zlambda( 1:n_pdep_eigen_to_use, glob_ip)
         ENDDO 
-        IF( l_macropol .AND. l_gammaq ) z_head_rfr( ifreq) = zhead
+        IF( l_macropol .AND. l_gammaq ) z_head_rfr( ifreq ) = zhead
         !
      ENDDO
      !
@@ -1251,14 +1252,13 @@ END SUBROUTINE
 SUBROUTINE output_eps_head( )
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : d_head_ifr,z_head_ifr,z_head_rfr,refreq_list,l_macropol,imfreq_list,wfreq_save_dir,l_gammaq
+  USE westcom,              ONLY : d_head_ifr,z_head_ifr,z_head_rfr,refreq_list,l_macropol,imfreq_list,wfreq_save_dir
   USE constants,            ONLY : rytoev,fpi
   !USE west_io,              ONLY : serial_table_output
   USE mp_world,             ONLY : mpime,root
   USE distribution_center,  ONLY : ifr,rfr
   USE mp,                   ONLY : mp_sum
   USE mp_global,            ONLY : intra_bgrp_comm 
-  USE control_flags,        ONLY : gamma_only 
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE io_global,            ONLY : stdout
@@ -1280,7 +1280,7 @@ SUBROUTINE output_eps_head( )
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
-  IF(l_macropol .AND. l_gammaq) THEN 
+  IF(l_macropol) THEN 
      !
      CALL io_push_title("(O)ptics") 
      !

@@ -462,7 +462,7 @@ SUBROUTINE davidson_diago_k ( )
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged, &
-                                   & sqvc,isz,l_gammaq,ngq,npwq,igq_q,npwqx,current_iq
+                                   & sqvc,isz,ngq,npwq,igq_q,npwqx
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
@@ -578,15 +578,13 @@ SUBROUTINE davidson_diago_k ( )
      notcnv  = nvec 
      dav_iter = -2
      !
-     l_gammaq = q_grid%l_gammap(iq)
-     !
      ! set local number of G vectors for perturbation at q
      !
      npwq = ngq(iq)
      !
      ! compute Coulomb potential
      !
-     IF (l_gammaq) THEN
+     IF ( q_grid%l_gammap(iq) ) THEN
         CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
      ELSE
         CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
@@ -619,8 +617,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         IF ( .NOT. l_restart_q_done ) THEN
            !
-           current_iq = iq
-           CALL wstat_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq )
+           CALL wstat_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq, iq )
            !
            IF ( iq < lastdone_iq ) THEN
               CYCLE QPOINTS_LOOP

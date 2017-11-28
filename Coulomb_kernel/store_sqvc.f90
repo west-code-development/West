@@ -456,11 +456,11 @@ SUBROUTINE store_vcspecial_H(vc_tmp,numg)
      qq = SUM(q(:)**2) 
      !
      on_double_grid = .TRUE.
-     x= 0.5_DP/tpiba*(q(1)*at(1,1)+q(2)*at(2,1)+q(3)*at(3,1))!*nq1
+     x= 0.5_DP/tpiba*(q(1)*at(1,1)+q(2)*at(2,1)+q(3)*at(3,1))  ! * nq(1)
      on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
-     x= 0.5_DP/tpiba*(q(1)*at(1,2)+q(2)*at(2,2)+q(3)*at(3,2))!*nq2
+     x= 0.5_DP/tpiba*(q(1)*at(1,2)+q(2)*at(2,2)+q(3)*at(3,2))  ! * nq(2)
      on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
-     x= 0.5_DP/tpiba*(q(1)*at(1,3)+q(2)*at(2,3)+q(3)*at(3,3))!*nq3
+     x= 0.5_DP/tpiba*(q(1)*at(1,3)+q(2)*at(2,3)+q(3)*at(3,3))  ! * nq(3)
      on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
      ! 
      IF( on_double_grid ) THEN

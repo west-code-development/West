@@ -227,7 +227,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
   USE westcom,              ONLY : qp_bandrange,isz,&
                                  & nbnd_occ,l_enable_lanczos,&
-                                 & n_lanczos,iks_l2g,l_macropol,l_gammaq,&
+                                 & n_lanczos,iks_l2g,l_macropol,&
                                  & z_head_ifr,z_head_rfr,z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
@@ -258,6 +258,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   REAL(DP) :: segno, enrg 
   COMPLEX(DP) :: residues_b,residues_h
   LOGICAL :: this_is_a_pole
+  LOGICAL :: l_gammaq 
   !
   TYPE(bz_grid) :: k1_grid,q_grid_aux
   !

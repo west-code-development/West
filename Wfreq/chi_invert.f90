@@ -136,7 +136,7 @@ END SUBROUTINE
 !
 !
 !-----------------------------------------------------------------------
-SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
+SUBROUTINE chi_invert_complex(matilda,head,lambda,nma,l_gammaq)
   !-----------------------------------------------------------------------
   !
   ! For each frequency and q-point I calculate X, ky, head and lambda
@@ -154,7 +154,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   !
   USE kinds,                 ONLY : DP 
   USE linear_algebra_kernel, ONLY : matinvrs_zge 
-  USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol,l_gammaq
+  USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol
   USE io_files,              ONLY : tmp_dir
   !
   ! I/O
@@ -162,6 +162,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   COMPLEX(DP),INTENT(IN) :: matilda(nma,nma)
   COMPLEX(DP),INTENT(OUT) :: head,lambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use) 
   INTEGER,INTENT(IN) :: nma
+  LOGICAL,OPTIONAL :: l_gammaq
   !
   ! Workspace
   ! 
@@ -175,6 +176,13 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   COMPLEX(DP),ALLOCATABLE :: templ(:,:)
   COMPLEX(DP) :: tempt(3,3)
   COMPLEX(DP) :: ky,Zone,Zzero
+  LOGICAL :: l_dohead
+  !
+  IF( PRESENT(l_gammaq) ) THEN 
+     l_dohead = l_macropol .AND. l_gammaq 
+  ELSE 
+     l_dohead = l_macropol
+  ENDIF 
   !
   ALLOCATE( body(n_pdep_eigen_to_use,n_pdep_eigen_to_use) )
   ALLOCATE( x(n_pdep_eigen_to_use,n_pdep_eigen_to_use) )
@@ -188,7 +196,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
      ENDDO
   ENDDO
   !
-  IF(l_macropol .AND. l_gammaq) THEN
+  IF(l_dohead) THEN
      !
      f = Zzero
      DO i1 = 1, 3
@@ -219,7 +227,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   !
   CALL matinvrs_zge(n_pdep_eigen_to_use,x)
   !
-  IF(l_macropol .AND. l_gammaq) THEN
+  IF(l_dohead) THEN
      !
      ! temph = X * wh
      ALLOCATE( temph(n_pdep_eigen_to_use,3) )
@@ -251,7 +259,7 @@ SUBROUTINE chi_invert_complex(matilda,head,lambda,nma)
   CALL ZGEMM( 'N', 'N', n_pdep_eigen_to_use, n_pdep_eigen_to_use, n_pdep_eigen_to_use, Zone, x, n_pdep_eigen_to_use, &
   & body, n_pdep_eigen_to_use, Zzero, lambda, n_pdep_eigen_to_use )
   !
-  IF( l_macropol .AND. l_gammaq ) THEN
+  IF( l_dohead ) THEN
      CALL ZGEMM( 'N', 'N', n_pdep_eigen_to_use, n_pdep_eigen_to_use, 3, Zone/(3._DP*ky), temph, &
      & n_pdep_eigen_to_use, templ, 3, Zone, lambda, n_pdep_eigen_to_use )
      DEALLOCATE( temph )

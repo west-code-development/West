@@ -461,12 +461,12 @@ MODULE wstat_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE wstat_restart_read_complex( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq)
+    SUBROUTINE wstat_restart_read_complex( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq, iq )
       !------------------------------------------------------------------------
       !
       USE mp_global,           ONLY : world_comm
       USE mp,                  ONLY : mp_barrier
-      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis,wstat_restart_dir,current_iq
+      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis,wstat_restart_dir
       USE io_global,           ONLY : stdout 
       USE distribution_center, ONLY : pert
       USE class_bz_grid,       ONLY : bz_grid
@@ -480,7 +480,8 @@ MODULE wstat_restart
       REAL(DP),INTENT(OUT) :: ew(n_pdep_basis)
       COMPLEX(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       COMPLEX(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
-      INTEGER, INTENT(OUT), OPTIONAL :: lastdone_iq
+      INTEGER, INTENT(OUT) :: lastdone_iq
+      INTEGER, INTENT(IN) :: iq
       !
       ! Workspace
       !
@@ -497,19 +498,11 @@ MODULE wstat_restart
       CALL start_clock('wstat_restart')
       time_spent(1)=get_clock('wstat_restart')
       !
-      IF ( PRESENT(lastdone_iq) ) THEN
-         CALL read_restart12_( dav_iter, notcnv, nbase, ew, lastdone_iq )
-      ELSE
-         CALL read_restart12_( dav_iter, notcnv, nbase, ew )
-      ENDIF
+      CALL read_restart12_( dav_iter, notcnv, nbase, ew, lastdone_iq )
       !
       CALL read_restart3z_( hr_distr, vr_distr )
       !
-      IF ( PRESENT(lastdone_iq) ) THEN
-         CALL read_restart4_( nbase, lastdone_iq )
-      ELSE
-         CALL read_restart4_( nbase )
-      ENDIF
+      CALL read_restart4_( nbase, lastdone_iq )
       !
       ! BARRIER
       !
@@ -518,21 +511,13 @@ MODULE wstat_restart
       time_spent(2)=get_clock('wstat_restart')
       CALL stop_clock('wstat_restart')
       !
-
-      IF ( PRESENT(lastdone_iq) ) THEN
-         IF ( current_iq == lastdone_iq ) THEN
-            WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------------------")')
-            WRITE( stdout, '(5x,"[I/O] Restarting from q(",i5,") = (",3f12.7,")")') &
-                 lastdone_iq, (q_grid%xp_cryst(ipol,lastdone_iq) , ipol = 1, 3)
-            WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-            WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( wstat_restart_dir )  
-            WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------------------")')
-         ENDIF
-      ELSE
-         WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
+      IF ( iq == lastdone_iq ) THEN
+         WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------------------")')
+         WRITE( stdout, '(5x,"[I/O] Restarting from q(",i5,") = (",3f12.7,")")') &
+              lastdone_iq, (q_grid%xp_cryst(ipol,lastdone_iq) , ipol = 1, 3)
          WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
          WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( wstat_restart_dir )  
-         WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
+         WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------------------")')
       ENDIF
       !
     END SUBROUTINE
@@ -582,8 +567,10 @@ MODULE wstat_restart
          IF( found ) ev(:) = rvals(:)
          CALL json%get('ew', rvals, found) 
          IF( found ) ew(1:n_pdep_basis) = rvals(1:n_pdep_basis)
-         CALL json%get('lastdone_iq', ival, found) 
-         IF( found ) iq = ival
+         IF( PRESENT(iq) ) THEN 
+            CALL json%get('lastdone_iq', ival, found) 
+            IF( found ) iq = ival
+         ENDIF
          !
          CALL json%destroy()
          !
@@ -596,7 +583,9 @@ MODULE wstat_restart
       !
       CALL mp_bcast( ev, root, world_comm )
       CALL mp_bcast( ew, root, world_comm )
-      CALL mp_bcast( iq, root, world_comm )
+      IF( PRESENT(iq) ) THEN  
+         CALL mp_bcast( iq, root, world_comm )
+      ENDIF
       !
     END SUBROUTINE
     !

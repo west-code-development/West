@@ -394,7 +394,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
                  DO ir=1,dffts%nnr 
-                    pertr_nc(ir,1)=DCONJG(psic_nc(ir,1))*pertr_nc(ir,1)+DCONJG(psic_nc(ir,2))*pertr_nc(ir,2)
+                    pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
                  CALL single_fwfft_k(dffts,ngms,ngms,pertr_nc(1,1),pertg,'Smooth') ! no igk
               ELSE

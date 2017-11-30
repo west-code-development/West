@@ -359,7 +359,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   USE io_push,               ONLY : io_push_title
   USE mp_world,              ONLY : mpime,world_comm
   USE class_bz_grid,         ONLY : bz_grid
-  USE types_bz_grid,         ONLY : kmq_grid,q_grid
+  USE types_bz_grid,         ONLY : q_grid, compute_phase
   !
   IMPLICIT NONE
   !
@@ -373,7 +373,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   !
   ! Workspace
   !
-  INTEGER :: ipert, ig, ir, ibnd, iks, ikqs
+  INTEGER :: ipert, ig, ir, ibnd, iks, ikqs, ik
   ! Counter on perturbations
   ! Counter on plane waves
   ! Counter on real space grids
@@ -386,6 +386,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   ! Current k-q point
   INTEGER :: npwkq
   !
+  REAL(DP) :: kmq(3), g0(3) 
   REAL(DP) :: anorm, prod 
   REAL(DP), ALLOCATABLE :: eprec(:)
   ! Preconditioning matrix
@@ -427,15 +428,20 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
      !
+     ik = k_grid%ip(iks) 
+     !
      current_k = iks
      !
-     ikqs = kmq_grid%index_kq(iks,iq)
+     k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+     ikqs = k_grid%find( kmq, 'cart' )
+     !ikqs = kmq_grid%index_kq(iks,iq)
      !
      ! computes the phase needed to bring the wavefunction at k-q 
      ! to the equivalent [k-q] point in the first BZ
      !
-     CALL kmq_grid%get_phase(iks,iq)
-     phase = kmq_grid%phase
+     CALL compute_phase( g0, 'cart', phase )
+     !CALL kmq_grid%get_phase(iks,iq)
+     !phase = kmq_grid%phase
      !
      IF ( lsda ) current_spin = isk(iks)
      CALL g2_kin(iks) 
@@ -453,7 +459,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
+     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
      !
      ! Read wavefuctions at k in G space, for all bands,
      ! and store them in evc
@@ -632,7 +638,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
      !
   ENDDO ! K-POINT and SPIN
   !
-  IF ( q_grid%l_gammap(iq) ) THEN
+  IF ( q_grid%l_pIsGamma(iq) ) THEN
      IF ( gstart == 2 ) dng(1,1:m) = CMPLX( 0._DP, 0._DP, KIND=DP )
   ENDIF
   !
@@ -646,3 +652,4 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   CALL stop_bar_type( barra, 'dfpt_q' )
   !
 END SUBROUTINE
+

@@ -251,7 +251,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
                                    vcut_get,  vcut_spheric_get, vcut_destroy
   USE class_bz_grid,        ONLY : bz_grid
-  USE types_bz_grid,        ONLY : k_grid, q_grid, kmq_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
   !
   IMPLICIT NONE
   !
@@ -279,6 +279,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   REAL(DP) :: ecutvcut
   TYPE(vcut_type)   :: vcut
   REAL(DP) :: mydiv
+  REAL(DP) :: kmq(3), g0(3)
   !
   WRITE(stdout,'(5x,a)') ' '
   CALL io_push_bar()
@@ -307,6 +308,8 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
+     ik = k_grid%ip(iks) 
+     !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
      current_k = iks
@@ -315,7 +318,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
+     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
      npw = ngk(iks)
      !
      ! ... read in wavefunctions from the previous iteration
@@ -364,12 +367,15 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
         ENDIF
         !
-        DO iq = 1, q_grid%nps
+        DO iq = 1, q_grid%np
            !
            ! if not set from input, div_kind_hf = 2 (Gygi-Baldereschi)
            !
-           l_gammaq = q_grid%l_gammap(iq)
-           ikqs = kmq_grid%index_kq(iks,iq)
+           l_gammaq = q_grid%l_pIsGamma(iq)
+           !
+           k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           ikqs = k_grid%find( kmq, 'cart' )
+           !ikqs = kmq_grid%index_kq(iks,iq)
            !
            IF ( l_gammaq ) THEN
               CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
@@ -377,8 +383,9 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
               CALL store_sqvc_q(mysqvc,ngms,div_kind_hf,iq,.FALSE.)
            ENDIF
            !
-           CALL kmq_grid%get_phase(iks,iq)
-           phase = kmq_grid%phase
+           CALL compute_phase( g0, 'cart', phase )
+           !CALL kmq_grid%get_phase(iks,iq)
+           !phase = kmq_grid%phase
            !
            npwkq = ngk(ikqs)
            !
@@ -408,7 +415,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
               DO ig = 1,ngms
                  pertg(ig) = pertg(ig) * mysqvc(ig) 
               ENDDO
-              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1) / omega * q_grid%wp(iq)
+              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1) / omega * q_grid%weight(iq)
               !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
               IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
               !

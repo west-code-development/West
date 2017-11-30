@@ -638,7 +638,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE class_idistribute,    ONLY : idistribute 
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE class_bz_grid,        ONLY : bz_grid
-  USE types_bz_grid,        ONLY : k_grid, q_grid, kpq_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid
   !
   IMPLICIT NONE
   !
@@ -685,6 +685,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   REAL(DP),ALLOCATABLE :: eprec(:)
   INTEGER :: ierr
   REAL(DP),ALLOCATABLE :: e(:)
+  REAL(DP) :: kpq(3), g0(3) 
   !
   CALL io_push_title("(W)-Lanczos")
   ! 
@@ -708,8 +709,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! ALLOCATE zmati_q, zmatr_q, where chi0 is stored
   !
-  ALLOCATE( zmati_q( mypara%nglob, mypara%nloc, ifr%nloc, q_grid%nps) )
-  ALLOCATE( zmatr_q( mypara%nglob, mypara%nloc, rfr%nloc, q_grid%nps) )
+  ALLOCATE( zmati_q( mypara%nglob, mypara%nloc, ifr%nloc, q_grid%np) )
+  ALLOCATE( zmatr_q( mypara%nglob, mypara%nloc, rfr%nloc, q_grid%np) )
   zmati_q = 0._DP
   zmatr_q = 0._DP
   !
@@ -732,12 +733,12 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      bks%old_ks        = 0 
      bks%old_q         = 0 
      bks%old_band      = 0 
-     bks%max_ks        = k_grid%nps
+     bks%max_ks        = k_grid%np
      bks%min_ks        = 1 
   ENDIF
   !
   barra_load = 0
-  DO iq = 1, q_grid%nps
+  DO iq = 1, q_grid%np
      IF (iq<bks%lastdone_q) CYCLE
      DO iks = 1, k_grid%nps
         IF(iks<bks%lastdone_ks) CYCLE
@@ -757,11 +758,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! LOOP 
   !
-  DO iq = 1, q_grid%nps   ! Q-POINT
+  DO iq = 1, q_grid%np   ! Q-POINT
      IF (iq<bks%lastdone_q) CYCLE
      !
      npwq = ngq(iq)
-     l_gammaq = q_grid%l_gammap(iq)
+     l_gammaq = q_grid%l_pIsGamma(iq)
      !
      IF (l_gammaq) THEN
         CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
@@ -770,6 +771,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      ENDIF
      !
      DO iks = 1, k_grid%nps   ! KPOINT-SPIN
+        ik = k_grid%ip(iks) 
         IF(iq==bks%lastdone_q .AND. iks<bks%lastdone_ks) CYCLE
         !
         ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -780,7 +782,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         ! ... More stuff needed by the hamiltonian: nonlocal projectors
         !
-        IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
+        IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
         npw = ngk(iks)
         !
         ! ... read in wavefunctions from the previous iteration
@@ -814,11 +816,16 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ikqs = kpq_grid%index_kq(iks,iq)
         npwkq = ngk(ikqs)
         !
-        ! computes the phase needed to bring the wavefunction at k+q 
-        ! to the equivalent [k+q] point in the first BZ
+        k_grid%add( k_grid%p_cart(:,ik), q_grid%p_cart(:,iq), kpq, g0, 'cart' ) 
+        ikqs = k_grid%find( kpq, 'cart' )
         !
-        CALL kpq_grid%get_phase(iks,iq)
-        phase = kpq_grid%phase
+        CALL compute_phase( g0, 'cart', phase )
+        !!
+        !! computes the phase needed to bring the wavefunction at k+q 
+        !! to the equivalent [k+q] point in the first BZ
+        !!
+        !CALL kpq_grid%get_phase(iks,iq)
+        !phase = kpq_grid%phase
         !
         ! Set wavefunctions at [k+q] in G space, for all bands,
         ! and store them in evckpq
@@ -828,8 +835,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         nbndval = nbnd_occ(iks)
         !
-        mwo = - k_grid%wp(iks) / omega
-        zmwo = CMPLX( - k_grid%wp(iks) / omega, 0._DP, KIND=DP)
+        mwo = - k_grid%weight(iks) / omega
+        zmwo = CMPLX( - k_grid%weight(iks) / omega, 0._DP, KIND=DP)
         !
         bks%max_band = nbndval
         bks%min_band = 1
@@ -1167,15 +1174,15 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ALLOCATE( zmatilda( mypara%nglob, mypara%nglob ) )
   ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use) ) 
-  ALLOCATE( z_epsm1_ifr_q( pert%nglob, pert%nloc, ifr%nloc, q_grid%nps) )
+  ALLOCATE( z_epsm1_ifr_q( pert%nglob, pert%nloc, ifr%nloc, q_grid%np) )
   z_epsm1_ifr_q = 0._DP
   IF(l_macropol) ALLOCATE( z_head_ifr( ifr%nloc) )
   !
   CALL start_clock('chi0_diag')
   !
-  DO iq = 1, q_grid%nps
+  DO iq = 1, q_grid%np
      !
-     l_gammaq = q_grid%l_gammap(iq)
+     l_gammaq = q_grid%l_pIsGamma(iq)
      !
      DO ifreq = 1, ifr%nloc
         !
@@ -1209,13 +1216,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ALLOCATE( zmatilda( mypara%nglob, mypara%nglob ) )
   ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use ) ) 
-  ALLOCATE( z_epsm1_rfr_q( pert%nglob, pert%nloc, rfr%nloc, q_grid%nps) )
+  ALLOCATE( z_epsm1_rfr_q( pert%nglob, pert%nloc, rfr%nloc, q_grid%np) )
   z_epsm1_rfr_q = 0._DP
   IF(l_macropol) ALLOCATE( z_head_rfr( rfr%nloc) )
   !
-  DO iq = 1, q_grid%nps
+  DO iq = 1, q_grid%np
      !
-     l_gammaq = q_grid%l_gammap(iq)
+     l_gammaq = q_grid%l_pIsGamma(iq)
      !
      DO ifreq = 1, rfr%nloc
         !

@@ -557,8 +557,8 @@ MODULE wfreq_restart
       !
       TYPE(bks_type),INTENT(IN) :: bks
       INTEGER, INTENT(IN) :: npg, npl
-      COMPLEX(DP), INTENT(IN) :: dmat(npg,npl,ifr%nloc,q_grid%nps)
-      COMPLEX(DP), INTENT(IN) :: zmat(npg,npl,rfr%nloc,q_grid%nps)
+      COMPLEX(DP), INTENT(IN) :: dmat(npg,npl,ifr%nloc,q_grid%np)
+      COMPLEX(DP), INTENT(IN) :: zmat(npg,npl,rfr%nloc,q_grid%np)
       !
       ! Workspace
       !
@@ -585,9 +585,9 @@ MODULE wfreq_restart
       !  
       ! DMAT
       !
-      ALLOCATE( tmp_dmat( npg, npl, ifr%nglob, q_grid%nps ))
+      ALLOCATE( tmp_dmat( npg, npl, ifr%nglob, q_grid%np ))
       tmp_dmat = 0._DP
-      DO iq = 1, q_grid%nps
+      DO iq = 1, q_grid%np
          DO ip = 1, ifr%nloc
             ip_glob = ifr%l2g(ip)
             tmp_dmat(:,:,ip_glob,iq) = dmat(:,:,ip,iq)
@@ -600,15 +600,15 @@ MODULE wfreq_restart
       fname=TRIM( dirname ) // '/' // TRIM(my_label)
       iunit = 2000 + my_image_id
       lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,iunit,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%nps)
+      CALL serial_data_write(lproc,iunit,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
       !
       DEALLOCATE(tmp_dmat)
       !
       ! ZMAT
       !
-      ALLOCATE( tmp_zmat( npg, npl, rfr%nglob, q_grid%nps ))
+      ALLOCATE( tmp_zmat( npg, npl, rfr%nglob, q_grid%np ))
       tmp_zmat = 0._DP
-      DO iq = 1, q_grid%nps
+      DO iq = 1, q_grid%np
          DO ip = 1, rfr%nloc
             ip_glob = rfr%l2g(ip)
             tmp_zmat(:,:,ip_glob,iq) = zmat(:,:,ip,iq)
@@ -621,7 +621,7 @@ MODULE wfreq_restart
       fname=TRIM( dirname ) // '/' // TRIM(my_label)
       iunit = 2000 + my_image_id
       lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,iunit,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%nps)
+      CALL serial_data_write(lproc,iunit,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
       !
       DEALLOCATE(tmp_zmat)
       !
@@ -869,8 +869,8 @@ MODULE wfreq_restart
       !
       TYPE(bks_type), INTENT(OUT) :: bks
       INTEGER, INTENT(IN) :: npg, npl
-      COMPLEX(DP), INTENT(OUT) :: dmat(npg,npl,ifr%nloc,q_grid%nps)
-      COMPLEX(DP), INTENT(OUT) :: zmat(npg,npl,rfr%nloc,q_grid%nps)
+      COMPLEX(DP), INTENT(OUT) :: dmat(npg,npl,ifr%nloc,q_grid%np)
+      COMPLEX(DP), INTENT(OUT) :: zmat(npg,npl,rfr%nloc,q_grid%np)
       !
       ! Workspace
       !
@@ -906,17 +906,17 @@ MODULE wfreq_restart
       !
       ! READ
       !
-      ALLOCATE( tmp_dmat( npg, npl, ifr%nglob, q_grid%nps ))
+      ALLOCATE( tmp_dmat( npg, npl, ifr%nglob, q_grid%np ))
       !
       WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_q,bks%lastdone_ks,bks%lastdone_band,&
                                                                           & my_image_id
       fname=TRIM( dirname ) // '/' // TRIM(my_label) 
       lproc = (me_bgrp==0) 
       iunit = 2000 + my_image_id
-      CALL serial_data_read(lproc,iunit,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%nps)
+      CALL serial_data_read(lproc,iunit,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
       !
       CALL mp_bcast( tmp_dmat, 0, intra_bgrp_comm)
-      DO iq = 1, q_grid%nps
+      DO iq = 1, q_grid%np
          DO ip = 1, ifr%nloc
             ip_glob = ifr%l2g(ip)
             dmat(:,:,ip,iq) = tmp_dmat(:,:,ip_glob,iq)
@@ -924,17 +924,17 @@ MODULE wfreq_restart
       ENDDO
       DEALLOCATE(tmp_dmat)
       !
-      ALLOCATE( tmp_zmat( npg, npl, rfr%nglob, q_grid%nps ))
+      ALLOCATE( tmp_zmat( npg, npl, rfr%nglob, q_grid%np ))
       !
       WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_q,bks%lastdone_ks,bks%lastdone_band,&
                                                                           & my_image_id
       fname=TRIM( dirname ) // '/' // TRIM(my_label) 
       lproc = (me_bgrp==0) 
       iunit = 2000 + my_image_id
-      CALL serial_data_read(lproc,iunit,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%nps)
+      CALL serial_data_read(lproc,iunit,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
       !
       CALL mp_bcast( tmp_zmat, 0, intra_bgrp_comm)
-      DO iq = 1, q_grid%nps
+      DO iq = 1, q_grid%np
          DO ip = 1, rfr%nloc
             ip_glob = rfr%l2g(ip)
             zmat(:,:,ip,iq) = tmp_zmat(:,:,ip_glob,iq)

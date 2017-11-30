@@ -565,7 +565,7 @@ SUBROUTINE davidson_diago_k ( )
   !
   !
   QPOINTS_LOOP: &
-  DO iq = 1, q_grid%nps
+  DO iq = 1, q_grid%np
      !
      nbase  = nvec
      conv   = .FALSE.
@@ -584,26 +584,26 @@ SUBROUTINE davidson_diago_k ( )
      !
      ! compute Coulomb potential
      !
-     IF ( q_grid%l_gammap(iq) ) THEN
+     IF ( q_grid%l_pIsGamma(iq) ) THEN
         CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
      ELSE
         CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
      ENDIF
      !
-     IF ( q_grid%nps > 1 ) THEN
+     IF ( q_grid%np > 1 ) THEN
         !
         IF ( wstat_calculation == 'S' ) THEN
            !
            WRITE( stdout, '(/,5x,64a)' ) ('=',i=1,64)
            WRITE( stdout, '(5x,a,i5.5,a,3f10.4,a)')&
-           'PDEP calculation at q(',iq,') = (',q_grid%xp_cart(:,iq),' )'
+           'PDEP calculation at q(',iq,') = (',q_grid%p_cart(:,iq),' )'
            WRITE( stdout, '(5x,64a)' ) ('-',i=1,64)
            !
         ELSEIF ( wstat_calculation == 'R' .AND. l_restart_q_done ) THEN
            !
            WRITE( stdout, '(/,5x,64a)' ) ('=',i=1,64)
            WRITE( stdout, '(5x,a,i5.5,a,3f10.4,a)')&
-           'PDEP calculation at q(',iq,') = (',q_grid%xp_cart(:,iq),' )'
+           'PDEP calculation at q(',iq,') = (',q_grid%p_cart(:,iq),' )'
            WRITE( stdout, '(5x,64a)' ) ('-',i=1,64)
            !
         ENDIF
@@ -1196,7 +1196,7 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   !
   CALL start_clock ('randomize')
   !
-  q(:) = q_grid%xp_cart(:,iq)
+  q(:) = q_grid%p_cart(:,iq)
   ! Random numbers are generated according to G-global
   !
   ALLOCATE(random_num_debug(2,ngm_g))
@@ -1416,7 +1416,7 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
    INTEGER :: i,j, ip
    CHARACTER(20),EXTERNAL :: human_readable_time
    CHARACTER(LEN=6) :: cdav,cq
-   INTEGER :: ndav(q_grid%nps),iunit
+   INTEGER :: ndav(q_grid%np),iunit
    LOGICAL :: found
    !
    WRITE(stdout,'(7X,a)') ' '

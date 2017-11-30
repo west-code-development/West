@@ -42,7 +42,6 @@ SUBROUTINE read_pwout() ! to be sync'd with PW/src/read_file.f90
   USE gvecw,                ONLY : ecutwfc
   USE fft_base,             ONLY : dfftp
   USE fft_base,             ONLY : dffts
-!  USE wvfct,                ONLY : npwx
   USE control_flags,        ONLY : gamma_only
   !
   IMPLICIT NONE 

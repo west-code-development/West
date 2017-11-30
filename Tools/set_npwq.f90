@@ -57,16 +57,16 @@ SUBROUTINE set_npwq()
      fftdriver = 'Wave'
      ! 'Dense' grid not yet implemented
      !
-     npwqx = n_plane_waves( gcutw, q_grid%nps, q_grid%xp_cart, g, ngm )
+     npwqx = n_plane_waves( gcutw, q_grid%np, q_grid%p_cart, g, ngm )
      !
      ALLOCATE( gq2kin(npwqx) )
-     ALLOCATE( ngq(q_grid%nps) )
-     ALLOCATE( igq_q(npwqx,q_grid%nps) )
+     ALLOCATE( ngq(q_grid%np) )
+     ALLOCATE( igq_q(npwqx,q_grid%np) )
      !ALLOCATE( igq_l2g(npwqx,q_grid%nps) )
      igq_q(:,:) = 0
      !igq_l2g(:,:) = 0
-     DO iq = 1, q_grid%nps
-        CALL gq_sort( q_grid%xp_cart(:,iq), ngm, g, gcutw, ngq(iq), igq_q(:,iq), gq2kin )
+     DO iq = 1, q_grid%np
+        CALL gq_sort( q_grid%p_cart(:,iq), ngm, g, gcutw, ngq(iq), igq_q(:,iq), gq2kin )
         !CALL gq_l2gmap( ngm, ig_l2g(1), ngq(iq), igq_q(1,iq), igq_l2g(1,iq) )
      ENDDO
      !
@@ -74,7 +74,7 @@ SUBROUTINE set_npwq()
      !
      ! ... compute the global number of q+G vectors for each q-point
      !
-     ALLOCATE( ngq_g(q_grid%nps) )
+     ALLOCATE( ngq_g(q_grid%np) )
      !
      ngq_g = 0
      ngq_g(:) = ngq(:)
@@ -86,7 +86,7 @@ SUBROUTINE set_npwq()
      ! ... compute the maximum G vector index among all q+G in processors
      !
      npwq_g = 0 
-     DO iq = 1, q_grid%nps
+     DO iq = 1, q_grid%np
         DO ig = 1, ngq(iq)
            npwq_g = MAX( npwq_g, ig_l2g(igq_q(ig,iq)) )
         ENDDO

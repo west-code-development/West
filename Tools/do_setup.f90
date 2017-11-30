@@ -60,24 +60,27 @@ SUBROUTINE do_setup
   !
   CALL set_dirs()
   !
-  ! INIT K, Q GRIDS
+  ! INIT K GRID
   !
   k_grid = bz_grid()
   CALL k_grid%init('K')
   !
   IF ( .NOT. gamma_only ) THEN
+     !
+     ! INIT Q GRID
+     !
      ! initialize q-point grid
      q_grid = bz_grid()
      CALL q_grid%init('Q')
-     IF (q_grid%np1 /= k_grid%np1 .OR. q_grid%np2 /= k_grid%np2 .OR. q_grid%np3 /= k_grid%np3) THEN
+     IF ( ANY ( q_grid%ngrid(:) - k_grid%ngrid(:) /= 0   ) ) THEN
         CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
      ENDIF
      ! initialize (k-q) grid
-     kmq_grid = bz_grid()
-     CALL kmq_grid%init_kq( k_grid, q_grid, -1 )
-     ! initialize (k-q) grid
-     kpq_grid = bz_grid()
-     CALL kpq_grid%init_kq( k_grid, q_grid, +1 )
+     !kmq_grid = bz_grid()
+     !CALL kmq_grid%init_kq( k_grid, q_grid, -1 )
+     !! initialize (k-q) grid
+     !kpq_grid = bz_grid()
+     !CALL kpq_grid%init_kq( k_grid, q_grid, +1 )
   ENDIF
   !
   IF( mpime == root ) THEN 
@@ -207,72 +210,45 @@ SUBROUTINE do_setup
      CALL json%add('system.cell.alat',alat)
   ENDIF
   !
-!  WRITE( stdout, '(5x,"number of ks points=",i6)') nkstot
-!  IF( mpime == root ) CALL json%add('system.kpt.nkstot',nkstot)
-!  WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
-!  DO ik = 1, nkstot
-!     WRITE( cik, '(i6)') ik 
-!     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') ik, &
-!          (xk (ipol, ik) , ipol = 1, 3) , wk (ik)
-!     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',xk(1:3))
-!     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',wk(ik))
-!  ENDDO
-!  WRITE( stdout, '(/23x,"cryst. coord.")')
-!  DO ik = 1, nkstot
-!     WRITE( cik, '(i6)') ik 
-!     DO ipol = 1, 3
-!        xkg(ipol) = at(1,ipol)*xk(1,ik) + at(2,ipol)*xk(2,ik) + &
-!                    at(3,ipol)*xk(3,ik)
-!        ! xkg are the component in the crystal RL basis
-!     ENDDO
-!     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
-!          ik, (xkg (ipol) , ipol = 1, 3) , wk (ik)
-!     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',xkg(1:3))
-!  ENDDO
   WRITE( stdout, '(5x,"number of ks points = ",i6)') k_grid%nps
   IF( mpime == root ) CALL json%add('system.kpt.nkstot',k_grid%nps)
   WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
-  DO ik = 1, k_grid%nps
+  DO iks = 1, k_grid%nps
+     ik = k_grid%ip(iks)
      WRITE( cik, '(i6)') ik
-     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') ik, &
-          (k_grid%xp_cart(ipol,ik) , ipol = 1, 3) , k_grid%wp(ik)
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',k_grid%xp_cart(1:3,ik))
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',k_grid%wp(ik))
+     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') iks, &
+          (k_grid%p_cart(ipol,ik) , ipol = 1, 3) , k_grid%weight(iks)
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',k_grid%p_cart(1:3,ik))
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',k_grid%weight(iks))
   ENDDO
   WRITE( stdout, '(/23x,"cryst. coord.")')
   DO ik = 1, k_grid%nps
+     ik = k_grid%ip(iks)
      WRITE( cik, '(i6)') ik
      WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
-          ik, (k_grid%xp_cryst(ipol,ik) , ipol = 1, 3) , k_grid%wp(ik)
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',k_grid%xp_cryst(1:3,ik))
+          ik, (k_grid%p_cryst(ipol,ik) , ipol = 1, 3) , k_grid%weight(iks)
+     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',k_grid%p_cryst(1:3,ik))
   ENDDO
   !
   ! q-point grid
   !
   IF (.NOT. gamma_only ) THEN
      WRITE( stdout, * )
-     WRITE( stdout, '(5x,"number of q points = ",i6)') q_grid%nps
-     IF( mpime == root ) CALL json%add('system.qpt.nqtot',q_grid%nps)
+     WRITE( stdout, '(5x,"number of q points = ",i6)') q_grid%np
+     IF( mpime == root ) CALL json%add('system.qpt.nqtot',q_grid%np)
      WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
-     DO iq = 1, q_grid%nps
+     DO iq = 1, q_grid%np
         WRITE( ciq, '(i6)') iq
         WRITE( stdout, '(8x,"q(",i5,") = (",3f12.7,")")') iq, &
-             (q_grid%xp_cart(ipol, iq) , ipol = 1, 3)
-        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').cartcoord:tpiba',q_grid%xp_cart(1:3,iq))
+             (q_grid%p_cart(ipol, iq) , ipol = 1, 3)
+        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').cartcoord:tpiba',q_grid%p_cart(1:3,iq))
      ENDDO
      WRITE( stdout, '(/23x,"cryst. coord.")')
-     DO iq = 1, q_grid%nps
+     DO iq = 1, q_grid%np
         WRITE( ciq, '(i6)') iq
         WRITE( stdout, '(8x,"q(",i5,") = (",3f12.7,")")') &
-             iq, (q_grid%xp_cryst(ipol,iq) , ipol = 1, 3)
-        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').crystcoord',q_grid%xp_cryst(1:3,iq))
-     ENDDO
-     WRITE(stdout, '(/5x,"setup uniform grid of", i3, " q-points centered on each k-point")') kmq_grid%nps
-     WRITE( stdout, '(5x,"(k-q)-points:")')
-     WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")' )
-     DO ik = 1, kmq_grid%nps
-        WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,")")') ik, &
-            (kmq_grid%xp_cart(ipol, ik) , ipol = 1, 3)
+             iq, (q_grid%p_cryst(ipol,iq) , ipol = 1, 3)
+        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').crystcoord',q_grid%p_cryst(1:3,iq))
      ENDDO
   ENDIF
   !

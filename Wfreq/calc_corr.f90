@@ -233,7 +233,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
   USE class_bz_grid,        ONLY : bz_grid
-  USE types_bz_grid,        ONLY : k_grid, q_grid, kmq_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid
   !
   IMPLICIT NONE
   !
@@ -246,7 +246,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   ! Workspace
   !
-  INTEGER :: iks,iq,ikqs,ib,ifreq,glob_ifreq,il,im,glob_im,ip
+  INTEGER :: ik,iks,iq,ikqs,ib,ifreq,glob_ifreq,il,im,glob_im,ip
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -256,11 +256,10 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   COMPLEX(DP) :: partial_b,partial_h
   REAL(DP) :: segno, enrg 
+  REAL(DP) :: kmq(3), g0(3) 
   COMPLEX(DP) :: residues_b,residues_h
   LOGICAL :: this_is_a_pole
   LOGICAL :: l_gammaq 
-  !
-  TYPE(bz_grid) :: k1_grid,q_grid_aux
   !
   ! PRINT TITLE of CALC
   !
@@ -269,11 +268,6 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   ! BARRIER : ALL 
   !
   CALL mp_barrier( world_comm )
-  !
-!  k1_grid = bz_grid()
-!  CALL k1_grid%init('K')
-!  q_grid_aux = bz_grid()
-!  CALL q_grid_aux%init_q( k_grid, k1_grid )
   !
   ! ZERO
   !
@@ -292,16 +286,19 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   ! LOOP 
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
+     ik = k_grid%ip(iks) 
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
         partial_h = 0._DP
         partial_b = 0._DP
         !
-        DO iq = 1, q_grid%nps   ! Q-POINT
+        DO iq = 1, q_grid%np   ! Q-POINT
            !
-           ikqs = kmq_grid%index_kq(iks,iq)
-           l_gammaq = q_grid%l_gammap(iq)
+           k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           ikqs = k_grid%find( kmq, 'cart' )
+           !ikqs = kmq_grid%index_kq(iks,iq)
+           l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikqs)
            !
            ! HEAD PART
@@ -321,7 +318,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
                  enrg = et(glob_im,ikqs) - energy(ib,iks)
-                 partial_b = partial_b + z_body1_ifr_q(im,ifreq,ib,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%wp(iq)
+                 partial_b = partial_b + z_body1_ifr_q(im,ifreq,ib,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
               ENDDO
            ENDDO
            !
@@ -334,7 +331,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
                  DO ip = 1, pert%nloc
                     DO il = 1, n_lanczos
                        enrg = d_diago_q(il,ip,ib,iks,iq) - energy(ib,iks)
-                       partial_b = partial_b + z_body2_ifr_q(il,ip,ifreq,ib,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%wp(iq)
+                       partial_b = partial_b + z_body2_ifr_q(il,ip,ifreq,ib,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
                     ENDDO
                  ENDDO
               ENDDO
@@ -371,6 +368,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   DO iks = 1, k_grid%nps
      !
+     ik = k_grid%ip(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -379,11 +377,13 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         residues_b = 0._DP
         residues_h = 0._DP
         !
-        DO iq = 1, q_grid%nps
+        DO iq = 1, q_grid%np
            !
-           ikqs = kmq_grid%index_kq(iks,iq)
+           k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           ikqs = k_grid%find( kmq, 'cart' )
+           !ikqs = kmq_grid%index_kq(iks,iq)
+           l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikqs)
-           l_gammaq = q_grid%l_gammap(iq)
            !
            DO im = 1,aband%nloc
               !
@@ -408,7 +408,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
                     !
                     IF(glob_im==ib.AND.l_macropol.AND.l_gammaq) residues_h = residues_h + segno * z_head_rfr(ifreq)
                     !
-                    residues_b = residues_b + segno * z_body_rfr_q( im, ifreq, ib, iks, iq )*q_grid%wp(iq)
+                    residues_b = residues_b + segno * z_body_rfr_q( im, ifreq, ib, iks, iq )*q_grid%weight(iq)
                     ! 
                  ENDDO
                  !

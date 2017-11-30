@@ -65,9 +65,9 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
     nq(2)=1._DP
     nq(3)=1._DP
  ELSE
-    nq(1) = REAL( q_grid%np1, KIND=DP )
-    nq(2) = REAL( q_grid%np2, KIND=DP )
-    nq(3) = REAL( q_grid%np3, KIND=DP )
+    nq(1) = REAL( q_grid%ngrid(1), KIND=DP )
+    nq(2) = REAL( q_grid%ngrid(2), KIND=DP )
+    nq(3) = REAL( q_grid%ngrid(3), KIND=DP )
  ENDIF
  !
  ! ======
@@ -322,11 +322,11 @@ SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
   !
   CALL start_clock( 'storesqvcq' )
   !
-  nq(1) = REAL( q_grid%np1, KIND=DP )
-  nq(2) = REAL( q_grid%np2, KIND=DP )
-  nq(3) = REAL( q_grid%np3, KIND=DP )
+  nq(1) = REAL( q_grid%ngrid(1), KIND=DP )
+  nq(2) = REAL( q_grid%ngrid(2), KIND=DP )
+  nq(3) = REAL( q_grid%ngrid(3), KIND=DP )
   !
-  q(:) = q_grid%xp_cart(:,iq)
+  q(:) = q_grid%p_cart(:,iq)
   !
   ! =======
   !  BODY

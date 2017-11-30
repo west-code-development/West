@@ -17,7 +17,7 @@ MODULE pdep_io
   USE kinds,        ONLY : DP
   USE mp_global,    ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm,&
                            & intra_pool_comm
-  USE westcom,      ONLY : npwq, npwq_g, npwqx, ngq, ngq_g, npwqx !, igq_l2g_kdip
+  USE westcom,      ONLY : npwq, npwq_g, npwqx, ngq, ngq_g, npwqx, igq_q !, igq_l2g_kdip
   USE gvect,        ONLY : ig_l2g
   USE json_module,  ONLY : json_file
   USE base64_module 
@@ -46,9 +46,9 @@ MODULE pdep_io
       ! Workspace
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
-      INTEGER :: iun,ierr
+      INTEGER :: iun,ierr,ig
       CHARACTER(LEN=:),ALLOCATABLE :: charbase64
-      INTEGER :: nbytes, ndim, igwx, iunit, nlen
+      INTEGER :: nbytes, ndim, iunit, nlen
       CHARACTER(LEN=30) :: endian
       INTEGER :: npwqx_g 
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
@@ -186,7 +186,7 @@ MODULE pdep_io
       CHARACTER(LEN=1000) :: line
       CHARACTER(LEN=:),ALLOCATABLE :: charbase64
       CHARACTER(LEN=:),ALLOCATABLE :: endian
-      INTEGER :: nbytes, ndim, igwx, iunit, nlen
+      INTEGER :: nbytes, ndim, iunit, nlen
       LOGICAL :: found, isle
       INTEGER :: npwqx_g
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 

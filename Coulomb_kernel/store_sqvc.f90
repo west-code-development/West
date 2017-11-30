@@ -11,12 +11,11 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
+SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,l_printout_div)
  !-----------------------------------------------------------------------
  !
  ! This routine computes results of applying sqVc to a potential
  ! associated with vector q. Coulomb cutoff technique can be used
- ! Used for gamma_only case
  !
  USE kinds,                ONLY : DP
  USE io_global,            ONLY : stdout
@@ -28,11 +27,12 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
  USE mp,                   ONLY : mp_sum
  USE mp_global,            ONLY : intra_bgrp_comm
  USE mp_world,             ONLY : mpime,world_comm,nproc
- USE gvecw,                ONLY : ecutwfc, gcutw
+ USE gvecw,                ONLY : ecutwfc
  USE control_flags,        ONLY : gamma_only
  USE random_numbers,       ONLY : randy
  USE class_bz_grid,        ONLY : bz_grid
  USE types_bz_grid,        ONLY : q_grid
+ USE constants,            ONLY : eps8
  !
  IMPLICIT NONE
  !
@@ -42,15 +42,13 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
  REAL(DP),INTENT(OUT) :: sqvc_tmp(numg)
  INTEGER,INTENT(IN) :: singularity_removal_mode
  REAL(DP),INTENT(OUT) :: div
- LOGICAL,INTENT(IN) :: printout_div
+ LOGICAL,INTENT(IN) :: l_printout_div
  !
  ! Workspace
  !
  REAL(DP) :: gnorm2,q(3),x,nq(3),ecutvcut,atws(3,3),dq(3),xq(3),alpha
  INTEGER :: ig, ipol, iq1, iq2, iq3, i1, i2, i3
  LOGICAL :: on_double_grid
- REAL(DP),PARAMETER :: eps=1.d-6
- REAL(DP),PARAMETER :: eps_qdiv=1.d-8
  REAL(DP) :: grid_factor = 8.d0/7.d0
 ! REAL(DP) :: grid_factor = 1.0_DP
  TYPE(vcut_type)   :: vcut
@@ -98,7 +96,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
        on_double_grid = .TRUE.
        DO ipol = 1,3
           x = 0.5_DP*( q(1)*at(1,ipol)+q(2)*at(2,ipol)+q(3)*at(3,ipol) )*nq(ipol)
-          on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
+          on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
        ENDDO
        IF(on_double_grid) THEN
           sqvc_tmp(ig)=0._DP
@@ -147,7 +145,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
     !
     div = ( (6._DP * pi * pi / ( omega*nq(1)*nq(2)*nq(3) ) )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
     !
-    IF ( printout_div ) WRITE(stdout,"(5X,'Spherical div        = ',es14.6)") div 
+    IF ( l_printout_div ) WRITE(stdout,"(5X,'Spherical div        = ',es14.6)") div 
     !
     IF( try_ort_div ) THEN
        !  
@@ -167,7 +165,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
           DO i2 = 1, 3
              IF( i1 == i2 ) CYCLE
              IF( ABS( prod(i1,i2)) > 1.d-8 ) THEN 
-                IF ( printout_div ) WRITE(stdout,"(5X,'Warning: non orthorombic RL')") 
+                IF ( l_printout_div ) WRITE(stdout,"(5X,'Warning: non orthorombic RL')") 
                 i_am_ort = .FALSE.
              ENDIF
           ENDDO
@@ -207,7 +205,7 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
           div = div / REAL(nproc,KIND=DP)
           CALL mp_sum(div,world_comm)
           !
-          IF ( printout_div ) WRITE(stdout,"(5X,'Orthorombic div      = ',es14.6)") div 
+          IF ( l_printout_div ) WRITE(stdout,"(5X,'Orthorombic div      = ',es14.6)") div 
           !
        ENDIF
        !
@@ -237,9 +235,9 @@ SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,div,printout_div)
                 on_double_grid = .TRUE.
                 DO ipol = 1,3
                    x = 0.5_DP*( q(1)*at(1,ipol)+q(2)*at(2,ipol)+q(3)*at(3,ipol) )*nq(ipol)
-                   on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
+                   on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
                 ENDDO
-                IF( .NOT.on_double_grid .AND. gnorm2 > eps_qdiv ) THEN 
+                IF( .NOT.on_double_grid .AND. gnorm2 > eps8 ) THEN 
                    div = div - EXP( -alpha * gnorm2 ) / gnorm2
                 ENDIF
              ENDDO
@@ -295,6 +293,7 @@ SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
   USE random_numbers,       ONLY : randy
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : q_grid
+  USE constants,            ONLY : eps8
   !
   IMPLICIT NONE
   !
@@ -311,8 +310,6 @@ SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
   REAL(DP) :: gnorm2,nq(3),q(3),qq(3),ecutvcut,atws(3,3),alpha,x
   INTEGER :: ig, ipol, i1, i2, i3
   LOGICAL :: on_double_grid
-  REAL(DP),PARAMETER :: eps=1.d-6
-  REAL(DP), PARAMETER :: eps_qdiv = 1.d-8
   REAL(DP) :: grid_factor = 8.d0/7.d0
 ! REAL(DP) :: grid_factor = 1.0_DP
   TYPE(vcut_type)   :: vcut
@@ -345,7 +342,7 @@ SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
            qq(:) = q(:) + g(:,ig)
         ENDIF
         gnorm2 = SUM(qq(:)**2) * tpiba2
-        IF ( gnorm2 < eps_qdiv ) THEN
+        IF ( gnorm2 < eps8 ) THEN
            sqvc_tmp(ig) = 0._DP
         ELSE
            sqvc_tmp(ig) = SQRT(e2*fpi/gnorm2)
@@ -366,9 +363,9 @@ SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
         on_double_grid = .TRUE.
         DO ipol = 1,3
            x = 0.5_DP*( qq(1)*at(1,ipol)+qq(2)*at(2,ipol)+qq(3)*at(3,ipol) )*nq(ipol)
-           on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
+           on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
         ENDDO
-        IF( on_double_grid .OR. gnorm2 < eps_qdiv ) THEN
+        IF( on_double_grid .OR. gnorm2 < eps8 ) THEN
            sqvc_tmp(ig)=0._DP
         ELSE
            sqvc_tmp(ig)=SQRT(e2*fpi*grid_factor/gnorm2)
@@ -411,73 +408,6 @@ SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
   CALL stop_clock( 'storesqvcq' )
   !
 END SUBROUTINE
-!
-!
-!
-!----------------------------------------------------------------------------
-SUBROUTINE store_vcspecial_H(vc_tmp,numg)
-!----------------------------------------------------------------------------
- !
- ! vcspecial_H
- !
- USE kinds,     ONLY : DP
- USE cell_base, ONLY : tpiba, at,omega
- USE gvect,     ONLY : g,gstart
- USE constants, ONLY : fpi, e2, pi
- USE exx,       ONLY : exxdiv 
- !
- IMPLICIT NONE
- !
- ! I/O
- !
- INTEGER,INTENT(IN) :: numg
- REAL(DP),INTENT(OUT) :: vc_tmp(numg)
- ! 
- !Local variables
- INTEGER :: ig !Counters 
- REAL(DP) :: q(3), qq, x
- REAL(DP) :: grid_factor = 8.d0/7.d0
- REAL(DP) :: eps = 1.d-6 
- LOGICAL :: on_double_grid
- REAL(DP) :: kost
- !
- kost = e2*fpi
- !
- IF(gstart==2) vc_tmp(1) = -exxdiv 
- !
-!$OMP PARALLEL SHARED(numg,g,tpiba,at,vc_tmp,kost,gstart) PRIVATE(ig,q,qq,on_double_grid,x)
-!$OMP DO
- DO ig=gstart,numg
-     !
-     q(:)= g(:,ig)
-     !
-     q = q * tpiba
-     !
-     qq = SUM(q(:)**2) 
-     !
-     on_double_grid = .TRUE.
-     x= 0.5_DP/tpiba*(q(1)*at(1,1)+q(2)*at(2,1)+q(3)*at(3,1))  ! * nq(1)
-     on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
-     x= 0.5_DP/tpiba*(q(1)*at(1,2)+q(2)*at(2,2)+q(3)*at(3,2))  ! * nq(2)
-     on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
-     x= 0.5_DP/tpiba*(q(1)*at(1,3)+q(2)*at(2,3)+q(3)*at(3,3))  ! * nq(3)
-     on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps)
-     ! 
-     IF( on_double_grid ) THEN
-        !
-        vc_tmp(ig) = -kost / qq
-        !
-     ELSE
-        !
-        vc_tmp(ig)= kost/qq / 7._DP
-        !
-     ENDIF
-     !
-  ENDDO
-!$OMP ENDDO
-!$OMP END PARALLEL 
-  !
-END SUBROUTINE 
 !
 !
 !

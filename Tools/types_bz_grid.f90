@@ -8,12 +8,13 @@
 ! This file is part of WEST.
 !
 ! Contributors to this file: 
-! Matteo Gerosa
+! Marco Govoni, Matteo Gerosa
 !
 !-----------------------------------------------------------------------
 MODULE types_bz_grid
   !-----------------------------------------------------------------------
   !
+  USE kinds,           ONLY : DP
   USE class_bz_grid,   ONLY : bz_grid
   !
   IMPLICIT NONE
@@ -28,13 +29,14 @@ MODULE types_bz_grid
   CONTAINS 
   !
   !
-  FUNCTION findG(g0, unit_type) RETURN(ig0) 
+  FUNCTION findG(g0, unit_type) RESULT(ig0) 
      !
      ! ... ig0 is the index of G (unit_type = [ "cryst", "cart"])
      ! ... if on exit ig0 == 0 --> G is not found
      !
      USE cell_base,        ONLY : bg
-     USE gvecs,            ONLY : g, ngms
+     USE gvecs,            ONLY : ngms
+     USE gvect,            ONLY : g
      USE constants,        ONLY : eps8
      !
      IMPLICIT NONE
@@ -62,7 +64,7 @@ MODULE types_bz_grid
      !
      ig0 = 0
      DO ig = 1, ngms
-        IF ( ALL ( ABS( g(:,ig) - g0(:) ) < eps8 ) ) THEN
+        IF ( ALL ( ABS( g(:,ig) - gtemp(:) ) < eps8 ) ) THEN
            ig0 = ig
         ENDIF
      ENDDO
@@ -102,7 +104,8 @@ MODULE types_bz_grid
      phase = (0._DP, 0._DP)
      phase( nls(ig0) ) = (1._DP, 0._DP)
      !
-     ! phase = exp(-iG_0*r)
+     ! phase(r) = exp(-iG_0*r)
+     !
      CALL invfft( 'Wave', phase, dffts )
      phase(1:dffts%nnr) = DCONJG( phase(1:dffts%nnr) )
      !

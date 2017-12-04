@@ -81,7 +81,7 @@ MODULE class_bz_grid
       CASE ( 'K', 'k')
          !
          this%ngrid(1:3) = (/ nk1, nk2, nk3 /) 
-         this%np = this%np(1) * this%np(2) * this%np(3) 
+         this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3) 
          this%ns = nspin 
          this%nps = nkstot   !    =   np * ns  
          !
@@ -107,7 +107,7 @@ MODULE class_bz_grid
       CASE ( 'Q', 'q')
          !
          this%ngrid(1:3) = nq(1:3) 
-         this%np = nq(1) * nq(2) * nq(3) 
+         this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3) 
          this%ns = 1
          this%nps = this%np 
          !
@@ -145,8 +145,8 @@ MODULE class_bz_grid
       !
       ! generate map ips --> ip and is
       !
-      ip = 0 
-      is = 0 
+      this%ip = 0 
+      this%is = 0 
       k = 0 
       DO i = 1, this%ns
          DO j = 1, this%np
@@ -156,9 +156,9 @@ MODULE class_bz_grid
          ENDDO
       ENDDO
       !
-      ALLOCATE( this%l_pIsGamma(grid%np) )
+      ALLOCATE( this%l_pIsGamma(this%np) )
       this%l_pIsGamma(:)=.FALSE.
-      DO ip = 1, grid%np
+      DO ip = 1, this%np
          this%l_pIsGamma(ip) = ( ALL( ABS ( this%p_cryst(:,ip) ) .LT. eps8 ) )
       ENDDO
       !
@@ -214,6 +214,8 @@ MODULE class_bz_grid
       ! ... pout = pin1 + pin2 - g0   ( g0 makes sure that pout is in 1BZ ) 
       ! ... unit_type determines the units of pin1, pin2 and pout, g0  
       !
+      USE cell_base,        ONLY : at, bg
+      !
       IMPLICIT NONE
       !
       ! I/O
@@ -247,8 +249,7 @@ MODULE class_bz_grid
          CALL cryst_to_cart( 1, g0   , bg, 1 )
       ENDIF  
       !
-      ! g0 is in cart 
-      !
+   END SUBROUTINE
 !     !
 !     IF ( sig == +1 ) THEN
 !        csig = '+'
@@ -338,8 +339,8 @@ MODULE class_bz_grid
 !     !
 !     DEALLOCATE( new_ikq, temp_index_ikq )
 !     DEALLOCATE( temp_xkq, temp_wkq )
-      !
-   END SUBROUTINE
+!      !
+!   END SUBROUTINE
    !
    !
 !  SUBROUTINE q_grid_init( qgrid, kgrid, k1grid )

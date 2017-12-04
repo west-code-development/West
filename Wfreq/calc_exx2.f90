@@ -266,7 +266,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,i1,ir,iks,ig,iv_glob,iq,ikqs
+  INTEGER :: ib,iv,i1,ir,iks,ik,ig,iv_glob,iq,ikqs
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -373,7 +373,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
            !
            l_gammaq = q_grid%l_pIsGamma(iq)
            !
-           k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
            ikqs = k_grid%find( kmq, 'cart' )
            !ikqs = kmq_grid%index_kq(iks,iq)
            !
@@ -415,7 +415,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
               DO ig = 1,ngms
                  pertg(ig) = pertg(ig) * mysqvc(ig) 
               ENDDO
-              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1) / omega * q_grid%weight(iq)
+              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
               !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
               IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
               !

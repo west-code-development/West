@@ -37,7 +37,8 @@ SUBROUTINE do_setup
   USE westcom,                ONLY : logfile
   USE mp_world,               ONLY : mpime, root
   USE class_bz_grid,          ONLY : bz_grid
-  USE types_bz_grid,          ONLY : k_grid, q_grid, kmq_grid, kpq_grid
+  USE types_bz_grid,          ONLY : k_grid, q_grid
+  !USE types_bz_grid,          ONLY : k_grid, q_grid, kmq_grid, kpq_grid
   !
   IMPLICIT NONE
   !
@@ -69,7 +70,6 @@ SUBROUTINE do_setup
      !
      ! INIT Q GRID
      !
-     ! initialize q-point grid
      q_grid = bz_grid()
      CALL q_grid%init('Q')
      IF ( ANY ( q_grid%ngrid(:) - k_grid%ngrid(:) /= 0   ) ) THEN
@@ -222,7 +222,7 @@ SUBROUTINE do_setup
      IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',k_grid%weight(iks))
   ENDDO
   WRITE( stdout, '(/23x,"cryst. coord.")')
-  DO ik = 1, k_grid%nps
+  DO iks = 1, k_grid%nps
      ik = k_grid%ip(iks)
      WRITE( cik, '(i6)') ik
      WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &

@@ -587,7 +587,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE class_bz_grid,        ONLY : bz_grid
-  USE types_bz_grid,        ONLY : k_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid
   !
   IMPLICIT NONE
   !
@@ -606,7 +606,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: en(:,:,:) 
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER   :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: k, ib, iks, ikks, iq, ifixed, ip, glob_ip, ifreq, il, im, glob_im, glob_jp, glob_ifreq
+  INTEGER :: k, ib, iks, ik, ikks, ikk, iq, ifixed, ip, glob_ip, ifreq, il, im, glob_im, glob_jp, glob_ifreq
+  REAL(DP) :: q(3), g0(3)
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk 
   CHARACTER(LEN=6) :: cifixed
@@ -624,17 +625,17 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   CHARACTER(LEN=5) :: ib_label, iks_label
   INTEGER,ALLOCATABLE :: un(:,:)
   REAL(DP) :: summed_sf
-  TYPE(bz_grid) :: k1_grid, q_grid_aux
+  !TYPE(bz_grid) :: k1_grid, q_grid_aux
   ! 
   CALL start_clock('solve_qp')
   !
   ALLOCATE( imfreq_list_integrate( 2, ifr%nloc ) )
   ALLOCATE( dtemp( n_imfreq ) ) 
   !
-  k1_grid = bz_grid()
-  CALL k1_grid%init('K')
-  q_grid_aux = bz_grid()
-  CALL q_grid_aux%init_q( k_grid, k1_grid )
+  !k1_grid = bz_grid()
+  !CALL k1_grid%init('K')
+  !q_grid_aux = bz_grid()
+  !CALL q_grid_aux%init_q( k_grid, k1_grid )
   !
   dtemp = 0._DP
   DO ifreq = 1, ifr%nloc 
@@ -663,11 +664,11 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   ! TEMP
   ! 
-  ALLOCATE( z_body1_ifr_q( aband%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid_aux%nps ) )
-  ALLOCATE( z_body_rfr_q( aband%nloc, rfr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid_aux%nps ) )
+  ALLOCATE( z_body1_ifr_q( aband%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid%nps ) )
+  ALLOCATE( z_body_rfr_q( aband%nloc, rfr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid%nps ) )
   IF( l_enable_lanczos ) THEN
-     ALLOCATE( z_body2_ifr_q( n_lanczos, pert%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid_aux%nps ) )
-     ALLOCATE( d_diago_q( n_lanczos, pert%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid_aux%nps ) )
+     ALLOCATE( z_body2_ifr_q( n_lanczos, pert%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid%nps ) )
+     ALLOCATE( d_diago_q( n_lanczos, pert%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps, q_grid%nps ) )
   ENDIF
   !
   z_body1_ifr_q = 0._DP
@@ -681,24 +682,28 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   CALL io_push_title("Collecting results from W and G")
   !
-  barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 ) * q_grid_aux%nps
+  barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 ) * q_grid%nps
   CALL start_bar_type( barra, 'coll_gw', barra_load )
   !
   ! LOOP 
   !
   ! outer k-point loop (matrix element): iks
   ! inner k-point loop (sum over k'): ikks
-  ! WARNING: iks and ikks are switched w.r.t. convention used in solve_gfreq_k
+  ! WARNING: iks and ikks are switched w.r.t. solve_gfreq_k
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
+     ik = k_grid%ip(iks)
      !
      nbndval = nbnd_occ(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
-        DO ikks = 1, k1_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
+        DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
+           ikk = k_grid%ip(ikks)
            !
-           iq = q_grid_aux%index_q(iks,ikks)
+           CALL k_grid%add( k_grid%p_cart(:,ik), -k_grid%p_cart(:,ikk), q, g0, 'cart' )  
+           iq = q_grid%find( q, 'cart' )
+           !iq = q_grid_aux%index_q(iks,ikks)
            !
            IF(ALLOCATED(overlap)) DEALLOCATE(overlap) 
            ALLOCATE(overlap(pert%nglob, nbnd ) )

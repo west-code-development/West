@@ -295,7 +295,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         !
         DO iq = 1, q_grid%np   ! Q-POINT
            !
-           k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
            ikqs = k_grid%find( kmq, 'cart' )
            !ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)
@@ -379,7 +379,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         !
         DO iq = 1, q_grid%np
            !
-           k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
            ikqs = k_grid%find( kmq, 'cart' )
            !ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)

@@ -367,7 +367,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq_q
   USE class_bz_grid,        ONLY : bz_grid
-  USE types_bz_grid,        ONLY : k_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
   !
   IMPLICIT NONE
   !
@@ -377,13 +377,14 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iv,iv_glob,iks,m,im,ikks,iq,il
+  INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iv,iv_glob,iks,ik,m,im,ikks,ikk,iq,il
   INTEGER :: npwk
   CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   CHARACTER(LEN=5)      :: my_label_q
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
+  REAL(DP) :: q(3), g0(3)
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:)
   COMPLEX(DP),ALLOCATABLE :: braket(:, :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
@@ -400,7 +401,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
-  TYPE(bz_grid) :: k1_grid, q_grid_aux
+  !TYPE(bz_grid) :: k1_grid, q_grid_aux
   !
   CALL io_push_title("(G)-Lanczos")
   !
@@ -430,18 +431,18 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ENDIF
   ALLOCATE( phase(dffts%nnr) )
   !
-  k1_grid = bz_grid()
-  CALL k1_grid%init('K')
-  !
-  q_grid_aux = bz_grid()
-  CALL q_grid_aux%init_q( k_grid, k1_grid )
+  !k1_grid = bz_grid()
+  !CALL k1_grid%init('K')
+  !!
+  !q_grid_aux = bz_grid()
+  !CALL q_grid_aux%init_q( k_grid, k1_grid )
   !
   barra_load = 0
   DO ikks = 1, k_grid%nps
      IF(ikks<bks%lastdone_ks) CYCLE
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(ikks==bks%lastdone_ks .AND. ib < bks%lastdone_band ) CYCLE
-        DO iks = 1, k1_grid%nps
+        DO iks = 1, k_grid%nps
            IF (ikks==bks%lastdone_ks .AND. ib == bks%lastdone_band .AND. iks <= bks%lastdone_ki) CYCLE 
            barra_load = barra_load + 1
         ENDDO
@@ -462,6 +463,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      IF(ikks<bks%lastdone_ks) CYCLE
+     ikk = k_grid%ip(ikks)
      !
      npwk = ngk(ikks)
      !
@@ -489,12 +491,15 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            CALL single_invfft_k(dffts,npwk,npwx,evck(1,ib),psick,'Wave',igk_k(1,ikks))
         ENDIF
         !
-        DO iks = 1, k1_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
+        DO iks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
            IF (ikks==bks%lastdone_ks .AND. ib==bks%lastdone_band .AND. iks <= bks%lastdone_ki) CYCLE
+           ik = k_grid%ip(iks)
            !
            time_spent(1) = get_clock( 'glanczos' ) 
            !
-           iq = q_grid_aux%index_q(ikks,iks)
+           CALL k_grid%add( k_grid%p_cart(:,ikk), -k_grid%p_cart(:,ik), q, g0, 'cart' )
+           iq = q_grid%find( q, 'cart' )
+           !iq = q_grid_aux%index_q(ikks,iks)
            !
            CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !
@@ -502,7 +507,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ! compute Coulomb potential
            !
-           IF ( q_grid_aux%l_gammap(iq) ) THEN
+           IF ( q_grid%l_pIsGamma(iq) ) THEN
               CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
            ELSE
               CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
@@ -539,8 +544,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 !          !
 !          CALL init_us_2 (npw, igk, xk (1, iks), vkb)
            !
-           CALL q_grid_aux%get_phase(ikks,iks)
-           phase = q_grid_aux%phase
+           CALL compute_phase( g0, 'cart', phase )
+           !CALL q_grid_aux%get_phase(ikks,iks)
+           !phase = q_grid_aux%phase
            !
            IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
            CALL mp_bcast( evc, 0, inter_image_comm )

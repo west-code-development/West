@@ -359,7 +359,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   USE io_push,               ONLY : io_push_title
   USE mp_world,              ONLY : mpime,world_comm
   USE class_bz_grid,         ONLY : bz_grid
-  USE types_bz_grid,         ONLY : q_grid, compute_phase
+  USE types_bz_grid,         ONLY : k_grid, q_grid, compute_phase
   !
   IMPLICIT NONE
   !
@@ -386,7 +386,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   ! Current k-q point
   INTEGER :: npwkq
   !
-  REAL(DP) :: kmq(3), g0(3) 
+  REAL(DP) :: kmq(3), g0(3), kk(3), qq(3)
   REAL(DP) :: anorm, prod 
   REAL(DP), ALLOCATABLE :: eprec(:)
   ! Preconditioning matrix
@@ -421,18 +421,18 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   !
   dng=0.0_DP
   !
-  CALL start_bar_type( barra, 'dfpt_q', MAX(m,1) * nks )
+  CALL start_bar_type( barra, 'dfpt_q', MAX(m,1) * k_grid%nps )
   !
   ALLOCATE( evckmq(npwx*npol,nbnd) )
   ALLOCATE( phase(dffts%nnr) )
   !
-  DO iks = 1, nks  ! KPOINT-SPIN LOOP
+  DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
      !
      ik = k_grid%ip(iks) 
      !
      current_k = iks
      !
-     k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+     CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, "cart" ) 
      ikqs = k_grid%find( kmq, 'cart' )
      !ikqs = kmq_grid%index_kq(iks,iq)
      !

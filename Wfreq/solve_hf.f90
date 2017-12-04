@@ -214,14 +214,14 @@ SUBROUTINE solve_hf_k( )
   IF( l_enable_gwetot) THEN
      !
      nbndval = MIN( MAXVAL( nbnd_occ(:) ), nbnd ) 
-     ALLOCATE(sigma_exx_all_occupied(nbndval,nks))
+     ALLOCATE(sigma_exx_all_occupied(nbndval,k_grid%nps))
      !
      CALL calc_exx2_k( sigma_exx_all_occupied, 1, nbndval ) 
      !
      exx_etot = 0._DP
-     DO iks = 1, nks 
+     DO iks = 1, k_grid%nps
         DO ib = 1, nbnd_occ(iks) 
-           exx_etot = exx_etot + sigma_exx_all_occupied( ib, iks) * wk(iks) / 2._DP
+           exx_etot = exx_etot + sigma_exx_all_occupied( ib, iks) * k_grid%weight(iks) / 2._DP
         ENDDO
      ENDDO
      !

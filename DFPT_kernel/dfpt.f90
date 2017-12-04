@@ -386,7 +386,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   ! Current k-q point
   INTEGER :: npwkq
   !
-  REAL(DP) :: kmq(3), g0(3), kk(3), qq(3)
+  REAL(DP) :: kmq(3), g0(3)
   REAL(DP) :: anorm, prod 
   REAL(DP), ALLOCATABLE :: eprec(:)
   ! Preconditioning matrix

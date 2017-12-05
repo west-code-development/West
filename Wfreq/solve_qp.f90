@@ -692,6 +692,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! WARNING: iks and ikks are switched w.r.t. solve_gfreq_k
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
+     !
      ik = k_grid%ip(iks)
      !
      nbndval = nbnd_occ(iks)
@@ -699,11 +700,13 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
         DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
+           !
            ikk = k_grid%ip(ikks)
            !
-           CALL k_grid%add( k_grid%p_cart(:,ik), -k_grid%p_cart(:,ikk), q, g0, 'cart' )  
-           iq = q_grid%find( q, 'cart' )
-           !iq = q_grid_aux%index_q(iks,ikks)
+           CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
+           !CALL k_grid%add( k_grid%p_cart(:,ik), -k_grid%p_cart(:,ikk), q, g0, 'cart' )  
+           !iq = q_grid%find( q, 'cart' )
+           !!iq = q_grid_aux%index_q(iks,ikks)
            !
            IF(ALLOCATED(overlap)) DEALLOCATE(overlap) 
            ALLOCATE(overlap(pert%nglob, nbnd ) )

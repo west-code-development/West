@@ -463,6 +463,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      IF(ikks<bks%lastdone_ks) CYCLE
+     !
      ikk = k_grid%ip(ikks)
      !
      npwk = ngk(ikks)
@@ -493,13 +494,15 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         !
         DO iks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
            IF (ikks==bks%lastdone_ks .AND. ib==bks%lastdone_band .AND. iks <= bks%lastdone_ki) CYCLE
+           !
            ik = k_grid%ip(iks)
            !
            time_spent(1) = get_clock( 'glanczos' ) 
            !
-           CALL k_grid%add( k_grid%p_cart(:,ikk), -k_grid%p_cart(:,ik), q, g0, 'cart' )
-           iq = q_grid%find( q, 'cart' )
-           !iq = q_grid_aux%index_q(ikks,iks)
+           CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 1, 'cart', iq, g0 )
+           !CALL k_grid%add( k_grid%p_cart(:,ikk), -k_grid%p_cart(:,ik), q, g0, 'cart' )
+           !iq = q_grid%find( q, 'cart' )
+           !!iq = q_grid_aux%index_q(ikks,iks)
            !
            CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !

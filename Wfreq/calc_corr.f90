@@ -246,7 +246,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   ! Workspace
   !
-  INTEGER :: ik,iks,iq,ikqs,ib,ifreq,glob_ifreq,il,im,glob_im,ip
+  INTEGER :: ik,is,iks,iq,ikqs,ib,ifreq,glob_ifreq,il,im,glob_im,ip
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -286,7 +286,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   ! LOOP 
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
+     !
      ik = k_grid%ip(iks) 
+     is = k_grid%is(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -295,8 +297,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         !
         DO iq = 1, q_grid%np   ! Q-POINT
            !
-           CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
-           ikqs = k_grid%find( kmq, 'cart' )
+           CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+           !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           !ikqs = k_grid%find( kmq, 'cart' )
            !ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikqs)
@@ -369,6 +372,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   DO iks = 1, k_grid%nps
      !
      ik = k_grid%ip(iks)
+     is = k_grid%is(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -377,11 +381,12 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         residues_b = 0._DP
         residues_h = 0._DP
         !
-        DO iq = 1, q_grid%np
+        DO iq = 1, q_grid%np   ! Q-POINT
            !
-           CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
-           ikqs = k_grid%find( kmq, 'cart' )
-           !ikqs = kmq_grid%index_kq(iks,iq)
+           CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+           !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           !ikqs = k_grid%find( kmq, 'cart' )
+           !!ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikqs)
            !

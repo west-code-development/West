@@ -29,7 +29,9 @@ MODULE types_bz_grid
   CONTAINS 
   !
   !
-  FUNCTION findG(g0, unit_type) RESULT(ig0) 
+  !
+  !
+  FUNCTION findG(g0, unit_type) RESULT(ig0)
      !
      ! ... ig0 is the index of G (unit_type = [ "cryst", "cart"])
      ! ... if on exit ig0 == 0 --> G is not found
@@ -54,10 +56,10 @@ MODULE types_bz_grid
      SELECT CASE(unit_type) 
      CASE("cryst","cart")
      CASE DEFAULT
-        CALL errore( 1, "unit_type not supported, supported only cryst or cart" )  
+        CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
      END SELECT 
      !
-     gtemp = g0 
+     gtemp = g0
      IF( unit_type == "cryst" ) CALL cryst_to_cart( 1, gtemp, bg, 1) 
      !
      ! gtemp is in cart 
@@ -66,6 +68,7 @@ MODULE types_bz_grid
      DO ig = 1, ngms
         IF ( ALL ( ABS( g(:,ig) - gtemp(:) ) < eps8 ) ) THEN
            ig0 = ig
+           EXIT
         ENDIF
      ENDDO
      !
@@ -79,6 +82,8 @@ MODULE types_bz_grid
      USE gvecs,            ONLY : nls
      USE fft_base,         ONLY : dffts
      USE fft_interfaces,   ONLY : invfft
+     USE mp,               ONLY : mp_max
+     USE mp_bands,         ONLY : intra_bgrp_comm
      !
      IMPLICIT NONE
      !
@@ -90,22 +95,27 @@ MODULE types_bz_grid
      !
      ! Workspace
      !
-     INTEGER :: ipol, ig, ig0
+     INTEGER :: ipol, ig, ig0, glob_ig0
      !
      SELECT CASE(unit_type) 
      CASE("cryst","cart")
      CASE DEFAULT
-        CALL errore( 1, "unit_type not supported, supported only cryst or cart" )  
+        CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
      END SELECT 
      !
      ig0 = findG(g0,unit_type)
-     IF( ig0 == 0 ) CALL errore( 1, "G0 not found" )
+     glob_ig0 = ig0
+     CALL mp_max( glob_ig0, intra_bgrp_comm )
      !
-     phase = (0._DP, 0._DP)
-     phase( nls(ig0) ) = (1._DP, 0._DP)
+     IF( glob_ig0 == 0 ) CALL errore( "types_bz_grid", "G0 not found", 1 )
      !
      ! phase(r) = exp(-iG_0*r)
      !
+     phase = (0._DP, 0._DP)
+     !
+     IF ( ig0 /= 0 ) THEN
+        phase( nls(ig0) ) = (1._DP, 0._DP)
+     ENDIF
      CALL invfft( 'Wave', phase, dffts )
      phase(1:dffts%nnr) = DCONJG( phase(1:dffts%nnr) )
      !

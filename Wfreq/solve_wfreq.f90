@@ -648,7 +648,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ik,iq,ikqs,ipol,m
+  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ik,is,iq,ikqs,ipol,m
   CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   CHARACTER(LEN=5)      :: my_label_q
@@ -771,7 +771,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      ENDIF
      !
      DO iks = 1, k_grid%nps   ! KPOINT-SPIN
+        !
         ik = k_grid%ip(iks) 
+        is = k_grid%is(iks) 
+        !
         IF(iq==bks%lastdone_q .AND. iks<bks%lastdone_ks) CYCLE
         !
         ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -816,8 +819,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !ikqs = kpq_grid%index_kq(iks,iq)
         !npwkq = ngk(ikqs)
         !
-        CALL k_grid%add( k_grid%p_cart(:,ik), q_grid%p_cart(:,iq), kpq, g0, 'cart' ) 
-        ikqs = k_grid%find( kpq, 'cart' )
+        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+        !CALL k_grid%add( k_grid%p_cart(:,ik), q_grid%p_cart(:,iq), kpq, g0, 'cart' ) 
+        !ikqs = k_grid%find( kpq, 'cart' )
         !
         npwkq = ngk(ikqs)
         !

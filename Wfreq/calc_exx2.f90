@@ -266,7 +266,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,i1,ir,iks,ik,ig,iv_glob,iq,ikqs
+  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -309,6 +309,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
      ik = k_grid%ip(iks) 
+     is = k_grid%is(iks)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -373,9 +374,10 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
            !
            l_gammaq = q_grid%l_pIsGamma(iq)
            !
-           CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
-           ikqs = k_grid%find( kmq, 'cart' )
-           !ikqs = kmq_grid%index_kq(iks,iq)
+           CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+           !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+           !ikqs = k_grid%find( kmq, 'cart' )
+           !!ikqs = kmq_grid%index_kq(iks,iq)
            !
            IF ( l_gammaq ) THEN
               CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)

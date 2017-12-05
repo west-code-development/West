@@ -373,7 +373,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   !
   ! Workspace
   !
-  INTEGER :: ipert, ig, ir, ibnd, iks, ikqs, ik
+  INTEGER :: ipert, ig, ir, ibnd, iks, ikqs, ik, is
   ! Counter on perturbations
   ! Counter on plane waves
   ! Counter on real space grids
@@ -428,13 +428,15 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   !
   DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
      !
-     ik = k_grid%ip(iks) 
+     ik = k_grid%ip(iks)
+     is = k_grid%is(iks)
      !
      current_k = iks
      !
-     CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, "cart" ) 
-     ikqs = k_grid%find( kmq, 'cart' )
-     !ikqs = kmq_grid%index_kq(iks,iq)
+     CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+     !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
+     !ikqs = k_grid%find( kmq, 'cart' )
+     !!ikqs = kmq_grid%index_kq(iks,iq)
      !
      ! computes the phase needed to bring the wavefunction at k-q 
      ! to the equivalent [k-q] point in the first BZ

@@ -43,7 +43,7 @@ MODULE class_bz_grid
       !
       PROCEDURE :: init => k_or_q_grid_init
       PROCEDURE :: find => findp
-      PROCEDURE :: add => addp
+!      PROCEDURE :: add => addp
 !      PROCEDURE :: init_kq => kq_grid_init
 !      PROCEDURE :: init_q => q_grid_init
 !      PROCEDURE :: get_phase => get_phase
@@ -100,6 +100,7 @@ MODULE class_bz_grid
          !
          ! set weights 
          !
+         ALLOCATE ( this%weight (this%nps) )
          DO ips = 1, this%nps
            this%weight(ips) = wk(ips)
          ENDDO
@@ -165,91 +166,123 @@ MODULE class_bz_grid
    END SUBROUTINE
    !
    !
-   FUNCTION findp(this,p,unit_type) RESULT(ip)
-      !
+   !FUNCTION findp(this,p,unit_type) RESULT(ip)
+   SUBROUTINE findp( this, p, is, unit_type, ip, g0 )
+      ! 
       ! ... ip is the index of p (unit_type = [ "cryst", "cart"])
       ! ... if on exit ip == 0 --> p is not commensurate with this grid
+      ! ... g0 relates p to an equivalent vector inside the 1BZ
       !
       USE constants, ONLY : eps8 
+      USE cell_base, ONLY : at, bg
       !
       IMPLICIT NONE
       !
       ! I/O 
       !
-      CLASS(bz_grid),INTENT(IN) :: this 
-      REAL(DP),INTENT(IN) :: p(3)
-      CHARACTER(LEN=*),INTENT(IN) :: unit_type
-      INTEGER :: ip
+      CLASS(bz_grid), INTENT(IN) :: this 
+      REAL(DP), INTENT(IN) :: p(3)
+      INTEGER, INTENT(IN) :: is
+      CHARACTER(LEN=*), INTENT(IN) :: unit_type
+      INTEGER, INTENT(OUT) :: ip
+      REAL(DP), INTENT(OUT) :: g0(3)
       !
       ! Workspace
       ! 
       INTEGER :: i
-      ! 
-      ip = 0 
-      SELECT CASE( unit_type ) 
-      CASE("cryst")
-         DO i = 1, this%np
-            IF( ( ALL( ABS ( p(:) - this%p_cryst(:,i) ) .LT. eps8 ) ) ) THEN 
-               ip = i 
-               EXIT
-            ENDIF
-         ENDDO
-      CASE("cart")
-         DO i = 1, this%np
-            IF( ( ALL( ABS ( p(:) - this%p_cart(:,i) ) .LT. eps8 ) ) ) THEN  
-               ip = i 
-               EXIT
-            ENDIF
-         ENDDO
-      CASE DEFAULT
-         CALL errore( 1, "unit_type not supported, supported only cryst or cart" )  
-      END SELECT
-      !
-   END FUNCTION
-   !
-   !
-   SUBROUTINE addp( this, pin1, pin2, pout, g0, unit_type )
-      !
-      ! ... out : pout and g0 
-      ! ... pout = pin1 + pin2 - g0   ( g0 makes sure that pout is in 1BZ ) 
-      ! ... unit_type determines the units of pin1, pin2 and pout, g0  
-      !
-      USE cell_base,        ONLY : at, bg
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      CLASS(bz_grid), INTENT(IN) :: this
-      REAL(DP), INTENT(IN) :: pin1(3), pin2(3) 
-      REAL(DP), INTENT(OUT) :: pout(3)
-      REAL(DP), INTENT(OUT) :: g0(3)
-      CHARACTER(LEN=*),INTENT(IN) :: unit_type
-      !
-      ! Workspace
-      !
-      REAL(DP) :: ptemp(3)  
+      REAL(DP) :: dp(3)
       !
       SELECT CASE(unit_type) 
       CASE("cryst","cart")
       CASE DEFAULT
-         CALL errore( 1, "unit_type not supported, supported only cryst or cart" )  
+         CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
       END SELECT 
-      !   
-      ptemp = pin1 + pin2
-      IF( unit_type == "cart" ) CALL cryst_to_cart( 1, ptemp, at, -1 )
       !
-      ! ptemp is now in cryst  
+      ! The search must be performed in crystalline coordinates
       !
-      g0 = NINT( ptemp ) ! in cryst 
-      pout = ptemp - g0  ! in cryst 
+      IF ( unit_type == "cart" ) CALL cryst_to_cart( 1, p, at, -1 )
       !
-      IF( unit_type == "cart" ) THEN 
-         CALL cryst_to_cart( 1, pout , bg, 1 )
-         CALL cryst_to_cart( 1, g0   , bg, 1 )
-      ENDIF  
+      ip = 0
+      DO i = 1, this%np
+         dp(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )
+         IF ( ALL ( ABS ( dp ) .LT. eps8 ) ) THEN
+            ip = i + (is-1) * this%np
+            g0(:) = p(:) - this%p_cryst(:,ip)
+            EXIT
+         ENDIF
+      ENDDO
       !
+      ! Tranform g0 back to cartesian coordinates if needed
+      !
+      IF ( unit_type == "cart" ) CALL cryst_to_cart( 1, g0, bg, 1 ) 
+      !      
+      !ip = 0 
+      !SELECT CASE( unit_type ) 
+      !CASE("cryst")
+      !   DO i = 1, this%np
+      !      IF( ( ALL( ABS ( p(:) - this%p_cryst(:,i) ) .LT. eps8 ) ) ) THEN 
+      !         ip = i 
+      !         EXIT
+      !      ENDIF
+      !   ENDDO
+      !CASE("cart")
+      !   DO i = 1, this%np
+      !      IF( ( ALL( ABS ( p(:) - this%p_cart(:,i) ) .LT. eps8 ) ) ) THEN  
+      !         ip = i 
+      !         EXIT
+      !      ENDIF
+      !   ENDDO
+      !CASE DEFAULT
+      !   CALL errore( "class_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
+      !END SELECT
+      !
+   !END FUNCTION
    END SUBROUTINE
+   !
+   !
+   !SUBROUTINE addp( this, pin1, pin2, pout, g0, unit_type )
+   !   !
+   !   ! ... out : pout and g0 
+   !   ! ... pout = pin1 + pin2 - g0   ( g0 makes sure that pout is in 1BZ ) 
+   !   ! ... unit_type determines the units of pin1, pin2 and pout, g0  
+   !   !
+   !   USE cell_base,        ONLY : at, bg
+   !   USE constants,        ONLY : eps8
+   !   !
+   !   IMPLICIT NONE
+   !   !
+   !   ! I/O
+   !   !
+   !   CLASS(bz_grid), INTENT(IN) :: this
+   !   REAL(DP), INTENT(IN) :: pin1(3), pin2(3) 
+   !   REAL(DP), INTENT(OUT) :: pout(3)
+   !   REAL(DP), INTENT(OUT) :: g0(3)
+   !   CHARACTER(LEN=*),INTENT(IN) :: unit_type
+   !   !
+   !   ! Workspace
+   !   !
+   !   REAL(DP) :: ptemp(3)  
+   !   !
+   !   SELECT CASE(unit_type) 
+   !   CASE("cryst","cart")
+   !   CASE DEFAULT
+   !      CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
+   !   END SELECT 
+   !   !   
+   !   ptemp = pin1 + pin2
+   !   IF( unit_type == "cart" ) CALL cryst_to_cart( 1, ptemp, at, -1 )
+   !   !
+   !   ! ptemp is now in cryst  
+   !   !
+   !   g0 = NINT( ptemp ) ! in cryst 
+   !   pout = ptemp - g0  ! in cryst 
+   !   !
+   !   IF( unit_type == "cart" ) THEN 
+   !      CALL cryst_to_cart( 1, pout , bg, 1 )
+   !      CALL cryst_to_cart( 1, g0   , bg, 1 )
+   !   ENDIF  
+   !   !
+   !END SUBROUTINE
 !     !
 !     IF ( sig == +1 ) THEN
 !        csig = '+'

@@ -351,8 +351,8 @@ MODULE coulomb
       !
       !IF(gstart==2) sqvc_tmp(1)=SQRT(tpi*e2*rcut*rcut)
       !
-     !$OMP PARALLEL private(ig,qgnorm2,qgnorm)
-     !$OMP DO
+!!$OMP PARALLEL private(ig,qgnorm2,qgnorm,qg)
+!!$OMP DO
       sqvc_tmp = 0._DP
       DO ig = 1,numg
          IF ( l_use_igq ) THEN
@@ -368,8 +368,8 @@ MODULE coulomb
             sqvc_tmp(ig) = SQRT(e2*fpi/qgnorm2 * (1._DP-COS(qgnorm*rcut)))
          ENDIF
       ENDDO
-     !$OMP ENDDO
-     !$OMP END PARALLEL
+!!$OMP ENDDO
+!!$OMP END PARALLEL
       !
       CALL stop_clock('storesqvc')
       !

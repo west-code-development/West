@@ -20,7 +20,7 @@ SUBROUTINE do_sxx ( )
   USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,igk_k,xk,npw,npwx,lsda,nkstot,current_k,ngk,et
   USE io_push,               ONLY : io_push_title,io_push_bar
   USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,westpp_save_dir,nbnd_occ,iks_l2g,westpp_epsinfty,dvg,ev,&
-                                  & npwq0,npwq0x,fftdriver,logfile
+                                  & npwq,npwqx,fftdriver,logfile
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE mp,                    ONLY : mp_bcast,mp_sum
   USE fft_base,              ONLY : dfftp,dffts
@@ -39,6 +39,7 @@ SUBROUTINE do_sxx ( )
   USE mp_world,              ONLY : mpime,root
   USE constants,             ONLY : rytoev
   USE json_module,           ONLY : json_file
+  USE coulomb,               ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -60,8 +61,9 @@ SUBROUTINE do_sxx ( )
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
-  ALLOCATE( mysqvc(npwq0) )
-  CALL store_sqvc(mysqvc,npwq0,1,mydiv)
+  ALLOCATE( mysqvc(npwq) )
+  CALL store_sqvc(mysqvc,npwq,'spherical',1,.FALSE.,mydiv)
+  !CALL store_sqvc(mysqvc,npwq,1,mydiv)
   !
   CALL io_push_title("(S)creened eXact eXchange")
   !
@@ -71,7 +73,7 @@ SUBROUTINE do_sxx ( )
   sigma_exx = 0._DP
   sigma_sxx = 0._DP
   !
-  ALLOCATE( pertg(npwq0x) )
+  ALLOCATE( pertg(npwqx) )
   IF(noncolin) THEN 
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
   ELSE
@@ -136,32 +138,32 @@ SUBROUTINE do_sxx ( )
               DO ir=1,dffts%nnr 
                  pertr(ir)=psic(ir)*pertr(ir)
               ENDDO
-              CALL single_fwfft_gamma(dffts,npwq0,npwq0x,pertr,pertg,TRIM(fftdriver))
+              CALL single_fwfft_gamma(dffts,npwq,npwqx,pertr,pertg,TRIM(fftdriver))
            ELSEIF(noncolin) THEN
               CALL single_invfft_k(dffts,npw,npwx,evc(1     ,iv),pertr_nc(1,1),'Wave',igk_k(1,current_k))
               CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,iv),pertr_nc(1,2),'Wave',igk_k(1,current_k))
               DO ir=1,dffts%nnr 
                  pertr_nc(ir,1)=DCONJG(psic_nc(ir,1))*pertr_nc(ir,1)+DCONJG(psic_nc(ir,2))*pertr_nc(ir,2)
               ENDDO
-              CALL single_fwfft_k(dffts,npwq0,npwq0x,pertr_nc(1,1),pertg,TRIM(fftdriver)) ! no igk
+              CALL single_fwfft_k(dffts,npwq,npwqx,pertr_nc(1,1),pertg,TRIM(fftdriver)) ! no igk
            ELSE
               CALL single_invfft_k(dffts,npw,npwx,evc(1,iv),pertr,'Wave',igk_k(1,current_k))
               DO ir=1,dffts%nnr 
                  pertr(ir)=DCONJG(psic(ir))*pertr(ir)
               ENDDO
-              CALL single_fwfft_k(dffts,npwq0,npwq0x,pertr,pertg,TRIM(fftdriver)) ! no igk
+              CALL single_fwfft_k(dffts,npwq,npwqx,pertr,pertg,TRIM(fftdriver)) ! no igk
            ENDIF 
            !
-           DO ig = 1,npwq0
+           DO ig = 1,npwq
               pertg(ig) = pertg(ig) * mysqvc(ig) 
            ENDDO
-           sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*npwq0, pertg(1), 1, pertg(1), 1) / omega
+           sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*npwq, pertg(1), 1, pertg(1), 1) / omega
            !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
            IF( ib == iv .AND. gstart == 2 ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
            !
            ! -- < SXX >
            IF( gamma_only ) THEN  
-              CALL glbrak_gamma( pertg, dvg, dproj, npwq0, npwq0x, 1, pert%nloc, 1, npol)
+              CALL glbrak_gamma( pertg, dvg, dproj, npwq, npwqx, 1, pert%nloc, 1, npol)
               CALL mp_sum( dproj, intra_bgrp_comm )
               DO ip = 1, pert%nloc
                  ip_glob = pert%l2g(ip)
@@ -169,7 +171,7 @@ SUBROUTINE do_sxx ( )
               ENDDO
               IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * mydiv
            ELSE
-              CALL glbrak_k( pertg, dvg, zproj, npwq0, npwq0x, 1, pert%nloc, 1, npol)
+              CALL glbrak_k( pertg, dvg, zproj, npwq, npwqx, 1, pert%nloc, 1, npol)
               CALL mp_sum( zproj, intra_bgrp_comm )
               DO ip = 1, pert%nloc
                  ip_glob = pert%l2g(ip)

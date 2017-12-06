@@ -256,7 +256,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   COMPLEX(DP) :: partial_b,partial_h
   REAL(DP) :: segno, enrg 
-  REAL(DP) :: kmq(3), g0(3) 
+  REAL(DP) :: g0(3) 
   COMPLEX(DP) :: residues_b,residues_h
   LOGICAL :: this_is_a_pole
   LOGICAL :: l_gammaq 

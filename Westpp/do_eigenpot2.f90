@@ -21,7 +21,7 @@ SUBROUTINE do_eigenpot2 ( )
                                   & current_k,ngk
   USE io_push,               ONLY : io_push_title,io_push_bar
   USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation,westpp_range,westpp_save_dir,fftdriver,&
-                                  & npwq0,npwq0x,dvg 
+                                  & npwq,npwqx,dvg 
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE mp,                    ONLY : mp_bcast
   USE fft_base,              ONLY : dfftp,dffts
@@ -62,9 +62,9 @@ SUBROUTINE do_eigenpot2 ( )
      !
      auxr = 0._DP
      IF( gamma_only ) THEN 
-        CALL single_invfft_gamma(dffts,npwq0,npwq0x,dvg(1,local_j),psic,TRIM(fftdriver))
+        CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(1,local_j),psic,TRIM(fftdriver))
      ELSE
-        CALL single_invfft_k(dffts,npwq0,npwq0x,dvg(1,local_j),psic,TRIM(fftdriver))
+        CALL single_invfft_k(dffts,npwq,npwqx,dvg(1,local_j),psic,TRIM(fftdriver))
      ENDIF
      IF( westpp_sign ) THEN
         DO ir = 1, dffts%nnr

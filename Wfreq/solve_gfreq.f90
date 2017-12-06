@@ -62,6 +62,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE distribution_center,  ONLY : pert
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -96,7 +97,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL deallocate_bec_type( becp ) 
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
-  CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
+  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz ) 
+  !CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
@@ -368,6 +370,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq_q
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -510,11 +513,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ! compute Coulomb potential
            !
-           IF ( q_grid%l_pIsGamma(iq) ) THEN
-              CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
-           ELSE
-              CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
-           ENDIF
+           CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz ) 
+           !IF ( q_grid%l_pIsGamma(iq) ) THEN
+           !   CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
+           !ELSE
+           !   CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
+           !ENDIF
            !
            ! The Hamiltonian is evaluated at k'
            !

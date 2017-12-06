@@ -46,6 +46,7 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   USE class_idistribute,    ONLY : idistribute
   USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
                                    vcut_get,  vcut_spheric_get, vcut_destroy
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -83,8 +84,8 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
      ALLOCATE( pertr( dffts%nnr ) )
   ENDIF
   !
-  ! if not set from input, div_kind_hf = 2 (Gygi-Baldereschi)
-  CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
+  CALL store_sqvc( mysqvc, ngms, 'gb', 1, .FALSE., mydiv )
+  !CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
   !
   ! Set to zero
   !
@@ -252,6 +253,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
                                    vcut_get,  vcut_spheric_get, vcut_destroy
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -279,7 +281,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   REAL(DP) :: ecutvcut
   TYPE(vcut_type)   :: vcut
   REAL(DP) :: mydiv
-  REAL(DP) :: kmq(3), g0(3)
+  REAL(DP) :: g0(3)
   !
   WRITE(stdout,'(5x,a)') ' '
   CALL io_push_bar()
@@ -379,11 +381,12 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
            !ikqs = k_grid%find( kmq, 'cart' )
            !!ikqs = kmq_grid%index_kq(iks,iq)
            !
-           IF ( l_gammaq ) THEN
-              CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
-           ELSE
-              CALL store_sqvc_q(mysqvc,ngms,div_kind_hf,iq,.FALSE.)
-           ENDIF
+           CALL store_sqvc( mysqvc, ngms, 'gb', iq, .FALSE., mydiv )
+           !IF ( l_gammaq ) THEN
+           !   CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
+           !ELSE
+           !   CALL store_sqvc_q(mysqvc,ngms,div_kind_hf,iq,.FALSE.)
+           !ENDIF
            !
            CALL compute_phase( g0, 'cart', phase )
            !CALL kmq_grid%get_phase(iks,iq)

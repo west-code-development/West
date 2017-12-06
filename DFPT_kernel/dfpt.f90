@@ -343,7 +343,6 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   USE gvecw,                 ONLY : gcutw
   USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
   USE mp_global,             ONLY : inter_image_comm,inter_pool_comm,my_image_id
-  USE mp_bands,              ONLY : me_bgrp
   USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
   USE fft_interfaces,        ONLY : fwfft, invfft
   USE buffers,               ONLY : get_buffer
@@ -386,7 +385,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   ! Current k-q point
   INTEGER :: npwkq
   !
-  REAL(DP) :: kmq(3), g0(3)
+  REAL(DP) :: g0(3)
   REAL(DP) :: anorm, prod 
   REAL(DP), ALLOCATABLE :: eprec(:)
   ! Preconditioning matrix

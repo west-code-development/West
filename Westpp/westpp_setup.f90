@@ -14,7 +14,7 @@
 SUBROUTINE westpp_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,westpp_save_dir,&
+  USE westcom,                ONLY : alphapv_dfpt,npwq,sqvc,west_prefix,westpp_save_dir,&
                                    & n_imfreq,nbnd_occ,l_macropol,macropol_calculation,&
                                    & n_refreq,isz,qp_bandrange,westpp_calculation,westpp_n_pdep_eigen_to_use
   USE mp,                     ONLY : mp_max
@@ -28,6 +28,7 @@ SUBROUTINE westpp_setup
   USE wavefunctions_module,   ONLY : evc
   USE mod_mpiio,              ONLY : set_io_comm
   USE pdep_db,                ONLY : pdep_db_read
+  USE coulomb,                ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -35,14 +36,16 @@ SUBROUTINE westpp_setup
   REAL(DP) :: qq
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: ig, i
+  LOGICAL :: l_printout_div = .TRUE.
   !
   CALL do_setup ( ) 
   !
-  CALL set_npwq0()
+  CALL set_npwq()
   !
-  ALLOCATE(sqvc(npwq0))
+  ALLOCATE(sqvc(npwq))
   !
-  CALL store_sqvc(sqvc,npwq0,1,isz)
+  CALL store_sqvc(sqvc,npwq,'spherical',1,.FALSE.,isz,l_printout_div)
+  !CALL store_sqvc(sqvc,npwq,1,isz)
   !
   CALL set_nbndocc()
   !

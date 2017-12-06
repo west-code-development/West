@@ -61,26 +61,16 @@ SUBROUTINE do_setup
   !
   CALL set_dirs()
   !
-  ! INIT K GRID
+  ! INIT K, Q GRIDS
   !
   k_grid = bz_grid()
   CALL k_grid%init('K')
   !
-  IF ( .NOT. gamma_only ) THEN
-     !
-     ! INIT Q GRID
-     !
-     q_grid = bz_grid()
-     CALL q_grid%init('Q')
-     IF ( ANY ( q_grid%ngrid(:) - k_grid%ngrid(:) /= 0   ) ) THEN
-        CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
-     ENDIF
-     ! initialize (k-q) grid
-     !kmq_grid = bz_grid()
-     !CALL kmq_grid%init_kq( k_grid, q_grid, -1 )
-     !! initialize (k-q) grid
-     !kpq_grid = bz_grid()
-     !CALL kpq_grid%init_kq( k_grid, q_grid, +1 )
+  q_grid = bz_grid()
+  CALL q_grid%init('Q')
+  !
+  IF ( ANY ( q_grid%ngrid(:) - k_grid%ngrid(:) /= 0   ) ) THEN
+     CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
   ENDIF
   !
   IF( mpime == root ) THEN 

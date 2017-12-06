@@ -63,6 +63,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE class_idistribute,    ONLY : idistribute 
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
+  USE class_bz_grid,        ONLY : bz_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -160,7 +163,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      CALL start_bar_type ( barra, 'wlanczos', barra_load )
   ENDIF
   !
-  CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
+  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz )
+  !CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
   !
   ! LOOP 
   !
@@ -639,6 +643,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -764,11 +769,12 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      npwq = ngq(iq)
      l_gammaq = q_grid%l_pIsGamma(iq)
      !
-     IF (l_gammaq) THEN
-        CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
-     ELSE
-        CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
-     ENDIF
+     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz )
+     !IF (l_gammaq) THEN
+     !   CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
+     !ELSE
+     !   CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
+     !ENDIF
      !
      DO iks = 1, k_grid%nps   ! KPOINT-SPIN
         !

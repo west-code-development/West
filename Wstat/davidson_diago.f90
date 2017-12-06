@@ -52,6 +52,9 @@ SUBROUTINE davidson_diago_gamma ( )
   USE gvect,                ONLY : gstart
   USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
                                    & update_with_vr_distr,refresh_with_vr_distr 
+  USE class_bz_grid,        ONLY : bz_grid
+  USE types_bz_grid,        ONLY : k_grid, q_grid
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -147,7 +150,8 @@ SUBROUTINE davidson_diago_gamma ( )
   notcnv  = nvec 
   dav_iter = -2
   !
-  CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
+  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz, .TRUE. )
+  !CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
   !
   ! KIND OF CALCULATION
   !
@@ -474,6 +478,7 @@ SUBROUTINE davidson_diago_k ( )
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : q_grid
+  USE coulomb,              ONLY : store_sqvc
   !
   IMPLICIT NONE
   !
@@ -584,11 +589,12 @@ SUBROUTINE davidson_diago_k ( )
      !
      ! compute Coulomb potential
      !
-     IF ( q_grid%l_pIsGamma(iq) ) THEN
-        CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
-     ELSE
-        CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
-     ENDIF
+     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz, .TRUE. )
+     !IF ( q_grid%l_pIsGamma(iq) ) THEN
+     !   CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
+     !ELSE
+     !   CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
+     !ENDIF
      !
      IF ( q_grid%np > 1 ) THEN
         !

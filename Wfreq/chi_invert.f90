@@ -175,7 +175,7 @@ MODULE chi_invert
       COMPLEX(DP),INTENT(IN) :: matilda(nma,nma)
       COMPLEX(DP),INTENT(OUT) :: head,lambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use) 
       INTEGER,INTENT(IN) :: nma
-      LOGICAL,INTENT(IN) :: l_gammaq
+      LOGICAL,INTENT(IN),OPTIONAL :: l_gammaq
       !
       ! Workspace
       ! 

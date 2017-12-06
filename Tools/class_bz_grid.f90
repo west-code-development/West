@@ -62,6 +62,7 @@ MODULE class_bz_grid
       USE klist,            ONLY : xk, wk, nkstot
       USE start_k,          ONLY : nk1, nk2, nk3
       USE pwcom,            ONLY : nspin
+      USE control_flags,    ONLY : gamma_only
       USE westcom,          ONLY : nq
       USE constants,        ONLY : eps8
       !
@@ -80,7 +81,8 @@ MODULE class_bz_grid
       SELECT CASE( grid_type )
       CASE ( 'K', 'k')
          !
-         this%ngrid(1:3) = (/ nk1, nk2, nk3 /) 
+         ! This is a workaround to prevent ngrid(:) to be set to (/ 0, 0, 0 /) in the gamma_only case (espresso default)
+         IF ( .NOT. gamma_only ) this%ngrid(1:3) = (/ nk1, nk2, nk3 /) 
          this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3) 
          this%ns = nspin 
          this%nps = nkstot   !    =   np * ns  

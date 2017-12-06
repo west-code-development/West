@@ -65,11 +65,18 @@ SUBROUTINE do_setup
   !
   k_grid = bz_grid()
   CALL k_grid%init('K')
+  print *, 'K'
+  print *, k_grid%p_cart
+  print *, k_grid%ngrid
+  print *, 'nks = ', nks
   !
   q_grid = bz_grid()
   CALL q_grid%init('Q')
+  print *, 'Q'
+  print *, q_grid%p_cart
+  print *, q_grid%ngrid
   !
-  IF ( ANY ( q_grid%ngrid(:) - k_grid%ngrid(:) /= 0   ) ) THEN
+  IF ( ANY ( (q_grid%ngrid(:) - k_grid%ngrid(:)) /= 0   ) ) THEN
      CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
   ENDIF
   !

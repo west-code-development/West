@@ -66,6 +66,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid
   USE coulomb,              ONLY : store_sqvc
+  USE chi_invert,           ONLY : chi_invert_real, chi_invert_complex
   !
   IMPLICIT NONE
   !
@@ -644,6 +645,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
   USE coulomb,              ONLY : store_sqvc
+  USE chi_invert,           ONLY : chi_invert_complex
   !
   IMPLICIT NONE
   !

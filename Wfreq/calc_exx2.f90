@@ -62,11 +62,9 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   INTEGER :: ib,iv,i1,ir,iks,ig,iv_glob
   INTEGER :: nbndval
   TYPE(idistribute) :: vband
-  REAL(DP) :: peso
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   REAL(DP),ALLOCATABLE :: mysqvc(:)
-  REAL(DP) :: q(3)
   REAL(DP) :: ecutvcut
   TYPE(vcut_type)   :: vcut
   REAL(DP) :: mydiv
@@ -139,12 +137,6 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
      !
      nbndval = nbnd_occ(iks)
      !
-!     IF( gamma_only ) THEN 
-        peso = 2._DP  
-!     ELSE
-!        peso = 1._DP
-!     ENDIF
-     !
      vband = idistribute()
      CALL vband%init(nbndval,'i','nbndval',.FALSE.)
      !
@@ -188,7 +180,7 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
            DO ig = 1,ngms
               pertg(ig) = pertg(ig) * mysqvc(ig) 
            ENDDO
-           sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1) / omega
+           sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - 2._DP * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1) / omega
            !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
            IF( ib == iv_glob .AND. gstart == 2 ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
            !
@@ -272,11 +264,9 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
-  REAL(DP) :: peso
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   REAL(DP),ALLOCATABLE :: mysqvc(:)
-  REAL(DP) :: q(3)
   LOGICAL :: l_gammaq
   REAL(DP) :: ecutvcut
   TYPE(vcut_type)   :: vcut
@@ -354,8 +344,6 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
      !
      nbndval = nbnd_occ(iks)
      !
-     peso = 1._DP
-     !
      vband = idistribute()
      CALL vband%init(nbndval,'i','nbndval',.FALSE.)
      !
@@ -420,7 +408,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
               DO ig = 1,ngms
                  pertg(ig) = pertg(ig) * mysqvc(ig) 
               ENDDO
-              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - DDOT( 2*ngms, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
               !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
               IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
               !

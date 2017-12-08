@@ -246,7 +246,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   ! Workspace
   !
-  INTEGER :: ik,is,iks,iq,ikqs,ib,ifreq,glob_ifreq,il,im,glob_im,ip
+  INTEGER :: ik,ikk,iks,ikks,iq,ib,ifreq,glob_ifreq,il,im,glob_im,ip
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -288,21 +288,24 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      ik = k_grid%ip(iks) 
-     is = k_grid%is(iks)
+!     is = k_grid%is(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
         partial_h = 0._DP
         partial_b = 0._DP
         !
-        DO iq = 1, q_grid%np   ! Q-POINT
+!        DO iq = 1, q_grid%np   ! Q-POINT
+        DO ikks = 1, k_grid%nps    ! KPOINT-SPIN (INTEGRAL OVER K')
            !
-           CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+           ikk = k_grid%ip(ikks)
+           !
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
            !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
            !ikqs = k_grid%find( kmq, 'cart' )
            !ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)
-           nbndval = nbnd_occ(ikqs)
+           nbndval = nbnd_occ(ikks)
            !
            ! HEAD PART
            !
@@ -320,7 +323,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            DO ifreq = 1,ifr%nloc
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
-                 enrg = et(glob_im,ikqs) - energy(ib,iks)
+                 enrg = et(glob_im,ikks) - energy(ib,iks)
                  partial_b = partial_b + z_body1_ifr_q(im,ifreq,ib,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
               ENDDO
            ENDDO
@@ -341,7 +344,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               !
            ENDIF
            !
-        ENDDO ! iq
+        ENDDO ! ikks
         !
         CALL mp_sum( partial_h, intra_bgrp_comm) 
         CALL mp_sum( partial_b, intra_bgrp_comm) 
@@ -369,10 +372,10 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   ! LOOP 
   !
-  DO iks = 1, k_grid%nps
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      ik = k_grid%ip(iks)
-     is = k_grid%is(iks)
+!     is = k_grid%is(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -381,14 +384,17 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         residues_b = 0._DP
         residues_h = 0._DP
         !
-        DO iq = 1, q_grid%np   ! Q-POINT
+!        DO iq = 1, q_grid%np   ! Q-POINT
+        DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
            !
-           CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+           ikk = k_grid%ip(ikks)
+           !
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
            !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
            !ikqs = k_grid%find( kmq, 'cart' )
            !!ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)
-           nbndval = nbnd_occ(ikqs)
+           nbndval = nbnd_occ(ikks)
            !
            DO im = 1,aband%nloc
               !
@@ -397,15 +403,15 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               this_is_a_pole=.false.
               IF( glob_im <= nbndval ) THEN ! poles inside G+
                  segno = -1._DP
-                 IF( et(glob_im,ikqs) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
+                 IF( et(glob_im,ikks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
               ELSE ! poles inside G-
                  segno = 1._DP
-                 IF( et(glob_im,ikqs) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
+                 IF( et(glob_im,ikks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
               ENDIF  
               !
               IF( this_is_a_pole ) THEN
                  !
-                 CALL retrieve_glob_freq( et(glob_im,ikqs) - enrg, glob_ifreq )
+                 CALL retrieve_glob_freq( et(glob_im,ikks) - enrg, glob_ifreq )
                  !
                  DO ifreq = 1, rfr%nloc 
                     !
@@ -421,7 +427,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               !
            ENDDO ! im
            !
-        ENDDO ! iq
+        ENDDO ! ikks
         !
         CALL mp_sum( residues_h, intra_bgrp_comm )
         CALL mp_sum( residues_h, inter_image_comm )

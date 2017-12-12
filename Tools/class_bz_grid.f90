@@ -192,7 +192,7 @@ MODULE class_bz_grid
       ! Workspace
       ! 
       INTEGER :: i
-      REAL(DP) :: dp(3)
+      REAL(DP) :: deltap(3)
       !
       SELECT CASE(unit_type) 
       CASE("cryst","cart")
@@ -206,8 +206,8 @@ MODULE class_bz_grid
       !
       ip = 0
       DO i = 1, this%np
-         dp(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )
-         IF ( ALL ( ABS ( dp ) .LT. eps8 ) ) THEN
+         deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )
+         IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN
             ip = i + (is-1) * this%np
             g0(:) = p(:) - this%p_cryst(:,ip)
             EXIT

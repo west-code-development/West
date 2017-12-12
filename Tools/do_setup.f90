@@ -63,10 +63,10 @@ SUBROUTINE do_setup
   !
   ! INIT K, Q GRIDS
   !
-  k_grid = bz_grid()
+  !k_grid = bz_grid()
   CALL k_grid%init('K')
   !
-  q_grid = bz_grid()
+  !q_grid = bz_grid()
   CALL q_grid%init('Q')
   !
   IF ( ANY ( (q_grid%ngrid(:) - k_grid%ngrid(:)) /= 0   ) ) THEN

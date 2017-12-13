@@ -157,6 +157,8 @@ MODULE coulomb
       !
       IF ( q_grid%l_pIsGamma(iq) ) CALL compute_divergence( numg, singularity_removal_mode, div, l_print )
       !
+      CALL stop_clock('storesqvc')
+      !
    END SUBROUTINE
    !
    !
@@ -310,8 +312,6 @@ MODULE coulomb
          div = 0._DP
          !
       END SELECT
-      !
-      CALL stop_clock('storesqvc')
       !
    END SUBROUTINE
    !

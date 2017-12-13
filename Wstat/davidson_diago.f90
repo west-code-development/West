@@ -1174,14 +1174,14 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   USE kinds,                ONLY : DP
   USE random_numbers,       ONLY : randy
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
-  USE westcom,              ONLY : dvg,npwqx,npwq,igq_q
-  USE constants,            ONLY : tpi
+  USE westcom,              ONLY : dvg,npwqx,ngq,igq_q
+  USE constants,            ONLY : tpi,eps8
   USE cell_base,            ONLY : tpiba2
   USE mp,                   ONLY : mp_barrier
   USE mp_global,            ONLY : world_comm
   USE distribution_center,  ONLY : pert
   USE class_bz_grid,        ONLY : bz_grid
-  USE types_bz_grid,             ONLY : q_grid
+  USE types_bz_grid,        ONLY : q_grid
   !
   IMPLICIT NONE
   !
@@ -1196,13 +1196,12 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   REAL(DP),ALLOCATABLE :: random_num_debug(:,:)
   INTEGER :: il1,ig1,ig
   REAL(DP) :: aux_real
-  REAL(DP) :: rr, arg, q(3), qq(3), gnorm2
+  REAL(DP) :: rr, arg, qg(3), qgnorm2
   !
   CALL mp_barrier(world_comm)
   !
   CALL start_clock ('randomize')
   !
-  q(:) = q_grid%p_cart(:,iq)
   ! Random numbers are generated according to G-global
   !
   ALLOCATE(random_num_debug(2,ngm_g))
@@ -1223,16 +1222,13 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
      amat(:,il1) = 0._DP
 !$OMP PARALLEL private(ig,rr,arg)
 !$OMP DO
-     DO ig=1,npwq
-        qq(:) = q(:) + g(:,ig)
-        gnorm2 = (qq(1)**2 + qq(2)**2 + qq(3)**2) * tpiba2
-        IF ( gnorm2 < 1.d-8 ) CYCLE
+     DO ig=1,ngq(iq)
+        qg(:) = q_grid%q_cart(:,iq) + g(:,igq_q(ig,iq))
+        qgnorm2 = SUM( qg(:)**2 ) * tpiba2
+        IF ( qgnorm2 < eps8 ) CYCLE
         rr = random_num_debug(1,ig_l2g(igq_q(ig,iq)))
         arg = tpi * random_num_debug(2,ig_l2g(igq_q(ig,iq)))
-        amat(ig,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / &
-                      (  ( q(1)+g(1,igq_q(ig,iq)) )*( q(1)+g(1,igq_q(ig,iq)) ) + &
-                         ( q(2)+g(2,igq_q(ig,iq)) )*( q(2)+g(2,igq_q(ig,iq)) ) + &
-                         ( q(3)+g(3,igq_q(ig,iq)) )*( q(3)+g(3,igq_q(ig,iq)) ) + 1.0_DP ) 
+        amat(ig,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / ( qgnorm2 + 1.0_DP ) 
      ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL

@@ -1223,7 +1223,7 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
 !$OMP PARALLEL private(ig,rr,arg)
 !$OMP DO
      DO ig=1,ngq(iq)
-        qg(:) = q_grid%q_cart(:,iq) + g(:,igq_q(ig,iq))
+        qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq))
         qgnorm2 = SUM( qg(:)**2 ) * tpiba2
         IF ( qgnorm2 < eps8 ) CYCLE
         rr = random_num_debug(1,ig_l2g(igq_q(ig,iq)))

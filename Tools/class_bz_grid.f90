@@ -33,20 +33,10 @@ MODULE class_bz_grid
       REAL(DP), ALLOCATABLE :: weight(:)        ! weight of point p (sum of weights = nspin)       [ 1:nps ]
       LOGICAL, ALLOCATABLE :: l_pIsGamma(:)     ! .true. if point p = (0,0,0), else .false.        [ 1:np  ]
       !
-!      ! Used only for k+q/k-q grids  
-!      INTEGER, ALLOCATABLE :: index_kq(:,:)     ! given ik and iq  => index of kp = k+/-q (reported in 1BZ) 
-!      INTEGER, ALLOCATABLE :: index_q(:,:)      ! given ik and ikp => index of q = k - kp (reported in 1BZ)
-!      REAL(DP), ALLOCATABLE :: g0(:,:,:)        ! (3,ik,iq) or (3,ik,ikp) --> G0 that brings back the point in 1BZ 
-!      COMPLEX(DP), ALLOCATABLE :: phase(:)      ! given ik and ikp ==> e^(iG0.r) 
-      !
       CONTAINS
       !
       PROCEDURE :: init => k_or_q_grid_init
       PROCEDURE :: find => findp
-!      PROCEDURE :: add => addp
-!      PROCEDURE :: init_kq => kq_grid_init
-!      PROCEDURE :: init_q => q_grid_init
-!      PROCEDURE :: get_phase => get_phase
       !
    END TYPE bz_grid
    !

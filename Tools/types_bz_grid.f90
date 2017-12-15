@@ -23,12 +23,8 @@ MODULE types_bz_grid
   !
   TYPE(bz_grid) :: k_grid
   TYPE(bz_grid) :: q_grid
-  !TYPE(bz_grid) :: kmq_grid
-  !TYPE(bz_grid) :: kpq_grid
   !
   CONTAINS 
-  !
-  !
   !
   !
   FUNCTION findG(g0, unit_type) RESULT(ig0)

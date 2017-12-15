@@ -11,164 +11,123 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-MODULE coulomb
-   !--------------------------------------------------------------------
+MODULE class_coulomb
+!-----------------------------------------------------------------------
    !
-   USE kinds,                ONLY : DP
-   USE constants,            ONLY : pi, tpi, fpi, e2, eps8
-   USE cell_base,            ONLY : alat, omega, at, bg, tpiba, tpiba2
-   USE gvect,                ONLY : g
-   USE westcom,              ONLY : igq_q
-   USE class_bz_grid,        ONLY : bz_grid
-   USE types_bz_grid,        ONLY : q_grid
+   USE kinds,            ONLY : DP
    !
    IMPLICIT NONE
    !
    PRIVATE
    !
-   PUBLIC :: store_sqvc, compute_divergence, store_sqvc_sphcut
+   TYPE, PUBLIC :: coulomb
+      !
+      REAL(DP) :: div                              ! divergece 
+      CHARACTER(LEN=*) :: singularity_removal_mode ! singularity_removal_mode
+      INTEGER :: iq                                ! q-point
+      REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW 
+      !
+      CONTAINS
+      !
+      PROCEDURE :: init => sqvc_init
+      PROCEDURE :: compute_divergence => compute_divergence
+      PROCEDURE :: print_divergence => print_divergence 
+      !
+   END TYPE coulomb
    !
    CONTAINS
    !
-   !
-   !
    !-----------------------------------------------------------------------
-   SUBROUTINE store_sqvc(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq,div,l_printout_div)
+   SUBROUTINE sqvc_init(this,iq,singularity_removal_mode)
       !-----------------------------------------------------------------------
       !
       ! This routine computes results of applying sqVc to a potential
       ! associated with vector q. Coulomb cutoff technique can be used
       !
-      !USE kinds,                ONLY : DP
-      !USE constants,            ONLY : fpi, e2, pi, eps8
-      !USE cell_base,            ONLY : tpiba2,tpiba,at,alat
-      !USE gvect,                ONLY : g
-      USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
-                                       vcut_get,  vcut_spheric_get, vcut_destroy
-      !USE westcom,              ONLY : igq_q
-      !USE class_bz_grid,        ONLY : bz_grid
-      !USE types_bz_grid,        ONLY : q_grid
+      USE kinds,                ONLY : DP
+      USE constants,            ONLY : pi, tpi, fpi, e2, eps8
+      USE cell_base,            ONLY : alat, omega, at, bg, tpiba, tpiba2
+      USE gvect,                ONLY : g
+      USE westcom,              ONLY : igq_q,npwqx,npwq
+      USE types_bz_grid,        ONLY : q_grid
+      USE control_flags,        ONLY : gamma_only
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      INTEGER, INTENT(IN) :: numg
-      REAL(DP),INTENT(OUT) :: sqvc_tmp(numg)
+      CLASS(coulomb) :: this 
       CHARACTER(LEN=*), INTENT(IN) :: singularity_removal_mode
       INTEGER, INTENT(IN) :: iq
-      LOGICAL, INTENT(IN) :: l_use_igq
-      REAL(DP), INTENT(OUT) :: div
-      LOGICAL,INTENT(IN), OPTIONAL :: l_printout_div
       !
       ! Workspace
       !
-      REAL(DP) :: qgnorm2,qg(3),x,ecutvcut,atws(3,3)
+      REAL(DP) :: qgnorm2,qg(3),x
       INTEGER :: ig, ipol
       LOGICAL :: on_double_grid, l_print
-      REAL(DP) :: grid_factor = 8.d0/7.d0
-      TYPE(vcut_type) :: vcut
+      REAL(DP) :: grid_factor 
       !
       CALL start_clock('storesqvc')
       !
-      ! ======
-      !  BODY
-      ! ======
+      IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc ) 
+      ALLOCATE( this%sqvc( npwqx ) ) 
       !
-      SELECT CASE(singularity_removal_mode)
+      this%iq = iq 
+      this%singularity_removal_mode = singularity_removal_mode 
+      !
+      this%sqvc = 0._DP
+      DO ig = 1,npwq
          !
-      CASE("spherical")
+         IF ( gamma_only ) THEN
+            qg(:) = g(:,ig)
+         ELSE
+            qg(:) = g(:,igq_q(ig,this%iq)) + q_grid%p_cart(:,this%iq)
+         ENDIF
          !
-         ! In this case we use the spherical region 
+         qgnorm2 = SUM( qg(:)**2 ) * tpiba2
          !
-         sqvc_tmp = 0._DP
-         DO ig = 1,numg
-            IF ( l_use_igq ) THEN
-               qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq)) 
-            ELSE
-               qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
-            ENDIF
-            qgnorm2 = SUM( qg(:)**2 ) * tpiba2
-            IF ( qgnorm2 > eps8 ) sqvc_tmp(ig) = SQRT(e2*fpi/qgnorm2)
-         ENDDO
+         IF( qgnorm2 < eps8 ) CYCLE ! don't touch sqvc_tmp of |q+G|=0
          !
-      CASE("gb")
+         grid_factor = 1._DP
+         on_double_grid = .FALSE. 
          !
-         ! In this case we use Gygi-Baldereschi method
-         !
-         sqvc_tmp = 0._DP
-         DO ig = 1,numg
-            IF ( l_use_igq ) THEN
-               qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq)) 
-            ELSE
-               qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
-            ENDIF
-            qgnorm2 = SUM( qg(:)**2 ) * tpiba2
+         IF( this%singularity_removal_mode == "gb" ) THEN 
+            !
+            ! In this case we use Gygi-Baldereschi method
+            !
+            grid_factor = 8._DP/7._DP
             on_double_grid = .TRUE.
             DO ipol = 1,3
                x = 0.5_DP*( qg(1)*at(1,ipol)+qg(2)*at(2,ipol)+qg(3)*at(3,ipol) )*DBLE(q_grid%ngrid(ipol))
                on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
             ENDDO
-            IF( on_double_grid .OR. qgnorm2 < eps8 ) CYCLE
-            sqvc_tmp(ig)=SQRT(e2*fpi*grid_factor/qgnorm2)
-         ENDDO
-         !
-      CASE("ws")
-         !
-         ! In this case we use CUT_WS
-         ! 
-         ecutvcut = 0.7_DP
-         !
-         ! build the superperiodicity direct lattice
-         !
-         atws = alat * at
-         !
-         DO ipol=1,3
-            atws(:,ipol) = atws(:,ipol) * DBLE(q_grid%ngrid(ipol))
-         ENDDO
-         !
-         CALL vcut_init( vcut, atws, ecutvcut )
-         !
-         DO ig = 1,numg
             !
-            IF ( l_use_igq ) THEN
-               qg(:) = ( q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq)) ) * tpiba
-            ELSE
-               qg(:) = ( q_grid%p_cart(:,iq) + g(:,ig) ) * tpiba
-            ENDIF
-            !
-            sqvc_tmp( ig ) = DSQRT( vcut_get(vcut,qg) )
-            !
-         ENDDO
+         ENDIF 
          !
-         CALL vcut_destroy(vcut)
+         IF( on_double_grid ) CYCLE
+         this%sqvc(ig) = SQRT(e2*fpi*grid_factor/qgnorm2) 
          !
-      CASE DEFAULT 
-         !
-         CALL errore("store_sqvc", "singularity_removal_mode not supported, supported only spherical, gb, ws", 1 )
-         !
-      END SELECT
+      ENDDO
       !
-      IF ( PRESENT(l_printout_div) ) THEN
-         l_print = l_printout_div
-      ELSE
-         l_print = .FALSE.
-      ENDIF
-      !
-      IF ( q_grid%l_pIsGamma(iq) ) CALL compute_divergence( numg, singularity_removal_mode, div, l_print )
+      this%div = this%compute_divergence()
       !
       CALL stop_clock('storesqvc')
       !
    END SUBROUTINE
    !
+   SUBROUTINE print_divergence( this )
+      !
+      ! I/O
+      !
+      CLASS(coulomb) :: this
+      !
+      WRITE(stdout,"(5X,'Divergence = ',es14.6)") div 
+      ! 
+   END SUBROUTINE 
    !
    !
-   SUBROUTINE compute_divergence( numg, singularity_removal_mode, div, l_printout_div )
+   FUNCTION compute_divergence( this ) RESULT( div ) 
       !    
-      !USE kinds,                ONLY : DP
-      !USE constants,            ONLY : pi, tpi, fpi, e2, eps8
-      !USE cell_base,            ONLY : omega, at, bg, tpiba2
-      !USE gvect,                ONLY : g
       USE io_global,            ONLY : stdout
       USE mp,                   ONLY : mp_sum
       USE mp_global,            ONLY : intra_bgrp_comm
@@ -176,25 +135,25 @@ MODULE coulomb
       USE control_flags,        ONLY : gamma_only
       USE gvecw,                ONLY : ecutwfc
       USE random_numbers,       ONLY : randy
-      !USE class_bz_grid,        ONLY : bz_grid
-      !USE types_bz_grid,        ONLY : q_grid
       !
       ! I/O
       !
-      INTEGER, INTENT(IN) :: numg
-      CHARACTER(LEN=*), INTENT(IN) :: singularity_removal_mode
-      REAL(DP), INTENT(INOUT) :: div
-      LOGICAL, INTENT(IN) :: l_printout_div
+      CLASS(coulomb) :: this 
       !
       ! Workspace
       !
+      REAL(DP) :: div
       LOGICAL :: try_ort_div=.TRUE., i_am_ort, on_double_grid
       REAL(DP) :: qg(3), qgnorm2, alpha, peso
-      REAL(DP) :: grid_factor = 8.d0/7.d0
+      REAL(DP) :: grid_factor = 8._DP/7._DP
       INTEGER :: i1, i2, i3, iq, ig, ipol
       REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp, intcounter, x
       !
-      SELECT CASE( singularity_removal_mode )
+      div = 0 
+      !
+      IF ( .NOT. q_grid%l_pIsGamma(this%iq) ) RETURN 
+      !
+      SELECT CASE( this%singularity_removal_mode )
       !
       CASE("spherical")
          !
@@ -202,11 +161,11 @@ MODULE coulomb
          !
          div = ( (6._DP * pi * pi / ( omega*DBLE(q_grid%np) ) )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
          !
-         IF ( l_printout_div ) WRITE(stdout,"(5X,'Spherical div        = ',es14.6)") div 
+         ! If the angles are all 90 deg then overwrite div as follows: 
          !
          IF( try_ort_div ) THEN
             !  
-            ! Redefine div according to orthorombic cell
+            ! prod( i, j ) = (b_i)^t * b_j    (if off-diagonal prods are all zero --> the angles are all 90 deg --> cell is orthorombic)   
             !
             prod = 0._DP
             DO i1 = 1, 3
@@ -217,16 +176,19 @@ MODULE coulomb
                ENDDO
             ENDDO
             !
+            ! check if the off-diagonal prods are zero
+            !
             i_am_ort = .TRUE.
             DO i1 = 1, 3
                DO i2 = 1, 3
                   IF( i1 == i2 ) CYCLE
                   IF( ABS( prod(i1,i2)) > eps8 ) THEN 
-                     IF ( l_printout_div ) WRITE(stdout,"(5X,'Warning: non orthorombic RL')") 
                      i_am_ort = .FALSE.
                   ENDIF
                ENDDO
             ENDDO 
+            !
+            ! if the system is not ort, spherical div will remain 
             !
             IF ( i_am_ort ) THEN
                !
@@ -262,8 +224,6 @@ MODULE coulomb
                div = div / REAL(nproc,KIND=DP)
                CALL mp_sum(div,world_comm)
                !
-               IF ( l_printout_div ) WRITE(stdout,"(5X,'Orthorombic div      = ',es14.6)") div 
-               !
             ENDIF
             !
          ENDIF
@@ -272,14 +232,14 @@ MODULE coulomb
          !
          ! In this case we use Gygi-Baldereschi method
          !
-         alpha = 10._DP / ecutwfc
+         alpha = 10._DP / ecutwfc  ! DEFINITION OF ALPHA  
          !
          div = 0._DP
          !
          DO iq = 1, q_grid%np
             ! 
-            DO ig = 1,numg
-               qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
+            DO ig = 1,ngq(iq)                                  ! MATTEO CONTROLLA
+               qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq)) ! MATTEO CONTROLLA
                qgnorm2 = SUM( qg(:)**2 ) * tpiba2
                on_double_grid = .TRUE.
                DO ipol = 1,3
@@ -301,15 +261,7 @@ MODULE coulomb
             peso = 1._DP
          ENDIF
          !
-         div = div * grid_factor * e2 * fpi / (omega * DBLE(q_grid%np)) * peso
-         ! 
-         div = div + e2 / SQRT( alpha * pi )
-         !
-      CASE("ws")
-         !
-         ! In this case we use CUT_WS
-         ! 
-         div = 0._DP
+         div = div * grid_factor * e2 * fpi / (omega * DBLE(q_grid%np)) * peso + e2 / SQRT( alpha * pi )
          !
       END SELECT
       !
@@ -317,63 +269,55 @@ MODULE coulomb
    !
    !
    !
-   SUBROUTINE store_sqvc_sphcut(sqvc_tmp,numg,iq,l_use_igq,rcut)
-      !
-      ! This routine computes results of applying sqVc to a potential
-      ! associated with vector q. Coulomb cutoff technique can be used
-      !
-      !USE kinds,            ONLY : DP
-      !USE constants,        ONLY : fpi, e2, tpi, eps8
-      !USE cell_base,        ONLY : tpiba2
-      !USE gvect,            ONLY : g !, gstart
-      !USE westcom,          ONLY : igq_q
-      !USE class_bz_grid,    ONLY : bz_grid
-      !USE types_bz_grid,    ONLY : q_grid
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      INTEGER,INTENT(IN) :: numg
-      REAL(DP),INTENT(OUT) :: sqvc_tmp(numg)
-      INTEGER, INTENT(IN) :: iq
-      LOGICAL, INTENT(IN) :: l_use_igq
-      REAL(DP),INTENT(IN) :: rcut
-      !
-      ! Workspace
-      !
-      REAL(DP) :: qg(3), qgnorm2, qgnorm
-      INTEGER :: ig
-      !
-      !
-      CALL start_clock('storesqvc')
-      !
-      !
-      !IF(gstart==2) sqvc_tmp(1)=SQRT(tpi*e2*rcut*rcut)
-      !
+!  SUBROUTINE store_sqvc_sphcut(sqvc_tmp,numg,iq,l_use_igq,rcut)
+!     !
+!     ! This routine computes results of applying sqVc to a potential
+!     ! associated with vector q. Coulomb cutoff technique can be used
+!     !
+!     IMPLICIT NONE
+!     !
+!     ! I/O
+!     !
+!     INTEGER,INTENT(IN) :: numg
+!     REAL(DP),INTENT(OUT) :: sqvc_tmp(numg)
+!     INTEGER, INTENT(IN) :: iq
+!     LOGICAL, INTENT(IN) :: l_use_igq
+!     REAL(DP),INTENT(IN) :: rcut
+!     !
+!     ! Workspace
+!     !
+!     REAL(DP) :: qg(3), qgnorm2, qgnorm
+!     INTEGER :: ig
+!     !
+!     !
+!     CALL start_clock('storesqvc')
+!     !
+!     !
+!     !IF(gstart==2) sqvc_tmp(1)=SQRT(tpi*e2*rcut*rcut)
+!     !
 !!$OMP PARALLEL private(ig,qgnorm2,qgnorm,qg)
 !!$OMP DO
-      sqvc_tmp = 0._DP
-      DO ig = 1,numg
-         IF ( l_use_igq ) THEN
-            qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq))
-         ELSE
-            qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
-         ENDIF
-         qgnorm2 = ( SUM(qg(:))**2 ) * tpiba2
-         IF ( qgnorm2 < eps8 ) THEN
-            sqvc_tmp(ig)=SQRT(tpi*e2*rcut*rcut)
-         ELSE
-            qgnorm  = SQRT(qgnorm2)
-            sqvc_tmp(ig) = SQRT(e2*fpi/qgnorm2 * (1._DP-COS(qgnorm*rcut)))
-         ENDIF
-      ENDDO
+!     sqvc_tmp = 0._DP
+!     DO ig = 1,numg
+!        IF ( l_use_igq ) THEN
+!           qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq))
+!        ELSE
+!           qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
+!        ENDIF
+!        qgnorm2 = ( SUM(qg(:))**2 ) * tpiba2
+!        IF ( qgnorm2 < eps8 ) THEN
+!           sqvc_tmp(ig)=SQRT(tpi*e2*rcut*rcut)
+!        ELSE
+!           qgnorm  = SQRT(qgnorm2)
+!           sqvc_tmp(ig) = SQRT(e2*fpi/qgnorm2 * (1._DP-COS(qgnorm*rcut)))
+!        ENDIF
+!     ENDDO
 !!$OMP ENDDO
 !!$OMP END PARALLEL
-      !
-      CALL stop_clock('storesqvc')
-      !
-   END SUBROUTINE
+!     !
+!     CALL stop_clock('storesqvc')
+!     !
+!  END SUBROUTINE
    !
    !
    !

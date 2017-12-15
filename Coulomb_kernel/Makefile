@@ -12,8 +12,8 @@ IFLAGS=
 
 
 COULOMB_KERNEL_OBJS = \
-coulomb.o 
-#store_sqvc.o
+class_coulomb.o \
+types_coulomb.o 
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a

@@ -34,7 +34,7 @@ SUBROUTINE solve_hf_gamma( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,qp_bandrange,iks_l2g,&
+  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,qp_bandrange,iks_l2g,&
                                  & n_secant_maxiter,n_imfreq,nbnd_occ,trev_secant,l_enable_gwetot,exx_etot, &
                                  & sigma_exx, sigma_vxcl, sigma_vxcnl, sigma_hf
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm, &
@@ -139,7 +139,7 @@ SUBROUTINE solve_hf_k( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,qp_bandrange,iks_l2g,&
+  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,qp_bandrange,iks_l2g,&
                                  & n_secant_maxiter,n_imfreq,nbnd_occ,trev_secant,l_enable_gwetot,exx_etot, &
                                  & sigma_exx, sigma_vxcl, sigma_vxcnl, sigma_hf
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm, &

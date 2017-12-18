@@ -46,7 +46,8 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   USE class_idistribute,    ONLY : idistribute
   USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
                                    vcut_get,  vcut_spheric_get, vcut_destroy
-  USE coulomb,              ONLY : store_sqvc
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -64,10 +65,8 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
-  REAL(DP),ALLOCATABLE :: mysqvc(:)
-  REAL(DP) :: ecutvcut
-  TYPE(vcut_type)   :: vcut
-  REAL(DP) :: mydiv
+!  REAL(DP),ALLOCATABLE :: mysqvc(:)
+!  REAL(DP) :: mydiv
   !
   WRITE(stdout,'(5x,a)') ' '
   CALL io_push_bar()
@@ -75,14 +74,15 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   CALL io_push_bar()
   !
   ALLOCATE( pertg( ngms ) )
-  ALLOCATE( mysqvc(ngms) )
+!  ALLOCATE( mysqvc(ngms) )
   IF(noncolin) THEN 
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
   ELSE
      ALLOCATE( pertr( dffts%nnr ) )
   ENDIF
   !
-  CALL store_sqvc( mysqvc, ngms, 'gb', 1, .FALSE., mydiv )
+  CALL pot3D%init('Smooth','gb')
+!  CALL store_sqvc( mysqvc, ngms, 'gb', 1, .FALSE., mydiv )
   !CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
   !
   ! Set to zero
@@ -178,11 +178,11 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
            ENDIF 
            !
            DO ig = 1,ngms
-              pertg(ig) = pertg(ig) * mysqvc(ig) 
+              pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
            ENDDO
            sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - 2._DP * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1) / omega
            !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
-           IF( ib == iv_glob .AND. gstart == 2 ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
+           IF( ib == iv_glob .AND. gstart == 2 ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
            !
         ENDDO
         !
@@ -198,7 +198,7 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   CALL mp_sum( sigma_exx, inter_image_comm ) 
   !
   DEALLOCATE( pertg ) 
-  DEALLOCATE( mysqvc )
+!  DEALLOCATE( mysqvc )
   IF( noncolin ) THEN 
     DEALLOCATE( pertr_nc ) 
   ELSE
@@ -230,7 +230,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ,div_kind_hf
+  USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
@@ -245,7 +245,8 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
                                    vcut_get,  vcut_spheric_get, vcut_destroy
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
-  USE coulomb,              ONLY : store_sqvc
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -266,11 +267,9 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
-  REAL(DP),ALLOCATABLE :: mysqvc(:)
+!  REAL(DP),ALLOCATABLE :: mysqvc(:)
   LOGICAL :: l_gammaq
-  REAL(DP) :: ecutvcut
-  TYPE(vcut_type)   :: vcut
-  REAL(DP) :: mydiv
+!  REAL(DP) :: mydiv
   REAL(DP) :: g0(3)
   !
   WRITE(stdout,'(5x,a)') ' '
@@ -279,7 +278,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   CALL io_push_bar()
   !
   ALLOCATE( pertg( ngms ) )
-  ALLOCATE( mysqvc( ngms ) )
+!  ALLOCATE( mysqvc( ngms ) )
   ALLOCATE( phase(dffts%nnr) )
   ALLOCATE( evckmq(npwx*npol,nbnd) )
   IF(noncolin) THEN 
@@ -369,7 +368,8 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
            !ikqs = k_grid%find( kmq, 'cart' )
            !!ikqs = kmq_grid%index_kq(iks,iq)
            !
-           CALL store_sqvc( mysqvc, ngms, 'gb', iq, .FALSE., mydiv )
+           CALL pot3D%init('Smooth', 'gb', iq)
+!           CALL store_sqvc( mysqvc, ngms, 'gb', iq, .FALSE., mydiv )
            !IF ( l_gammaq ) THEN
            !   CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
            !ELSE
@@ -406,11 +406,11 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
               ENDIF 
               !
               DO ig = 1,ngms
-                 pertg(ig) = pertg(ig) * mysqvc(ig) 
+                 pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
               ENDDO
               sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - DDOT( 2*ngms, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
               !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
-              IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
+              IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
               !
            ENDDO ! iv
            !
@@ -428,7 +428,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   CALL mp_sum( sigma_exx, inter_image_comm ) 
   !
   DEALLOCATE( pertg ) 
-  DEALLOCATE( mysqvc )
+!  DEALLOCATE( mysqvc )
   IF( noncolin ) THEN 
     DEALLOCATE( pertr_nc ) 
   ELSE

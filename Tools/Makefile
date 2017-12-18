@@ -32,7 +32,6 @@ clean_scratchfiles.o \
 set_nbndocc.o \
 get_alpha_pv.o \
 set_iks_l2g.o \
-set_isz.o \
 v_x.o \
 gradcorr_x.o \
 west_environment.o \

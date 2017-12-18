@@ -23,9 +23,10 @@ MODULE class_coulomb
    TYPE, PUBLIC :: coulomb
       !
       REAL(DP) :: div                              ! divergece 
-      CHARACTER(LEN=*) :: singularity_removal_mode ! singularity_removal_mode
+      CHARACTER(LEN=7) :: singularity_removal_mode ! singularity_removal_mode
       INTEGER :: iq                                ! q-point
       REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW 
+      INTEGER :: numg, numgx
       !
       CONTAINS
       !
@@ -38,16 +39,17 @@ MODULE class_coulomb
    CONTAINS
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE sqvc_init(this,iq,singularity_removal_mode)
+   SUBROUTINE sqvc_init(this,cdriver,singularity_removal_mode,iq)
       !-----------------------------------------------------------------------
       !
       ! This routine computes results of applying sqVc to a potential
       ! associated with vector q. Coulomb cutoff technique can be used
       !
       USE kinds,                ONLY : DP
-      USE constants,            ONLY : pi, tpi, fpi, e2, eps8
-      USE cell_base,            ONLY : alat, omega, at, bg, tpiba, tpiba2
+      USE constants,            ONLY : fpi, e2, eps8
+      USE cell_base,            ONLY : at, tpiba2
       USE gvect,                ONLY : g
+      USE gvecs,                ONLY : ngms
       USE westcom,              ONLY : igq_q,npwqx,npwq
       USE types_bz_grid,        ONLY : q_grid
       USE control_flags,        ONLY : gamma_only
@@ -57,26 +59,46 @@ MODULE class_coulomb
       ! I/O
       !
       CLASS(coulomb) :: this 
+      CHARACTER(LEN=*), INTENT(IN) :: cdriver
       CHARACTER(LEN=*), INTENT(IN) :: singularity_removal_mode
-      INTEGER, INTENT(IN) :: iq
+      INTEGER, INTENT(IN), OPTIONAL :: iq
       !
       ! Workspace
       !
       REAL(DP) :: qgnorm2,qg(3),x
+      INTEGER :: numg, numgx
       INTEGER :: ig, ipol
       LOGICAL :: on_double_grid, l_print
       REAL(DP) :: grid_factor 
       !
-      CALL start_clock('storesqvc')
+      CALL start_clock('sqvc_init')
+      !
+      SELECT CASE ( cdriver )
+      CASE ( 'Wave' )
+         this%numg = npwq
+         this%numgx = npwqx
+      CASE ( 'Smooth' )      
+         this%numg = ngms
+         this%numgx = ngms
+      CASE DEFAULT 
+         CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Smooth",1)
+      END SELECT
       !
       IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc ) 
-      ALLOCATE( this%sqvc( npwqx ) ) 
+      ALLOCATE( this%sqvc( this%numgx ) ) 
       !
-      this%iq = iq 
-      this%singularity_removal_mode = singularity_removal_mode 
+      IF ( PRESENT(iq) ) THEN
+         this%iq = iq 
+      ELSE 
+         this%iq = 1   ! gamma-only
+      ENDIF
+      !
+      this%singularity_removal_mode = TRIM(singularity_removal_mode)
+      IF (this%singularity_removal_mode /= "gb" .AND. this%singularity_removal_mode /= "default") &
+         & CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
       !
       this%sqvc = 0._DP
-      DO ig = 1,npwq
+      DO ig = 1,this%numg
          !
          IF ( gamma_only ) THEN
             qg(:) = g(:,ig)
@@ -109,32 +131,26 @@ MODULE class_coulomb
          !
       ENDDO
       !
-      this%div = this%compute_divergence()
+      IF ( q_grid%l_pIsGamma(this%iq) ) this%div = this%compute_divergence()
       !
-      CALL stop_clock('storesqvc')
+      CALL stop_clock('sqvc_init')
       !
    END SUBROUTINE
-   !
-   SUBROUTINE print_divergence( this )
-      !
-      ! I/O
-      !
-      CLASS(coulomb) :: this
-      !
-      WRITE(stdout,"(5X,'Divergence = ',es14.6)") div 
-      ! 
-   END SUBROUTINE 
    !
    !
    FUNCTION compute_divergence( this ) RESULT( div ) 
       !    
-      USE io_global,            ONLY : stdout
+      USE constants,            ONLY : pi, tpi, fpi, e2, eps8
+      USE cell_base,            ONLY : omega, at, bg,  tpiba2
       USE mp,                   ONLY : mp_sum
       USE mp_global,            ONLY : intra_bgrp_comm
       USE mp_world,             ONLY : mpime, world_comm, nproc
       USE control_flags,        ONLY : gamma_only
       USE gvecw,                ONLY : ecutwfc
       USE random_numbers,       ONLY : randy
+      USE gvect,                ONLY : g
+      USE westcom,              ONLY : ngq,igq_q
+      USE types_bz_grid,        ONLY : q_grid
       !
       ! I/O
       !
@@ -149,13 +165,11 @@ MODULE class_coulomb
       INTEGER :: i1, i2, i3, iq, ig, ipol
       REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp, intcounter, x
       !
-      div = 0 
-      !
-      IF ( .NOT. q_grid%l_pIsGamma(this%iq) ) RETURN 
+      div = 0._DP
       !
       SELECT CASE( this%singularity_removal_mode )
       !
-      CASE("spherical")
+      CASE("default")
          !
          ! In this case we use the spherical region 
          !
@@ -238,8 +252,8 @@ MODULE class_coulomb
          !
          DO iq = 1, q_grid%np
             ! 
-            DO ig = 1,ngq(iq)                                  ! MATTEO CONTROLLA
-               qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq)) ! MATTEO CONTROLLA
+            DO ig = 1,ngq(iq)
+               qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq))
                qgnorm2 = SUM( qg(:)**2 ) * tpiba2
                on_double_grid = .TRUE.
                DO ipol = 1,3
@@ -265,7 +279,22 @@ MODULE class_coulomb
          !
       END SELECT
       !
-   END SUBROUTINE
+   END FUNCTION
+   !
+   !
+   SUBROUTINE print_divergence( this )
+      !
+      USE io_global,      ONLY : stdout
+      USE types_bz_grid,   ONLY : q_grid
+      !
+      ! I/O
+      !
+      CLASS(coulomb) :: this
+      !
+      IF ( .NOT. q_grid%l_pIsGamma(this%iq) ) RETURN
+      WRITE(stdout,"(5X,'Divergence = ',es14.6)") this%div 
+      ! 
+   END SUBROUTINE 
    !
    !
    !

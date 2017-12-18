@@ -8,6 +8,7 @@ MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LA
           $(MOD_FLAG)../Modules \
           $(MOD_FLAG)../Tools \
           $(MOD_FLAG)../FFT_kernel \
+          $(MOD_FLAG)../Coulomb_kernel \
           $(MOD_FLAG).
 IFLAGS=
 

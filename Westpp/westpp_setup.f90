@@ -14,9 +14,9 @@
 SUBROUTINE westpp_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq,sqvc,west_prefix,westpp_save_dir,&
+  USE westcom,                ONLY : alphapv_dfpt,npwq,west_prefix,westpp_save_dir,&
                                    & n_imfreq,nbnd_occ,l_macropol,macropol_calculation,&
-                                   & n_refreq,isz,qp_bandrange,westpp_calculation,westpp_n_pdep_eigen_to_use
+                                   & n_refreq,qp_bandrange,westpp_calculation,westpp_n_pdep_eigen_to_use
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : nbnd
@@ -28,7 +28,8 @@ SUBROUTINE westpp_setup
   USE wavefunctions_module,   ONLY : evc
   USE mod_mpiio,              ONLY : set_io_comm
   USE pdep_db,                ONLY : pdep_db_read
-  USE coulomb,                ONLY : store_sqvc
+  USE class_coulomb,          ONLY : coulomb
+  USE types_coulomb,          ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -36,15 +37,16 @@ SUBROUTINE westpp_setup
   REAL(DP) :: qq
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: ig, i
-  LOGICAL :: l_printout_div = .TRUE.
   !
   CALL do_setup ( ) 
   !
   CALL set_npwq()
   !
-  ALLOCATE(sqvc(npwq))
+!  ALLOCATE(sqvc(npwq))
   !
-  CALL store_sqvc(sqvc,npwq,'spherical',1,.FALSE.,isz,l_printout_div)
+  CALL pot3D%init('Wave','default')
+  CALL pot3D%print_divergence()
+!  CALL store_sqvc(sqvc,npwq,'spherical',1,.FALSE.,isz,l_printout_div)
   !CALL store_sqvc(sqvc,npwq,1,isz)
   !
   CALL set_nbndocc()

@@ -41,7 +41,7 @@ SUBROUTINE davidson_diago_gamma ( )
   USE distribution_center,  ONLY : pert
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE westcom,              ONLY : dvg,dng,sqvc,isz,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
+  USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwqx,npwq,&
                                    & npwqx,npwq,trev_pdep_rel,tr2_dfpt,l_is_wstat_converged
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
@@ -54,7 +54,8 @@ SUBROUTINE davidson_diago_gamma ( )
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid
-  USE coulomb,              ONLY : store_sqvc
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -115,9 +116,9 @@ SUBROUTINE davidson_diago_gamma ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dng ', ABS(ierr) )
   !
-  ALLOCATE( sqvc( npwqx ), STAT=ierr )
-  IF( ierr /= 0 ) &
-     CALL errore( 'chidiago',' cannot allocate sqvc ', ABS(ierr) )
+!  ALLOCATE( sqvc( npwqx ), STAT=ierr )
+!  IF( ierr /= 0 ) &
+!     CALL errore( 'chidiago',' cannot allocate sqvc ', ABS(ierr) )
   !
   ALLOCATE( hr_distr( nvecx, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -150,7 +151,9 @@ SUBROUTINE davidson_diago_gamma ( )
   notcnv  = nvec 
   dav_iter = -2
   !
-  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz, .TRUE. )
+  CALL pot3D%init('Wave','default')
+  CALL pot3d%print_divergence()
+!  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz, .TRUE. )
   !CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
   !
   ! KIND OF CALCULATION
@@ -466,7 +469,7 @@ SUBROUTINE davidson_diago_k ( )
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged, &
-                                   & sqvc,isz,ngq,npwq,igq_q,npwqx
+                                   & ngq,npwq,igq_q,npwqx
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
@@ -478,7 +481,8 @@ SUBROUTINE davidson_diago_k ( )
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : q_grid
-  USE coulomb,              ONLY : store_sqvc
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -565,8 +569,8 @@ SUBROUTINE davidson_diago_k ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate conv ', ABS(ierr) )
   !
-  ALLOCATE(sqvc(npwqx), STAT=ierr)
-     CALL errore( 'chidiago',' cannot allocate sqvc ', ABS(ierr) )
+!  ALLOCATE(sqvc(npwqx), STAT=ierr)
+!     CALL errore( 'chidiago',' cannot allocate sqvc ', ABS(ierr) )
   !
   !
   QPOINTS_LOOP: &
@@ -589,7 +593,9 @@ SUBROUTINE davidson_diago_k ( )
      !
      ! compute Coulomb potential
      !
-     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz, .TRUE. )
+     CALL pot3D%init('Wave','default',iq)
+     CALL pot3d%print_divergence()
+!     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz, .TRUE. )
      !IF ( q_grid%l_pIsGamma(iq) ) THEN
      !   CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
      !ELSE
@@ -917,7 +923,7 @@ SUBROUTINE davidson_diago_k ( )
   DEALLOCATE( ev )
   DEALLOCATE( hr_distr )
   DEALLOCATE( vr_distr )
-  DEALLOCATE( sqvc )
+!  DEALLOCATE( sqvc )
   !
   !
   DEALLOCATE( dng )

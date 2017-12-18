@@ -24,13 +24,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : tpi,fpi,rytoev,e2,pi
   USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
-  USE westcom,              ONLY : qp_bandrange,isz,&
-                                 & nbnd_occ,l_enable_lanczos,&
-                                 & n_lanczos,iks_l2g,l_macropol,&
+  USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,iks_l2g,l_macropol,&
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -129,7 +128,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         CALL mp_sum( partial_b, intra_bgrp_comm) 
         CALL mp_sum( partial_b, inter_image_comm) 
         !
-        sigma_corr(ib,iks) = sigma_corr(ib,iks) + CMPLX( partial_b/omega/pi + partial_h*isz/pi, 0._DP, KIND=DP ) 
+        sigma_corr(ib,iks) = sigma_corr(ib,iks) + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
         !
@@ -198,7 +197,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         CALL mp_sum( residues_b, intra_bgrp_comm )
         CALL mp_sum( residues_b, inter_image_comm )
         !
-        sigma_corr(ib,iks) = sigma_corr(ib,iks) + residues_b/omega + residues_h*isz
+        sigma_corr(ib,iks) = sigma_corr(ib,iks) + residues_b/omega + residues_h*pot3D%div
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
         !
@@ -225,15 +224,14 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : tpi,fpi,rytoev,e2,pi
   USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
-  USE westcom,              ONLY : qp_bandrange,isz,&
-                                 & nbnd_occ,l_enable_lanczos,&
-                                 & n_lanczos,iks_l2g,l_macropol,&
+  USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,iks_l2g,l_macropol,&
                                  & z_head_ifr,z_head_rfr,z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -350,7 +348,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         CALL mp_sum( partial_b, intra_bgrp_comm) 
         CALL mp_sum( partial_b, inter_image_comm) 
         !
-        sigma_corr(ib,iks) = sigma_corr(ib,iks) + partial_b/omega/pi + partial_h*isz/pi 
+        sigma_corr(ib,iks) = sigma_corr(ib,iks) + partial_b/omega/pi + partial_h*pot3D%div/pi 
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
         !
@@ -434,7 +432,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         CALL mp_sum( residues_b, intra_bgrp_comm )
         CALL mp_sum( residues_b, inter_image_comm )
         !
-        sigma_corr(ib,iks) = sigma_corr(ib,iks) + residues_b/omega + residues_h*isz
+        sigma_corr(ib,iks) = sigma_corr(ib,iks) + residues_b/omega + residues_h*pot3D%div
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
         !

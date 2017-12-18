@@ -36,9 +36,10 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
   USE io_files,              ONLY : tmp_dir, nwordwfc, iunwfc, diropn
   USE uspp,                  ONLY : nkb, vkb, okvan
   USE constants,             ONLY : e2,fpi
-  USE westcom,               ONLY : npwq,sqvc,nbnd_occ,iuwfc,lrwfc,npwqx,fftdriver
+  USE westcom,               ONLY : npwq,nbnd_occ,iuwfc,lrwfc,npwqx,fftdriver
   USE io_push,               ONLY : io_push_title
   USE mp_world,              ONLY : mpime,world_comm
+  USE types_coulomb,         ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -149,7 +150,7 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
         aux_r = 0._DP
         !
         DO ig = 1, npwq  ! perturbation acts only on body
-           aux_g(ig) = dvg(ig,ipert) * sqvc(ig) 
+           aux_g(ig) = dvg(ig,ipert) * pot3D%sqvc(ig) 
         ENDDO
         !
         IF(gamma_only) THEN
@@ -290,7 +291,7 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
         ENDIF
         !
         DO ig=1,npwq ! pert acts only on body
-           dng(ig,ipert) = dng(ig,ipert) + 2._DP * wk(iks) * aux_g(ig) * sqvc(ig) / omega
+           dng(ig,ipert) = dng(ig,ipert) + 2._DP * wk(iks) * aux_g(ig) * pot3D%sqvc(ig) / omega
         ENDDO
         !
         DEALLOCATE(aux_g)
@@ -354,11 +355,12 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   USE control_flags,         ONLY : gamma_only, io_level
   USE io_files,              ONLY : tmp_dir, nwordwfc, iunwfc, diropn
   USE uspp,                  ONLY : nkb, vkb, okvan
-  USE westcom,               ONLY : sqvc,nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q
+  USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q
   USE io_push,               ONLY : io_push_title
   USE mp_world,              ONLY : mpime,world_comm
   USE class_bz_grid,         ONLY : bz_grid
   USE types_bz_grid,         ONLY : k_grid, q_grid, compute_phase
+  USE types_coulomb,         ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -489,7 +491,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
         aux_r = (0._DP,0._DP)
         !
         DO ig = 1, npwq  ! perturbation acts only on body
-           aux_g(ig) = dvg(ig,ipert) * sqvc(ig) 
+           aux_g(ig) = dvg(ig,ipert) * pot3D%sqvc(ig) 
         ENDDO
         !
         ! inverse Fourier transform of the perturbation: (q+)G ---> R
@@ -621,7 +623,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
         CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,aux_g,'Wave',igq_q(1,iq))
         !
         DO ig = 1, npwq ! pert acts only on body
-           dng(ig,ipert) = dng(ig,ipert) + 2._DP * wk(iks) * aux_g(ig) * sqvc(ig) / omega
+           dng(ig,ipert) = dng(ig,ipert) + 2._DP * k_grid%weight(iks) * aux_g(ig) * pot3D%sqvc(ig) / omega
         ENDDO
         !
         DEALLOCATE( aux_g )

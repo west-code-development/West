@@ -15,7 +15,7 @@ SUBROUTINE wstat_setup
   !-----------------------------------------------------------------------
   !
   USE westcom,                ONLY : alphapv_dfpt,npwq,west_prefix,&
-                                   & n_pdep_basis,n_pdep_eigen,n_pdep_times,isz,l_use_ecutrho,&
+                                   & n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,&
                                    & wstat_save_dir, wstat_restart_dir
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm

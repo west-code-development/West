@@ -39,7 +39,8 @@ SUBROUTINE do_sxx ( )
   USE mp_world,              ONLY : mpime,root
   USE constants,             ONLY : rytoev
   USE json_module,           ONLY : json_file
-  USE coulomb,               ONLY : store_sqvc
+  USE class_coulomb,         ONLY : coulomb
+  USE types_coulomb,         ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -47,9 +48,9 @@ SUBROUTINE do_sxx ( )
   !
   INTEGER :: ir, ip, ig, iks, ib, iv, ip_glob 
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
-  REAL(DP),ALLOCATABLE :: mysqvc(:)
+!  REAL(DP),ALLOCATABLE :: mysqvc(:)
   TYPE(bar_type) :: barra
-  REAL(DP) :: mydiv
+!  REAL(DP) :: mydiv
   REAL(DP),ALLOCATABLE :: sigma_exx( :, : ) 
   REAL(DP),ALLOCATABLE :: sigma_sxx( :, : ) 
   REAL(DP) :: peso
@@ -61,8 +62,9 @@ SUBROUTINE do_sxx ( )
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
-  ALLOCATE( mysqvc(npwq) )
-  CALL store_sqvc(mysqvc,npwq,'spherical',1,.FALSE.,mydiv)
+  CALL pot3d%init('Wave','gb')
+!  ALLOCATE( mysqvc(npwq) )
+!  CALL store_sqvc(mysqvc,npwq,'spherical',1,.FALSE.,mydiv)
   !CALL store_sqvc(mysqvc,npwq,1,mydiv)
   !
   CALL io_push_title("(S)creened eXact eXchange")
@@ -155,11 +157,11 @@ SUBROUTINE do_sxx ( )
            ENDIF 
            !
            DO ig = 1,npwq
-              pertg(ig) = pertg(ig) * mysqvc(ig) 
+              pertg(ig) = pertg(ig) * 3Dpot%sqvc(ig) 
            ENDDO
            sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*npwq, pertg(1), 1, pertg(1), 1) / omega
            !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
-           IF( ib == iv .AND. gstart == 2 ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - mydiv
+           IF( ib == iv .AND. gstart == 2 ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
            !
            ! -- < SXX >
            IF( gamma_only ) THEN  
@@ -169,7 +171,7 @@ SUBROUTINE do_sxx ( )
                  ip_glob = pert%l2g(ip)
                  sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - dproj(1,ip)**2 * (ev(ip_glob)/(1._DP-ev(ip_glob))) / omega
               ENDDO
-              IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * mydiv
+              IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * pot3D%div
            ELSE
               CALL glbrak_k( pertg, dvg, zproj, npwq, npwqx, 1, pert%nloc, 1, npol)
               CALL mp_sum( zproj, intra_bgrp_comm )
@@ -178,7 +180,7 @@ SUBROUTINE do_sxx ( )
                  sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - REAL(zproj(1,ip)*CONJG(zproj(1,ip)),KIND=DP) &
                                       & * (ev(ip_glob)/(1._DP-ev(ip_glob))) / omega
               ENDDO
-              IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * mydiv
+              IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * pot3D%div
            ENDIF 
            ! -- </ SXX > 
            !
@@ -198,7 +200,7 @@ SUBROUTINE do_sxx ( )
   sigma_sxx = sigma_exx + sigma_sxx 
   !
   DEALLOCATE( pertg ) 
-  DEALLOCATE( mysqvc )
+!  DEALLOCATE( mysqvc )
   IF( noncolin ) THEN 
     DEALLOCATE( pertr_nc ) 
   ELSE

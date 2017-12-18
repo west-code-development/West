@@ -35,8 +35,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
-                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,isz,&
+  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
+                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime
@@ -65,8 +65,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid
-  USE coulomb,              ONLY : store_sqvc
   USE chi_invert,           ONLY : chi_invert_real, chi_invert_complex
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -135,7 +136,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   dmati = 0._DP
   zmatr = 0._DP
   !
-  ALLOCATE( sqvc(npwqx) )
+!  ALLOCATE( sqvc(npwqx) )
   !
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bks, dmati, zmatr, mypara%nglob, mypara%nloc )
@@ -164,7 +165,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      CALL start_bar_type ( barra, 'wlanczos', barra_load )
   ENDIF
   !
-  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz )
+  CALL pot3D%init('Wave','default')
+!  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz )
   !CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
   !
   ! LOOP 
@@ -310,7 +312,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               !
               ! Multiply by sqvc
               DO ig = 1, npwq
-                 pertg(ig) = sqvc(ig) * pertg(ig)
+                 pertg(ig) = pot3D%sqvc(ig) * pertg(ig)
               ENDDO
               !
               ! Bring it to R-space
@@ -613,10 +615,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,z_epsm1_ifr_q,&
+  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,z_epsm1_ifr_q,&
                                  &  z_epsm1_rfr_q,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir,&
-                                 & ngq, igq_q, isz
+                                 & ngq, igq_q
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
@@ -644,8 +646,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
-  USE coulomb,              ONLY : store_sqvc
   USE chi_invert,           ONLY : chi_invert_complex
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -721,7 +724,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   zmati_q = 0._DP
   zmatr_q = 0._DP
   !
-  ALLOCATE( sqvc(npwqx) )
+!  ALLOCATE( sqvc(npwqx) )
   !
   ALLOCATE( evckpq(npwx*npol,nbnd) )
   IF (noncolin) THEN
@@ -771,7 +774,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      npwq = ngq(iq)
      l_gammaq = q_grid%l_pIsGamma(iq)
      !
-     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz )
+     CALL pot3D%init('Wave','default',iq)
+!     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz )
      !IF (l_gammaq) THEN
      !   CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
      !ELSE
@@ -949,7 +953,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
                  ! Multiply by sqvc
                  DO ig = 1, npwq
-                    pertg(ig) = sqvc(ig) * pertg(ig)
+                    pertg(ig) = pot3D%sqvc(ig) * pertg(ig)
                  ENDDO
                  !
                  ! Bring it to R-space

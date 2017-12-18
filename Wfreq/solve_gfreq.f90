@@ -35,7 +35,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : sqvc,isz,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
+  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver, &
                                  & wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm,inter_pool_comm
@@ -62,7 +62,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE distribution_center,  ONLY : pert
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq
-  USE coulomb,              ONLY : store_sqvc
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -97,7 +98,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL deallocate_bec_type( becp ) 
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
-  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz ) 
+  CALL pot3D%init('Wave','default')
+!  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz ) 
   !CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
   !
   IF(l_read_restart) THEN
@@ -218,7 +220,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            ! Multiply by sqvc
            !pertg(:) = sqvc(:) * pertg(:) ! / SQRT(fpi*e2)     ! CONTROLLARE QUESTO
            DO ig = 1, npwq
-              pertg(ig) = sqvc(ig) * pertg(ig)
+              pertg(ig) = pot3D%sqvc(ig) * pertg(ig)
            ENDDO
            !
            ! Bring it to R-space
@@ -330,7 +332,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
   ENDDO ! KPOINT-SPIN 
   ! 
-  DEALLOCATE( sqvc )
+!  DEALLOCATE( sqvc )
   !
   CALL stop_bar_type( barra, 'glanczos' )
   !
@@ -341,9 +343,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : sqvc,west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
+  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver, &
-                                 & wstat_save_dir,ngq,igq_q,isz
+                                 & wstat_save_dir,ngq,igq_q
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm,inter_pool_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout, ionode
@@ -370,7 +372,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq_q
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
-  USE coulomb,              ONLY : store_sqvc
+  USE class_coulomb,        ONLY : coulomb
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -433,12 +436,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      ALLOCATE( psick(dffts%nnr) )
   ENDIF
   ALLOCATE( phase(dffts%nnr) )
-  !
-  !k1_grid = bz_grid()
-  !CALL k1_grid%init('K')
-  !!
-  !q_grid_aux = bz_grid()
-  !CALL q_grid_aux%init_q( k_grid, k1_grid )
   !
   barra_load = 0
   DO ikks = 1, k_grid%nps
@@ -513,7 +510,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ! compute Coulomb potential
            !
-           CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz ) 
+           CALL pot3D%init('Wave', 'default', iq)
+           !CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz ) 
            !IF ( q_grid%l_pIsGamma(iq) ) THEN
            !   CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
            !ELSE
@@ -580,7 +578,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               ! Multiply by sqvc
               !pertg(:) = sqvc(:) * pertg(:) ! / SQRT(fpi*e2)     ! CONTROLLARE QUESTO
               DO ig = 1, npwq
-                 pertg(ig) = sqvc(ig) * pertg(ig)
+                 pertg(ig) = pot3D%sqvc(ig) * pertg(ig)
               ENDDO
               !
               ! Bring it to R-space
@@ -690,7 +688,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
   ENDDO ! KPOINT-SPIN (MATRIX ELEMENT)
   !
-  DEALLOCATE( sqvc )
+!  DEALLOCATE( sqvc )
   DEALLOCATE( phase )
   DEALLOCATE( psick )
   DEALLOCATE( evck )

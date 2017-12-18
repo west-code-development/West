@@ -99,8 +99,8 @@ MODULE class_coulomb
       this%sqvc = 0._DP
       DO ig = 1,numg
          !
-         IF ( gamma_only ) THEN
-            qg(:) = g(:,ig)
+         IF ( gamma_only .OR. cdriver == 'Smooth') THEN ! if smooth grid is used (X), no mapping is needed
+            qg(:) = g(:,ig) + q_grid%p_cart(:,this%iq)
          ELSE
             qg(:) = g(:,igq_q(ig,this%iq)) + q_grid%p_cart(:,this%iq)
          ENDIF
@@ -148,7 +148,7 @@ MODULE class_coulomb
       USE gvecw,                ONLY : ecutwfc
       USE random_numbers,       ONLY : randy
       USE gvect,                ONLY : g
-      USE westcom,              ONLY : ngq,igq_q
+      USE gvecs,                ONLY : ngms
       USE types_bz_grid,        ONLY : q_grid
       !
       ! I/O
@@ -251,8 +251,8 @@ MODULE class_coulomb
          !
          DO iq = 1, q_grid%np
             ! 
-            DO ig = 1,ngq(iq)
-               qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq))
+            DO ig = 1,ngms
+               qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
                qgnorm2 = SUM( qg(:)**2 ) * tpiba2
                on_double_grid = .TRUE.
                DO ipol = 1,3

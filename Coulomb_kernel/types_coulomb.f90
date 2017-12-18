@@ -15,7 +15,7 @@ MODULE types_coulomb
 !-----------------------------------------------------------------------
   !
   USE kinds,           ONLY : DP
-  USE class_coulomb,   ONLY : coulomb 
+  USE class_coulomb,   ONLY : coulomb
   !
   IMPLICIT NONE
   !

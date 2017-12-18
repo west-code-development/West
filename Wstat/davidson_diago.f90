@@ -116,10 +116,6 @@ SUBROUTINE davidson_diago_gamma ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dng ', ABS(ierr) )
   !
-!  ALLOCATE( sqvc( npwqx ), STAT=ierr )
-!  IF( ierr /= 0 ) &
-!     CALL errore( 'chidiago',' cannot allocate sqvc ', ABS(ierr) )
-  !
   ALLOCATE( hr_distr( nvecx, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate hr_distr ', ABS(ierr) )
@@ -153,8 +149,6 @@ SUBROUTINE davidson_diago_gamma ( )
   !
   CALL pot3D%init('Wave','default')
   CALL pot3d%print_divergence()
-!  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz, .TRUE. )
-  !CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
   !
   ! KIND OF CALCULATION
   !
@@ -569,10 +563,6 @@ SUBROUTINE davidson_diago_k ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate conv ', ABS(ierr) )
   !
-!  ALLOCATE(sqvc(npwqx), STAT=ierr)
-!     CALL errore( 'chidiago',' cannot allocate sqvc ', ABS(ierr) )
-  !
-  !
   QPOINTS_LOOP: &
   DO iq = 1, q_grid%np
      !
@@ -595,12 +585,6 @@ SUBROUTINE davidson_diago_k ( )
      !
      CALL pot3D%init('Wave','default',iq)
      CALL pot3d%print_divergence()
-!     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz, .TRUE. )
-     !IF ( q_grid%l_pIsGamma(iq) ) THEN
-     !   CALL store_sqvc(sqvc,npwq,1,isz,.TRUE.)
-     !ELSE
-     !   CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
-     !ENDIF
      !
      IF ( q_grid%np > 1 ) THEN
         !
@@ -923,7 +907,6 @@ SUBROUTINE davidson_diago_k ( )
   DEALLOCATE( ev )
   DEALLOCATE( hr_distr )
   DEALLOCATE( vr_distr )
-!  DEALLOCATE( sqvc )
   !
   !
   DEALLOCATE( dng )

@@ -48,9 +48,7 @@ SUBROUTINE do_sxx ( )
   !
   INTEGER :: ir, ip, ig, iks, ib, iv, ip_glob 
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
-!  REAL(DP),ALLOCATABLE :: mysqvc(:)
   TYPE(bar_type) :: barra
-!  REAL(DP) :: mydiv
   REAL(DP),ALLOCATABLE :: sigma_exx( :, : ) 
   REAL(DP),ALLOCATABLE :: sigma_sxx( :, : ) 
   REAL(DP) :: peso
@@ -61,11 +59,6 @@ SUBROUTINE do_sxx ( )
   REAL(DP),ALLOCATABLE :: dproj(:,:)
   TYPE(json_file) :: json
   INTEGER :: iunit
-  !
-  CALL pot3d%init('Wave','gb')
-!  ALLOCATE( mysqvc(npwq) )
-!  CALL store_sqvc(mysqvc,npwq,'spherical',1,.FALSE.,mydiv)
-  !CALL store_sqvc(mysqvc,npwq,1,mydiv)
   !
   CALL io_push_title("(S)creened eXact eXchange")
   !
@@ -81,6 +74,8 @@ SUBROUTINE do_sxx ( )
   ELSE
      ALLOCATE( pertr( dffts%nnr ) )
   ENDIF
+  !
+  CALL pot3d%init('Wave','gb')
   !
   IF( gamma_only ) THEN 
      peso = 2._DP  
@@ -200,7 +195,6 @@ SUBROUTINE do_sxx ( )
   sigma_sxx = sigma_exx + sigma_sxx 
   !
   DEALLOCATE( pertg ) 
-!  DEALLOCATE( mysqvc )
   IF( noncolin ) THEN 
     DEALLOCATE( pertr_nc ) 
   ELSE

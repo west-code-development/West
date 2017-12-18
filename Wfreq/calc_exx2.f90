@@ -65,8 +65,6 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
-!  REAL(DP),ALLOCATABLE :: mysqvc(:)
-!  REAL(DP) :: mydiv
   !
   WRITE(stdout,'(5x,a)') ' '
   CALL io_push_bar()
@@ -74,7 +72,6 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   CALL io_push_bar()
   !
   ALLOCATE( pertg( ngms ) )
-!  ALLOCATE( mysqvc(ngms) )
   IF(noncolin) THEN 
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
   ELSE
@@ -82,8 +79,6 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   ENDIF
   !
   CALL pot3D%init('Smooth','gb')
-!  CALL store_sqvc( mysqvc, ngms, 'gb', 1, .FALSE., mydiv )
-  !CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
   !
   ! Set to zero
   !
@@ -267,9 +262,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
-!  REAL(DP),ALLOCATABLE :: mysqvc(:)
   LOGICAL :: l_gammaq
-!  REAL(DP) :: mydiv
   REAL(DP) :: g0(3)
   !
   WRITE(stdout,'(5x,a)') ' '
@@ -278,7 +271,6 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   CALL io_push_bar()
   !
   ALLOCATE( pertg( ngms ) )
-!  ALLOCATE( mysqvc( ngms ) )
   ALLOCATE( phase(dffts%nnr) )
   ALLOCATE( evckmq(npwx*npol,nbnd) )
   IF(noncolin) THEN 
@@ -364,21 +356,10 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
            l_gammaq = q_grid%l_pIsGamma(iq)
            !
            CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
-           !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
-           !ikqs = k_grid%find( kmq, 'cart' )
-           !!ikqs = kmq_grid%index_kq(iks,iq)
            !
            CALL pot3D%init('Smooth', 'gb', iq)
-!           CALL store_sqvc( mysqvc, ngms, 'gb', iq, .FALSE., mydiv )
-           !IF ( l_gammaq ) THEN
-           !   CALL store_sqvc(mysqvc,ngms,div_kind_hf,mydiv)
-           !ELSE
-           !   CALL store_sqvc_q(mysqvc,ngms,div_kind_hf,iq,.FALSE.)
-           !ENDIF
            !
            CALL compute_phase( g0, 'cart', phase )
-           !CALL kmq_grid%get_phase(iks,iq)
-           !phase = kmq_grid%phase
            !
            npwkq = ngk(ikqs)
            !
@@ -428,7 +409,6 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   CALL mp_sum( sigma_exx, inter_image_comm ) 
   !
   DEALLOCATE( pertg ) 
-!  DEALLOCATE( mysqvc )
   IF( noncolin ) THEN 
     DEALLOCATE( pertr_nc ) 
   ELSE

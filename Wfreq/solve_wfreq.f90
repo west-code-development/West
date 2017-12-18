@@ -136,8 +136,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   dmati = 0._DP
   zmatr = 0._DP
   !
-!  ALLOCATE( sqvc(npwqx) )
-  !
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bks, dmati, zmatr, mypara%nglob, mypara%nloc )
   ELSE
@@ -166,8 +164,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ENDIF
   !
   CALL pot3D%init('Wave','default')
-!  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz )
-  !CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
   !
   ! LOOP 
   !
@@ -724,8 +720,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   zmati_q = 0._DP
   zmatr_q = 0._DP
   !
-!  ALLOCATE( sqvc(npwqx) )
-  !
   ALLOCATE( evckpq(npwx*npol,nbnd) )
   IF (noncolin) THEN
      ALLOCATE( psick_nc(dffts%nnr,npol) )
@@ -775,12 +769,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      l_gammaq = q_grid%l_pIsGamma(iq)
      !
      CALL pot3D%init('Wave','default',iq)
-!     CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz )
-     !IF (l_gammaq) THEN
-     !   CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
-     !ELSE
-     !   CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
-     !ENDIF
      !
      DO iks = 1, k_grid%nps   ! KPOINT-SPIN
         !
@@ -832,18 +820,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !npwkq = ngk(ikqs)
         !
         CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
-        !CALL k_grid%add( k_grid%p_cart(:,ik), q_grid%p_cart(:,iq), kpq, g0, 'cart' ) 
-        !ikqs = k_grid%find( kpq, 'cart' )
         !
         npwkq = ngk(ikqs)
         !
         CALL compute_phase( g0, 'cart', phase )
-        !!
-        !! computes the phase needed to bring the wavefunction at k+q 
-        !! to the equivalent [k+q] point in the first BZ
-        !!
-        !CALL kpq_grid%get_phase(iks,iq)
-        !phase = kpq_grid%phase
         !
         ! Set wavefunctions at [k+q] in G space, for all bands,
         ! and store them in evckpq

@@ -42,12 +42,8 @@ SUBROUTINE westpp_setup
   !
   CALL set_npwq()
   !
-!  ALLOCATE(sqvc(npwq))
-  !
   CALL pot3D%init('Wave','default')
   CALL pot3D%print_divergence()
-!  CALL store_sqvc(sqvc,npwq,'spherical',1,.FALSE.,isz,l_printout_div)
-  !CALL store_sqvc(sqvc,npwq,1,isz)
   !
   CALL set_nbndocc()
   !

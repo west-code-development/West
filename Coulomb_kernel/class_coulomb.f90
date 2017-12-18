@@ -22,11 +22,10 @@ MODULE class_coulomb
    !
    TYPE, PUBLIC :: coulomb
       !
-      REAL(DP) :: div                              ! divergece 
+      REAL(DP) :: div                              ! divergence 
       CHARACTER(LEN=7) :: singularity_removal_mode ! singularity_removal_mode
       INTEGER :: iq                                ! q-point
       REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW 
-      INTEGER :: numg, numgx
       !
       CONTAINS
       !
@@ -68,24 +67,24 @@ MODULE class_coulomb
       REAL(DP) :: qgnorm2,qg(3),x
       INTEGER :: numg, numgx
       INTEGER :: ig, ipol
-      LOGICAL :: on_double_grid, l_print
+      LOGICAL :: on_double_grid
       REAL(DP) :: grid_factor 
       !
       CALL start_clock('sqvc_init')
       !
       SELECT CASE ( cdriver )
       CASE ( 'Wave' )
-         this%numg = npwq
-         this%numgx = npwqx
+         numg = npwq
+         numgx = npwqx
       CASE ( 'Smooth' )      
-         this%numg = ngms
-         this%numgx = ngms
+         numg = ngms
+         numgx = ngms
       CASE DEFAULT 
          CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Smooth",1)
       END SELECT
       !
       IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc ) 
-      ALLOCATE( this%sqvc( this%numgx ) ) 
+      ALLOCATE( this%sqvc( numgx ) ) 
       !
       IF ( PRESENT(iq) ) THEN
          this%iq = iq 
@@ -93,12 +92,12 @@ MODULE class_coulomb
          this%iq = 1   ! gamma-only
       ENDIF
       !
-      this%singularity_removal_mode = TRIM(singularity_removal_mode)
+      this%singularity_removal_mode = singularity_removal_mode
       IF (this%singularity_removal_mode /= "gb" .AND. this%singularity_removal_mode /= "default") &
          & CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
       !
       this%sqvc = 0._DP
-      DO ig = 1,this%numg
+      DO ig = 1,numg
          !
          IF ( gamma_only ) THEN
             qg(:) = g(:,ig)

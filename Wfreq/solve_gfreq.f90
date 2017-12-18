@@ -99,8 +99,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL pot3D%init('Wave','default')
-!  CALL store_sqvc( sqvc, npwq, 'spherical', 1, .FALSE., isz ) 
-  !CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
@@ -332,7 +330,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
   ENDDO ! KPOINT-SPIN 
   ! 
-!  DEALLOCATE( sqvc )
   !
   CALL stop_bar_type( barra, 'glanczos' )
   !
@@ -357,13 +354,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,nkstot,current_k,ngk
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
   USE io_files,             ONLY : tmp_dir,nwordwfc,iunwfc
-!  USE fft_at_gamma,         ONLY : DOUBLEBAND_INVFFT,SINGLEBAND_INVFFT,DOUBLEBAND_FWFFT,SINGLEBAND_FWFFT
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
   USE io_push,              ONLY : io_push_title
-!  USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -407,7 +402,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
-  !TYPE(bz_grid) :: k1_grid, q_grid_aux
   !
   CALL io_push_title("(G)-Lanczos")
   !
@@ -500,9 +494,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            time_spent(1) = get_clock( 'glanczos' ) 
            !
            CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 1, 'cart', iq, g0 )
-           !CALL k_grid%add( k_grid%p_cart(:,ikk), -k_grid%p_cart(:,ik), q, g0, 'cart' )
-           !iq = q_grid%find( q, 'cart' )
-           !!iq = q_grid_aux%index_q(ikks,iks)
            !
            CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !
@@ -511,12 +502,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            ! compute Coulomb potential
            !
            CALL pot3D%init('Wave', 'default', iq)
-           !CALL store_sqvc( sqvc, npwq, 'spherical', iq, .TRUE., isz ) 
-           !IF ( q_grid%l_pIsGamma(iq) ) THEN
-           !   CALL store_sqvc(sqvc,npwq,1,isz,.FALSE.)
-           !ELSE
-           !   CALL store_sqvc_q(sqvc,npwq,1,iq,.TRUE.)
-           !ENDIF
            !
            ! The Hamiltonian is evaluated at k'
            !
@@ -550,8 +535,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 !          CALL init_us_2 (npw, igk, xk (1, iks), vkb)
            !
            CALL compute_phase( g0, 'cart', phase )
-           !CALL q_grid_aux%get_phase(ikks,iks)
-           !phase = q_grid_aux%phase
            !
            IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
            CALL mp_bcast( evc, 0, inter_image_comm )
@@ -688,7 +671,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
   ENDDO ! KPOINT-SPIN (MATRIX ELEMENT)
   !
-!  DEALLOCATE( sqvc )
   DEALLOCATE( phase )
   DEALLOCATE( psick )
   DEALLOCATE( evck )

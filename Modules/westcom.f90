@@ -19,7 +19,6 @@ MODULE scratch_area
   SAVE
   !
   ! COULOMB
-!  REAL(DP),ALLOCATABLE :: sqvc(:)
   INTEGER              :: npwq,npwqx,npwq_g
   CHARACTER(LEN=6)     :: fftdriver
   INTEGER,ALLOCATABLE  :: iks_l2g(:)
@@ -70,7 +69,6 @@ MODULE scratch_area
   ! I/O 
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
   !
-!  REAL(DP) :: isz
   !
 END MODULE
 !

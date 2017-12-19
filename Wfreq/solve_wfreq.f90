@@ -164,7 +164,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ENDIF
   !
   CALL pot3D%init('Wave','default')
-  CALL pot3D%print_divergence()
   !
   ! LOOP 
   !
@@ -770,7 +769,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      l_gammaq = q_grid%l_pIsGamma(iq)
      !
      CALL pot3D%init('Wave','default',iq)
-     CALL pot3D%print_divergence()
      !
      DO iks = 1, k_grid%nps   ! KPOINT-SPIN
         !

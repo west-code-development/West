@@ -611,20 +611,20 @@ SUBROUTINE davidson_diago_k ( )
      SELECT CASE(wstat_calculation)
      CASE('r','R')
         !
-        IF ( .NOT. l_restart_q_done ) THEN
-           !
-           CALL wstat_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq, iq )
-           !
-           IF ( iq < lastdone_iq ) THEN
-              CYCLE QPOINTS_LOOP
-           ELSEIF ( iq == lastdone_iq .AND. notcnv == 0 ) THEN
-              CYCLE QPOINTS_LOOP
-           ENDIF
-           !
-           l_restart_q_done = .TRUE.
-           wstat_calculation = 'S' ! Start from scratch for the next q (after restart has been done)
-           !
+!        IF ( .NOT. l_restart_q_done ) THEN
+        !
+        CALL wstat_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq, iq )
+        !
+        IF ( iq < lastdone_iq ) THEN
+           CYCLE QPOINTS_LOOP
+        ELSEIF ( iq == lastdone_iq .AND. notcnv == 0 ) THEN
+           CYCLE QPOINTS_LOOP
         ENDIF
+        !
+        l_restart_q_done = .TRUE.
+        wstat_calculation = 'S' ! Start from scratch for the next q (after restart has been done)
+        !
+!        ENDIF
         !
      CASE('s','S')
         !

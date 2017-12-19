@@ -93,7 +93,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      trev_secant             = 0.003675_DP
      l_enable_lanczos        = .TRUE.
      l_enable_gwetot         = .FALSE.
-     div_kind_hf             = 2 
      o_restart_time          = 0._DP
      ecut_spectralf          = (/ -2._DP, 2._DP /)
      n_spectralf             = 10
@@ -189,8 +188,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         IF( found ) l_enable_lanczos = lval  
         CALL json%get('wfreq_control.l_enable_gwetot', lval, found) 
         IF( found ) l_enable_gwetot = lval  
-        CALL json%get('wfreq_control.div_kind_hf', ival, found) 
-        IF( found ) div_kind_hf = ival  
         CALL json%get('wfreq_control.o_restart_time', rval, found) 
         IF( found ) o_restart_time = rval  
         CALL json%get('wfreq_control.ecut_spectralf', rvec, found) 
@@ -297,7 +294,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      CALL mp_bcast(trev_secant,root,world_comm)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
      CALL mp_bcast(l_enable_gwetot,root,world_comm)
-     CALL mp_bcast(div_kind_hf,root,world_comm)
      CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
@@ -419,7 +415,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         CALL io_push_value('trev_secant [Ry]',trev_secant,numsp)
         CALL io_push_value('l_enable_lanczos',l_enable_lanczos,numsp)
         CALL io_push_value('l_enable_gwetot',l_enable_gwetot,numsp)
-        CALL io_push_value('div_kind_hf',div_kind_hf,numsp)
         CALL io_push_value('o_restart_time [min]',o_restart_time,numsp)
         CALL io_push_value('ecut_spectralf(1) [Ry]',ecut_spectralf(1),numsp)
         CALL io_push_value('ecut_spectralf(2) [Ry]',ecut_spectralf(2),numsp)
@@ -539,7 +534,6 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wfreq_control.trev_secant',trev_secant)
         CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
         CALL json%add('input.wfreq_control.l_enable_gwetot',l_enable_gwetot)
-        CALL json%add('input.wfreq_control.div_kind_hf',div_kind_hf)
         CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
         CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
         CALL json%add('input.wfreq_control.n_spectralf',n_spectralf)

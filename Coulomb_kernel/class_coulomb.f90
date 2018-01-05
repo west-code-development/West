@@ -158,7 +158,7 @@ MODULE class_coulomb
       ! Workspace
       !
       REAL(DP) :: div
-      LOGICAL :: try_ort_div=.TRUE., ellipsoid=.TRUE., i_am_ort, on_double_grid
+      LOGICAL :: try_ort_div=.TRUE., i_am_ort, on_double_grid
       REAL(DP) :: qg(3), qgnorm2, alpha, peso
       REAL(DP) :: grid_factor = 8._DP/7._DP
       INTEGER :: i1, i2, i3, iq, ig, ipol
@@ -205,112 +205,40 @@ MODULE class_coulomb
             !
             IF ( i_am_ort ) THEN
                !
-               IF ( ellipsoid ) THEN
-                  !
-                  edge(1) = SQRT(prod(1,1)) / 2._DP 
-                  edge(2) = SQRT(prod(2,2)) / 2._DP 
-                  edge(3) = SQRT(prod(3,3)) / 2._DP 
-                  edge(:) = edge(:) / DBLE(q_grid%ngrid(:))
-                  !
-                  vbz = tpi**3 / ( omega * DBLE(q_grid%np) )
-                  vhelp = fpi / 3._DP * edge(1)*edge(2)*edge(3)
-                  !
-                  rand=randy(mpime)
-                  div = 0._DP
-                  intcounter = 0 
-                  !
-                  DO i1 = 1, 100000
-                     qmo=0._DP
-                     DO i2 = 1, 3
-                        qbz(i2) = randy() * edge(i2)
-                        qmo = qmo + qbz(i2)**2 / edge(i2)**2
-                     ENDDO
-                     IF( qmo < 1._DP ) CYCLE
-                     div = div + 1._DP/(qbz(1)**2+qbz(2)**2+qbz(3)**2) * tpiba2
-                     intcounter = intcounter + 1._DP
+               edge(1) = SQRT(prod(1,1)) / 2._DP 
+               edge(2) = SQRT(prod(2,2)) / 2._DP 
+               edge(3) = SQRT(prod(3,3)) / 2._DP 
+               edge(:) = edge(:) / DBLE(q_grid%ngrid(:))
+               !
+               qhelp = MIN( edge(1),edge(2),edge(3)  )  
+               vbz = tpi**3 / ( omega * DBLE(q_grid%np) )
+               vhelp = fpi / 3._DP * qhelp**3
+               !
+               rand=randy(mpime)
+               div = 0._DP
+               intcounter = 0 
+               !
+               DO i1 = 1, 100000
+                  qmo=0._DP
+                  DO i2 = 1, 3
+                     qbz(i2) = randy() * edge(i2)
+                     qmo = qmo + qbz(i2)**2
                   ENDDO
-                  !
-                  div = div * ( vbz - vhelp  ) / intcounter  
-                  div = div + fpi * edge(1)*edge(2)*edge(3)
-                  div = div * fpi * e2 / ( tpi * tpi * tpi ) 
-                  !
-                  div = div / REAL(nproc,KIND=DP)
-                  CALL mp_sum(div,world_comm)
-                  !
-               ELSE 
-                  !
-                  edge(1) = SQRT(prod(1,1)) / 2._DP 
-                  edge(2) = SQRT(prod(2,2)) / 2._DP 
-                  edge(3) = SQRT(prod(3,3)) / 2._DP 
-                  edge(:) = edge(:) / DBLE(q_grid%ngrid(:))
-                  !
-                  qhelp = MIN( edge(1),edge(2),edge(3)  )  
-                  vbz = tpi**3 / ( omega * DBLE(q_grid%np) )
-                  vhelp = fpi / 3._DP * qhelp**3
-                  !
-                  rand=randy(mpime)
-                  div = 0._DP
-                  intcounter = 0 
-                  !
-                  DO i1 = 1, 100000
-                     qmo=0._DP
-                     DO i2 = 1, 3
-                        qbz(i2) = randy() * edge(i2)
-                        qmo = qmo + qbz(i2)**2
-                     ENDDO
-                     qmo = SQRT( qmo ) 
-                     IF( qmo < qhelp ) CYCLE
-                     div = div + 1._DP/qmo/qmo
-                     intcounter = intcounter + 1._DP
-                  ENDDO
-                  !
-                  div = div * ( vbz - vhelp  ) / intcounter  
-                  div = div + fpi * qhelp
-                  div = div * fpi * e2 / ( tpi * tpi * tpi ) 
-                  !
-                  div = div / REAL(nproc,KIND=DP)
-                  CALL mp_sum(div,world_comm)
-                  !
-               ENDIF
+                  qmo = SQRT( qmo ) 
+                  IF( qmo < qhelp ) CYCLE
+                  div = div + 1._DP/qmo/qmo
+                  intcounter = intcounter + 1._DP
+               ENDDO
+               !
+               div = div * ( vbz - vhelp  ) / intcounter  
+               div = div + fpi * qhelp
+               div = div * fpi * e2 / ( tpi * tpi * tpi ) 
+               !
+               div = div / REAL(nproc,KIND=DP)
+               CALL mp_sum(div,world_comm)
                !
             ENDIF
-!
-!            IF ( i_am_ort ) THEN
-!               !
-!               edge(1) = SQRT(prod(1,1)) / 2._DP 
-!               edge(2) = SQRT(prod(2,2)) / 2._DP 
-!               edge(3) = SQRT(prod(3,3)) / 2._DP 
-!               edge(:) = edge(:) / DBLE(q_grid%ngrid(:))
-!               !
-!               qhelp = MIN( edge(1),edge(2),edge(3)  )  
-!               vbz = tpi**3 / ( omega * DBLE(q_grid%np) )
-!               vhelp = fpi / 3._DP * qhelp**3
-!               !
-!               rand=randy(mpime)
-!               div = 0._DP
-!               intcounter = 0 
-!               !
-!               DO i1 = 1, 100000
-!                  qmo=0._DP
-!                  DO i2 = 1, 3
-!                     qbz(i2) = randy() * edge(i2)
-!                     qmo = qmo + qbz(i2)**2
-!                  ENDDO
-!                  qmo = SQRT( qmo ) 
-!                  IF( qmo < qhelp ) CYCLE
-!                  div = div + 1._DP/qmo/qmo
-!                  intcounter = intcounter + 1._DP
-!               ENDDO
-!               !
-!               div = div * ( vbz - vhelp  ) / intcounter  
-!               div = div + fpi * qhelp
-!               div = div * fpi * e2 / ( tpi * tpi * tpi ) 
-!               !
-!               div = div / REAL(nproc,KIND=DP)
-!               CALL mp_sum(div,world_comm)
-!               !
-!            ENDIF
-!            !
+            !
          ENDIF
          !
       CASE("gb")

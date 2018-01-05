@@ -33,7 +33,7 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ
+  USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ,div_kind_hf
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
@@ -350,6 +350,8 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
         ENDIF
         !
         DO iq = 1, q_grid%np
+           !
+           ! if not set from input, div_kind_hf = 2 (Gygi-Baldereschi)
            !
            l_gammaq = q_grid%l_pIsGamma(iq)
            !

@@ -168,6 +168,7 @@ MODULE wfreq_center
   REAL(DP),ALLOCATABLE :: imfreq_list(:)
   REAL(DP),ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP),PARAMETER :: frequency_list_power = 2._DP
+  INTEGER :: div_kind_hf ! 1=spherical region, 2=GB, 3=cut_ws
   !
   ! gw_etot 
   !

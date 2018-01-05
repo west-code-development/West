@@ -355,7 +355,7 @@ MODULE class_coulomb
    !
    SUBROUTINE print_divergence( this )
       !
-      USE io_global,       ONLY : stdout
+      USE io_global,      ONLY : stdout
       USE types_bz_grid,   ONLY : q_grid
       !
       ! I/O

@@ -530,7 +530,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
               !
               ! inverse Fourier transform of wavefunction at [k-q]: (k-q+)G ---> R
               !
-              CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,ibnd),psic,'Wave',igk_k(1,ikqs))
+              CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
               !
               ! construct right-hand-side term of Sternheimer equation:
               ! product of wavefunction at [k-q], phase and perturbation in real space
@@ -552,7 +552,7 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
         DEALLOCATE( aux_g )
         DEALLOCATE( aux_r )
         !
-        ! P_c | dvpsi >
+        ! - P_c | dvpsi >
         !
         CALL apply_alpha_pc_to_m_wfcs( nbndval, nbndval, dvpsi, (-1._DP,0._DP) )
         !

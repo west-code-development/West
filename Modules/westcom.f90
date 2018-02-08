@@ -113,7 +113,8 @@ MODULE wstat_center
   LOGICAL :: l_kinetic_only
   LOGICAL :: l_minimize_exx_if_active
   LOGICAL :: l_use_ecutrho
-  INTEGER :: nq(3)
+  !INTEGER :: nq(3)  
+  INTEGER, ALLOCATABLE :: qlist(:)
   !
   ! Common workspace
   !

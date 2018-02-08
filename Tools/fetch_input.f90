@@ -23,6 +23,8 @@ SUBROUTINE fetch_input( driver, verbose )
   USE mp_global,        ONLY : nimage
   USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
   USE gvect,            ONLY : ecutrho
+  USE start_k,          ONLY : nk1, nk2, nk3
+  USE control_flags,    ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -81,7 +83,13 @@ SUBROUTINE fetch_input( driver, verbose )
      l_kinetic_only           = .FALSE.
      l_minimize_exx_if_active = .FALSE. 
      l_use_ecutrho            = .FALSE.
-     nq                       = (/ 1, 1, 1 /) 
+     IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+     ALLOCATE( qlist(1) ) 
+     qlist(1) = 1 
+     IF( .NOT. gamma_only ) THEN  
+        ALLOCATE(qlist(nk1*nk2*nk3))
+        qlist = (/ (i, i=1,nk1*nk2*nk3,1) /)
+     ENDIF 
   ENDIF
   !
   ! ** wfreq_control **
@@ -166,8 +174,14 @@ SUBROUTINE fetch_input( driver, verbose )
         IF( found ) l_minimize_exx_if_active = lval  
         CALL json%get('wstat_control.l_use_ecutrho', lval, found) 
         IF( found ) l_use_ecutrho = lval  
-        CALL json%get('wstat_control.nq', ivec, found) 
-        IF( found ) nq(1:3) = ivec(:)  
+        !CALL json%get('wstat_control.nq', ivec, found) 
+        !IF( found ) nq(1:3) = ivec(:) 
+        CALL json%get('wstat_control.qlist', ivec, found) 
+        IF( found ) THEN 
+           IF( ALLOCATED(qlist) ) DEALLOCATE(qlist) 
+           ALLOCATE(qlist(SIZE(ivec)))
+           qlist = ivec
+        ENDIF
      ENDIF
      !
      IF ( ANY(driver(:)==3) ) THEN 
@@ -268,7 +282,8 @@ SUBROUTINE fetch_input( driver, verbose )
      CALL mp_bcast(l_kinetic_only,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
      CALL mp_bcast(l_use_ecutrho,root,world_comm)
-     CALL mp_bcast(nq,root,world_comm)
+     !CALL mp_bcast(nq,root,world_comm)
+     CALL mp_bcast(qlist,root,world_comm)
      !
      ! CHECKS 
      !
@@ -398,9 +413,12 @@ SUBROUTINE fetch_input( driver, verbose )
         CALL io_push_value('l_kinetic_only',l_kinetic_only,numsp)
         CALL io_push_value('l_minimize_exx_if_active',l_minimize_exx_if_active,numsp)
         CALL io_push_value('l_use_ecutrho',l_use_ecutrho,numsp)
-        CALL io_push_value('nq(1)',nq(1),numsp)
-        CALL io_push_value('nq(2)',nq(2),numsp)
-        CALL io_push_value('nq(3)',nq(3),numsp)
+        !CALL io_push_value('nq(1)',nq(1),numsp)
+        !CALL io_push_value('nq(2)',nq(2),numsp)
+        !CALL io_push_value('nq(3)',nq(3),numsp)
+        DO i = 1, SIZE(qlist) 
+           CALL io_push_value('qlist',qlist(i),numsp)
+        ENDDO
         !
         CALL io_push_bar()
         !
@@ -527,7 +545,8 @@ SUBROUTINE add_intput_parameters_to_json_file( driver, json )
         CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
         CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
-        CALL json%add('input.wstat_control.nq', nq) 
+        !CALL json%add('input.wstat_control.nq', nq) 
+        CALL json%add('input.wstat_control.qlist', qlist) 
         !
      ENDIF
      !

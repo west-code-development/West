@@ -23,7 +23,7 @@ MODULE class_bz_grid
    TYPE, PUBLIC :: bz_grid
       !
       INTEGER :: ngrid(3) = (/ 1, 1, 1 /)       ! number of points in each direction
-      INTEGER :: np = 1                         ! total number of points = ngrid(1) * ngrid(2) * ngrid(3) 
+      INTEGER :: np = 1                         ! total number of points = ngrid(1) * ngrid(2) * ngrid(3) **** NOOOOOO ****** 
       INTEGER :: ns = 1                         ! total number of spin = nspin
       INTEGER :: nps = 1                        ! total number of points and spins = np * ns
       INTEGER,ALLOCATABLE :: ip(:)              ! given ips --> ip   
@@ -53,8 +53,9 @@ MODULE class_bz_grid
       USE start_k,          ONLY : nk1, nk2, nk3
       USE pwcom,            ONLY : nspin
       USE control_flags,    ONLY : gamma_only
-      USE westcom,          ONLY : nq
+      !USE westcom,          ONLY : nq
       USE constants,        ONLY : eps8
+      USE westcom,          ONLY : qlist
       !
       IMPLICIT NONE
       !
@@ -67,6 +68,7 @@ MODULE class_bz_grid
       !
       INTEGER :: ip, iq1, iq2, iq3, ips
       INTEGER :: i, j, k
+      INTEGER :: iqlist
       !
       SELECT CASE( grid_type )
       CASE ( 'K', 'k')
@@ -99,22 +101,29 @@ MODULE class_bz_grid
          !
       CASE ( 'Q', 'q')
          !
-         this%ngrid(1:3) = nq(1:3) 
-         this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3) 
+         !this%ngrid(1:3) = nq(1:3) 
+         IF ( .NOT. gamma_only ) this%ngrid(1:3) = (/ nk1, nk2, nk3 /)
+         !this%ngrid(1:3) = nq(1:3) 
+         !this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3)
+         this%np = SIZE(qlist) 
          this%ns = 1
          this%nps = this%np 
          !
          ! generate p-vectors in cryst 
          !
          ALLOCATE ( this%p_cryst  (3,this%np) )
+         iqlist = 0 
          ip = 0
-         DO iq1 = 1, nq(1)
-            DO iq2 = 1, nq(2)
-               DO iq3 = 1, nq(3)
+         DO iq1 = 1, this%ngrid(1)
+            DO iq2 = 1, this%ngrid(2)
+               DO iq3 = 1, this%ngrid(3)
                   ip = ip + 1
-                  this%p_cryst(1,ip) = DBLE( iq1 - 1 ) / DBLE( this%ngrid(1) ) 
-                  this%p_cryst(2,ip) = DBLE( iq2 - 1 ) / DBLE( this%ngrid(2) )
-                  this%p_cryst(3,ip) = DBLE( iq3 - 1 ) / DBLE( this%ngrid(3) )
+                  IF ( ANY(qlist(:)) == ip ) THEN 
+                     iqlist = iqlist + 1 
+                     this%p_cryst(1,iqlist) = DBLE( iq1 - 1 ) / DBLE( this%ngrid(1) ) 
+                     this%p_cryst(2,iqlist) = DBLE( iq2 - 1 ) / DBLE( this%ngrid(2) )
+                     this%p_cryst(3,iqlist) = DBLE( iq3 - 1 ) / DBLE( this%ngrid(3) )
+                  ENDIF
                ENDDO
             ENDDO
          ENDDO
@@ -123,11 +132,11 @@ MODULE class_bz_grid
          !
          ALLOCATE ( this%p_cart (3,this%np) )
          this%p_cart(:,:) = this%p_cryst(:,:)
-         CALL cryst_to_cart( this%nps, this%p_cart, bg, +1 )
+         CALL cryst_to_cart( this%np, this%p_cart, bg, +1 )
          !
          ! set weights 
          !
-         ALLOCATE ( this%weight (this%nps)   )
+         ALLOCATE ( this%weight (this%np)   )
          !
          this%weight = 1._DP / DBLE(this%np)
          !

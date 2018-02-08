@@ -32,7 +32,10 @@ SUBROUTINE westpp_readin()
   CALL start_clock('westpp_readin')
   !
   !CALL fetch_namelist(3,(/1,2,4/))
-  CALL fetch_input(3,(/1,2,4/),.TRUE.)
+  !
+  ! READ INPUT_WEST
+  !
+  CALL fetch_input((/1/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed
@@ -45,6 +48,10 @@ SUBROUTINE westpp_readin()
   IF (domag) CALL errore('westpp_readin','domag version not available',1)
   IF (okvan) CALL errore('westpp_readin','ultrasoft pseudopotential not implemented',1)
   IF (doublegrid) CALL errore('westpp_readin', 'double grid not implemented',1)
+  !
+  ! READ other sections of the input file
+  !
+  CALL fetch_input((/2,4/),.TRUE.)
   !
   CALL stop_clock('westpp_readin')
   !

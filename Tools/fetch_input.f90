@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE fetch_input( num_drivers, driver, verbose )
+SUBROUTINE fetch_input( driver, verbose )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
@@ -22,13 +22,14 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
   USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
+  USE gvect,            ONLY : ecutrho
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: num_drivers
-  INTEGER, INTENT(IN) :: driver(num_drivers)
+  !INTEGER, INTENT(IN) :: num_drivers
+  INTEGER, INTENT(IN) :: driver(:)
   LOGICAL, INTENT(IN) :: verbose
   !
   ! Workspace
@@ -62,6 +63,12 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   !
   ! ** wstat_control **
   IF ( ANY(driver(:)==2) ) THEN
+     ! 
+     ! ** WARNING ** : In order to properly initialize these variables, this driver 
+     !                 can be called only after: 
+     !                 - fetch_input( driver 1 ) 
+     !                 - read_pwout() 
+     !
      wstat_calculation        = 'S'
      n_pdep_eigen             = 1
      n_pdep_times             = 4
@@ -79,14 +86,20 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   !
   ! ** wfreq_control **
   IF ( ANY(driver(:)==3) ) THEN
+     ! 
+     ! ** WARNING ** : In order to properly initialize these variables, this driver 
+     !                 can be called only after: 
+     !                 - fetch_input( driver 1 ) 
+     !                 - read_pwout() 
+     !
      wfreq_calculation       = 'XWGQ'
      n_pdep_eigen_to_use     = 2
      qp_bandrange            = (/ 1, 2 /)
      macropol_calculation    = 'N'
      n_lanczos               = 20
-     n_imfreq                = 10
+     n_imfreq                = 128
      n_refreq                = 10
-     ecut_imfreq             = 1._DP
+     ecut_imfreq             = ecutrho
      ecut_refreq             = 2._DP
      wfreq_eta               = 0.003675_DP
      n_secant_maxiter        = 1
@@ -453,7 +466,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         CALL json%initialize()
         CALL json%load_file(filename=TRIM(logfile))
         !
-        CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
+        CALL add_intput_parameters_to_json_file( driver, json )
         ! 
         OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
         CALL json%print_file( iunit )
@@ -469,7 +482,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
+SUBROUTINE add_intput_parameters_to_json_file( driver, json )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
@@ -486,8 +499,8 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: num_drivers
-  INTEGER, INTENT(IN) :: driver(num_drivers)
+  !INTEGER, INTENT(IN) :: num_drivers
+  INTEGER, INTENT(IN) :: driver(:)
   TYPE(json_file), INTENT(INOUT) :: json 
   !
   IF ( mpime == root ) THEN

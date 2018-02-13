@@ -118,7 +118,7 @@ MODULE class_bz_grid
             DO iq2 = 1, this%ngrid(2)
                DO iq3 = 1, this%ngrid(3)
                   ip = ip + 1
-                  IF ( ANY(qlist(:)) == ip ) THEN 
+                  IF ( ANY(qlist(:) == ip) ) THEN 
                      iqlist = iqlist + 1 
                      this%p_cryst(1,iqlist) = DBLE( iq1 - 1 ) / DBLE( this%ngrid(1) ) 
                      this%p_cryst(2,iqlist) = DBLE( iq2 - 1 ) / DBLE( this%ngrid(2) )

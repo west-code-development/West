@@ -20,7 +20,6 @@ SUBROUTINE dfpt (m,dvg,dng,tr2)
   USE fft_base,              ONLY : dfftp,dffts
   USE gvect,                 ONLY : nl,gstart,g,ngm
   USE wavefunctions_module,  ONLY : evc,psic
-  USE gvecs,                 ONLY : ngms
   USE gvecw,                 ONLY : gcutw
   USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
   USE mp_global,             ONLY : inter_image_comm,inter_pool_comm,my_image_id
@@ -340,7 +339,6 @@ SUBROUTINE dfpt_q (m,dvg,dng,tr2,iq)
   USE fft_base,              ONLY : dfftp,dffts
   USE gvect,                 ONLY : nl,nl,gstart,g,ngm
   USE wavefunctions_module,  ONLY : evc,psic
-  USE gvecs,                 ONLY : ngms,nls
   USE gvecw,                 ONLY : gcutw
   USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
   USE mp_global,             ONLY : inter_image_comm,inter_pool_comm,my_image_id

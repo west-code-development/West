@@ -42,7 +42,7 @@ SUBROUTINE westpp_setup
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Wave','default')
+  CALL pot3D%init('Wave',.FALSE.,'default')
   CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()

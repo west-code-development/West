@@ -33,8 +33,7 @@ MODULE types_bz_grid
      ! ... if on exit ig0 == 0 --> G is not found
      !
      USE cell_base,        ONLY : bg
-     USE gvecs,            ONLY : ngms
-     USE gvect,            ONLY : g
+     USE gvect,            ONLY : g, ngm
      USE constants,        ONLY : eps8
      !
      IMPLICIT NONE
@@ -61,7 +60,7 @@ MODULE types_bz_grid
      ! gtemp is in cart 
      !
      ig0 = 0
-     DO ig = 1, ngms
+     DO ig = 1, ngm
         IF ( ALL ( ABS( g(:,ig) - gtemp(:) ) < eps8 ) ) THEN
            ig0 = ig
            EXIT

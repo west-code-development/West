@@ -147,7 +147,7 @@ SUBROUTINE davidson_diago_gamma ( )
   notcnv  = nvec 
   dav_iter = -2
   !
-  CALL pot3D%init('Wave','default')
+  CALL pot3D%init('Wave',.FALSE.,'default')
   CALL pot3d%print_divergence()
   !
   ! KIND OF CALCULATION
@@ -583,7 +583,7 @@ SUBROUTINE davidson_diago_k ( )
      !
      ! compute Coulomb potential
      !
-     CALL pot3D%init('Wave','default',iq)
+     CALL pot3D%init('Wave',.TRUE.,'default',iq)
      CALL pot3d%print_divergence()
      !
      IF ( q_grid%np > 1 ) THEN

@@ -98,7 +98,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL deallocate_bec_type( becp ) 
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
-  CALL pot3D%init('Wave','default')
+  CALL pot3D%init('Wave',.FALSE.,'default')
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
@@ -501,7 +501,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ! compute Coulomb potential
            !
-           CALL pot3D%init('Wave', 'default', iq)
+           CALL pot3D%init('Wave',.TRUE.,'default',iq)
            !
            ! The Hamiltonian is evaluated at k'
            !

@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE fetch_input( driver, verbose )
+SUBROUTINE fetch_input( num_drivers, driver, verbose )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
@@ -30,8 +30,8 @@ SUBROUTINE fetch_input( driver, verbose )
   !
   ! I/O
   !
-  !INTEGER, INTENT(IN) :: num_drivers
-  INTEGER, INTENT(IN) :: driver(:)
+  INTEGER, INTENT(IN) :: num_drivers
+  INTEGER, INTENT(IN) :: driver(num_drivers)
   LOGICAL, INTENT(IN) :: verbose
   !
   ! Workspace
@@ -84,9 +84,10 @@ SUBROUTINE fetch_input( driver, verbose )
      l_minimize_exx_if_active = .FALSE. 
      l_use_ecutrho            = .FALSE.
      IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
-     ALLOCATE( qlist(1) ) 
-     qlist(1) = 1 
-     IF( .NOT. gamma_only ) THEN  
+     IF ( gamma_only ) THEN
+        ALLOCATE( qlist(1) ) 
+        qlist(1) = 1 
+     ELSE
         ALLOCATE(qlist(nk1*nk2*nk3))
         qlist = (/ (i, i=1,nk1*nk2*nk3,1) /)
      ENDIF 
@@ -180,7 +181,7 @@ SUBROUTINE fetch_input( driver, verbose )
         IF( found ) THEN 
            IF( ALLOCATED(qlist) ) DEALLOCATE(qlist) 
            ALLOCATE(qlist(SIZE(ivec)))
-           qlist = ivec
+           qlist(1:SIZE(ivec)) = ivec(1:SIZE(ivec))
         ENDIF
      ENDIF
      !
@@ -303,6 +304,11 @@ SUBROUTINE fetch_input( driver, verbose )
      IF(tr2_dfpt<=0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
      IF(trev_pdep<=0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
      IF(trev_pdep_rel<=0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
+     IF(gamma_only) THEN
+        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1.',1)
+     ELSE 
+        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3.',1)
+     ENDIF
      !
   ENDIF
   !
@@ -484,7 +490,7 @@ SUBROUTINE fetch_input( driver, verbose )
         CALL json%initialize()
         CALL json%load_file(filename=TRIM(logfile))
         !
-        CALL add_intput_parameters_to_json_file( driver, json )
+        CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
         ! 
         OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
         CALL json%print_file( iunit )
@@ -500,7 +506,7 @@ SUBROUTINE fetch_input( driver, verbose )
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE add_intput_parameters_to_json_file( driver, json )
+SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
@@ -517,8 +523,8 @@ SUBROUTINE add_intput_parameters_to_json_file( driver, json )
   !
   ! I/O
   !
-  !INTEGER, INTENT(IN) :: num_drivers
-  INTEGER, INTENT(IN) :: driver(:)
+  INTEGER, INTENT(IN) :: num_drivers
+  INTEGER, INTENT(IN) :: driver(num_drivers)
   TYPE(json_file), INTENT(INOUT) :: json 
   !
   IF ( mpime == root ) THEN

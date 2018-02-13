@@ -23,7 +23,6 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   USE io_files,             ONLY : nwordwfc, iunwfc
   USE scf,                  ONLY : rho, rho_core, rhog_core
   USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
-  USE gvecs,                ONLY : ngms
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,omega,tpiba,at,alat
   USE fft_base,             ONLY : dfftp,dffts
@@ -71,14 +70,14 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   WRITE(stdout,'(5x,a)') '(X)-Sigma'
   CALL io_push_bar()
   !
-  ALLOCATE( pertg( ngms ) )
+  ALLOCATE( pertg( ngm ) )
   IF(noncolin) THEN 
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
   ELSE
      ALLOCATE( pertr( dffts%nnr ) )
   ENDIF
   !
-  CALL pot3D%init('Smooth','gb')
+  CALL pot3D%init('Dense',.FALSE.,'gb')
   !
   ! Set to zero
   !
@@ -156,14 +155,14 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
               DO ir=1,dffts%nnr 
                  pertr(ir)=psic(ir)*pertr(ir)
               ENDDO
-              CALL single_fwfft_gamma(dffts,ngms,ngms,pertr,pertg,'Smooth')
+              CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Dense')
            ELSEIF(noncolin) THEN
               CALL single_invfft_k(dffts,npw,npwx,evc(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,current_k))
               CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,current_k))
               DO ir=1,dffts%nnr 
                  pertr_nc(ir,1)=DCONJG(psic_nc(ir,1))*pertr_nc(ir,1)+DCONJG(psic_nc(ir,2))*pertr_nc(ir,2)
               ENDDO
-              CALL single_fwfft_k(dffts,ngms,ngms,pertr_nc(1,1),pertg,'Smooth') ! no igk
+              CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
 !           ELSE
 !              CALL single_invfft_k(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave',igk_k(1,current_k))
 !              DO ir=1,dffts%nnr 
@@ -172,10 +171,10 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
 !              CALL single_fwfft_k(dffts,ngms,ngms,pertr,pertg,'Smooth') ! no igk
            ENDIF 
            !
-           DO ig = 1,ngms
+           DO ig = 1,ngm
               pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
            ENDDO
-           sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - 2._DP * DDOT( 2*ngms, pertg(1), 1, pertg(1), 1) / omega
+           sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - 2._DP * DDOT( 2*ngm, pertg(1), 1, pertg(1), 1) / omega
            !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
            IF( ib == iv_glob .AND. gstart == 2 ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
            !
@@ -215,7 +214,6 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   USE io_files,             ONLY : nwordwfc, iunwfc
   USE scf,                  ONLY : rho, rho_core, rhog_core
   USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
-  USE gvecs,                ONLY : ngms
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,omega,tpiba,at,alat
   USE fft_base,             ONLY : dfftp,dffts
@@ -270,7 +268,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   WRITE(stdout,'(5x,a)') '(X)-Sigma'
   CALL io_push_bar()
   !
-  ALLOCATE( pertg( ngms ) )
+  ALLOCATE( pertg( ngm ) )
   ALLOCATE( phase(dffts%nnr) )
   ALLOCATE( evckmq(npwx*npol,nbnd) )
   IF(noncolin) THEN 
@@ -355,7 +353,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
            !
            CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
            !
-           CALL pot3D%init('Smooth', 'gb', iq)
+           CALL pot3D%init('Dense',.FALSE.,'gb',iq)
            !
            CALL compute_phase( g0, 'cart', phase )
            !
@@ -375,19 +373,19 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
                  DO ir=1,dffts%nnr 
                     pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
-                 CALL single_fwfft_k(dffts,ngms,ngms,pertr_nc(1,1),pertg,'Smooth') ! no igk
+                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
               ELSE
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv_glob),pertr,'Wave',igk_k(1,ikqs))
                  DO ir=1,dffts%nnr 
                     pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO
-                 CALL single_fwfft_k(dffts,ngms,ngms,pertr,pertg,'Smooth') ! no igk
+                 CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Dense') ! no igk
               ENDIF 
               !
-              DO ig = 1,ngms
+              DO ig = 1,ngm
                  pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
               ENDDO
-              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - DDOT( 2*ngms, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
               !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
               IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
               !

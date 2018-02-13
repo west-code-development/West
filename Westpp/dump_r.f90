@@ -69,9 +69,9 @@ SUBROUTINE dump_r ( auxr, fname )
      ALLOCATE(auxr_(dffts%nnr))
      auxr_ = CMPLX( auxr, 0.d0, KIND = DP)
      IF( gamma_only ) THEN 
-        CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Smooth')
+        CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Dense')
      ELSE
-        CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Smooth')
+        CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Dense')
      ENDIF
      CALL write_wfc_spav ( 2005, TRIM(fname)//".spavr", auxg, westpp_r0, westpp_nr, westpp_rmax )
      DEALLOCATE(auxg)

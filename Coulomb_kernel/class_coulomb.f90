@@ -24,6 +24,8 @@ MODULE class_coulomb
       !
       REAL(DP) :: div                              ! divergence 
       CHARACTER(LEN=7) :: singularity_removal_mode ! singularity_removal_mode
+      CHARACTER(LEN=5) :: cdriver                  ! FFT driver = "Wave", "Dense"
+      LOGICAL :: l_use_igq                         ! use igq map
       INTEGER :: iq                                ! q-point
       REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW 
       !
@@ -38,7 +40,7 @@ MODULE class_coulomb
    CONTAINS
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE sqvc_init(this,cdriver,singularity_removal_mode,iq)
+   SUBROUTINE sqvc_init(this,cdriver,l_use_igq,singularity_removal_mode,iq)
       !-----------------------------------------------------------------------
       !
       ! This routine computes results of applying sqVc to a potential
@@ -47,8 +49,7 @@ MODULE class_coulomb
       USE kinds,                ONLY : DP
       USE constants,            ONLY : fpi, e2, eps8
       USE cell_base,            ONLY : at, tpiba2
-      USE gvect,                ONLY : g
-      USE gvecs,                ONLY : ngms
+      USE gvect,                ONLY : g, ngm
       USE westcom,              ONLY : igq_q,npwqx,npwq
       USE types_bz_grid,        ONLY : q_grid
       USE control_flags,        ONLY : gamma_only
@@ -59,6 +60,7 @@ MODULE class_coulomb
       !
       CLASS(coulomb) :: this 
       CHARACTER(LEN=*), INTENT(IN) :: cdriver
+      LOGICAL, INTENT(IN) :: l_use_igq
       CHARACTER(LEN=*), INTENT(IN) :: singularity_removal_mode
       INTEGER, INTENT(IN), OPTIONAL :: iq
       !
@@ -72,37 +74,54 @@ MODULE class_coulomb
       !
       CALL start_clock('sqvc_init')
       !
-      SELECT CASE ( cdriver )
-      CASE ( 'Wave' )
-         numg = npwq
-         numgx = npwqx
-      CASE ( 'Smooth' )      
-         numg = ngms
-         numgx = ngms
-      CASE DEFAULT 
-         CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Smooth",1)
-      END SELECT
-      !
-      IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc ) 
-      ALLOCATE( this%sqvc( numgx ) ) 
-      !
+      this%cdriver = cdriver
+      this%l_use_igq = l_use_igq
+      this%singularity_removal_mode = singularity_removal_mode
       IF ( PRESENT(iq) ) THEN
          this%iq = iq 
       ELSE 
          this%iq = 1   ! gamma-only
       ENDIF
       !
-      this%singularity_removal_mode = singularity_removal_mode
-      IF (this%singularity_removal_mode /= "gb" .AND. this%singularity_removal_mode /= "default") &
-         & CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
+      ! ... Check compatibility between singularity removal mode and FFT driver
+      !
+      SELECT CASE ( this%singularity_removal_mode )
+      CASE ( 'default' )
+      CASE ( 'gb' )
+         IF ( this%cdriver == 'Wave' ) CALL errore("sqvc_init", "gb singularity removal mode requires Dense grid",1)
+      CASE DEFAULT
+         CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
+      END SELECT
+      !
+      ! ... Check compatibility between FFT driver and use of igq map
+      !
+      SELECT CASE ( this%cdriver )
+      CASE ( 'Wave' )
+         IF (.NOT.gamma_only .AND. .NOT.this%l_use_igq) THEN
+            CALL errore("sqvc_init", "q-points case requires igq map when using Wave grid",1)
+         ELSEIF (gamma_only .AND. this%l_use_igq) THEN
+            CALL errore("sqvc_init", "igq map not needed in gamma-only case",1)
+         ENDIF
+         numg = npwq
+         numgx = npwqx
+      CASE ( 'Dense' )
+         IF (this%l_use_igq) CALL errore("sqvc_init", "igq map not used with Dense grid",1)
+         numg = ngm
+         numgx = ngm
+      CASE DEFAULT 
+         CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Dense",1)
+      END SELECT
+      !
+      IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc ) 
+      ALLOCATE( this%sqvc( numgx ) ) 
       !
       this%sqvc = 0._DP
       DO ig = 1,numg
          !
-         IF ( gamma_only .OR. cdriver == 'Smooth') THEN ! if smooth grid is used (X), no mapping is needed
-            qg(:) = g(:,ig) + q_grid%p_cart(:,this%iq)
-         ELSE
+         IF ( this%l_use_igq ) THEN 
             qg(:) = g(:,igq_q(ig,this%iq)) + q_grid%p_cart(:,this%iq)
+         ELSE
+            qg(:) = g(:,ig) + q_grid%p_cart(:,this%iq)
          ENDIF
          !
          qgnorm2 = SUM( qg(:)**2 ) * tpiba2
@@ -147,8 +166,7 @@ MODULE class_coulomb
       USE control_flags,        ONLY : gamma_only
       USE gvecw,                ONLY : ecutwfc
       USE random_numbers,       ONLY : randy
-      USE gvect,                ONLY : g
-      USE gvecs,                ONLY : ngms
+      USE gvect,                ONLY : g, ngm
       USE types_bz_grid,        ONLY : q_grid
       !
       ! I/O
@@ -251,7 +269,7 @@ MODULE class_coulomb
          !
          DO iq = 1, q_grid%np
             ! 
-            DO ig = 1,ngms
+            DO ig = 1,ngm
                qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
                qgnorm2 = SUM( qg(:)**2 ) * tpiba2
                on_double_grid = .TRUE.

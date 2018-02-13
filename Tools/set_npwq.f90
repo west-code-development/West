@@ -54,8 +54,8 @@ SUBROUTINE set_npwq()
      !
   ELSE
      !
+     IF( l_use_ecutrho ) CALL errore("set_npwq", "Dense grid not implemented with q-points",1)
      fftdriver = 'Wave'
-     ! 'Dense' grid not yet implemented
      !
      npwqx = n_plane_waves( gcutw, q_grid%np, q_grid%p_cart, g, ngm )
      !

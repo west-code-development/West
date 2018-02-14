@@ -43,7 +43,7 @@ SUBROUTINE davidson_diago_gamma ( )
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwqx,npwq,&
-                                   & npwqx,npwq,trev_pdep_rel,tr2_dfpt,l_is_wstat_converged
+                                   & npwqx,npwq,trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
@@ -52,10 +52,8 @@ SUBROUTINE davidson_diago_gamma ( )
   USE gvect,                ONLY : gstart
   USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
                                    & update_with_vr_distr,refresh_with_vr_distr 
-  USE class_bz_grid,        ONLY : bz_grid
-  USE types_bz_grid,        ONLY : k_grid, q_grid
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
+  USE dfpt_module
   !
   IMPLICIT NONE
   !
@@ -147,7 +145,7 @@ SUBROUTINE davidson_diago_gamma ( )
   notcnv  = nvec 
   dav_iter = -2
   !
-  CALL pot3D%init('Wave',.FALSE.,'default')
+  CALL pot3D%init(fftdriver,.FALSE.,'default')
   CALL pot3d%print_divergence()
   !
   ! KIND OF CALCULATION
@@ -473,10 +471,9 @@ SUBROUTINE davidson_diago_k ( )
   USE gvecw,                ONLY : gcutw
   USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
                                    & update_with_vr_distr,refresh_with_vr_distr 
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : q_grid
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
+  USE dfpt_module
   !
   IMPLICIT NONE
   !
@@ -662,7 +659,8 @@ SUBROUTINE davidson_diago_k ( )
         ENDDO
         !
         pccg_res_tr2 = -1._DP
-        CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        !CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         dav_iter = -1
         CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq)
         !
@@ -701,7 +699,8 @@ SUBROUTINE davidson_diago_k ( )
         ENDDO
         !
         pccg_res_tr2 = MIN(0.01_DP,1000000._DP*tr2_dfpt)
-        CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        !CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         ! 
         ! </ EXTRA STEP >
         !
@@ -796,7 +795,8 @@ SUBROUTINE davidson_diago_k ( )
         ! Apply operator with DFPT
         !
         pccg_res_tr2 = tr2_dfpt
-        CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        !CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         !
         ! ... update the reduced hamiltonian
         !

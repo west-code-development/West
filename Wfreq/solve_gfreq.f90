@@ -566,18 +566,18 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               ! Bring it to R-space
               IF(noncolin) THEN
-                 CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver),igq_q(1,iq))
+                 CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                  DO ir=1,dffts%nnr 
                     pertr(ir)=DCONJG(phase(ir))*psick_nc(ir,1)*DCONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
-                 CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver),igq_q(1,iq))
+                 CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                  DO ir=1,dffts%nnr 
                     pertr(ir)=DCONJG(phase(ir))*psick_nc(ir,2)*DCONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1+npwx,ip),'Wave',igk_k(1,current_k))
               ELSE
-                 CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver),igq_q(1,iq))
+                 CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                  DO ir=1,dffts%nnr 
                     pertr(ir)=DCONJG(phase(ir))*psick(ir)*DCONJG(pertr(ir))
                  ENDDO

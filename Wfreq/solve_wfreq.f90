@@ -950,7 +950,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                        pertr(ir)=phase(ir)*psick_nc(ir,1)*DCONJG(pertr(ir))
                     ENDDO
                     CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
-                    CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
+                    CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                     DO ir=1,dffts%nnr 
                        pertr(ir)=phase(ir)*psick_nc(ir,2)*DCONJG(pertr(ir))
                     ENDDO

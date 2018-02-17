@@ -319,7 +319,7 @@ MODULE dfpt_module
                IF ( npol == 2 ) THEN
                   DO ibnd = 1, nbndval 
                      !
-                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,ibnd),psic,'Wave',igk_k(1,ikqs))
+                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
                      !
                      CALL single_invfft_k(dffts,npw,npwx,dpsi(npwx+1,ibnd),dpsic,'Wave',igk_k(1,iks))
                      !

@@ -421,7 +421,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      bks%old_band      = 0 
      bks%max_ks        = k_grid%nps
      bks%min_ks        = 1 
-     bks%max_q         = k_grid%nps
+     bks%max_q         = q_grid%nps
      bks%min_q         = 1 
   ENDIF
   !

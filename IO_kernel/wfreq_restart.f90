@@ -25,14 +25,14 @@ MODULE wfreq_restart
   TYPE :: bks_type
      INTEGER :: lastdone_q
      INTEGER :: lastdone_ks
-     INTEGER :: lastdone_ki
      INTEGER :: lastdone_band
      INTEGER :: old_q
      INTEGER :: old_ks
-     INTEGER :: old_ki
      INTEGER :: old_band
+     INTEGER :: max_q
      INTEGER :: max_ks
      INTEGER :: max_band
+     INTEGER :: min_q
      INTEGER :: min_ks
      INTEGER :: min_band
   END TYPE bks_type
@@ -149,8 +149,10 @@ MODULE wfreq_restart
          CALL iotk_write_dat( iunout, "old_q"        , bks%old_q        )
          CALL iotk_write_dat( iunout, "old_ks"       , bks%old_ks       )
          CALL iotk_write_dat( iunout, "old_band"     , bks%old_band     )
+         CALL iotk_write_dat( iunout, "max_q"        , bks%max_q        )
          CALL iotk_write_dat( iunout, "max_ks"       , bks%max_ks       )
          CALL iotk_write_dat( iunout, "max_band"     , bks%max_band     )
+         CALL iotk_write_dat( iunout, "min_q"        , bks%min_q        )
          CALL iotk_write_dat( iunout, "min_ks"       , bks%min_ks       )
          CALL iotk_write_dat( iunout, "min_band"     , bks%min_band     )
          CALL iotk_write_end( iunout, "BKS-SUMMARY"  )
@@ -270,8 +272,10 @@ MODULE wfreq_restart
          CALL iotk_scan_dat( iunout, "old_q"        , bks%old_q         )
          CALL iotk_scan_dat( iunout, "old_ks"       , bks%old_ks        )
          CALL iotk_scan_dat( iunout, "old_band"     , bks%old_band      )
+         CALL iotk_scan_dat( iunout, "max_q"        , bks%max_q         )
          CALL iotk_scan_dat( iunout, "max_ks"       , bks%max_ks        )
          CALL iotk_scan_dat( iunout, "max_band"     , bks%max_band      )
+         CALL iotk_scan_dat( iunout, "min_q"        , bks%min_q         )
          CALL iotk_scan_dat( iunout, "min_ks"       , bks%min_ks        )
          CALL iotk_scan_dat( iunout, "min_band"     , bks%min_band      )
          CALL iotk_scan_end( iunout, "BKS-SUMMARY"  )
@@ -286,8 +290,10 @@ MODULE wfreq_restart
       CALL mp_bcast( bks%old_q         , root , world_comm )
       CALL mp_bcast( bks%old_ks        , root , world_comm )
       CALL mp_bcast( bks%old_band      , root , world_comm )
+      CALL mp_bcast( bks%max_q         , root , world_comm )
       CALL mp_bcast( bks%max_ks        , root , world_comm )
       CALL mp_bcast( bks%max_band      , root , world_comm )
+      CALL mp_bcast( bks%min_q         , root , world_comm )
       CALL mp_bcast( bks%min_ks        , root , world_comm )
       CALL mp_bcast( bks%min_band      , root , world_comm )
       !

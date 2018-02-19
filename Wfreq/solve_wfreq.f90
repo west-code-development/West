@@ -737,7 +737,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      bks%old_ks        = 0 
      bks%old_q         = 0 
      bks%old_band      = 0 
+     bks%max_q         = q_grid%np
      bks%max_ks        = k_grid%np
+     bks%min_q         = 1 
      bks%min_ks        = 1 
   ENDIF
   !
@@ -745,9 +747,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   DO iq = 1, q_grid%np
      IF (iq<bks%lastdone_q) CYCLE
      DO iks = 1, k_grid%nps
-        IF(iks<bks%lastdone_ks) CYCLE
+        IF(iq==bks%lastdone_q .AND. iks<bks%lastdone_ks) CYCLE
         DO iv = 1, nbnd_occ(iks)
-           IF(iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
+           IF(iq==bks%lastdone_q .AND. iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
            barra_load = barra_load + 1
         ENDDO
      ENDDO
@@ -902,7 +904,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 !        ELSE
            IF(noncolin) THEN
               CALL single_invfft_k(dffts,npwkq,npwx,evckpq(1     ,iv),psick_nc(1,1),'Wave',igk_k(1,ikqs))
-              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(1+npwx,iv),psick_nc(1,2),'Wave',igk_k(1,ikqs))
+              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(npwx+1,iv),psick_nc(1,2),'Wave',igk_k(1,ikqs))
            ELSE
               CALL single_invfft_k(dffts,npwkq,npwx,evckpq(1,iv),psick,'Wave',igk_k(1,ikqs))
            ENDIF
@@ -954,7 +956,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                     DO ir=1,dffts%nnr 
                        pertr(ir)=phase(ir)*psick_nc(ir,2)*DCONJG(pertr(ir))
                     ENDDO
-                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1+npwx,ip),'Wave',igk_k(1,current_k))
+                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(npwx+1,ip),'Wave',igk_k(1,current_k))
                  ELSE
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                     DO ir=1,dffts%nnr 
@@ -1145,7 +1147,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  bks%lastdone_q=iq
                  bks%lastdone_ks=iks
                  bks%lastdone_band=iv
-                 CALL solvewfreq_restart_write(bks,zmati_q(:,:,:,iq),zmatr_q(:,:,:,iq),mypara%nglob,mypara%nloc)
+                 CALL solvewfreq_restart_write(bks,zmati_q(:,:,:,:),zmatr_q(:,:,:,:),mypara%nglob,mypara%nloc)
                  bks%old_q = iq
                  bks%old_ks = iks 
                  bks%old_band = iv

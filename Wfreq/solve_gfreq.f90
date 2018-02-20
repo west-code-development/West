@@ -489,13 +489,13 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         ENDIF
         !
         DO iks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
+           IF (ikks==bksks%lastdone_ks .AND. ib==bksks%lastdone_band .AND. iks <= bksks%lastdone_ksc) CYCLE
            !
            ik = k_grid%ip(iks)
            !
            time_spent(1) = get_clock( 'glanczos' ) 
            !
            CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 1, 'cart', iq, g0 )
-           IF (ikks==bksks%lastdone_ks .AND. ib==bksks%lastdone_band .AND. iks <= bksks%lastdone_ksc) CYCLE
            !
            CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !

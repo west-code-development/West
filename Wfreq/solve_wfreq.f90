@@ -899,9 +899,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            ! PSIC
            !
-!        IF(gamma_only) THEN
-!           CALL SINGLEBAND_invfft(npw,evc(1,iv),npwx,psic,dffts%nnr) 
-!        ELSE
            IF(noncolin) THEN
               CALL single_invfft_k(dffts,npwkq,npwx,evckpq(1     ,iv),psick_nc(1,1),'Wave',igk_k(1,ikqs))
               CALL single_invfft_k(dffts,npwkq,npwx,evckpq(npwx+1,iv),psick_nc(1,2),'Wave',igk_k(1,ikqs))
@@ -939,13 +936,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  ENDDO
                  !
                  ! Bring it to R-space
-!                 IF(gamma_only) THEN
-!                    CALL SINGLEBAND_invfft(npwq,pertg(1),npwx,pertr,dffts%nnr)
-!                    DO ir=1,dffts%nnr 
-!                       pertr(ir)=psic(ir)*pertr(ir)
-!                    ENDDO
-!                    CALL SINGLEBAND_fwfft(npw,pertr,dffts%nnr,dvpsi(1,ip),npwx)
-!                 ELSE
                  IF(noncolin) THEN
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                     DO ir=1,dffts%nnr 

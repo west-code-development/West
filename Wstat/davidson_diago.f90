@@ -517,10 +517,6 @@ SUBROUTINE davidson_diago_k ( )
   lastdone_iq = 0
   l_restart_q_done = .FALSE.
   !
-  CALL start_clock( 'chidiago' )
-  time_spent(1)=get_clock( 'chidiago' )
-  CALL get_clock_called( 'stern' , sternop_ncalls(1) )
-  !
   ! ... DISTRIBUTE nvecx
   !
   pert=idistribute()
@@ -562,6 +558,10 @@ SUBROUTINE davidson_diago_k ( )
   !
   QPOINTS_LOOP: &
   DO iq = 1, q_grid%np
+     !
+     CALL start_clock( 'chidiago' )
+     time_spent(1)=get_clock( 'chidiago' )
+     CALL get_clock_called( 'stern' , sternop_ncalls(1) )
      !
      nbase  = nvec
      conv   = .FALSE.
@@ -659,7 +659,7 @@ SUBROUTINE davidson_diago_k ( )
         ENDDO
         !
         pccg_res_tr2 = -1._DP
-        !CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        !
         CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         dav_iter = -1
         CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq)
@@ -699,7 +699,7 @@ SUBROUTINE davidson_diago_k ( )
         ENDDO
         !
         pccg_res_tr2 = MIN(0.01_DP,1000000._DP*tr2_dfpt)
-        !CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        !
         CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         ! 
         ! </ EXTRA STEP >
@@ -795,7 +795,7 @@ SUBROUTINE davidson_diago_k ( )
         ! Apply operator with DFPT
         !
         pccg_res_tr2 = tr2_dfpt
-        !CALL dfpt_q ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        !
         CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         !
         ! ... update the reduced hamiltonian
@@ -900,6 +900,8 @@ SUBROUTINE davidson_diago_k ( )
         !
      END DO iterate
   !
+  CALL stop_clock( 'chidiago' )
+  !
   ENDDO QPOINTS_LOOP ! iq
   !
   DEALLOCATE( conv )
@@ -911,8 +913,6 @@ SUBROUTINE davidson_diago_k ( )
   !
   DEALLOCATE( dng )
   DEALLOCATE( dvg )
-  !
-  CALL stop_clock( 'chidiago' )
   !
   RETURN
   !

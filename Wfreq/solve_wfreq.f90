@@ -639,7 +639,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE class_idistribute,    ONLY : idistribute 
-  USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
+  USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bksq_type
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
   USE chi_invert,           ONLY : chi_invert_complex
@@ -687,7 +687,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   LOGICAL :: l_gammaq
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
-  TYPE(bks_type) :: bks
+  TYPE(bksq_type) :: bksq
   REAL(DP),ALLOCATABLE :: eprec(:)
   INTEGER :: ierr
   REAL(DP),ALLOCATABLE :: e(:)
@@ -729,27 +729,27 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ALLOCATE( phase(dffts%nnr) )
   !
   IF(l_read_restart) THEN
-     CALL solvewfreq_restart_read( bks, zmati_q, zmatr_q, mypara%nglob, mypara%nloc )
+     CALL solvewfreq_restart_read( bksq, zmati_q, zmatr_q, mypara%nglob, mypara%nloc )
   ELSE
-     bks%lastdone_ks   = 0 
-     bks%lastdone_q    = 0 
-     bks%lastdone_band = 0 
-     bks%old_ks        = 0 
-     bks%old_q         = 0 
-     bks%old_band      = 0 
-     bks%max_q         = q_grid%np
-     bks%max_ks        = k_grid%np
-     bks%min_q         = 1 
-     bks%min_ks        = 1 
+     bksq%lastdone_ks   = 0 
+     bksq%lastdone_q    = 0 
+     bksq%lastdone_band = 0 
+     bksq%old_ks        = 0 
+     bksq%old_q         = 0 
+     bksq%old_band      = 0 
+     bksq%max_q         = q_grid%np
+     bksq%max_ks        = k_grid%np
+     bksq%min_q         = 1 
+     bksq%min_ks        = 1 
   ENDIF
   !
   barra_load = 0
   DO iq = 1, q_grid%np
-     IF (iq<bks%lastdone_q) CYCLE
+     IF (iq<bksq%lastdone_q) CYCLE
      DO iks = 1, k_grid%nps
-        IF(iq==bks%lastdone_q .AND. iks<bks%lastdone_ks) CYCLE
+        IF(iq==bksq%lastdone_q .AND. iks<bksq%lastdone_ks) CYCLE
         DO iv = 1, nbnd_occ(iks)
-           IF(iq==bks%lastdone_q .AND. iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
+           IF(iq==bksq%lastdone_q .AND. iks==bksq%lastdone_ks .AND. iv <= bksq%lastdone_band ) CYCLE
            barra_load = barra_load + 1
         ENDDO
      ENDDO
@@ -765,7 +765,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! LOOP 
   !
   DO iq = 1, q_grid%np   ! Q-POINT
-     IF (iq<bks%lastdone_q) CYCLE
+     IF (iq<bksq%lastdone_q) CYCLE
      !
      npwq = ngq(iq)
      l_gammaq = q_grid%l_pIsGamma(iq)
@@ -777,7 +777,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ik = k_grid%ip(iks) 
         is = k_grid%is(iks) 
         !
-        IF(iq==bks%lastdone_q .AND. iks<bks%lastdone_ks) CYCLE
+        IF(iq==bksq%lastdone_q .AND. iks<bksq%lastdone_ks) CYCLE
         !
         ! ... Set k-point, spin, kinetic energy, needed by Hpsi
         !
@@ -838,8 +838,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         mwo = - k_grid%weight(iks) / omega
         zmwo = CMPLX( - k_grid%weight(iks) / omega, 0._DP, KIND=DP)
         !
-        bks%max_band = nbndval
-        bks%min_band = 1
+        bksq%max_band = nbndval
+        bksq%min_band = 1
         !
         ALLOCATE(dvpsi(npwx*npol,mypara%nlocx)) 
         !
@@ -848,7 +848,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ! LOOP over band states 
         !
         DO iv = 1, nbndval
-           IF(iq==bks%lastdone_q .AND. iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
+           IF(iq==bksq%lastdone_q .AND. iks==bksq%lastdone_ks .AND. iv <= bksq%lastdone_band ) CYCLE
            !
            ! MACROPOL CASE
            !
@@ -1144,13 +1144,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            IF( o_restart_time >= 0._DP ) THEN 
               IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. iv == nbndval) THEN
-                 bks%lastdone_q=iq
-                 bks%lastdone_ks=iks
-                 bks%lastdone_band=iv
-                 CALL solvewfreq_restart_write(bks,zmati_q(:,:,:,:),zmatr_q(:,:,:,:),mypara%nglob,mypara%nloc)
-                 bks%old_q = iq
-                 bks%old_ks = iks 
-                 bks%old_band = iv
+                 bksq%lastdone_q=iq
+                 bksq%lastdone_ks=iks
+                 bksq%lastdone_band=iv
+                 CALL solvewfreq_restart_write(bksq,zmati_q(:,:,:,:),zmatr_q(:,:,:,:),mypara%nglob,mypara%nloc)
+                 bksq%old_q = iq
+                 bksq%old_ks = iks 
+                 bksq%old_band = iv
                  time_spent(1) = get_clock( 'wlanczos' )
               ENDIF
            ENDIF

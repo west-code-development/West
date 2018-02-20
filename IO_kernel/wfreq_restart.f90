@@ -22,7 +22,22 @@ MODULE wfreq_restart
   !
   SAVE
   !
+  ! BKS: band, k
+  !
   TYPE :: bks_type
+     INTEGER :: lastdone_ks
+     INTEGER :: lastdone_band
+     INTEGER :: old_ks
+     INTEGER :: old_band
+     INTEGER :: max_ks
+     INTEGER :: max_band
+     INTEGER :: min_ks
+     INTEGER :: min_band
+  END TYPE bks_type
+  !
+  ! BKSQ: band, k, q (solve_wfreq_q)
+  ! 
+  TYPE :: bksq_type
      INTEGER :: lastdone_q
      INTEGER :: lastdone_ks
      INTEGER :: lastdone_band
@@ -35,7 +50,24 @@ MODULE wfreq_restart
      INTEGER :: min_q
      INTEGER :: min_ks
      INTEGER :: min_band
-  END TYPE bks_type
+  END TYPE bksq_type
+  !
+  ! BKSKS: band, k, k1 (solve_gfreq_q)
+  !
+  TYPE :: bksks_type
+     INTEGER :: lastdone_ks
+     INTEGER :: lastdone_ksc
+     INTEGER :: lastdone_band
+     INTEGER :: old_ks
+     INTEGER :: old_ksc
+     INTEGER :: old_band
+     INTEGER :: max_ks
+     INTEGER :: max_ksc
+     INTEGER :: max_band
+     INTEGER :: min_ks
+     INTEGER :: min_ksc
+     INTEGER :: min_band
+  END TYPE bksks_type
   !
   INTERFACE solvewfreq_restart_write
      MODULE PROCEDURE solvewfreq_restart_write_real, solvewfreq_restart_write_complex, solvewfreq_restart_write_complex_q
@@ -106,7 +138,7 @@ MODULE wfreq_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE write_bks_q(bks,dirname,fname)
+    SUBROUTINE write_bksq(bksq,dirname,fname)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage,intra_bgrp_comm
@@ -119,7 +151,7 @@ MODULE wfreq_restart
       !
       ! I/O
       !
-      TYPE(bks_type),INTENT(IN) :: bks
+      TYPE(bksq_type),INTENT(IN) :: bksq
       CHARACTER(LEN=512),INTENT(IN) :: dirname, fname
       INTEGER :: iunout
       !
@@ -142,20 +174,80 @@ MODULE wfreq_restart
       !
       IF ( mpime == root ) THEN  
          !
-         CALL iotk_write_begin( iunout, "BKS-SUMMARY" )
-         CALL iotk_write_dat( iunout, "lastdone_q"   , bks%lastdone_q   )
-         CALL iotk_write_dat( iunout, "lastdone_ks"  , bks%lastdone_ks  )
-         CALL iotk_write_dat( iunout, "lastdone_band", bks%lastdone_band)
-         CALL iotk_write_dat( iunout, "old_q"        , bks%old_q        )
-         CALL iotk_write_dat( iunout, "old_ks"       , bks%old_ks       )
-         CALL iotk_write_dat( iunout, "old_band"     , bks%old_band     )
-         CALL iotk_write_dat( iunout, "max_q"        , bks%max_q        )
-         CALL iotk_write_dat( iunout, "max_ks"       , bks%max_ks       )
-         CALL iotk_write_dat( iunout, "max_band"     , bks%max_band     )
-         CALL iotk_write_dat( iunout, "min_q"        , bks%min_q        )
-         CALL iotk_write_dat( iunout, "min_ks"       , bks%min_ks       )
-         CALL iotk_write_dat( iunout, "min_band"     , bks%min_band     )
-         CALL iotk_write_end( iunout, "BKS-SUMMARY"  )
+         CALL iotk_write_begin( iunout, "BKSQ-SUMMARY" )
+         CALL iotk_write_dat( iunout, "lastdone_q"   , bksq%lastdone_q   )
+         CALL iotk_write_dat( iunout, "lastdone_ks"  , bksq%lastdone_ks  )
+         CALL iotk_write_dat( iunout, "lastdone_band", bksq%lastdone_band)
+         CALL iotk_write_dat( iunout, "old_q"        , bksq%old_q        )
+         CALL iotk_write_dat( iunout, "old_ks"       , bksq%old_ks       )
+         CALL iotk_write_dat( iunout, "old_band"     , bksq%old_band     )
+         CALL iotk_write_dat( iunout, "max_q"        , bksq%max_q        )
+         CALL iotk_write_dat( iunout, "max_ks"       , bksq%max_ks       )
+         CALL iotk_write_dat( iunout, "max_band"     , bksq%max_band     )
+         CALL iotk_write_dat( iunout, "min_q"        , bksq%min_q        )
+         CALL iotk_write_dat( iunout, "min_ks"       , bksq%min_ks       )
+         CALL iotk_write_dat( iunout, "min_band"     , bksq%min_band     )
+         CALL iotk_write_end( iunout, "BKSQ-SUMMARY"  )
+         !
+         CALL iotk_close_write( iunout )
+         !
+      END IF
+      !
+      CALL mp_barrier(world_comm)
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE write_bksks(bksks,dirname,fname)
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage,intra_bgrp_comm
+      USE mp_world,             ONLY : mpime,root,world_comm,nproc
+      USE io_global,            ONLY : stdout 
+      USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get,mp_sum
+      USE io_files,             ONLY : delete_if_present
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      TYPE(bksks_type),INTENT(IN) :: bksks
+      CHARACTER(LEN=512),INTENT(IN) :: dirname, fname
+      INTEGER :: iunout
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      !
+      IF ( mpime == root ) THEN
+         !
+         ! ... open XML descriptor
+         !
+         CALL iotk_free_unit( iunout, ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( dirname ) // '/' // TRIM(fname) , BINARY = .FALSE., IERR = ierr )
+         !
+      END IF
+      !
+      CALL mp_bcast( ierr, root, world_comm )
+      !
+      CALL errore( 'wfreq_restart', 'cannot open restart file for writing', ierr )
+      !
+      IF ( mpime == root ) THEN  
+         !
+         CALL iotk_write_begin( iunout, "BKSKS-SUMMARY" )
+         CALL iotk_write_dat( iunout, "lastdone_ks"  , bksks%lastdone_ks  )
+         CALL iotk_write_dat( iunout, "lastdone_ksc" , bksks%lastdone_ksc )
+         CALL iotk_write_dat( iunout, "lastdone_band", bksks%lastdone_band)
+         CALL iotk_write_dat( iunout, "old_ks"       , bksks%old_ks       )
+         CALL iotk_write_dat( iunout, "old_ksc"      , bksks%old_ksc      )
+         CALL iotk_write_dat( iunout, "old_band"     , bksks%old_band     )
+         CALL iotk_write_dat( iunout, "max_ks"       , bksks%max_ks       )
+         CALL iotk_write_dat( iunout, "max_ksc"      , bksks%max_ksc      )
+         CALL iotk_write_dat( iunout, "max_band"     , bksks%max_band     )
+         CALL iotk_write_dat( iunout, "min_ks"       , bksks%min_ks       )
+         CALL iotk_write_dat( iunout, "min_ksc"      , bksks%min_ksc      )
+         CALL iotk_write_dat( iunout, "min_band"     , bksks%min_band     )
+         CALL iotk_write_end( iunout, "BKSKS-SUMMARY"  )
          !
          CALL iotk_close_write( iunout )
          !
@@ -229,7 +321,7 @@ MODULE wfreq_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_bks_q(bks,dirname,fname)
+    SUBROUTINE read_bksq(bksq,dirname,fname)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage,intra_bgrp_comm
@@ -242,7 +334,7 @@ MODULE wfreq_restart
       !
       ! I/O
       !
-      TYPE(bks_type),INTENT(OUT) :: bks
+      TYPE(bksq_type),INTENT(OUT) :: bksq
       CHARACTER(LEN=512),INTENT(IN) :: dirname, fname
       INTEGER :: iunout
       !
@@ -265,37 +357,108 @@ MODULE wfreq_restart
       !
       IF ( mpime == root ) THEN  
          !
-         CALL iotk_scan_begin( iunout, "BKS-SUMMARY" )
-         CALL iotk_scan_dat( iunout, "lastdone_q"   , bks%lastdone_q    )
-         CALL iotk_scan_dat( iunout, "lastdone_ks"  , bks%lastdone_ks   )
-         CALL iotk_scan_dat( iunout, "lastdone_band", bks%lastdone_band )
-         CALL iotk_scan_dat( iunout, "old_q"        , bks%old_q         )
-         CALL iotk_scan_dat( iunout, "old_ks"       , bks%old_ks        )
-         CALL iotk_scan_dat( iunout, "old_band"     , bks%old_band      )
-         CALL iotk_scan_dat( iunout, "max_q"        , bks%max_q         )
-         CALL iotk_scan_dat( iunout, "max_ks"       , bks%max_ks        )
-         CALL iotk_scan_dat( iunout, "max_band"     , bks%max_band      )
-         CALL iotk_scan_dat( iunout, "min_q"        , bks%min_q         )
-         CALL iotk_scan_dat( iunout, "min_ks"       , bks%min_ks        )
-         CALL iotk_scan_dat( iunout, "min_band"     , bks%min_band      )
-         CALL iotk_scan_end( iunout, "BKS-SUMMARY"  )
+         CALL iotk_scan_begin( iunout, "BKSQ-SUMMARY" )
+         CALL iotk_scan_dat( iunout, "lastdone_q"   , bksq%lastdone_q    )
+         CALL iotk_scan_dat( iunout, "lastdone_ks"  , bksq%lastdone_ks   )
+         CALL iotk_scan_dat( iunout, "lastdone_band", bksq%lastdone_band )
+         CALL iotk_scan_dat( iunout, "old_q"        , bksq%old_q         )
+         CALL iotk_scan_dat( iunout, "old_ks"       , bksq%old_ks        )
+         CALL iotk_scan_dat( iunout, "old_band"     , bksq%old_band      )
+         CALL iotk_scan_dat( iunout, "max_q"        , bksq%max_q         )
+         CALL iotk_scan_dat( iunout, "max_ks"       , bksq%max_ks        )
+         CALL iotk_scan_dat( iunout, "max_band"     , bksq%max_band      )
+         CALL iotk_scan_dat( iunout, "min_q"        , bksq%min_q         )
+         CALL iotk_scan_dat( iunout, "min_ks"       , bksq%min_ks        )
+         CALL iotk_scan_dat( iunout, "min_band"     , bksq%min_band      )
+         CALL iotk_scan_end( iunout, "BKSQ-SUMMARY"  )
          !
          CALL iotk_close_read( iunout )
          !
       END IF
       !
-      CALL mp_bcast( bks%lastdone_q    , root , world_comm )
-      CALL mp_bcast( bks%lastdone_ks   , root , world_comm )
-      CALL mp_bcast( bks%lastdone_band , root , world_comm )
-      CALL mp_bcast( bks%old_q         , root , world_comm )
-      CALL mp_bcast( bks%old_ks        , root , world_comm )
-      CALL mp_bcast( bks%old_band      , root , world_comm )
-      CALL mp_bcast( bks%max_q         , root , world_comm )
-      CALL mp_bcast( bks%max_ks        , root , world_comm )
-      CALL mp_bcast( bks%max_band      , root , world_comm )
-      CALL mp_bcast( bks%min_q         , root , world_comm )
-      CALL mp_bcast( bks%min_ks        , root , world_comm )
-      CALL mp_bcast( bks%min_band      , root , world_comm )
+      CALL mp_bcast( bksq%lastdone_q    , root , world_comm )
+      CALL mp_bcast( bksq%lastdone_ks   , root , world_comm )
+      CALL mp_bcast( bksq%lastdone_band , root , world_comm )
+      CALL mp_bcast( bksq%old_q         , root , world_comm )
+      CALL mp_bcast( bksq%old_ks        , root , world_comm )
+      CALL mp_bcast( bksq%old_band      , root , world_comm )
+      CALL mp_bcast( bksq%max_q         , root , world_comm )
+      CALL mp_bcast( bksq%max_ks        , root , world_comm )
+      CALL mp_bcast( bksq%max_band      , root , world_comm )
+      CALL mp_bcast( bksq%min_q         , root , world_comm )
+      CALL mp_bcast( bksq%min_ks        , root , world_comm )
+      CALL mp_bcast( bksq%min_band      , root , world_comm )
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE read_bksks(bksks,dirname,fname)
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage,intra_bgrp_comm
+      USE mp_world,             ONLY : mpime,root,world_comm,nproc
+      USE io_global,            ONLY : stdout 
+      USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get,mp_sum
+      USE io_files,             ONLY : delete_if_present
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      TYPE(bksks_type),INTENT(OUT) :: bksks
+      CHARACTER(LEN=512),INTENT(IN) :: dirname, fname
+      INTEGER :: iunout
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      !
+      IF ( mpime == root ) THEN
+         !
+         ! ... open XML descriptor
+         !
+         CALL iotk_free_unit( iunout, ierr )
+         CALL iotk_open_read( iunout, FILE = TRIM( dirname ) // '/' // TRIM(fname) , BINARY = .FALSE., IERR = ierr )
+         !
+      END IF
+      !
+      CALL mp_bcast( ierr, root, world_comm )
+      !
+      CALL errore( 'wfreq_restart', 'cannot open restart file for reading', ierr )
+      !
+      IF ( mpime == root ) THEN  
+         !
+         CALL iotk_scan_begin( iunout, "BKSKS-SUMMARY" )
+         CALL iotk_scan_dat( iunout, "lastdone_ks"  , bksks%lastdone_ks   )
+         CALL iotk_scan_dat( iunout, "lastdone_ksc" , bksks%lastdone_ksc  )
+         CALL iotk_scan_dat( iunout, "lastdone_band", bksks%lastdone_band )
+         CALL iotk_scan_dat( iunout, "old_ks"       , bksks%old_ks        )
+         CALL iotk_scan_dat( iunout, "old_ksc"      , bksks%old_ksc       )
+         CALL iotk_scan_dat( iunout, "old_band"     , bksks%old_band      )
+         CALL iotk_scan_dat( iunout, "max_ks"       , bksks%max_ks        )
+         CALL iotk_scan_dat( iunout, "max_ksc"      , bksks%max_ksc       )
+         CALL iotk_scan_dat( iunout, "max_band"     , bksks%max_band      )
+         CALL iotk_scan_dat( iunout, "min_ks"       , bksks%min_ks        )
+         CALL iotk_scan_dat( iunout, "min_ksc"      , bksks%min_ksc       )
+         CALL iotk_scan_dat( iunout, "min_band"     , bksks%min_band      )
+         CALL iotk_scan_end( iunout, "BKSKS-SUMMARY"  )
+         !
+         CALL iotk_close_read( iunout )
+         !
+      END IF
+      !
+      CALL mp_bcast( bksks%lastdone_ks   , root , world_comm )
+      CALL mp_bcast( bksks%lastdone_ksc  , root , world_comm )
+      CALL mp_bcast( bksks%lastdone_band , root , world_comm )
+      CALL mp_bcast( bksks%old_ks        , root , world_comm )
+      CALL mp_bcast( bksks%old_ksc       , root , world_comm )
+      CALL mp_bcast( bksks%old_band      , root , world_comm )
+      CALL mp_bcast( bksks%max_ks        , root , world_comm )
+      CALL mp_bcast( bksks%max_ksc       , root , world_comm )
+      CALL mp_bcast( bksks%max_band      , root , world_comm )
+      CALL mp_bcast( bksks%min_ks        , root , world_comm )
+      CALL mp_bcast( bksks%min_ksc       , root , world_comm )
+      CALL mp_bcast( bksks%min_band      , root , world_comm )
       !
     END SUBROUTINE
     !
@@ -543,7 +706,7 @@ MODULE wfreq_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_write_complex_q(bks,dmat,zmat,npg,npl)
+    SUBROUTINE solvewfreq_restart_write_complex_q(bksq,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage,intra_bgrp_comm
@@ -561,7 +724,7 @@ MODULE wfreq_restart
       !
       ! I/O
       !
-      TYPE(bks_type),INTENT(IN) :: bks
+      TYPE(bksq_type),INTENT(IN) :: bksq
       INTEGER, INTENT(IN) :: npg, npl
       COMPLEX(DP), INTENT(IN) :: dmat(npg,npl,ifr%nloc,q_grid%np)
       COMPLEX(DP), INTENT(IN) :: zmat(npg,npl,rfr%nloc,q_grid%np)
@@ -601,7 +764,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum( tmp_dmat, intra_bgrp_comm ) 
       !
-      WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_q,bks%lastdone_ks,bks%lastdone_band,&
+      WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,&
                                                                           & my_image_id
       fname=TRIM( dirname ) // '/' // TRIM(my_label)
       iunit = 2000 + my_image_id
@@ -622,7 +785,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum( tmp_zmat, intra_bgrp_comm ) 
       !   
-      WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_q,bks%lastdone_ks,bks%lastdone_band,&
+      WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,&
                                                                           & my_image_id
       fname=TRIM( dirname ) // '/' // TRIM(my_label)
       iunit = 2000 + my_image_id
@@ -633,14 +796,14 @@ MODULE wfreq_restart
       !
       ! CLEAR
       !
-      IF(bks%old_q/=0.AND.bks%old_ks/=0.AND.bks%old_band/=0) THEN
+      IF(bksq%old_q/=0.AND.bksq%old_ks/=0.AND.bksq%old_band/=0) THEN
          IF( me_bgrp == 0 ) THEN
             WRITE(my_label2,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
-            & bks%old_q, bks%old_ks, bks%old_band, my_image_id
+            & bksq%old_q, bksq%old_ks, bksq%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
             WRITE(my_label2,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') & 
-            & bks%old_q, bks%old_ks, bks%old_band, my_image_id
+            & bksq%old_q, bksq%old_ks, bksq%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
          ENDIF
@@ -649,7 +812,7 @@ MODULE wfreq_restart
       ! CREATE THE SUMMARY FILE
       !
       fname = "summary_w.xml"
-      CALL write_bks_q ( bks, dirname, fname ) 
+      CALL write_bksq ( bksq, dirname, fname ) 
       !
       CALL stop_clock('sw_restart')
       !
@@ -856,7 +1019,7 @@ MODULE wfreq_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_read_complex_q( bks, dmat, zmat, npg, npl )
+    SUBROUTINE solvewfreq_restart_read_complex_q( bksq, dmat, zmat, npg, npl )
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage,intra_bgrp_comm
@@ -873,7 +1036,7 @@ MODULE wfreq_restart
       !
       ! I/O
       !
-      TYPE(bks_type), INTENT(OUT) :: bks
+      TYPE(bksq_type), INTENT(OUT) :: bksq
       INTEGER, INTENT(IN) :: npg, npl
       COMPLEX(DP), INTENT(OUT) :: dmat(npg,npl,ifr%nloc,q_grid%np)
       COMPLEX(DP), INTENT(OUT) :: zmat(npg,npl,rfr%nloc,q_grid%np)
@@ -908,13 +1071,13 @@ MODULE wfreq_restart
       ! CREATE THE SUMMARY FILE
       !
       fname = "summary_w.xml"
-      CALL read_bks_q( bks, dirname, fname )
+      CALL read_bksq( bksq, dirname, fname )
       !
       ! READ
       !
       ALLOCATE( tmp_dmat( npg, npl, ifr%nglob, q_grid%np ))
       !
-      WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_q,bks%lastdone_ks,bks%lastdone_band,&
+      WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,&
                                                                           & my_image_id
       fname=TRIM( dirname ) // '/' // TRIM(my_label) 
       lproc = (me_bgrp==0) 
@@ -932,7 +1095,7 @@ MODULE wfreq_restart
       !
       ALLOCATE( tmp_zmat( npg, npl, rfr%nglob, q_grid%np ))
       !
-      WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_q,bks%lastdone_ks,bks%lastdone_band,&
+      WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,&
                                                                           & my_image_id
       fname=TRIM( dirname ) // '/' // TRIM(my_label) 
       lproc = (me_bgrp==0) 
@@ -1007,6 +1170,48 @@ MODULE wfreq_restart
       !
     END SUBROUTINE
     !
+    !------------------------------------------------------------------------
+    SUBROUTINE solvegfreq_restart_write_q( bksks )
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
+      USE mp_world,             ONLY : mpime,root,world_comm,nproc
+      USE io_global,            ONLY : stdout 
+      USE westcom,              ONLY : west_prefix
+      USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
+      USE io_files,             ONLY : delete_if_present
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      TYPE(bksks_type), INTENT(IN) :: bksks
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      CHARACTER(LEN=512) :: dirname,fname
+      REAL(DP), EXTERNAL :: GET_CLOCK
+      REAL(DP) :: time_spent(2)
+      CHARACTER(20),EXTERNAL :: human_readable_time
+      !
+      ! BARRIER
+      !
+      CALL mp_barrier(world_comm)
+      !
+      ! MKDIR 
+      !
+      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wfreq.restart'
+      CALL my_mkdir( dirname )
+      !
+      CALL start_clock('sg_restart')
+      !
+      fname = "summary_g.xml"
+      CALL write_bksks( bksks, dirname, fname )
+      !
+      CALL stop_clock('sg_restart')
+      !
+    END SUBROUTINE
     !
     !
     !------------------------------------------------------------------------
@@ -1047,6 +1252,60 @@ MODULE wfreq_restart
       !
       fname = "summary_g.xml"
       CALL read_bks( bks, dirname, fname ) 
+      !
+      ! BARRIER
+      !
+      CALL mp_barrier(world_comm)
+      time_spent(2)=get_clock('sg_restart')
+      CALL stop_clock('sg_restart')
+      !
+      WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
+      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )  
+      WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
+      !
+    END SUBROUTINE
+    !
+    !
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE solvegfreq_restart_read_q( bksks )
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
+      USE mp_world,             ONLY : mpime,root,world_comm
+      USE io_global,            ONLY : stdout 
+      USE westcom,              ONLY : west_prefix
+      USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      TYPE(bksks_type),INTENT(OUT) :: bksks
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      CHARACTER(LEN=512) :: dirname,fname
+      REAL(DP), EXTERNAL :: GET_CLOCK
+      REAL(DP) :: time_spent(2)
+      CHARACTER(20),EXTERNAL :: human_readable_time
+      !
+      ! BARRIER
+      !
+      CALL mp_barrier(world_comm)
+      !
+      ! MKDIR 
+      !
+      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wfreq.restart'
+      CALL my_mkdir( dirname )
+      !
+      CALL start_clock('sg_restart')
+      time_spent(1)=get_clock('sg_restart')
+      !
+      fname = "summary_g.xml"
+      CALL read_bksks( bksks, dirname, fname ) 
       !
       ! BARRIER
       !

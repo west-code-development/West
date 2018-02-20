@@ -363,7 +363,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert
-  USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
+  USE wfreq_restart,        ONLY : solvegfreq_restart_write_q,solvegfreq_restart_read_q,bksks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq_q
   USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
@@ -401,7 +401,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   LOGICAL :: l_iks_skip, l_ib_skip
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
-  TYPE(bks_type) :: bks
+  TYPE(bksks_type) :: bksks
   !
   CALL io_push_title("(G)-Lanczos")
   !
@@ -411,18 +411,18 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   IF(l_read_restart) THEN
-     CALL solvegfreq_restart_read( bks )
+     CALL solvegfreq_restart_read_q( bksks )
   ELSE
-     bks%lastdone_ks   = 0 
-     bks%lastdone_q    = 0 
-     bks%lastdone_band = 0 
-     bks%old_ks        = 0 
-     bks%old_q         = 0 
-     bks%old_band      = 0 
-     bks%max_ks        = k_grid%nps
-     bks%min_ks        = 1 
-     bks%max_q         = q_grid%nps
-     bks%min_q         = 1 
+     bksks%lastdone_ks     = 0 
+     bksks%lastdone_ksc    = 0 
+     bksks%lastdone_band   = 0 
+     bksks%old_ks          = 0 
+     bksks%old_ksc         = 0 
+     bksks%old_band        = 0 
+     bksks%max_ks          = k_grid%nps
+     bksks%min_ks          = 1 
+     bksks%max_ksc         = k_grid%nps
+     bksks%min_ksc         = 1 
   ENDIF
   !
   ALLOCATE( evck(npwx*npol,nbnd) )
@@ -435,14 +435,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   barra_load = 0
   DO ikks = 1, k_grid%nps
-     ikk = k_grid%ip(ikks)
-     IF(ikks<bks%lastdone_ks) CYCLE
+     IF(ikks<bksks%lastdone_ks) CYCLE
      DO ib = qp_bandrange(1), qp_bandrange(2)
-        IF(ikks==bks%lastdone_ks .AND. ib < bks%lastdone_band ) CYCLE
+        IF(ikks==bksks%lastdone_ks .AND. ib < bksks%lastdone_band ) CYCLE
         DO iks = 1, k_grid%nps
-           ik = k_grid%ip(iks)
-           CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 1, 'cart', iq, g0 )
-           IF (ikks==bks%lastdone_ks .AND. ib == bks%lastdone_band .AND. iq <= bks%lastdone_q) CYCLE 
+           IF (ikks==bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_ksc) CYCLE 
            barra_load = barra_load + 1
         ENDDO
      ENDDO
@@ -461,7 +458,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! inner k-point loop (sum over k'): iks, npw, evc (passed to h_psi)
   !
   DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
-     IF(ikks<bks%lastdone_ks) CYCLE
+     IF(ikks<bksks%lastdone_ks) CYCLE
      !
      ikk = k_grid%ip(ikks)
      !
@@ -472,15 +469,15 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      nbndval = nbnd_occ(ikks)
      !
-     bks%max_band=nbndval
-     bks%min_band=1
+     bksks%max_band=nbndval
+     bksks%min_band=1
      !
      ALLOCATE(dvpsi(npwx*npol,pert%nlocx))   
      !
      ! LOOP over band states 
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
-        IF(ikks==bks%lastdone_ks .AND. ib < bks%lastdone_band ) CYCLE
+        IF(ikks==bksks%lastdone_ks .AND. ib < bksks%lastdone_band ) CYCLE
         !
         ! PSIC
         !
@@ -498,7 +495,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            time_spent(1) = get_clock( 'glanczos' ) 
            !
            CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 1, 'cart', iq, g0 )
-           IF (ikks==bks%lastdone_ks .AND. ib==bks%lastdone_band .AND. iq <= bks%lastdone_q) CYCLE
+           IF (ikks==bksks%lastdone_ks .AND. ib==bksks%lastdone_band .AND. iks <= bksks%lastdone_ksc) CYCLE
            !
            CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !
@@ -655,13 +652,13 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            IF( o_restart_time >= 0._DP ) THEN 
               IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN 
-                 bks%lastdone_ks=ikks
-                 bks%lastdone_q=iq
-                 bks%lastdone_band=ib 
-                 CALL solvegfreq_restart_write( bks )
-                 bks%old_ks=ikks
-                 bks%old_q=iq
-                 bks%old_band=ib
+                 bksks%lastdone_ks=ikks
+                 bksks%lastdone_ksc=iks
+                 bksks%lastdone_band=ib 
+                 CALL solvegfreq_restart_write_q( bksks )
+                 bksks%old_ks=ikks
+                 bksks%old_ksc=iks
+                 bksks%old_band=ib
                  time_spent(1) = get_clock( 'glanczos' )
               ENDIF
            ENDIF

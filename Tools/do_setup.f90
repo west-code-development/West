@@ -36,9 +36,7 @@ SUBROUTINE do_setup
   USE io_push
   USE westcom,                ONLY : logfile
   USE mp_world,               ONLY : mpime, root
-  USE class_bz_grid,          ONLY : bz_grid
   USE types_bz_grid,          ONLY : k_grid, q_grid
-  !USE types_bz_grid,          ONLY : k_grid, q_grid, kmq_grid, kpq_grid
   !
   IMPLICIT NONE
   !

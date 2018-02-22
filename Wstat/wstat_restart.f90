@@ -469,7 +469,6 @@ MODULE wstat_restart
       USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis,wstat_restart_dir
       USE io_global,           ONLY : stdout 
       USE distribution_center, ONLY : pert
-      USE class_bz_grid,       ONLY : bz_grid
       USE types_bz_grid,       ONLY : q_grid
       !
       IMPLICIT NONE

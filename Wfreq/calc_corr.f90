@@ -229,7 +229,6 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid
   USE types_coulomb,        ONLY : pot3D
   !

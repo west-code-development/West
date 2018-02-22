@@ -17,7 +17,7 @@ SUBROUTINE do_wfc2 ( )
   USE kinds,                 ONLY : DP
   USE uspp,                  ONLY : vkb,nkb
   USE io_global,             ONLY : stdout
-  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,igk_k,xk,npw,npwx,lsda,nkstot,current_k,ngk
+  USE pwcom,                 ONLY : current_spin,wk,nelup,neldw,isk,igk_k,xk,npw,npwx,lsda,current_k,ngk
   USE io_push,               ONLY : io_push_title,io_push_bar
   USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation,westpp_range,westpp_save_dir 
   USE mp_global,             ONLY : inter_image_comm,my_image_id
@@ -31,6 +31,7 @@ SUBROUTINE do_wfc2 ( )
   USE fft_at_k,              ONLY : single_invfft_k
   USE distribution_center,   ONLY : aband
   USE control_flags,         ONLY : gamma_only 
+  USE types_bz_grid,         ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -49,9 +50,9 @@ SUBROUTINE do_wfc2 ( )
   auxr = 0._DP
   psic = 0._DP
   !
-  CALL start_bar_type( barra, 'westpp', nks * MAX(aband%nloc,1) ) 
+  CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) ) 
   !
-  DO iks = 1, nks  ! KPOINT-SPIN LOOP
+  DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -66,7 +67,7 @@ SUBROUTINE do_wfc2 ( )
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks>1) THEN
+     IF(k_grid%nps>1) THEN
         !iuwfc = 20
         !lrwfc = nbnd * npwx * npol 
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )

@@ -167,7 +167,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! ... Eventually randomize
      !
-     IF(n_pdep_read_from_file<nvec) CALL do_randomize ( dvg, n_pdep_read_from_file+1, nvec  )
+     IF(n_pdep_read_from_file<nvec) CALL do_randomize ( dvg, n_pdep_read_from_file+1, nvec )
      !
      ! ... MGS
      !
@@ -505,6 +505,7 @@ SUBROUTINE davidson_diago_k ( )
   !
   INTEGER :: iq, lastdone_iq
   LOGICAL :: l_restart_q_done
+  LOGICAL :: l_print_pdep_read
   REAL(DP) :: q(3)
   !
   REAL(DP), EXTERNAL :: GET_CLOCK
@@ -629,7 +630,12 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! ... Eventually read from file
         !
-        IF(n_pdep_read_from_file>0) CALL pdep_db_read( n_pdep_read_from_file, iq )
+        IF (iq==1) THEN 
+           l_print_pdep_read = .TRUE.
+        ELSE 
+           l_print_pdep_read = .FALSE.
+        ENDIF
+        IF(n_pdep_read_from_file>0) CALL pdep_db_read( n_pdep_read_from_file, iq, l_print_pdep_read)
         !
         ! ... Eventually randomize
         !
@@ -1169,7 +1175,6 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   USE mp,                   ONLY : mp_barrier
   USE mp_global,            ONLY : world_comm
   USE distribution_center,  ONLY : pert
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : q_grid
   !
   IMPLICIT NONE
@@ -1389,8 +1394,7 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
    USE io_push,              ONLY : io_push_title,io_push_bar
    USE mp_world,             ONLY : mpime, root
    USE westcom,              ONLY : logfile
-   USE class_bz_grid,        ONLY : bz_grid
-   USE types_bz_grid,             ONLY : q_grid
+   USE types_bz_grid,        ONLY : q_grid
    !
    IMPLICIT NONE
    !
@@ -1406,7 +1410,8 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
    !
    INTEGER :: i,j, ip
    CHARACTER(20),EXTERNAL :: human_readable_time
-   CHARACTER(LEN=6) :: cdav,cq
+   CHARACTER(LEN=6) :: cdav
+   CHARACTER(LEN=5) :: cq
    INTEGER :: ndav(q_grid%np),iunit
    LOGICAL :: found
    !

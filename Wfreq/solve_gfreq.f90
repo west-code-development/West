@@ -62,7 +62,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE distribution_center,  ONLY : pert
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -365,9 +364,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE distribution_center,  ONLY : pert
   USE wfreq_restart,        ONLY : solvegfreq_restart_write_q,solvegfreq_restart_read_q,bksks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq_q
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -464,8 +461,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      npwk = ngk(ikks)
      !
-     IF(my_image_id==0) CALL get_buffer( evck, lrwfc, iuwfc, ikks )
-     CALL mp_bcast(evck,0,inter_image_comm)
+     IF (k_grid%nps>1) THEN
+        IF(my_image_id==0) CALL get_buffer( evck, lrwfc, iuwfc, ikks )
+        CALL mp_bcast(evck,0,inter_image_comm)
+     ENDIF
      !
      nbndval = nbnd_occ(ikks)
      !

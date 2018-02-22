@@ -158,7 +158,6 @@ SUBROUTINE solve_hf_k( )
   USE funct,                ONLY : get_exx_fraction,dft_is_hybrid
   USE klist,                ONLY : wk
   USE wfreq_io,             ONLY : writeout_solvehf 
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE

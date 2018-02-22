@@ -22,7 +22,6 @@ SUBROUTINE set_npwq()
   USE gvecw,           ONLY : gcutw
   USE pwcom,           ONLY : npw,npwx
   USE control_flags,   ONLY : gamma_only
-  USE class_bz_grid,   ONLY : bz_grid
   USE types_bz_grid,   ONLY : q_grid
   !
   IMPLICIT NONE

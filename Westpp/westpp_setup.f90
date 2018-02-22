@@ -28,7 +28,6 @@ SUBROUTINE westpp_setup
   USE wavefunctions_module,   ONLY : evc
   USE mod_mpiio,              ONLY : set_io_comm
   USE pdep_db,                ONLY : pdep_db_read
-  USE class_coulomb,          ONLY : coulomb
   USE types_coulomb,          ONLY : pot3D
   !
   IMPLICIT NONE
@@ -42,8 +41,8 @@ SUBROUTINE westpp_setup
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Wave',.FALSE.,'default')
-  CALL pot3D%print_divergence()
+!  CALL pot3D%init('Wave',.FALSE.,'default')
+!  CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()
   !
@@ -61,12 +60,12 @@ SUBROUTINE westpp_setup
      IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) THEN
         pert = idistribute()
         CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
-        CALL pdep_db_read(westpp_n_pdep_eigen_to_use)
+        !CALL pdep_db_read(westpp_n_pdep_eigen_to_use)
      ENDIF 
      IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) THEN
         pert = idistribute()
         CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
-        CALL pdep_db_read(westpp_n_pdep_eigen_to_use)
+        !CALL pdep_db_read(westpp_n_pdep_eigen_to_use)
      ENDIF 
   ENDDO
   !

@@ -63,10 +63,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE class_idistribute,    ONLY : idistribute 
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid
   USE chi_invert,           ONLY : chi_invert_real, chi_invert_complex
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -640,10 +638,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE class_idistribute,    ONLY : idistribute 
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bksq_type
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
   USE chi_invert,           ONLY : chi_invert_complex
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE

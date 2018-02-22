@@ -45,7 +45,6 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   USE class_idistribute,    ONLY : idistribute
   USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
                                    vcut_get,  vcut_spheric_get, vcut_destroy
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -236,9 +235,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
   USE class_idistribute,    ONLY : idistribute
   USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
                                    vcut_get,  vcut_spheric_get, vcut_destroy
-  USE class_bz_grid,        ONLY : bz_grid
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
-  USE class_coulomb,        ONLY : coulomb
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -342,7 +339,7 @@ SUBROUTINE calc_exx2_k( sigma_exx, nb1, nb2 )
         !
         IF (noncolin) THEN
            CALL single_invfft_k(dffts,npw,npwx,evc(1     ,ib),psic_nc(1,1),'Wave',igk_k(1,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,ib),psic_nc(1,2),'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1,ib),psic_nc(1,2),'Wave',igk_k(1,current_k))
         ELSE
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
         ENDIF

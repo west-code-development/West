@@ -49,7 +49,8 @@ MODULE pdep_db
       INTEGER, INTENT(IN), OPTIONAL :: iq
       !
       CHARACTER(LEN=512)    :: fname
-      CHARACTER(LEN=6)      :: my_label, my_label_q
+      CHARACTER(LEN=6)      :: my_label
+      CHARACTER(LEN=5)      :: my_label_q
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -144,7 +145,7 @@ MODULE pdep_db
     ! *****************************
     !
     !------------------------------------------------------------------------
-    SUBROUTINE pdep_db_read( nglob_to_be_read, iq_to_be_read )
+    SUBROUTINE pdep_db_read( nglob_to_be_read, iq_to_be_read, l_print_readin_info )
       !------------------------------------------------------------------------
       !
       USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwqx,wstat_save_dir
@@ -161,9 +162,11 @@ MODULE pdep_db
       !
       INTEGER, INTENT(IN) :: nglob_to_be_read
       INTEGER, INTENT(IN), OPTIONAL :: iq_to_be_read
+      LOGICAL, INTENT(IN), OPTIONAL :: l_print_readin_info
       !
       CHARACTER(LEN=512) :: fname
-      CHARACTER(LEN=6)      :: my_label, my_label_q
+      CHARACTER(LEN=6)      :: my_label
+      CHARACTER(LEN=5)      :: my_label_q
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -174,6 +177,7 @@ MODULE pdep_db
       LOGICAL :: found
       TYPE(json_file) :: json
       CHARACTER(20),ALLOCATABLE :: eigenpot_filename(:) 
+      LOGICAL :: l_print_message
       !
       ! MPI BARRIER
       !
@@ -196,8 +200,8 @@ MODULE pdep_db
          CALL json%get('input.wstat_control.n_pdep_eigen', tmp_n_pdep_eigen, found) 
          IF (PRESENT(iq_to_be_read)) THEN
             WRITE(my_label_q,'(i5.5)') iq_to_be_read
-            CALL json%get('output.Q'//TRIM(my_label_q)//').eigenval',tmp_ev, found)
-            CALL json%get('output.Q'//TRIM(my_label_q)//').eigenpot', eigenpot_filename, found) 
+            CALL json%get('output.Q'//TRIM(my_label_q)//'.eigenval',tmp_ev, found)
+            CALL json%get('output.Q'//TRIM(my_label_q)//'.eigenpot', eigenpot_filename, found)
          ELSE
             CALL json%get('output.eigenval', tmp_ev, found)
             CALL json%get('output.eigenpot', eigenpot_filename, found) 
@@ -262,12 +266,20 @@ MODULE pdep_db
       time_spent(2)=get_clock('pdep_db')
       CALL stop_clock('pdep_db')
       !
-      WRITE(stdout,'(  5x," ")')
-      CALL io_push_bar()
-      WRITE(stdout, "(5x, 'SAVE read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )  
-      WRITE(stdout, "(5x, 'Eigen. found : ',i12)") n_eigen_to_get
-      CALL io_push_bar()
+      IF (PRESENT(l_print_readin_info)) THEN
+         l_print_message = l_print_readin_info
+      ELSE
+         l_print_message = .TRUE.
+      ENDIF
+      !
+      IF (l_print_message) THEN
+         WRITE(stdout,'(  5x," ")')
+         CALL io_push_bar()
+         WRITE(stdout, "(5x, 'SAVE read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+         WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )  
+         WRITE(stdout, "(5x, 'Eigen. found : ',i12)") n_eigen_to_get
+         CALL io_push_bar()
+      ENDIF
       !
     END SUBROUTINE
     !

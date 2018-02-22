@@ -717,7 +717,6 @@ MODULE wfreq_restart
       USE io_files,             ONLY : delete_if_present
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write 
-      USE class_bz_grid,        ONLY : bz_grid
       USE types_bz_grid,        ONLY : q_grid
       !
       IMPLICIT NONE
@@ -1029,7 +1028,6 @@ MODULE wfreq_restart
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read 
-      USE class_bz_grid,        ONLY : bz_grid
       USE types_bz_grid,        ONLY : q_grid
       !
       IMPLICIT NONE

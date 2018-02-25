@@ -673,7 +673,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ENDDO ! KPOINT-SPIN (MATRIX ELEMENT)
   !
   DEALLOCATE( phase )
-  DEALLOCATE( psick )
+  IF ( noncolin ) THEN
+     DEALLOCATE( psick_nc )
+  ELSE
+     DEALLOCATE( psick )
+  ENDIF
   DEALLOCATE( evck )
   !
   CALL stop_bar_type( barra, 'glanczos' )

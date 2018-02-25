@@ -70,11 +70,11 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   CALL io_push_bar()
   !
   ALLOCATE( pertg( ngm ) )
-  IF(noncolin) THEN 
-     ALLOCATE( pertr_nc( dffts%nnr, npol ) )
-  ELSE
+!  IF(noncolin) THEN 
+!     ALLOCATE( pertr_nc( dffts%nnr, npol ) )
+!  ELSE
      ALLOCATE( pertr( dffts%nnr ) )
-  ENDIF
+!  ENDIF
   !
   CALL pot3D%init('Dense',.FALSE.,'gb')
   !
@@ -135,40 +135,40 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
      !
      DO ib = nb1, nb2
         !
-        IF(gamma_only) THEN
+        !IF(gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave') 
-        ELSEIF(noncolin) THEN
-           CALL single_invfft_k(dffts,npw,npwx,evc(1     ,ib),psic_nc(1,1),'Wave',igk_k(1,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,ib),psic_nc(1,2),'Wave',igk_k(1,current_k))
-!        ELSE
-!           CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
-        ENDIF
+        !ELSEIF(noncolin) THEN
+        !   CALL single_invfft_k(dffts,npw,npwx,evc(1     ,ib),psic_nc(1,1),'Wave',igk_k(1,current_k))
+        !   CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,ib),psic_nc(1,2),'Wave',igk_k(1,current_k))
+        ! ELSE
+        !    CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
+        !ENDIF
         !
         DO iv = 1, vband%nloc
            !
            iv_glob = vband%l2g(iv)
            !
            ! Bring it to R-space
-           IF(gamma_only) THEN
+           !IF(gamma_only) THEN
               CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave')
               DO ir=1,dffts%nnr 
                  pertr(ir)=psic(ir)*pertr(ir)
               ENDDO
               CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Dense')
-           ELSEIF(noncolin) THEN
-              CALL single_invfft_k(dffts,npw,npwx,evc(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,current_k))
-              CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,current_k))
-              DO ir=1,dffts%nnr 
-                 pertr_nc(ir,1)=DCONJG(psic_nc(ir,1))*pertr_nc(ir,1)+DCONJG(psic_nc(ir,2))*pertr_nc(ir,2)
-              ENDDO
-              CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
-!           ELSE
-!              CALL single_invfft_k(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave',igk_k(1,current_k))
-!              DO ir=1,dffts%nnr 
-!                 pertr(ir)=DCONJG(psic(ir))*pertr(ir)
-!              ENDDO
-!              CALL single_fwfft_k(dffts,ngms,ngms,pertr,pertg,'Smooth') ! no igk
-           ENDIF 
+           !ELSEIF(noncolin) THEN
+           !   CALL single_invfft_k(dffts,npw,npwx,evc(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,current_k))
+           !   CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,current_k))
+           !   DO ir=1,dffts%nnr 
+           !      pertr_nc(ir,1)=DCONJG(psic_nc(ir,1))*pertr_nc(ir,1)+DCONJG(psic_nc(ir,2))*pertr_nc(ir,2)
+           !   ENDDO
+           !   CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
+           !ELSE
+           !   CALL single_invfft_k(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave',igk_k(1,current_k))
+           !   DO ir=1,dffts%nnr 
+           !      pertr(ir)=DCONJG(psic(ir))*pertr(ir)
+           !   ENDDO
+           !   CALL single_fwfft_k(dffts,ngms,ngms,pertr,pertg,'Smooth') ! no igk
+           !ENDIF 
            !
            DO ig = 1,ngm
               pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
@@ -192,11 +192,11 @@ SUBROUTINE calc_exx2_gamma( sigma_exx, nb1, nb2 )
   !
   DEALLOCATE( pertg ) 
 !  DEALLOCATE( mysqvc )
-  IF( noncolin ) THEN 
-    DEALLOCATE( pertr_nc ) 
-  ELSE
+!  IF( noncolin ) THEN 
+!    DEALLOCATE( pertr_nc ) 
+!  ELSE
     DEALLOCATE( pertr ) 
-  ENDIF
+!  ENDIF
   !
 END SUBROUTINE 
 !

@@ -101,7 +101,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   DO ibnd=1,m
      CALL ZAXPY(npw,(-1._DP,0._DP),b(1,ibnd),1,g(1,ibnd),1)
   ENDDO
-  IF(npol==2) THEN
+  IF(noncolin) THEN
      DO ibnd=1,m
         CALL ZAXPY(npw,(-1._DP,0._DP),b(npwx+1,ibnd),1,g(npwx+1,ibnd),1)
      ENDDO

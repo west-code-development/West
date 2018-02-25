@@ -240,7 +240,7 @@ MODULE dfpt_module
                   !
                ENDDO
                !
-               IF ( npol == 2 ) THEN
+               IF (noncolin) THEN
                   DO ibnd = 1, nbndval
                      !
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
@@ -316,7 +316,7 @@ MODULE dfpt_module
                   !
                ENDDO
                !
-               IF ( npol == 2 ) THEN
+               IF (noncolin) THEN
                   DO ibnd = 1, nbndval 
                      !
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))

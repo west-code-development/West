@@ -1154,6 +1154,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   CALL stop_bar_type( barra, 'wlanczos' )
   !
   DEALLOCATE( evckpq )
+  IF (noncolin) THEN
+     DEALLOCATE( psick_nc )
+  ELSE
+     DEALLOCATE( psick )
+  ENDIF
   DEALLOCATE( phase )
   !
   ! EPS-1 imfreq

@@ -23,8 +23,8 @@ MODULE class_bz_grid
    TYPE, PUBLIC :: bz_grid
       !
       INTEGER :: ngrid(3) = (/ 1, 1, 1 /)       ! number of points in each direction
-      INTEGER :: np = 1                         ! total number of points = ngrid(1) * ngrid(2) * ngrid(3) **** NOOOOOO ****** 
-      INTEGER :: ns = 1                         ! total number of spin = nspin
+      INTEGER :: np = 1                         ! total number of points
+      INTEGER :: ns = 1                         ! total number of spin = nspin_lsda
       INTEGER :: nps = 1                        ! total number of points and spins = np * ns
       INTEGER,ALLOCATABLE :: ip(:)              ! given ips --> ip   
       INTEGER,ALLOCATABLE :: is(:)              ! given ips --> is   
@@ -51,9 +51,8 @@ MODULE class_bz_grid
       USE cell_base,        ONLY : at, bg
       USE klist,            ONLY : xk, wk, nkstot
       USE start_k,          ONLY : nk1, nk2, nk3
-      USE pwcom,            ONLY : nspin
+      USE noncollin_module, ONLY : nspin_lsda
       USE control_flags,    ONLY : gamma_only
-      !USE westcom,          ONLY : nq
       USE constants,        ONLY : eps8
       USE westcom,          ONLY : qlist
       !
@@ -76,8 +75,9 @@ MODULE class_bz_grid
          ! This is a workaround to prevent ngrid(:) to be set to (/ 0, 0, 0 /) in the gamma_only case (espresso default)
          IF ( .NOT. gamma_only ) this%ngrid(1:3) = (/ nk1, nk2, nk3 /) 
          this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3) 
-         this%ns = nspin 
-         this%nps = nkstot   !    =   np * ns  
+         this%ns = nspin_lsda ! = 1 if nspin = 1 (unpolarized) or nspin = 4 (noncollinear)
+         !                      = 2 if nspin = 2 (collinear)
+         this%nps = nkstot    ! = np * ns  
          !
          ! generate p-vectors in cart 
          !

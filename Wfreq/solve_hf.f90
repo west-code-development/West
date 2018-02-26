@@ -74,7 +74,7 @@ SUBROUTINE solve_hf_gamma( )
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2_gamma(sigma_exx, qp_bandrange(1), qp_bandrange(2))
+  CALL calc_exx2(sigma_exx, qp_bandrange(1), qp_bandrange(2))
   !
   ! Get SIGMA X
   !
@@ -109,7 +109,7 @@ SUBROUTINE solve_hf_gamma( )
      nbndval = MIN( MAXVAL( nbnd_occ(:) ), nbnd ) 
      ALLOCATE(sigma_exx_all_occupied(nbndval,nks))
      !
-     CALL calc_exx2_gamma( sigma_exx_all_occupied, 1, nbndval ) 
+     CALL calc_exx2( sigma_exx_all_occupied, 1, nbndval ) 
      !
      exx_etot = 0._DP
      DO iks = 1, nks 
@@ -180,7 +180,7 @@ SUBROUTINE solve_hf_k( )
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2_k(sigma_exx, qp_bandrange(1), qp_bandrange(2))
+  CALL calc_exx2(sigma_exx, qp_bandrange(1), qp_bandrange(2))
   !
   ! Get SIGMA X
   !
@@ -215,7 +215,7 @@ SUBROUTINE solve_hf_k( )
      nbndval = MIN( MAXVAL( nbnd_occ(:) ), nbnd ) 
      ALLOCATE(sigma_exx_all_occupied(nbndval,k_grid%nps))
      !
-     CALL calc_exx2_k( sigma_exx_all_occupied, 1, nbndval ) 
+     CALL calc_exx2( sigma_exx_all_occupied, 1, nbndval ) 
      !
      exx_etot = 0._DP
      DO iks = 1, k_grid%nps

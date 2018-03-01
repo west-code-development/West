@@ -41,6 +41,7 @@ MODULE wfreq_db
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file 
       USE constants,            ONLY : rytoev
+      USE types_bz_grid,        ONLY : k_grid
       !
       IMPLICIT NONE
       !
@@ -87,7 +88,7 @@ MODULE wfreq_db
          DEALLOCATE(ilist)
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
-         DO iks = 1, nks 
+         DO iks = 1, k_grid%nps
             !
             WRITE(my_label_k,'(i6.6)') iks_l2g(iks)
             !

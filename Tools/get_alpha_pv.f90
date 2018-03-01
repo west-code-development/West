@@ -20,6 +20,7 @@ FUNCTION get_alpha_pv()
   USE mp_global,              ONLY : inter_pool_comm
   USE klist,                  ONLY : nks
   USE westcom,                ONLY : nbnd_occ
+  USE types_bz_grid,          ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -34,7 +35,7 @@ FUNCTION get_alpha_pv()
   ! Calculate ALPHA_PV
   !
   emin = et (1, 1)
-  DO iks = 1, nks
+  DO iks = 1, k_grid%nps
      DO ibnd = 1, nbnd
         emin = MIN (emin, et (ibnd, iks) )
      ENDDO
@@ -43,7 +44,7 @@ FUNCTION get_alpha_pv()
   CALL mp_min( emin, inter_pool_comm) 
   !
   emax = et (1, 1)
-  DO iks = 1, nks 
+  DO iks = 1, k_grid%nps 
      DO ibnd = 1, nbnd_occ(iks)
         emax = MAX (emax, et (ibnd, iks) )
      ENDDO

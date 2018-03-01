@@ -29,6 +29,7 @@ SUBROUTINE wfreq_setup
   USE class_idistribute,      ONLY : idistribute
   USE wavefunctions_module,   ONLY : evc
   USE mod_mpiio,              ONLY : set_io_comm
+  USE types_bz_grid,          ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -75,17 +76,17 @@ SUBROUTINE wfreq_setup
   !
   ! Allocate for output
   !
-  ALLOCATE( sigma_exx       (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_vxcl      (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_vxcnl     (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_hf        (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_z         (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_eqplin    (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_eqpsec    (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_sc_eks    (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),nks) )
+  ALLOCATE( sigma_exx       (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_vxcl      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_vxcnl     (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_hf        (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_z         (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_eqplin    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_eqpsec    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_sc_eks    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
@@ -102,7 +103,7 @@ SUBROUTINE wfreq_setup
      IF( wfreq_calculation(i:i) == 'P' ) l_generate_plot = .TRUE.
   ENDDO
   IF( l_generate_plot ) THEN 
-     ALLOCATE( sigma_spectralf      (n_spectralf,qp_bandrange(1):qp_bandrange(2),nks) )
+     ALLOCATE( sigma_spectralf      (n_spectralf,qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
      ALLOCATE( sigma_freq           (n_spectralf) )
      sigma_spectralf = 0._DP
      sigma_freq      = 0._DP

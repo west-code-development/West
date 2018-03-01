@@ -51,8 +51,8 @@ SUBROUTINE solve_hf_gamma( )
   USE west_io,              ONLY : serial_table_output
   USE distribution_center,  ONLY : pert
   USE funct,                ONLY : get_exx_fraction,dft_is_hybrid
-  USE klist,                ONLY : wk
   USE wfreq_io,             ONLY : writeout_solvehf 
+  USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -80,12 +80,12 @@ SUBROUTINE solve_hf_gamma( )
   !
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
   !
-  CALL writeout_solvehf( sigma_hf(qp_bandrange(1),1), qp_bandrange(2)-qp_bandrange(1)+1, nks  )
+  CALL writeout_solvehf( sigma_hf(qp_bandrange(1),1), qp_bandrange(2)-qp_bandrange(1)+1, k_grid%nps )
  !
  ! Output it per k-point
  !
  ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,6))
- DO iks=1,nks
+ DO iks=1,k_grid%nps
     DO ib = qp_bandrange(1), qp_bandrange(2)
        out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
        out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
@@ -107,14 +107,14 @@ SUBROUTINE solve_hf_gamma( )
   IF( l_enable_gwetot) THEN
      !
      nbndval = MIN( MAXVAL( nbnd_occ(:) ), nbnd ) 
-     ALLOCATE(sigma_exx_all_occupied(nbndval,nks))
+     ALLOCATE(sigma_exx_all_occupied(nbndval,k_grid%nps))
      !
      CALL calc_exx2( sigma_exx_all_occupied, 1, nbndval ) 
      !
      exx_etot = 0._DP
-     DO iks = 1, nks 
+     DO iks = 1, k_grid%nps 
         DO ib = 1, nbnd_occ(iks) 
-           exx_etot = exx_etot + sigma_exx_all_occupied( ib, iks) * wk(iks) / 2._DP
+           exx_etot = exx_etot + sigma_exx_all_occupied( ib, iks) * k_grid%weight(iks) / 2._DP
         ENDDO
      ENDDO
      !

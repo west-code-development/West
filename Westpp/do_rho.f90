@@ -90,12 +90,12 @@ SUBROUTINE do_rho ( )
         IF( gamma_only ) THEN 
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
            DO ir = 1, dffts%nnr
-              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * wk(iks)  
+              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * k_grid%weight(iks)  
            ENDDO 
         ELSE
            CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
            DO ir = 1, dffts%nnr
-              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * wk(iks)
+              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * k_grid%weight(iks)
            ENDDO 
         ENDIF
         !

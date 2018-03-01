@@ -53,7 +53,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   ! I/O
   !
   INTEGER, INTENT(IN) :: nb1, nb2
-  REAL(DP),INTENT(OUT) :: sigma_exx( nb1:nb2, nks) 
+  REAL(DP),INTENT(OUT) :: sigma_exx( nb1:nb2, k_grid%nps) 
   !
   ! Workspace
   !

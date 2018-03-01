@@ -56,6 +56,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
+  USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -126,11 +127,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   ! TEMP
   ! 
-  ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), nks ) )
-  ALLOCATE( z_body_rfr( aband%nloc, rfr%nloc, qp_bandrange(1):qp_bandrange(2), nks ) )
+  ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps ) )
+  ALLOCATE( z_body_rfr( aband%nloc, rfr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps ) )
   IF( l_enable_lanczos ) THEN
-     ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), nks ) )
-     ALLOCATE( d_diago( n_lanczos, pert%nloc, qp_bandrange(1):qp_bandrange(2), nks ) )
+     ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps ) )
+     ALLOCATE( d_diago( n_lanczos, pert%nloc, qp_bandrange(1):qp_bandrange(2), k_grid%nps ) )
   ENDIF
   !
   d_body1_ifr = 0._DP
@@ -144,12 +145,12 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   CALL io_push_title("Collecting results from W and G")
   !
-  barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   CALL start_bar_type( barra, 'coll_gw', barra_load )
   !
   ! LOOP 
   !
-  DO iks = 1, nks   ! KPOINT-SPIN
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
      nbndval = nbnd_occ(iks)
      !
@@ -270,8 +271,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   ! Get Sigma_X
   !
-  ALLOCATE( sigma_hf (qp_bandrange(1):qp_bandrange(2),nks) )
-  CALL readin_solvehf( sigma_hf(qp_bandrange(1),1), qp_bandrange(2)-qp_bandrange(1)+1, nks )
+  ALLOCATE( sigma_hf (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  CALL readin_solvehf( sigma_hf(qp_bandrange(1),1), qp_bandrange(2)-qp_bandrange(1)+1, k_grid%nps )
   !
   ! For CORR
   !
@@ -279,24 +280,24 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      CALL io_push_title("(Q)uasiparticle energies")
      !
-     ALLOCATE( en(qp_bandrange(1):qp_bandrange(2),nks,2) ) 
-     ALLOCATE( sc(qp_bandrange(1):qp_bandrange(2),nks,2) ) 
-     ALLOCATE( l_conv(qp_bandrange(1):qp_bandrange(2),nks) ) 
-     ALLOCATE( sigma_cor_in (qp_bandrange(1):qp_bandrange(2),nks) )
-     ALLOCATE( sigma_cor_out(qp_bandrange(1):qp_bandrange(2),nks) )
-     ALLOCATE( z_in (qp_bandrange(1):qp_bandrange(2),nks) )
-     ALLOCATE( qp_energy (qp_bandrange(1):qp_bandrange(2),nks) )
+     ALLOCATE( en(qp_bandrange(1):qp_bandrange(2),k_grid%nps,2) ) 
+     ALLOCATE( sc(qp_bandrange(1):qp_bandrange(2),k_grid%nps,2) ) 
+     ALLOCATE( l_conv(qp_bandrange(1):qp_bandrange(2),k_grid%nps) ) 
+     ALLOCATE( sigma_cor_in (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     ALLOCATE( sigma_cor_out(qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     ALLOCATE( z_in (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     ALLOCATE( qp_energy (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
      !
      ! 1st step of secant solver : E_KS - 0.5 * eshift
      !
-     DO iks = 1, nks
+     DO iks = 1, k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            en(ib,iks,1) = et(ib,iks) - eshift*0.5_DP
         ENDDO
      ENDDO
      CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE.)  
      !
-     !DO iks = 1, nks
+     !DO iks = 1, k_grid%nps
      !   DO ib = qp_bandrange(1), qp_bandrange(2)
      !      WRITE(stdout,"(5X,1f14.6,' : ',2f14.6)") en(ib,iks,1) * rytoev, sc(ib,iks,1) * rytoev
      !   ENDDO
@@ -304,13 +305,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ! 1st step of secant solver : E_KS + 0.5 * eshift
      !
-     DO iks = 1, nks
+     DO iks = 1, k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            en(ib,iks,2) = et(ib,iks) + eshift*0.5_DP
         ENDDO
      ENDDO
      CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE.) 
-     !DO iks = 1, nks
+     !DO iks = 1, k_grid%nps
      !   DO ib = qp_bandrange(1), qp_bandrange(2)
      !      WRITE(stdout,"(5X,1f14.6,' : ',2f14.6)") en(ib,iks,2) * rytoev, sc(ib,iks,2) * rytoev
      !   ENDDO
@@ -318,7 +319,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ! Stage sigma_corr_in
      !
-     DO iks = 1, nks
+     DO iks = 1, k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            sigma_cor_in(ib,iks) = ( sc(ib,iks,2) + sc(ib,iks,1) ) * 0.5_DP 
         ENDDO
@@ -326,7 +327,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ! Stage z_in
      !
-     DO iks = 1, nks
+     DO iks = 1, k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            z_in(ib,iks) = 1._DP / ( 1._DP-REAL( sc(ib,iks,2)-sc(ib,iks,1), KIND=DP ) / eshift  ) 
         ENDDO
@@ -335,7 +336,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ! en 1 = EKS, sc 1 = sigma_corr_in
      ! en 2 = EKS + Z * ( sigmax - vxc + sigmacorrin)
      !
-     DO iks = 1, nks
+     DO iks = 1, k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            en(ib,iks,1) = et(ib,iks) 
            sc(ib,iks,1) = sigma_cor_in(ib,iks)
@@ -350,14 +351,14 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ! nth step of the secant solver
      !
      l_conv = .FALSE.
-     notconv = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+     notconv = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
      DO ifixed = 1, n_secant_maxiter
         ! 
         WRITE(cifixed,"(i6.6)") ifixed
         !CALL io_push_title("Iter : "//cifixed)
         !
         CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE.)  
-        !DO iks = 1, nks
+        !DO iks = 1, k_grid%nps
         !   DO ib = qp_bandrange(1), qp_bandrange(2)
         !      WRITE(stdout,"(5X,1f14.6,' : ',2f14.6)") en(ib,iks,2) * rytoev, sc(ib,iks,2) * rytoev
         !   ENDDO
@@ -365,7 +366,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         !
         ! Resulting new energy:
         !
-        DO iks = 1, nks
+        DO iks = 1, k_grid%nps
            DO ib = qp_bandrange(1), qp_bandrange(2)
                IF( .NOT. l_conv(ib,iks) ) THEN
                   qp_energy(ib,iks) = en(ib,iks,2) + &
@@ -377,7 +378,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         !
         ! Estimate l_conv
         !
-        DO iks = 1, nks
+        DO iks = 1, k_grid%nps
            DO ib = qp_bandrange(1), qp_bandrange(2)
               l_conv(ib,iks) = ( ABS( qp_energy(ib,iks) - en(ib,iks,2) ) < trev_secant ) 
            ENDDO
@@ -388,7 +389,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
        !WRITE(stdout,"(5X,'Iter: ',i6.6)") ifixed
        !WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
        !CALL io_push_bar()
-       !DO iks = 1, nks
+       !DO iks = 1, k_grid%nps
        !   DO ib = qp_bandrange(1), qp_bandrange(2)
        !      WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,4X,l)") iks, ib, qp_energy(ib,iks) * rytoev, l_conv(ib,iks) 
        !   ENDDO
@@ -398,7 +399,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         ! Count the number of notconverged QP energies
         !
         notconv = 0 
-        DO iks = 1, nks
+        DO iks = 1, k_grid%nps
            DO ib = qp_bandrange(1), qp_bandrange(2)
               IF( .NOT.l_conv(ib,iks) ) notconv = notconv + 1
            ENDDO
@@ -445,7 +446,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
      !
-     DO iks=1,nks
+     DO iks=1,k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP) 
            out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
@@ -476,13 +477,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      CALL start_bar_type( barra, 'qplot', n_spectralf )
      !
-     ALLOCATE( en(qp_bandrange(1):qp_bandrange(2),nks,1) ) 
-     ALLOCATE( sc(qp_bandrange(1):qp_bandrange(2),nks,1) )
+     ALLOCATE( en(qp_bandrange(1):qp_bandrange(2),k_grid%nps,1) ) 
+     ALLOCATE( sc(qp_bandrange(1):qp_bandrange(2),k_grid%nps,1) )
      !ALLOCATE( un(qp_bandrange(1):qp_bandrange(2),nks) )
      !
    ! IF( mpime == 0 ) THEN 
    !    k = 0 
-   !    DO iks=1,nks
+   !    DO iks=1,k_grid%nps
    !       WRITE(iks_label,"(i5.5)") iks
    !       DO ib = qp_bandrange(1), qp_bandrange(2)
    !          WRITE(ib_label,"(i5.5)") ib
@@ -506,13 +507,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      DO glob_ifreq = 1, n_spectralf
         en = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) + ecut_spectralf(1)
         CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .FALSE.) 
-        DO iks=1,nks
+        DO iks=1,k_grid%nps
            DO ib = qp_bandrange(1), qp_bandrange(2)
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1) 
            ENDDO
         ENDDO
        !IF( mpime == 0 ) THEN 
-       !   DO iks=1,nks
+       !   DO iks=1,k_grid%nps
        !      summed_sf=0._DP
        !      DO ib = qp_bandrange(1), qp_bandrange(2)
        !         WRITE( un(ib,iks),"(5f14.6)") en(ib,iks,1)*rytoev, &
@@ -533,7 +534,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ENDDO
      !
     !IF( mpime == 0 ) THEN 
-    !   DO iks=1,nks
+    !   DO iks=1,k_grid%nps
     !      DO ib = qp_bandrange(1), qp_bandrange(2)
     !         CLOSE( un(ib,iks) )
     !      ENDDO 
@@ -686,9 +687,9 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   ! LOOP 
   !
-  ! outer k-point loop (matrix element): iks
-  ! inner k-point loop (sum over k'): ikks
-  ! WARNING: iks and ikks are switched w.r.t. solve_gfreq_k
+  ! ... Outer k-point loop (wfc matrix element): iks
+  ! ... Inner k-point loop (wfc summed over k'): ikks
+  ! ... BEWARE: iks and ikks are switched w.r.t. solve_gfreq_k
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
@@ -703,9 +704,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            ikk = k_grid%ip(ikks)
            !
            CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
-           !CALL k_grid%add( k_grid%p_cart(:,ik), -k_grid%p_cart(:,ikk), q, g0, 'cart' )  
-           !iq = q_grid%find( q, 'cart' )
-           !!iq = q_grid_aux%index_q(iks,ikks)
            !
            IF(ALLOCATED(overlap)) DEALLOCATE(overlap) 
            ALLOCATE(overlap(pert%nglob, nbnd ) )

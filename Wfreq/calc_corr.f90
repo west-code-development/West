@@ -30,13 +30,14 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
   USE types_coulomb,        ONLY : pot3D
+  USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  COMPLEX(DP),INTENT(OUT) :: sigma_corr( qp_bandrange(1):qp_bandrange(2), nks )  ! The correlation self-energy, imaginary part is lifetime.  
-  REAL(DP),INTENT(IN) :: energy( qp_bandrange(1):qp_bandrange(2), nks )          ! The energy variable
+  COMPLEX(DP),INTENT(OUT) :: sigma_corr( qp_bandrange(1):qp_bandrange(2), k_grid%nps )  ! The correlation self-energy, imaginary part is lifetime.  
+  REAL(DP),INTENT(IN) :: energy( qp_bandrange(1):qp_bandrange(2), k_grid%nps )          ! The energy variable
   LOGICAL,INTENT(IN) :: l_verbose
   !
   ! Workspace
@@ -73,12 +74,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Integrating along the IM axis...")') 
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_i', barra_load )
   !
   ! LOOP 
   !
-  DO iks = 1, nks   ! KPOINT-SPIN
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
      nbndval = nbnd_occ(iks)
      !
@@ -145,12 +146,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")') 
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP 
   !
-  DO iks = 1, nks
+  DO iks = 1, k_grid%nps
      !
      nbndval = nbnd_occ(iks)
      !
@@ -298,9 +299,6 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            ikk = k_grid%ip(ikks)
            !
            CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
-           !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
-           !ikqs = k_grid%find( kmq, 'cart' )
-           !ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !
@@ -387,9 +385,6 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            ikk = k_grid%ip(ikks)
            !
            CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
-           !CALL k_grid%add( k_grid%p_cart(:,ik), -q_grid%p_cart(:,iq), kmq, g0, 'cart' ) 
-           !ikqs = k_grid%find( kmq, 'cart' )
-           !!ikqs = kmq_grid%index_kq(iks,iq)
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !

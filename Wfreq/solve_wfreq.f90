@@ -63,7 +63,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE class_idistribute,    ONLY : idistribute 
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
-  USE types_bz_grid,        ONLY : k_grid, q_grid
+  USE types_bz_grid,        ONLY : k_grid
   USE chi_invert,           ONLY : chi_invert_real, chi_invert_complex
   USE types_coulomb,        ONLY : pot3D
   !
@@ -141,12 +141,12 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      bks%lastdone_band = 0 
      bks%old_ks        = 0 
      bks%old_band      = 0 
-     bks%max_ks        = nks 
+     bks%max_ks        = k_grid%nps 
      bks%min_ks        = 1 
   ENDIF
   !
   barra_load = 0
-  DO iks = 1, nks
+  DO iks = 1, k_grid%nps 
      IF(iks<bks%lastdone_ks) CYCLE
      DO iv = 1, nbnd_occ(iks)
         IF(iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
@@ -165,7 +165,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   ! LOOP 
   !
-  DO iks = 1, nks   ! KPOINT-SPIN
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      IF(iks<bks%lastdone_ks) CYCLE
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -181,7 +181,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks>1) THEN
+     IF(k_grid%nps>1) THEN
         !iuwfc = 20
         !lrwfc = nbnd * npwx * npol 
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
@@ -209,8 +209,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      nbndval = nbnd_occ(iks)
      !
-     mwo = - wk(iks) / omega
-     zmwo = CMPLX( - wk(iks) / omega, 0._DP, KIND=DP)
+     mwo = - k_grid%weight(iks) / omega
+     zmwo = CMPLX( - k_grid%weight(iks) / omega, 0._DP, KIND=DP)
      !
      bks%max_band = nbndval
      bks%min_band = 1
@@ -272,14 +272,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
         ! PSIC
         !
-!        IF(gamma_only) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),psic,'Wave') 
-!        ELSEIF(noncolin) THEN
-!           CALL SINGLEBAND_invfft_k(npw,evc(1     ,iv),npwx,psic_nc(1,1),dffts%nnr,.TRUE.)
-!           CALL SINGLEBAND_invfft_k(npw,evc(1+npwx,iv),npwx,psic_nc(1,2),dffts%nnr,.TRUE.)
-!        ELSE
-!           CALL SINGLEBAND_invfft_k(npw,evc(1,iv),npwx,psic,dffts%nnr,.TRUE.)
-!        ENDIF
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),psic,'Wave') 
         !
         ! ZEROS
         !
@@ -310,30 +303,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               ENDDO
               !
               ! Bring it to R-space
-!              IF(gamma_only) THEN
-                 CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
-                 DO ir=1,dffts%nnr 
-                    pertr(ir)=psic(ir)*pertr(ir)
-                 ENDDO
-                 CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave')
-!              ELSEIF(noncolin) THEN
-!                 CALL SINGLEBAND_invfft_k(npwq,pertg(1),npwx,pertr,dffts%nnr,.FALSE.)
-!                 DO ir=1,dffts%nnr 
-!                    pertr(ir)=psic_nc(ir,1)*pertr(ir)
-!                 ENDDO
-!                 CALL SINGLEBAND_fwfft_k(npw,pertr,dffts%nnr,dvpsi(1,ip),npwx,.TRUE.)
-!                 CALL SINGLEBAND_invfft_k(npwq,pertg(1),npwx,pertr,dffts%nnr,.FALSE.)
-!                 DO ir=1,dffts%nnr 
-!                    pertr(ir)=psic_nc(ir,2)*pertr(ir)
-!                 ENDDO
-!                 CALL SINGLEBAND_fwfft_k(npw,pertr,dffts%nnr,dvpsi(1+npwx,ip),npwx,.TRUE.)
-!              ELSE
-!                 CALL SINGLEBAND_invfft_k(npwq,pertg(1),npwx,pertr,dffts%nnr,.FALSE.)
-!                 DO ir=1,dffts%nnr 
-!                    pertr(ir)=psic(ir)*pertr(ir)
-!                 ENDDO
-!                 CALL SINGLEBAND_fwfft_k(npw,pertr,dffts%nnr,dvpsi(1,ip),npwx,.TRUE.)
-!              ENDIF 
+              CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
+              DO ir=1,dffts%nnr 
+                 pertr(ir)=psic(ir)*pertr(ir)
+              ENDDO
+              CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave')
               !
            ELSE
               !

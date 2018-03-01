@@ -63,6 +63,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq
   USE types_coulomb,        ONLY : pot3D
+  USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -106,12 +107,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      bks%lastdone_band = 0 
      bks%old_ks        = 0 
      bks%old_band      = 0 
-     bks%max_ks        = nks 
+     bks%max_ks        = k_grid%nps
      bks%min_ks        = 1 
   ENDIF
   !
   barra_load = 0
-  DO iks = 1, nks
+  DO iks = 1, k_grid%nps
      IF(iks<bks%lastdone_ks) CYCLE
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(iks==bks%lastdone_ks .AND. ib <= bks%lastdone_band ) CYCLE
@@ -128,7 +129,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! LOOP 
   !
-  DO iks = 1, nks   ! KPOINT-SPIN
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      IF(iks<bks%lastdone_ks) CYCLE
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -144,7 +145,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks>1) THEN
+     IF(k_grid%nps>1) THEN
         !iuwfc = 20
         !lrwfc = nbnd * npwx * npol 
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
@@ -187,14 +188,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         ! PSIC
         !
-!        IF(gamma_only) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave') 
-!        ELSEIF(noncolin) THEN
-!           CALL SINGLEBAND_invfft_k(npw,evc(1     ,ib),npwx,psic_nc(1,1),dffts%nnr,.TRUE.)
-!           CALL SINGLEBAND_invfft_k(npw,evc(1+npwx,ib),npwx,psic_nc(1,2),dffts%nnr,.TRUE.)
-!        ELSE
-!           CALL SINGLEBAND_invfft_k(npw,evc(1,ib),npwx,psic,dffts%nnr,.TRUE.)
-!        ENDIF
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave') 
         !
         ! ZEROS
         !
@@ -221,30 +215,11 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            ENDDO
            !
            ! Bring it to R-space
-!           IF(gamma_only) THEN
-              CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
-              DO ir=1,dffts%nnr 
-                 pertr(ir)=psic(ir)*pertr(ir)
-              ENDDO
-              CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave')
-!           ELSEIF(noncolin) THEN
-!              CALL SINGLEBAND_invfft_k(npwq,pertg(1),npwx,pertr,dffts%nnr,.FALSE.)
-!              DO ir=1,dffts%nnr 
-!                 pertr(ir)=psic_nc(ir,1)*DCONJG(pertr(ir))
-!              ENDDO
-!              CALL SINGLEBAND_fwfft_k(npw,pertr,dffts%nnr,dvpsi(1,ip),npwx,.TRUE.)
-!              CALL SINGLEBAND_invfft_k(npwq,pertg(1),npwx,pertr,dffts%nnr,.FALSE.)
-!              DO ir=1,dffts%nnr 
-!                 pertr(ir)=psic_nc(ir,2)*DCONJG(pertr(ir))
-!              ENDDO
-!              CALL SINGLEBAND_fwfft_k(npw,pertr,dffts%nnr,dvpsi(1+npwx,ip),npwx,.TRUE.)
-!           ELSE
-!              CALL SINGLEBAND_invfft_k(npwq,pertg(1),npwx,pertr,dffts%nnr,.FALSE.)
-!              DO ir=1,dffts%nnr 
-!                 pertr(ir)=psic(ir)*DCONJG(pertr(ir))
-!              ENDDO
-!              CALL SINGLEBAND_fwfft_k(npw,pertr,dffts%nnr,dvpsi(1,ip),npwx,.TRUE.)
-!           ENDIF 
+           CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
+           DO ir=1,dffts%nnr 
+              pertr(ir)=psic(ir)*pertr(ir)
+           ENDDO
+           CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave')
            !
            !
         ENDDO ! pert
@@ -451,8 +426,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   ! LOOP 
   !
-  ! outer k-point loop (matrix element): ikks, npwk, evck, psick
-  ! inner k-point loop (sum over k'): iks, npw, evc (passed to h_psi)
+  ! ... Outer k-point loop (wfc matrix element): ikks, npwk, evck, psick
+  ! ... Inner k-point loop (wfc summed over k'): iks, npw, evc (passed to h_psi: current_k = iks)
   !
   DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      IF(ikks<bksks%lastdone_ks) CYCLE

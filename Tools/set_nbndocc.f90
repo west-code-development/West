@@ -22,6 +22,7 @@ SUBROUTINE set_nbndocc( )
   USE noncollin_module,       ONLY : noncolin,npol
   USE io_global,              ONLY : stdout
   USE westcom,                ONLY : nbnd_occ
+  USE types_bz_grid,          ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -30,11 +31,11 @@ SUBROUTINE set_nbndocc( )
   ! Calculate NBNDVAL
   !
   IF(ALLOCATED(nbnd_occ)) DEALLOCATE(nbnd_occ)
-  ALLOCATE( nbnd_occ(nks) )
+  ALLOCATE( nbnd_occ(k_grid%nps) )
   !
   IF(lsda) THEN  
      !
-     DO iks = 1, nks
+     DO iks = 1, k_grid%nps
         spin = isk(iks)
         !
         SELECT CASE(spin)

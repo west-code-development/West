@@ -66,8 +66,8 @@ SUBROUTINE do_sxx ( )
   !
   CALL io_push_title("(S)creened eXact eXchange")
   !
-  ALLOCATE( sigma_exx( westpp_range(1):westpp_range(2), nks) )
-  ALLOCATE( sigma_sxx( westpp_range(1):westpp_range(2), nks) )
+  ALLOCATE( sigma_exx( westpp_range(1):westpp_range(2), k_grid%nps) )
+  ALLOCATE( sigma_sxx( westpp_range(1):westpp_range(2), k_grid%nps) )
   !
   sigma_exx = 0._DP
   sigma_sxx = 0._DP

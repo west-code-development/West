@@ -55,17 +55,16 @@ SUBROUTINE do_setup
   ! INIT PW
   !
   CALL init_pw_arrays(nbnd)
-  CALL set_iks_l2g()
   !
   CALL set_dirs()
   !
   ! INIT K, Q GRIDS
   !
-  !k_grid = bz_grid()
   CALL k_grid%init('K')
   !
-  !q_grid = bz_grid()
   CALL q_grid%init('Q')
+  !
+  CALL set_iks_l2g()
   !
   IF ( ANY ( (q_grid%ngrid(:) - k_grid%ngrid(:)) /= 0   ) ) THEN
      CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
@@ -79,7 +78,7 @@ SUBROUTINE do_setup
   IF ( lsda ) THEN
      IF ( INT( nelup ) == 0 .AND. INT( neldw ) == 0 ) THEN
      !IF ( .NOT. two_fermi_energies ) THEN
-        DO iks = 1, nks
+        DO iks = 1, k_grid%nps
            spin = isk(iks)
            !
            SELECT CASE(spin)

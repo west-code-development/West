@@ -386,15 +386,15 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      CALL solvegfreq_restart_read_q( bksks )
   ELSE
      bksks%lastdone_ks     = 0 
-     bksks%lastdone_ksc    = 0 
+     bksks%lastdone_kks    = 0 
      bksks%lastdone_band   = 0 
      bksks%old_ks          = 0 
-     bksks%old_ksc         = 0 
+     bksks%old_kks         = 0 
      bksks%old_band        = 0 
      bksks%max_ks          = k_grid%nps
      bksks%min_ks          = 1 
-     bksks%max_ksc         = k_grid%nps
-     bksks%min_ksc         = 1 
+     bksks%max_kks         = k_grid%nps
+     bksks%min_kks         = 1 
   ENDIF
   !
   ALLOCATE( evck(npwx*npol,nbnd) )
@@ -411,7 +411,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(ikks==bksks%lastdone_ks .AND. ib < bksks%lastdone_band ) CYCLE
         DO iks = 1, k_grid%nps
-           IF (ikks==bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_ksc) CYCLE 
+           IF (ikks==bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE 
            barra_load = barra_load + 1
         ENDDO
      ENDDO
@@ -463,7 +463,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         ENDIF
         !
         DO iks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
-           IF (ikks==bksks%lastdone_ks .AND. ib==bksks%lastdone_band .AND. iks <= bksks%lastdone_ksc) CYCLE
+           IF (ikks==bksks%lastdone_ks .AND. ib==bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE
            !
            ik = k_grid%ip(iks)
            !
@@ -627,11 +627,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            IF( o_restart_time >= 0._DP ) THEN 
               IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN 
                  bksks%lastdone_ks=ikks
-                 bksks%lastdone_ksc=iks
+                 bksks%lastdone_kks=iks
                  bksks%lastdone_band=ib 
                  CALL solvegfreq_restart_write_q( bksks )
                  bksks%old_ks=ikks
-                 bksks%old_ksc=iks
+                 bksks%old_kks=iks
                  bksks%old_band=ib
                  time_spent(1) = get_clock( 'glanczos' )
               ENDIF

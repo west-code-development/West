@@ -56,16 +56,16 @@ MODULE wfreq_restart
   !
   TYPE :: bksks_type
      INTEGER :: lastdone_ks
-     INTEGER :: lastdone_ksc
+     INTEGER :: lastdone_kks
      INTEGER :: lastdone_band
      INTEGER :: old_ks
-     INTEGER :: old_ksc
+     INTEGER :: old_kks
      INTEGER :: old_band
      INTEGER :: max_ks
-     INTEGER :: max_ksc
+     INTEGER :: max_kks
      INTEGER :: max_band
      INTEGER :: min_ks
-     INTEGER :: min_ksc
+     INTEGER :: min_kks
      INTEGER :: min_band
   END TYPE bksks_type
   !
@@ -236,16 +236,16 @@ MODULE wfreq_restart
          !
          CALL iotk_write_begin( iunout, "BKSKS-SUMMARY" )
          CALL iotk_write_dat( iunout, "lastdone_ks"  , bksks%lastdone_ks  )
-         CALL iotk_write_dat( iunout, "lastdone_ksc" , bksks%lastdone_ksc )
+         CALL iotk_write_dat( iunout, "lastdone_kks" , bksks%lastdone_kks )
          CALL iotk_write_dat( iunout, "lastdone_band", bksks%lastdone_band)
          CALL iotk_write_dat( iunout, "old_ks"       , bksks%old_ks       )
-         CALL iotk_write_dat( iunout, "old_ksc"      , bksks%old_ksc      )
+         CALL iotk_write_dat( iunout, "old_kks"      , bksks%old_kks      )
          CALL iotk_write_dat( iunout, "old_band"     , bksks%old_band     )
          CALL iotk_write_dat( iunout, "max_ks"       , bksks%max_ks       )
-         CALL iotk_write_dat( iunout, "max_ksc"      , bksks%max_ksc      )
+         CALL iotk_write_dat( iunout, "max_kks"      , bksks%max_kks      )
          CALL iotk_write_dat( iunout, "max_band"     , bksks%max_band     )
          CALL iotk_write_dat( iunout, "min_ks"       , bksks%min_ks       )
-         CALL iotk_write_dat( iunout, "min_ksc"      , bksks%min_ksc      )
+         CALL iotk_write_dat( iunout, "min_kks"      , bksks%min_kks      )
          CALL iotk_write_dat( iunout, "min_band"     , bksks%min_band     )
          CALL iotk_write_end( iunout, "BKSKS-SUMMARY"  )
          !
@@ -430,16 +430,16 @@ MODULE wfreq_restart
          !
          CALL iotk_scan_begin( iunout, "BKSKS-SUMMARY" )
          CALL iotk_scan_dat( iunout, "lastdone_ks"  , bksks%lastdone_ks   )
-         CALL iotk_scan_dat( iunout, "lastdone_ksc" , bksks%lastdone_ksc  )
+         CALL iotk_scan_dat( iunout, "lastdone_kks" , bksks%lastdone_kks  )
          CALL iotk_scan_dat( iunout, "lastdone_band", bksks%lastdone_band )
          CALL iotk_scan_dat( iunout, "old_ks"       , bksks%old_ks        )
-         CALL iotk_scan_dat( iunout, "old_ksc"      , bksks%old_ksc       )
+         CALL iotk_scan_dat( iunout, "old_kks"      , bksks%old_kks       )
          CALL iotk_scan_dat( iunout, "old_band"     , bksks%old_band      )
          CALL iotk_scan_dat( iunout, "max_ks"       , bksks%max_ks        )
-         CALL iotk_scan_dat( iunout, "max_ksc"      , bksks%max_ksc       )
+         CALL iotk_scan_dat( iunout, "max_kks"      , bksks%max_kks       )
          CALL iotk_scan_dat( iunout, "max_band"     , bksks%max_band      )
          CALL iotk_scan_dat( iunout, "min_ks"       , bksks%min_ks        )
-         CALL iotk_scan_dat( iunout, "min_ksc"      , bksks%min_ksc       )
+         CALL iotk_scan_dat( iunout, "min_kks"      , bksks%min_kks       )
          CALL iotk_scan_dat( iunout, "min_band"     , bksks%min_band      )
          CALL iotk_scan_end( iunout, "BKSKS-SUMMARY"  )
          !
@@ -448,16 +448,16 @@ MODULE wfreq_restart
       END IF
       !
       CALL mp_bcast( bksks%lastdone_ks   , root , world_comm )
-      CALL mp_bcast( bksks%lastdone_ksc  , root , world_comm )
+      CALL mp_bcast( bksks%lastdone_kks  , root , world_comm )
       CALL mp_bcast( bksks%lastdone_band , root , world_comm )
       CALL mp_bcast( bksks%old_ks        , root , world_comm )
-      CALL mp_bcast( bksks%old_ksc       , root , world_comm )
+      CALL mp_bcast( bksks%old_kks       , root , world_comm )
       CALL mp_bcast( bksks%old_band      , root , world_comm )
       CALL mp_bcast( bksks%max_ks        , root , world_comm )
-      CALL mp_bcast( bksks%max_ksc       , root , world_comm )
+      CALL mp_bcast( bksks%max_kks       , root , world_comm )
       CALL mp_bcast( bksks%max_band      , root , world_comm )
       CALL mp_bcast( bksks%min_ks        , root , world_comm )
-      CALL mp_bcast( bksks%min_ksc       , root , world_comm )
+      CALL mp_bcast( bksks%min_kks       , root , world_comm )
       CALL mp_bcast( bksks%min_band      , root , world_comm )
       !
     END SUBROUTINE

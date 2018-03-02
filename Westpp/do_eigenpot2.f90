@@ -59,7 +59,7 @@ SUBROUTINE do_eigenpot2 ( )
      IF (gamma_only) THEN
         CALL pdep_db_read(westpp_n_pdep_eigen_to_use)
      ELSE
-        l_print_pdep_read = .FALSE.
+        !l_print_pdep_read = .FALSE.
         IF (iq==1) THEN 
            l_print_pdep_read = .TRUE.
         ELSE 

@@ -146,7 +146,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
      !
      DO ib = nb1, nb2
         !
-        sigma_exx(ib,iks) = 0._DP
+        !sigma_exx(ib,iks) = 0._DP
         !
         IF (gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')

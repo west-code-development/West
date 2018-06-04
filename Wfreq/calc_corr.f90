@@ -298,7 +298,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            !
            ikk = k_grid%ip(ikks)
            !
-           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
+           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !MATTEO
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     !MARCO
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !
@@ -384,7 +385,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            !
            ikk = k_grid%ip(ikks)
            !
-           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
+           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )  !MATTEO
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )      !MARCO
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !

@@ -703,7 +703,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            !
            ikk = k_grid%ip(ikks)
            !
-           CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
+           !CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !MATTEO
+           CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     !MARCO
            !
            IF(ALLOCATED(overlap)) DEALLOCATE(overlap) 
            ALLOCATE(overlap(pert%nglob, nbnd ) )
@@ -1152,27 +1153,44 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   CHARACTER(LEN=9) :: prefisso
   INTEGER :: contatore
   REAL(DP) :: out_tabella(k_grid%nps*(qp_bandrange(2)-qp_bandrange(1)+1),7)
-  INTEGER :: ib, iks
-  CHARACTER(LEN=4) :: symb
+  INTEGER :: ib, iks, ik, is
+  CHARACTER(LEN=4) :: symb(2)
   TYPE(json_file) :: json
   CHARACTER(LEN=6) :: my_label_k,my_label_b,citr
   INTEGER :: secitr, iunit
   LOGICAL :: found
+  LOGICAL :: lnospin
+  CHARACTER(LEN=10) :: ccounter, csecitr
+  INTEGER :: counter
   !
   ! STDOUT
   !
+  lnospin = ( k_grid%nps == k_grid%np )
   WRITE(stdout,"(5X)")  
   CALL io_push_bar()
-  IF( iteration >= 0 ) WRITE(stdout,"(5X,'Iter: ',i6.6)") iteration 
-  WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a)") 'K     ', 'B     ', 'QP energ. [eV]', 'conv'
-  CALL io_push_bar()
-  DO iks = 1, k_grid%nps
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        symb='  no'
-        IF( (iteration .NE. 0) .AND. (ABS(en2(ib,iks)-en1(ib,iks)) < trev_secant) ) symb=' yes'
-        WRITE(stdout,"(5X,i6.6,1X,i6.6,1X,1f14.6,1X,a)") iks, ib, en2(ib,iks) * rytoev, symb
-     ENDDO
-     IF (k_grid%nps>1.AND.iks<k_grid%nps)  WRITE(stdout,"(5X, 33(a))") '---------------------------------'
+  IF( iteration >= 0 ) WRITE(stdout,"(5X,'Iter: ',i6.6)") iteration
+  DO ik = 1, k_grid%np
+     WRITE( stdout, '(5x,"k(",i6.6,") = (",3f12.7,") cryst. coord.")') ik, k_grid%p_cryst(1:3,ik)
+     IF( lnospin ) THEN
+        WRITE(stdout,"(5X,a,1X,a,1X,a)") 'band  ', '   QP en. [eV]', 'conv'
+        DO ib = qp_bandrange(1), qp_bandrange(2)
+           symb(1)='  no'
+           IF( (iteration .NE. 0) .AND. (ABS(en2(ib,iks)-en1(ib,iks)) < trev_secant) ) symb(1)=' yes'
+           WRITE(stdout,"(5X,i6.6,1X,1f14.6,1X,a)") ib, en2(ib,iks)*rytoev, symb(1)
+        ENDDO
+     ELSE
+        WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a,1X,a)") 'band  ', '   QP en. [eV]', 'conv', '   QP en. [eV]', 'conv'
+        DO ib = qp_bandrange(1), qp_bandrange(2)
+           symb(1:2)='  no'
+           IF( (iteration .NE. 0) .AND. (ABS(en2(ib,k_grid%ipis2ips(ik,1))-en1(ib,k_grid%ipis2ips(ik,1))) &
+             & < trev_secant) ) symb(1)=' yes'
+           IF( (iteration .NE. 0) .AND. (ABS(en2(ib,k_grid%ipis2ips(ik,2))-en1(ib,k_grid%ipis2ips(ik,2))) &
+             & < trev_secant) ) symb(2)=' yes'
+           WRITE(stdout,"(5X,i6.6,1X,1f14.6,1X,a,1f14.6,1X,a)") ib, en2(ib,k_grid%ipis2ips(ik,1))*rytoev, symb(1), & 
+           & en2(ib,k_grid%ipis2ips(ik,2))*rytoev, symb(2)
+        ENDDO
+     ENDIF
+     IF (k_grid%np>1.AND.ik<k_grid%np)  WRITE(stdout,"(5X, 33(a))") '---------------------------------'
   ENDDO
   CALL io_push_bar()
   !
@@ -1215,20 +1233,22 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
         secitr = 1
      ENDIF
      !
-     WRITE(citr,'(i6)') secitr
+     WRITE(csecitr,'(i10)') secitr
      !
      CALL json%update('exec.Q.secitr', secitr, found )
      !
+     counter = 0 
      DO iks = 1, k_grid%nps
-        WRITE( my_label_k, '(i6.6)') iks_l2g(iks)
-        DO ib = qp_bandrange(1), qp_bandrange(2) 
-           WRITE( my_label_b, '(i6.6)') ib
-           CALL json%add('exec.Q.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.ein('//TRIM(ADJUSTL(citr))//')',&
-           & en1(ib,iks)*rytoev)
-           CALL json%add('exec.Q.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.eout('//TRIM(ADJUSTL(citr))//')',&
-           & en2(ib,iks)*rytoev)
-           CALL json%add('exec.Q.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sc_ein('//TRIM(ADJUSTL(citr))//')',&
-           & REAL(sc1(ib,iks))*rytoev)
+        ik = k_grid%ip(iks)
+        is = k_grid%is(iks)
+        DO ib = qp_bandrange(1), qp_bandrange(2)
+           counter = counter + 1 
+           WRITE( ccounter, '(i10)') counter
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ksb',(/ik,is,ib/))
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ein('//TRIM(ADJUSTL(csecitr))//')',en1(ib,iks)*rytoev)
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').eout('//TRIM(ADJUSTL(csecitr))//')',en2(ib,iks)*rytoev)
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').sc_ein('//TRIM(ADJUSTL(csecitr))//')',&
+              &(/DBLE(sc1(ib,iks)*rytoev),AIMAG(sc1(ib,iks)*rytoev)/))
         ENDDO
      ENDDO
      !

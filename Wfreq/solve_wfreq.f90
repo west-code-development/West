@@ -624,7 +624,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ik,is,iq,ikqs,ipol,m
+  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ik,is,iq,ikqs,ikq,ipol,m
   CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   CHARACTER(LEN=5)      :: my_label_q
@@ -791,7 +791,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !ikqs = kpq_grid%index_kq(iks,iq)
         !npwkq = ngk(ikqs)
         !
-        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+        !CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 ) !MATTEO
+        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), 'cart', ikq, g0 )       !MARCO
+        ikqs = k_grid%ipis2ips(ikq,is)                                                       !MARCO                            
         !
         npwkq = ngk(ikqs)
         !

@@ -607,6 +607,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER   :: eshift = 0.007349862_DP ! = 0.1 eV
   INTEGER :: k, ib, iks, ik, ikks, ikk, iq, ifixed, ip, glob_ip, ifreq, il, im, glob_im, glob_jp, glob_ifreq
+  INTEGER :: is, iss
   REAL(DP) :: q(3), g0(3)
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk 
@@ -694,6 +695,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      ik = k_grid%ip(iks)
+     is = k_grid%is(iks)
      !
      nbndval = nbnd_occ(iks)
      !
@@ -702,6 +704,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
            !
            ikk = k_grid%ip(ikks)
+           iss = k_grid%is(ikks)
+           IF( is /= iss ) CYCLE 
            !
            !CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !MATTEO
            CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     !MARCO
@@ -767,7 +771,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
                  !
               ENDDO ! im
               !
-              CALL mp_sum( ztemp, inter_image_comm ) 
+              CALL mp_sum( ztemp, inter_image_comm )
               !
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
@@ -1173,6 +1177,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      WRITE( stdout, '(5x,"k(",i6.6,") = (",3f12.7,") cryst. coord.")') ik, k_grid%p_cryst(1:3,ik)
      IF( lnospin ) THEN
         WRITE(stdout,"(5X,a,1X,a,1X,a)") 'band  ', '   QP en. [eV]', 'conv'
+        iks = k_grid%ipis2ips(ik,1)
         DO ib = qp_bandrange(1), qp_bandrange(2)
            symb(1)='  no'
            IF( (iteration .NE. 0) .AND. (ABS(en2(ib,iks)-en1(ib,iks)) < trev_secant) ) symb(1)=' yes'

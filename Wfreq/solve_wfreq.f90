@@ -39,7 +39,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
-  USE mp_world,             ONLY : mpime
+  USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout,ionode
   USE gvect,                ONLY : g,ngm,gstart
@@ -588,7 +588,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                                  & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir,&
                                  & ngq, igq_q
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
-  USE mp_world,             ONLY : mpime
+  USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout,ionode
   USE gvect,                ONLY : g,ngm,gstart

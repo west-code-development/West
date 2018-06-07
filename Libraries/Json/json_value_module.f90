@@ -7987,7 +7987,8 @@
     select case (me%var_type)
     case (json_array)
         if (json%count(me)==0) then
-            allocate(character(kind=CK,len=0) :: vec(0))
+            !allocate(character(kind=CK,len=0) :: vec(0)) DOES NOT COMPILE ON BGQ
+            allocate(character(len=0) :: vec(0))
             allocate(ilen(0))
             return
         end if
@@ -8020,7 +8021,8 @@
         if (.not. initialized) then
             ! string length long enough to hold the longest one
             ! Note that this doesn't work with gfortran 4.9 or 5.
-            allocate( character(kind=CK,len=max_len) :: vec(count) )
+            !allocate( character(kind=CK,len=max_len) :: vec(count) ) ! DOES NOT COMPILE ON BGQ
+            allocate( character(len=max_len) :: vec(count) ) 
             initialized = .true.
         end if
 
@@ -8639,7 +8641,8 @@
         if (c==newline .or. ios/=0) exit
         iend=iend+1
     end do
-    allocate( character(kind=CK,len=iend-istart+1) :: line )
+    !allocate( character(kind=CK,len=iend-istart+1) :: line ) DOES NOT COMPILE ON BGQ
+    allocate( character(len=iend-istart+1) :: line )
     read(iunit,pos=istart,iostat=ios) line
 
     end subroutine get_current_line_from_file_stream

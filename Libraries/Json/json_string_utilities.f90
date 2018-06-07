@@ -126,7 +126,8 @@
     ! Compute how many digits we need to read
     ndigits = 2*len_trim(str)
     ndigits_digits = floor(log10(real(ndigits)))+1
-    allocate(character(kind=CDK,len=ndigits_digits) :: digits)
+    !allocate(character(kind=CDK,len=ndigits_digits) :: digits) DOES NOT COMPILE ON BGQ 
+    allocate(character(len=ndigits_digits) :: digits)
     write(digits,'(I0)') ndigits !gfortran will have a runtime error with * edit descriptor here
     ! gfortran bug: '*' edit descriptor for ISO_10646 strings does bad stuff.
     read(str,'(I'//trim(digits)//')',iostat=ierr) ival   !string to integer
@@ -752,12 +753,16 @@
 !
 !  Returns lowercase version of the `CK` string.
 
-    pure elemental function lowercase_string(str) result(s_lower)
+    !pure elemental function lowercase_string(str) result(s_lower) ! DOES NOT COMPILE ON BGQ
+    pure function lowercase_string(str) result(s_lower)
 
     implicit none
 
-    character(kind=CK,len=*),intent(in) :: str      !! input string
-    character(kind=CK,len=(len(str)))   :: s_lower  !! lowercase version of the string
+    !character(kind=CK,len=*),intent(in) :: str      !! input string ! DOES NOT COMPILE ON BGQ
+    !character(kind=CK,len=(len(str)))   :: s_lower  !! lowercase version of the string !DOES NOT COMPILE ON BGQ
+    character(len=*),intent(in) :: str      !! input string
+    character(len=(len(str)))   :: s_lower  !! lowercase version of the string
+
 
     integer :: i  !! counter
     integer :: j  !! index of uppercase character

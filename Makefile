@@ -14,8 +14,7 @@ dfpt_kernel_do \
 io_kernel_do \
 wstat_do \
 wfreq_do \
-westpp_do \
-westpy_do
+westpp_do 
 
 
 libraries_do:
@@ -158,19 +157,4 @@ westpp_undo:
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
-westpy_undo:
-	if test -d Westpy ; then \
-	( cd Westpy ; if test "$(MAKE)" = "" ; then make clean ; \
-	else $(MAKE) clean ; fi ) ; fi
-
-doc:
-	if test -d Doc ; then \
-	( cd Doc ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all ; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
-
-doc_clean:
-	if test -d Doc ; then \
-	( cd Doc ; if test "$(MAKE)" = "" ; then make $(MFLAGS) clean ; \
-	else $(MAKE) $(MFLAGS) clean ; fi ) ; fi
-
-distclean: clean doc_clean
+distclean: clean 

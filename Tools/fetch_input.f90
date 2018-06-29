@@ -105,13 +105,13 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      n_pdep_eigen_to_use     = 2
      qp_bandrange            = (/ 1, 2 /)
      macropol_calculation    = 'N'
-     n_lanczos               = 20
+     n_lanczos               = 30
      n_imfreq                = 128
      n_refreq                = 272
      ecut_imfreq             = ecutrho
      ecut_refreq             = 2._DP
      wfreq_eta               = 0.003675_DP
-     n_secant_maxiter        = 20
+     n_secant_maxiter        = 21
      trev_secant             = 0.003675_DP
      l_enable_lanczos        = .TRUE.
      l_enable_gwetot         = .FALSE.

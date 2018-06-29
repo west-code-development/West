@@ -614,7 +614,7 @@ MODULE wstat_restart
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
       !
-      IF( mpime == root ) OPEN( UNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
+      IF( mpime == root ) OPEN( NEWUNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
       !
       DO im = 0, nimage-1
          !
@@ -732,7 +732,7 @@ MODULE wstat_restart
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
       !
-      IF( mpime == root ) OPEN( UNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
+      IF( mpime == root ) OPEN( NEWUNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
       !
       DO im = 0, nimage-1
          !

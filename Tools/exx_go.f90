@@ -20,7 +20,7 @@ SUBROUTINE exx_go()
                                      &get_screening_parameter,get_exx_fraction,start_exx,get_gau_parameter
   USE fft_base,               ONLY : dfftp,dffts 
   USE exx,                    ONLY : x_gamma_extrapolation,exxdiv_treatment,exx_grid_init,exx_div_check,exx_divergence,&
-                                     &deallocate_exx,exxinit,vexx,exx_restart,erfc_scrlen,exxdiv,exxalfa,gau_scrlen,&
+                                     &deallocate_exx,exxinit,exx_mp_init,vexx,exx_restart,erfc_scrlen,exxdiv,exxalfa,gau_scrlen,&
                                      &exxdiv_treatment, ecutfock
   USE gvecw,                  ONLY : ecutwfc
   USE wvfct,                  ONLY : nbnd, npwx
@@ -61,6 +61,8 @@ SUBROUTINE exx_go()
      CALL weights()
      CALL exx_grid_init
      CALL exx_div_check
+     ! exx_mp_init necessary when k points are used
+     CALL exx_mp_init
      CALL exxinit
      exxdiv = exx_divergence() 
      WRITE(stdout, '(7X,"** WARNING : EXX-exxdiv           = ", f14.6)') exxdiv

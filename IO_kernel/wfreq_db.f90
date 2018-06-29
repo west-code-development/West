@@ -41,6 +41,7 @@ MODULE wfreq_db
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file 
       USE constants,            ONLY : rytoev
+      USE types_bz_grid,        ONLY : k_grid
       !
       IMPLICIT NONE
       !
@@ -49,13 +50,14 @@ MODULE wfreq_db
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iunout,global_j,local_j
-      INTEGER :: ierr, iks, ib
+      INTEGER :: ierr, iks, ik, is, ib
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       !
       TYPE(json_file) :: json 
-      INTEGER :: iunit, i
+      INTEGER :: iunit, i, counter
       INTEGER,ALLOCATABLE :: ilist(:) 
       LOGICAL :: l_generate_plot, l_optics
+      CHARACTER(LEN=10) :: ccounter
       !
       ! MPI BARRIER
       !
@@ -87,7 +89,32 @@ MODULE wfreq_db
          DEALLOCATE(ilist)
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
-         DO iks = 1, nks 
+         !counter = 0 
+         !DO iks = 1, k_grid%nps
+         !   ik = k_grid%ip(iks)
+         !   is = k_grid%is(iks)
+         !   DO ib = qp_bandrange(1), qp_bandrange(2)
+         !      counter = counter + 1
+         !      WRITE( ccounter, '(i10)') counter
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').ksb',(/ik,is,ib/))
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmax',sigma_exx(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').vxcl'  ,sigma_vxcl(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').vxcnl' ,sigma_vxcnl(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').hf'    ,sigma_hf(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').z'     ,sigma_z(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').eks'   ,et(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').eqpLin',sigma_eqplin(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').eqpSec',sigma_eqpsec(ib,iks)*rytoev)
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eks',&
+         !        (/DBLE(sigma_sc_eks(ib,iks)*rytoev),AIMAG(sigma_sc_eks(ib,iks)*rytoev)/) )
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eqpLin',&
+         !        (/DBLE(sigma_sc_eqplin(ib,iks)*rytoev),AIMAG(sigma_sc_eqplin(ib,iks)*rytoev)/) )
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eqpSec',& 
+         !        (/DBLE(sigma_sc_eqpsec(ib,iks)*rytoev),AIMAG(sigma_sc_eqpsec(ib,iks)*rytoev)/) )
+         !   ENDDO
+         !ENDDO
+         !
+         DO iks = 1, k_grid%nps
             !
             WRITE(my_label_k,'(i6.6)') iks_l2g(iks)
             !

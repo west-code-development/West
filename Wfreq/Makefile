@@ -18,16 +18,15 @@ MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LA
           $(MOD_FLAG).
 IFLAGS=
 
-
 WFREQ_OBJS = \
 wfreq_readin.o \
 wfreq_setup.o \
 diago_lanczos.o \
 solve_deflated_lanczos_w_full_ortho.o \
 get_brak_hyper_parallel.o \
+chi_invert.o \
 solve_wfreq.o \
 set_freqlists.o \
-chi_invert.o \
 solve_gfreq.o \
 calc_vxc.o \
 calc_exx2.o \
@@ -36,6 +35,50 @@ calc_corr.o \
 solve_qp.o \
 wfreq.o
 #io_eigenfreq.o
+
+### XWG ###
+#WFREQ_OBJS = \
+#wfreq_readin.o \
+#wfreq_setup.o \
+#diago_lanczos.o \
+#solve_deflated_lanczos_w_full_ortho.o \
+#get_brak_hyper_parallel.o \
+#solve_wfreq.o \
+#set_freqlists.o \
+#chi_invert.o \
+#solve_gfreq.o \
+#calc_vxc.o \
+#calc_exx2.o \
+#solve_hf.o \
+#wfreq.o
+##io_eigenfreq.o
+
+### XW ###
+#WFREQ_OBJS = \
+#wfreq_readin.o \
+#wfreq_setup.o \
+#diago_lanczos.o \
+#solve_deflated_lanczos_w_full_ortho.o \
+#get_brak_hyper_parallel.o \
+#solve_wfreq.o \
+#set_freqlists.o \
+#chi_invert.o \
+#calc_vxc.o \
+#calc_exx2.o \
+#solve_hf.o \
+#wfreq.o
+##io_eigenfreq.o
+
+### X ###
+#WFREQ_OBJS = \
+#wfreq_readin.o \
+#wfreq_setup.o \
+#set_freqlists.o \
+#calc_vxc.o \
+#calc_exx2.o \
+#solve_hf.o \
+#wfreq.o
+##io_eigenfreq.o
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a

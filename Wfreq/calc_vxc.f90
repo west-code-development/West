@@ -22,7 +22,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE io_global,            ONLY : stdout, ionode
   USE io_files,             ONLY : nwordwfc, iunwfc
   USE scf,                  ONLY : rho, rho_core, rhog_core
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ig_l2g,ngm
+  USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2
   USE fft_base,             ONLY : dfftp,dffts
@@ -42,13 +42,14 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE funct,                ONLY : dft_is_hybrid,get_exx_fraction
   USE class_idistribute,    ONLY : idistribute
   USE exx,                  ONLY : vexx,exxalfa
+  USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  REAL(DP),INTENT(OUT) :: sigma_vxcl( qp_bandrange(1):qp_bandrange(2), nks )
-  REAL(DP),INTENT(OUT) :: sigma_vxcnl( qp_bandrange(1):qp_bandrange(2), nks )
+  REAL(DP),INTENT(OUT) :: sigma_vxcl( qp_bandrange(1):qp_bandrange(2), k_grid%nps )
+  REAL(DP),INTENT(OUT) :: sigma_vxcnl( qp_bandrange(1):qp_bandrange(2), k_grid%nps )
   !
   ! Workspace
   !
@@ -84,12 +85,12 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   nnr = REAL( dfftp%nr1*dfftp%nr2*dfftp%nr3, KIND=DP )
   !
-  barra_load = nks 
+  barra_load = k_grid%nps
   CALL start_bar_type( barra, 'sigmavxc', barra_load )
   !
   ! LOOP 
   !
-  DO iks = 1, nks   ! KPOINT-SPIN
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -100,11 +101,11 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
      IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
-     !npw = ngk(iks)
+     npw = ngk(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks>1) THEN
+     IF(k_grid%nps>1) THEN
         !iuwfc = 20
         !lrwfc = nbnd * npwx * npol 
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )

@@ -54,7 +54,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   USE wvfct,                ONLY : g2kin
   USE control_flags,        ONLY : gamma_only 
   USE westcom,              ONLY : n_dfpt_maxiter,alphapv_dfpt
-  USE pwcom,                ONLY : npw,npwx
+  USE pwcom,                ONLY : npw,npwx,ngk,current_k
   USE noncollin_module,     ONLY : npol,noncolin
   !
   IMPLICIT NONE
@@ -101,7 +101,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   DO ibnd=1,m
      CALL ZAXPY(npw,(-1._DP,0._DP),b(1,ibnd),1,g(1,ibnd),1)
   ENDDO
-  IF(npol==2) THEN
+  IF(noncolin) THEN
      DO ibnd=1,m
         CALL ZAXPY(npw,(-1._DP,0._DP),b(npwx+1,ibnd),1,g(npwx+1,ibnd),1)
      ENDDO

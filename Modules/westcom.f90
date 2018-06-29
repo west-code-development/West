@@ -18,11 +18,9 @@ MODULE scratch_area
   !
   SAVE
   !
-  ! Coulomb
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  INTEGER              :: npwq0,npwq0x,npwq0_g
+  ! COULOMB
+  INTEGER              :: npwq,npwqx,npwq_g
   CHARACTER(LEN=6)     :: fftdriver
-  !INTEGER,ALLOCATABLE  :: q0ig_l2g(:)
   INTEGER,ALLOCATABLE  :: iks_l2g(:)
   !
   ! DBS
@@ -35,10 +33,21 @@ MODULE scratch_area
   ! BANDS
   INTEGER,ALLOCATABLE :: nbnd_occ(:) 
   !
+  ! Q-POINTS
+  INTEGER, ALLOCATABLE :: ngq(:)            ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for (q+G) (global in iq)
+  INTEGER, ALLOCATABLE :: igq_q(:,:)        ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq ) 
+  INTEGER, ALLOCATABLE :: ngq_g(:)          ! equivalent of ngk_g(:) --> ex. ngk_g(iq) = TOTAL number of PW for (q+G) (global in iq)  
+  ! INTEGER, ALLOCATABLE :: igq_l2g(:,:)      ! equivalent of igk_l2g(:,:) --> ex. iqq_l2g(ig,iq) => correspondence between the local (q+G) index and the global G index 
+  ! INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:) ! equivalent of igk_l2g_kdip(:,:) --> ex. iqq_l2g_kdip(ig,iq) => correspondence between the global order of (q+G) and the local index for (q+G).
+  !
   ! EPSILON
   REAL(DP),ALLOCATABLE    :: d_epsm1_ifr(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_ifr(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr(:,:,:)
+  !
+  ! EPSILON with q-points
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:) ! EPSILON + iq  (global in iq) 
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq  (global in iq) 
   !
   ! CORRELATION
   REAL(DP),ALLOCATABLE    :: d_head_ifr(:)
@@ -51,10 +60,15 @@ MODULE scratch_area
   COMPLEX(DP),ALLOCATABLE :: z_head_rfr(:)
   COMPLEX(DP),ALLOCATABLE :: z_body_rfr(:,:,:,:) 
   !
+  ! CORRELATION with q-points
+  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:) ! CORRELATION + iq  (global in iq)
+  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)       ! CORRELATION + iq  (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
+  !
   ! I/O 
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
   !
-  REAL(DP) :: isz
   !
 END MODULE
 !
@@ -99,6 +113,8 @@ MODULE wstat_center
   LOGICAL :: l_kinetic_only
   LOGICAL :: l_minimize_exx_if_active
   LOGICAL :: l_use_ecutrho
+  !INTEGER :: nq(3)  
+  INTEGER, ALLOCATABLE :: qlist(:)
   !
   ! Common workspace
   !
@@ -153,7 +169,6 @@ MODULE wfreq_center
   REAL(DP),ALLOCATABLE :: imfreq_list(:)
   REAL(DP),ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP),PARAMETER :: frequency_list_power = 2._DP
-  INTEGER :: div_kind_hf ! 1=spherical region, 2=GB, 3=cut_ws
   !
   ! gw_etot 
   !

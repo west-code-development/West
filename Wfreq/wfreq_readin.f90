@@ -32,7 +32,10 @@ SUBROUTINE wfreq_readin()
   CALL start_clock('wfreq_readin')
   !
   !CALL fetch_namelist(3,(/1,2,3/))
-  CALL fetch_input(3,(/1,2,3/),.TRUE.)
+  !
+  ! READ INPUT_WEST
+  !
+  CALL fetch_input(1,(/1/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed
@@ -45,6 +48,10 @@ SUBROUTINE wfreq_readin()
   IF (domag) CALL errore('wfreq_readin','domag version not available',1)
   IF (okvan) CALL errore('wfreq_readin','ultrasoft pseudopotential not implemented',1)
   IF (doublegrid) CALL errore('wfreq_readin', 'double grid not implemented',1)
+  !
+  ! READ other sections of the input file
+  !
+  CALL fetch_input(2,(/2,3/),.TRUE.)
   !
   CALL stop_clock('wfreq_readin')
   !

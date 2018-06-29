@@ -22,6 +22,9 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
   USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
+  USE gvect,            ONLY : ecutrho
+  USE start_k,          ONLY : nk1, nk2, nk3
+  USE control_flags,    ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -62,6 +65,12 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
   !
   ! ** wstat_control **
   IF ( ANY(driver(:)==2) ) THEN
+     ! 
+     ! ** WARNING ** : In order to properly initialize these variables, this driver 
+     !                 can be called only after: 
+     !                 - fetch_input( driver 1 ) 
+     !                 - read_pwout() 
+     !
      wstat_calculation        = 'S'
      n_pdep_eigen             = 1
      n_pdep_times             = 4
@@ -71,28 +80,41 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      trev_pdep                = 1.d-3
      trev_pdep_rel            = 1.d-1
      tr2_dfpt                 = 1.d-12
-     l_kinetic_only           = .false.
-     l_minimize_exx_if_active = .false. 
-     l_use_ecutrho            = .false.
+     l_kinetic_only           = .FALSE.
+     l_minimize_exx_if_active = .FALSE. 
+     l_use_ecutrho            = .FALSE.
+     IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+     IF ( gamma_only ) THEN
+        ALLOCATE( qlist(1) ) 
+        qlist(1) = 1 
+     ELSE
+        ALLOCATE(qlist(nk1*nk2*nk3))
+        qlist = (/ (i, i=1,nk1*nk2*nk3,1) /)
+     ENDIF 
   ENDIF
   !
   ! ** wfreq_control **
   IF ( ANY(driver(:)==3) ) THEN
+     ! 
+     ! ** WARNING ** : In order to properly initialize these variables, this driver 
+     !                 can be called only after: 
+     !                 - fetch_input( driver 1 ) 
+     !                 - read_pwout() 
+     !
      wfreq_calculation       = 'XWGQ'
      n_pdep_eigen_to_use     = 2
      qp_bandrange            = (/ 1, 2 /)
      macropol_calculation    = 'N'
-     n_lanczos               = 20
-     n_imfreq                = 10
-     n_refreq                = 10
-     ecut_imfreq             = 1._DP
+     n_lanczos               = 30
+     n_imfreq                = 128
+     n_refreq                = 272
+     ecut_imfreq             = ecutrho
      ecut_refreq             = 2._DP
      wfreq_eta               = 0.003675_DP
-     n_secant_maxiter        = 1
+     n_secant_maxiter        = 21
      trev_secant             = 0.003675_DP
      l_enable_lanczos        = .TRUE.
      l_enable_gwetot         = .FALSE.
-     div_kind_hf             = 2 
      o_restart_time          = 0._DP
      ecut_spectralf          = (/ -2._DP, 2._DP /)
      n_spectralf             = 10
@@ -153,6 +175,14 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         IF( found ) l_minimize_exx_if_active = lval  
         CALL json%get('wstat_control.l_use_ecutrho', lval, found) 
         IF( found ) l_use_ecutrho = lval  
+        !CALL json%get('wstat_control.nq', ivec, found) 
+        !IF( found ) nq(1:3) = ivec(:) 
+        CALL json%get('wstat_control.qlist', ivec, found) 
+        IF( found ) THEN 
+           IF( ALLOCATED(qlist) ) DEALLOCATE(qlist) 
+           ALLOCATE(qlist(SIZE(ivec)))
+           qlist(1:SIZE(ivec)) = ivec(1:SIZE(ivec))
+        ENDIF
      ENDIF
      !
      IF ( ANY(driver(:)==3) ) THEN 
@@ -186,8 +216,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         IF( found ) l_enable_lanczos = lval  
         CALL json%get('wfreq_control.l_enable_gwetot', lval, found) 
         IF( found ) l_enable_gwetot = lval  
-        CALL json%get('wfreq_control.div_kind_hf', ival, found) 
-        IF( found ) div_kind_hf = ival  
         CALL json%get('wfreq_control.o_restart_time', rval, found) 
         IF( found ) o_restart_time = rval  
         CALL json%get('wfreq_control.ecut_spectralf', rvec, found) 
@@ -255,6 +283,8 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      CALL mp_bcast(l_kinetic_only,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
      CALL mp_bcast(l_use_ecutrho,root,world_comm)
+     !CALL mp_bcast(nq,root,world_comm)
+     CALL mp_bcast(qlist,root,world_comm)
      !
      ! CHECKS 
      !
@@ -274,6 +304,11 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      IF(tr2_dfpt<=0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
      IF(trev_pdep<=0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
      IF(trev_pdep_rel<=0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
+     IF(gamma_only) THEN
+        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1.',1)
+     ELSE 
+        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3.',1)
+     ENDIF
      !
   ENDIF
   !
@@ -293,7 +328,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      CALL mp_bcast(trev_secant,root,world_comm)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
      CALL mp_bcast(l_enable_gwetot,root,world_comm)
-     CALL mp_bcast(div_kind_hf,root,world_comm)
      CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
@@ -313,7 +347,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      IF( ecut_refreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_spectralf(2)<ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
      IF( wfreq_eta<=0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
-     IF( n_secant_maxiter < 1 ) CALL errore('fetch_input','Err: n_secant_maxiter<1',1) 
+     IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1) 
      IF( trev_secant<=0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
      SELECT CASE(macropol_calculation) 
      CASE('N','n','C','c')
@@ -385,6 +419,12 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         CALL io_push_value('l_kinetic_only',l_kinetic_only,numsp)
         CALL io_push_value('l_minimize_exx_if_active',l_minimize_exx_if_active,numsp)
         CALL io_push_value('l_use_ecutrho',l_use_ecutrho,numsp)
+        !CALL io_push_value('nq(1)',nq(1),numsp)
+        !CALL io_push_value('nq(2)',nq(2),numsp)
+        !CALL io_push_value('nq(3)',nq(3),numsp)
+        DO i = 1, SIZE(qlist) 
+           CALL io_push_value('qlist',qlist(i),numsp)
+        ENDDO
         !
         CALL io_push_bar()
         !
@@ -412,7 +452,6 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         CALL io_push_value('trev_secant [Ry]',trev_secant,numsp)
         CALL io_push_value('l_enable_lanczos',l_enable_lanczos,numsp)
         CALL io_push_value('l_enable_gwetot',l_enable_gwetot,numsp)
-        CALL io_push_value('div_kind_hf',div_kind_hf,numsp)
         CALL io_push_value('o_restart_time [min]',o_restart_time,numsp)
         CALL io_push_value('ecut_spectralf(1) [Ry]',ecut_spectralf(1),numsp)
         CALL io_push_value('ecut_spectralf(2) [Ry]',ecut_spectralf(2),numsp)
@@ -512,6 +551,8 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
         CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
+        !CALL json%add('input.wstat_control.nq', nq) 
+        CALL json%add('input.wstat_control.qlist', qlist) 
         !
      ENDIF
      !
@@ -531,7 +572,6 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wfreq_control.trev_secant',trev_secant)
         CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
         CALL json%add('input.wfreq_control.l_enable_gwetot',l_enable_gwetot)
-        CALL json%add('input.wfreq_control.div_kind_hf',div_kind_hf)
         CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
         CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
         CALL json%add('input.wfreq_control.n_spectralf',n_spectralf)

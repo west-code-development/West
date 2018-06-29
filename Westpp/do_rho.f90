@@ -32,6 +32,7 @@ SUBROUTINE do_rho ( )
   USE fft_at_k,              ONLY : single_invfft_k
   USE distribution_center,   ONLY : aband
   USE control_flags,         ONLY : gamma_only 
+  USE types_bz_grid,         ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -50,9 +51,9 @@ SUBROUTINE do_rho ( )
   auxr = 0._DP
   psic = 0._DP
   !
-  CALL start_bar_type( barra, 'westpp', nks ) 
+  CALL start_bar_type( barra, 'westpp', k_grid%nps ) 
   !
-  DO iks = 1, nks  ! KPOINT-SPIN LOOP
+  DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -67,7 +68,7 @@ SUBROUTINE do_rho ( )
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks>1) THEN
+     IF(k_grid%nps>1) THEN
         !iuwfc = 20
         !lrwfc = nbnd * npwx * npol 
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
@@ -89,12 +90,12 @@ SUBROUTINE do_rho ( )
         IF( gamma_only ) THEN 
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
            DO ir = 1, dffts%nnr
-              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * wk(iks)  
+              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * k_grid%weight(iks)  
            ENDDO 
         ELSE
            CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
            DO ir = 1, dffts%nnr
-              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * wk(iks)
+              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * k_grid%weight(iks)
            ENDDO 
         ENDIF
         !

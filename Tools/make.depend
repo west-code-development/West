@@ -27,6 +27,7 @@ do_setup.o : ../../Modules/mp.o
 do_setup.o : ../../Modules/mp_global.o
 do_setup.o : ../../Modules/noncol.o
 do_setup.o : ../../PW/src/pwcom.o
+do_setup.o : types_bz_grid.o
 do_setup.o : io_push.o
 get_alpha_pv.o : ../../Modules/kind.o
 get_alpha_pv.o : ../../Modules/mp.o
@@ -67,3 +68,10 @@ set_isz.o : ../../Modules/cell_base.o
 set_isz.o : ../../Modules/constants.o
 set_isz.o : ../../Modules/kind.o
 set_isz.o : ../../West/Modules/westcom.o
+class_bz_grid.o : ../../Modules/kind.o
+class_bz_grid.o : ../../Modules/cell_base.o
+class_bz_grid.o : ../../Modules/recvec.o
+class_bz_grid.o : ../../PW/src/start_k.o
+class_bz_grid.o : ../../PW/src/pwcom.o
+class_bz_grid.o : ../../West/Modules/westcom.o
+types_bz_grid.o : class_bz_grid.o

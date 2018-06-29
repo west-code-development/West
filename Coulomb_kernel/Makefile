@@ -5,15 +5,19 @@ include ../../make.inc
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
+          $(MOD_FLAG)../Modules \
+          $(MOD_FLAG)../Tools \
           $(MOD_FLAG).
 IFLAGS=
 
 
 COULOMB_KERNEL_OBJS = \
-store_sqvc.o 
+class_coulomb.o \
+types_coulomb.o 
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a
+WESTLIBS = ../Tools/libtools.a
 
 TLDEPS= bindir mods libs pw
 

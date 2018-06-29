@@ -208,6 +208,8 @@ solve_wfreq.o : ../../West/IO_kernel/pdep_io.o
 solve_wfreq.o : ../../West/Modules/westcom.o
 solve_wfreq.o : ../../West/Tools/bar.o
 solve_wfreq.o : ../../West/Tools/io_push.o
+solve_wfreq.o : ../../West/Tools/class_bz_grid.o
+solve_wfreq.o : ../../West/Tools/types_bz_grid.o
 solve_wfreq.o : ../../iotk/src/iotk_module.o
 wfreq.o : ../../Modules/check_stop.o
 wfreq.o : ../../Modules/control_flags.o

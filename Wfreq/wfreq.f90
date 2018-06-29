@@ -20,7 +20,6 @@ PROGRAM wfreq
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end 
   USE mp,                   ONLY : mp_sum,mp_barrier
-  USE control_flags,        ONLY : gamma_only
   USE westcom,              ONLY : wfreq_calculation
   ! 
   IMPLICIT NONE

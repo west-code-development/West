@@ -360,15 +360,15 @@ MODULE wstat_tools
       USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq0,npwq0x
+      USE westcom,              ONLY : npwq,npwqx
       USE gvect,                ONLY : gstart
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwq0x,pert%nlocx)
-      COMPLEX(DP),INTENT(IN) :: bg(npwq0x,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: l2_s,l2_e
       REAL(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
       INTEGER,INTENT(IN) :: g_s, g_e
@@ -407,9 +407,9 @@ MODULE wstat_tools
                !IF( ig2 < n1 .OR. ig2 > n2 ) CYCLE
                !
                IF(gstart==1) THEN
-                  c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq0,ag(1,il1),1,bg(1,il2),1)
+                  c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
                ELSE
-                  c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq0-2,ag(2,il1),1,bg(2,il2),1)
+                  c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq-2,ag(2,il1),1,bg(2,il2),1)
                ENDIF
                !
             ENDDO
@@ -443,14 +443,14 @@ MODULE wstat_tools
       USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq0,npwq0x
+      USE westcom,              ONLY : npwq,npwqx
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwq0x,pert%nlocx)
-      COMPLEX(DP),INTENT(IN) :: bg(npwq0x,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: l2_s,l2_e
       COMPLEX(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
       INTEGER,INTENT(IN) :: g_s, g_e
@@ -488,7 +488,7 @@ MODULE wstat_tools
                !ig2 = pert%l2g(il2)
                !IF( ig2 < n1 .OR. ig2 > n2 ) CYCLE
                !
-               c_distr(ig1,il2) = ZDOTC(npwq0,ag(1,il1),1,bg(1,il2),1)
+               c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
                !
             ENDDO
          ENDDO
@@ -789,14 +789,14 @@ MODULE wstat_tools
       USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq0,npwq0x
+      USE westcom,              ONLY : npwq,npwqx
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwq0x,pert%nlocx)
-      COMPLEX(DP) :: bg(npwq0x,pert%nlocx)
+      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       REAL(DP),INTENT(IN) :: ew(lda)
@@ -812,7 +812,7 @@ MODULE wstat_tools
       !  
       CALL start_clock( 'update_vr' )
       !
-      ALLOCATE( hg(npwq0x,pert%nlocx) )
+      ALLOCATE( hg(npwqx,pert%nlocx) )
       hg = 0._DP 
       !
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
@@ -836,7 +836,7 @@ MODULE wstat_tools
                IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
                !
                zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
-               CALL ZAXPY(npwq0,zconst,ag(1,il1),1,hg(1,il2),1)
+               CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
                !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2-n) 
                !
             ENDDO
@@ -870,7 +870,7 @@ MODULE wstat_tools
                IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
                !
                zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
-               CALL ZAXPY(npwq0,zconst,bg(1,il1),1,hg(1,il2),1)
+               CALL ZAXPY(npwq,zconst,bg(1,il1),1,hg(1,il2),1)
                !dhg(:,il2) = dhg(:,il2) + bmat(:,il1) * z(ig1,ig2-n) 
                !
             ENDDO
@@ -905,14 +905,14 @@ MODULE wstat_tools
       USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq0,npwq0x
+      USE westcom,              ONLY : npwq,npwqx
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwq0x,pert%nlocx)
-      COMPLEX(DP) :: bg(npwq0x,pert%nlocx)
+      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       REAL(DP),INTENT(IN) :: ew(lda)
@@ -927,7 +927,7 @@ MODULE wstat_tools
       !  
       CALL start_clock( 'update_vr' )
       !
-      ALLOCATE( hg(npwq0x,pert%nlocx) )
+      ALLOCATE( hg(npwqx,pert%nlocx) )
       hg = 0._DP 
       !
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
@@ -950,7 +950,7 @@ MODULE wstat_tools
                ig2 = pert%l2g(il2)
                IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
                !
-               CALL ZAXPY(npwq0,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
+               CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
                !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2-n) 
                !
             ENDDO
@@ -983,7 +983,7 @@ MODULE wstat_tools
                ig2 = pert%l2g(il2)
                IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
                !
-               CALL ZAXPY(npwq0,vr_distr(ig1,il2),bg(1,il1),1,hg(1,il2),1)
+               CALL ZAXPY(npwq,vr_distr(ig1,il2),bg(1,il1),1,hg(1,il2),1)
                !dhg(:,il2) = dhg(:,il2) + bmat(:,il1) * z(ig1,ig2-n) 
                !
             ENDDO
@@ -1018,13 +1018,13 @@ MODULE wstat_tools
       USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq0,npwq0x
+      USE westcom,              ONLY : npwq,npwqx
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwq0x,pert%nlocx)
+      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       !
@@ -1039,7 +1039,7 @@ MODULE wstat_tools
       !  
       CALL start_clock( 'refresh_vr' )
       !
-      ALLOCATE( hg(npwq0x,pert%nlocx) )
+      ALLOCATE( hg(npwqx,pert%nlocx) )
       hg = 0._DP 
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
@@ -1062,7 +1062,7 @@ MODULE wstat_tools
                IF( ig2 > nselect ) CYCLE 
                !
                zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
-               CALL ZAXPY(npwq0,zconst,ag(1,il1),1,hg(1,il2),1)
+               CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
                !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2) 
                !
             ENDDO
@@ -1100,13 +1100,13 @@ MODULE wstat_tools
       USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq0,npwq0x
+      USE westcom,              ONLY : npwq,npwqx
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwq0x,pert%nlocx)
+      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       !
@@ -1120,7 +1120,7 @@ MODULE wstat_tools
       !  
       CALL start_clock( 'refresh_vr' )
       !
-      ALLOCATE( hg(npwq0x,pert%nlocx) )
+      ALLOCATE( hg(npwqx,pert%nlocx) )
       hg = 0._DP 
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
@@ -1142,7 +1142,7 @@ MODULE wstat_tools
                ig2 = pert%l2g(il2)
                IF( ig2 > nselect ) CYCLE 
                !
-               CALL ZAXPY(npwq0,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
+               CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
                !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2) 
                !
             ENDDO

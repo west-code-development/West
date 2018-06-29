@@ -33,7 +33,10 @@ SUBROUTINE wstat_readin()
   CALL start_clock('wstat_readin')
   !
   !CALL fetch_namelist(2,(/1,2/))
-  CALL fetch_input(2,(/1,2/),.TRUE.)
+  !
+  ! READ INPUT_WEST
+  !
+  CALL fetch_input(1,(/1/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed
@@ -46,6 +49,10 @@ SUBROUTINE wstat_readin()
   IF (domag) CALL errore('wstat_readin','domag version not available',1)
   IF (okvan) CALL errore('wstat_readin','ultrasoft pseudopotential not implemented',1)
   IF (doublegrid) CALL errore('wstat_readin', 'double grid not implemented',1)
+  !
+  ! READ other sections of the input file
+  !
+  CALL fetch_input(1,(/2/),.TRUE.)
   !
   CALL stop_clock('wstat_readin')
   !

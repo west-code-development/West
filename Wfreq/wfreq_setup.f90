@@ -14,22 +14,22 @@
 SUBROUTINE wfreq_setup
   !-----------------------------------------------------------------------
   !
-  USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,west_prefix,wfreq_save_dir,&
+  USE westcom,                ONLY : alphapv_dfpt,npwq,npwqx,west_prefix,wfreq_save_dir,&
                                    & n_pdep_eigen_to_use,n_imfreq,nbnd_occ,l_macropol,macropol_calculation,&
-                                   & n_refreq,isz,qp_bandrange,wfreq_calculation
+                                   & n_refreq,qp_bandrange,wfreq_calculation, fftdriver
   USE westcom,                ONLY : sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
                                      & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf
-  USE westcom,                ONLY : 
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : nbnd,nks
   USE kinds,                  ONLY : DP
-  USE gvect,                  ONLY : gstart,g,ig_l2g
+  USE gvect,                  ONLY : gstart,g
   USE io_files,               ONLY : tmp_dir
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband
   USE class_idistribute,      ONLY : idistribute
   USE wavefunctions_module,   ONLY : evc
   USE mod_mpiio,              ONLY : set_io_comm
+  USE types_bz_grid,          ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -45,11 +45,7 @@ SUBROUTINE wfreq_setup
   !
   alphapv_dfpt = get_alpha_pv()
   !
-  CALL set_npwq0()
-  !
-  ALLOCATE(sqvc(npwq0))
-  !
-  CALL store_sqvc(sqvc,npwq0,1,isz)
+  CALL set_npwq()
   !
   IF(qp_bandrange(1)>nbnd) CALL errore('wfreq_setup','Err: qp_bandrange(1)>nbnd', 1) 
   IF(qp_bandrange(2)>nbnd) CALL errore('wfreq_setup','Err: qp_bandrange(2)>nbnd', 1) 
@@ -80,17 +76,17 @@ SUBROUTINE wfreq_setup
   !
   ! Allocate for output
   !
-  ALLOCATE( sigma_exx       (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_vxcl      (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_vxcnl     (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_hf        (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_z         (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_eqplin    (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_eqpsec    (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_sc_eks    (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),nks) )
-  ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),nks) )
+  ALLOCATE( sigma_exx       (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_vxcl      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_vxcnl     (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_hf        (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_z         (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_eqplin    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_eqpsec    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_sc_eks    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
@@ -107,7 +103,7 @@ SUBROUTINE wfreq_setup
      IF( wfreq_calculation(i:i) == 'P' ) l_generate_plot = .TRUE.
   ENDDO
   IF( l_generate_plot ) THEN 
-     ALLOCATE( sigma_spectralf      (n_spectralf,qp_bandrange(1):qp_bandrange(2),nks) )
+     ALLOCATE( sigma_spectralf      (n_spectralf,qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
      ALLOCATE( sigma_freq           (n_spectralf) )
      sigma_spectralf = 0._DP
      sigma_freq      = 0._DP

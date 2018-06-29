@@ -27,7 +27,7 @@ MODULE pdep_db
     ! *****************************
     !
     !------------------------------------------------------------------------
-    SUBROUTINE pdep_db_write( )
+    SUBROUTINE pdep_db_write( iq )
       !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
@@ -43,16 +43,20 @@ MODULE pdep_db
       USE distribution_center,  ONLY : pert 
       USE json_module,          ONLY : json_file 
       !
+      !
       IMPLICIT NONE
+      !
+      INTEGER, INTENT(IN), OPTIONAL :: iq
       !
       CHARACTER(LEN=512)    :: fname
       CHARACTER(LEN=6)      :: my_label
+      CHARACTER(LEN=5)      :: my_label_q
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iunout,global_j,local_j
       INTEGER :: ierr
-      CHARACTER(12) :: eigenpot_filename(n_pdep_eigen)
+      CHARACTER(20) :: eigenpot_filename(n_pdep_eigen)
       !
       TYPE(json_file) :: json 
       INTEGER :: iunit      
@@ -64,8 +68,14 @@ MODULE pdep_db
       ! SET FILENAMES
       !
       DO global_j = 1, n_pdep_eigen
-         WRITE(my_label,'(i6.6)') global_j
-         eigenpot_filename(global_j) = "E"//TRIM(ADJUSTL(my_label))//".json" 
+         IF ( PRESENT(iq) ) THEN
+            WRITE(my_label,'(i6.6)') global_j
+            WRITE(my_label_q,'(i5.5)') iq
+            eigenpot_filename(global_j) = "EQ"//TRIM(ADJUSTL(my_label_q))//"_"//TRIM(ADJUSTL(my_label))//".json" 
+         ELSE
+            WRITE(my_label,'(i6.6)') global_j
+            eigenpot_filename(global_j) = "E"//TRIM(ADJUSTL(my_label))//".json" 
+         ENDIF
       ENDDO
       !
       ! TIMING
@@ -79,8 +89,13 @@ MODULE pdep_db
          !
          CALL json%load_file(filename=TRIM(logfile))
          ! 
-         CALL json%add('output.eigenval',ev(1:n_pdep_eigen))
-         CALL json%add('output.eigenpot',eigenpot_filename(1:n_pdep_eigen))
+         IF (PRESENT(iq)) THEN
+            CALL json%add('output.Q'//TRIM(my_label_q)//'.eigenval',ev(1:n_pdep_eigen))
+            CALL json%add('output.Q'//TRIM(my_label_q)//'.eigenpot',eigenpot_filename(1:n_pdep_eigen))
+         ELSE
+            CALL json%add('output.eigenval',ev(1:n_pdep_eigen))
+            CALL json%add('output.eigenpot',eigenpot_filename(1:n_pdep_eigen))
+         ENDIF
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
          CALL json%print_file( iunit )
@@ -99,7 +114,11 @@ MODULE pdep_db
          IF(global_j>n_pdep_eigen) CYCLE
          ! 
          fname = TRIM( wstat_save_dir ) // "/"//TRIM(eigenpot_filename(global_j))
-         CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
+         IF ( PRESENT(iq) ) THEN
+            CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq)
+         ELSE
+            CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
+         ENDIF
          !
       ENDDO
       !
@@ -126,10 +145,10 @@ MODULE pdep_db
     ! *****************************
     !
     !------------------------------------------------------------------------
-    SUBROUTINE pdep_db_read( nglob_to_be_read )
+    SUBROUTINE pdep_db_read( nglob_to_be_read, iq_to_be_read, l_print_readin_info )
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwq0x,wstat_save_dir
+      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwqx,wstat_save_dir
       USE io_global,           ONLY : stdout 
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root
@@ -141,10 +160,13 @@ MODULE pdep_db
       !
       IMPLICIT NONE
       !
-      INTEGER, INTENT(IN) :: nglob_to_be_read  
+      INTEGER, INTENT(IN) :: nglob_to_be_read
+      INTEGER, INTENT(IN), OPTIONAL :: iq_to_be_read
+      LOGICAL, INTENT(IN), OPTIONAL :: l_print_readin_info
       !
       CHARACTER(LEN=512) :: fname
       CHARACTER(LEN=6)      :: my_label
+      CHARACTER(LEN=5)      :: my_label_q
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -154,7 +176,8 @@ MODULE pdep_db
       REAL(DP),ALLOCATABLE :: tmp_ev(:)
       LOGICAL :: found
       TYPE(json_file) :: json
-      CHARACTER(12),ALLOCATABLE :: eigenpot_filename(:) 
+      CHARACTER(20),ALLOCATABLE :: eigenpot_filename(:) 
+      LOGICAL :: l_print_message
       !
       ! MPI BARRIER
       !
@@ -175,8 +198,14 @@ MODULE pdep_db
          CALL json%load_file( filename = TRIM( wstat_save_dir ) // '/' // TRIM('wstat.json') )
          ! 
          CALL json%get('input.wstat_control.n_pdep_eigen', tmp_n_pdep_eigen, found) 
-         CALL json%get('output.eigenval', tmp_ev, found)
-         CALL json%get('output.eigenpot', eigenpot_filename, found) 
+         IF (PRESENT(iq_to_be_read)) THEN
+            WRITE(my_label_q,'(i5.5)') iq_to_be_read
+            CALL json%get('output.Q'//TRIM(my_label_q)//'.eigenval',tmp_ev, found)
+            CALL json%get('output.Q'//TRIM(my_label_q)//'.eigenpot', eigenpot_filename, found)
+         ELSE
+            CALL json%get('output.eigenval', tmp_ev, found)
+            CALL json%get('output.eigenpot', eigenpot_filename, found) 
+         ENDIF
          !
          CALL json%destroy()
          !
@@ -193,6 +222,8 @@ MODULE pdep_db
          n_eigen_to_get = MIN(tmp_n_pdep_eigen,nglob_to_be_read)
       ENDIF
       !
+      ! 2)  READ THE EIGENVALUES FILE
+      !
       IF(.NOT.ALLOCATED(ev)) ALLOCATE(ev(n_eigen_to_get))
       IF ( mpime==root ) ev(1:nglob_to_be_read) = tmp_ev(1:nglob_to_be_read)
       CALL mp_bcast( ev, root, world_comm )
@@ -205,7 +236,7 @@ MODULE pdep_db
       ! 3)  READ THE EIGENVECTOR FILES
       !
       IF(.NOT.ALLOCATED(dvg)) THEN
-         ALLOCATE(dvg(npwq0x,pert%nlocx))
+         ALLOCATE(dvg(npwqx,pert%nlocx))
          dvg = 0._DP
       ENDIF
       !
@@ -217,7 +248,11 @@ MODULE pdep_db
          IF(global_j>n_eigen_to_get) CYCLE
          ! 
          fname = TRIM( wstat_save_dir ) // "/"//TRIM(eigenpot_filename(global_j))
-         CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
+         IF ( PRESENT(iq_to_be_read) ) THEN
+            CALL pdep_read_G_and_distribute(fname,dvg(:,local_j),iq_to_be_read)
+         ELSE
+            CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
+         ENDIF
          !
       ENDDO
       !
@@ -231,12 +266,20 @@ MODULE pdep_db
       time_spent(2)=get_clock('pdep_db')
       CALL stop_clock('pdep_db')
       !
-      WRITE(stdout,'(  5x," ")')
-      CALL io_push_bar()
-      WRITE(stdout, "(5x, 'SAVE read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )  
-      WRITE(stdout, "(5x, 'Eigen. found : ',i12)") n_eigen_to_get
-      CALL io_push_bar()
+      IF (PRESENT(l_print_readin_info)) THEN
+         l_print_message = l_print_readin_info
+      ELSE
+         l_print_message = .TRUE.
+      ENDIF
+      !
+      IF (l_print_message) THEN
+         WRITE(stdout,'(  5x," ")')
+         CALL io_push_bar()
+         WRITE(stdout, "(5x, 'SAVE read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+         WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )  
+         WRITE(stdout, "(5x, 'Eigen. found : ',i12)") n_eigen_to_get
+         CALL io_push_bar()
+      ENDIF
       !
     END SUBROUTINE
     !

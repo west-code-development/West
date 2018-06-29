@@ -8,6 +8,7 @@ MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LA
           $(MOD_FLAG)../Modules \
           $(MOD_FLAG)../Tools \
           $(MOD_FLAG)../FFT_kernel \
+          $(MOD_FLAG)../Coulomb_kernel \
           $(MOD_FLAG).
 IFLAGS=
 
@@ -16,7 +17,7 @@ DFPT_KERNEL_OBJS = \
 apply_sternheimerop_to_m_wfcs.o \
 precondition_m_wfcts.o \
 linsolve_sternheimer_m_wfcts.o \
-dfpt.o  
+dfpt_module.o  
 
 PWOBJS = ../../PW/src/libpw.a 
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a

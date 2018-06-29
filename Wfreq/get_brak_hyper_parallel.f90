@@ -21,7 +21,7 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE random_numbers,       ONLY : randy
   USE mp,                   ONLY : mp_sum,mp_circular_shift_left
   USE io_global,            ONLY : stdout, ionode
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ig_l2g
+  USE gvect,                ONLY : g,nl,gstart,ngm_g
   USE cell_base,            ONLY : tpiba2
   USE fft_base,             ONLY : dfftp,dffts
   USE fft_interfaces,       ONLY : fwfft, invfft
@@ -143,7 +143,7 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE random_numbers,       ONLY : randy
   USE mp,                   ONLY : mp_sum,mp_circular_shift_left
   USE io_global,            ONLY : stdout, ionode
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ig_l2g
+  USE gvect,                ONLY : g,nl,gstart,ngm_g
   USE cell_base,            ONLY : tpiba2
   USE fft_base,             ONLY : dfftp,dffts
   USE fft_interfaces,       ONLY : fwfft, invfft

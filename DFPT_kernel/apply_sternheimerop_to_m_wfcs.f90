@@ -63,7 +63,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
      za = CMPLX( -e(ibnd), 0._DP, KIND=DP )
      CALL ZAXPY(npw,za,psi(1,ibnd),1,hpsi(1,ibnd),1)
   ENDDO
-  IF(npol==2) THEN
+  IF(noncolin) THEN
      DO ibnd=1,m
         za = CMPLX( -e(ibnd), 0._DP, KIND=DP )
         CALL ZAXPY(npw,za,psi(npwx+1,ibnd),1,hpsi(npwx+1,ibnd),1)

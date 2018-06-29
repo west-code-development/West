@@ -3,8 +3,11 @@ store_sqvc.o : ../../Modules/constants.o
 store_sqvc.o : ../../Modules/io_global.o
 store_sqvc.o : ../../Modules/kind.o
 store_sqvc.o : ../../Modules/recvec.o
+store_sqvc.o : ../Tools/class_bz_grid.o
+store_sqvc.o : ../Tools/types_bz_grid.o
 store_sqvc.o : ../../PW/src/exx.o
 store_sqvc.o : ../../PW/src/pwcom.o
+store_sqvc.o : ../../West/Modules/westcom.o
 store_vspx.o : ../../Modules/cell_base.o
 store_vspx.o : ../../Modules/constants.o
 store_vspx.o : ../../Modules/kind.o

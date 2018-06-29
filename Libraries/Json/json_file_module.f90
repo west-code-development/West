@@ -338,7 +338,9 @@
                                             comment_char,&
                                             path_mode,&
                                             path_separator,&
-                                            compress_vectors)
+                                            compress_vectors,&
+                                            allow_duplicate_keys,&
+                                            escape_solidus)
 
     implicit none
 
@@ -355,7 +357,9 @@
                             comment_char,&
                             path_mode,&
                             path_separator,&
-                            compress_vectors)
+                            compress_vectors,&
+                            allow_duplicate_keys,&
+                            escape_solidus)
 
     end subroutine initialize_json_core_in_file
 !*****************************************************************************************
@@ -419,7 +423,9 @@
                                   comment_char,&
                                   path_mode,&
                                   path_separator,&
-                                  compress_vectors) result(file_object)
+                                  compress_vectors,&
+                                  allow_duplicate_keys,&
+                                  escape_solidus) result(file_object)
 
     implicit none
 
@@ -438,7 +444,9 @@
                                 comment_char,&
                                 path_mode,&
                                 path_separator,&
-                                compress_vectors)
+                                compress_vectors,&
+                                allow_duplicate_keys,&
+                                escape_solidus)
 
     if (present(p)) file_object%p => p
 
@@ -1190,7 +1198,7 @@
 !  date: 12/17/2016
 !
 !  Get an (allocatable length) string vector from a JSON file.
-!  This is just a wrapper for [[json_get_alloc_string_vec_with_path]].
+!  This is just a wrapper for [[json_get_alloc_string_vec_by_path]].
 
     subroutine json_file_get_alloc_string_vec(me, path, vec, ilen, found)
 
@@ -1212,7 +1220,7 @@
 !*****************************************************************************************
 !>
 !  Alternate version of [[json_file_get_alloc_string_vec]], where "path" is kind=CDK.
-!  This is just a wrapper for [[wrap_json_get_alloc_string_vec_with_path]].
+!  This is just a wrapper for [[wrap_json_get_alloc_string_vec_by_path]].
 
     subroutine wrap_json_file_get_alloc_string_vec(me, path, vec, ilen, found)
 

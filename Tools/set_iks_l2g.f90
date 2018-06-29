@@ -19,6 +19,7 @@ SUBROUTINE set_iks_l2g
   USE westcom,                ONLY : iks_l2g
   USE mp,                     ONLY : mp_sum
   USE mp_global,              ONLY : inter_pool_comm,npool,my_pool_id
+  USE types_bz_grid,          ONLY : k_grid
   !
   IMPLICIT NONE
   !
@@ -28,7 +29,7 @@ SUBROUTINE set_iks_l2g
   ALLOCATE( iks_l2g(nkstot) )
   !
   my_nks=0
-  my_nks(my_pool_id) = nks
+  my_nks(my_pool_id) = k_grid%nps
   CALL mp_sum( my_nks, inter_pool_comm )
   !
   my_offset = 0 
@@ -36,7 +37,7 @@ SUBROUTINE set_iks_l2g
      my_offset = my_offset + my_nks(ip)
   ENDDO
   !
-  DO iks = 1, nks
+  DO iks = 1, k_grid%nps
      iks_l2g(iks) = my_offset + iks 
   ENDDO
   !

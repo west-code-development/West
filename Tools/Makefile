@@ -21,6 +21,8 @@ exx_go.o \
 exx_ungo.o \
 report_dynamical_memory.o \
 parse_command_arguments.o \
+class_bz_grid.o \
+types_bz_grid.o \
 do_setup.o \
 linear_algebra_kernel.o \
 human_readable_time.o \
@@ -30,11 +32,10 @@ clean_scratchfiles.o \
 set_nbndocc.o \
 get_alpha_pv.o \
 set_iks_l2g.o \
-set_isz.o \
 v_x.o \
 gradcorr_x.o \
 west_environment.o \
-set_npwq0.o \
+set_npwq.o \
 set_eprec.o \
 read_pwout.o \
 bar.o  

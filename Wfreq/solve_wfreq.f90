@@ -39,7 +39,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
-  USE mp_world,             ONLY : mpime
+  USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout,ionode
   USE gvect,                ONLY : g,ngm,gstart
@@ -588,7 +588,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                                  & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir,&
                                  & ngq, igq_q
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
-  USE mp_world,             ONLY : mpime
+  USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout,ionode
   USE gvect,                ONLY : g,ngm,gstart
@@ -624,7 +624,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ik,is,iq,ikqs,ipol,m
+  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ik,is,iq,ikqs,ikq,ipol,m
   CHARACTER(LEN=512)    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   CHARACTER(LEN=5)      :: my_label_q
@@ -791,7 +791,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !ikqs = kpq_grid%index_kq(iks,iq)
         !npwkq = ngk(ikqs)
         !
-        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+        !CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 ) !MATTEO
+        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), 'cart', ikq, g0 )       !MARCO
+        ikqs = k_grid%ipis2ips(ikq,is)                                                       !MARCO                            
         !
         npwkq = ngk(ikqs)
         !

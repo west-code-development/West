@@ -61,7 +61,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs
+  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs,ikq
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -167,7 +167,9 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
               l_gammaq = q_grid%l_pIsGamma(iq)
               CALL pot3D%init('Dense',.FALSE.,'gb',iq)
               !
-              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+              !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !MATTEO
+              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        !MARCO
+              ikqs = k_grid%ipis2ips(ikq,is)                                                        !MARCO
               CALL compute_phase( g0, 'cart', phase )
               !
               nbndval = nbnd_occ(ikqs)

@@ -62,7 +62,7 @@ MODULE dfpt_module
       !
       ! Workspace
       !
-      INTEGER :: ipert, ig, ir, ibnd, iks, ikqs, ik, is
+      INTEGER :: ipert, ig, ir, ibnd, iks, ikqs, ikq, ik, is
       INTEGER :: i, j, k
       INTEGER :: nbndval, ierr
       INTEGER :: npwkq
@@ -145,7 +145,10 @@ MODULE dfpt_module
             !
             ! ... Find G0 and compute phase
             !
-            CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )
+            !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )   !MATTEO
+            CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )         !MARCO
+            ikqs = k_grid%ipis2ips(ikq,is)                                                         !MARCO
+            !
             CALL compute_phase( g0, 'cart', phase )
             !
             ! ... Number of G vectors for PW expansion of wfs at [k-q]

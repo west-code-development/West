@@ -59,3 +59,18 @@ logical(LK),intent(in),optional :: compress_vectors
   !! [Note: `no_whitespace` will
   !! override this option if necessary].
   !! (Default is False).
+logical(LK),intent(in),optional :: allow_duplicate_keys
+  !! * If True [default] then no special checks
+  !!   are done to check for duplicate keys.
+  !! * If False, then after parsing, if any duplicate
+  !!   keys are found, an error is thrown. A call to
+  !!   [[json_value_validate]] will also check for
+  !!   duplicates.
+logical(LK),intent(in),optional :: escape_solidus
+  !! * If True then the solidus "`/`" is always escaped
+  !!   "`\/`" when serializing JSON
+  !! * If False [default], then it is not escaped.
+  !! Note that this option does not affect parsing
+  !! (both escaped and unescaped are still valid in
+  !! all cases).
+

@@ -107,7 +107,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      macropol_calculation    = 'N'
      n_lanczos               = 30
      n_imfreq                = 128
-     n_refreq                = 10
+     n_refreq                = 272
      ecut_imfreq             = ecutrho
      ecut_refreq             = 2._DP
      wfreq_eta               = 0.003675_DP
@@ -347,7 +347,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      IF( ecut_refreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_spectralf(2)<ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
      IF( wfreq_eta<=0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
-     IF( n_secant_maxiter < 1 ) CALL errore('fetch_input','Err: n_secant_maxiter<1',1) 
+     IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1) 
      IF( trev_secant<=0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
      SELECT CASE(macropol_calculation) 
      CASE('N','n','C','c')

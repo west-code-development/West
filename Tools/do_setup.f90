@@ -28,7 +28,7 @@ SUBROUTINE do_setup
   USE constants,              ONLY : rytoev
   USE control_flags,          ONLY : gamma_only
   USE noncollin_module,       ONLY : noncolin,npol
-  USE cell_base,              ONLY : omega,celldm,at
+  USE cell_base,              ONLY : omega,celldm,at,bg,tpiba
   USE fft_base,               ONLY : dfftp,dffts
   USE gvecs,                  ONLY : ngms_g, ngms
   USE gvect,                  ONLY : ngm_g, ngm, ecutrho
@@ -43,7 +43,7 @@ SUBROUTINE do_setup
   TYPE(json_file) :: json
   INTEGER :: iunit
   INTEGER :: auxi,ib
-  INTEGER :: ipol,ik,iq,npwx_g, nkbl, nkl, nkr, iks, ike, spin, ip
+  INTEGER :: ipol,ik,iq,npwx_g, nkbl, nkl, nkr, iks, ike, spin, ip, is
   INTEGER,ALLOCATABLE :: ngm_i(:), npw_i(:) 
   INTEGER, ALLOCATABLE :: ngk_g(:)
 !  REAL(DP) :: xkg(3)
@@ -182,60 +182,53 @@ SUBROUTINE do_setup
   !
   alat = celldm(1)
   !
-  WRITE( stdout, '(/5x,"sFFT : (",i4,",",i4,",",i4,")")') dffts%nr1, dffts%nr2, dffts%nr3
-  WRITE( stdout, '(/5x,"pFFT : (",i4,",",i4,",",i4,")")') dfftp%nr1, dfftp%nr2, dfftp%nr3
-  WRITE( stdout, '(/5x,"Cell [a.u.]          = ",3f14.6)') alat*at(1,1:3)
-  WRITE( stdout, '( 5x,"                     = ",3f14.6)') alat*at(2,1:3)
-  WRITE( stdout, '( 5x,"                     = ",3f14.6)') alat*at(3,1:3)
+  WRITE( stdout, '(/5x,"3DFFT grid")') 
+  WRITE( stdout, '( 8x,"s : (",i4,",",i4,",",i4,")")') dffts%nr1, dffts%nr2, dffts%nr3
+  WRITE( stdout, '( 8x,"p : (",i4,",",i4,",",i4,")")') dfftp%nr1, dfftp%nr2, dfftp%nr3
+  WRITE( stdout, '(/5x,"Direct Lattice Cell [a.u.]")') 
+  WRITE( stdout, '( 8x,"a1 = (",3f14.7,")")') alat*at(1:3,1)
+  WRITE( stdout, '( 8x,"a2 = (",3f14.7,")")') alat*at(1:3,2)
+  WRITE( stdout, '( 8x,"a3 = (",3f14.7,")")') alat*at(1:3,3)
+  WRITE( stdout, '(/5x,"Reciprocal Lattice Cell [a.u.]")')
+  WRITE( stdout, '( 8x,"b1 = (",3f14.7,")")') tpiba*bg(1:3,1)
+  WRITE( stdout, '( 8x,"b2 = (",3f14.7,")")') tpiba*bg(1:3,2)
+  WRITE( stdout, '( 8x,"b3 = (",3f14.7,")")') tpiba*bg(1:3,3)
   WRITE( stdout, '( 5x," ")')
   IF( mpime == root ) THEN 
-     CALL json%add('system.basis.sFFT',(/ dffts%nr1, dffts%nr2, dffts%nr3 /) )
-     CALL json%add('system.basis.pFFT',(/ dfftp%nr1, dfftp%nr2, dfftp%nr3 /) )
+     CALL json%add('system.3dfft.s',(/ dffts%nr1, dffts%nr2, dffts%nr3 /) )
+     CALL json%add('system.3dfft.p',(/ dfftp%nr1, dfftp%nr2, dfftp%nr3 /) )
      CALL json%add('system.cell.a1',alat*at(1:3,1))
      CALL json%add('system.cell.a2',alat*at(1:3,2))
      CALL json%add('system.cell.a3',alat*at(1:3,3))
+     CALL json%add('system.cell.b1',tpiba*bg(1:3,1))
+     CALL json%add('system.cell.b2',tpiba*bg(1:3,2))
+     CALL json%add('system.cell.b3',tpiba*bg(1:3,3))
      CALL json%add('system.cell.alat',alat)
+     CALL json%add('system.cell.tpiba',tpiba)
   ENDIF
   !
-  WRITE( stdout, '(5x,"number of ks points = ",i6)') k_grid%nps
-  IF( mpime == root ) CALL json%add('system.kpt.nkstot',k_grid%nps)
-  WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
-  DO iks = 1, k_grid%nps
-     ik = k_grid%ip(iks)
+  WRITE( stdout, '(/5x,"Brillouin Zone sampling [cryst. coord.]")') 
+  WRITE( stdout, * ) 
+  DO ik = 1, k_grid%np
      WRITE( cik, '(i6)') ik
-     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') iks, &
-          (k_grid%p_cart(ipol,ik) , ipol = 1, 3) , k_grid%weight(iks)
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').cartcoord:tpiba',k_grid%p_cart(1:3,ik))
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').weight',k_grid%weight(iks))
-  ENDDO
-  WRITE( stdout, '(/23x,"cryst. coord.")')
-  DO iks = 1, k_grid%nps
-     ik = k_grid%ip(iks)
-     WRITE( cik, '(i6)') ik
-     WRITE( stdout, '(8x,"k(",i5,") = (",3f12.7,"), wk =",f12.7)') &
-          ik, (k_grid%p_cryst(ipol,ik) , ipol = 1, 3) , k_grid%weight(iks)
-     IF( mpime == root ) CALL json%add('system.kpt.k('//TRIM(ADJUSTL(cik))//').crystcoord',k_grid%p_cryst(1:3,ik))
+     WRITE( stdout, '(8x,"k(",i6.6,") = (",3f14.7,")")') ik, k_grid%p_cryst(1:3,ik) 
+     IF( mpime == root ) THEN
+        CALL json%add('system.bzsamp.k('//TRIM(ADJUSTL(cik))//').id',ik)
+        CALL json%add('system.bzsamp.k('//TRIM(ADJUSTL(cik))//').crystcoord',k_grid%p_cryst(1:3,ik))
+     ENDIF
   ENDDO
   !
   ! q-point grid
   !
   IF (.NOT. gamma_only ) THEN
-     WRITE( stdout, * )
-     WRITE( stdout, '(5x,"number of q points = ",i6)') q_grid%np
-     IF( mpime == root ) CALL json%add('system.qpt.nqtot',q_grid%np)
-     WRITE( stdout, '(23x,"cart. coord. in units 2pi/alat")')
+     WRITE( stdout, * ) 
      DO iq = 1, q_grid%np
         WRITE( ciq, '(i6)') iq
-        WRITE( stdout, '(8x,"q(",i5,") = (",3f12.7,")")') iq, &
-             (q_grid%p_cart(ipol, iq) , ipol = 1, 3)
-        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').cartcoord:tpiba',q_grid%p_cart(1:3,iq))
-     ENDDO
-     WRITE( stdout, '(/23x,"cryst. coord.")')
-     DO iq = 1, q_grid%np
-        WRITE( ciq, '(i6)') iq
-        WRITE( stdout, '(8x,"q(",i5,") = (",3f12.7,")")') &
-             iq, (q_grid%p_cryst(ipol,iq) , ipol = 1, 3)
-        IF( mpime == root ) CALL json%add('system.qpt.q('//TRIM(ADJUSTL(ciq))//').crystcoord',q_grid%p_cryst(1:3,iq))
+        WRITE( stdout, '(8x,"q(",i6.6,") = (",3f14.7,")")') iq, q_grid%p_cryst(1:3,iq) 
+        IF( mpime == root ) THEN 
+           CALL json%add('system.bzsamp.q('//TRIM(ADJUSTL(ciq))//').id',iq)
+           CALL json%add('system.bzsamp.q('//TRIM(ADJUSTL(ciq))//').crystcoord',q_grid%p_cryst(1:3,iq))
+        ENDIF
      ENDDO
   ENDIF
   !

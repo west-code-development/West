@@ -244,7 +244,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   ! Workspace
   !
-  INTEGER :: ik,ikk,iks,ikks,iq,ib,ifreq,glob_ifreq,il,im,glob_im,ip
+  INTEGER :: ik,ikk,iks,ikks,iq,ib,ifreq,glob_ifreq,il,im,glob_im,ip,is,iss
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -286,7 +286,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      ik = k_grid%ip(iks) 
-!     is = k_grid%is(iks)
+     is = k_grid%is(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -297,8 +297,11 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         DO ikks = 1, k_grid%nps    ! KPOINT-SPIN (INTEGRAL OVER K')
            !
            ikk = k_grid%ip(ikks)
+           iss = k_grid%is(ikks)
+           IF( is /= iss ) CYCLE
            !
-           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
+           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !MATTEO
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     !MARCO
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !
@@ -370,7 +373,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      ik = k_grid%ip(iks)
-!     is = k_grid%is(iks)
+     is = k_grid%is(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -383,8 +386,12 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
            !
            ikk = k_grid%ip(ikks)
+           iss = k_grid%is(ikks)
            !
-           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )
+           IF( is /= iss ) CYCLE
+           !
+           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )  !MATTEO
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )      !MARCO
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !

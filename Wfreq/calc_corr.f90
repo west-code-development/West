@@ -300,8 +300,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            iss = k_grid%is(ikks)
            IF( is /= iss ) CYCLE
            !
-           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !MATTEO
-           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     !MARCO
+           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !M
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !
@@ -390,8 +390,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            !
            IF( is /= iss ) CYCLE
            !
-           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )  !MATTEO
-           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )      !MARCO
+           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )  !M
+           CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )      
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
            !

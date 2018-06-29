@@ -37,7 +37,7 @@ MODULE class_bz_grid
       !
       PROCEDURE :: init => k_or_q_grid_init
       PROCEDURE :: find => findp
-      PROCEDURE :: ipis2ips => from_ip_and_is_to_ips   ! MARCO  
+      PROCEDURE :: ipis2ips => from_ip_and_is_to_ips   !   
       !
    END TYPE bz_grid
    !
@@ -91,8 +91,8 @@ MODULE class_bz_grid
          !
          ALLOCATE ( this%p_cryst  (3,this%np) )
          this%p_cryst(:,:) = this%p_cart(:,:) 
-         !CALL cryst_to_cart( this%nps, this%p_cryst, at, -1 ) !MATTEO
-         CALL cryst_to_cart( this%np, this%p_cryst, at, -1 )   !MARCO
+         !CALL cryst_to_cart( this%nps, this%p_cryst, at, -1 ) !M
+         CALL cryst_to_cart( this%np, this%p_cryst, at, -1 )   
          !
          ! set weights 
          !
@@ -170,8 +170,8 @@ MODULE class_bz_grid
    !
    !
    !FUNCTION findp(this,p,unit_type) RESULT(ip)
-   !SUBROUTINE findp( this, p, is, unit_type, ip, g0 )     !MATTEO
-   SUBROUTINE findp( this, p, unit_type, ip, g0 )          !MARCO
+   !SUBROUTINE findp( this, p, is, unit_type, ip, g0 )     !M
+   SUBROUTINE findp( this, p, unit_type, ip, g0 )          
       ! 
       ! ... ip is the index of p (unit_type = [ "cryst", "cart"])
       ! ... if on exit ip == 0 --> p is not commensurate with this grid
@@ -186,7 +186,6 @@ MODULE class_bz_grid
       !
       CLASS(bz_grid), INTENT(IN) :: this 
       REAL(DP), INTENT(IN) :: p(3)
-      !INTEGER, INTENT(IN) :: is !MATTEO 
       CHARACTER(LEN=*), INTENT(IN) :: unit_type
       INTEGER, INTENT(OUT) :: ip
       REAL(DP), INTENT(OUT) :: g0(3)
@@ -207,22 +206,22 @@ MODULE class_bz_grid
       IF ( unit_type == "cart" ) CALL cryst_to_cart( 1, p, at, -1 )
       !
       ip = 0                                                                          
-      !DO i = 1, this%np                                                                !MATTEO
-      !   deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )       !MATTEO
-      !   IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN                                  !MATTEO
-      !      ip = i + (is-1) * this%np                                                  !MATTEO
-      !      g0(:) = p(:) - this%p_cryst(:,ip)                                          !MATTEO
-      !      EXIT                                                                       !MATTEO
-      !   ENDIF                                                                         !MATTEO
-      !ENDDO                                                                            !MATTEO
-      DO i = 1, this%np                                                                 !MARCO
-         deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )        !MARCO
-         IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN                                   !MARCO
-            g0(:) = p(:) - this%p_cryst(:,i)                                            !MARCO 
-            ip=i                                                                        !MARCO
-            EXIT                                                                        !MARCO
-         ENDIF                                                                          !MARCO
-      ENDDO                                                                             !MARCO
+      !DO i = 1, this%np                                                                !M
+      !   deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )       !M
+      !   IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN                                  !M
+      !      ip = i + (is-1) * this%np                                                  !M
+      !      g0(:) = p(:) - this%p_cryst(:,ip)                                          !M
+      !      EXIT                                                                       !M
+      !   ENDIF                                                                         !M
+      !ENDDO                                                                            !M
+      DO i = 1, this%np                                                                 
+         deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )        
+         IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN                                   
+            g0(:) = p(:) - this%p_cryst(:,i)                                             
+            ip=i                                                                        
+            EXIT                                                                        
+         ENDIF                                                                          
+      ENDDO                                                                             
       !
       ! Tranform g0 back to cartesian coordinates if needed
       !
@@ -252,19 +251,19 @@ MODULE class_bz_grid
    END SUBROUTINE
    !
    !
-   FUNCTION from_ip_and_is_to_ips(this,ip,is) RESULT(ips)  !MARCO
-      !                                                    !MARCO
-      IMPLICIT NONE                                        !MARCO
-      !                                                    !MARCO
-      ! I/O                                                !MARCO
-      !                                                    !MARCO
-      CLASS(bz_grid), INTENT(IN) :: this                   !MARCO
-      INTEGER, INTENT(IN) :: ip,is                         !MARCO
-      INTEGER :: ips                                       !MARCO
-      !                                                    !MARCO
-      ips = ip + (is-1) * this%np ! CI MANCHI MATTEO       !MARCO
-      !                                                    !MARCO
-   END FUNCTION                                            !MARCO
+   FUNCTION from_ip_and_is_to_ips(this,ip,is) RESULT(ips)  
+      !                                                    
+      IMPLICIT NONE                                        
+      !                                                    
+      ! I/O                                                
+      !                                                    
+      CLASS(bz_grid), INTENT(IN) :: this                   
+      INTEGER, INTENT(IN) :: ip,is                         
+      INTEGER :: ips                                       
+      !                                                    
+      ips = ip + (is-1) * this%np ! M     
+      !                                                    
+   END FUNCTION                                            
    !
    !
    !SUBROUTINE addp( this, pin1, pin2, pout, g0, unit_type )

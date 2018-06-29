@@ -791,9 +791,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !ikqs = kpq_grid%index_kq(iks,iq)
         !npwkq = ngk(ikqs)
         !
-        !CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 ) !MATTEO
-        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), 'cart', ikq, g0 )       !MARCO
-        ikqs = k_grid%ipis2ips(ikq,is)                                                       !MARCO                            
+        !CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 ) !M
+        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), 'cart', ikq, g0 )       
+        ikqs = k_grid%ipis2ips(ikq,is)                                                                                   
         !
         npwkq = ngk(ikqs)
         !

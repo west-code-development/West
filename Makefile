@@ -77,11 +77,6 @@ westpp_do:
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-westpy_do:
-	if test -d Westpy ; then \
-	( cd Westpy ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
-
 clean: \
 libraries_undo \
 modules_undo \
@@ -94,8 +89,7 @@ dfpt_kernel_undo \
 io_kernel_undo \
 wstat_undo \
 wfreq_undo \
-westpp_undo \
-westpy_undo
+westpp_undo 
 
 libraries_undo:
 	if test -d Libraries ; then \

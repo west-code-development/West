@@ -167,9 +167,9 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
               l_gammaq = q_grid%l_pIsGamma(iq)
               CALL pot3D%init('Dense',.FALSE.,'gb',iq)
               !
-              !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !MATTEO
-              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        !MARCO
-              ikqs = k_grid%ipis2ips(ikq,is)                                                        !MARCO
+              !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !M
+              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        
+              ikqs = k_grid%ipis2ips(ikq,is)                                                        
               CALL compute_phase( g0, 'cart', phase )
               !
               nbndval = nbnd_occ(ikqs)

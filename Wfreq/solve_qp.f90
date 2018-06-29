@@ -707,8 +707,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            iss = k_grid%is(ikks)
            IF( is /= iss ) CYCLE 
            !
-           !CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !MATTEO
-           CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     !MARCO
+           !CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !M
+           CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )     
            !
            IF(ALLOCATED(overlap)) DEALLOCATE(overlap) 
            ALLOCATE(overlap(pert%nglob, nbnd ) )

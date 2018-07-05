@@ -1,11 +1,9 @@
-Project Leads 
--------------
+# Project Leads 
 
 - Marco Govoni (Argonne National Laboratory and University of Chicago)
 - Giulia Galli (University of Chicago and Argonne National Laboratory)
 
-Developers
-----------
+## Developers
 
 - Matteo Gerosa (University of Chicago)
 - Ikutaro Hamada (University of Osaka)
@@ -14,13 +12,11 @@ Developers
 - Han Yang (University of Chicago)
 - Huihuo Zheng (Argonne National Laboratory)
 
-Contributors
-------------
+## Contributors
 
 Jonathan Skone
 
-Former Developers
------------------
+## Former Developers
 
 Nichola Brawand,
 Ryan McAvoy,

@@ -1,4 +1,4 @@
-# west
+# West
 WEST code repository. [www.west-code.org](http://www.west-code.org) 
 
 ## About

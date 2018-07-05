@@ -1,0 +1,10 @@
+job1:
+  script:
+  - echo "Do something"
+  only:
+  - master
+  - tags
+
+job2:
+  script:
+  - echo "Do something else"

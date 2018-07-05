@@ -1,4 +1,5 @@
 job1:
+  tags: [west-devel]
   script:
   - echo "Do something"
   only:
@@ -6,5 +7,6 @@ job1:
   - tags
 
 job2:
+  tags: [west-devel]
   script:
   - echo "Do something else"

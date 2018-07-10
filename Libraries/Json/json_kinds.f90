@@ -75,8 +75,7 @@
 #elif REAL128
     integer,parameter,public :: RK = real128  !! Default real kind [16 bytes]
 #else
-    !integer,parameter,public :: RK = real64   !! Default real kind if not specified [8 bytes]
-    integer,parameter,public :: RK = selected_real_kind(14,200)
+    integer,parameter,public :: RK = real64   !! Default real kind if not specified [8 bytes]
 #endif
 
 #ifdef INT8

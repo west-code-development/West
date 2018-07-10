@@ -40,10 +40,11 @@ character(kind=CK,len=1),intent(in),optional :: comment_char
 integer(IK),intent(in),optional :: path_mode
   !! How the path strings are interpreted in the
   !! `get_by_path` routines:
-  !! * 1 -- Default way (see [[json_get_by_path_default]])
-  !!   [Default]
+  !! * 1 -- Default mode (see [[json_get_by_path_default]])
   !! * 2 -- as RFC 6901 "JSON Pointer" paths
   !!   (see [[json_get_by_path_rfc6901]])
+  !! * 3 -- JSONPath "bracket-notation"
+  !!   see [[json_get_by_path_jsonpath_bracket]])
 character(kind=CK,len=1),intent(in),optional :: path_separator
   !! The `path` separator to use
   !! in the "default" mode for
@@ -73,4 +74,7 @@ logical(LK),intent(in),optional :: escape_solidus
   !! Note that this option does not affect parsing
   !! (both escaped and unescaped are still valid in
   !! all cases).
+logical(LK),intent(in),optional :: stop_on_error
+  !! If an exception is raised, then immediately quit.
+  !! (Default is False).
 

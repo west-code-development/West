@@ -4,7 +4,7 @@
 !
 !  JSON-Fortran support module for string manipulation.
 !
-!## License
+!### License
 !  * JSON-Fortran is released under a BSD-style license.
 !    See the [LICENSE](https://github.com/jacobwilliams/json-fortran/blob/master/LICENSE)
 !    file for details.
@@ -116,17 +116,18 @@
 
     implicit none
 
-    character(kind=CK,len=*),intent(in) :: str        !! the string to conver to an integer
+    character(kind=CK,len=*),intent(in) :: str        !! the string to convert to an integer
     integer(IK),intent(out)             :: ival       !! the integer value
     logical(LK),intent(out)             :: status_ok  !! true if there were no errors
 
-    character(kind=CDK,len=:),allocatable :: digits
+    !character(kind=CDK,len=:),allocatable :: digits
+    character(len=:),allocatable :: digits
     integer(IK) :: ndigits_digits,ndigits,ierr
 
     ! Compute how many digits we need to read
     ndigits = 2*len_trim(str)
     ndigits_digits = floor(log10(real(ndigits)))+1
-    !allocate(character(kind=CDK,len=ndigits_digits) :: digits) DOES NOT COMPILE ON BGQ 
+    !allocate(character(kind=CK,len=ndigits_digits) :: digits)
     allocate(character(len=ndigits_digits) :: digits)
     write(digits,'(I0)') ndigits !gfortran will have a runtime error with * edit descriptor here
     ! gfortran bug: '*' edit descriptor for ISO_10646 strings does bad stuff.
@@ -194,8 +195,8 @@
 
     implicit none
 
-    character(kind=CK,len=*),intent(in) :: str
-    real(RK),intent(out)                :: rval
+    character(kind=CK,len=*),intent(in) :: str        !! the string to convert to a real
+    real(RK),intent(out)                :: rval       !! `str` converted to a real value
     logical(LK),intent(out)             :: status_ok  !! true if there were no errors
 
     integer(IK) :: ierr  !! read iostat error code
@@ -322,7 +323,6 @@
                                                      horizontal_tab
 
     character(kind=CK,len=*),parameter :: specials = specials_no_slash//slash
-
 
     !Do a quick scan for the special characters,
     ! if any are present, then process the string,
@@ -753,16 +753,12 @@
 !
 !  Returns lowercase version of the `CK` string.
 
-    !pure elemental function lowercase_string(str) result(s_lower) ! DOES NOT COMPILE ON BGQ
     pure function lowercase_string(str) result(s_lower)
 
     implicit none
 
-    !character(kind=CK,len=*),intent(in) :: str      !! input string ! DOES NOT COMPILE ON BGQ
-    !character(kind=CK,len=(len(str)))   :: s_lower  !! lowercase version of the string !DOES NOT COMPILE ON BGQ
-    character(len=*),intent(in) :: str      !! input string
-    character(len=(len(str)))   :: s_lower  !! lowercase version of the string
-
+    character(kind=CK,len=*),intent(in) :: str      !! input string
+    character(kind=CK,len=(len(str)))   :: s_lower  !! lowercase version of the string
 
     integer :: i  !! counter
     integer :: j  !! index of uppercase character

@@ -18,7 +18,6 @@ west_at_qe_6_1_0:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - mkdir bin
    - cd QEDIR
-   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - ./configure
    - make -j pw
    - pwd 
@@ -26,6 +25,10 @@ west_at_qe_6_1_0:
    - mpirun --version 
    - gfortran --version
    - cat /proc/cpuinfo | grep -c MHz
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West/test
+   - mpif90 hello.f90 -o hello.x
+   - mpirun -np 2 hello.x  
 #   - cd West
 #   - git checkout $CI_COMMIT_SHA
 #   - cd test

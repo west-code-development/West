@@ -24,6 +24,8 @@ west_at_qe_6_1_0:
    - pwd 
    - ls bin
    - mpirun --version 
+   - gfortran --version
+   - cat /proc/cpuinfo | grep -c MHz
 #   - cd West
 #   - git checkout $CI_COMMIT_SHA
 #   - cd test

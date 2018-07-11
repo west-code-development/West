@@ -1,12 +1,27 @@
-job1:
-  tags: [west-devel]
-  script:
-  - echo "Do something"
-  only:
-  - master
-  - tags
+variables:
+ GIT_STRATEGY: none
 
-job2:
-  tags: [west-devel]
-  script:
-  - echo "Do something else"
+stages:
+ - build
+
+west_at_qe_6_1_0:
+ tags: [rcc,docker,node-01]
+ stage: build
+ image: ubuntu:latest
+ before_script:
+   - apt-get update
+   - apt-get install --yes git
+   - apt-get install --yes build-essential gfortran wget python
+   - apt-get install --yes libopenmpi-dev openmpi-bin
+   - apt-get install --yes libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - mkdir bin
+   - cd QEDIR
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - ./configure
+   - make -j pw
+#   - cd West
+#   - git checkout $CI_COMMIT_SHA
+#   - cd test
+#    - cd make

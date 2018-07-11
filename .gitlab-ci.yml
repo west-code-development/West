@@ -3,8 +3,9 @@ variables:
 
 stages:
  - build
+ - test
 
-west_at_qe_6_1_0:
+west_build:
  tags: [rcc,docker,node-01]
  stage: build
  image: ubuntu:latest
@@ -17,15 +18,41 @@ west_at_qe_6_1_0:
  script:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR
-   - git desribe
+   - git describe
    - ./configure
    - make -j pw
    - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West
-   - git desribe
+   - git describe
    - make
    - ls ../bin 
+#   - mpif90 hello.f90 -o hello.x
+#   - ls 
+#   - mpirun -np 28 --allow-run-as-root hello.x  
+#   - cd West
+#   - git checkout $CI_COMMIT_SHA
+#   - cd test
+#    - cd make
+
+west_test_gamma:
+ tags: [rcc,docker,node-01]
+ stage: test
+ image: ubuntu:latest
+ before_script:
+   - apt-get update
+   - apt-get install --yes git
+   - apt-get install --yes build-essential gfortran wget python
+   - apt-get install --yes libopenmpi-dev openmpi-bin
+   - apt-get install --yes libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - ./configure
+   - make -j pw
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - make
 #   - mpif90 hello.f90 -o hello.x
 #   - ls 
 #   - mpirun -np 28 --allow-run-as-root hello.x  

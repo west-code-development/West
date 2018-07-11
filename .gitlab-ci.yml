@@ -21,6 +21,9 @@ west_at_qe_6_1_0:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - ./configure
    - make -j pw
+   - pwd 
+   - ls bin
+   - mpirun --version 
 #   - cd West
 #   - git checkout $CI_COMMIT_SHA
 #   - cd test

@@ -16,18 +16,16 @@ west_at_qe_6_1_0:
    - apt-get install --yes libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config
  script:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
-   - mkdir bin
    - cd QEDIR
+   - git desribe
    - ./configure
    - make -j pw
-   - pwd 
    - ls bin
-   - mpirun --version 
-   - gfortran --version
-   - cat /proc/cpuinfo | grep -c MHz
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West
-   - make 
+   - git desribe
+   - make
+   - ls ../bin 
 #   - mpif90 hello.f90 -o hello.x
 #   - ls 
 #   - mpirun -np 28 --allow-run-as-root hello.x  

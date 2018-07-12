@@ -47,4 +47,5 @@ west_test_gamma:
    - cd West
    - make
    - cd test 
+   - sleep 10m
    - make NP=28 NI=1 NT=1 

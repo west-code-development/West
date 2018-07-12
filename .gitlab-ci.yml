@@ -1,0 +1,50 @@
+variables:
+ GIT_STRATEGY: none
+
+stages:
+ - build
+ - test
+
+west_build:
+ tags: [rcc,docker,node-01]
+ stage: build
+ image: ubuntu:latest
+ before_script:
+   - apt-get update > /dev/null
+   - apt-get install -qq git > /dev/null 
+   - apt-get install -qq build-essential gfortran wget python > /dev/null
+   - apt-get install -qq libopenmpi-dev openmpi-bin > /dev/null
+   - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config > /dev/null
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - ./configure
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - make
+   - ls ../bin 
+
+west_test_gamma:
+ tags: [rcc,docker,node-01]
+ stage: test
+ image: ubuntu:latest
+ before_script:
+   - apt-get update > /dev/null
+   - apt-get install -qq git > /dev/null 
+   - apt-get install -qq build-essential gfortran wget python > /dev/null
+   - apt-get install -qq libopenmpi-dev openmpi-bin > /dev/null
+   - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config > /dev/null
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - ./configure FFLAGS="-ffpe-summary=none" > /dev/null
+   - make -j pw > /dev/null
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West 
+   - make > /dev/null
+   - cd test 
+   - make NP=28 NI=1 NT=1 

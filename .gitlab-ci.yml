@@ -11,10 +11,10 @@ west_build:
  image: ubuntu:latest
  before_script:
    - apt-get update 
-   - apt-get install --yes --quiet git
-   - apt-get install --yes --quiet build-essential gfortran wget python
-   - apt-get install --yes --quiet libopenmpi-dev openmpi-bin
-   - apt-get install --yes --quiet libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config
+   - apt-get install -qq git
+   - apt-get install -qq build-essential gfortran wget python
+   - apt-get install -qq libopenmpi-dev openmpi-bin
+   - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config
  script:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR

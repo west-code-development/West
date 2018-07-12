@@ -11,6 +11,7 @@ west_build:
  image: ubuntu:latest
  before_script:
    - apt-get update > /dev/null
+   - apt-get install -qq apt-utils > /dev/null
    - apt-get install -qq git > /dev/null 
    - apt-get install -qq build-essential gfortran wget python > /dev/null
    - apt-get install -qq libopenmpi-dev openmpi-bin > /dev/null
@@ -34,6 +35,7 @@ west_test_gamma:
  image: ubuntu:latest
  before_script:
    - apt-get update > /dev/null
+   - apt-get install -qq apt-utils > /dev/null
    - apt-get install -qq git > /dev/null 
    - apt-get install -qq build-essential gfortran wget python > /dev/null
    - apt-get install -qq libopenmpi-dev openmpi-bin > /dev/null
@@ -41,10 +43,10 @@ west_test_gamma:
  script:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR
-   - ./configure FFLAGS="-ffpe-summary=none"
-   - make -j pw
+   - ./configure FFLAGS="-ffpe-summary=none" > /dev/null
+   - make -j pw > /dev/null
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
-   - cd West
-   - make
+   - cd West 
+   - make > /dev/null
    - cd test 
    - make NP=28 NI=1 NT=1 

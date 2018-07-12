@@ -1,7 +1,7 @@
 # Makefile
 #
 
-default: all 
+default: title all 
 
 all: \
 test001_all 

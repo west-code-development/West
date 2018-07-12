@@ -2,7 +2,7 @@
 
 include ../maketest.inc
 
-default: all
+default: title all
 
 all: prepare_input run 
 

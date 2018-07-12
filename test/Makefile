@@ -4,16 +4,13 @@
 default: all 
 
 all: \
-test001_all \
-test002_all
+test001_all 
 
 run: \
-test001_run \
-test002_run
+test001_run 
 
 clean: \
-test001_clean \
-test002_clean
+test001_clean 
 
 test001_all:
 	if test -d test001 ; then \

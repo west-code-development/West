@@ -8,4 +8,4 @@ OMP_NUM_THREADS = ${NT}
 PARA_PREFIX = mpirun -np ${NP} --allow-run-as-root
 
 WGET = wget
-BINDIR = ../../bin
+BINDIR = ../../../bin

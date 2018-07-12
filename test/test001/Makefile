@@ -14,9 +14,9 @@ prepare_input:
 	-wget -N -q http://www.west-code.org/doc/training/silane/wfreq.in
 
 run: 
-	- ${PARA_PREFIX} ${BINDIR}/pw.x -i pw.in > pw.out
-	- ${PARA_PREFIX} ${BINDIR}/wstat.x -nimage ${NIMAGE} -i wstat.in > wstat.out
-	- ${PARA_PREFIX} ${BINDIR}/wfreq.x -nimage ${NIMAGE} -i wfreq.in > wfreq.out
+	- ${PARA_PREFIX} ${BINDIR}/pw.x -i pw.in >& pw.out; wait
+	- ${PARA_PREFIX} ${BINDIR}/wstat.x -nimage ${NIMAGE} -i wstat.in >& wstat.out; wait 
+	- ${PARA_PREFIX} ${BINDIR}/wfreq.x -nimage ${NIMAGE} -i wfreq.in >& wfreq.out; wait 
 
 clean:
 	- /bin/rm -rf *out *in *upf *save >& /dev/null

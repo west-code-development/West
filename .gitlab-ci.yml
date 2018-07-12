@@ -41,7 +41,7 @@ west_test_gamma:
  script:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR
-   - ./configure
+   - ./configure FFLAGS="-ffpe-summary=none"
    - make -j pw
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West

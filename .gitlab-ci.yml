@@ -10,11 +10,11 @@ west_build:
  stage: build
  image: ubuntu:latest
  before_script:
-   - apt-get update 
-   - apt-get install -qq git
-   - apt-get install -qq build-essential gfortran wget python
-   - apt-get install -qq libopenmpi-dev openmpi-bin
-   - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config
+   - apt-get update > /dev/null
+   - apt-get install -qq git > /dev/null 
+   - apt-get install -qq build-essential gfortran wget python > /dev/null
+   - apt-get install -qq libopenmpi-dev openmpi-bin > /dev/null
+   - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config > /dev/null
  script:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR
@@ -33,11 +33,11 @@ west_test_gamma:
  stage: test
  image: ubuntu:latest
  before_script:
-   - apt-get update
-   - apt-get install --yes --quiet git
-   - apt-get install --yes --quiet build-essential gfortran wget python
-   - apt-get install --yes --quiet libopenmpi-dev openmpi-bin
-   - apt-get install --yes --quiet libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config
+   - apt-get update > /dev/null
+   - apt-get install -qq git > /dev/null 
+   - apt-get install -qq build-essential gfortran wget python > /dev/null
+   - apt-get install -qq libopenmpi-dev openmpi-bin > /dev/null
+   - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config > /dev/null
  script:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR

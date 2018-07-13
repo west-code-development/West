@@ -46,5 +46,5 @@ west_test_gamma:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West 
    - make > /dev/null
-   - cd test 
+   - cd tests 
    - make NP=28 NI=1 NT=1 

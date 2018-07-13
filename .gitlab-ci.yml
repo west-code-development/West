@@ -12,7 +12,7 @@ west_build:
  before_script:
    - apt-get update > /dev/null
    - apt-get install -qq git > /dev/null 
-   - apt-get install -qq build-essential gfortran wget python > /dev/null
+   - apt-get install -qq build-essential gfortran wget python-pip python-dev > /dev/null
    - apt-get install -qq libopenmpi-dev openmpi-bin > /dev/null
    - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config > /dev/null
  script:

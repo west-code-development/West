@@ -17,7 +17,7 @@ SUBROUTINE wbse_fetch_namelist(num_namelists,driver)
   USE pwcom
   USE westcom
   USE wbsecom
-  USE qbox_interface
+!  USE qbox_interface
   USE io_files,         ONLY : tmp_dir, prefix
   USE io_global,        ONLY : stdout
   USE mp,               ONLY : mp_bcast
@@ -47,10 +47,10 @@ SUBROUTINE wbse_fetch_namelist(num_namelists,driver)
       & west_prefix,    &
       & outdir,         &
       & l_load_qbox_wfc,&
-      & qbox_ks_wfc_filename,&
-      & which_bse_method
+      & qbox_ks_wfc_filename
   ! 2
   NAMELIST /wbse_init/ &
+      & which_bse_method, &
       & wbse_init_calculation, &
       & n_pdep_eigen, &
       & chi_kernel,  &

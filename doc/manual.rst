@@ -9,10 +9,13 @@ The complete **WEST** reference for input parameters.
               :depth: 1
 
 .. note:: 
-   Not all input parameters listed below are mandatory. Check Quick reference or Tutorials pages to see examples of input files. 
+   Not all input parameters listed below are mandatory. Check :ref:`quickreference` or :ref:`tutorial` pages to see examples of input files. 
 
 .. seealso::
    **WESTpy** is a Python package, designed to assist users of the WEST code in pre- and post-process massively parallel calculations. Click `here <http://www.west-code.org/doc/westpy/latest/>`_ to know more.
+
+.. seealso::
+   The input file is given according to the JavaScript Object Notation (`www.json.org <http://www.json.org/>`_).  
 
 |
 
@@ -105,20 +108,20 @@ wstat_control
 .. data:: l_minimize_exx_if_active
 
    :type: boolean
-   :default: False
-   :description: If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
+   :default: false
+   :description: If (true), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
    
 .. data:: l_kinetic_only
 
    :type: boolean
-   :default: False
-   :description: If (True), then only the kinetic term in the Hamiltonian is kept.
+   :default: false
+   :description: If (true), then only the kinetic term in the Hamiltonian is kept.
    
 .. data:: l_use_ecutrho 
 
    :type: boolean
-   :default: False
-   :description: If (True), then the eigenpotentials are represented with ecutrho instead of ecutwfc.
+   :default: false
+   :description: If (true), then the eigenpotentials are represented with ecutrho instead of ecutwfc.
    
 .. data:: qlist 
 
@@ -218,13 +221,13 @@ wfreq_control
 .. data:: l_enable_lanczos
 
    :type: boolean
-   :default: True
-   :description: If (False), then Lanczos solvers are turned off.
+   :default: true
+   :description: If (false), then Lanczos solvers are turned off.
 
 .. data:: l_enable_gwetot
 
    :type: boolean
-   :default: False
+   :default: false
    :description: Deprecated parameter.
 
 .. data:: o_restart_time
@@ -287,8 +290,8 @@ westpp_control
 .. data:: westpp_sign
 
    :type: boolean
-   :default: False
-   :description: If (True), then the sign of the wavefunction/eigenpotential is kept in the output file.
+   :default: false
+   :description: If (true), then the sign of the wavefunction/eigenpotential is kept in the output file.
 
 .. data:: westpp_n_pdep_eigen_to_use
 

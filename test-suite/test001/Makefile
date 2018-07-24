@@ -4,14 +4,10 @@ include ../maketest.inc
 
 default: title all
 
-all: prepare_input run 
+all: prepare_inputs run 
 
-prepare_input: 
-	-wget -N -q http://www.quantum-simulation.org/potentials/sg15_oncv/upf/H_ONCV_PBE-1.0.upf
-	-wget -N -q http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Si_ONCV_PBE-1.1.upf 
-	-wget -N -q http://www.west-code.org/doc/training/silane/pw.in
-	-wget -N -q http://www.west-code.org/doc/training/silane/wstat.in
-	-wget -N -q http://www.west-code.org/doc/training/silane/wfreq.in
+prepare_inputs: 
+	-bash prepare_inputs.sh
 
 run: 
 	- ${PARA_PREFIX} ${BINDIR}/pw.x -i pw.in > pw.out

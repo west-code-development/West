@@ -57,7 +57,8 @@ MODULE wbsecom
   LOGICAL :: l_davidson    = .FALSE. 
   LOGICAL :: l_bse_triplet = .FALSE. 
   LOGICAL :: l_xcchi       = .FALSE.
-  REAL(DP):: mac_isz
+  REAL(DP):: sigma_c_head  = 0.0_DP
+  REAL(DP):: sigma_x_head  = 0.0_DP
   !
   ! FOR INPUT Lanzcos diago
   !  

@@ -20,8 +20,8 @@ SUBROUTINE bse_init()
                                     size_index_matrix_lz,&
                                     index_matrix_lz
      USE pwcom,              ONLY : isk,nks
-     USE westcom,            ONLY : nbnd_occ,n_pdep_eigen
-     USE wbsecom,            ONLY : nbndval0x, mac_isz, eps_macro,use_wstat_pdep
+     USE westcom,            ONLY : nbnd_occ,n_pdep_eigen,fftdriver
+     USE wbsecom,            ONLY : nbndval0x,sigma_c_head,sigma_x_head,eps_macro,use_wstat_pdep
      USE control_flags,      ONLY : gamma_only
      USE lsda_mod,           ONLY : nspin
      USE mp,                 ONLY : mp_max
@@ -29,6 +29,7 @@ SUBROUTINE bse_init()
      USE mp_global,          ONLY : intra_bgrp_comm
      USE constants,          ONLY : e2, pi
      USE cell_base,          ONLY : omega
+     USE types_coulomb,      ONLY : pot3D
      !
      IMPLICIT NONE
      !
@@ -36,13 +37,19 @@ SUBROUTINE bse_init()
      INTEGER     :: ibnd, jbnd, iks, current_spin,alnd
      REAL(DP)    :: ovl_value
      !
+     ! compute the divergence term in Fock potential, using F-G method
+     !
+     CALL pot3D%init('Dense',.FALSE.,'gb')
+     CALL pot3D%print_divergence()
+     sigma_x_head = pot3D%div
+     !
      ! compute macroscopic term, it needs macroscopic dielectric constant
      ! from input.
      !
-     mac_isz = ((1.0_DP/eps_macro) - 1.0_DP)*(2.0_DP*e2/pi) * &
+     sigma_c_head = ((1.0_DP/eps_macro) - 1.0_DP)*(2.0_DP*e2/pi) * &
                     ((6.0_DP*pi*pi/omega)**(1.0_DP/3.0_DP))
      !
-     WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:", f9.5)') mac_isz
+     WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:", f9.5)') sigma_c_head
      !
      ! set max ngm_g for reading pot file
      !

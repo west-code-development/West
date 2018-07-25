@@ -7,6 +7,8 @@ LIBS+= -lstdc++
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src $(MOD_FLAG)../../LR_Modules \
+          $(MOD_FLAG)../Libraries/Json \
+          $(MOD_FLAG)../Libraries/Base64 \
           $(MOD_FLAG)../Modules \
           $(MOD_FLAG)../Tools \
           $(MOD_FLAG)../FFT_kernel \
@@ -46,16 +48,16 @@ lanzcos_db.o \
 lanzcos_restart.o \
 wbse_lanzcos_diago.o \
 wbse_lanzcos_diago.o \
-check_ovl_wfc.o \
-bse_localization.o\
-wbse_init_restart.o \
-wbse_init_pdep.o \
-wbse_davidson_diago_square.o\
-wbse_init_qboxcoupling.o \
-wbse_init_fock_energy.o 
+#check_ovl_wfc.o \
+#bse_localization.o\
+#wbse_init_restart.o \
+#wbse_init_pdep.o \
+#wbse_davidson_diago_square.o\
+#wbse_init_qboxcoupling.o \
+#wbse_init_fock_energy.o 
 
 PWOBJS = ../../PW/src/libpw.a 
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../../LR_Modules/liblrmod.a
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../../LR_Modules/liblrmod.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a
 WESTLIBS = \
 ../Wstat/libwstat.a \
 ../IO_kernel/lib_io_kernel.a \
@@ -70,7 +72,7 @@ WESTLIBS = \
 
 TLDEPS= bindir mods libs pw
 
-all : title tldeps libwbse.a wbse.x wbse_init.x
+all : title tldeps libwbse.a wbse.x #wbse_init.x
 
 libwbse.a : $(WBSE_OBJS)
 	$(AR) $(ARFLAGS) $@ $?
@@ -81,10 +83,10 @@ wbse.x : libwbse.a wbse.o $(PWOBJS) $(QEMODS) $(LIBOBJS)
 	        $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS)
 	- ( cd ../../bin ; ln -fs ../West/Wbse/$@ . )
 
-wbse_init.x : wbse_init.o libwbse.a $(PWOBJS) $(QEMODS) $(LIBOBJS)
-	$(LD) $(LDFLAGS) -o $@ wbse_init.o libwbse.a \
-		$(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS)
-	- ( cd ../../bin ; ln -fs ../West/Wbse/wbse_init.x . )
+#wbse_init.x : wbse_init.o libwbse.a $(PWOBJS) $(QEMODS) $(LIBOBJS)
+#	$(LD) $(LDFLAGS) -o $@ wbse_init.o libwbse.a \
+#		$(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS)
+#	- ( cd ../../bin ; ln -fs ../West/Wbse/wbse_init.x . )
 
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :

@@ -18,7 +18,7 @@ MODULE plep_io
   USE kinds,       ONLY : DP
   USE mp_global,   ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
   USE mp,          ONLY : mp_max
-  USE westcom,     ONLY : npwq0,npwq0_g
+  USE westcom,     ONLY : npwq,npwq_g
   USE wbsecom,     ONLY : nbndval0x
   USE pwcom,       ONLY : nks,npwx
   USE wvfct,       ONLY : npwx
@@ -79,13 +79,13 @@ MODULE plep_io
         !
       ENDIF
       !
-      ALLOCATE( tmp_vec(npwq0_g) )
+      ALLOCATE( tmp_vec(npwq_g) )
       !
       DO ibnd = 1, nbndval
          ! 
          tmp_vec=0._DP
          !
-         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq0, ig_l2g(1:npwq0), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
@@ -93,8 +93,8 @@ MODULE plep_io
            !
            ! ... open XML descriptor
            !
-           CALL iotk_write_dat( iun, "ndim" , npwq0_g )
-           CALL iotk_write_dat( iun, "plep" // iotk_index( ibnd ), tmp_vec(1:npwq0_g) )
+           CALL iotk_write_dat( iun, "ndim" , npwq_g )
+           CALL iotk_write_dat( iun, "plep" // iotk_index( ibnd ), tmp_vec(1:npwq_g) )
            !
          ENDIF
          !
@@ -136,7 +136,7 @@ MODULE plep_io
       !
       ! Resume all components 
       !
-      ALLOCATE( tmp_vec(npwq0_g) )
+      ALLOCATE( tmp_vec(npwq_g) )
       tmp_vec=0._DP
       plepg=0._DP
       IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
@@ -181,11 +181,11 @@ MODULE plep_io
             IF(me_bgrp==root_bgrp) THEN
                !
                CALL iotk_scan_dat( iun, &
-                                   "plep" // iotk_index( ibnd ), tmp_vec(1:npwq0_g) )
+                                   "plep" // iotk_index( ibnd ), tmp_vec(1:npwq_g) )
                !
             ENDIF
             !
-            CALL splitwf( plepg(:,ibnd), tmp_vec, npwq0, ig_l2g(1:npwq0), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+            CALL splitwf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
             ! 
          ENDIF
          !
@@ -436,13 +436,13 @@ MODULE plep_io
         !
       ENDIF
       !
-      ALLOCATE( tmp_vec(npwq0_g) )
+      ALLOCATE( tmp_vec(npwq_g) )
       !
       DO ibnd = 1, nbnd
          ! 
          tmp_vec=0._DP
          !
-         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq0, ig_l2g(1:npwq0), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
@@ -450,8 +450,8 @@ MODULE plep_io
            !
            ! ... open XML descriptor
            !
-           CALL iotk_write_dat( iun, "ndim" , npwq0_g )
-           CALL iotk_write_dat( iun, "plep" // iotk_index( ibnd ), tmp_vec(1:npwq0_g) )
+           CALL iotk_write_dat( iun, "ndim" , npwq_g )
+           CALL iotk_write_dat( iun, "plep" // iotk_index( ibnd ), tmp_vec(1:npwq_g) )
            !
          ENDIF
          !
@@ -497,7 +497,7 @@ MODULE plep_io
       !
       ! Resume all components 
       !
-      ALLOCATE( tmp_vec(npwq0_g) )
+      ALLOCATE( tmp_vec(npwq_g) )
       !
       tmp_vec=0._DP
       plepg=0._DP
@@ -561,11 +561,11 @@ MODULE plep_io
                !
                CALL iotk_scan_dat( iun, &
                                    "evc" // iotk_index( ibnd ), tmp_vec(1:igwx_) )
-               IF ( npwq0_g > igwx_ ) tmp_vec((igwx_+1):npwq0_g) = 0.0_DP
+               IF ( npwq_g > igwx_ ) tmp_vec((igwx_+1):npwq_g) = 0.0_DP
                !
             ENDIF
             !
-            CALL splitwf( plepg(:,ibnd), tmp_vec, npwq0, ig_l2g(1:npwq0), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+            CALL splitwf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
             ! 
          ENDIF
          !

@@ -33,7 +33,7 @@ SUBROUTINE wbse_readin()
   !
   CALL start_clock('wbse_readin')
   !
-  CALL wbse_fetch_namelist(3,(/1,2,3/))
+  CALL wbse_fetch_namelist(3,(/1,2,3/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

@@ -39,7 +39,7 @@ MODULE plep_db
       USE io_global,            ONLY : stdout 
       USE westcom,              ONLY : wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_maxiter,n_dfpt_maxiter, &
                                      & n_steps_write_restart,n_pdep_restart_from_itr,n_pdep_read_from_file,trev_pdep, &
-                                     & tr2_dfpt,l_deflate,l_kinetic_only,ev,west_prefix,wstat_dirname,trev_pdep_rel, &
+                                     & tr2_dfpt,l_deflate,l_kinetic_only,ev,west_prefix,wstat_save_dir,trev_pdep_rel, &
                                      & l_minimize_exx_if_active,l_use_ecutrho
       USE wbsecom,              ONLY : dvg_exc 
       USE plep_io,              ONLY : plep_merge_and_write_G 
@@ -72,7 +72,7 @@ MODULE plep_db
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_dirname ) // '/' // TRIM("input-file.xml") , BINARY=.FALSE.,IERR=ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_save_dir ) // '/' // TRIM("input-file.xml") , BINARY=.FALSE.,IERR=ierr )
          !
       END IF
       !
@@ -106,7 +106,7 @@ MODULE plep_db
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_dirname ) // '/' // TRIM("dbs_eigenvalues.xml"),BINARY=.FALSE.,IERR=ierr)
+         CALL iotk_open_write( iunout, FILE = TRIM( wstat_save_dir ) // '/' // TRIM("dbs_eigenvalues.xml"),BINARY=.FALSE.,IERR=ierr)
          !
       END IF
       !
@@ -136,7 +136,7 @@ MODULE plep_db
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>n_pdep_eigen) CYCLE
          ! 
-         fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label))//".dat"
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
          !
       ENDDO
@@ -153,7 +153,7 @@ MODULE plep_db
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
       WRITE(stdout, "(5x, 'Database written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_dirname )  
+      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )
       CALL io_push_bar()
       !
     END SUBROUTINE
@@ -168,7 +168,7 @@ MODULE plep_db
       !------------------------------------------------------------------------
       !
       USE pwcom,               ONLY : nks,npwx
-      USE westcom,             ONLY : n_pdep_eigen,ev,west_prefix,wstat_dirname
+      USE westcom,             ONLY : n_pdep_eigen,ev,west_prefix,wstat_save_dir 
       USE wbsecom,             ONLY : dvg_exc,nbndval0x
       USE io_global,           ONLY : stdout 
       USE mp,                  ONLY : mp_bcast,mp_barrier
@@ -205,7 +205,7 @@ MODULE plep_db
       ! ... the main db directory
       !
       !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
-      dirname = wstat_dirname 
+      dirname = wstat_save_dir
       !
       ! 1)  READ THE INPUT FILE
       !
@@ -257,7 +257,7 @@ MODULE plep_db
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_dirname ) // '/' // TRIM( 'dbs_eigenvalues.xml' ), IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wstat_save_dir ) // '/' // TRIM( 'dbs_eigenvalues.xml' ), IERR = ierr )
          !
       ENDIF
       !
@@ -298,7 +298,7 @@ MODULE plep_db
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>n_eigen_to_get) CYCLE
          ! 
-         fname = TRIM( wstat_dirname ) // "/E"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label))//".dat"
          CALL plep_read_G_and_distribute(fname,dvg_exc(:,:,:,local_j))
          !
       ENDDO
@@ -315,7 +315,7 @@ MODULE plep_db
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
       WRITE(stdout, "(5x, 'Database read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_dirname )
+      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )
       WRITE(stdout, "(5x, 'Eigen. found : ',i12)") n_eigen_to_get
       CALL io_push_bar()
       !

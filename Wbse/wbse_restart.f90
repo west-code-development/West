@@ -902,7 +902,7 @@ MODULE wbse_restart
       !------------------------------------------------------------------------
       !
       USE pwcom,               ONLY : nks
-      USE westcom,             ONLY : npwq0x
+      USE westcom,             ONLY : npwqx
       USE wbsecom,             ONLY : dvg_exc,dng_exc,nbndval0x
       USE mp_global,           ONLY : my_image_id
       USE plep_io,             ONLY : plep_read_G_and_distribute
@@ -917,8 +917,8 @@ MODULE wbse_restart
       CHARACTER(LEN=256) :: fname
       INTEGER :: iun
       !
-      IF(.NOT.ALLOCATED(dvg_exc)) ALLOCATE(dvg_exc(npwq0x,nbndval0x,nks,pert%nlocx))
-      IF(.NOT.ALLOCATED(dng_exc)) ALLOCATE(dng_exc(npwq0x,nbndval0x,nks,pert%nlocx))
+      IF(.NOT.ALLOCATED(dvg_exc)) ALLOCATE(dvg_exc(npwqx,nbndval0x,nks,pert%nlocx))
+      IF(.NOT.ALLOCATED(dng_exc)) ALLOCATE(dng_exc(npwqx,nbndval0x,nks,pert%nlocx))
       dvg_exc = 0._DP
       dng_exc = 0._DP
       !

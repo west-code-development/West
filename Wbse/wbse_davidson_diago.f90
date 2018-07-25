@@ -29,9 +29,9 @@ SUBROUTINE wbse_davidson_diago ( )
   USE wbsecom,              ONLY : dvg_exc,dng_exc,nbndval0x
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged
+                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver
   USE plep_db,              ONLY : plep_db_write,plep_db_read
-  USE write_xml,            ONLY : wstat_xml_dump
+  !USE write_xml,            ONLY : wstat_xml_dump
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
   USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm
@@ -42,6 +42,7 @@ SUBROUTINE wbse_davidson_diago ( )
                                    wbse_refresh_with_vr_distr,apply_preconditioning_dvg
   USE wbsecom,              ONLY : l_preconditioning         
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz,bseparal
+  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -173,6 +174,8 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... Eventually randomize
      !
+!write(stdout,*) dvg_exc(1,1,1,1), n_pdep_read_from_file, nvec
+write(stdout,*) n_pdep_read_from_file, nvec
      IF(n_pdep_read_from_file<nvec) CALL wbse_do_randomize ( dvg_exc, n_pdep_read_from_file+1, nvec  )
      !
      ! ... MGS
@@ -290,7 +293,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... diagonalize the reduced hamiltonian
      !
-     CALL diagox( pert, nbase, nvec, hr_distr, nvecx, ew, vr_distr )     
+     CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )     
      time_spent(2)=get_clock( 'chidiago' )
      ev(1:nvec) = ew(1:nvec)
      !
@@ -347,7 +350,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... expand the basis set with new basis vectors ( H - e*S )|psi> ...
      !
-     CALL redistribute_vr_distr(pert, notcnv, nbase, nvecx, vr_distr, ishift )
+     CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift )
      DEALLOCATE(ishift)
      CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew )
      !
@@ -413,11 +416,11 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      nbase = nbase + notcnv
      !
-     CALL symm_hr_distr(pert,hr_distr,nbase,nvecx)
+     CALL symm_hr_distr(hr_distr,nbase,nvecx)
      !
      ! ... diagonalize the reduced Liouville hamiltonian
      !
-     CALL diagox( pert, nbase, nvec, hr_distr, nvecx, ew, vr_distr )
+     CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
      !
      ! ... test for convergence

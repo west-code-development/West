@@ -31,8 +31,8 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE wbsecom,              ONLY : l_diag_term_only,scissor_ope,nbndval0x
   USE wbsecom,              ONLY : l_qp_correction
   USE bse_module,           ONLY : bse_calc,et_qp
-  USE westcom,              ONLY : isz,lrwfc,iuwfc,nbnd_occ
-  USE wbsecom,              ONLY : l_bse_triplet, l_lanzcos, mac_isz
+  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ
+  USE wbsecom,              ONLY : l_bse_triplet, l_lanzcos, sigma_c_head, sigma_x_head
   USE distribution_center,  ONLY : aband
   !
   IMPLICIT NONE
@@ -226,7 +226,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            ! 
            IF (bse_calc) THEN
               !
-              CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor + isz + mac_isz),0.0d0,DP), &
+              CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),0.0d0,DP), &
                          evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
            ELSE 
@@ -246,7 +246,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            !
            IF (bse_calc) THEN
               ! 
-              CALL zaxpy(npw,CMPLX(-(et(ibnd,iks) - scissor + isz + mac_isz),0.0d0,DP), &
+              CALL zaxpy(npw,CMPLX(-(et(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),0.0d0,DP), &
                          evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
            ELSE

@@ -24,7 +24,7 @@ SUBROUTINE wbse_init_memory_report()
   USE uspp,           ONLY : nkb
   USE control_flags,  ONLY : isolve, nmix, gamma_only, lscf
   USE mp_global,      ONLY : np_ortho
-  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwq0x
+  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwqx
   USE distribution_center,  ONLY : pert
   USE noncollin_module,     ONLY : noncolin,npol
   !
@@ -104,7 +104,7 @@ SUBROUTINE wbse_memory_report()
   USE uspp,           ONLY : nkb
   USE control_flags,  ONLY : isolve, nmix, gamma_only, lscf
   USE mp_global,      ONLY : np_ortho
-  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwq0x
+  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwqx
   USE distribution_center,  ONLY : pert
   USE noncollin_module,      ONLY : noncolin,npol
   !
@@ -161,14 +161,14 @@ SUBROUTINE wbse_memory_report()
   WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
-  mem_partial = DBLE(complex_size*npwq0x*nbnd_occ(1)*pert%nlocx)/DBLE(Mb)
+  mem_partial = DBLE(complex_size*npwqx*nbnd_occ(1)*pert%nlocx)/DBLE(Mb)
   WRITE( stdout, '(5x,"[MEM] dvg_exc                 ",f10.2," Mb", 5x,"(",i7,",",i5,",",i5,")")') &
-     mem_partial, npwq0x, nbnd_occ(1), pert%nlocx
+     mem_partial, npwqx, nbnd_occ(1), pert%nlocx
   mem_tot = mem_tot + mem_partial
   !
-  mem_partial = DBLE(complex_size*npwq0x*nbnd_occ(1)*pert%nlocx)/DBLE(Mb)
+  mem_partial = DBLE(complex_size*npwqx*nbnd_occ(1)*pert%nlocx)/DBLE(Mb)
   WRITE( stdout, '(5x,"[MEM] dng_exc                 ",f10.2," Mb", 5x,"(",i7,","i5,",",i5,")")') &
-     mem_partial, npwq0x, nbnd_occ(1), pert%nlocx
+     mem_partial, npwqx, nbnd_occ(1), pert%nlocx
   mem_tot = mem_tot + mem_partial
   !
   IF( gamma_only ) THEN  

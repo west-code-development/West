@@ -58,10 +58,12 @@ west_doc_build:
    - apt-get update > /dev/null
    - apt-get install -qq build-essential > /dev/null
    - apt-get install -qq apt-utils > /dev/null
+   - apt-get install -qq wget git > /dev/null
    - apt-get -qq install vim > /dev/null 
    - export TZ="US/Central"
    - rm -f /etc/localtime
    - cp  /usr/share/zoneinfo/$TZ  /etc/localtime
+   - apt-get install -qq texlive-latex-base > /dev/null
    - apt-get install -qq latex2html > /dev/null
    - apt-get install -qq pandoc > /dev/null
    - cd /opt
@@ -74,8 +76,11 @@ west_doc_build:
    - make 
    - make install
    - ln -s $PY_DIR/bin/python3.5 $PY_DIR/bin/python
-   - ln -s $PY_DIR/bin/pip3.5 $PY_DIR/bin/pip 
    - export PATH=$PY_DIR/bin:$PATH
+   - python get-pip.py
+   - pip install -U pip
+   - ln -s $PY_DIR/bin/pip3.5 $PY_DIR/bin/pip 
+   - pip install -U sphinx
  script:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West

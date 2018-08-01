@@ -79,14 +79,13 @@ west_doc_build:
    - export PATH=$PY_DIR/bin:$PATH
    - wget https://bootstrap.pypa.io/get-pip.py
    - python get-pip.py
-   - pip install -U pip
-   - ln -s $PY_DIR/bin/pip3.5 $PY_DIR/bin/pip 
+   - which python
+   - which pip 
    - pip install -U sphinx
  script:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West
    - git describe
    - cd doc
-   - sleep 60m
    - make html
 

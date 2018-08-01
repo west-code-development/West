@@ -81,5 +81,6 @@ west_doc_build:
    - cd West
    - git describe
    - cd doc
+   - sleep 60m
    - make html
 

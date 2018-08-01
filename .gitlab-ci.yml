@@ -3,6 +3,7 @@ variables:
 
 stages:
  - build
+ - doc
  - test
 
 west_build:
@@ -48,3 +49,37 @@ west_test_gamma:
    - make > /dev/null
    - cd test-suite 
    - make NP=28 NI=1 NT=1 
+
+west_doc_build:
+ tags: [rcc,docker,node-01]
+ stage: doc
+ image: gcc:4.9.4
+ before_script:
+   - apt-get update > /dev/null
+   - apt-get install -qq build-essential > /dev/null
+   - apt-get install -qq apt-utils > /dev/null
+   - apt-get -qq install vim > /dev/null 
+   - export TZ="US/Central"
+   - rm -f /etc/localtime
+   - cp  /usr/share/zoneinfo/$TZ  /etc/localtime
+   - apt-get install -qq latex2html > /dev/null
+   - apt-get install -qq pandoc > /dev/null
+   - cd /opt
+   - export PY_VERSION="3.5.4"
+   - wget https://www.python.org/ftp/python/$PY_VERSION/Python-$PY_VERSION.tgz
+   - tar -xzvf Python-$PY_VERSION.tgz
+   - cd Python-$PY_VERSION 
+   - export PY_DIR="/opt/python"
+   - ./configure --prefix $PY_DIR
+   - make 
+   - make install
+   - ln -s $PY_DIR/bin/python3.5 $PY_DIR/bin/python
+   - ln -s $PY_DIR/bin/pip3.5 $PY_DIR/bin/pip 
+   - export PATH=$PY_DIR/bin:$PATH
+ script:
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - cd doc
+   - make html
+

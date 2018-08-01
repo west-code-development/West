@@ -51,112 +51,63 @@ MODULE pdep_io
       INTEGER :: nbytes, ndim, iunit, nlen
       CHARACTER(LEN=30) :: endian
       INTEGER :: npwqx_g 
-      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
+      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:)
+      LOGICAL, PARAMETER :: default_iq = 1 
+      LOGICAL :: iq_ 
       !
-      !
-      IF (PRESENT(iq)) THEN
-         !
-         ! Resume all components 
-         !
-         ndim = ngq_g(iq)
-         !
-         ! <NEW>
-         !
-         npwqx_g = MAXVAL( ngq_g(:) )
-         ALLOCATE( igq_l2g_kdip(npwqx_g) )
-         igq_l2g_kdip(:) = 0
-         !
-         ALLOCATE( igq_l2g(ngq(iq)) )
-         DO ig = 1, ngq(iq)
-            igq_l2g(ig) = ig_l2g( igq_q(ig,iq) )
-         ENDDO
-         CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip )
-         DEALLOCATE( igq_l2g )
-         !
-         ! </NEW>
-         ! 
-!         npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
-!         CALL mp_max(npwq_g,intra_pool_comm)
-!         CALL mp_max(npwq_g,intra_bgrp_comm)
-         !
-         ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
-         !
-         CALL mergewf( pdepg(:), tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
-         DEALLOCATE( igq_l2g_kdip ) 
-         !
-         ! ONLY ROOT W/IN BGRP WRITES
-         !
-         IF(me_bgrp==root_bgrp) THEN 
-            !
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
-            ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
-            CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64) 
-            !
-            IF( islittleendian() ) THEN 
-               endian = '"islittleendian" : true'
-            ELSE
-               endian = '"islittleendian" : false'
-            ENDIF  
-            !
-            OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-            WRITE( iunit, '(a)' ) '{'
-            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "readme" : "eigenpotential", "type" : "complex double", "space" : "G",&
-                         "ndim" : ', ndim, ', "code" : "base64", '//TRIM(endian)//' }'
-            WRITE( iunit, '(a)') ', "data" : ' 
-            WRITE( iunit, '(a)' ) '"'//charbase64//'"'
-            WRITE( iunit, '(a)' ) '}'
-            CLOSE( iunit ) 
-            !
-            DEALLOCATE( charbase64 )
-            !
-         END IF
-         !
-         DEALLOCATE( tmp_vec )
-      !
+      IF( PRESENT(iq) ) THEN 
+         iq_ = iq 
       ELSE
-         !
-         ! Resume all components 
-         !
-         ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
-         !
-         CALL mergewf( pdepg(:), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
-         !
-         ! ONLY ROOT W/IN BGRP WRITES
-         !
-         IF(me_bgrp==root_bgrp) THEN 
-            !
-            ndim = npwq_g
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
-            ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
-            CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64) 
-            !
-            IF( islittleendian() ) THEN 
-               endian = '"islittleendian" : true'
-            ELSE
-               endian = '"islittleendian" : false'
-            ENDIF  
-            !
-            OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-            WRITE( iunit, '(a)' ) '{'
-            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "readme" : "eigenpotential", "type" : "complex double", "space" : "G",&
-                         "ndim" : ', ndim, ', "code" : "base64", '//TRIM(endian)//' }'
-            WRITE( iunit, '(a)') ', "data" : ' 
-            WRITE( iunit, '(a)' ) '"'//charbase64//'"'
-            WRITE( iunit, '(a)' ) '}'
-            CLOSE( iunit ) 
-            !
-            DEALLOCATE( charbase64 )
-            !
-         END IF
-         !
-         DEALLOCATE( tmp_vec )
-      !
+         iq_ = default_iq
       ENDIF
-    !
+      ! 
+      ndim = ngq_g(iq_)
+      !
+      npwqx_g = MAXVAL( ngq_g(:) )
+      ALLOCATE( igq_l2g_kdip(npwqx_g) )
+      igq_l2g_kdip(:) = 0
+      !
+      ALLOCATE( igq_l2g(ngq(iq_)) )
+      DO ig = 1, ngq(iq_)
+         igq_l2g(ig) = ig_l2g( igq_q(ig,iq_) )
+      ENDDO
+      CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
+      DEALLOCATE( igq_l2g )
+      !
+      ALLOCATE( tmp_vec(npwq_g) )
+      tmp_vec=0._DP
+      !
+      CALL mergewf( pdepg(:), tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+      DEALLOCATE( igq_l2g_kdip ) 
+      !
+      IF(me_bgrp==root_bgrp) THEN 
+         !
+         nbytes = SIZEOF(tmp_vec(1)) * ndim
+         nlen = lenbase64(nbytes)
+         ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
+         CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64) 
+         !
+         IF( islittleendian() ) THEN 
+            endian = '"islittleendian" : true'
+         ELSE
+            endian = '"islittleendian" : false'
+         ENDIF  
+         !
+         OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
+         WRITE( iunit, '(a)' ) '{'
+         WRITE( iunit, '(a,i0,a)' ) '"meta" : { "name" : "eigenpotential", "type" : "complex double", "space" : "G",&
+                      "ndim" : ', ndim, ', "encoding" : "base64", '//TRIM(endian)//' }'
+         WRITE( iunit, '(a)') ', "data" : ' 
+         WRITE( iunit, '(a)' ) '"'//charbase64//'"'
+         WRITE( iunit, '(a)' ) '}'
+         CLOSE( iunit ) 
+         !
+         DEALLOCATE( charbase64 )
+         !
+      END IF
+      !
+      DEALLOCATE( tmp_vec )
+      !
     END SUBROUTINE
     !
     ! ******************************************
@@ -190,122 +141,68 @@ MODULE pdep_io
       LOGICAL :: found, isle
       INTEGER :: npwqx_g
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
+      LOGICAL, PARAMETER :: default_iq = 1 
+      LOGICAL :: iq_
       !
-      IF ( PRESENT(iq) ) THEN
-         !
-         ! Resume all components 
-         !
-         ndim = ngq_g(iq)
-!         npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
-!         CALL mp_max(npwq_g,intra_pool_comm)
-!         CALL mp_max(npwq_g,intra_bgrp_comm)
-         !
-         ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
-         pdepg=0._DP
-         !
-         IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
-            !
-            ! ONLY ROOT W/IN BGRP READS
-            !
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
-            !
-            IF(me_bgrp==root_bgrp) THEN 
-               !
-               ALLOCATE(CHARACTER(LEN=(nlen+2)) :: charbase64)
-               !
-               OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-               READ( iunit, * ) 
-               READ( iunit, '(a)' ) line 
-               READ( iunit, * ) 
-               READ( iunit, '(a)' ) charbase64
-               CLOSE( iunit )
-               CALL base64_decode_complex(charbase64(2:(nlen+1)), ndim, tmp_vec(1:ndim)) 
-               DEALLOCATE( charbase64 )
-               !
-               CALL json%load_from_string("{"//TRIM(line)//"}")
-               CALL json%get('meta.islittleendian', isle, found)
-               CALL json%destroy()
-               !
-               IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
-               !
-            END IF
-            !
-            !
-            ! <NEW>
-            !
-            npwqx_g = MAXVAL( ngq_g(:) )
-            ALLOCATE( igq_l2g_kdip(npwqx_g) )
-            igq_l2g_kdip(:) = 0
-            !
-            ALLOCATE( igq_l2g(ngq(iq)) )
-            DO ig = 1, ngq(iq)
-               igq_l2g(ig) = ig_l2g( igq_q(ig,iq) )
-            ENDDO
-            CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip )
-            DEALLOCATE( igq_l2g )
-            !
-            ! </NEW>
-            ! 
-            CALL splitwf( pdepg, tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
-            DEALLOCATE( igq_l2g_kdip ) 
-            !
-         ENDIF
-         !
-         DEALLOCATE( tmp_vec )
-         !
-         CALL mp_bcast(pdepg,0,inter_bgrp_comm)
-         CALL mp_bcast(pdepg,0,inter_pool_comm)
-      !
+      IF( PRESENT(iq) ) THEN 
+         iq_ = iq 
       ELSE
-         !
-         ! Resume all components 
-         !
-         ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
-         pdepg=0._DP
-         !
-         IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
-            !
-            ! ONLY ROOT W/IN BGRP READS
-            !
-            ndim = npwq_g
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
-            !
-            IF(me_bgrp==root_bgrp) THEN 
-               !
-               ALLOCATE(CHARACTER(LEN=(nlen+2)) :: charbase64)
-               !
-               OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-               READ( iunit, * ) 
-               READ( iunit, '(a)' ) line 
-               READ( iunit, * ) 
-               READ( iunit, '(a)' ) charbase64
-               CLOSE( iunit )
-               CALL base64_decode_complex(charbase64(2:(nlen+1)), ndim, tmp_vec(1:ndim)) 
-               DEALLOCATE( charbase64 )
-               !
-               CALL json%load_from_string("{"//TRIM(line)//"}")
-               CALL json%get('meta.islittleendian', isle, found)
-               CALL json%destroy()
-               !
-               IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
-               !
-            END IF
-            !
-            CALL splitwf( pdepg, tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
-            !
-         ENDIF
-         !
-         DEALLOCATE( tmp_vec )
-         !
-         CALL mp_bcast(pdepg,0,inter_bgrp_comm)
-         CALL mp_bcast(pdepg,0,inter_pool_comm)
-      !
+         iq_ = default_iq
       ENDIF
-    !
+      !
+      ndim = ngq_g(iq_)
+      !
+      ALLOCATE( tmp_vec(npwq_g) )
+      tmp_vec=0._DP
+      pdepg=0._DP
+      !
+      IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
+         !
+         nbytes = SIZEOF(tmp_vec(1)) * ndim
+         nlen = lenbase64(nbytes)
+         !
+         IF(me_bgrp==root_bgrp) THEN 
+            !
+            ALLOCATE(CHARACTER(LEN=(nlen+2)) :: charbase64)
+            !
+            OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
+            READ( iunit, * ) 
+            READ( iunit, '(a)' ) line 
+            READ( iunit, * ) 
+            READ( iunit, '(a)' ) charbase64
+            CLOSE( iunit )
+            CALL base64_decode_complex(charbase64(2:(nlen+1)), ndim, tmp_vec(1:ndim)) 
+            DEALLOCATE( charbase64 )
+            !
+            CALL json%load_from_string("{"//TRIM(line)//"}")
+            CALL json%get('meta.islittleendian', isle, found)
+            CALL json%destroy()
+            !
+            IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
+            !
+         END IF
+         !
+         npwqx_g = MAXVAL( ngq_g(:) )
+         ALLOCATE( igq_l2g_kdip(npwqx_g) )
+         igq_l2g_kdip(:) = 0
+         !
+         ALLOCATE( igq_l2g(ngq(iq_)) )
+         DO ig = 1, ngq(iq_)
+            igq_l2g(ig) = ig_l2g( igq_q(ig,iq_) )
+         ENDDO
+         CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
+         DEALLOCATE( igq_l2g )
+         ! 
+         CALL splitwf( pdepg, tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+         DEALLOCATE( igq_l2g_kdip ) 
+         !
+      ENDIF
+      !
+      DEALLOCATE( tmp_vec )
+      !
+      CALL mp_bcast(pdepg,0,inter_bgrp_comm)
+      CALL mp_bcast(pdepg,0,inter_pool_comm)
+      !
     END SUBROUTINE
     !
 END MODULE

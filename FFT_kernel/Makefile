@@ -11,7 +11,8 @@ IFLAGS=
 
 FFT_KERNEL_OBJS = \
 fft_at_gamma.o \
-fft_at_k.o
+fft_at_k.o \
+fft_interpolation.o
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a

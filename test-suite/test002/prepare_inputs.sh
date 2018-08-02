@@ -37,7 +37,7 @@ K_POINTS {gamma}
 EOF
 
 
-cat > wstat.in << EOF
+cat > wstat1.in << EOF
 {
   "input_west": {
     "qe_prefix": "test",
@@ -46,7 +46,22 @@ cat > wstat.in << EOF
   },
   "wstat_control": {
     "wstat_calculation": "S",
-    "n_pdep_eigen": 50
+    "n_pdep_eigen": 10
+  }
+}
+EOF
+
+cat > wstat2.in << EOF
+{
+  "input_west": {
+    "qe_prefix": "test",
+    "west_prefix": "test",
+    "outdir": "./"
+  },
+  "wstat_control": {
+    "wstat_calculation": "S",
+    "n_pdep_eigen": 50, 
+    "n_pdep_read_from_file": 5 
   }
 }
 EOF

@@ -21,6 +21,32 @@ MODULE pdep_db
   !
   CONTAINS
     !
+    SUBROUTINE generate_pdep_fname( fname, j, iq)
+       !
+       ! I/O 
+       ! 
+       CHARACTER(LEN=25), INTENT(OUT) :: fname
+       INTEGER, INTENT(IN) :: j 
+       INTEGER, INTENT(IN), OPTIONAL :: iq
+       !
+       ! Workspace 
+       !
+       INTEGER,PARAMETER :: default_iq = 1
+       INTEGER :: iq_
+       CHARACTER(LEN=9) :: label_j, label_q
+       !
+       IF( PRESENT(iq) ) THEN 
+          iq_ = iq
+       ELSE
+          iq_ = default_iq
+       ENDIF 
+       !
+       WRITE(label_j,'(i9.9)') j
+       WRITE(label_q,'(i9.9)') iq_
+       fname = "Q"//TRIM(ADJUSTL(label_q))//"E"//TRIM(ADJUSTL(label_j))//".json" 
+       !
+    END SUBROUTINE 
+    !
     !
     ! *****************************
     ! PDEP WRITE
@@ -63,8 +89,6 @@ MODULE pdep_db
       LOGICAL, PARAMETER :: default_lprintinfo = .TRUE.
       LOGICAL            :: lprintinfo_
       ! labels  
-      CHARACTER(LEN=9) :: label_j
-      CHARACTER(LEN=9) :: label_q
       CHARACTER(LEN=9) :: label_i
       ! time 
       REAL(DP), EXTERNAL    :: GET_CLOCK
@@ -112,9 +136,7 @@ MODULE pdep_db
       IF(ALLOCATED(eigenpot_filename)) DEALLOCATE(eigenpot_filename)
       ALLOCATE( CHARACTER(LEN=25) :: eigenpot_filename(n_pdep_eigen) )
       DO global_j = 1, n_pdep_eigen
-         WRITE(label_j,'(i9.9)') global_j
-         WRITE(label_q,'(i9.9)') iq_
-         eigenpot_filename(global_j) = "Q"//TRIM(ADJUSTL(label_q))//"E"//TRIM(ADJUSTL(label_j))//".json" 
+         CALL generate_pdep_fname( eigenpot_filename(global_j), global_j, iq_) 
       ENDDO
       IF(ALLOCATED(summary_file)) DEALLOCATE(summary_file)
       summary_file = TRIM(ADJUSTL(wstat_save_dir)) // "/summary.json"
@@ -247,8 +269,6 @@ MODULE pdep_db
       LOGICAL, PARAMETER :: default_lprintinfo = .TRUE.  
       LOGICAL            :: lprintinfo_
       ! labels
-      CHARACTER(LEN=9)      :: label_j
-      CHARACTER(LEN=9)      :: label_q
       CHARACTER(LEN=9)      :: label_i
       ! time 
       REAL(DP), EXTERNAL    :: GET_CLOCK

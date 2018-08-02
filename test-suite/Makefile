@@ -1,6 +1,6 @@
 # Makefile
 #
-testdirs:= test001 test002 test003 test003
+testdirs:= test001 test002 test003 test004
 
 default: title all
 all:

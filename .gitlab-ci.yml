@@ -3,8 +3,8 @@ variables:
 
 stages:
  - build
- - doc
  - test
+ - doc
 
 west_build:
  tags: [rcc,docker,node-01]

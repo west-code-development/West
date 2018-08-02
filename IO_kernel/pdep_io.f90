@@ -52,8 +52,8 @@ MODULE pdep_io
       CHARACTER(LEN=30) :: endian
       INTEGER :: npwqx_g 
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:)
-      LOGICAL, PARAMETER :: default_iq = 1 
-      LOGICAL :: iq_ 
+      INTEGER, PARAMETER :: default_iq = 1 
+      INTEGER :: iq_ 
       !
       IF( PRESENT(iq) ) THEN 
          iq_ = iq 
@@ -141,8 +141,8 @@ MODULE pdep_io
       LOGICAL :: found, isle
       INTEGER :: npwqx_g
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
-      LOGICAL, PARAMETER :: default_iq = 1 
-      LOGICAL :: iq_
+      INTEGER, PARAMETER :: default_iq = 1 
+      INTEGER :: iq_
       !
       IF( PRESENT(iq) ) THEN 
          iq_ = iq 

@@ -60,6 +60,7 @@ west_doc_build:
    - apt-get install -qq apt-utils > /dev/null
    - apt-get install -qq wget git > /dev/null
    - apt-get -qq install vim > /dev/null 
+   - apt-get -qq install zlib1g > /dev/null
    - export TZ="US/Central"
    - rm -f /etc/localtime
    - cp  /usr/share/zoneinfo/$TZ  /etc/localtime

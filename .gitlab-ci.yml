@@ -90,4 +90,4 @@ west_doc_build:
    - git describe
    - cd doc
    - make html
-
+   - ls _build/html

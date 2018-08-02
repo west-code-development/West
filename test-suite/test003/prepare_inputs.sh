@@ -21,6 +21,7 @@ nspin           = 2
 ecutwfc         = 25.0
 nbnd            = 10
 assume_isolated ='mp'
+tot_magnetization = 0.
 /
 &electrons
 diago_full_acc = .TRUE.

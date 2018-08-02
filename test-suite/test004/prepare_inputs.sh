@@ -29,7 +29,7 @@ ATOMIC_POSITIONS (crystal)
  Si  0.0000  0.0000  0.0000
  Si  0.2500  0.2500  0.2500
 K_POINTS (automatic)
-2 2 2   0 0 0
+1 1 2   0 0 0
 EOF
 
 

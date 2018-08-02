@@ -4,9 +4,9 @@ testdirs:= test001 test002 test003 test003
 
 default: title all
 all:
-	for d in $(testdirs); do (cd $$d; $(MAKE)); done
+	for d in $(testdirs); do cd $$d; $(MAKE); [[ $$? != 0 ]] && exit -1; echo 'done'; cd ..; done
 clean:
-	for d in $(testdirs); do (cd $$d; $(MAKE) clean); done
+	for d in $(testdirs); do cd $$d; $(MAKE) clean; cd ..; done
 
 title :
 	@echo "                "

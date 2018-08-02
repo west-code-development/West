@@ -29,7 +29,7 @@ west_build:
    - make
    - ls ../bin 
 
-west_test_gamma:
+west_test:
  tags: [rcc,docker,node-01]
  stage: test
  image: ubuntu:latest

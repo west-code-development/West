@@ -37,15 +37,8 @@ MODULE fourier_interpolation
     !
     ! Workspace
     !
-    INTEGER  :: ig
+    INTEGER  :: ig, i_dim
     INTEGER  :: h, k, l, hmax, kmax, lmax, hidx, kidx, lidx
-    !
-    SELECT CASE(ndim) 
-    CASE(1,2) 
-      ! ok
-    CASE DEFAULT 
-      CALL errore("","Bad mapping given: only 1 and 2",1) 
-    END SELECT
     !
     nl = 0
     !
@@ -55,50 +48,23 @@ MODULE fourier_interpolation
     kmax = (n2 - 1) / 2
     lmax = (n3 - 1) / 2
     !
-    DO ig = 1, n
-       !
-       ! Get the current Miller index
-       !
-       h = NINT(SUM(g(:,ig) * at(:,1)))
-       k = NINT(SUM(g(:,ig) * at(:,2)))
-       l = NINT(SUM(g(:,ig) * at(:,3)))
-       !
-       IF( ABS(h) <= hmax .AND. ABS(k) <= kmax .AND. ABS(l) <= lmax ) THEN 
-          !
-          ! derive position of G vector in (n1, n2, n3) grid
-          !
-          IF ( h >= 0 ) THEN
-             hidx = h + 1
-          ELSE
-             hidx = h + n1 + 1
-          ENDIF
-          !
-          IF ( k >= 0 ) THEN
-             kidx = k + 1
-          ELSE
-             kidx = k + n2 + 1
-          ENDIF
-          !
-          IF ( l >= 0 ) THEN
-             lidx = l + 1
-          ELSE
-             lidx = l + n3 + 1
-          ENDIF
-          !
-          nl(ig,1) = hidx + (kidx - 1) * n1 + (lidx - 1) * n1 * n2
-          !
-       ENDIF
-       !
-    ENDDO
-    !
-    IF (ndim == 2 ) THEN 
+    DO i_dim = 1, ndim 
        DO ig = 1, n
           !
           ! Get the current Miller index
           !
-          h = NINT(SUM(-g(:,ig) * at(:,1)))
-          k = NINT(SUM(-g(:,ig) * at(:,2)))
-          l = NINT(SUM(-g(:,ig) * at(:,3)))
+          SELECT CASE (i_dim)
+          CASE(1)  
+             h = NINT(SUM(g(:,ig) * at(:,1)))
+             k = NINT(SUM(g(:,ig) * at(:,2)))
+             l = NINT(SUM(g(:,ig) * at(:,3)))
+          CASE(2)
+             h = NINT(SUM(-g(:,ig) * at(:,1)))
+             k = NINT(SUM(-g(:,ig) * at(:,2)))
+             l = NINT(SUM(-g(:,ig) * at(:,3)))
+          CASE DEFAULT
+             CALL errore("","Bad mapping given: only 1 .OR. 2",1) 
+          END SELECT
           !
           IF( ABS(h) <= hmax .AND. ABS(k) <= kmax .AND. ABS(l) <= lmax ) THEN 
              !
@@ -122,12 +88,12 @@ MODULE fourier_interpolation
                 lidx = l + n3 + 1
              ENDIF
              !
-             nl(ig,2) = hidx + (kidx - 1) * n1 + (lidx - 1) * n1 * n2
+             nl(ig,i_dim) = hidx + (kidx - 1) * n1 + (lidx - 1) * n1 * n2
              !
           ENDIF
           !
        ENDDO
-    ENDIF
+    ENDDO
     !
  END SUBROUTINE
  !

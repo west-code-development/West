@@ -53,7 +53,7 @@ MODULE pdep_db
       ! I/O 
       !
       INTEGER, INTENT(IN), OPTIONAL :: iq
-      LOGICAL, INTENT(OUT), OPTIONAL :: lprintinfo
+      LOGICAL, INTENT(IN), OPTIONAL :: lprintinfo
       !
       ! Workspace
       ! 

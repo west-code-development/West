@@ -1,0 +1,11 @@
+*.o 
+*.x 
+*.mod
+*.save
+*.restart
+*.upf
+*.UPF
+*.dSYM
+*.a
+*.in
+*.out

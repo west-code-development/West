@@ -81,8 +81,9 @@ west_doc_build:
    - python get-pip.py
    - which python
    - which pip 
-   - pip install -U nbsphinx
-   - pip install -U sphinx_rtd_theme
+   - pip install nbsphinx
+   - pip install sphinx_rtd_theme
+   - pip install ipython
  script:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West

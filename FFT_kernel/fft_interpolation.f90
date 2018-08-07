@@ -17,11 +17,11 @@ MODULE fourier_interpolation
  !
  CONTAINS
  !
- SUBROUTINE get_G2R_mapping (n1, n2, n3, n, nl, ndim)
+ SUBROUTINE get_G2R_mapping (n1, n2, n3, ng, ngx, ndim, nl)
     ! 
     ! INPUT  : n1, n2, n3 = dimension of arbitrary R grid 
-    !          n          = actual number of PW
-    !          ndim       - dimensions of nl, 1: (n), 2:(n,-n)
+    !          ng, ngx    = actual number of PW
+    !          ndim       = dimensions of nl, 1: (n), 2:(n,-n)
     ! OUTPUT : nl         = computed mapping from G to R space (i,e. from [1,n] to [1, n1*n2*n3] )
     !
     USE kinds,         ONLY : DP
@@ -32,8 +32,8 @@ MODULE fourier_interpolation
     ! 
     ! I/O
     !
-    INTEGER, INTENT(IN)  :: n1, n2, n3, n, ndim
-    INTEGER, INTENT(OUT) :: nl(n,ndim)        ! mapping from [1, npw] to [1, n1*n2*n3]  
+    INTEGER, INTENT(IN)  :: n1, n2, n3, ng, ngx, ndim
+    INTEGER, INTENT(OUT) :: nl(ngx,ndim) ! mapping from [1, npw] to [1, n1*n2*n3]  
     !
     ! Workspace
     !
@@ -49,7 +49,7 @@ MODULE fourier_interpolation
     lmax = (n3 - 1) / 2
     !
     DO i_dim = 1, ndim 
-       DO ig = 1, n
+       DO ig = 1, ng
           !
           ! Get the current Miller index
           !
@@ -98,15 +98,15 @@ MODULE fourier_interpolation
  END SUBROUTINE
  !
  !
- SUBROUTINE single_fwfft_fromArbitraryRGrid (fr, n1, n2, n3, n, nx, ndim, nl, fg, igk)
+ SUBROUTINE single_fwfft_fromArbitraryRGrid (fr, n1, n2, n3, ng, ngx, ndim, nl, fg, igk)
    !
    ! Note that the interpolation needs to be called by all processors within one band group 
    !
    ! FWFFT : R ---> G
    !
    ! INPUT  : n1, n2, n3 = dimension of arbitrary R grid 
-   !          n     = actual number of PW
-   !          nx    = leading dimendion for fg
+   !          ng    = actual number of PW
+   !          ngx   = leading dimendion for fg
    !          ndim  = 1, 2
    !          fr    = ONE COMPLEX array containing ONE function in R space (note that the array is not distributed, i.e. dimension = n1*n2*n3 )
    !          nl    = pre-computed mapping from G to R space (i,e. from [1,n] to [1, n1*n2*n3] )
@@ -119,11 +119,11 @@ MODULE fourier_interpolation
    !
    ! I/O
    !
-   INTEGER,     INTENT(IN)       :: n1, n2, n3, n, nx, ndim
-   INTEGER,     INTENT(IN)       :: nl(n,ndim)
+   INTEGER,     INTENT(IN)       :: n1, n2, n3, ng, ngx, ndim
+   INTEGER,     INTENT(IN)       :: nl(ngx,ndim)
    COMPLEX(DP), INTENT(IN)       :: fr(n1*n2*n3)
-   COMPLEX(DP), INTENT(OUT)      :: fg(nx)
-   INTEGER, INTENT(IN), OPTIONAL :: igk(n)
+   COMPLEX(DP), INTENT(OUT)      :: fg(ngx)
+   INTEGER, INTENT(IN), OPTIONAL :: igk(ng)
    !
    ! Workspace
    !
@@ -142,14 +142,14 @@ MODULE fourier_interpolation
    CALL mp_bcast( fr, 0, intra_bgrp_comm )
    !
    IF( PRESENT(igk) ) THEN
-      DO ig=1, n
+      DO ig=1, ng
          !
          idx = nl(igk(ig),1)
          IF (idx > 0) fg(ig) = fr(nl(igk(ig),1))
          !
       ENDDO
    ELSE
-      DO ig=1, n
+      DO ig=1, ng
          !
          idx = nl(ig,1)
          IF (idx > 0) fg(ig) = fr(nl(ig,1))
@@ -157,7 +157,7 @@ MODULE fourier_interpolation
       ENDDO
    ENDIF
    !
-   DO ig = (n+1), nx
+   DO ig = (ng+1), ngx
       !
       fg(ig) = (0.0_DP,0.0_DP)
       !
@@ -166,11 +166,11 @@ MODULE fourier_interpolation
  ENDSUBROUTINE
  !
  !
- SUBROUTINE single_invfft_toArbitraryRGrid (fr, n1, n2, n3, n, nx, ndim, nl, fg, igk)
+ SUBROUTINE single_invfft_toArbitraryRGrid (fr, n1, n2, n3, ng, ngx, ndim, nl, fg, igk)
    !
    ! Note that the interpolation needs to be called by all processors within one band group 
    !
-   ! FWFFT : R ---> G
+   ! INVFFT : R <--- G
    !
    ! INPUT  : n1, n2, n3 = dimension of arbitrary R grid 
    !          n     = actual number of PW
@@ -187,11 +187,11 @@ MODULE fourier_interpolation
    !
    ! I/O
    !
-   INTEGER,     INTENT(IN) :: n1, n2, n3, n, nx, ndim
-   INTEGER,     INTENT(IN) :: nl(n,ndim)
+   INTEGER,     INTENT(IN) :: n1, n2, n3, ng, ngx, ndim
+   INTEGER,     INTENT(IN) :: nl(ng,ndim)
    COMPLEX(DP), INTENT(OUT) :: fr(n1*n2*n3)
-   COMPLEX(DP), INTENT(IN):: fg(nx)
-   INTEGER, INTENT(IN), OPTIONAL :: igk(n)
+   COMPLEX(DP), INTENT(IN):: fg(ngx)
+   INTEGER, INTENT(IN), OPTIONAL :: igk(ng)
    !
    ! Workspace
    !
@@ -200,7 +200,7 @@ MODULE fourier_interpolation
    fr = 0._DP
    !
    IF( PRESENT(igk) ) THEN
-      DO ig=1, n
+      DO ig=1, ng
          !
          idx = nl(igk(ig),1)
          IF (idx > 0) THEN 
@@ -209,7 +209,7 @@ MODULE fourier_interpolation
          !
       ENDDO
    ELSE 
-      DO ig=1, n
+      DO ig=1, ng
          !
          idx = nl(ig,1)
          IF (idx > 0) THEN 
@@ -218,7 +218,7 @@ MODULE fourier_interpolation
          !
       ENDDO
       IF ( ndim == 2 ) THEN
-         DO ig=1, n
+         DO ig=1, ng
             !
             idx = nl(ig,2)
             IF (idx > 0) THEN 

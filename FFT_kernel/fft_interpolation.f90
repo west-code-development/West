@@ -40,6 +40,8 @@ MODULE fourier_interpolation
     INTEGER  :: ig, i_dim
     INTEGER  :: h, k, l, hmax, kmax, lmax, hidx, kidx, lidx
     !
+    CALL start_clock('g2rmap')
+    !
     nl = 0
     !
     ! Maximum Miller indexes associated to the R grid 
@@ -95,6 +97,8 @@ MODULE fourier_interpolation
        ENDDO
     ENDDO
     !
+    CALL stop_clock('g2rmap')
+    !
  END SUBROUTINE
  !
  !
@@ -131,6 +135,8 @@ MODULE fourier_interpolation
    !
    ! FFT is serial...
    !
+   CALL start_clock('ftfw')
+   !
    IF ( me_bgrp == 0 ) THEN
       !
       CALL cfft3d( fr, n1, n2, n3, n1, n2, n3, 1, -1)
@@ -162,6 +168,8 @@ MODULE fourier_interpolation
       fg(ig) = (0.0_DP,0.0_DP)
       !
    ENDDO
+   !
+   CALL stop_clock('ftfw')
    !
  ENDSUBROUTINE
  !
@@ -196,6 +204,8 @@ MODULE fourier_interpolation
    ! Workspace
    !
    INTEGER :: ig, idx
+   !
+   CALL start_clock('ftinv')
    !
    fr = 0._DP
    !
@@ -240,6 +250,8 @@ MODULE fourier_interpolation
       CALL cfft3d( fr, n1, n2, n3, n1, n2, n3, 1, 1)
       !
    ENDIF
+   !
+   CALL stop_clock('ftinv')
    !
  ENDSUBROUTINE
  !

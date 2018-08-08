@@ -20,13 +20,15 @@ PROGRAM wstat
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE mp,                   ONLY : mp_sum,mp_barrier
+  USE mp_world,             ONLY : world_comm
   USE wavefunctions_module, ONLY : evc
   USE function3d
   USE pwcom,                ONLY : npw,npwx
+  USE westcom,              ONLY : n_pdep_eigen
   ! 
   IMPLICIT NONE
   !
-  INTEGER :: nx, ny, nz
+  INTEGER :: nx, ny, nz, i
   CHARACTER(LEN=9) :: code = 'WSTAT'
   !
   ! *** START *** 
@@ -44,6 +46,39 @@ PROGRAM wstat
   CALL wstat_readin ( )
   !
   CALL wstat_setup ( )
+  !
+  CALL mp_barrier( world_comm )
+  !
+  nx = n_pdep_eigen
+  ny = n_pdep_eigen
+  nz = n_pdep_eigen
+  !
+  PRINT*, 'nx, ny, nz = ', nx, ny, nz
+  DO i = 1, 100
+      !
+      PRINT*, 'Writing ', i, '%'
+      CALL write_function3d( 'wfcl.f3d', nx, ny, nz, npw, npwx, evc(:, 3))
+      !
+  ENDDO
+  !
+  CALL mp_barrier( world_comm )
+  !
+  DO i = 1, 100
+      !
+      PRINT*, 'Reading ', i, '%'
+      CALL read_function3d ( 'wfcl.f3d', nx, ny, nz, npw, npwx, evc(:, 3))
+      !
+  ENDDO
+  !
+  CALL mp_barrier( world_comm )
+  !
+  PRINT*, 'Reading finished'
+  !
+  CALL west_print_clocks( )
+  !
+  PRINT*, 'STOP'
+  !
+  STOP
   !
   CALL davidson_diago ( )
   !

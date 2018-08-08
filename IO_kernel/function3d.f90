@@ -60,6 +60,8 @@ MODULE function3d
    CALL single_invfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, nmaps, nl, funct3d_g)
    DEALLOCATE( nl )
    !
+   CALL start_clock('write_d3f')
+   !
    IF( me_bgrp == 0 ) THEN
       !
       ! 2) Encode 
@@ -127,6 +129,8 @@ MODULE function3d
       DEALLOCATE( funct3d_r_complex )
    ENDIF 
    !
+   CALL stop_clock('write_d3f')
+   !
    END SUBROUTINE 
  ! 
  !-----------------------------------------------------------------
@@ -163,6 +167,8 @@ MODULE function3d
    LOGICAL :: lstop
    INTEGER, ALLOCATABLE :: nl(:,:)
    CHARACTER(LEN=:),ALLOCATABLE :: ctype 
+   !
+   CALL start_clock('read_d3f')
    !
    IF( me_bgrp == 0 ) THEN
       !
@@ -261,6 +267,9 @@ MODULE function3d
    CALL mp_bcast(nx,0,intra_bgrp_comm)  
    CALL mp_bcast(ny,0,intra_bgrp_comm)  
    CALL mp_bcast(nz,0,intra_bgrp_comm)  
+   !
+   CALL stop_clock('read_d3f')
+   !
    IF( .NOT. ALLOCATED(funct3d_r_complex)) ALLOCATE( funct3d_r_complex(1:ndim) )
    !
    ! 1) F interpolate funct3_r --> funct3d_g

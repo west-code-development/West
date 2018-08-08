@@ -45,20 +45,6 @@ PROGRAM wstat
   !
   CALL wstat_setup ( )
   !
-  !PRINT*, SHAPE(evc)
-  !PRINT*, npw, npwx
-  PRINT*, evc(1:100, 3)
-  !
-  CALL write_function3d( 'wfcl.f3d', 30, 30, 30, npw, npwx, evc(:, 3))
-  PRINT*, "WRITE FINISHED"
-  !
-  CALL read_function3d ( 'wfcl.f3d', nx, ny, nz, npw, npwx, evc(:, 3))
-  PRINT*, "READ FINISHED"
-  PRINT*, nx, ny, nz
-  PRINT*, evc(1:100, 3)
-  !
-  STOP
-  !
   CALL davidson_diago ( )
   !
   CALL exx_ungo ( )

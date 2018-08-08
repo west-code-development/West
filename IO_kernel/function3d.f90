@@ -164,7 +164,6 @@ MODULE function3d
    CHARACTER(LEN=:),ALLOCATABLE :: buff2
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
    LOGICAL :: lread 
-   LOGICAL :: lstop
    INTEGER, ALLOCATABLE :: nl(:,:)
    CHARACTER(LEN=:),ALLOCATABLE :: ctype 
    !
@@ -210,8 +209,6 @@ MODULE function3d
         ctype = bufftag(is:ie)
         lread = .true.
       ENDIF
-      !      
-      lstop = .FALSE.
       !
       IF( lread ) THEN
          ndim = nx*ny*nz
@@ -223,24 +220,14 @@ MODULE function3d
          CASE DEFAULT
          END SELECT 
          nlen = lenbase64(nbytes)
-         charbase64=""
+         ALLOCATE( CHARACTER(LEN=nlen) :: charbase64 )
          !
-         DO
-            READ(iu,'(a)',IOSTAT=ios) buffline
-            IF( ios /=0 ) EXIT
-            IF(INDEX(buffline,"</grid_function>") /= 0) THEN
-               lstop = .TRUE.
-               EXIT
-            ENDIF
-            charbase64 = charbase64 // TRIM( buffline )
-         ENDDO
+         CALL read_long_string(iu,charbase64)
+         !
       ELSE
          CALL errore("","Could not start tag",1)
       ENDIF
       !
-      IF( .NOT. lstop ) THEN
-         CALL errore("","Could not close tag",1)
-      ENDIF
       !
       CLOSE(iu)
       !
@@ -298,7 +285,7 @@ MODULE function3d
    ! I/O
    !
    INTEGER,INTENT(IN) :: iu
-   CHARACTER(LEN=*) :: longstring
+   CHARACTER(LEN=*),INTENT(IN) :: longstring
    !
    ! Workspace
    !
@@ -311,6 +298,40 @@ MODULE function3d
    DO j = 1, nlines
       WRITE(iu,'(a)') longstring((j-1)*maxlen+1:MIN(j*maxlen,thislen))
    ENDDO
+   !
+ END SUBROUTINE
+ !
+ !
+ SUBROUTINE read_long_string(iu,longstring) 
+   !
+   ! Read a long string on multiple lines (each line has a max of 72 charachter)
+   ! The unit "iu" is NOT opened and closed here 
+   !
+   IMPLICIT NONE
+   !
+   ! I/O
+   !
+   INTEGER,INTENT(IN) :: iu
+   CHARACTER(LEN=*),INTENT(INOUT) :: longstring
+   !
+   ! Workspace
+   !
+   INTEGER :: j, nlines, thislen
+   INTEGER, PARAMETER :: maxlen = 72
+   CHARACTER(LEN=maxlen) :: buffline 
+   !
+   thislen = LEN(longstring)
+   nlines = thislen / maxlen
+   !
+   DO j = 1, nlines 
+      READ(iu,'(a)') buffline
+      longstring((j-1)*maxlen+1:j*maxlen) = buffline(1:maxlen)
+   ENDDO
+   !
+   IF( MOD( thislen, maxlen ) > 0 ) THEN
+      READ(iu,'(a)') buffline
+      longstring(nlines*maxlen+1:thislen) = buffline(1:MOD( thislen, maxlen ))
+   ENDIF
    !
  END SUBROUTINE
  !

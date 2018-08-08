@@ -21,11 +21,12 @@ PROGRAM wstat
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE mp,                   ONLY : mp_sum,mp_barrier
   USE wavefunctions_module, ONLY : evc
-  USE function3d,           ONLY : write_function3d
+  USE function3d
   USE pwcom,                ONLY : npw,npwx
   ! 
   IMPLICIT NONE
   !
+  INTEGER :: nx, ny, nz
   CHARACTER(LEN=9) :: code = 'WSTAT'
   !
   ! *** START *** 
@@ -44,9 +45,15 @@ PROGRAM wstat
   !
   CALL wstat_setup ( )
   !
-  PRINT*, SHAPE(evc)
-  PRINT*, npw, npwx
-  CALL write_function3d( 'wfc.f3d', 60, 60, 60, npw, npwx, evc(:, 3))
+  !PRINT*, SHAPE(evc)
+  !PRINT*, npw, npwx
+  PRINT*, evc(1:100, 3)
+  !
+  !CALL write_function3d( 'wfcl.f3d', 30, 30, 30, npw, npwx, evc(:, 3))
+  !
+  CALL read_function3d ( 'wfcl.f3d', nx, ny, nz, npw, npwx, evc(:, 3))
+  PRINT*, nx, ny, nz
+  PRINT*, evc(1:100, 3)
   !
   RETURN
   !

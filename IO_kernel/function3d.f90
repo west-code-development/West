@@ -114,8 +114,7 @@ MODULE function3d
       WRITE(iu,'(a)') '<grid nx="',TRIM(ADJUSTL(lab(1))),'" ny="',TRIM(ADJUSTL(lab(2))),'" nz="',TRIM(ADJUSTL(lab(3))),'"/>'
       WRITE(iu,'(a)') '<grid_function type="',ctype,'" nx="',TRIM(ADJUSTL(lab(1))),'" ny="',TRIM(ADJUSTL(lab(2))), &
             &'" nz="',TRIM(ADJUSTL(lab(3))),'" encoding="base64">'
-      WRITE(iu,'(a)') charbase64
-      !CALL write_long_string(iu,charbase64) 
+      CALL write_long_string(iu,charbase64) 
       WRITE(iu,'(a)') '</grid_function>'
       WRITE(iu,'(a)') '</fpmd:function3d>'
       !
@@ -298,7 +297,7 @@ MODULE function3d
    nlines = thislen / maxlen
    IF( MOD( thislen, maxlen ) > 0 ) nlines = nlines + 1
    DO j = 1, nlines
-      WRITE(iu,'(a)') longstring((j-1)*72+1:MIN((j)*72,maxlen))
+      WRITE(iu,'(a)') longstring((j-1)*maxlen+1:MIN((j)*maxlen,thislen))
    ENDDO
    !
  END SUBROUTINE

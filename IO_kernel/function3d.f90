@@ -27,6 +27,7 @@ MODULE function3d
    USE control_flags,   ONLY : gamma_only
    USE mp_bands,        ONLY : me_bgrp
    USE base64_module
+   USE fourier_interpolation
    !
    IMPLICIT NONE
    !
@@ -54,7 +55,7 @@ MODULE function3d
       nmaps = 1 
    ENDIF
    ALLOCATE( nl(ng,nmaps) )
-   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nl, nmaps)
+   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nmaps, nl)
    ALLOCATE( funct3d_r_complex(nx*ny*nz) )
    CALL single_invfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, ndim, nl, funct3d_g)
    DEALLOCATE( nl )
@@ -136,6 +137,7 @@ MODULE function3d
    USE control_flags,   ONLY : gamma_only
    USE mp_bands,        ONLY : me_bgrp
    USE base64_module
+   USE fourier_interpolation
    !
    IMPLICIT NONE
    !
@@ -266,8 +268,8 @@ MODULE function3d
       nmaps = 1 
    ENDIF
    ALLOCATE( nl(ng,nmaps) )
-   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nl, nmaps)
-   CALL single_fwfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, ndim, nl, funct3d_g)
+   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nmaps, nl)
+   CALL single_fwfft_fromArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, ndim, nl, funct3d_g)
    DEALLOCATE( nl )
    DEALLOCATE( funct3d_r_complex )
    !

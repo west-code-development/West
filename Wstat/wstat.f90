@@ -20,6 +20,9 @@ PROGRAM wstat
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE mp,                   ONLY : mp_sum,mp_barrier
+  USE wavefunctions_module, ONLY : evc
+  USE function3d,           ONLY : write_function3d
+  USE pwcom,                ONLY : npw,npwx
   ! 
   IMPLICIT NONE
   !
@@ -40,6 +43,10 @@ PROGRAM wstat
   CALL wstat_readin ( )
   !
   CALL wstat_setup ( )
+  !
+  CALL write_function3d( 'wfc.f3d', 30, 30, 30, npw, npwx, evc(1, :))
+  !
+  RETURN
   !
   CALL davidson_diago ( )
   !

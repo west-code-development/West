@@ -183,7 +183,7 @@ MODULE fourier_interpolation
    USE kinds,         ONLY : DP
    USE fft_scalar,    ONLY : cfft3d
    USE mp_bands,      ONLY : intra_bgrp_comm, me_bgrp
-   USE mp,            ONLY : mp_bcast
+   USE mp,            ONLY : mp_bcast, mp_sum
    !
    ! I/O
    !

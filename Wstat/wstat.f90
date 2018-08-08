@@ -49,13 +49,15 @@ PROGRAM wstat
   !PRINT*, npw, npwx
   PRINT*, evc(1:100, 3)
   !
-  !CALL write_function3d( 'wfcl.f3d', 30, 30, 30, npw, npwx, evc(:, 3))
+  CALL write_function3d( 'wfcl.f3d', 30, 30, 30, npw, npwx, evc(:, 3))
+  PRINT*, "WRITE FINISHED"
   !
   CALL read_function3d ( 'wfcl.f3d', nx, ny, nz, npw, npwx, evc(:, 3))
+  PRINT*, "READ FINISHED"
   PRINT*, nx, ny, nz
   PRINT*, evc(1:100, 3)
   !
-  RETURN
+  STOP
   !
   CALL davidson_diago ( )
   !

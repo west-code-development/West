@@ -53,39 +53,18 @@ west_test_gamma:
 west_doc_build:
  tags: [rcc,docker,node-01]
  stage: doc
- image: debian:7
+ image: continuumio/miniconda3:latest
  before_script:
    - apt-get update > /dev/null
-   - apt-get install -qq build-essential > /dev/null
-   - apt-get install -qq apt-utils > /dev/null
-   - apt-get install -qq wget git > /dev/null
-   - apt-get -qq install vim > /dev/null 
-   - apt-get -qq install zlib1g-dev > /dev/null
-   - apt-get -qq install libssl-dev > /dev/null
    - export TZ="US/Central"
+   - apt-get install -qq make > /dev/null
+   - apt-get install -qq pandoc > /dev/null
    - rm -f /etc/localtime
    - cp  /usr/share/zoneinfo/$TZ  /etc/localtime
-   - apt-get install -qq texlive-latex-base > /dev/null
-   - apt-get install -qq latex2html > /dev/null
-   - apt-get install -qq pandoc > /dev/null
-   - cd /opt
-   - export PY_VERSION="3.5.4"
-   - wget https://www.python.org/ftp/python/$PY_VERSION/Python-$PY_VERSION.tgz
-   - tar -xzvf Python-$PY_VERSION.tgz
-   - cd Python-$PY_VERSION 
-   - export PY_DIR="/opt/python"
-   - ./configure --prefix $PY_DIR
-   - make 
-   - make install
-   - ln -s $PY_DIR/bin/python3.5 $PY_DIR/bin/python
-   - export PATH=$PY_DIR/bin:$PATH
-   - wget https://bootstrap.pypa.io/get-pip.py
-   - python get-pip.py
-   - which python
-   - which pip 
-   - pip install nbsphinx
-   - pip install sphinx_rtd_theme
-   - pip install ipython
+   - pip install -q --upgrade pip
+   - pip install -q nbsphinx
+   - pip install -q sphinx_rtd_theme
+   - pip install -q ipython
  script:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West

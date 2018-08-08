@@ -44,7 +44,9 @@ PROGRAM wstat
   !
   CALL wstat_setup ( )
   !
-  CALL write_function3d( 'wfc.f3d', 30, 30, 30, npw, npwx, evc(1, :))
+  PRINT*, SHAPE(evc)
+  PRINT*, npw, npwx
+  CALL write_function3d( 'wfc.f3d', 60, 60, 60, npw, npwx, evc(:, 3))
   !
   RETURN
   !

@@ -176,9 +176,9 @@ MODULE fourier_interpolation
    !          n     = actual number of PW
    !          nx    = leading dimendion for fg
    !          ndim  = 1,2
-   !          fr    = ONE COMPLEX array containing ONE function in R space (note that the array is not distributed, i.e. dimension = n1*n2*n3 )
+   !          fg    = ONE COMPLEX array containing ONE function in R space (note that the array is not distributed, i.e. dimension = n1*n2*n3 )
    !          nl    = pre-computed mapping from G to R space (i,e. from [1,n] to [1, n1*n2*n3] )
-   ! OUTPUT : fg    = ONE COMPLEX array containing ONE functions in G space (note that the array is distributed ) 
+   ! OUTPUT : fr    = ONE COMPLEX array containing ONE functions in G space (note that the array is distributed ) 
    !
    USE kinds,         ONLY : DP
    USE fft_scalar,    ONLY : cfft3d

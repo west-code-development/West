@@ -113,10 +113,11 @@ MODULE function3d
       WRITE(lab(3),'(i14)') nz
       WRITE(iu,'(a)') '<grid nx="',TRIM(ADJUSTL(lab(1))),'" ny="',TRIM(ADJUSTL(lab(2))),'" nz="',TRIM(ADJUSTL(lab(3))),'"/>'
       WRITE(iu,'(a)') '<grid_function type="',ctype,'" nx="',TRIM(ADJUSTL(lab(1))),'" ny="',TRIM(ADJUSTL(lab(2))), &
-            &'" nz="',TRIM(ADJUSTL(lab(3))),' encoding="base64"/>'
-      CALL write_long_string(iu,charbase64) 
+            &'" nz="',TRIM(ADJUSTL(lab(3))),'" encoding="base64">'
+      WRITE(iu,'(a)') charbase64
+      !CALL write_long_string(iu,charbase64) 
       WRITE(iu,'(a)') '</grid_function>'
-      WRITE(iu,'(a)') '</function3d>'
+      WRITE(iu,'(a)') '</fpmd:function3d>'
       !
       CLOSE(iu)
       !

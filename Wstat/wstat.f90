@@ -24,7 +24,7 @@ PROGRAM wstat
   USE wavefunctions_module, ONLY : evc
   USE function3d
   USE pwcom,                ONLY : npw,npwx
-  USE westcom,              ONLY : n_pdep_eigen
+  USE westcom,              ONLY : n_pdep_eigen, n_pdep_times
   ! 
   IMPLICIT NONE
   !
@@ -54,18 +54,18 @@ PROGRAM wstat
   nz = n_pdep_eigen
   !
   PRINT*, 'nx, ny, nz = ', nx, ny, nz
-  DO i = 1, 100
+  DO i = 1, n_pdep_times
       !
-      PRINT*, 'Writing ', i, '%'
+      PRINT*, 'Writing ', i, '/', n_pdep_times
       CALL write_function3d( 'wfcl.f3d', nx, ny, nz, npw, npwx, evc(:, 3))
       !
   ENDDO
   !
   CALL mp_barrier( world_comm )
   !
-  DO i = 1, 100
+  DO i = 1, n_pdep_times
       !
-      PRINT*, 'Reading ', i, '%'
+      PRINT*, 'Reading ', i, '/', n_pdep_times
       CALL read_function3d ( 'wfcl.f3d', nx, ny, nz, npw, npwx, evc(:, 3))
       !
   ENDDO

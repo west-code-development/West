@@ -318,20 +318,14 @@ MODULE function3d
    !
    INTEGER :: j, nlines, thislen
    INTEGER, PARAMETER :: maxlen = 72
-   CHARACTER(LEN=maxlen) :: buffline 
    !
    thislen = LEN(longstring)
    nlines = thislen / maxlen
+   IF( MOD( thislen, maxlen ) > 0 ) nlines = nlines + 1
    !
    DO j = 1, nlines 
-      READ(iu,'(a)') buffline
-      longstring((j-1)*maxlen+1:j*maxlen) = buffline(1:maxlen)
+      READ(iu,'(a)') longstring((j-1)*maxlen+1:MIN(j*maxlen,thislen))
    ENDDO
-   !
-   IF( MOD( thislen, maxlen ) > 0 ) THEN
-      READ(iu,'(a)') buffline
-      longstring(nlines*maxlen+1:thislen) = buffline(1:MOD( thislen, maxlen ))
-   ENDIF
    !
  END SUBROUTINE
  !

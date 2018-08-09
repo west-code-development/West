@@ -108,7 +108,7 @@ MODULE fourier_interpolation
    !          ng    = actual number of PW
    !          ngx   = leading dimendion for fg
    !          ndim  = 1, 2
-   !          fr    = ONE COMPLEX array containing ONE function in R space (note that the array is not distributed, i.e. dimension = n1*n2*n3 )
+   !          fr    = ONE COMPLEX array containing ONE function in R space (note that the array is not distributed, i.e. dimension = n1*n2*n3 ) DESTROYED
    !          nl    = pre-computed mapping from G to R space (i,e. from [1,n] to [1, n1*n2*n3] )
    ! OUTPUT : fg    = ONE COMPLEX array containing ONE functions in G space (note that the array is distributed ) 
    !
@@ -121,7 +121,7 @@ MODULE fourier_interpolation
    !
    INTEGER,     INTENT(IN)       :: n1, n2, n3, ng, ngx, ndim
    INTEGER,     INTENT(IN)       :: nl(ngx,ndim)
-   COMPLEX(DP), INTENT(IN)       :: fr(n1*n2*n3)
+   COMPLEX(DP), INTENT(INOUT)    :: fr(n1*n2*n3)
    COMPLEX(DP), INTENT(OUT)      :: fg(ngx)
    INTEGER, INTENT(IN), OPTIONAL :: igk(ng)
    !
@@ -176,14 +176,14 @@ MODULE fourier_interpolation
    !          n     = actual number of PW
    !          nx    = leading dimendion for fg
    !          ndim  = 1,2
-   !          fr    = ONE COMPLEX array containing ONE function in R space (note that the array is not distributed, i.e. dimension = n1*n2*n3 )
+   !          fg    = ONE COMPLEX array containing ONE function in R space (note that the array is not distributed, i.e. dimension = n1*n2*n3 )
    !          nl    = pre-computed mapping from G to R space (i,e. from [1,n] to [1, n1*n2*n3] )
-   ! OUTPUT : fg    = ONE COMPLEX array containing ONE functions in G space (note that the array is distributed ) 
+   ! OUTPUT : fr    = ONE COMPLEX array containing ONE functions in G space (note that the array is distributed ) 
    !
    USE kinds,         ONLY : DP
    USE fft_scalar,    ONLY : cfft3d
    USE mp_bands,      ONLY : intra_bgrp_comm, me_bgrp
-   USE mp,            ONLY : mp_bcast
+   USE mp,            ONLY : mp_bcast, mp_sum
    !
    ! I/O
    !

@@ -27,6 +27,7 @@ MODULE function3d
    USE control_flags,   ONLY : gamma_only
    USE mp_bands,        ONLY : me_bgrp
    USE base64_module
+   USE fourier_interpolation
    !
    IMPLICIT NONE
    !
@@ -53,10 +54,10 @@ MODULE function3d
    ELSE 
       nmaps = 1 
    ENDIF
-   ALLOCATE( nl(ng,nmaps) )
-   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nl, nmaps)
+   ALLOCATE( nl(ngx,nmaps) )
+   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nmaps, nl)
    ALLOCATE( funct3d_r_complex(nx*ny*nz) )
-   CALL single_invfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, ndim, nl, funct3d_g)
+   CALL single_invfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, nmaps, nl, funct3d_g)
    DEALLOCATE( nl )
    !
    IF( me_bgrp == 0 ) THEN
@@ -94,28 +95,28 @@ MODULE function3d
       WRITE(iu,'(a)') '<fpmd:function3d xmlns:fpmd="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0"'
       WRITE(iu,'(a)') 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
       WRITE(iu,'(a)') 'xsi:schemaLocation="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0 function3d.xsd"'
-      WRITE(iu,'(a)') 'name="delta_rho">'
+      WRITE(iu,'(a)') 'name="delta_v">'
       DO i = 1, 3
          WRITE(lab(i),'(f14.6)') celldm(1) * at(i,1) 
       ENDDO     
-      WRITE(iu,'(a)') '<domain a="',TRIM(ADJUSTL(lab(1))), TRIM(ADJUSTL(lab(2))), TRIM(ADJUSTL(lab(3))),'"'
+      WRITE(iu,'(a)') '<domain a="'//TRIM(ADJUSTL(lab(1)))//" "//TRIM(ADJUSTL(lab(2)))//" "//TRIM(ADJUSTL(lab(3)))//'"'
       DO i = 1, 3
          WRITE(lab(i),'(f14.6)') celldm(1) * at(i,2) 
       ENDDO     
-      WRITE(iu,'(a)') 'b="',TRIM(ADJUSTL(lab(1))), TRIM(ADJUSTL(lab(2))), TRIM(ADJUSTL(lab(3))),'"'
+      WRITE(iu,'(a)') 'b="'//TRIM(ADJUSTL(lab(1)))//" "//TRIM(ADJUSTL(lab(2)))//" "//TRIM(ADJUSTL(lab(3)))//'"'
       DO i = 1, 3
          WRITE(lab(i),'(f14.6)') celldm(1) * at(i,3) 
       ENDDO     
-      WRITE(iu,'(a)') 'c="',TRIM(ADJUSTL(lab(1))), TRIM(ADJUSTL(lab(2))), TRIM(ADJUSTL(lab(3))),'"/>'
+      WRITE(iu,'(a)') 'c="'//TRIM(ADJUSTL(lab(1)))//" "//TRIM(ADJUSTL(lab(2)))//" "//TRIM(ADJUSTL(lab(3)))//'"/>'
       WRITE(lab(1),'(i14)') nx
       WRITE(lab(2),'(i14)') ny
       WRITE(lab(3),'(i14)') nz
-      WRITE(iu,'(a)') '<grid nx="',TRIM(ADJUSTL(lab(1))),'" ny="',TRIM(ADJUSTL(lab(2))),'" nz="',TRIM(ADJUSTL(lab(3))),'"/>'
-      WRITE(iu,'(a)') '<grid_function type="',ctype,'" nx="',TRIM(ADJUSTL(lab(1))),'" ny="',TRIM(ADJUSTL(lab(2))), &
-            &'" nz="',TRIM(ADJUSTL(lab(3))),' encoding="base64"/>'
+      WRITE(iu,'(a)') '<grid nx="'//TRIM(ADJUSTL(lab(1)))//'" ny="'//TRIM(ADJUSTL(lab(2)))//'" nz="'//TRIM(ADJUSTL(lab(3)))//'"/>'
+      WRITE(iu,'(a)') '<grid_function type="'//ctype//'" nx="'//TRIM(ADJUSTL(lab(1)))//'" ny="'//TRIM(ADJUSTL(lab(2)))// &
+            &'" nz="'//TRIM(ADJUSTL(lab(3)))//'" encoding="base64">'
       CALL write_long_string(iu,charbase64) 
       WRITE(iu,'(a)') '</grid_function>'
-      WRITE(iu,'(a)') '</function3d>'
+      WRITE(iu,'(a)') '</fpmd:function3d>'
       !
       CLOSE(iu)
       !
@@ -134,8 +135,10 @@ MODULE function3d
    !
    USE kinds,           ONLY : DP
    USE control_flags,   ONLY : gamma_only
-   USE mp_bands,        ONLY : me_bgrp
+   USE mp,              ONLY : mp_bcast
+   USE mp_bands,        ONLY : me_bgrp, intra_bgrp_comm
    USE base64_module
+   USE fourier_interpolation
    !
    IMPLICIT NONE
    !
@@ -157,7 +160,6 @@ MODULE function3d
    CHARACTER(LEN=:),ALLOCATABLE :: buff2
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
    LOGICAL :: lread 
-   LOGICAL :: lstop
    INTEGER, ALLOCATABLE :: nl(:,:)
    CHARACTER(LEN=:),ALLOCATABLE :: ctype 
    !
@@ -201,8 +203,6 @@ MODULE function3d
         ctype = bufftag(is:ie)
         lread = .true.
       ENDIF
-      !      
-      lstop = .FALSE.
       !
       IF( lread ) THEN
          ndim = nx*ny*nz
@@ -214,28 +214,14 @@ MODULE function3d
          CASE DEFAULT
          END SELECT 
          nlen = lenbase64(nbytes)
-         ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
+         ALLOCATE( CHARACTER(LEN=nlen) :: charbase64 )
          !
-         DO
-            READ(iu,'(a)',IOSTAT=ios) buffline
-            IF( ios /=0 ) EXIT
-            IF(INDEX(buffline,"</grid_function>") /= 0) THEN
-               lstop = .TRUE.
-               EXIT
-            ENDIF
-            IF( .NOT. ALLOCATED( charbase64 )) THEN
-               charbase64 = TRIM( buffline )
-            ELSE
-               charbase64 = charbase64 // TRIM( buffline )
-            ENDIF
-         ENDDO
+         CALL read_long_string(iu,charbase64)
+         !
       ELSE
          CALL errore("","Could not start tag",1)
       ENDIF
       !
-      IF( .NOT. lstop ) THEN
-         CALL errore("","Could not close tag",1)
-      ENDIF
       !
       CLOSE(iu)
       !
@@ -256,7 +242,14 @@ MODULE function3d
       CASE DEFAULT
       END SELECT
       !
-   ENDIF
+   ENDIF 
+   !
+   CALL mp_bcast(ndim,0,intra_bgrp_comm)  
+   CALL mp_bcast(nx,0,intra_bgrp_comm)  
+   CALL mp_bcast(ny,0,intra_bgrp_comm)  
+   CALL mp_bcast(nz,0,intra_bgrp_comm)  
+   !
+   IF( .NOT. ALLOCATED(funct3d_r_complex)) ALLOCATE( funct3d_r_complex(1:ndim) )
    !
    ! 1) F interpolate funct3_r --> funct3d_g
    !
@@ -265,9 +258,9 @@ MODULE function3d
    ELSE 
       nmaps = 1 
    ENDIF
-   ALLOCATE( nl(ng,nmaps) )
-   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nl, nmaps)
-   CALL single_fwfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, ndim, nl, funct3d_g)
+   ALLOCATE( nl(ngx,nmaps) )
+   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nmaps, nl)
+   CALL single_fwfft_fromArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, nmaps, nl, funct3d_g)
    DEALLOCATE( nl )
    DEALLOCATE( funct3d_r_complex )
    !
@@ -284,7 +277,7 @@ MODULE function3d
    ! I/O
    !
    INTEGER,INTENT(IN) :: iu
-   CHARACTER(LEN=*) :: longstring
+   CHARACTER(LEN=*),INTENT(IN) :: longstring
    !
    ! Workspace
    !
@@ -295,7 +288,35 @@ MODULE function3d
    nlines = thislen / maxlen
    IF( MOD( thislen, maxlen ) > 0 ) nlines = nlines + 1
    DO j = 1, nlines
-      WRITE(iu,'(a)') longstring((j-1)*72+1:MIN((j)*72,maxlen))
+      WRITE(iu,'(a)') longstring((j-1)*maxlen+1:MIN(j*maxlen,thislen))
+   ENDDO
+   !
+ END SUBROUTINE
+ !
+ !
+ SUBROUTINE read_long_string(iu,longstring) 
+   !
+   ! Read a long string on multiple lines (each line has a max of 72 charachter)
+   ! The unit "iu" is NOT opened and closed here 
+   !
+   IMPLICIT NONE
+   !
+   ! I/O
+   !
+   INTEGER,INTENT(IN) :: iu
+   CHARACTER(LEN=*),INTENT(INOUT) :: longstring
+   !
+   ! Workspace
+   !
+   INTEGER :: j, nlines, thislen
+   INTEGER, PARAMETER :: maxlen = 72
+   !
+   thislen = LEN(longstring)
+   nlines = thislen / maxlen
+   IF( MOD( thislen, maxlen ) > 0 ) nlines = nlines + 1
+   !
+   DO j = 1, nlines 
+      READ(iu,'(a)') longstring((j-1)*maxlen+1:MIN(j*maxlen,thislen))
    ENDDO
    !
  END SUBROUTINE

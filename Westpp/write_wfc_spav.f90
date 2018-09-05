@@ -53,7 +53,7 @@ SUBROUTINE write_wfc_spav ( iu, fname, wfc, r0, nr, rmax )
   IF ( gamma_only ) THEN 
      !
      IF(gstart == 2) THEN 
-        spav(:) = spav(:) + REAL( wfc(ig) , KIND=DP )
+        spav(:) = spav(:) + REAL( wfc(1) , KIND=DP )
      ENDIF 
      !
      DO ig = gstart, ngm

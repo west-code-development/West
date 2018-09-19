@@ -70,7 +70,7 @@ west_build_intel:
    - which ifort
    - which mpiifort
    - ./configure --enable-openmp 
-   - sleep 500s
+   - sleep 600s
    - make -j pw
    - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

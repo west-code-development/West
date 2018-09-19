@@ -60,6 +60,7 @@ west_build_intel:
    - export I_MPI_F90=ifort 
    - export I_MPI_ROOT=/software/intel/impi/5.1.3.210
    - which ifort
+   - which icc
    - which mpiifort 
    - ./configure 
    - sleep 700s

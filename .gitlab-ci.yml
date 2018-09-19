@@ -32,12 +32,22 @@ west_build:
 west_build_intel:
  tags: [rcc,docker,node-01]
  stage: build
- image: ubuntu:latest
+ image: centos:centos7
  before_script:
-   - apt-get update > /dev/null
-   - apt-get install -qq git > /dev/null 
-   - apt-get install -qq build-essential wget python-pip python-dev > /dev/null
-   - apt-get install -qq libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config > /dev/null
+   - yum -y update > /dev/null
+   - yum -y install yum-utils > /dev/null
+   - yum -y install centos-release-scl-rh > /dev/null
+   - yum -y install vim > /dev/null 
+   - yum -y install devtoolset-3-gcc > /dev/null
+   - yum -y install devtoolset-3-gcc-gfortran > /dev/null
+   - yum -y install wget pkgconfig git make > /dev/null
+   - yum -y install openmpi3-devel > /dev/null
+   - yum -y install blas-devel lapack-devel fftw-devel > /dev/null
+   - yum -y install libblas-dev liblapack-dev fftw3 fftw3-dev pkg-config > /dev/null
+   - export TZ="US/Central"
+   - rm -f /etc/localtime
+   - cp  /usr/share/zoneinfo/$TZ  /etc/localtime
+   - source /opt/rh/devtoolset-3/enable
  script:
    - echo "JHSKONE"
    - echo "$PATH"
@@ -56,6 +66,7 @@ west_build_intel:
    - which ifort
    - which mpiifort
    - ./configure --enable-openmp 
+   - sleep 600s
    - make -j pw
    - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

@@ -15,6 +15,7 @@
 ## Contributors
 
 Jonathan Skone
+Aditya Tanikanti
 
 ## Former Developers
 

@@ -18,6 +18,8 @@ nat         = 2,
 ntyp        = 1,
 ecutwfc     = 30.0,
 nbnd        = 10
+noinv       = .true.
+nosym       = .true.
 /
 &ELECTRONS
 diago_full_acc = .true.

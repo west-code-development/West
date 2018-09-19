@@ -53,6 +53,7 @@ west_build_intel:
    - export BLAS_LIBS=" -lmkl_intel_lp64  -lmkl_sequential -lmkl_core"
    - export LAPACK_LIBS_SWITCH="external"
    - export LAPACK_LIBS=""
+   - sleep 1200s
    - ./configure --enable-openmp 
    - make -j pw
    - ls bin

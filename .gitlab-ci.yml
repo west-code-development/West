@@ -42,7 +42,6 @@ west_build_intel:
    - export TZ="US/Central"
    - rm -f /etc/localtime
    - cp  /usr/share/zoneinfo/$TZ  /etc/localtime
-   - source /opt/rh/devtoolset-3/enable
  script:
    - echo "JHSKONE"
    - echo "$PATH"

@@ -50,7 +50,7 @@ west_build_intel:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR
    - git describe
-   - export PATH=/opt/intel/impi/5.1.3.210/bin:/opt/intel/2016up3/bin:$PATH
+   - export PATH=/software/intel/impi/5.1.3.210/intel64/bin:/software/intel/parallel_studio_xe_2016_update3/bin:$PATH
    - export LD_LIBRARY_PATH=/opt/intel/impi/5.1.3.210/lib:/opt/intel/mkl/lib/intel64:/opt/intel/2016up3/lib/intel64:/opt/intel/2016up3/ipp/lib/intel64:$LD_LIBRARY_PATH
    - export F77=mpiifort
    - export CC=icc

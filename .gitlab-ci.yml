@@ -58,6 +58,7 @@ west_build_intel:
    - export MPIF90=mpiifort
    - export FC=ifort
    - which ifort
+   - which mpiifort 
    - ./configure 
    - sleep 700s
    - make -j pw

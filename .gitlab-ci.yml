@@ -57,6 +57,7 @@ west_build_intel:
    - export LD=mpiifort
    - export MPIF90=mpiifort
    - export FC=ifort
+   - export I_MPI_F90=ifort
    - which ifort
    - which mpiifort 
    - ./configure 

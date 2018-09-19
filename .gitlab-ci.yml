@@ -69,7 +69,7 @@ west_build_intel:
    - export LAPACK_LIBS=""
    - which ifort
    - which mpiifort
-   - ./configure --enable-openmp 
+   - ./configure --enable-openmp --with-scalapack 
    - sleep 600s
    - make -j pw
    - ls bin

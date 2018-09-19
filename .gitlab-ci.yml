@@ -56,7 +56,7 @@ west_build_intel:
    - cd QEDIR
    - git describe
    - export PATH=/opt/intel/impi/5.1.3.210/bin:/opt/intel/2016up3/bin:$PATH
-   - export LD_LIBRARY_PATH=/opt/intel/impi/5.1.3.210/lib:/opt/intel/2016up3/lib/intel64:/opt/intel/2016up3/ipp/lib/intel64:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+   - export LD_LIBRARY_PATH=/opt/intel/impi/5.1.3.210/lib:/opt/intel/mkl/lib/intel64:/opt/intel/2016up3/lib/intel64:/opt/intel/2016up3/ipp/lib/intel64:$LD_LIBRARY_PATH
    - export F77=ifort
    - export CC=icc
    - export MPIF90=mpiifort

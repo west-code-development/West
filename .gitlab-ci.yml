@@ -79,7 +79,7 @@ west_build_intel:
    - export LAPACK_LIBS_SWITCH="external"
    - export LAPACK_LIBS=""
    - export SCALAPACK_LIBS=" -lmkl_scalapack_lp64 -Wl,--start-group  -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -Wl,--end-group"
-   - ./configure 
+   - ./configure --enable-openmp --with-scalapack
    - make -j pw
    - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

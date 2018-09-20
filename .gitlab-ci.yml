@@ -71,7 +71,7 @@ west_build_intel:
    - which icc
    - which mpiifort 
    - ./configure 
-   - sleep 700s
+   - sleep 760s
    - make -j pw
    - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

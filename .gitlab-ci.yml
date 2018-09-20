@@ -147,9 +147,11 @@ west_test_gamma_intel:
    - git describe
    - make
    - ls ../bin 
+   - adduser -q --disabled-password --gecos qe qe
+   - cp -r test-suite /home/qe
+   - su - qe
    - cd test-suite 
-   - sleep 600
-   - make NP=28 NI=1 NT=1 
+   - make NP=14 NI=1 NT=1 
 
 west_test_gamma_gcc:
  tags: [rcc,docker,node-01]
@@ -169,8 +171,11 @@ west_test_gamma_gcc:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West 
    - make > /dev/null
+   - adduser -q --disabled-password --gecos qe qe
+   - cp -r test-suite /home/qe
+   - su - qe
    - cd test-suite 
-   - make NP=28 NI=1 NT=1 
+   - make NP=14 NI=1 NT=1 
 
 west_doc_build:
  tags: [rcc,docker,node-01]

@@ -147,7 +147,7 @@ west_test_gamma_intel:
    - git describe
    - make
    - ls ../bin 
-   - adduser --quiet --disabled-password --gecos qe qe
+   - useradd -m qe
    - cp -r test-suite /home/qe
    - su - qe
    - cd test-suite 
@@ -171,7 +171,7 @@ west_test_gamma_gcc:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West 
    - make > /dev/null
-   - adduser -q --disabled-password --gecos qe qe
+   - useradd -m qe
    - cp -r test-suite /home/qe
    - su - qe
    - cd test-suite 

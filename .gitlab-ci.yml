@@ -46,7 +46,7 @@ west_build_intel:
    - export PATH=/software/intel/impi/5.1.3.210/intel64/bin:/software/intel/parallel_studio_xe_2016_update3/bin:$PATH
    - export LD_LIBRARY_PATH=/software/intel/parallel_studio_xe_2017/mkl/lib/intel64:/software/intel/impi/5.1.3.210/intel64/lib:$LD_LIBRARY_PATH
    - export LD_LIBRARY_PATH=/software/intel/parallel_studio_xe_2016_update3/ipp/lib/intel64:/software/intel/parallel_studio_xe_2016_update3/lib/intel64:$LD_LIBRARY_PATH
-   - export CPATH=/software/intel/parallel_studio_xe_2016_update3/ipp/include:$CPATH
+   - export CPATH=/software/intel/parallel_studio_xe_2016_update3/ipp/include
    - export I_MPI_CC=icc
    - export I_MPI_CXX=icpc
    - export I_MPI_FC=ifort
@@ -54,6 +54,7 @@ west_build_intel:
    - export I_MPI_F90=ifort
    - export I_MPI_F95=ifort
    - export I_MPI_PROCESS_MANAGER=hydra
+   - export I_MPI_ROOT=/software/intel/impi/5.1.3.210
  script:
    - echo "$PATH"
    - echo "$LD_LIBRARY_PATH"
@@ -65,13 +66,11 @@ west_build_intel:
    - export CC=mpiicc
    - export MPIF90=mpiifort
    - export FC=mpiifort
-   - export I_MPI_F90=ifort 
-   - export I_MPI_ROOT=/software/intel/impi/5.1.3.210
    - which ifort
    - which icc
    - which mpiifort 
    - ./configure 
-   - sleep 760s
+   - sleep 1200s
    - make -j pw
    - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

@@ -2,8 +2,8 @@ variables:
  GIT_STRATEGY: none
 
 stages:
- - test
  - build
+ - test
  - doc
 
 west_build_gcc:

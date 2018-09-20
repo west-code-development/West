@@ -14,7 +14,7 @@ export NT=1  # Number of OPENMP threads
 export BINDIR = ../../../bin
 
 # How to run in a parallel executable with MPI
-export PARA_PREFIX = mpirun -np ${NP} --allow-run-as-root  
+export PARA_PREFIX = mpirun -np ${NP} 
 
 # How to download files
 export WGET=wget -N -q

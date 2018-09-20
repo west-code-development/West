@@ -147,7 +147,7 @@ west_test_gamma_intel:
    - git describe
    - make
    - ls ../bin 
-   - adduser -q --disabled-password --gecos qe qe
+   - adduser --quiet --disabled-password --gecos qe qe
    - cp -r test-suite /home/qe
    - su - qe
    - cd test-suite 

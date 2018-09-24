@@ -15,4 +15,9 @@
 
 .wy-side-nav-search {
    background-color: #B80000;
+   color: #fcfcfc;
+}
+
+.version {
+   color:white !important;
 }

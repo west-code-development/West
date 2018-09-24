@@ -1,6 +1,0 @@
-
-Details
-    This example shows how to use pw.x, wstat.x and wfreq.x to compute 
-    the GW electronic structure for SiH4. 
-    The input parameters have not been converged in order to yield a quick 
-    simulation time for testing purposes only. 

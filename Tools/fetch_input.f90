@@ -393,7 +393,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
         !
         numsp = 14
         CALL io_push_c512('qe_prefix',qe_prefix,numsp)
-        CALL io_push_c512('west_prefix',qe_prefix,numsp)
+        CALL io_push_c512('west_prefix',west_prefix,numsp)
         CALL io_push_c512('outdir',outdir,numsp)
         !
         CALL io_push_bar()

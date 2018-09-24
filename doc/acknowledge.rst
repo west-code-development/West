@@ -24,7 +24,8 @@ Developers
 Contributors
 ------------
 
-Jonathan Skone 
+Jonathan Skone,
+Aditya Tanikanti 
 
 Former Developers
 -----------------

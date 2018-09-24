@@ -89,7 +89,7 @@ west_build_intel:
    - ls ../bin 
    - ldd ../bin/pw.x
 
-west_test_gamma_intel:
+west_test_intel:
  tags: [rcc,docker,node-01]
  stage: test
  image: centos:centos7
@@ -153,7 +153,7 @@ west_test_gamma_intel:
    - cd test-suite 
    - make NP=14 NI=1 NT=1 
 
-west_test_gamma_gcc:
+west_test_gcc:
  tags: [rcc,docker,node-01]
  stage: test
  image: ubuntu:latest

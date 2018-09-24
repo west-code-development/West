@@ -6,7 +6,7 @@ stages:
  - test
  - doc
 
-west_build:
+west_build_gcc:
  tags: [rcc,docker,node-01]
  stage: build
  image: ubuntu:latest
@@ -29,7 +29,131 @@ west_build:
    - make
    - ls ../bin 
 
-west_test:
+west_build_intel:
+ tags: [rcc,docker,node-01]
+ stage: build
+ image: centos:centos7
+ before_script:
+   - yum -y update > /dev/null
+   - yum -y install yum-utils > /dev/null
+   - yum -y install centos-release-scl-rh > /dev/null
+   - yum -y install devtoolset-3 > /dev/null
+   - yum -y install gcc gcc-c++ autoconf automake
+   - yum -y install vim > /dev/null 
+   - yum -y install wget pkgconfig git make > /dev/null
+   - export TZ="US/Central"
+   - rm -f /etc/localtime
+   - cp  /usr/share/zoneinfo/$TZ  /etc/localtime
+   - export PATH=/software/intel/impi/5.1.3.210/intel64/bin:/software/intel/parallel_studio_xe_2016_update3/bin:$PATH
+   - export LD_LIBRARY_PATH=/software/intel/parallel_studio_xe_2017/mkl/lib/intel64:/software/intel/impi/5.1.3.210/intel64/lib:$LD_LIBRARY_PATH
+   - export LD_LIBRARY_PATH=/software/intel/parallel_studio_xe_2016_update3/ipp/lib/intel64:/software/intel/parallel_studio_xe_2016_update3/lib/intel64:$LD_LIBRARY_PATH
+   - export LIBRARY_PATH=/software/intel/parallel_studio_xe_2017/mkl/lib/intel64:$LIBRARY_PATH
+   - export CPATH=/software/intel/parallel_studio_xe_2016_update3/ipp/include:/software/intel/parallel_studio_xe_2017/mkl/include
+   - export I_MPI_CC=icc
+   - export I_MPI_CXX=icpc
+   - export I_MPI_FC=ifort
+   - export I_MPI_F77=ifort
+   - export I_MPI_F90=ifort
+   - export I_MPI_F95=ifort
+   - export I_MPI_PROCESS_MANAGER=hydra
+   - export I_MPI_ROOT=/software/intel/impi/5.1.3.210
+ script:
+   - echo "$PATH"
+   - echo "$LD_LIBRARY_PATH"
+   - echo "$I_MPI_F90"
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - export F77=mpiifort
+   - export CC=mpiicc
+   - export MPIF90=mpiifort
+   - export FC=mpiifort
+   - which ifort
+   - which icc
+   - which mpiifort 
+   - export CFLAGS="-O3 -xHost -fno-alias -ansi-alias -g -mkl"
+   - export FFLAGS="-O3 -xHost -fno-alias -ansi-alias -g -mkl"
+   - export DFLAGS="-D__DFTI -D__MPI -D__SCALAPACK"
+   - export BLAS_LIBS_SWITCH="external"
+   - export BLAS_LIBS=" -lmkl_intel_lp64  -lmkl_sequential -lmkl_core"
+   - export LAPACK_LIBS_SWITCH="external"
+   - export LAPACK_LIBS=""
+   - export SCALAPACK_LIBS=" -lmkl_scalapack_lp64 -Wl,--start-group  -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -Wl,--end-group"
+   - ./configure --enable-openmp --with-scalapack
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - make
+   - ls ../bin 
+   - ldd ../bin/pw.x
+
+west_test_intel:
+ tags: [rcc,docker,node-01]
+ stage: test
+ image: centos:centos7
+ before_script:
+   - yum -y update > /dev/null
+   - yum -y install yum-utils > /dev/null
+   - yum -y install centos-release-scl-rh > /dev/null
+   - yum -y install devtoolset-3 > /dev/null
+   - yum -y install gcc gcc-c++ autoconf automake
+   - yum -y install vim > /dev/null 
+   - yum -y install wget pkgconfig git make > /dev/null
+   - export TZ="US/Central"
+   - rm -f /etc/localtime
+   - cp  /usr/share/zoneinfo/$TZ  /etc/localtime
+   - export PATH=/software/intel/impi/5.1.3.210/intel64/bin:/software/intel/parallel_studio_xe_2016_update3/bin:$PATH
+   - export LD_LIBRARY_PATH=/software/intel/parallel_studio_xe_2017/mkl/lib/intel64:/software/intel/impi/5.1.3.210/intel64/lib:$LD_LIBRARY_PATH
+   - export LD_LIBRARY_PATH=/software/intel/parallel_studio_xe_2016_update3/ipp/lib/intel64:/software/intel/parallel_studio_xe_2016_update3/lib/intel64:$LD_LIBRARY_PATH
+   - export LIBRARY_PATH=/software/intel/parallel_studio_xe_2017/mkl/lib/intel64:$LIBRARY_PATH
+   - export CPATH=/software/intel/parallel_studio_xe_2016_update3/ipp/include:/software/intel/parallel_studio_xe_2017/mkl/include
+   - export I_MPI_CC=icc
+   - export I_MPI_CXX=icpc
+   - export I_MPI_FC=ifort
+   - export I_MPI_F77=ifort
+   - export I_MPI_F90=ifort
+   - export I_MPI_F95=ifort
+   - export I_MPI_PROCESS_MANAGER=hydra
+   - export I_MPI_ROOT=/software/intel/impi/5.1.3.210
+ script:
+   - echo "$PATH"
+   - echo "$LD_LIBRARY_PATH"
+   - echo "$I_MPI_F90"
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - export F77=mpiifort
+   - export CC=mpiicc
+   - export MPIF90=mpiifort
+   - export FC=mpiifort
+   - which ifort
+   - which icc
+   - which mpiifort 
+   - export CFLAGS="-O3 -xHost -fno-alias -ansi-alias -g -mkl"
+   - export FFLAGS="-O3 -xHost -fno-alias -ansi-alias -g -mkl"
+   - export DFLAGS="-D__DFTI -D__MPI -D__SCALAPACK"
+   - export BLAS_LIBS_SWITCH="external"
+   - export BLAS_LIBS=" -lmkl_intel_lp64  -lmkl_sequential -lmkl_core"
+   - export LAPACK_LIBS_SWITCH="external"
+   - export LAPACK_LIBS=""
+   - export SCALAPACK_LIBS=" -lmkl_scalapack_lp64 -Wl,--start-group  -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -Wl,--end-group"
+   - ./configure --enable-openmp --with-scalapack
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - make
+   - ls ../bin 
+   - useradd -m qe
+   - cp -r test-suite /home/qe
+   - su - qe
+   - cd test-suite 
+   - make NP=14 NI=1 NT=1 
+
+west_test_gcc:
  tags: [rcc,docker,node-01]
  stage: test
  image: ubuntu:latest
@@ -47,8 +171,11 @@ west_test:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West 
    - make > /dev/null
+   - useradd -m qe
+   - cp -r test-suite /home/qe
+   - su - qe
    - cd test-suite 
-   - make NP=28 NI=1 NT=1 
+   - make NP=14 NI=1 NT=1 
 
 west_doc_build:
  tags: [rcc,docker,node-01]

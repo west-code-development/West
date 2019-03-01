@@ -11,12 +11,9 @@ Configure QuantumEspresso by running the ``configure`` script that comes with th
 
 .. code-block:: bash 
 
-   $ wget https://gitlab.com/QEF/q-e/-/archive/qe-6.1.0/q-e-qe-6.1.0.tar
-   $ mkdir QEdir
-   $ tar -xvf q-e-qe-6.1.0.tar -C QEdir --strip-components 1
+   $ git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
    $ cd QEdir
-   $ wget http://www/west-code.org/downloads/latest/West.tar.gz
-   $ tar -zxvf West.tar.gz
+   $ git clone -b 'v3.1.1' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
    $ ./configure
 
 It's now time to create the ``pw.x``, ``wstat.x``, ``wfreq.x``, and ``westpp.x`` executables by doing:

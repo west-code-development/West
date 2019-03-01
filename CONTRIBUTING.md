@@ -5,20 +5,26 @@
 
 ## Developers
 
-- Matteo Gerosa (University of Chicago)
-- Ikutaro Hamada (University of Osaka)
+- Sijia Dong (Argonne National Laboratory)
+- Marco Govoni (Argonne National Laboratory and University of Chicago)
 - He Ma (University of Chicago)
-- Ngoc Linh Nguyen (University of Chicago)
 - Han Yang (University of Chicago)
-- Huihuo Zheng (Argonne National Laboratory)
 
 ## Contributors
 
-Jonathan Skone
-Aditya Tanikanti
+- Francois Gygi (University of California, Davis)
+- Ikutaro Hamada (Osaka University)
+- Yuan Ping (University of California, Santa Cruz)
+- Jonathan Skone (University of Chicago)
+- Tyler Smart (University of California, Santa Cruz)
+- Aditya Tanikanti (University of Chicago)
+- Feng Wu (University of California, Santa Cruz)
+- Huihuo Zheng (Argonne National Laboratory)
 
 ## Former Developers
 
-Nichola Brawand,
-Ryan McAvoy,
-Peter Scherpelz
+- Nicholas Brawand
+- Matteo Gerosa 
+- Ryan McAvoy
+- Ngoc Linh Nguyen
+- Peter Scherpelz

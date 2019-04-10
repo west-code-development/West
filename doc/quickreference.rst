@@ -5,6 +5,12 @@ Quick Reference
 
 These are quick references for **WEST** input file examples. 
 
+.. note:: 
+   Indentation is optional. 
+
+.. seealso:: 
+   All input keywords are referenced and explained in the :ref:`manual`. 
+
 wstat.x
 ~~~~~~~
 
@@ -23,12 +29,6 @@ This is a typical input for ``wstat.x``.
        "n_pdep_eigen": 50
      }
    }
-
-.. note:: 
-   Indentation is not important. 
-
-.. seealso:: 
-   All input keywords are referenced and explained in the Manual. 
 
 wfreq.x
 ~~~~~~~
@@ -56,8 +56,27 @@ This is a typical input for ``wfreq.x``.
      }
    }
 
-.. note:: 
-   Indentation is not important. 
+westpp.x
+~~~~~~~~
 
-.. seealso:: 
-   All input keywords are referenced and explained in the Manual. 
+This is a typical input for ``westpp.x``. 
+
+.. code-block:: bash 
+
+   {
+     "input_west": {
+       "qe_prefix": "silane",
+       "west_prefix": "silane",
+       "outdir": "./"
+     },
+     "wstat_control": {
+       "wstat_calculation": "S",
+       "n_pdep_eigen": 50
+     },
+     "westpp_control": {
+        "westpp_calculation" : "E",
+        "westpp_range" : [ 1, 2 ], 
+        "westpp_format" : "C", 
+        "westpp_sign" : true
+     }
+   }

@@ -2,7 +2,7 @@
 
 default: all
 
-all: \
+wstat: \
 libraries_do \
 modules_do \
 tools_do \
@@ -12,10 +12,21 @@ para_kernel_do \
 hamiltonian_kernel_do \
 dfpt_kernel_do \
 io_kernel_do \
-wstat_do \
-wfreq_do \
-westpp_do 
+wstat_do
 
+wfreq: \
+wstat \
+wfreq_do
+
+westpp: \
+wstat \
+wfreq \
+westpp_do
+
+all: \
+wstat \
+wfreq \
+westpp 
 
 libraries_do:
 	if test -d Libraries ; then \

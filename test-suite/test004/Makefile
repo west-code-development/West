@@ -22,7 +22,7 @@ wfreq:
 	tail -5 wfreq.out
 
 clean:
-	- /bin/rm -rf *out *in *upf *save >& /dev/null
+	- /bin/rm -rf *out *in *upf *tab *restart *save >& /dev/null
 
 title:
 	@echo "               "

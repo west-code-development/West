@@ -330,7 +330,7 @@ MODULE fourier_interpolation
  END SUBROUTINE
  !
  !
- SUBROUTINE single_fwfft_gamma(dfft,n,nx,a,b1,cdriver,nl)
+ SUBROUTINE single_interp_fwfft_gamma(dfft,n,nx,a,b1,cdriver,nl)
    !
    USE kinds,                 ONLY : DP
    USE fft_interfaces,        ONLY : fwfft,invfft

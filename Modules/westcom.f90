@@ -15,6 +15,7 @@ MODULE scratch_area
   !-----------------------------------------------------------------------
   !
   USE kinds, ONLY :  DP
+  USE fft_types, ONLY : fft_type_descriptor
   !
   SAVE
   !
@@ -68,6 +69,8 @@ MODULE scratch_area
   !
   ! I/O 
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
+  !
+  TYPE ( fft_type_descriptor ) :: dfft_io
   !
   !
 END MODULE

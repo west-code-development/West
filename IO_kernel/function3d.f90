@@ -19,23 +19,25 @@ MODULE function3d
  CONTAINS
  ! 
  !-----------------------------------------------------------------
-   SUBROUTINE write_function3d ( fname, nx, ny, nz, ng, ngx, funct3d_g )
+   SUBROUTINE write_function3d ( fname, ng, ngx, funct3d_g, igk )
    ! -----------------------------------------------------------------
    !
    USE kinds,           ONLY : DP
    USE cell_base,       ONLY : celldm, at
    USE control_flags,   ONLY : gamma_only
    USE mp_bands,        ONLY : me_bgrp
+   USE fourier_interpolation, ONLY : set_nl
+   USE westcom,         ONLY : dfft_io
    USE base64_module
-   USE fourier_interpolation
    !
    IMPLICIT NONE
    !
    ! I/O 
    !
    CHARACTER(LEN=*),INTENT(IN) :: fname
-   INTEGER, INTENT(IN) :: nx, ny, nz, ng, ngx
+   INTEGER, INTENT(IN) :: ng, ngx
    COMPLEX(DP),INTENT(IN) :: funct3d_g(ngx)
+   INTEGER,INTENT(IN),OPTIONAL :: igk(ng)
    ! 
    ! Workspace
    !
@@ -47,15 +49,19 @@ MODULE function3d
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
    CHARACTER(LEN=:),ALLOCATABLE :: ctype
    !
-   ! 1) Fourier interpolate funct3_g --> funct3d_r
+   ! 1) Preparing the nl array
    !
    IF( gamma_only ) THEN 
       nmaps = 2
    ELSE 
       nmaps = 1 
    ENDIF
-   ALLOCATE( nl(ngx,nmaps) )
-   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nmaps, nl)
+   ALLOCATE( nl(nmaps,ngx) )
+   IF( PRESENT(igk) ) THEN 
+      CALL set_nl( dfft_io, ng, ngx, nmaps, nl, igk) 
+   ELSE 
+      CALL set_nl( dfft_io, ng, ngx, nmaps, nl) 
+   ENDIF
    ALLOCATE( funct3d_r_complex(nx*ny*nz) )
    CALL single_invfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, nmaps, nl, funct3d_g)
    DEALLOCATE( nl )

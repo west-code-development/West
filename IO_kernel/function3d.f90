@@ -67,12 +67,9 @@ MODULE function3d
       CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
    ENDIF
    !
-   IF ( mpime == 1 ) WRITE(*,*) "funct3d_r_complex when writing: ", funct3d_r_complex(1:10)
-   !
    ALLOCATE( funct3d_r_complex_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x) )
    funct3d_r_complex_gathered = 0.0_DP
    CALL gather_grid(dfft,funct3d_r_complex,funct3d_r_complex_gathered)
-   !IF ( mpime == 0 ) WRITE(*,*) "funct3d_r_complex_gathered when writing: ", funct3d_r_complex_gathered(:)
    !
    IF( dfft%mype == dfft%root ) THEN
       !
@@ -276,13 +273,7 @@ MODULE function3d
    !
    ALLOCATE( funct3d_r_complex(dfft%nnr) )
    !
-   !IF ( me_bgrp == 0 ) WRITE(*,*) fname,"size of gathered : ", SIZE(funct3d_r_complex_gathered)
-   !IF ( me_bgrp == 0 ) WRITE(*,*) fname,"size of distributed : ", SIZE(funct3d_r_complex)
-   !
-   !IF ( mpime == 0 ) WRITE(*,*) "funct3d_r_complex_gathered when reading: ", funct3d_r_complex_gathered(:)
    CALL scatter_grid(dfft,funct3d_r_complex_gathered,funct3d_r_complex)
-   !
-   !IF ( mpime == 1 ) WRITE(*,*) "funct3d_r_complex: ",  funct3d_r_complex(:)
    !
    IF ( gamma_only ) THEN
       SELECT CASE(fftdriver)
@@ -294,8 +285,6 @@ MODULE function3d
    ELSE
       CALL single_interp_fwfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
    ENDIF
-   !
-   !IF ( mpime == 1 ) WRITE(*,*) "funct3d_g: ",  funct3d_g(1:10)
    !
    DEALLOCATE( funct3d_r_complex_gathered )
    DEALLOCATE( funct3d_r_complex )

@@ -30,7 +30,9 @@ MODULE function3d
    USE scatter_mod,                 ONLY : gather_grid
    USE fft_types,                   ONLY : fft_type_descriptor
    USE base64_module
-   USE fourier_interpolation
+   USE fourier_interpolation,       ONLY : set_nl, single_interp_invfft_gamma, &&
+                                           single_interp_invfft_k, single_interp_fwfft_gamma, &&
+                                           single_interp_fwfft_k
    !
    IMPLICIT NONE
    !

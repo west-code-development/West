@@ -71,6 +71,7 @@ MODULE scratch_area
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
   !
   TYPE ( fft_type_descriptor ) :: dfft_io
+  INTEGER,ALLOCATABLE :: nlq(:,:) ! nl of q
   !
 END MODULE
 !

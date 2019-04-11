@@ -461,7 +461,7 @@ SUBROUTINE davidson_diago_k ( )
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged, &
-                                   & ngq,npwq,igq_q,npwqx
+                                   & ngq,npwq,igq_q,npwqx,dfft_io,nlq
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
   USE mp_world,             ONLY : mpime
@@ -473,6 +473,7 @@ SUBROUTINE davidson_diago_k ( )
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
+  USE fourier_interpolation,ONLY : set_nl
   USE dfpt_module
   !
   IMPLICIT NONE
@@ -578,6 +579,12 @@ SUBROUTINE davidson_diago_k ( )
      ! set local number of G vectors for perturbation at q
      !
      npwq = ngq(iq)
+     !
+     ! set nl of this q point
+     !
+     ALLOCATE( nlq(1,npwqx) )
+     nlq = 0
+     CALL set_nl (dfft_io, npwq, npwqx, 1, nlq, igq_q(:,iq))
      !
      ! compute Coulomb potential
      !
@@ -907,6 +914,8 @@ SUBROUTINE davidson_diago_k ( )
      END DO iterate
   !
   CALL stop_clock( 'chidiago' )
+  !
+  DEALLOCATE(nlq)
   !
   ENDDO QPOINTS_LOOP ! iq
   !

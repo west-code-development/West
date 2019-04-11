@@ -43,7 +43,7 @@ MODULE pdep_db
        !
        WRITE(label_j,'(i9.9)') j
        WRITE(label_q,'(i9.9)') iq_
-       fname = "Q"//TRIM(ADJUSTL(label_q))//"E"//TRIM(ADJUSTL(label_j))//".json" 
+       fname = "Q"//TRIM(ADJUSTL(label_q))//"E"//TRIM(ADJUSTL(label_j))//".xml" 
        !
     END SUBROUTINE 
     !
@@ -63,7 +63,7 @@ MODULE pdep_db
       USE westcom,              ONLY : wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_maxiter,n_dfpt_maxiter, &
                                      & n_steps_write_restart,n_pdep_restart_from_itr,n_pdep_read_from_file,trev_pdep, &
                                      & tr2_dfpt,l_deflate,l_kinetic_only,ev,dvg,west_prefix,trev_pdep_rel, &
-                                     & l_minimize_exx_if_active,l_use_ecutrho,wstat_save_dir,logfile 
+                                     & l_minimize_exx_if_active,l_use_ecutrho,wstat_save_dir,logfile,nlq,dfft_io,npwqx,npwq
       USE pdep_io,              ONLY : pdep_merge_and_write_G 
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert
@@ -72,6 +72,7 @@ MODULE pdep_db
       USE cell_base,            ONLY : celldm,at,bg,tpiba
       USE gvect,                ONLY : ecutrho
       USE gvecw,                ONLY : ecutwfc
+      USE function3d,           ONLY : write_function3d,read_function3d
       !
       !
       IMPLICIT NONE
@@ -108,6 +109,11 @@ MODULE pdep_db
       CHARACTER(LEN=:),ALLOCATABLE  :: eigenpot_filename(:)
       CHARACTER(LEN=:),ALLOCATABLE  :: fname
       LOGICAL :: lexists
+      COMPLEX(DP) :: tot
+      INTEGER :: i
+      COMPLEX(DP),ALLOCATABLE :: tmp_dvg(:)
+      ALLOCATE(tmp_dvg(npwqx))
+      tmp_dvg = CMPLX(0.0_DP,0.0_DP,KIND=DP)
       !
       ! Assign defaut to optional parameters 
       !
@@ -206,8 +212,16 @@ MODULE pdep_db
          global_j = pert%l2g(local_j)
          IF(global_j>n_pdep_eigen) CYCLE
          ! 
-         fname = TRIM(ADJUSTL(wstat_save_dir)) // "/"// TRIM(ADJUSTL(eigenpot_filename(global_j))) 
-         CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
+         fname = TRIM(ADJUSTL(wstat_save_dir)) // "/"// TRIM(ADJUSTL(eigenpot_filename(global_j)))
+         !CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
+         CALL write_function3d ( dfft_io, fname, 'Descriptor', npwq, npwqx, dvg(:,local_j), 1, nlq )
+         CALL mp_barrier(world_comm)
+         CALL read_function3d ( dfft_io, fname, npwq, npwqx, tmp_dvg(:), 1, nlq)
+         tot = CMPLX(0.0_DP,0.0_DP)
+         DO i = 1, npwq
+            tot = tot + ABS(tmp_dvg(i) - dvg(i,local_j))
+         ENDDO
+         WRITE(*,*) "difference : ", tot, "tmp_dvg(1): ", tmp_dvg(1)
          !
       ENDDO
       !
@@ -243,7 +257,7 @@ MODULE pdep_db
     SUBROUTINE pdep_db_read( nglob_to_be_read, iq, lprintinfo )
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwqx,wstat_save_dir
+      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwqx,wstat_save_dir,npwq,npwqx,dfft_io,nlq
       USE io_global,           ONLY : stdout 
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root

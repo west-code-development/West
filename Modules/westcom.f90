@@ -72,7 +72,6 @@ MODULE scratch_area
   !
   TYPE ( fft_type_descriptor ) :: dfft_io
   !
-  !
 END MODULE
 !
 !

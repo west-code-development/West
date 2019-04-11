@@ -19,7 +19,7 @@ MODULE function3d
  CONTAINS
  ! 
  !-----------------------------------------------------------------
-   SUBROUTINE write_function3d ( fname, ng, ngx, funct3d_g, igk )
+   SUBROUTINE write_function3d ( dfft, fname, descriptor, ng, ngx, funct3d_g, nmaps, nl )
    ! -----------------------------------------------------------------
    !
    USE kinds,           ONLY : DP
@@ -27,54 +27,56 @@ MODULE function3d
    USE control_flags,   ONLY : gamma_only
    USE mp_bands,        ONLY : me_bgrp
    USE fourier_interpolation, ONLY : set_nl
-   USE westcom,         ONLY : dfft_io
+   USE westcom,         ONLY : fftdriver
+   USE scatter_mod,           ONLY : gather_grid
+   USE fft_types,             ONLY : fft_type_descriptor
    USE base64_module
    !
    IMPLICIT NONE
    !
    ! I/O 
    !
+   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
    CHARACTER(LEN=*),INTENT(IN) :: fname
-   INTEGER, INTENT(IN) :: ng, ngx
+   CHARACTER(LEN=*),INTENT(IN) :: descriptor
+   INTEGER, INTENT(IN) :: ng, ngx, nmaps
    COMPLEX(DP),INTENT(IN) :: funct3d_g(ngx)
-   INTEGER,INTENT(IN),OPTIONAL :: igk(ng)
+   INTEGER,INTENT(IN) :: nl(nmaps,ngx)
    ! 
    ! Workspace
    !
-   INTEGER              :: iu, ndim, nbytes, nlen, nmaps, i
+   INTEGER              :: iu, ndim, nbytes, nlen, i
    COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex(:)
+   COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex_gathered(:)
    REAL(DP),ALLOCATABLE :: funct3d_r_double(:)
-   INTEGER, ALLOCATABLE :: nl(:,:)
    CHARACTER(LEN=14)    :: lab(3)
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
    CHARACTER(LEN=:),ALLOCATABLE :: ctype
    !
-   ! 1) Preparing the nl array
+   ALLOCATE( funct3d_r_complex(dfft%nnr) )
+   IF ( gamma_only ) THEN 
+      SELECT CASE(fftdriver) 
+      CASE('Wave') 
+         CALL single_interp_invfft_gamma(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
+      CASE('Dense')
+         CALL single_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
+      END SELECT
+   ELSE
+      CALL single_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
+   ENDIF
    !
-   IF( gamma_only ) THEN 
-      nmaps = 2
-   ELSE 
-      nmaps = 1 
-   ENDIF
-   ALLOCATE( nl(nmaps,ngx) )
-   IF( PRESENT(igk) ) THEN 
-      CALL set_nl( dfft_io, ng, ngx, nmaps, nl, igk) 
-   ELSE 
-      CALL set_nl( dfft_io, ng, ngx, nmaps, nl) 
-   ENDIF
-   ALLOCATE( funct3d_r_complex(nx*ny*nz) )
-   CALL single_invfft_toArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, nmaps, nl, funct3d_g)
-   DEALLOCATE( nl )
+   ALLOCATE( funct3d_r_complex_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x) )
+   CALL gather_grid(dfft,funct3d_r_complex,funct3d_r_complex_gathered)
    !
    IF( me_bgrp == 0 ) THEN
       !
       ! 2) Encode 
       !
       IF( gamma_only ) THEN 
-         ALLOCATE( funct3d_r_double( nx*ny*nz ) ) 
+         ALLOCATE( funct3d_r_double( dfft%nr1x*dfft%nr2x*dfft%nr3x ) ) 
          funct3d_r_double = REAL(funct3d_r_complex(:),KIND=DP)
          DEALLOCATE(funct3d_r_complex)
-         ndim = nx*ny*nz
+         ndim = dfft%nr1x*dfft%nr2x*dfft%nr3x
          nbytes = SIZEOF(funct3d_r_double(1)) * ndim
          nlen = lenbase64(nbytes)
          ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
@@ -83,7 +85,7 @@ MODULE function3d
          DEALLOCATE(funct3d_r_double)
          ctype = "double"
       ELSE
-         ndim = nx*ny*nz
+         ndim = dfft%nr1x*dfft%nr2x*dfft%nr3x
          nbytes = SIZEOF(funct3d_r_complex(1)) * ndim
          nlen = lenbase64(nbytes)
          ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
@@ -101,7 +103,7 @@ MODULE function3d
       WRITE(iu,'(a)') '<fpmd:function3d xmlns:fpmd="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0"'
       WRITE(iu,'(a)') 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
       WRITE(iu,'(a)') 'xsi:schemaLocation="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0 function3d.xsd"'
-      WRITE(iu,'(a)') 'name="delta_v">'
+      WRITE(iu,'(a)') 'name="',TRIM(ADJUSTL(descriptor)),'">'
       DO i = 1, 3
          WRITE(lab(i),'(f14.6)') celldm(1) * at(i,1) 
       ENDDO     
@@ -114,9 +116,9 @@ MODULE function3d
          WRITE(lab(i),'(f14.6)') celldm(1) * at(i,3) 
       ENDDO     
       WRITE(iu,'(a)') 'c="'//TRIM(ADJUSTL(lab(1)))//" "//TRIM(ADJUSTL(lab(2)))//" "//TRIM(ADJUSTL(lab(3)))//'"/>'
-      WRITE(lab(1),'(i14)') nx
-      WRITE(lab(2),'(i14)') ny
-      WRITE(lab(3),'(i14)') nz
+      WRITE(lab(1),'(i14)') dfft%nr1x
+      WRITE(lab(2),'(i14)') dfft%nr2x
+      WRITE(lab(3),'(i14)') dfft%nr3x
       WRITE(iu,'(a)') '<grid nx="'//TRIM(ADJUSTL(lab(1)))//'" ny="'//TRIM(ADJUSTL(lab(2)))//'" nz="'//TRIM(ADJUSTL(lab(3)))//'"/>'
       WRITE(iu,'(a)') '<grid_function type="'//ctype//'" nx="'//TRIM(ADJUSTL(lab(1)))//'" ny="'//TRIM(ADJUSTL(lab(2)))// &
             &'" nz="'//TRIM(ADJUSTL(lab(3)))//'" encoding="base64">'
@@ -136,13 +138,16 @@ MODULE function3d
    END SUBROUTINE 
  ! 
  !-----------------------------------------------------------------
-   SUBROUTINE read_function3d ( fname, nx, ny, nz, ng, ngx, funct3d_g )
+   SUBROUTINE read_function3d ( dfft, fname, ng, ngx, funct3d_g, nmaps, nl)
    ! -----------------------------------------------------------------
    !
    USE kinds,           ONLY : DP
    USE control_flags,   ONLY : gamma_only
    USE mp,              ONLY : mp_bcast
    USE mp_bands,        ONLY : me_bgrp, intra_bgrp_comm
+   USE fft_types,             ONLY : fft_type_descriptor
+   USE scatter_mod,           ONLY : scatter_grid
+   USE westcom,         ONLY : fftdriver
    USE base64_module
    USE fourier_interpolation
    !
@@ -150,14 +155,16 @@ MODULE function3d
    !
    ! I/O 
    !
+   TYPE(fft_type_descriptor), INTENT(IN) :: dfft 
    CHARACTER(LEN=*),INTENT(IN) :: fname
-   INTEGER,INTENT(OUT) :: nx, ny, nz
-   INTEGER,INTENT(IN) :: ng, ngx
+   INTEGER,INTENT(IN) :: ng, ngx, nmaps
    COMPLEX(DP),INTENT(OUT) :: funct3d_g(ngx)
+   INTEGER,INTENT(IN) :: nl(nmaps,ngx)
    ! 
    ! Workspace
    !
-   INTEGER :: iu, i, nlen, ndim, nbytes, nmaps 
+   INTEGER :: iu, i, nlen, ndim, nbytes, nx, ny, nz 
+   COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex_gathered(:)
    COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex(:)
    REAL(DP),ALLOCATABLE :: funct3d_r_double(:)
    INTEGER :: nlines, j, is, ie, ios, nline_start, nline_end
@@ -166,7 +173,6 @@ MODULE function3d
    CHARACTER(LEN=:),ALLOCATABLE :: buff2
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
    LOGICAL :: lread 
-   INTEGER, ALLOCATABLE :: nl(:,:)
    CHARACTER(LEN=:),ALLOCATABLE :: ctype 
    !
    IF( me_bgrp == 0 ) THEN
@@ -231,7 +237,7 @@ MODULE function3d
       !
       CLOSE(iu)
       !
-      ALLOCATE( funct3d_r_complex(1:ndim) )
+      ALLOCATE( funct3d_r_complex_gathered(1:ndim) )
       !
       SELECT CASE(ctype) 
       CASE("double")
@@ -239,12 +245,12 @@ MODULE function3d
          CALL base64_decode_double(charbase64(1:nlen), ndim, funct3d_r_double(1:ndim))
          DEALLOCATE( charbase64 )
          IF (.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,funct3d_r_double(1:ndim)) 
-         funct3d_r_complex(:) = CMPLX( funct3d_r_double(:), 0._DP, KIND=DP)
+         funct3d_r_complex_gathered(:) = CMPLX( funct3d_r_double(:), 0._DP, KIND=DP)
          DEALLOCATE( funct3d_r_double )
       CASE("complex")
-         CALL base64_decode_complex(charbase64(1:nlen), ndim, funct3d_r_complex(1:ndim))
+         CALL base64_decode_complex(charbase64(1:nlen), ndim, funct3d_r_complex_gathered(1:ndim))
          DEALLOCATE( charbase64 )
-         IF (.NOT. islittleendian()) CALL base64_byteswap_complex(nbytes,funct3d_r_complex(1:ndim)) 
+         IF (.NOT. islittleendian()) CALL base64_byteswap_complex(nbytes,funct3d_r_complex_gathered(1:ndim)) 
       CASE DEFAULT
       END SELECT
       !
@@ -253,21 +259,27 @@ MODULE function3d
    CALL mp_bcast(ndim,0,intra_bgrp_comm)  
    CALL mp_bcast(nx,0,intra_bgrp_comm)  
    CALL mp_bcast(ny,0,intra_bgrp_comm)  
-   CALL mp_bcast(nz,0,intra_bgrp_comm)  
+   CALL mp_bcast(nz,0,intra_bgrp_comm) 
    !
-   IF( .NOT. ALLOCATED(funct3d_r_complex)) ALLOCATE( funct3d_r_complex(1:ndim) )
+   IF( nx /= dfft%nr1x ) CALL errore('read','Wrong nx',1) 
+   IF( ny /= dfft%nr2x ) CALL errore('read','Wrong ny',1) 
+   IF( nz /= dfft%nr3x ) CALL errore('read','Wrong nz',1) 
    !
-   ! 1) F interpolate funct3_r --> funct3d_g
+   IF( .NOT. ALLOCATED(funct3d_r_complex)) ALLOCATE( funct3d_r_complex(dfft%nnr) )
    !
-   IF( gamma_only ) THEN 
-      nmaps = 2
-   ELSE 
-      nmaps = 1 
-   ENDIF
-   ALLOCATE( nl(ngx,nmaps) )
-   CALL get_G2R_mapping (nx, ny, nz, ng, ngx, nmaps, nl)
-   CALL single_fwfft_fromArbitraryRGrid (funct3d_r_complex, nx, ny, nz, ng, ngx, nmaps, nl, funct3d_g)
-   DEALLOCATE( nl )
+   CALL scatter_grid(dfft,funct3d_r_complex_gathered,funct3d_r_complex)
+   !
+   IF ( gamma_only ) THEN
+      SELECT CASE(fftdriver)
+      CASE('Wave')
+         CALL single_interp_fwfft_gamma(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
+      CASE('Dense')
+         CALL single_invfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
+      END SELECT
+   ELSE
+      CALL single_invfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
+   ENDIF 
+   !
    DEALLOCATE( funct3d_r_complex )
    !
  END SUBROUTINE

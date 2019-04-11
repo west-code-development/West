@@ -26,7 +26,6 @@ MODULE function3d
    USE cell_base,                   ONLY : celldm, at
    USE control_flags,               ONLY : gamma_only
    USE mp_bands,                    ONLY : me_bgrp
-   USE mp_world,                    ONLY : mpime
    USE westcom,                     ONLY : fftdriver
    USE scatter_mod,                 ONLY : gather_grid
    USE fft_types,                   ONLY : fft_type_descriptor

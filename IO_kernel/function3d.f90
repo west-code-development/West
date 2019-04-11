@@ -59,12 +59,12 @@ MODULE function3d
    IF ( gamma_only ) THEN 
       SELECT CASE(fftdriver) 
       CASE('Wave') 
-         CALL single_interp_invfft_gamma(dfft,ng,ngx,funct3d_g,funct3d_r_complex,'Wave',nl)
+         CALL single_interp_invfft_gamma(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
       CASE('Dense')
-         CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,'Dense',nl)
+         CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
       END SELECT
    ELSE
-      CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,'Wave',nl)
+      CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
    ENDIF
    !
    IF ( mpime == 1 ) WRITE(*,*) "funct3d_r_complex when writing: ", funct3d_r_complex(1:10)

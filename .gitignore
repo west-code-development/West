@@ -11,4 +11,3 @@
 *.out
 doc/_build/
 Modules/west_version.f90
-*.un~

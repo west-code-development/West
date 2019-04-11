@@ -148,7 +148,6 @@ MODULE function3d
    USE control_flags,               ONLY : gamma_only
    USE mp,                          ONLY : mp_bcast
    USE mp_bands,                    ONLY : me_bgrp, intra_bgrp_comm
-   USE mp_world,                    ONLY : mpime
    USE fft_types,                   ONLY : fft_type_descriptor
    USE scatter_mod,                 ONLY : scatter_grid
    USE westcom,                     ONLY : fftdriver

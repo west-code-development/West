@@ -72,7 +72,6 @@ MODULE pdep_db
       USE cell_base,            ONLY : celldm,at,bg,tpiba
       USE gvect,                ONLY : ecutrho
       USE gvecw,                ONLY : ecutwfc
-      USE function3d,           ONLY : write_function3d,read_function3d
       !
       !
       IMPLICIT NONE
@@ -244,7 +243,7 @@ MODULE pdep_db
     SUBROUTINE pdep_db_read( nglob_to_be_read, iq, lprintinfo )
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwqx,wstat_save_dir,npwq,npwqx,dfft_io,nlq
+      USE westcom,             ONLY : n_pdep_eigen,ev,dvg,west_prefix,npwqx,wstat_save_dir
       USE io_global,           ONLY : stdout 
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root

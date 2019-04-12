@@ -22,15 +22,17 @@ MODULE function3d
    SUBROUTINE write_function3d ( dfft, fname, descriptor, ng, ngx, funct3d_g, nmaps, nl )
    ! -----------------------------------------------------------------
    !
-   USE kinds,           ONLY : DP
-   USE cell_base,       ONLY : celldm, at
-   USE control_flags,   ONLY : gamma_only
-   USE mp_bands,        ONLY : me_bgrp
-   USE fourier_interpolation, ONLY : set_nl
-   USE westcom,         ONLY : fftdriver
-   USE scatter_mod,           ONLY : gather_grid
-   USE fft_types,             ONLY : fft_type_descriptor
+   USE kinds,                       ONLY : DP
+   USE cell_base,                   ONLY : celldm, at
+   USE control_flags,               ONLY : gamma_only
+   USE mp_bands,                    ONLY : me_bgrp
+   USE westcom,                     ONLY : fftdriver
+   USE scatter_mod,                 ONLY : gather_grid
+   USE fft_types,                   ONLY : fft_type_descriptor
    USE base64_module
+   USE fourier_interpolation,       ONLY : set_nl, single_interp_invfft_gamma,&
+                                           &single_interp_invfft_k, single_interp_fwfft_gamma,&
+                                           &single_interp_fwfft_k
    !
    IMPLICIT NONE
    !
@@ -59,13 +61,14 @@ MODULE function3d
       CASE('Wave') 
          CALL single_interp_invfft_gamma(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
       CASE('Dense')
-         CALL single_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
+         CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
       END SELECT
    ELSE
-      CALL single_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
+      CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
    ENDIF
    !
    ALLOCATE( funct3d_r_complex_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x) )
+   funct3d_r_complex_gathered = 0.0_DP
    CALL gather_grid(dfft,funct3d_r_complex,funct3d_r_complex_gathered)
    !
    IF( me_bgrp == 0 ) THEN
@@ -74,8 +77,8 @@ MODULE function3d
       !
       IF( gamma_only ) THEN 
          ALLOCATE( funct3d_r_double( dfft%nr1x*dfft%nr2x*dfft%nr3x ) ) 
-         funct3d_r_double = REAL(funct3d_r_complex(:),KIND=DP)
-         DEALLOCATE(funct3d_r_complex)
+         funct3d_r_double = REAL(funct3d_r_complex_gathered(:),KIND=DP)
+         DEALLOCATE(funct3d_r_complex_gathered)
          ndim = dfft%nr1x*dfft%nr2x*dfft%nr3x
          nbytes = SIZEOF(funct3d_r_double(1)) * ndim
          nlen = lenbase64(nbytes)
@@ -86,12 +89,12 @@ MODULE function3d
          ctype = "double"
       ELSE
          ndim = dfft%nr1x*dfft%nr2x*dfft%nr3x
-         nbytes = SIZEOF(funct3d_r_complex(1)) * ndim
+         nbytes = SIZEOF(funct3d_r_complex_gathered(1)) * ndim
          nlen = lenbase64(nbytes)
          ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
-         IF (.NOT. islittleendian()) CALL base64_byteswap_complex(nbytes,funct3d_r_complex(1:ndim))
-         CALL base64_encode_complex(funct3d_r_complex(1:ndim), ndim, charbase64)
-         DEALLOCATE(funct3d_r_complex)
+         IF (.NOT. islittleendian()) CALL base64_byteswap_complex(nbytes,funct3d_r_complex_gathered(1:ndim))
+         CALL base64_encode_complex(funct3d_r_complex_gathered(1:ndim), ndim, charbase64)
+         DEALLOCATE(funct3d_r_complex_gathered)
          ctype = "complex"
       ENDIF
       !
@@ -141,13 +144,13 @@ MODULE function3d
    SUBROUTINE read_function3d ( dfft, fname, ng, ngx, funct3d_g, nmaps, nl)
    ! -----------------------------------------------------------------
    !
-   USE kinds,           ONLY : DP
-   USE control_flags,   ONLY : gamma_only
-   USE mp,              ONLY : mp_bcast
-   USE mp_bands,        ONLY : me_bgrp, intra_bgrp_comm
-   USE fft_types,             ONLY : fft_type_descriptor
-   USE scatter_mod,           ONLY : scatter_grid
-   USE westcom,         ONLY : fftdriver
+   USE kinds,                       ONLY : DP
+   USE control_flags,               ONLY : gamma_only
+   USE mp,                          ONLY : mp_bcast
+   USE mp_bands,                    ONLY : me_bgrp, intra_bgrp_comm
+   USE fft_types,                   ONLY : fft_type_descriptor
+   USE scatter_mod,                 ONLY : scatter_grid
+   USE westcom,                     ONLY : fftdriver
    USE base64_module
    USE fourier_interpolation
    !
@@ -237,8 +240,20 @@ MODULE function3d
       !
       CLOSE(iu)
       !
-      ALLOCATE( funct3d_r_complex_gathered(1:ndim) )
-      !
+   ENDIF
+   !
+   CALL mp_bcast(ndim,0,intra_bgrp_comm)
+   CALL mp_bcast(nx,0,intra_bgrp_comm)
+   CALL mp_bcast(ny,0,intra_bgrp_comm)
+   CALL mp_bcast(nz,0,intra_bgrp_comm)
+   !
+   IF( nx /= dfft%nr1x ) CALL errore('read','Wrong nx',1) 
+   IF( ny /= dfft%nr2x ) CALL errore('read','Wrong ny',1) 
+   IF( nz /= dfft%nr3x ) CALL errore('read','Wrong nz',1) 
+   !
+   ALLOCATE( funct3d_r_complex_gathered(1:ndim) )
+   !
+   IF ( me_bgrp == 0 ) THEN
       SELECT CASE(ctype) 
       CASE("double")
          ALLOCATE( funct3d_r_double(1:ndim) )
@@ -253,19 +268,9 @@ MODULE function3d
          IF (.NOT. islittleendian()) CALL base64_byteswap_complex(nbytes,funct3d_r_complex_gathered(1:ndim)) 
       CASE DEFAULT
       END SELECT
-      !
-   ENDIF 
+   ENDIF
    !
-   CALL mp_bcast(ndim,0,intra_bgrp_comm)  
-   CALL mp_bcast(nx,0,intra_bgrp_comm)  
-   CALL mp_bcast(ny,0,intra_bgrp_comm)  
-   CALL mp_bcast(nz,0,intra_bgrp_comm) 
-   !
-   IF( nx /= dfft%nr1x ) CALL errore('read','Wrong nx',1) 
-   IF( ny /= dfft%nr2x ) CALL errore('read','Wrong ny',1) 
-   IF( nz /= dfft%nr3x ) CALL errore('read','Wrong nz',1) 
-   !
-   IF( .NOT. ALLOCATED(funct3d_r_complex)) ALLOCATE( funct3d_r_complex(dfft%nnr) )
+   ALLOCATE( funct3d_r_complex(dfft%nnr) )
    !
    CALL scatter_grid(dfft,funct3d_r_complex_gathered,funct3d_r_complex)
    !
@@ -274,12 +279,13 @@ MODULE function3d
       CASE('Wave')
          CALL single_interp_fwfft_gamma(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
       CASE('Dense')
-         CALL single_invfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
+         CALL single_interp_fwfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
       END SELECT
    ELSE
-      CALL single_invfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
-   ENDIF 
+      CALL single_interp_fwfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
+   ENDIF
    !
+   DEALLOCATE( funct3d_r_complex_gathered )
    DEALLOCATE( funct3d_r_complex )
    !
  END SUBROUTINE

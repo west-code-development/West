@@ -214,7 +214,6 @@ MODULE pdep_db
          ! 
          fname = TRIM(ADJUSTL(wstat_save_dir)) // "/"// TRIM(ADJUSTL(eigenpot_filename(global_j)))
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
-         tot = CMPLX(0.0_DP,0.0_DP)
          !
       ENDDO
       !

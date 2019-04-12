@@ -71,7 +71,7 @@ MODULE function3d
    funct3d_r_complex_gathered = 0.0_DP
    CALL gather_grid(dfft,funct3d_r_complex,funct3d_r_complex_gathered)
    !
-   IF( dfft%mype == dfft%root ) THEN
+   IF( me_bgrp == 0 ) THEN
       !
       ! 2) Encode 
       !
@@ -178,7 +178,7 @@ MODULE function3d
    LOGICAL :: lread 
    CHARACTER(LEN=:),ALLOCATABLE :: ctype 
    !
-   IF( dfft%mype == dfft%root ) THEN
+   IF( me_bgrp == 0 ) THEN
       !
       OPEN(NEWUNIT=iu,FILE=TRIM(ADJUSTL(fname)))
       !
@@ -253,7 +253,7 @@ MODULE function3d
    !
    ALLOCATE( funct3d_r_complex_gathered(1:ndim) )
    !
-   IF ( dfft%mype == dfft%root ) THEN
+   IF ( me_bgrp == 0 ) THEN
       SELECT CASE(ctype) 
       CASE("double")
          ALLOCATE( funct3d_r_double(1:ndim) )

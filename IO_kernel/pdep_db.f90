@@ -43,7 +43,7 @@ MODULE pdep_db
        !
        WRITE(label_j,'(i9.9)') j
        WRITE(label_q,'(i9.9)') iq_
-       fname = "Q"//TRIM(ADJUSTL(label_q))//"E"//TRIM(ADJUSTL(label_j))//".xml" 
+       fname = "Q"//TRIM(ADJUSTL(label_q))//"E"//TRIM(ADJUSTL(label_j))//".json" 
        !
     END SUBROUTINE 
     !
@@ -63,7 +63,7 @@ MODULE pdep_db
       USE westcom,              ONLY : wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_maxiter,n_dfpt_maxiter, &
                                      & n_steps_write_restart,n_pdep_restart_from_itr,n_pdep_read_from_file,trev_pdep, &
                                      & tr2_dfpt,l_deflate,l_kinetic_only,ev,dvg,west_prefix,trev_pdep_rel, &
-                                     & l_minimize_exx_if_active,l_use_ecutrho,wstat_save_dir,logfile,nlq,dfft_io,npwqx,npwq
+                                     & l_minimize_exx_if_active,l_use_ecutrho,wstat_save_dir,logfile 
       USE pdep_io,              ONLY : pdep_merge_and_write_G 
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert
@@ -109,11 +109,6 @@ MODULE pdep_db
       CHARACTER(LEN=:),ALLOCATABLE  :: eigenpot_filename(:)
       CHARACTER(LEN=:),ALLOCATABLE  :: fname
       LOGICAL :: lexists
-      COMPLEX(DP) :: tot
-      INTEGER :: i
-      COMPLEX(DP),ALLOCATABLE :: tmp_dvg(:)
-      ALLOCATE(tmp_dvg(npwqx))
-      tmp_dvg = CMPLX(0.0_DP,0.0_DP,KIND=DP)
       !
       ! Assign defaut to optional parameters 
       !
@@ -212,7 +207,7 @@ MODULE pdep_db
          global_j = pert%l2g(local_j)
          IF(global_j>n_pdep_eigen) CYCLE
          ! 
-         fname = TRIM(ADJUSTL(wstat_save_dir)) // "/"// TRIM(ADJUSTL(eigenpot_filename(global_j)))
+         fname = TRIM(ADJUSTL(wstat_save_dir)) // "/"// TRIM(ADJUSTL(eigenpot_filename(global_j))) 
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
          !
       ENDDO

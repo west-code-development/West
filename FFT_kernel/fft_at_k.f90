@@ -17,8 +17,6 @@ MODULE fft_at_k
   ! Everything is done following dffts
   !
   USE kinds,                ONLY : DP
-  USE gvect,                ONLY : nl,nlm
-  USE gvecs,                ONLY : nls,nlsm
   USE fft_interfaces,       ONLY : fwfft,invfft
   USE fft_types,            ONLY : fft_type_descriptor
   !
@@ -32,6 +30,8 @@ MODULE fft_at_k
   !
   !
   SUBROUTINE single_invfft_k(dfft,n,nx,a1,b,cdriver,igk)
+    !
+    USE gvecs,                ONLY : nls
     !
     ! INVFFT : G ---> R
     !
@@ -73,6 +73,8 @@ MODULE fft_at_k
   !
   !
   SUBROUTINE single_fwfft_k(dfft,n,nx,a,b1,cdriver,igk)
+    !
+    USE gvecs,                ONLY : nls
     !
     ! FWFFT : R ---> G
     !

@@ -440,10 +440,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      npwk = ngk(ikks)
      !
-     IF (k_grid%nps>1) THEN
+!     IF (k_grid%nps>1) THEN
         IF(my_image_id==0) CALL get_buffer( evck, lrwfc, iuwfc, ikks )
         CALL mp_bcast(evck,0,inter_image_comm)
-     ENDIF
+!     ENDIF
      !
      nbndval = nbnd_occ(ikks)
      !

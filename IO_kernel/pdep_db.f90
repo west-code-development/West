@@ -213,15 +213,8 @@ MODULE pdep_db
          IF(global_j>n_pdep_eigen) CYCLE
          ! 
          fname = TRIM(ADJUSTL(wstat_save_dir)) // "/"// TRIM(ADJUSTL(eigenpot_filename(global_j)))
-         !CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
-         CALL write_function3d ( dfft_io, fname, 'Descriptor', npwq, npwqx, dvg(:,local_j), 1, nlq )
-         CALL mp_barrier(world_comm)
-         CALL read_function3d ( dfft_io, fname, npwq, npwqx, tmp_dvg(:), 1, nlq)
+         CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
          tot = CMPLX(0.0_DP,0.0_DP)
-         DO i = 1, npwq
-            tot = tot + ABS(tmp_dvg(i) - dvg(i,local_j))
-         ENDDO
-         WRITE(*,*) "difference : ", tot, "tmp_dvg(1): ", tmp_dvg(1)
          !
       ENDDO
       !

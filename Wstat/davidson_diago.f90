@@ -473,7 +473,6 @@ SUBROUTINE davidson_diago_k ( )
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
-  USE fourier_interpolation,ONLY : set_nl
   USE dfpt_module
   !
   IMPLICIT NONE

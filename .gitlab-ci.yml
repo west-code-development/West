@@ -60,6 +60,118 @@ gcc650_0002:
    - git describe
    - make
    - ls ../bin 
+   
+
+gcc740_0001:
+ tags: [rcc,docker,node-01]
+ stage: build
+ image: miccomcenter/bot:$CI_JOB_NAME
+ before_script:    
+   - if [ -z $GCC_VERSION ]; then echo "not set"; else echo $GCC_VERSION; fi
+   - if [ -z $LAPACK_VERSION ]; then echo "not set"; else echo $LAPACK_VERSION; fi
+   - if [ -z $XERCES_VERSION ]; then echo "not set"; else echo $XERCES_VERSION; fi
+   - if [ -z $OPENMPI_VERSION ]; then echo "not set"; else echo $OPENMPI_VERSION; fi
+   - if [ -z $MPICH_VERSION ]; then echo "not set"; else echo $MPICH_VERSION; fi
+   - if [ -z $SCALAPACK_VERSION ]; then echo "not set"; else echo $SCALAPACK_VERSION; fi
+   - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
+   - if [ -z PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
+   - if [ -z PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - ./configure FFT_LIBS=/usr/fftw3
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - make
+   - ls ../bin 
+
+
+gcc740_0002:
+ tags: [rcc,docker,node-01]
+ stage: build
+ image: miccomcenter/bot:$CI_JOB_NAME
+ before_script:    
+   - if [ -z $GCC_VERSION ]; then echo "not set"; else echo $GCC_VERSION; fi
+   - if [ -z $LAPACK_VERSION ]; then echo "not set"; else echo $LAPACK_VERSION; fi
+   - if [ -z $XERCES_VERSION ]; then echo "not set"; else echo $XERCES_VERSION; fi
+   - if [ -z $OPENMPI_VERSION ]; then echo "not set"; else echo $OPENMPI_VERSION; fi
+   - if [ -z $MPICH_VERSION ]; then echo "not set"; else echo $MPICH_VERSION; fi
+   - if [ -z $SCALAPACK_VERSION ]; then echo "not set"; else echo $SCALAPACK_VERSION; fi
+   - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
+   - if [ -z PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
+   - if [ -z PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - ./configure FFT_LIBS=/usr/fftw3
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - make
+   - ls ../bin 
+   
+
+gcc830_0001:
+ tags: [rcc,docker,node-01]
+ stage: build
+ image: miccomcenter/bot:$CI_JOB_NAME
+ before_script:    
+   - if [ -z $GCC_VERSION ]; then echo "not set"; else echo $GCC_VERSION; fi
+   - if [ -z $LAPACK_VERSION ]; then echo "not set"; else echo $LAPACK_VERSION; fi
+   - if [ -z $XERCES_VERSION ]; then echo "not set"; else echo $XERCES_VERSION; fi
+   - if [ -z $OPENMPI_VERSION ]; then echo "not set"; else echo $OPENMPI_VERSION; fi
+   - if [ -z $MPICH_VERSION ]; then echo "not set"; else echo $MPICH_VERSION; fi
+   - if [ -z $SCALAPACK_VERSION ]; then echo "not set"; else echo $SCALAPACK_VERSION; fi
+   - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
+   - if [ -z PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
+   - if [ -z PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - ./configure FFT_LIBS=/usr/fftw3
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - make
+   - ls ../bin 
+
+
+gcc830_0002:
+ tags: [rcc,docker,node-01]
+ stage: build
+ image: miccomcenter/bot:$CI_JOB_NAME
+ before_script:    
+   - if [ -z $GCC_VERSION ]; then echo "not set"; else echo $GCC_VERSION; fi
+   - if [ -z $LAPACK_VERSION ]; then echo "not set"; else echo $LAPACK_VERSION; fi
+   - if [ -z $XERCES_VERSION ]; then echo "not set"; else echo $XERCES_VERSION; fi
+   - if [ -z $OPENMPI_VERSION ]; then echo "not set"; else echo $OPENMPI_VERSION; fi
+   - if [ -z $MPICH_VERSION ]; then echo "not set"; else echo $MPICH_VERSION; fi
+   - if [ -z $SCALAPACK_VERSION ]; then echo "not set"; else echo $SCALAPACK_VERSION; fi
+   - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
+   - if [ -z PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
+   - if [ -z PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - ./configure FFT_LIBS=/usr/fftw3
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West
+   - git describe
+   - make
+   - ls ../bin 
 
 west_build_gcc:
  tags: [rcc,docker,node-01]
@@ -223,6 +335,67 @@ west_test_gcc:
    - cd QEDIR
    - ./configure FFLAGS="-ffpe-summary=none" > /dev/null
    - make -j pw > /dev/null
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West 
+   - make > /dev/null
+   - useradd -m qe
+   - cp -r test-suite /home/qe
+   - su - qe
+   - cd test-suite 
+   - make NP=14 NI=1 NT=1 
+   
+gcc830_0001:
+ tags: [rcc,docker,node-01]
+ stage: test
+ image: miccomcenter/bot:$CI_JOB_NAME
+ before_script:    
+   - if [ -z $GCC_VERSION ]; then echo "not set"; else echo $GCC_VERSION; fi
+   - if [ -z $LAPACK_VERSION ]; then echo "not set"; else echo $LAPACK_VERSION; fi
+   - if [ -z $XERCES_VERSION ]; then echo "not set"; else echo $XERCES_VERSION; fi
+   - if [ -z $OPENMPI_VERSION ]; then echo "not set"; else echo $OPENMPI_VERSION; fi
+   - if [ -z $MPICH_VERSION ]; then echo "not set"; else echo $MPICH_VERSION; fi
+   - if [ -z $SCALAPACK_VERSION ]; then echo "not set"; else echo $SCALAPACK_VERSION; fi
+   - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
+   - if [ -z PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
+   - if [ -z PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - ./configure FFT_LIBS=/usr/fftw3
+   - make -j pw
+   - ls bin
+   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+   - cd West 
+   - make > /dev/null
+   - useradd -m qe
+   - cp -r test-suite /home/qe
+   - su - qe
+   - cd test-suite 
+   - make NP=14 NI=1 NT=1 
+
+
+gcc830_0002:
+ tags: [rcc,docker,node-01]
+ stage: test
+ image: miccomcenter/bot:$CI_JOB_NAME
+ before_script:    
+   - if [ -z $GCC_VERSION ]; then echo "not set"; else echo $GCC_VERSION; fi
+   - if [ -z $LAPACK_VERSION ]; then echo "not set"; else echo $LAPACK_VERSION; fi
+   - if [ -z $XERCES_VERSION ]; then echo "not set"; else echo $XERCES_VERSION; fi
+   - if [ -z $OPENMPI_VERSION ]; then echo "not set"; else echo $OPENMPI_VERSION; fi
+   - if [ -z $MPICH_VERSION ]; then echo "not set"; else echo $MPICH_VERSION; fi
+   - if [ -z $SCALAPACK_VERSION ]; then echo "not set"; else echo $SCALAPACK_VERSION; fi
+   - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
+   - if [ -z PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
+   - if [ -z PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+ script:
+   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+   - cd QEDIR
+   - git describe
+   - ./configure FFT_LIBS=/usr/fftw3
+   - make -j pw
+   - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West 
    - make > /dev/null

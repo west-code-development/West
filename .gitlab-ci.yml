@@ -52,7 +52,7 @@ gcc650_0002:
    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
    - cd QEDIR
    - git describe
-   - ./configure FFT_LIBS=/tmp/fftw3
+   - ./configure
    - make -j pw
    - ls bin
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

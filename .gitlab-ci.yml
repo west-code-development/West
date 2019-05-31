@@ -175,7 +175,7 @@ gcc830_0002:
 
 west_build_gcc:
  tags: [rcc,docker,node-01]
- stage: build
+ stage: build2
  image: ubuntu:latest
  before_script:
    - apt-get update > /dev/null
@@ -198,7 +198,7 @@ west_build_gcc:
 
 west_build_intel:
  tags: [rcc,docker,node-01]
- stage: build
+ stage: build2
  image: centos:centos7
  before_script:
    - yum -y update > /dev/null
@@ -258,7 +258,7 @@ west_build_intel:
 
 west_test_intel:
  tags: [rcc,docker,node-01]
- stage: test
+ stage: test2
  image: centos:centos7
  before_script:
    - yum -y update > /dev/null
@@ -322,7 +322,7 @@ west_test_intel:
 
 west_test_gcc:
  tags: [rcc,docker,node-01]
- stage: test
+ stage: test2
  image: ubuntu:latest
  before_script:
    - apt-get update > /dev/null

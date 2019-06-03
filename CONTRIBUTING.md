@@ -1,30 +1,19 @@
-# Project Leads 
+Contributions are welcomed via pull requests. Contact the **WEST** developers before starting work to ensure it meshes well with the planned development direction and
+standards set for the project.
 
-- Marco Govoni (Argonne National Laboratory and University of Chicago)
-- Giulia Galli (University of Chicago and Argonne National Laboratory)
+# Features
 
-## Developers
+New features should be applicable to a variety of use-cases. The **WEST** developers can assist you in designing flexible interfaces.
 
-- Sijia Dong (Argonne National Laboratory)
-- Marco Govoni (Argonne National Laboratory and University of Chicago)
-- He Ma (University of Chicago)
-- Han Yang (University of Chicago)
+# Version control
 
-## Contributors
+All changes in a pull request should be closely related. Multiple change sets that are loosely coupled should be proposed in separate pull requests. Use a consistent style for writing code. 
 
-- Francois Gygi (University of California, Davis)
-- Ikutaro Hamada (Osaka University)
-- Yuan Ping (University of California, Santa Cruz)
-- Jonathan Skone (University of Chicago)
-- Tyler Smart (University of California, Santa Cruz)
-- Aditya Tanikanti (University of Chicago)
-- Feng Wu (University of California, Santa Cruz)
-- Huihuo Zheng (Argonne National Laboratory)
+# Documentation
 
-## Former Developers
+Comment complex sections of code so that other developers can understand them.
+Add demonstrations of new functionality, e.g. using Jupyter notebooks.
 
-- Nicholas Brawand
-- Matteo Gerosa 
-- Ryan McAvoy
-- Ngoc Linh Nguyen
-- Peter Scherpelz
+# Testing
+
+Add tests for all new functionality.

@@ -16,18 +16,16 @@ JSON_OBJS = ../Json/libjson.a
 TLDEPS= bindir mods libs pw
 
 #all : title tldeps wstat.x
-all : title tldeps wstat.x
+all : title test.x
 
-wstat.x : $(JSON_OBJS) $(LIBOBJS)
+test.x : $(JSONTEST_OBJS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o test.x \
 		$(JSONTEST_OBJS) $(JSON_OBJS) $(LIBOBJS) $(LIBS)
-#	- ( cd ../../bin ; ln -fs ../West/Wstat/wstat.x . )
-#tldeps:
-#	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
+	- ./test.x
+	- python check.py 
 
 clean :
-	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L
-#	- /bin/rm -f ../../bin/wstat.x
+	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L *.json
 
 title :
 	@echo "              "

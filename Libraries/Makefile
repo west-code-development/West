@@ -21,7 +21,7 @@ json_test_do:
 	( cd Json-test ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-clean: json_undo base64_undo 
+clean: json_undo base64_undo json_test_undo 
 
 json_undo:
 	if test -d Json ; then \

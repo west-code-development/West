@@ -18,8 +18,6 @@
 - Jonathan Skone (University of Chicago)
 - Tyler Smart (University of California, Santa Cruz)
 - Aditya Tanikanti (University of Chicago)
-- Feng Wu (University of California, Santa Cruz)
-- Huihuo Zheng (Argonne National Laboratory)
 
 ## Former Developers
 
@@ -28,3 +26,5 @@
 - Ryan McAvoy
 - Ngoc Linh Nguyen
 - Peter Scherpelz
+- Feng Wu 
+- Huihuo Zheng 

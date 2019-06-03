@@ -4,6 +4,8 @@ default: all
 
 all: title json_do base64_do
 
+test: json_test_do
+
 json_do:
 	if test -d Json ; then \
 	( cd Json ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
@@ -12,6 +14,11 @@ json_do:
 base64_do:
 	if test -d Base64 ; then \
 	( cd Base64 ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+
+json_test_do:
+	if test -d Json-test ; then \
+	( cd Json-test ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 clean: json_undo base64_undo 
@@ -24,6 +31,11 @@ json_undo:
 base64_undo:
 	if test -d Base64 ; then \
 	( cd Base64 ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
+
+json_test_undo:
+	if test -d Json-test ; then \
+	( cd Json-test ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
 distclean: clean

@@ -19,9 +19,9 @@ Add tests for all new functionality.
 
 We use [semantic versioning](https://semver.org/), i.e. version labels have the form v<major>.<minor>.<patch>
 
- - Patch release: v0.8.1 to v0.8.2, only bug fixes
- - Minor release: v0.8.1 to v0.9.0, bug fixes and new features that maintain backwards compatibility
- - Major release: v0.8.1 to v1.0.0, bug fixes and new features that break backwards compatibility
+ - Patch release: v0.0.0 to v0.0.1, only bug fixes
+ - Minor release: v0.0.0 to v0.1.0, bug fixes and new features that maintain backwards compatibility
+ - Major release: v0.0.0 to v1.0.0, bug fixes and new features that break backwards compatibility
 
 # Contributing to the documentation
 

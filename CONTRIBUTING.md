@@ -17,7 +17,7 @@ Add tests for all new functionality.
 
 ## Release
 
-We use [semantic versioning](https://semver.org/), i.e. version labels have the form v<major>.<minor>.<patch>
+We use [semantic versioning](https://semver.org/), i.e. version labels have the form v`<major>`.`<minor>`.`<patch>`
 
  - Patch release: v0.0.0 to v0.0.1, only bug fixes
  - Minor release: v0.0.0 to v0.1.0, bug fixes and new features that maintain backwards compatibility

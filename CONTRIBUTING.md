@@ -1,4 +1,4 @@
-Contributions are welcomed via pull requests. Contact the **WEST** developers before starting work to ensure it meshes well with the planned development direction and
+Contributions are welcomed via merge requests. Contact the **WEST** developers before starting work to ensure it meshes well with the planned development direction and
 standards set for the project.
 
 # Features

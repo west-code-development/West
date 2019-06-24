@@ -23,18 +23,18 @@ The former list of developers, in alphabetical order:
 - Ryan McAvoy (2017-2018)
 - Ngoc Linh Nguyen (2017-2018)
 - Peter Scherpelz (2016-2017)
-- Feng Wu (2018)
 - Huihuo Zheng (2016-2018)
 
 # Contributors
 
-We would like to thank the following people for their contibution (beside generic comments and bugfixes):
+We would like to thank the following people for their contibution (beside generic comments and bugfixes), in alphabetical order:
 
 - Francois Gygi (University of California, Davis): for strategic discussions
 - Ikutaro Hamada (Osaka University): for the first implementation of k-points
-- Yuan Ping (University of California, Santa Cruz): for 2D cutoff
+- Yuan Ping (University of California, Santa Cruz): for the first implementation of 2D cutoff
 - Jonathan Skone (University of Chicago): hybrid functionals
-- Tyler Smart (University of California, Santa Cruz): for 2D cutoff
-- Aditya Tanikanti (University of Chicago): for deployment and testing
+- Tyler Smart (University of California, Santa Cruz): for the first implementation of 2D cutoff
+- Aditya Tanikanti (University of Chicago): for improving deployment and testing
+- Feng Wu (University of California, Santa Cruz): for the first implementation of 2D cutoff
 
 Please, don't hesitate to contact us if you see that information is wrong or missing in this file.

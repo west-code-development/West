@@ -6,9 +6,8 @@ stages:
  - test
  - doc
  
-.template_bot:
+.template_bot_start:
   tags: [rcc,docker,node-01]
-  stage: build
   image: miccomcenter/bot:$CI_JOB_NAME
   before_script:    
     - if [ -z $GCC_VERSION ]; then echo "not set"; else echo $GCC_VERSION; fi
@@ -20,6 +19,9 @@ stages:
     - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
     - if [ -z PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
     - if [ -z PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+    
+.template_build:
+  stage: build
   script:
     - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
@@ -32,25 +34,67 @@ stages:
     - git describe
     - make
     - ls ../bin 
+    
+.template_test:
+  stage: test
+  script:
+    - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+    - cd QEDIR
+    - git describe
+    - ./configure
+    - make -j pw
+    - ls bin
+    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+    - cd West 
+    - make > /dev/null
+    - useradd -m qe
+    - cp -r test-suite /home/qe
+    - su - qe
+    - cd test-suite 
+    - make NP=14 NI=1 NT=1 
 
 gcc650_0001:
- extends: .template_bot
+ extends: 
+   - .template_bot_start
+   - .template_build
   
 gcc650_0002:
- extends: .template_bot
+ extends: 
+   - .template_bot_start
+   - .template_build
 
 gcc740_0001:
- extends: .template_bot
+ extends: 
+   - .template_bot_start
+   - .template_build
  
 gcc740_0002:
- extends: .template_bot
+ extends: 
+   - .template_bot_start
+   - .template_build
 
 gcc830_0001:
- extends: .template_bot
+ extends: 
+   - .template_bot_start
+   - .template_build
 
 gcc830_0002:
- extends: .template_bot
-  
+ extends: 
+   - .template_bot_start
+   - .template_build
+ 
+gcc830_0001_t:
+ extends: 
+   - .template_bot_start
+   - .template_test
+ image: miccomcenter/bot:gcc830_0001
+
+gcc830_0002_t:
+ extends: 
+   - .template_bot_start
+   - .template_test
+ image: miccomcenter/bot:gcc830_0002
+
 #west_build_gcc:
 # tags: [rcc,docker,node-01]
 # stage: build
@@ -222,42 +266,28 @@ gcc830_0002:
 #   - cd test-suite 
 #   - make NP=14 NI=1 NT=1 
    
-gcc830_0001:
- extends: .template_bot
- script:
-   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
-   - cd QEDIR
-   - git describe
-   - ./configure
-   - make -j pw
-   - ls bin
-   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
-   - cd West 
-   - make > /dev/null
-   - useradd -m qe
-   - cp -r test-suite /home/qe
-   - su - qe
-   - cd test-suite 
-   - make NP=14 NI=1 NT=1 
+#gcc830_0001:
+# extends: .template_bot
+# script:
+#   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+#   - cd QEDIR
+#   - git describe
+#   - ./configure
+#   - make -j pw
+#   - ls bin
+#   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
+#   - cd West 
+#   - make > /dev/null
+#   - useradd -m qe
+#   - cp -r test-suite /home/qe
+#   - su - qe
+#   - cd test-suite 
+#   - make NP=14 NI=1 NT=1 
 
 
-gcc830_0002:
- extends: .template_bot
- script:
-   - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
-   - cd QEDIR
-   - git describe
-   - ./configure
-   - make -j pw
-   - ls bin
-   - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
-   - cd West 
-   - make > /dev/null
-   - useradd -m qe
-   - cp -r test-suite /home/qe
-   - su - qe
-   - cd test-suite 
-   - make NP=14 NI=1 NT=1 
+#gcc830_0002:
+# extends: .template_bot
+
 
 west_doc_build:
  tags: [rcc,docker,node-01]

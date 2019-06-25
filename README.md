@@ -13,5 +13,5 @@ See [CHANGELOG.md](CHANGELOG.md) for more information.
 ## Contributing 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more information.
 
-## Authors 
+## Authors
 See [AUTHORS.md](AUTHORS.md) for more information.

@@ -5,7 +5,7 @@ standards set for the project.
 
 ## Version control
 
-All changes in a pull request should be closely related. Multiple change sets that are loosely coupled should be proposed in separate pull requests. Use a consistent style for writing code. The pull request should be merged in the `develop` branch. 
+All changes in a pull request should be closely related. Multiple change sets that are loosely coupled should be proposed in separate pull requests. Use a consistent style for writing code.
 
 ## Features
 

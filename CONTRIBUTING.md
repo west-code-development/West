@@ -1,30 +1,30 @@
-# Project Leads 
+# Contributing to the source
 
-- Marco Govoni (Argonne National Laboratory and University of Chicago)
-- Giulia Galli (University of Chicago and Argonne National Laboratory)
+Contributions are welcomed via merge requests. Contact the **WEST** developers before starting work to ensure it meshes well with the planned development direction and
+standards set for the project.
 
-## Developers
+## Version control
 
-- Sijia Dong (Argonne National Laboratory)
-- Marco Govoni (Argonne National Laboratory and University of Chicago)
-- He Ma (University of Chicago)
-- Han Yang (University of Chicago)
+All changes in a pull request should be closely related. Multiple change sets that are loosely coupled should be proposed in separate pull requests. Use a consistent style for writing code.
 
-## Contributors
+## Features
 
-- Francois Gygi (University of California, Davis)
-- Ikutaro Hamada (Osaka University)
-- Yuan Ping (University of California, Santa Cruz)
-- Jonathan Skone (University of Chicago)
-- Tyler Smart (University of California, Santa Cruz)
-- Aditya Tanikanti (University of Chicago)
-- Feng Wu (University of California, Santa Cruz)
-- Huihuo Zheng (Argonne National Laboratory)
+New features should be applicable to a variety of use-cases. The **WEST** developers can assist you in designing flexible interfaces.
 
-## Former Developers
+## Testing
 
-- Nicholas Brawand
-- Matteo Gerosa 
-- Ryan McAvoy
-- Ngoc Linh Nguyen
-- Peter Scherpelz
+Add tests for all new functionality.
+
+## Release
+
+We use [semantic versioning](https://semver.org/), i.e. version labels have the form v`<major>`.`<minor>`.`<patch>`
+
+ - Patch release: v0.0.0 to v0.0.1, only bug fixes
+ - Minor release: v0.0.0 to v0.1.0, bug fixes and new features that maintain backwards compatibility
+ - Major release: v0.0.0 to v1.0.0, bug fixes and new features that break backwards compatibility
+
+# Contributing to the documentation
+
+Comment complex sections of code so that other developers can understand them.
+Add demonstrations of new functionality, e.g. using Jupyter notebooks.
+

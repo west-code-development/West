@@ -1,36 +1,48 @@
-===========================
-WEST 3.1.1 – Sept. 19, 2018
+Change Log
+==========
+
+v3.1.1 (2019/09/19)
+-------------------
+
 - Python suite for pre- and post process WEST calculations
 
-===========================
-WEST 3.1.0 – June 30, 2018
+v3.1.0 (2018/06/30)
+-------------------
+
 - Introduction of k-points sampling
-- Porting to Intel KNL 
-- Expansion of documentation, and streamlining of its generation using markup language (Sphinx)
+- Porting to Intel KNL
 - Migration of all developments to a private GitLab server, and master branch mirrored to GitHub
 - Test suite and continuous integration in place to automatically test the integrity of the code at every addition
+- Expansion of documentation, and streamlining of its generation using markup language (Sphinx)
 
-===========================
-WEST 3.0.0 – July 16, 2017
+
+v3.0.0 (2017/07/16)
+-------------------
+
 - Restructuring of I/O in JSON (JavaScript Object Notation) format, thus enabling seamless integration with pre-/postprocessing tools and compatibility with Jupyter electronic notebooks
 
-===========================
-WEST 2.0.0 – Oct. 19, 2016
+v2.0.0 (2016/10/19)
+-------------------
+
 - Implementation of spin-orbit coupling
 - Implementation of novel hybrid functionals derived from GW self-energy
 
-===========================
-WEST 1.1.0 – May 20, 2016
+v1.1.0 (2016/05/20)
+-------------------
+
 - Addition of postprocessing routines, forming the seed for WESTpy
 
-===========================
-WEST 1.0.3 – Jan. 8, 2016
+v1.0.3 (2016/01/08)
+-------------------
+
 - Efficiency improvements and bug fixes to the contour deformation technique
 
-===========================
-WEST 1.0.2 – Sept. 23, 2015
+v1.0.2 (2015/09/23)
+-------------------
+
 - Efficiency improvements and bug fixes to the PDEP algorithm
 
-===========================
-WEST 1.0.1 – June 20, 2015
+v1.0.1 (2015/06/20)
+-------------------
+
 - Initial beta release of WEST: GW without empty states

@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v3.1.1 (2019/09/19)
+v3.1.1 (2018/09/19)
 -------------------
 
 - Python suite for pre- and post process WEST calculations

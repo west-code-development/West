@@ -5,6 +5,7 @@ include ../../make.inc
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
+          $(MOD_FLAG)../Libraries/Forpy \
           $(MOD_FLAG).
 IFLAGS=
 
@@ -14,7 +15,7 @@ west_version.o \
 westcom.o
 
 PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a
 
 TLDEPS= bindir mods libs pw
 
@@ -22,6 +23,7 @@ all : title tldeps libmodules.a
 
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
+	./update_west_version ${TOPDIR}
 
 libmodules.a : $(MODULES_OBJS)
 	$(AR) $(ARFLAGS) $@ $?

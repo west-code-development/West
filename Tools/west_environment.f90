@@ -192,7 +192,7 @@ CONTAINS
     USE json_module,     ONLY : json_file
     USE io_global,       ONLY : stdout
     USE global_version,  ONLY : version_number, svn_revision
-    USE west_version,    ONLY : west_version_number, west_svn_revision
+    USE west_version,    ONLY : west_version_number, west_git_revision
     USE mp_world,        ONLY : mpime,root 
     USE westcom,         ONLY : logfile
     USE base64_module,   ONLY : islittleendian  
@@ -209,9 +209,9 @@ CONTAINS
     !
     CALL date_and_tim( cdate, ctime )
     !
-    IF ( TRIM (west_svn_revision) /= "unknown" ) THEN
-       WRITE( stdout, '(/5X,"Program ",A," v. ",A," svn rev. ",A," starts on ",A9," at ",A9)' ) &
-       & TRIM(code), TRIM(west_version_number), TRIM (west_svn_revision), cdate, ctime
+    IF ( TRIM (west_git_revision) /= "unknown" ) THEN
+       WRITE( stdout, '(/5X,"Program ",A," v. ",A," git rev. ",A," starts on ",A9," at ",A9)' ) &
+       & TRIM(code), TRIM(west_version_number), TRIM (west_git_revision), cdate, ctime
     ELSE
        WRITE( stdout, '(/5X,"Program ",A," v. ",A," starts on ",A9," at ",A9)' ) &
        & TRIM(code), TRIM(west_version_number), cdate, ctime
@@ -245,7 +245,7 @@ CONTAINS
        CALL json%add('software.package', "WEST" )
        CALL json%add('software.program', TRIM(code) )
        CALL json%add('software.version', TRIM(west_version_number) )
-       IF( TRIM (west_svn_revision) /= "unknown" ) CALL json%add('software.westsvn', TRIM(west_svn_revision) )
+       IF( TRIM (west_git_revision) /= "unknown" ) CALL json%add('software.westgit', TRIM(west_git_revision) )
        CALL json%add('software.website',"http://www.west-code.org")
        CALL json%add('software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
        CALL json%add('software.qeversion', TRIM(version_number) )

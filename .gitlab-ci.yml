@@ -26,6 +26,8 @@ stages:
     - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe
+    - pip list 
+    - echo $PYTHON_PATH
     - ./configure --with-scalapack --enable-openmp LDFLAGS="-g -pthread -fopenmp `python3-config --ldflags`"
     - make -j pw
     - ls bin

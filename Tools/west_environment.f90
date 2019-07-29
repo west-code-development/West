@@ -37,6 +37,7 @@ CONTAINS
     USE westcom,         ONLY : savedir, logfile, outdir, west_prefix 
     USE base64_module,   ONLY : base64_init 
     USE json_string_utilities, ONLY : lowercase_string
+    USE west_version,    ONLY : start_forpy
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
@@ -113,7 +114,8 @@ CONTAINS
     END IF
     !
     ! Initialize base64 tables  
-    CALL base64_init() 
+    CALL base64_init()
+    CALL start_forpy() 
     !
     CALL west_opening_message( code )
 #if defined(__MPI)
@@ -131,6 +133,7 @@ CONTAINS
     USE mp_world,        ONLY : mpime,root,world_comm
     USE mp,              ONLY : mp_barrier
     USE westcom,         ONLY : logfile 
+    USE west_version,    ONLY : end_forpy
     !
     IMPLICIT NONE 
     !
@@ -180,6 +183,8 @@ CONTAINS
       CALL json%destroy()
       !
     ENDIF
+    !
+    CALL end_forpy()
     !
     CALL mp_barrier(world_comm) 
     !

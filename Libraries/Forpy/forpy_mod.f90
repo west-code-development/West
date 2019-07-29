@@ -2170,7 +2170,9 @@ function forpy_initialize_unicode() result(ierror)
   type(c_ptr) :: a_unicode
   type(PyObject), pointer :: ptr
 
-  a_unicode = PyUnicode_DecodeUTF8("", 0_PY_SSIZE_T_KIND, "strict" // C_NULL_CHAR)
+  character(kind=C_CHAR) :: a = "", b  = "strict"
+
+  a_unicode = PyUnicode_DecodeUTF8(a, 0_PY_SSIZE_T_KIND, b // C_NULL_CHAR)
 
   if (.not. c_associated(a_unicode)) then
     ierror = EXCEPTION_ERROR

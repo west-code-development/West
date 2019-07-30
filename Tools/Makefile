@@ -2,6 +2,11 @@
 
 include ../../make.inc
 
+.SUFFIXES : .o .c .f .f90 .F90
+
+.F90.o:
+	$(MPIF90) $(F90FLAGS) -c $<
+
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \

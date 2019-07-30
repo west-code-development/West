@@ -597,7 +597,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
 END SUBROUTINE
 
 
-SUBROUTINE fetch_input1( num_drivers, driver, verbose )
+SUBROUTINE fetch_input1( num_drivers, driver, debug )
   !
   USE west_version, ONLY : start_forpy, end_forpy
   USE io_push,      ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
@@ -625,7 +625,7 @@ SUBROUTINE fetch_input1( num_drivers, driver, verbose )
   !
   INTEGER, INTENT(IN) :: num_drivers
   INTEGER, INTENT(IN) :: driver(num_drivers)
-  LOGICAL, INTENT(IN) :: verbose
+  LOGICAL, INTENT(IN) :: debug 
   !
   INTEGER :: IERR
   TYPE(tuple) :: args
@@ -646,18 +646,17 @@ SUBROUTINE fetch_input1( num_drivers, driver, verbose )
   CALL start_clock('fetch_input')
   !
   IF ( mpime==root ) THEN 
-     !
-     !CALL start_forpy()
      ! 
      IERR = import_py(pymod, "fetch_input")
      !
      IF ( ANY(driver(:)==1) ) THEN 
         !  
-        IERR = tuple_create(args, 1)
+        IERR = tuple_create(args, 2)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
+        IERR = args%setitem(1, "input_west" )
         IERR = dict_create(kwargs)
         !
-        IERR = call_py(return_obj, pymod, "read_input_west", args, kwargs)
+        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
@@ -682,10 +681,11 @@ SUBROUTINE fetch_input1( num_drivers, driver, verbose )
         !  
         IERR = tuple_create(args, 2)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, nq )
+        IERR = args%setitem(1, "wstat_control" )
         IERR = dict_create(kwargs)
+        IERR = kwargs%setitem("nq",nq)
         !
-        IERR = call_py(return_obj, pymod, "read_wstat_control", args, kwargs)
+        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
@@ -720,14 +720,6 @@ SUBROUTINE fetch_input1( num_drivers, driver, verbose )
      ENDIF
      !
      CALL pymod%destroy
-     !
-     IERR = import_py(pymod, "sys")
-     IERR = pymod%getattribute(return_obj, "stdout")
-     IERR = call_py_noret(return_obj, "flush")
-     !
-     CALL pymod%destroy
-     CALL return_obj%destroy
-     !CALL end_forpy()
      !
   ENDIF
   !
@@ -788,13 +780,10 @@ SUBROUTINE fetch_input1( num_drivers, driver, verbose )
      ENDIF
      !
   ENDIF
-!  OPEN(1000+mpime)
-!  WRITE(1000+mpime,*) driver, qe_prefix, west_prefix, outdir
-!  CLOSE(1000+mpime)
   !
   ! REPORT
   !
-  IF ( .TRUE. ) THEN
+  IF ( debug ) THEN
      !
      IF ( ANY(driver(:)==1) ) THEN
         !
@@ -893,19 +882,20 @@ SUBROUTINE fetch_input1( num_drivers, driver, verbose )
         !
      ENDIF
      !
-     IF( mpime == root ) THEN
-        !
-        CALL json%initialize()
-        CALL json%load_file(filename=TRIM(logfile))
-        !
-        CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
-        ! 
-        OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
-        CALL json%print_file( iunit )
-        CLOSE( iunit )
-        CALL json%destroy()
-        !
-     ENDIF
+     !
+  ENDIF
+  !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     CALL json%load_file(filename=TRIM(logfile))
+     !
+     CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
+     ! 
+     OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
+     CALL json%print_file( iunit )
+     CLOSE( iunit )
+     CALL json%destroy()
      !
   ENDIF
   !

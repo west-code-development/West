@@ -2169,10 +2169,16 @@ function forpy_initialize_unicode() result(ierror)
 
   type(c_ptr) :: a_unicode
   type(PyObject), pointer :: ptr
+  
+  character(kind=C_CHAR), dimension(1) :: a
+  character(kind=C_CHAR), dimension(7) :: b 
+  
+  a = [C_NULL_CHAR]
+  b = ['s','t','r','i','c','t', C_NULL_CHAR]
 
-  character(kind=C_CHAR) :: a = "", b  = "strict"
-
-  a_unicode = PyUnicode_DecodeUTF8(a, 0_PY_SSIZE_T_KIND, b // C_NULL_CHAR)
+  ! fix for PGI compiler: pgi does not like if a and b are 
+  ! string literals in this function call
+  a_unicode = PyUnicode_DecodeUTF8(a, 0_PY_SSIZE_T_KIND, b)
 
   if (.not. c_associated(a_unicode)) then
     ierror = EXCEPTION_ERROR

@@ -25,5 +25,6 @@ MODULE distribution_center
   TYPE(idistribute) :: ifr
   TYPE(idistribute) :: rfr
   TYPE(idistribute) :: aband
+  TYPE(idistribute) :: occband
   !
 END MODULE

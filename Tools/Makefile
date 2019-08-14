@@ -15,6 +15,7 @@ IFLAGS=
 
 TOOLS_OBJS = \
 io_push.o \
+logfile.o \
 fetch_input.o \
 set_dirs.o \
 west_print_clocks.o \

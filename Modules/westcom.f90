@@ -86,7 +86,7 @@ MODULE westin
   CHARACTER(LEN=512) :: qe_prefix
   CHARACTER(LEN=512) :: savedir            ! outdir/west_prefix.code.save
   CHARACTER(LEN=512) :: main_input_file    ! input file
-  CHARACTER(LEN=512) :: logfile            ! savedir/logfile.json 
+  CHARACTER(LEN=:), ALLOCATABLE :: logfile ! savedir/logfile.xml 
   !
 END MODULE  
 !

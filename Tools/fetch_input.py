@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # File: fetch_input.py
 # Test: python3 fetch_input.py

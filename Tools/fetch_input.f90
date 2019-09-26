@@ -1,7 +1,7 @@
 !
 ! Copyright (C) 2015-2017 M. Govoni 
 ! This file is distributed under the terms of the
-! GNU General Public License. See the file `License'
+! GNU General Public License. See the file License
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
@@ -264,7 +264,7 @@ SUBROUTINE fetch_input( num_drivers, driver, verbose )
      CALL mp_bcast(qe_prefix,root,world_comm)
      prefix=qe_prefix
      CALL mp_bcast(west_prefix,root,world_comm)
-     tmp_dir = trimcheck (outdir)
+     tmp_dir = trimcheck (TRIM(ADJUSTL(outdir)))
      CALL mp_bcast(tmp_dir,root,world_comm)
      !
   ENDIF
@@ -593,5 +593,312 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
      ENDIF
      !
   ENDIF
+  !
+END SUBROUTINE
+
+
+SUBROUTINE fetch_input1( num_drivers, driver, debug )
+  !
+  USE west_version, ONLY : start_forpy, end_forpy
+  USE io_push,      ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
+  USE forpy_mod,    ONLY: call_py, call_py_noret, import_py, module_py
+  USE forpy_mod,    ONLY: tuple, tuple_create 
+  USE forpy_mod,    ONLY: dict, dict_create 
+  USE forpy_mod,    ONLY: list, list_create 
+  USE forpy_mod,    ONLY: object, cast
+  USE forpy_mod,    ONLY : exception_matches, KeyError, err_clear, err_print 
+  USE westcom
+  USE io_files,         ONLY : tmp_dir, prefix
+  USE io_global,        ONLY : stdout
+  USE mp,               ONLY : mp_bcast
+  USE mp_world,         ONLY : mpime,root,world_comm
+  USE mp_global,        ONLY : nimage
+  USE gvect,            ONLY : ecutrho
+  USE start_k,          ONLY : nk1, nk2, nk3
+  USE control_flags,    ONLY : gamma_only
+  USE json_module,      ONLY : json_file
+
+  !
+  IMPLICIT NONE 
+  !
+  ! I/O
+  !
+  INTEGER, INTENT(IN) :: num_drivers
+  INTEGER, INTENT(IN) :: driver(num_drivers)
+  LOGICAL, INTENT(IN) :: debug 
+  !
+  INTEGER :: IERR
+  TYPE(tuple) :: args
+  TYPE(dict) :: kwargs
+  TYPE(module_py) :: pymod
+  TYPE(object) :: return_obj, tmp_obj
+  TYPE(dict) :: return_dict
+  TYPE(list) :: tmp_list
+  INTEGER :: list_len
+  INTEGER :: i
+  INTEGER :: nq
+  INTEGER :: numsp 
+  CHARACTER(LEN=512), EXTERNAL :: trimcheck
+  CHARACTER(LEN=:),ALLOCATABLE :: cvalue
+  TYPE(json_file) :: json
+  INTEGER :: iunit
+  ! 
+  CALL start_clock('fetch_input')
+  !
+  IF ( mpime==root ) THEN 
+     ! 
+     IERR = import_py(pymod, "fetch_input")
+     !
+     IF ( ANY(driver(:)==1) ) THEN 
+        !  
+        IERR = tuple_create(args, 2)
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
+        IERR = args%setitem(1, "input_west" )
+        IERR = dict_create(kwargs)
+        !
+        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = cast(return_dict, return_obj)
+        !
+        CALL args%destroy
+        CALL kwargs%destroy
+        CALL return_obj%destroy
+        !
+        IERR = return_dict%getitem(cvalue, "qe_prefix"); qe_prefix = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, "west_prefix"); west_prefix = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, "outdir"); outdir = TRIM(ADJUSTL(cvalue))
+        !
+        CALL return_dict%destroy
+        !
+     ENDIF
+     !
+     IF ( ANY(driver(:)==2) ) THEN
+        !
+        IF ( gamma_only ) THEN
+           nq = 1 
+        ELSE
+           nq = nk1*nk2*nk3
+        ENDIF
+        !  
+        IERR = tuple_create(args, 2)
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
+        IERR = args%setitem(1, "wstat_control" )
+        IERR = dict_create(kwargs)
+        IERR = kwargs%setitem("nq",nq)
+        !
+        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = cast(return_dict, return_obj)
+        !
+        CALL args%destroy
+        CALL kwargs%destroy
+        CALL return_obj%destroy
+        !
+        IERR = return_dict%getitem(cvalue, "wstat_calculation"); wstat_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(n_pdep_eigen, "n_pdep_eigen")
+        IERR = return_dict%getitem(n_pdep_times, "n_pdep_times")
+        IERR = return_dict%getitem(n_pdep_maxiter, "n_pdep_maxiter")
+        IERR = return_dict%getitem(n_dfpt_maxiter, "n_dfpt_maxiter")
+        IERR = return_dict%getitem(n_pdep_read_from_file, "n_pdep_read_from_file")
+        IERR = return_dict%getitem(trev_pdep, "trev_pdep")
+        IERR = return_dict%getitem(trev_pdep_rel, "trev_pdep_rel")
+        IERR = return_dict%getitem(tr2_dfpt, "tr2_dfpt")
+        IERR = return_dict%getitem(l_kinetic_only, "l_kinetic_only")
+        IERR = return_dict%getitem(l_minimize_exx_if_active, "l_minimize_exx_if_active")
+        IERR = return_dict%getitem(l_use_ecutrho, "l_use_ecutrho")
+        IERR = return_dict%getitem(tmp_obj, "qlist")
+        IERR = cast(tmp_list,tmp_obj)
+        IERR = tmp_list%len(list_len)
+        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        ALLOCATE(qlist(list_len))
+        DO i = 0, list_len-1 ! Python indices start at 0
+           IERR = tmp_list%getitem(qlist(i+1), i) ! Fortran indices start at 1 
+        ENDDO
+        !
+        CALL return_dict%destroy
+        CALL tmp_obj%destroy
+        CALL tmp_list%destroy
+        !
+     ENDIF
+     !
+     CALL pymod%destroy
+     !
+  ENDIF
+  !
+  ! BCAST & CHECKS
+  !
+  IF ( ANY(driver(:)==1) ) THEN
+     !
+     CALL mp_bcast(qe_prefix,root,world_comm); prefix=qe_prefix
+     CALL mp_bcast(west_prefix,root,world_comm)
+     CALL mp_bcast(outdir,root,world_comm); tmp_dir = trimcheck (outdir)
+     !
+  ENDIF
+  !
+  IF ( ANY(driver(:)==2) ) THEN
+     !
+     CALL mp_bcast(wstat_calculation,root,world_comm)
+     CALL mp_bcast(n_pdep_eigen,root,world_comm)
+     CALL mp_bcast(n_pdep_times,root,world_comm)
+     CALL mp_bcast(n_pdep_maxiter,root,world_comm)
+     CALL mp_bcast(n_dfpt_maxiter,root,world_comm)
+     CALL mp_bcast(n_pdep_read_from_file,root,world_comm)
+     CALL mp_bcast(trev_pdep,root,world_comm)
+     CALL mp_bcast(trev_pdep_rel,root,world_comm)
+     CALL mp_bcast(tr2_dfpt,root,world_comm)
+     CALL mp_bcast(l_kinetic_only,root,world_comm)
+     CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
+     CALL mp_bcast(l_use_ecutrho,root,world_comm)
+     IF(mpime == root) nq = SIZE(qlist)
+     CALL mp_bcast(nq,root,world_comm)
+     IF(mpime /= root) THEN 
+        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        ALLOCATE(qlist(nq))
+     ENDIF  
+     CALL mp_bcast(qlist,root,world_comm)
+     !
+     ! CHECKS 
+     !
+     SELECT CASE(wstat_calculation) 
+     CASE('r','R','s','S')
+     CASE DEFAULT
+        CALL errore('fetch_input','Err: wstat_calculation /= S or R',1)
+     END SELECT
+     !
+     IF( n_pdep_times < 2 ) CALL errore('fetch_input','Err: n_pdep_times<2',1) 
+     IF( n_pdep_eigen < 1 ) CALL errore('fetch_input','Err: n_pdep_eigen<1',1)
+     IF( n_pdep_eigen*n_pdep_times < nimage ) CALL errore('fetch_input','Err: n_pdep_eigen*n_pdep_times<nimage',1) 
+     IF( n_pdep_maxiter < 1 ) CALL errore('fetch_input','Err: n_pdep_maxiter<1',1) 
+     IF( n_dfpt_maxiter < 1 ) CALL errore('fetch_input','Err: n_dfpt_maxiter<1',1) 
+     IF( n_pdep_read_from_file < 0 ) CALL errore('fetch_input','Err: n_pdep_read_from_file<0',1) 
+     IF( n_pdep_read_from_file > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_read_from_file>n_pdep_eigen',1) 
+     IF(tr2_dfpt<=0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
+     IF(trev_pdep<=0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
+     IF(trev_pdep_rel<=0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
+     IF(gamma_only) THEN
+        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1.',1)
+     ELSE 
+        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3.',1)
+     ENDIF
+     !
+  ENDIF
+  !
+  ! REPORT
+  !
+  IF ( debug ) THEN
+     !
+     IF ( ANY(driver(:)==1) ) THEN
+        !
+        ! REPORT
+        !
+        CALL io_push_title("I/O Summary : input_west")
+        !
+        numsp = 14
+        CALL io_push_c512('qe_prefix',qe_prefix,numsp)
+        CALL io_push_c512('west_prefix',west_prefix,numsp)
+        CALL io_push_c512('outdir',outdir,numsp)
+        !
+        CALL io_push_bar()
+        !
+     ENDIF
+     !
+     IF ( ANY(driver(:)==2) ) THEN
+        !
+        ! REPORT
+        !
+        CALL io_push_title('I/O Summary : wstat_control')
+        !
+        numsp=30
+        CALL io_push_value('wstat_calculation',wstat_calculation,numsp)
+        CALL io_push_value('n_pdep_eigen',n_pdep_eigen,numsp)
+        CALL io_push_value('n_pdep_times',n_pdep_times,numsp)
+        CALL io_push_value('n_pdep_maxiter',n_pdep_maxiter,numsp)
+        CALL io_push_value('n_dfpt_maxiter',n_dfpt_maxiter,numsp)
+        CALL io_push_value('n_pdep_read_from_file',n_pdep_read_from_file,numsp)
+        CALL io_push_es0('trev_pdep',trev_pdep,numsp)
+        CALL io_push_es0('trev_pdep_rel',trev_pdep_rel,numsp)
+        CALL io_push_es0('tr2_dfpt',tr2_dfpt,numsp)
+        CALL io_push_value('l_kinetic_only',l_kinetic_only,numsp)
+        CALL io_push_value('l_minimize_exx_if_active',l_minimize_exx_if_active,numsp)
+        CALL io_push_value('l_use_ecutrho',l_use_ecutrho,numsp)
+        DO i = 1, SIZE(qlist) 
+           CALL io_push_value('qlist',qlist(i),numsp)
+        ENDDO
+        !
+        CALL io_push_bar()
+        !
+     ENDIF
+     !
+     IF ( ANY(driver(:)==3) ) THEN
+        !
+        ! REPORT
+        !
+        CALL io_push_title('I/O Summary : wfreq_control')
+        !
+        numsp=40
+        CALL io_push_value('wfreq_calculation',wfreq_calculation,numsp)
+        CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
+        CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
+        CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
+        CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
+        CALL io_push_value('n_lanczos',n_lanczos,numsp)
+        CALL io_push_value('n_imfreq',n_imfreq,numsp)
+        CALL io_push_value('n_refreq',n_refreq,numsp)
+        CALL io_push_value('ecut_imfreq [Ry]',ecut_imfreq,numsp)
+        CALL io_push_value('ecut_refreq [Ry]',ecut_refreq,numsp)
+        CALL io_push_value('wfreq_eta [Ry]',wfreq_eta,numsp)
+        CALL io_push_value('n_secant_maxiter',n_secant_maxiter,numsp)
+        CALL io_push_value('trev_secant [Ry]',trev_secant,numsp)
+        CALL io_push_value('l_enable_lanczos',l_enable_lanczos,numsp)
+        CALL io_push_value('l_enable_gwetot',l_enable_gwetot,numsp)
+        CALL io_push_value('o_restart_time [min]',o_restart_time,numsp)
+        CALL io_push_value('ecut_spectralf(1) [Ry]',ecut_spectralf(1),numsp)
+        CALL io_push_value('ecut_spectralf(2) [Ry]',ecut_spectralf(2),numsp)
+        CALL io_push_value('n_spectralf',n_spectralf,numsp)
+        !
+        CALL io_push_bar()
+        !
+     ENDIF
+     !
+     IF ( ANY(driver(:)==4) ) THEN
+        !
+        ! REPORT
+        !
+        CALL io_push_title('I/O Summary : westpp_control')
+        !
+        numsp=40
+        CALL io_push_value('westpp_calculation',westpp_calculation,numsp)
+        CALL io_push_value('westpp_range(1)',westpp_range(1),numsp)
+        CALL io_push_value('westpp_range(2)',westpp_range(2),numsp)
+        CALL io_push_value('westpp_format',westpp_format,numsp)
+        CALL io_push_value('westpp_sign',westpp_sign,numsp)
+        CALL io_push_value('westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use,numsp)
+        CALL io_push_value('westpp_r0(1)',westpp_r0(1),numsp)
+        CALL io_push_value('westpp_r0(2)',westpp_r0(2),numsp)
+        CALL io_push_value('westpp_r0(3)',westpp_r0(3),numsp)
+        CALL io_push_value('westpp_nr',westpp_nr,numsp)
+        CALL io_push_value('westpp_rmax',westpp_rmax,numsp)
+        CALL io_push_value('westpp_epsinfty',westpp_epsinfty,numsp)
+        !
+        CALL io_push_bar()
+        !
+     ENDIF
+     !
+     !
+  ENDIF
+  !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     CALL json%load_file(filename=TRIM(logfile))
+     !
+     CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
+     ! 
+     OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
+     CALL json%print_file( iunit )
+     CLOSE( iunit )
+     CALL json%destroy()
+     !
+  ENDIF
+  !
+  CALL stop_clock('fetch_input')
   !
 END SUBROUTINE

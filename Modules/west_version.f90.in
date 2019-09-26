@@ -12,11 +12,39 @@
 MODULE west_version
   !-----------------------------------------------------------------------
   !
+  USE forpy_mod, ONLY: list
+  !
   IMPLICIT NONE
   !
   SAVE
   !
   CHARACTER (LEN=6)  :: west_version_number = '3.1.1'
-  CHARACTER (LEN=12) :: west_svn_revision = 'unknown'
+  CHARACTER (LEN=512) :: west_git_revision = 'unknown'
+  CHARACTER (LEN=512) :: west_forpy_path = 'unset'
+  TYPE(list) :: paths 
+  !
+  CONTAINS
+  !
+  SUBROUTINE start_forpy()
+     USE forpy_mod, ONLY: forpy_initialize, get_sys_path
+     IMPLICIT NONE
+     INTEGER :: IERR
+     !
+     IERR = forpy_initialize()
+     IF(IERR/=0) CALL errore('forpy','Err: cannot init forpy',1)
+     !
+     IERR = get_sys_path(paths)
+     IF(IERR/=0) CALL errore('forpy','Err: cannot get_sys_path',1)
+     !
+     IERR = paths%append(TRIM(ADJUSTL(west_forpy_path))//"West/Tools")
+     IF(IERR/=0) CALL errore('forpy','Err: cannot append paths',1) 
+  END SUBROUTINE
+  !
+  SUBROUTINE end_forpy()
+     USE forpy_mod, ONLY: forpy_finalize
+     IMPLICIT NONE
+     CALL paths%destroy()
+     CALL forpy_finalize()
+  END SUBROUTINE
   !
 END MODULE 

@@ -2,7 +2,7 @@
 
 default: all
 
-all: title forpy_do json_do base64_do 
+all: title forpy_do json_do base64_do
 
 test: json_test_do
 

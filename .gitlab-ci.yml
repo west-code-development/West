@@ -58,42 +58,42 @@ gcc650_0001:
    - .template_bot_start
    - .template_build
   
-#gcc650_0002:
-# extends: 
-#   - .template_bot_start
-#   - .template_build
-#
-#gcc740_0001:
-# extends: 
-#   - .template_bot_start
-#   - .template_build
-# 
-#gcc740_0002:
-# extends: 
-#   - .template_bot_start
-#   - .template_build
-#
-#gcc830_0001:
-# extends: 
-#   - .template_bot_start
-#   - .template_build
-#
-#gcc830_0002:
-# extends: 
-#   - .template_bot_start
-#   - .template_build
-# 
-#gcc830_0001_t:
-# extends: 
-#   - .template_bot_start
-#   - .template_test
-# image: miccomcenter/bot:gcc830_0001
-#
-#gcc830_0002_t:
-# extends: 
-#   - .template_bot_start
-#   - .template_test
-# image: miccomcenter/bot:gcc830_0002
+gcc650_0002:
+ extends: 
+   - .template_bot_start
+   - .template_build
+
+gcc740_0001:
+ extends: 
+   - .template_bot_start
+   - .template_build
+ 
+gcc740_0002:
+ extends: 
+   - .template_bot_start
+   - .template_build
+
+gcc830_0001:
+ extends: 
+   - .template_bot_start
+   - .template_build
+
+gcc830_0002:
+ extends: 
+   - .template_bot_start
+   - .template_build
+ 
+gcc830_0001_t:
+ extends: 
+   - .template_bot_start
+   - .template_test
+ image: miccomcenter/bot:gcc830_0001
+
+gcc830_0002_t:
+ extends: 
+   - .template_bot_start
+   - .template_test
+ image: miccomcenter/bot:gcc830_0002
 
 #west_build_gcc:
 # tags: [rcc,docker,node-01]

@@ -26,6 +26,7 @@ wstat_setup.o \
 wstat_restart.o \
 wstat_memory_report.o \
 wstat_tools.o \
+apply_operator.o \
 davidson_diago.o \
 wstat.o
 

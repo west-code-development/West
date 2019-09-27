@@ -53,7 +53,7 @@ SUBROUTINE davidson_diago_gamma ( )
   USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE types_coulomb,        ONLY : pot3D
-  USE dfpt_module
+  USE dfpt_module,          ONLY : dfpt
   !
   IMPLICIT NONE
   !
@@ -473,7 +473,7 @@ SUBROUTINE davidson_diago_k ( )
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
-  USE dfpt_module
+  USE dfpt_module,          ONLY : dfpt
   !
   IMPLICIT NONE
   !

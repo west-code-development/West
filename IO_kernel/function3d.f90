@@ -119,7 +119,7 @@ MODULE function3d
    USE cell_base,                   ONLY : celldm, at
    USE control_flags,               ONLY : gamma_only
    USE mp_bands,                    ONLY : me_bgrp
-   USE scatter_mod,                 ONLY : gather_grid
+   USE scatter_mod,                 ONLY : scatter_grid
    USE fft_types,                   ONLY : fft_type_descriptor
    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
    USE forpy_mod,  ONLY: tuple, tuple_create 

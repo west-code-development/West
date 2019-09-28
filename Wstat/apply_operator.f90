@@ -106,6 +106,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   COMPLEX(DP), INTENT(IN) :: dvg(npwqx,m)
   COMPLEX(DP), INTENT(OUT) :: dng(npwqx,m)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:)
+  REAL(DP), ALLOCATABLE :: aux_r_double(:)
   CHARACTER(LEN=:),ALLOCATABLE :: filename
   CHARACTER(LEN=:),ALLOCATABLE :: lockfile
   !
@@ -114,6 +115,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   IF(iq/=0) CALL errore("outsourced","iq /= 0 not allowed",iq)
   !
   ALLOCATE(aux_r(dffts%nnr)); aux_r=0._DP
+  ALLOCATE(aux_r_double(dffts%nnr)); aux_r=0._DP
   !
   ! WRITE PERTURBATIONS TO FILE
   !
@@ -126,7 +128,8 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
      ENDIF
      !
      WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert 
-     !CALL write_function3d(filename,aux_r,dffts)
+     aux_r_double(:) = DBLE(aux_r(:))
+     CALL write_function3d(filename,aux_r_double,dffts)
      !
   ENDDO
   !
@@ -154,7 +157,8 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   DO ipert = 1, m
      !
      WRITE(filename,'("I.",I0,"_P.",I0,".xml.response")') my_image_id, ipert 
-     !CALL read_function3d(filename,aux_r,dffts)
+     CALL read_function3d(filename,aux_r_double,dffts)
+     aux_r(:) = CMPLX(aux_r_double(:),0._DP) 
      !       
      IF(gamma_only) THEN
         CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,dng(:,ipert),TRIM(fftdriver))
@@ -178,6 +182,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   ENDIF   
   !
   DEALLOCATE(aux_r)
+  DEALLOCATE(aux_r_double)
   !
 END SUBROUTINE
 

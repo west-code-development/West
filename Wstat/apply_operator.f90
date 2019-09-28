@@ -16,7 +16,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !
   USE kinds,                 ONLY : DP
   USE mp,                    ONLY : mp_barrier
-  USE westcom,               ONLY : npwqx,npwq
+  USE westcom,               ONLY : npwqx,npwq,wstat_calculation
   USE mp_world,              ONLY : world_comm
   USE types_coulomb,         ONLY : pot3D
   USE dfpt_module,           ONLY : dfpt
@@ -33,7 +33,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !
   ! Workspace
   !
-  INTEGER :: ipert, ig
+  INTEGER :: ipert, ig, i
   INTEGER :: iq_
   !
   REAL(DP) :: tr2_
@@ -45,6 +45,9 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   CALL mp_barrier( world_comm )
   !
   l_outsource = .FALSE.
+  DO i = 1,2 
+     IF( wstat_calculation(i:i) == 'E' ) l_outsource = .TRUE.
+  ENDDO
   !
   IF(PRESENT(iq)) THEN 
      iq_ = iq
@@ -66,7 +69,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   ENDDO
   !
   IF( l_outsource ) THEN
-     CALL calc_outsourced(m,aux_g,dng)
+     CALL calc_outsourced(m,aux_g,dng,iq_)
   ELSE 
      CALL dfpt(m,aux_g,dng,tr2_,iq_)
   ENDIF 
@@ -81,20 +84,139 @@ END SUBROUTINE
 !
 !
 !-------------------------------------------------------------------------
-SUBROUTINE calc_outsourced (m,dvg,dng)
+SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   !-----------------------------------------------------------------------
   !
-  USE kinds,   ONLY : DP
-  USE westcom, ONLY : npwqx      
+  USE kinds,           ONLY : DP
+  USE mp,              ONLY : mp_barrier
+  USE westcom,         ONLY : npwq,npwqx,fftdriver,igq_q      
+  USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
+  USE fft_at_k,        ONLY : single_fwfft_k,single_invfft_k
+  USE fft_at_gamma,    ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
+  USE fft_base,        ONLY : dfftp,dffts
+  USE control_flags,   ONLY : gamma_only
+  USE function3d,      ONLY : write_function3d,read_function3d
   !
   IMPLICIT NONE
   !
   ! I/O
   !
+  INTEGER, INTENT(IN) :: iq
   INTEGER, INTENT(IN) :: m
   COMPLEX(DP), INTENT(IN) :: dvg(npwqx,m)
   COMPLEX(DP), INTENT(OUT) :: dng(npwqx,m)
+  COMPLEX(DP), ALLOCATABLE :: aux_r(:)
+  CHARACTER(LEN=:),ALLOCATABLE :: filename
+  CHARACTER(LEN=:),ALLOCATABLE :: lockfile
   !
-  dng = dvg ! placeholder
+  INTEGER :: ipert, iu, stat 
   !
-END SUBROUTINE 
+  IF(iq/=0) CALL errore("outsourced","iq /= 0 not allowed",iq)
+  !
+  ALLOCATE(aux_r(dffts%nnr)); aux_r=0._DP
+  !
+  ! WRITE PERTURBATIONS TO FILE
+  !
+  DO ipert = 1, m
+     !
+     IF (gamma_only) THEN
+       CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,ipert),aux_r,TRIM(fftdriver))
+     ELSE
+        CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,ipert),aux_r,'Wave',igq_q(1,iq))
+     ENDIF
+     !
+     WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert 
+     !CALL write_function3d(filename,aux_r)
+     !
+  ENDDO
+  !
+  ! DUMP A LOCK FILE 
+  !
+  IF( me_bgrp == 0 ) THEN  
+     WRITE(lockfile,'("I.",I0,".lock")') my_image_id
+     OPEN(NEWUNIT=iu,FILE=lockfile) 
+     DO ipert = 1, m 
+        WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert
+        WRITE(iu,'(A)') filename
+     ENDDO
+     CLOSE(iu)
+     !
+     ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED 
+     !
+     CALL sleep_and_wait_for_lock_to_be_removed(lockfile)
+     !
+  ENDIF
+  !
+  CALL mp_barrier(intra_image_comm)
+  !
+  ! READ RESPONSES
+  !
+  DO ipert = 1, m
+     !
+     WRITE(filename,'("I.",I0,"_P.",I0,".xml.response")') my_image_id, ipert 
+     !CALL read_function3d(filename,aux_r)
+     !       
+     IF(gamma_only) THEN
+        CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,dng(:,ipert),TRIM(fftdriver))
+     ELSE
+        CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,dng(:,ipert),'Wave',igq_q(1,iq))
+     ENDIF
+     !
+  ENDDO
+  !
+  ! CLEANUP
+  !
+  IF( me_bgrp == 0 ) THEN  
+     DO ipert = 1, m 
+        WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert
+        OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
+        IF (stat == 0) CLOSE(iu, STATUS='DELETE')
+        WRITE(filename,'("I.",I0,"_P.",I0,".xml.response")') my_image_id, ipert
+        OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
+        IF (stat == 0) CLOSE(iu, STATUS='DELETE')
+     ENDDO
+  ENDIF   
+  !
+  DEALLOCATE(aux_r)
+  !
+END SUBROUTINE
+
+
+SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile)
+    !
+    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+    USE forpy_mod,  ONLY: tuple, tuple_create 
+    USE forpy_mod,  ONLY: dict, dict_create 
+    USE forpy_mod,  ONLY: list, list_create 
+    USE forpy_mod,  ONLY: object, cast
+    USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print 
+    !
+    IMPLICIT NONE
+    !
+    CHARACTER(LEN=*),INTENT(IN) :: lockfile
+    !
+    INTEGER :: IERR
+    TYPE(tuple) :: args
+    TYPE(dict) :: kwargs
+    TYPE(module_py) :: pymod
+    TYPE(object) :: return_obj
+    INTEGER :: return_int
+    !
+    IERR = import_py(pymod, "lockfile")
+    !  
+    IERR = tuple_create(args, 2)
+    IERR = args%setitem(0, lockfile )
+    IERR = dict_create(kwargs)
+    !
+    IERR = call_py(return_obj, pymod, "sleep_and_wait_for_lock_to_be_removed", args, kwargs)
+    !
+    IERR = cast(return_int, return_obj)
+    !
+    IF( return_int /= 0 ) CALL errore("sleep","Did not wake well",return_int)
+    !
+    CALL kwargs%destroy
+    CALL args%destroy
+    CALL return_obj%destroy
+    CALL pymod%destroy 
+    !
+END SUBROUTINE

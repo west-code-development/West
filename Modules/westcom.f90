@@ -99,7 +99,7 @@ MODULE wstat_center
   !
   ! INPUT FOR wstat_control
   !
-  CHARACTER(LEN=1) :: wstat_calculation 
+  CHARACTER(LEN=2) :: wstat_calculation 
   INTEGER :: n_pdep_basis
   INTEGER :: n_pdep_times
   INTEGER :: n_pdep_eigen

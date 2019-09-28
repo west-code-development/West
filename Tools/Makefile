@@ -14,6 +14,7 @@ IFLAGS=
 
 
 TOOLS_OBJS = \
+conversions.o \
 io_push.o \
 logfile.o \
 fetch_input.o \

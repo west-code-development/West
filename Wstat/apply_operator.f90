@@ -126,7 +126,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
      ENDIF
      !
      WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert 
-     !CALL write_function3d(filename,aux_r)
+     !CALL write_function3d(filename,aux_r,dffts)
      !
   ENDDO
   !
@@ -154,7 +154,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   DO ipert = 1, m
      !
      WRITE(filename,'("I.",I0,"_P.",I0,".xml.response")') my_image_id, ipert 
-     !CALL read_function3d(filename,aux_r)
+     !CALL read_function3d(filename,aux_r,dffts)
      !       
      IF(gamma_only) THEN
         CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,dng(:,ipert),TRIM(fftdriver))

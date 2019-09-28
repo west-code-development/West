@@ -16,333 +16,220 @@ MODULE function3d
  !
  IMPLICIT NONE
  !
+ INTERFACE write_function3d
+    MODULE PROCEDURE write_function3d_real !, write_function3d_complex
+ END INTERFACE  
+ !
+ INTERFACE read_function3d
+    MODULE PROCEDURE read_function3d_real !, read_function3d_complex
+ END INTERFACE  
+ !
  CONTAINS
  ! 
  !-----------------------------------------------------------------
-   SUBROUTINE write_function3d ( dfft, fname, descriptor, ng, ngx, funct3d_g, nmaps, nl )
+   SUBROUTINE write_function3d_real ( fname, f_r, dfft )
    ! -----------------------------------------------------------------
    !
    USE kinds,                       ONLY : DP
    USE cell_base,                   ONLY : celldm, at
    USE control_flags,               ONLY : gamma_only
    USE mp_bands,                    ONLY : me_bgrp
-   USE westcom,                     ONLY : fftdriver
    USE scatter_mod,                 ONLY : gather_grid
    USE fft_types,                   ONLY : fft_type_descriptor
+   USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+   USE forpy_mod,  ONLY: tuple, tuple_create 
+   USE forpy_mod,  ONLY: dict, dict_create 
+   USE forpy_mod,  ONLY: list, list_create 
+   USE forpy_mod,  ONLY: object, cast
+   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print 
+   USE conversions, ONLY : ltoa, itoa, dtoa
    USE base64_module
-   USE fourier_interpolation,       ONLY : set_nl, single_interp_invfft_gamma,&
-                                           &single_interp_invfft_k, single_interp_fwfft_gamma,&
-                                           &single_interp_fwfft_k
    !
    IMPLICIT NONE
    !
    ! I/O 
    !
-   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
    CHARACTER(LEN=*),INTENT(IN) :: fname
-   CHARACTER(LEN=*),INTENT(IN) :: descriptor
-   INTEGER, INTENT(IN) :: ng, ngx, nmaps
-   COMPLEX(DP),INTENT(IN) :: funct3d_g(ngx)
-   INTEGER,INTENT(IN) :: nl(nmaps,ngx)
+   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+   REAL(DP),INTENT(IN) :: f_r(dfft%nnr)
    ! 
    ! Workspace
    !
-   INTEGER              :: iu, ndim, nbytes, nlen, i
-   COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex(:)
-   COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex_gathered(:)
-   REAL(DP),ALLOCATABLE :: funct3d_r_double(:)
-   CHARACTER(LEN=14)    :: lab(3)
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
-   CHARACTER(LEN=:),ALLOCATABLE :: ctype
+   REAL(DP),ALLOCATABLE :: f_r_gathered(:), f_r_gathered_nopadded(:)
+   INTEGER :: ndim, nbytes, nlen
+   TYPE(tuple) :: args
+   TYPE(dict) :: kwargs
+   TYPE(module_py) :: pymod
+   TYPE(object) :: return_obj
+   INTEGER :: return_int
+   INTEGER :: IERR
    !
-   ALLOCATE( funct3d_r_complex(dfft%nnr) )
-   IF ( gamma_only ) THEN 
-      SELECT CASE(fftdriver) 
-      CASE('Wave') 
-         CALL single_interp_invfft_gamma(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
-      CASE('Dense')
-         CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
-      END SELECT
-   ELSE
-      CALL single_interp_invfft_k(dfft,ng,ngx,funct3d_g,funct3d_r_complex,fftdriver,nl)
-   ENDIF
+   ! Gather the function 
    !
-   ALLOCATE( funct3d_r_complex_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x) )
-   funct3d_r_complex_gathered = 0.0_DP
-   CALL gather_grid(dfft,funct3d_r_complex,funct3d_r_complex_gathered)
+   ALLOCATE(f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)); f_r_gathered = 0._DP
+   CALL gather_grid(dfft,f_r,f_r_gathered)
    !
    IF( me_bgrp == 0 ) THEN
       !
-      ! 2) Encode 
+      ALLOCATE(f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)); f_r_gathered_nopadded = 0._DP
+      CALL remove_padding_real(dfft,f_r_gathered,f_r_gathered_nopadded)
       !
-      IF( gamma_only ) THEN 
-         ALLOCATE( funct3d_r_double( dfft%nr1x*dfft%nr2x*dfft%nr3x ) ) 
-         funct3d_r_double = REAL(funct3d_r_complex_gathered(:),KIND=DP)
-         DEALLOCATE(funct3d_r_complex_gathered)
-         ndim = dfft%nr1x*dfft%nr2x*dfft%nr3x
-         nbytes = SIZEOF(funct3d_r_double(1)) * ndim
-         nlen = lenbase64(nbytes)
-         ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
-         IF (.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,funct3d_r_double(1:ndim))
-         CALL base64_encode_double(funct3d_r_double(1:ndim), ndim, charbase64)
-         DEALLOCATE(funct3d_r_double)
-         ctype = "double"
-      ELSE
-         ndim = dfft%nr1x*dfft%nr2x*dfft%nr3x
-         nbytes = SIZEOF(funct3d_r_complex_gathered(1)) * ndim
-         nlen = lenbase64(nbytes)
-         ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
-         IF (.NOT. islittleendian()) CALL base64_byteswap_complex(nbytes,funct3d_r_complex_gathered(1:ndim))
-         CALL base64_encode_complex(funct3d_r_complex_gathered(1:ndim), ndim, charbase64)
-         DEALLOCATE(funct3d_r_complex_gathered)
-         ctype = "complex"
-      ENDIF
+      ! Encode
       !
-      ! 3) Write 
+      ndim = dfft%nr1*dfft%nr2*dfft%nr3
+      nbytes = SIZEOF(f_r_gathered_nopadded(1)) * ndim
+      nlen = lenbase64(nbytes)
+      ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
+      IF (.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,f_r_gathered_nopadded(1:ndim))
+      CALL base64_encode_double(f_r_gathered_nopadded(1:ndim), ndim, charbase64)
+      DEALLOCATE(f_r_gathered_nopadded)
       !
-      OPEN(NEWUNIT=iu,FILE=TRIM(ADJUSTL(fname)))
+      IERR = import_py(pymod, "function3d")
+      !  
+      IERR = tuple_create(args, 1)
+      IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
+      IERR = dict_create(kwargs)
+      IERR = kwargs%setitem("name","delta_v")
+      IERR = kwargs%setitem("domain",'{'// &
+      & '"a":['//dtoa(celldm(1)*at(1,1))//","//dtoa(celldm(1)*at(2,1))//","//dtoa(celldm(1)*at(3,1))//'],'// &
+      & '"b":['//dtoa(celldm(1)*at(1,2))//","//dtoa(celldm(1)*at(2,2))//","//dtoa(celldm(1)*at(3,2))//'],'// &
+      & '"c":['//dtoa(celldm(1)*at(1,3))//","//dtoa(celldm(1)*at(2,3))//","//dtoa(celldm(1)*at(3,3))//'] }')
+      IERR = kwargs%setitem("grid","["//itoa(dfft%nr1)//","//itoa(dfft%nr2)//","//itoa(dfft%nr3)//"]" )
+      IERR = kwargs%setitem("grid_function",charbase64)
+      IERR = kwargs%setitem("dtype","double")
       !
-      WRITE(iu,'(a)') '<?xml version="1.0" encoding="UTF-8"?>'
-      WRITE(iu,'(a)') '<fpmd:function3d xmlns:fpmd="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0"'
-      WRITE(iu,'(a)') 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
-      WRITE(iu,'(a)') 'xsi:schemaLocation="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0 function3d.xsd"'
-      WRITE(iu,'(a)') 'name="',TRIM(ADJUSTL(descriptor)),'">'
-      DO i = 1, 3
-         WRITE(lab(i),'(f14.6)') celldm(1) * at(i,1) 
-      ENDDO     
-      WRITE(iu,'(a)') '<domain a="'//TRIM(ADJUSTL(lab(1)))//" "//TRIM(ADJUSTL(lab(2)))//" "//TRIM(ADJUSTL(lab(3)))//'"'
-      DO i = 1, 3
-         WRITE(lab(i),'(f14.6)') celldm(1) * at(i,2) 
-      ENDDO     
-      WRITE(iu,'(a)') 'b="'//TRIM(ADJUSTL(lab(1)))//" "//TRIM(ADJUSTL(lab(2)))//" "//TRIM(ADJUSTL(lab(3)))//'"'
-      DO i = 1, 3
-         WRITE(lab(i),'(f14.6)') celldm(1) * at(i,3) 
-      ENDDO     
-      WRITE(iu,'(a)') 'c="'//TRIM(ADJUSTL(lab(1)))//" "//TRIM(ADJUSTL(lab(2)))//" "//TRIM(ADJUSTL(lab(3)))//'"/>'
-      WRITE(lab(1),'(i14)') dfft%nr1x
-      WRITE(lab(2),'(i14)') dfft%nr2x
-      WRITE(lab(3),'(i14)') dfft%nr3x
-      WRITE(iu,'(a)') '<grid nx="'//TRIM(ADJUSTL(lab(1)))//'" ny="'//TRIM(ADJUSTL(lab(2)))//'" nz="'//TRIM(ADJUSTL(lab(3)))//'"/>'
-      WRITE(iu,'(a)') '<grid_function type="'//ctype//'" nx="'//TRIM(ADJUSTL(lab(1)))//'" ny="'//TRIM(ADJUSTL(lab(2)))// &
-            &'" nz="'//TRIM(ADJUSTL(lab(3)))//'" encoding="base64">'
-      CALL write_long_string(iu,charbase64) 
-      WRITE(iu,'(a)') '</grid_function>'
-      WRITE(iu,'(a)') '</fpmd:function3d>'
+      IERR = call_py_noret(pymod, "base64_to_function3d", args, kwargs)
       !
-      CLOSE(iu)
+      CALL kwargs%destroy
+      CALL args%destroy
+      CALL pymod%destroy
       !
-      DEALLOCATE(charbase64)
-      DEALLOCATE(ctype)
-      !
-   ELSE 
-      DEALLOCATE( funct3d_r_complex )
-   ENDIF 
+   ENDIF
+   ! 
+   DEALLOCATE(f_r_gathered)
    !
-   END SUBROUTINE 
- ! 
+ END SUBROUTINE 
+ !
  !-----------------------------------------------------------------
-   SUBROUTINE read_function3d ( dfft, fname, ng, ngx, funct3d_g, nmaps, nl)
+   SUBROUTINE read_function3d_real ( fname, f_r, dfft )
    ! -----------------------------------------------------------------
    !
    USE kinds,                       ONLY : DP
+   USE cell_base,                   ONLY : celldm, at
    USE control_flags,               ONLY : gamma_only
-   USE mp,                          ONLY : mp_bcast
-   USE mp_bands,                    ONLY : me_bgrp, intra_bgrp_comm
+   USE mp_bands,                    ONLY : me_bgrp
+   USE scatter_mod,                 ONLY : gather_grid
    USE fft_types,                   ONLY : fft_type_descriptor
-   USE scatter_mod,                 ONLY : scatter_grid
-   USE westcom,                     ONLY : fftdriver
+   USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+   USE forpy_mod,  ONLY: tuple, tuple_create 
+   USE forpy_mod,  ONLY: dict, dict_create 
+   USE forpy_mod,  ONLY: list, list_create 
+   USE forpy_mod,  ONLY: object, cast
+   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print 
    USE base64_module
-   USE fourier_interpolation
    !
    IMPLICIT NONE
    !
    ! I/O 
    !
-   TYPE(fft_type_descriptor), INTENT(IN) :: dfft 
    CHARACTER(LEN=*),INTENT(IN) :: fname
-   INTEGER,INTENT(IN) :: ng, ngx, nmaps
-   COMPLEX(DP),INTENT(OUT) :: funct3d_g(ngx)
-   INTEGER,INTENT(IN) :: nl(nmaps,ngx)
+   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+   REAL(DP),INTENT(OUT) :: f_r(dfft%nnr)
    ! 
    ! Workspace
    !
-   INTEGER :: iu, i, nlen, ndim, nbytes, nx, ny, nz 
-   COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex_gathered(:)
-   COMPLEX(DP),ALLOCATABLE :: funct3d_r_complex(:)
-   REAL(DP),ALLOCATABLE :: funct3d_r_double(:)
-   INTEGER :: nlines, j, is, ie, ios, nline_start, nline_end
-   CHARACTER(LEN=256) :: buffline
-   CHARACTER(LEN=:),ALLOCATABLE :: bufftag
-   CHARACTER(LEN=:),ALLOCATABLE :: buff2
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
-   LOGICAL :: lread 
-   CHARACTER(LEN=:),ALLOCATABLE :: ctype 
+   REAL(DP),ALLOCATABLE :: f_r_gathered(:), f_r_gathered_nopadded(:)
+   INTEGER :: ndim, nbytes, nlen
+   TYPE(tuple) :: args
+   TYPE(dict) :: kwargs, return_dict
+   TYPE(module_py) :: pymod
+   TYPE(object) :: return_obj
+   INTEGER :: return_int
+   INTEGER :: IERR
+   !
+   ALLOCATE(f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)); f_r_gathered = 0._DP
    !
    IF( me_bgrp == 0 ) THEN
       !
-      OPEN(NEWUNIT=iu,FILE=TRIM(ADJUSTL(fname)))
-      !
-      DO
-         READ(iu,'(a)',IOSTAT=ios) buffline
-         IF( ios /=0 ) EXIT
-         IF( INDEX(buffline,"<grid_function ") /= 0 ) THEN
-            bufftag = TRIM(buffline)
-            EXIT
-         ENDIF
-      ENDDO
-      !
-      DO WHILE ( INDEX(bufftag,">") == 0 )
-         READ(iu,'(a)',IOSTAT=ios) buffline
-         IF( ios /=0 ) EXIT
-         bufftag = bufftag // TRIM(buffline)
-      ENDDO
-      !
-      IF( INDEX(bufftag,">") == 0 ) THEN
-        lread = .false.
-      ELSE
-        is = INDEX(bufftag,'nx="') + 4
-        buff2 = bufftag(is:)
-        ie = INDEX(buff2,'"') + is - 2
-        READ(bufftag(is:ie),*) nx
-        is = INDEX(bufftag,'ny="') + 4
-        buff2 = bufftag(is:)
-        ie = INDEX(buff2,'"') + is - 2
-        READ(bufftag(is:ie),*) ny
-        is = INDEX(bufftag,'nz="') + 4
-        buff2 = bufftag(is:)
-        ie = INDEX(buff2,'"') + is - 2
-        READ(bufftag(is:ie),*) nz
-        is = INDEX(bufftag,'type="') + 6
-        buff2 = bufftag(is:)
-        ie = INDEX(buff2,'"') + is - 2
-        ctype = bufftag(is:ie)
-        lread = .true.
-      ENDIF
-      !
-      IF( lread ) THEN
-         ndim = nx*ny*nz
-         SELECT CASE (ctype)
-         CASE("double") 
-            nbytes = SIZEOF(1._DP) * ndim
-         CASE("complex")
-            nbytes = SIZEOF(CMPLX(1._DP,0._DP,KIND=DP)) * ndim
-         CASE DEFAULT
-         END SELECT 
-         nlen = lenbase64(nbytes)
-         ALLOCATE( CHARACTER(LEN=nlen) :: charbase64 )
-         !
-         CALL read_long_string(iu,charbase64)
-         !
-      ELSE
-         CALL errore("","Could not start tag",1)
-      ENDIF
+      ! Decode
       !
       !
-      CLOSE(iu)
+      IERR = import_py(pymod, "function3d")
+      !  
+      IERR = tuple_create(args, 1)
+      IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
+      IERR = dict_create(kwargs)
+      !
+      IERR = call_py(return_obj,pymod, "function3d_to_base64", args, kwargs)
+      !
+      IERR = cast(return_dict, return_obj)
+      !
+      ndim = dfft%nr1*dfft%nr2*dfft%nr3
+      nbytes = SIZEOF(f_r_gathered_nopadded(1)) * ndim
+      nlen = lenbase64(nbytes)
+      ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
+      IERR = return_dict%getitem(charbase64, "grid_function")
+      ALLOCATE(f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)); f_r_gathered_nopadded = 0._DP
+      CALL base64_decode_double(charbase64(1:nlen), ndim, f_r_gathered_nopadded(1:ndim))
+      IF (.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,f_r_gathered_nopadded(1:ndim))
+      !
+      CALL kwargs%destroy
+      CALL args%destroy
+      CALL return_obj%destroy
+      CALL return_dict%destroy
+      CALL pymod%destroy
+      !
+      CALL add_padding_real(dfft,f_r_gathered_nopadded,f_r_gathered)
+      DEALLOCATE(f_r_gathered_nopadded) 
       !
    ENDIF
    !
-   CALL mp_bcast(ndim,0,intra_bgrp_comm)
-   CALL mp_bcast(nx,0,intra_bgrp_comm)
-   CALL mp_bcast(ny,0,intra_bgrp_comm)
-   CALL mp_bcast(nz,0,intra_bgrp_comm)
-   !
-   IF( nx /= dfft%nr1x ) CALL errore('read','Wrong nx',1) 
-   IF( ny /= dfft%nr2x ) CALL errore('read','Wrong ny',1) 
-   IF( nz /= dfft%nr3x ) CALL errore('read','Wrong nz',1) 
-   !
-   ALLOCATE( funct3d_r_complex_gathered(1:ndim) )
-   !
-   IF ( me_bgrp == 0 ) THEN
-      SELECT CASE(ctype) 
-      CASE("double")
-         ALLOCATE( funct3d_r_double(1:ndim) )
-         CALL base64_decode_double(charbase64(1:nlen), ndim, funct3d_r_double(1:ndim))
-         DEALLOCATE( charbase64 )
-         IF (.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,funct3d_r_double(1:ndim)) 
-         funct3d_r_complex_gathered(:) = CMPLX( funct3d_r_double(:), 0._DP, KIND=DP)
-         DEALLOCATE( funct3d_r_double )
-      CASE("complex")
-         CALL base64_decode_complex(charbase64(1:nlen), ndim, funct3d_r_complex_gathered(1:ndim))
-         DEALLOCATE( charbase64 )
-         IF (.NOT. islittleendian()) CALL base64_byteswap_complex(nbytes,funct3d_r_complex_gathered(1:ndim)) 
-      CASE DEFAULT
-      END SELECT
-   ENDIF
-   !
-   ALLOCATE( funct3d_r_complex(dfft%nnr) )
-   !
-   CALL scatter_grid(dfft,funct3d_r_complex_gathered,funct3d_r_complex)
-   !
-   IF ( gamma_only ) THEN
-      SELECT CASE(fftdriver)
-      CASE('Wave')
-         CALL single_interp_fwfft_gamma(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
-      CASE('Dense')
-         CALL single_interp_fwfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
-      END SELECT
-   ELSE
-      CALL single_interp_fwfft_k(dfft,ng,ngx,funct3d_r_complex,funct3d_g,fftdriver,nl)
-   ENDIF
-   !
-   DEALLOCATE( funct3d_r_complex_gathered )
-   DEALLOCATE( funct3d_r_complex )
+   CALL scatter_grid(dfft,f_r_gathered,f_r)
+   ! 
+   DEALLOCATE(f_r_gathered)
    !
  END SUBROUTINE
  !
- !
- SUBROUTINE write_long_string(iu,longstring) 
-   !
-   ! Write a long string on multiple lines (each line has a max of 72 charachter)
-   ! The unit "iu" is NOT opened and closed here 
-   !
+ SUBROUTINE add_padding_real(dfft,f_r_gathered_nopadded,f_r_gathered) 
+   USE kinds, ONLY :DP
+   USE fft_types,                   ONLY : fft_type_descriptor
    IMPLICIT NONE
-   !
-   ! I/O
-   !
-   INTEGER,INTENT(IN) :: iu
-   CHARACTER(LEN=*),INTENT(IN) :: longstring
-   !
-   ! Workspace
-   !
-   INTEGER :: j, nlines, thislen
-   INTEGER, PARAMETER :: maxlen = 72
-   !
-   thislen = LEN(longstring)
-   nlines = thislen / maxlen
-   IF( MOD( thislen, maxlen ) > 0 ) nlines = nlines + 1
-   DO j = 1, nlines
-      WRITE(iu,'(a)') longstring((j-1)*maxlen+1:MIN(j*maxlen,thislen))
+   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+   REAL(DP),INTENT(IN) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
+   REAL(DP),INTENT(OUT) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
+   INTEGER :: i,j,k,ir_notpadded,ir_padded
+   f_r_gathered = 0._DP
+   DO k = 1, dfft%nr3
+      DO j = 1, dfft%nr2
+         DO i = 1, dfft%nr1
+            ir_notpadded = (i-1)*dfft%nr1 *dfft%nr2  + (j-1)*dfft%nr2  + k
+            ir_padded    = (i-1)*dfft%nr1x*dfft%nr2x + (j-1)*dfft%nr2x + k
+            f_r_gathered(ir_padded) = f_r_gathered_nopadded(ir_notpadded)
+         ENDDO
+      ENDDO
    ENDDO
-   !
  END SUBROUTINE
  !
- !
- SUBROUTINE read_long_string(iu,longstring) 
-   !
-   ! Read a long string on multiple lines (each line has a max of 72 charachter)
-   ! The unit "iu" is NOT opened and closed here 
-   !
+ SUBROUTINE remove_padding_real(dfft,f_r_gathered,f_r_gathered_nopadded) 
+   USE kinds, ONLY :DP
+   USE fft_types,                   ONLY : fft_type_descriptor
    IMPLICIT NONE
-   !
-   ! I/O
-   !
-   INTEGER,INTENT(IN) :: iu
-   CHARACTER(LEN=*),INTENT(INOUT) :: longstring
-   !
-   ! Workspace
-   !
-   INTEGER :: j, nlines, thislen
-   INTEGER, PARAMETER :: maxlen = 72
-   !
-   thislen = LEN(longstring)
-   nlines = thislen / maxlen
-   IF( MOD( thislen, maxlen ) > 0 ) nlines = nlines + 1
-   !
-   DO j = 1, nlines 
-      READ(iu,'(a)') longstring((j-1)*maxlen+1:MIN(j*maxlen,thislen))
+   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+   REAL(DP),INTENT(IN) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
+   REAL(DP),INTENT(OUT) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
+   INTEGER :: i,j,k,ir_notpadded,ir_padded
+   f_r_gathered_nopadded = 0._DP
+   DO k = 1, dfft%nr3
+      DO j = 1, dfft%nr2
+         DO i = 1, dfft%nr1
+            ir_notpadded = (i-1)*dfft%nr1 *dfft%nr2  + (j-1)*dfft%nr2  + k
+            ir_padded    = (i-1)*dfft%nr1x*dfft%nr2x + (j-1)*dfft%nr2x + k
+            f_r_gathered_nopadded(ir_notpadded) = f_r_gathered(ir_padded)
+         ENDDO
+      ENDDO
    ENDDO
-   !
  END SUBROUTINE
  !
 END MODULE

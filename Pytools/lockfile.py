@@ -98,6 +98,8 @@ def sleep_and_wait_for_lock_to_be_removed(*args, **kwargs):
     
 
 def test() :
+    with open("I.1.lock","w") as f :
+       f.write(" ")
     sleep_and_wait_for_lock_to_be_removed("I.1.lock",maxsec=60,sleepsec=2)
 
 if __name__ == "__main__":

@@ -53,7 +53,6 @@ SUBROUTINE davidson_diago_gamma ( )
   USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE types_coulomb,        ONLY : pot3D
-  USE dfpt_module,          ONLY : dfpt
   !
   IMPLICIT NONE
   !
@@ -193,7 +192,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ENDDO
      !
      pccg_res_tr2 = -1._DP
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
+     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      dav_iter = -1
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
@@ -230,7 +229,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ENDDO
      !
      pccg_res_tr2 = MIN(0.01_DP,1000000._DP*tr2_dfpt)
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
+     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      ! 
      ! </ EXTRA STEP >
      !
@@ -325,7 +324,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ! Apply operator with DFPT
      !
      pccg_res_tr2 = tr2_dfpt
-     CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
+     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
      !
      ! ... update the reduced hamiltonian
      !
@@ -473,7 +472,6 @@ SUBROUTINE davidson_diago_k ( )
                                    & update_with_vr_distr,refresh_with_vr_distr 
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
-  USE dfpt_module,          ONLY : dfpt
   !
   IMPLICIT NONE
   !
@@ -666,7 +664,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         pccg_res_tr2 = -1._DP
         !
-        CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         dav_iter = -1
         CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq)
         !
@@ -706,7 +704,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         pccg_res_tr2 = MIN(0.01_DP,1000000._DP*tr2_dfpt)
         !
-        CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         ! 
         ! </ EXTRA STEP >
         !
@@ -802,7 +800,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         pccg_res_tr2 = tr2_dfpt
         !
-        CALL dfpt ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
+        CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq ) 
         !
         ! ... update the reduced hamiltonian
         !

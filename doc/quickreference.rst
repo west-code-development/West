@@ -13,7 +13,7 @@ wstat.x
 
 This is a typical input for ``wstat.x``. 
 
-.. code-block:: bash 
+.. code-block:: yaml 
 
    input_west: 
       qe_prefix: silane
@@ -29,7 +29,7 @@ wfreq.x
 
 This is a typical input for ``wfreq.x``. 
 
-.. code-block:: bash 
+.. code-block:: yaml
 
    input_west: 
       qe_prefix: silane
@@ -52,7 +52,7 @@ westpp.x
 
 This is a typical input for ``westpp.x``. 
 
-.. code-block:: bash 
+.. code-block:: yaml 
 
    input_west: 
       qe_prefix: silane

@@ -40,4 +40,3 @@ Former Developers
 - Ryan McAvoy
 - Ngoc Linh Nguyen
 - Peter Scherpelz
-

@@ -152,7 +152,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   IF ( mpime==root ) THEN 
      ! 
-     IERR = import_py(pymod, "fetch_input")
+     IERR = import_py(pymod, "west_fetch_input")
      !
      IF ( ANY(driver(:)==1) ) THEN 
         !  

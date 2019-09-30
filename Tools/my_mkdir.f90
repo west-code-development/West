@@ -41,7 +41,7 @@ SUBROUTINE my_mkdir( dirname )
   !
   IF ( mpime == root ) THEN 
        !
-      IERR = import_py(pymod, "utils")
+      IERR = import_py(pymod, "west_utils")
       !  
       IERR = tuple_create(args, 1)
       IERR = args%setitem(0, TRIM(ADJUSTL(dirname)) )

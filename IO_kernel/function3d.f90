@@ -85,7 +85,7 @@ MODULE function3d
       CALL base64_encode_double(f_r_gathered_nopadded(1:ndim), ndim, charbase64)
       DEALLOCATE(f_r_gathered_nopadded)
       !
-      IERR = import_py(pymod, "function3d")
+      IERR = import_py(pymod, "west_function3d")
       !  
       IERR = tuple_create(args, 1)
       IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
@@ -156,7 +156,7 @@ MODULE function3d
       ! Decode
       !
       !
-      IERR = import_py(pymod, "function3d")
+      IERR = import_py(pymod, "west_function3d")
       !  
       IERR = tuple_create(args, 1)
       IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
@@ -200,16 +200,20 @@ MODULE function3d
    REAL(DP),INTENT(IN) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
    REAL(DP),INTENT(OUT) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
    INTEGER :: i,j,k,ir_notpadded,ir_padded
-   f_r_gathered = 0._DP
-   DO k = 1, dfft%nr3
-      DO j = 1, dfft%nr2
-         DO i = 1, dfft%nr1
-            ir_notpadded = (i-1)*dfft%nr1 *dfft%nr2  + (j-1)*dfft%nr2  + k
-            ir_padded    = (i-1)*dfft%nr1x*dfft%nr2x + (j-1)*dfft%nr2x + k
-            f_r_gathered(ir_padded) = f_r_gathered_nopadded(ir_notpadded)
+   IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN 
+      f_r_gathered = f_r_gathered_nopadded
+   ELSE 
+      f_r_gathered = 0._DP
+      DO k = 1, dfft%nr3
+         DO j = 1, dfft%nr2
+            DO i = 1, dfft%nr1
+               ir_notpadded = (i-1)*dfft%nr1 *dfft%nr2  + (j-1)*dfft%nr2  + k
+               ir_padded    = (i-1)*dfft%nr1x*dfft%nr2x + (j-1)*dfft%nr2x + k
+               f_r_gathered(ir_padded) = f_r_gathered_nopadded(ir_notpadded)
+            ENDDO
          ENDDO
       ENDDO
-   ENDDO
+   ENDIF
  END SUBROUTINE
  !
  SUBROUTINE remove_padding_real(dfft,f_r_gathered,f_r_gathered_nopadded) 
@@ -220,16 +224,20 @@ MODULE function3d
    REAL(DP),INTENT(IN) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
    REAL(DP),INTENT(OUT) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
    INTEGER :: i,j,k,ir_notpadded,ir_padded
-   f_r_gathered_nopadded = 0._DP
-   DO k = 1, dfft%nr3
-      DO j = 1, dfft%nr2
-         DO i = 1, dfft%nr1
-            ir_notpadded = (i-1)*dfft%nr1 *dfft%nr2  + (j-1)*dfft%nr2  + k
-            ir_padded    = (i-1)*dfft%nr1x*dfft%nr2x + (j-1)*dfft%nr2x + k
-            f_r_gathered_nopadded(ir_notpadded) = f_r_gathered(ir_padded)
+   IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN 
+      f_r_gathered_nopadded = f_r_gathered
+   ELSE 
+      f_r_gathered_nopadded = 0._DP
+      DO k = 1, dfft%nr3
+         DO j = 1, dfft%nr2
+            DO i = 1, dfft%nr1
+               ir_notpadded = (i-1)*dfft%nr1 *dfft%nr2  + (j-1)*dfft%nr2  + k
+               ir_padded    = (i-1)*dfft%nr1x*dfft%nr2x + (j-1)*dfft%nr2x + k
+               f_r_gathered_nopadded(ir_notpadded) = f_r_gathered(ir_padded)
+            ENDDO
          ENDDO
       ENDDO
-   ENDDO
+   ENDIF
  END SUBROUTINE
  !
 END MODULE

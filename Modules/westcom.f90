@@ -1,7 +1,7 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni 
 ! This file is distributed under the terms of the
-! GNU General Public License. See the file `License'
+! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !

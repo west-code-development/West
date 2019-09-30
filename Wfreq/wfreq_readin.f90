@@ -51,7 +51,7 @@ SUBROUTINE wfreq_readin()
   !
   ! READ other sections of the input file
   !
-  CALL fetch_input_yml(2,(/2,3/),.TRUE.,.TRUE.)
+  CALL fetch_input_yml(2,(/2,3/),.TRUE.,.FALSE.)
   !
   CALL stop_clock('wfreq_readin')
   !

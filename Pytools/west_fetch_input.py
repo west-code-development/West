@@ -180,6 +180,7 @@ def print_dict(title="input_west", data={}) :
     for i in range(nspaces) : 
        s+=" "
     #
+    print("")
     print_bar(s,nmarks)
     print(s+"I/O Summary : "+str(title))
     print_bar(s,nmarks)

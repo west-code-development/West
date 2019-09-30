@@ -99,7 +99,7 @@ MODULE function3d
       IERR = kwargs%setitem("grid_function",charbase64)
       IERR = kwargs%setitem("dtype","double")
       !
-      IERR = call_py_noret(pymod, "base64_to_function3d", args, kwargs)
+      IERR = call_py_noret(pymod, "base64_to_function3D", args, kwargs)
       !
       CALL kwargs%destroy
       CALL args%destroy
@@ -162,7 +162,7 @@ MODULE function3d
       IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
       IERR = dict_create(kwargs)
       !
-      IERR = call_py(return_obj,pymod, "function3d_to_base64", args, kwargs)
+      IERR = call_py(return_obj,pymod, "function3D_to_base64", args, kwargs)
       !
       IERR = cast(return_dict, return_obj)
       !

@@ -67,6 +67,7 @@ class QboxServer(ClientServer) :
        #
        client_image = self.client_lockfile.split(".")[1] 
        self.server_inputfile = f"qb.{client_image}.in" # we assume that server_number = client_image
+       print(self.server_inputfile)
        #
        # List of perturbation files 
        #
@@ -102,7 +103,7 @@ class QboxServer(ClientServer) :
 # INTERFACE #
 #############
 
-def sleep_and_wait_for_lock_to_be_removed(*args, **kwargs):
+def sleep_and_wait(*args, **kwargs):
     #
     client_lockfile = args[0] # name of client lockfile 
     maxsec = 12 * 60 * 60 # 12 hours, Max sleep time (in s) 
@@ -127,7 +128,7 @@ def sleep_and_wait_for_lock_to_be_removed(*args, **kwargs):
 def test() :
     with open("I.1.lock","w") as f :
        f.write(" ")
-    sleep_and_wait_for_lock_to_be_removed("I.1.lock",maxsec=60,sleepsec=2)
+    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2)
 
 if __name__ == "__main__":
     # execute only if run as a script

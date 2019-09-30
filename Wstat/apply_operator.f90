@@ -25,11 +25,11 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN), OPTIONAL :: iq
-  REAL(DP),INTENT(IN), OPTIONAL :: tr2
   INTEGER, INTENT(IN) :: m
   COMPLEX(DP), INTENT(IN) :: dvg(npwqx,m)
   COMPLEX(DP), INTENT(OUT) :: dng(npwqx,m)
+  REAL(DP),INTENT(IN), OPTIONAL :: tr2
+  INTEGER, INTENT(IN), OPTIONAL :: iq
   !
   ! Workspace
   !
@@ -64,18 +64,24 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !
   ALLOCATE( aux_g(npwqx,m) ); aux_g=0._DP
   !
-  DO CONCURRENT (ipert = 1:m, ig = 1:npwq)
-     aux_g(ig,ipert) = dvg(ig,ipert) * pot3D%sqvc(ig) ! perturbation acts only on body 
+  DO ipert = 1, m
+     DO ig = 1, npwq
+        aux_g(ig,ipert) = dvg(ig,ipert) * pot3D%sqvc(ig) ! perturbation acts only on body 
+     ENDDO
   ENDDO
   !
   IF( l_outsource ) THEN
      CALL calc_outsourced(m,aux_g,dng,iq_)
   ELSE 
      CALL dfpt(m,aux_g,dng,tr2_,iq_)
-  ENDIF 
+  ENDIF
   !
-  DO CONCURRENT (ipert = 1:m, ig = 1:npwq) 
-     dng(ig,ipert) = dng(ig,ipert) * pot3D%sqvc(ig) ! perturbation acts only on body  
+  DEALLOCATE( aux_g ) 
+  !
+  DO ipert = 1, m
+     DO ig = 1, npwq
+        dng(ig,ipert) = dng(ig,ipert) * pot3D%sqvc(ig) ! perturbation acts only on body  
+     ENDDO
   ENDDO
   !
   CALL mp_barrier( world_comm )
@@ -96,6 +102,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   USE fft_base,        ONLY : dfftp,dffts
   USE control_flags,   ONLY : gamma_only
   USE function3d,      ONLY : write_function3d,read_function3d
+  USE conversions,     ONLY : itoa
   !
   IMPLICIT NONE
   !
@@ -112,7 +119,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   !
   INTEGER :: ipert, iu, stat 
   !
-  IF(iq/=0) CALL errore("outsourced","iq /= 0 not allowed",iq)
+  IF(iq/=1) CALL errore("outsourced","iq /= 1 not allowed",iq)
   !
   ALLOCATE(aux_r(dffts%nnr)); aux_r=0._DP
   ALLOCATE(aux_r_double(dffts%nnr)); aux_r=0._DP
@@ -127,7 +134,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
         CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,ipert),aux_r,'Wave',igq_q(1,iq))
      ENDIF
      !
-     WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert 
+     filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml"
      aux_r_double(:) = DBLE(aux_r(:))
      CALL write_function3d(filename,aux_r_double,dffts)
      !
@@ -136,10 +143,10 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   ! DUMP A LOCK FILE 
   !
   IF( me_bgrp == 0 ) THEN  
-     WRITE(lockfile,'("I.",I0,".lock")') my_image_id
+     lockfile = "I."//itoa(my_image_id)//".lock"
      OPEN(NEWUNIT=iu,FILE=lockfile) 
      DO ipert = 1, m 
-        WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert
+        filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml"
         WRITE(iu,'(A)') filename
      ENDDO
      CLOSE(iu)
@@ -156,7 +163,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   !
   DO ipert = 1, m
      !
-     WRITE(filename,'("I.",I0,"_P.",I0,".xml.response")') my_image_id, ipert 
+     filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml.response"
      CALL read_function3d(filename,aux_r_double,dffts)
      aux_r(:) = CMPLX(aux_r_double(:),0._DP) 
      !       
@@ -171,11 +178,11 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   ! CLEANUP
   !
   IF( me_bgrp == 0 ) THEN  
-     DO ipert = 1, m 
-        WRITE(filename,'("I.",I0,"_P.",I0,".xml")') my_image_id, ipert
+     DO ipert = 1, m
+        filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml" 
         OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
         IF (stat == 0) CLOSE(iu, STATUS='DELETE')
-        WRITE(filename,'("I.",I0,"_P.",I0,".xml.response")') my_image_id, ipert
+        filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml.response"
         OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
         IF (stat == 0) CLOSE(iu, STATUS='DELETE')
      ENDDO
@@ -207,13 +214,13 @@ SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile)
     TYPE(object) :: return_obj
     INTEGER :: return_int
     !
-    IERR = import_py(pymod, "lockfile")
+    IERR = import_py(pymod, "clientserver")
     !  
-    IERR = tuple_create(args, 2)
-    IERR = args%setitem(0, lockfile )
+    IERR = tuple_create(args, 1)
+    IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)) )
     IERR = dict_create(kwargs)
     !
-    IERR = call_py(return_obj, pymod, "sleep_and_wait_for_lock_to_be_removed", args, kwargs)
+    IERR = call_py(return_obj, pymod, "sleep_and_wait", args, kwargs)
     !
     IERR = cast(return_int, return_obj)
     !

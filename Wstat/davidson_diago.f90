@@ -149,14 +149,14 @@ SUBROUTINE davidson_diago_gamma ( )
   !
   ! KIND OF CALCULATION
   !
-  SELECT CASE(wstat_calculation)
-  CASE('r','R')
+  IF( wstat_calculation(1:1)=="R" .OR. wstat_calculation(2:2)=="R" ) THEN
      !
      ! RESTART
      !
      CALL wstat_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
-  CASE('s','S')
+  ENDIF
+  IF( wstat_calculation(1:1)=="S" .OR. wstat_calculation(2:2)=="S" ) THEN
      !
      ! FROM SCRATCH
      !
@@ -192,13 +192,11 @@ SUBROUTINE davidson_diago_gamma ( )
      ENDDO
      !
      pccg_res_tr2 = -1._DP
-     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
+     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, 1 ) 
      dav_iter = -1
      CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
-  CASE DEFAULT
-     CALL errore('chidiago', 'Wrong wstat_calculation',1)
-  END SELECT
+  ENDIF
   !
   IF( dav_iter == -2 ) CALL errore( 'chidiago','Cannot find the 1st starting loop',1) 
   !
@@ -324,7 +322,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ! Apply operator with DFPT
      !
      pccg_res_tr2 = tr2_dfpt
-     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2 ) 
+     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, 1) 
      !
      ! ... update the reduced hamiltonian
      !
@@ -584,14 +582,14 @@ SUBROUTINE davidson_diago_k ( )
      !
      IF ( q_grid%np > 1 ) THEN
         !
-        IF ( wstat_calculation == 'S' ) THEN
+        IF ( wstat_calculation(1:1) == 'S' .OR. wstat_calculation(2:2) == 'S' ) THEN
            !
            WRITE( stdout, '(/,5x,64a)' ) ('=',i=1,64)
            WRITE( stdout, '(5x,a,i5.5,a,3f10.4,a)')&
            'PDEP calculation at q(',iq,') = (',q_grid%p_cart(:,iq),' )'
            WRITE( stdout, '(5x,64a)' ) ('-',i=1,64)
            !
-        ELSEIF ( wstat_calculation == 'R' .AND. l_restart_q_done ) THEN
+        ELSEIF ( (wstat_calculation(1:1) == 'R' .OR. wstat_calculation(2:2) == 'R') .AND. l_restart_q_done ) THEN
            !
            WRITE( stdout, '(/,5x,64a)' ) ('=',i=1,64)
            WRITE( stdout, '(5x,a,i5.5,a,3f10.4,a)')&
@@ -604,8 +602,7 @@ SUBROUTINE davidson_diago_k ( )
      !
      ! KIND OF CALCULATION
      !
-     SELECT CASE(wstat_calculation)
-     CASE('r','R')
+     IF( wstat_calculation(1:1) == "R" .OR. wstat_calculation(2:2) == "R" ) THEN 
         !
         IF ( .NOT. l_restart_q_done ) THEN
            !
@@ -622,7 +619,8 @@ SUBROUTINE davidson_diago_k ( )
            !
         ENDIF
         !
-     CASE('s','S')
+     ENDIF
+     IF( wstat_calculation(1:1) == "S" .OR. wstat_calculation(2:2) == "S" ) THEN
         !
         ! FROM SCRATCH
         !
@@ -668,11 +666,7 @@ SUBROUTINE davidson_diago_k ( )
         dav_iter = -1
         CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq)
         !
-     CASE DEFAULT
-        !
-        CALL errore('chidiago', 'Wrong wstat_calculation',1)
-        !
-     END SELECT
+     ENDIF
      !
      IF( dav_iter == -2 ) CALL errore( 'chidiago','Cannot find the 1st starting loop',1) 
      !

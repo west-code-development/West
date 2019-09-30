@@ -16,9 +16,9 @@ IFLAGS=
 TOOLS_OBJS = \
 conversions.o \
 io_push.o \
-logfile.o \
-fetch_input.o \
+my_mkdir.o \
 set_dirs.o \
+fetch_input.o \
 west_print_clocks.o \
 exx_go.o \
 exx_ungo.o \

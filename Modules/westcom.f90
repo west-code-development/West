@@ -86,7 +86,7 @@ MODULE westin
   CHARACTER(LEN=512) :: qe_prefix
   CHARACTER(LEN=512) :: savedir            ! outdir/west_prefix.code.save
   CHARACTER(LEN=512) :: main_input_file    ! input file
-  CHARACTER(LEN=:), ALLOCATABLE :: logfile ! savedir/logfile.xml 
+  CHARACTER(LEN=512) :: logfile ! savedir/logfile.json 
   !
 END MODULE  
 !
@@ -148,8 +148,8 @@ MODULE wfreq_center
   INTEGER :: n_secant_maxiter
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
-  CHARACTER(LEN=1) :: macropol_calculation
   LOGICAL :: l_enable_gwetot
+  CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
   REAL(DP) :: o_restart_time
   REAL(DP) :: ecut_spectralf(2)

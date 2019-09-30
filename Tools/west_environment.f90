@@ -38,7 +38,7 @@ CONTAINS
     USE base64_module,   ONLY : base64_init 
     USE json_string_utilities, ONLY : lowercase_string
     USE west_version,    ONLY : start_forpy
-    USE logfile_mod,     ONLY : clear_log
+    !USE logfile_mod,     ONLY : clear_log
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
@@ -54,15 +54,16 @@ CONTAINS
 #if defined(__INTEL_COMPILER)
     CALL remove_stack_limit ( )
 #endif
+    CALL start_forpy() 
     !
     ! Input from (-i), output from (-o)
     !
     CALL parse_command_arguments()
-    CALL fetch_input(1,(/1/),.FALSE.)
+    CALL fetch_input_yml(1,(/1/),.FALSE.,.FALSE.)
     !
-    savedir = TRIM(outdir) // trim(west_prefix) // "." // TRIM(lowercase_string(code)) // ".save/"
-    CALL my_mkdir( savedir )
-    logfile = TRIM(savedir) // TRIM(lowercase_string(code))//".log.xml"
+    savedir = TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) // "." // TRIM(lowercase_string(code)) // ".save/"
+    logfile = TRIM(ADJUSTL(savedir)) // TRIM(lowercase_string(code))//".json"
+    CALL my_mkdir( TRIM(ADJUSTL(savedir)) ) 
     !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
     ! ... use ".TRUE."  to enable clocks
@@ -116,9 +117,8 @@ CONTAINS
     !
     ! Initialize base64 tables  
     CALL base64_init()
-    CALL start_forpy() 
     !
-    CALL clear_log()
+    !CALL clear_log()
     CALL west_opening_message( code )
 #if defined(__MPI)
     CALL report_parallel_status ( )
@@ -196,7 +196,7 @@ CONTAINS
   !
   SUBROUTINE west_opening_message( code )
     !
-    !USE json_module,     ONLY : json_file
+    USE json_module,     ONLY : json_file
     USE io_global,       ONLY : stdout
     USE global_version,  ONLY : version_number, svn_revision
     USE west_version,    ONLY : west_version_number, west_git_revision
@@ -204,7 +204,7 @@ CONTAINS
     USE westcom,         ONLY : logfile
     USE base64_module,   ONLY : islittleendian  
     USE forpy_mod,        ONLY : dict, dict_create 
-    USE logfile_mod,      ONLY : append_log, itoa, ltoa, dtoa
+    !USE logfile_mod,      ONLY : append_log, itoa, ltoa, dtoa
     !
     ! I/O
     !
@@ -212,8 +212,8 @@ CONTAINS
     !
     ! Workspace
     !
-    !TYPE(json_file) :: json
-    !INTEGER :: iunit
+    TYPE(json_file) :: json
+    INTEGER :: iunit
     CHARACTER(LEN=9)  :: cdate, ctime
     !
     INTEGER :: IERR
@@ -249,50 +249,50 @@ CONTAINS
     ENDIF 
     !
     IF( mpime == root ) THEN 
-       !
-      !CALL json%initialize()
+      ! 
+      CALL json%initialize()
+      !
+      CALL json%add('runjob.startdate', TRIM(cdate) )
+      CALL json%add('runjob.starttime', TRIM(ctime) )
+      CALL json%add('runjob.completed', .FALSE. )
+      CALL json%add('software.package', "WEST" )
+      CALL json%add('software.program', TRIM(code) )
+      CALL json%add('software.version', TRIM(west_version_number) )
+      IF( TRIM (west_git_revision) /= "unknown" ) CALL json%add('software.westgit', TRIM(west_git_revision) )
+      CALL json%add('software.website',"http://www.west-code.org")
+      CALL json%add('software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
+      CALL json%add('software.qeversion', TRIM(version_number) )
+      IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('software.qesvn', TRIM(svn_revision) )
+      CALL json%add('config.io.islittleendian', islittleendian() )
+      !
+      OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
+      CALL json%print_file( iunit )
+      CLOSE( iunit )
+      !
+      CALL json%destroy()
+      !
+      !s = '{ '
+      !s = s // '"startdate" : '   //'"'//TRIM(cdate) //'" , '
+      !s = s // '"startime" : '    //'"'//TRIM(ctime)     //'" , '
+      !s = s // '"package" : '     //'"WEST"'          //' , '
+      !s = s // '"program" : '     //'"'//TRIM(code)      //'" , '
+      !s = s // '"version" : '     //'"'//TRIM(west_version_number) //'" , '
+      !IF( TRIM (west_git_revision) /= "unknown" ) THEN
+      !   s = s // '"git_version" : ' //'"'//TRIM(west_git_revision) //'" , '
+      !ENDIF
+      !s = s // '"website" : '     //'"http://www.west-code.org"' //' , '
+      !s = s // '"citation" : '    //'"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015)."' //' , '
+      !s = s // '"website" : '     //'"http://www.west-code.org"' //' , '
+      !s = s // '"qeversion" : '     //'"'//TRIM(version_number) //'" , '
+      !s = s // '"islittleendian" : ' //ltoa(islittleendian()) //'   '
+      !s = s // '}'
       !!
-      !CALL json%add('runjob.startdate', TRIM(cdate) )
-      !CALL json%add('runjob.starttime', TRIM(ctime) )
-      !CALL json%add('runjob.completed', .FALSE. )
-      !CALL json%add('software.package', "WEST" )
-      !CALL json%add('software.program', TRIM(code) )
-      !CALL json%add('software.version', TRIM(west_version_number) )
-      !IF( TRIM (west_git_revision) /= "unknown" ) CALL json%add('software.westgit', TRIM(west_git_revision) )
-      !CALL json%add('software.website',"http://www.west-code.org")
-      !CALL json%add('software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
-      !CALL json%add('software.qeversion', TRIM(version_number) )
-      !IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('software.qesvn', TRIM(svn_revision) )
-      !CALL json%add('config.io.islittleendian', islittleendian() )
+      !IERR = dict_create(attr)
+      !IERR = attr%setitem("type", "intro" )
       !!
-      !OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
-      !CALL json%print_file( iunit )
-      !CLOSE( iunit )
+      !CALL append_log( s, attr )
       !!
-      !CALL json%destroy()
-      !
-      s = '{ '
-      s = s // '"startdate" : '   //'"'//TRIM(cdate) //'" , '
-      s = s // '"startime" : '    //'"'//TRIM(ctime)     //'" , '
-      s = s // '"package" : '     //'"WEST"'          //' , '
-      s = s // '"program" : '     //'"'//TRIM(code)      //'" , '
-      s = s // '"version" : '     //'"'//TRIM(west_version_number) //'" , '
-      IF( TRIM (west_git_revision) /= "unknown" ) THEN
-         s = s // '"git_version" : ' //'"'//TRIM(west_git_revision) //'" , '
-      ENDIF
-      s = s // '"website" : '     //'"http://www.west-code.org"' //' , '
-      s = s // '"citation" : '    //'"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015)."' //' , '
-      s = s // '"website" : '     //'"http://www.west-code.org"' //' , '
-      s = s // '"qeversion" : '     //'"'//TRIM(version_number) //'" , '
-      s = s // '"islittleendian" : ' //ltoa(islittleendian()) //'   '
-      s = s // '}'
-      !
-      IERR = dict_create(attr)
-      IERR = attr%setitem("type", "intro" )
-      !
-      CALL append_log( s, attr )
-      !
-      CALL attr%destroy
+      !CALL attr%destroy
       !
     ENDIF 
     !
@@ -305,12 +305,14 @@ CONTAINS
      !
      ! ... Report the mpi/openmp status
      !
+     USE json_module,      ONLY : json_file
      USE io_global,        ONLY : stdout
      USE mp_global,        ONLY : nimage,npool,nbgrp,nproc_image,nproc_pool,nproc_bgrp 
      USE mp_world,         ONLY : nproc,mpime,root 
      USE io_push,          ONLY : io_push_title,io_push_bar
      USE forpy_mod,        ONLY : dict, dict_create 
-     USE logfile_mod,      ONLY : append_log, itoa
+     USE westcom,          ONLY : logfile
+     !USE logfile_mod,      ONLY : append_log, itoa
      !
      IMPLICIT NONE
      !
@@ -319,6 +321,8 @@ CONTAINS
 #endif
      !
      INTEGER :: nth, ncores 
+     TYPE(json_file) :: json
+     INTEGER :: iunit
      !
      INTEGER :: IERR
      CHARACTER(LEN=:),ALLOCATABLE :: s
@@ -355,28 +359,49 @@ CONTAINS
      CALL io_push_bar()
 #endif
     !
-    IF( mpime == root ) THEN 
+    IF( mpime == root ) THEN
        !
-       s = '{ '
-       s = s // '"nranks" : '   //ITOA(nproc)      //' , '
-       s = s // '"nimage" : '   //ITOA(nimage)     //' , '
-       s = s // '"nimage" : '   //ITOA(nimage)     //' , '
-       s = s // '"npool" : '    //ITOA(npool)      //' , '
-       s = s // '"nbgrp" : '    //ITOA(nbgrp)      //' , '
-       s = s // '"nrg" : '      //ITOA(nproc_bgrp) //' , '
+       CALL json%initialize()
+       !
+       CALL json%load_file(filename=TRIM(logfile))
+       !
+       CALL json%add('parallel.nranks', nproc )
+       CALL json%add('parallel.nimage', nimage )
+       CALL json%add('parallel.npool', npool )
+       CALL json%add('parallel.nbgrp', nbgrp )
+       CALL json%add('parallel.nrg', nproc_bgrp )
+       CALL json%add('parallel.nproc', ncores )
 #if defined(__OPENMP)
-       s = s // '"nthreads" : ' //ITOA(nth)        //' , '
+       CALL json%add('parallel.nthreads', nth )
 #endif
-       s = s // '"nproc" : '    //ITOA(ncores)     //'   '
-       s = s // '}'
        !
-       IERR = dict_create(attr)
-       IERR = attr%setitem("type", "parallel" )
+       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+       CALL json%print_file( iunit )
+       CLOSE( iunit )
        !
-       CALL append_log( s, attr )
+       CALL json%destroy()
        !
-       CALL attr%destroy
-       !
+!       !
+!       s = '{ '
+!       s = s // '"nranks" : '   //ITOA(nproc)      //' , '
+!       s = s // '"nimage" : '   //ITOA(nimage)     //' , '
+!       s = s // '"nimage" : '   //ITOA(nimage)     //' , '
+!       s = s // '"npool" : '    //ITOA(npool)      //' , '
+!       s = s // '"nbgrp" : '    //ITOA(nbgrp)      //' , '
+!       s = s // '"nrg" : '      //ITOA(nproc_bgrp) //' , '
+!#if defined(__OPENMP)
+!       s = s // '"nthreads" : ' //ITOA(nth)        //' , '
+!#endif
+!       s = s // '"nproc" : '    //ITOA(ncores)     //'   '
+!       s = s // '}'
+!       !
+!       IERR = dict_create(attr)
+!       IERR = attr%setitem("type", "parallel" )
+!       !
+!       CALL append_log( s, attr )
+!       !
+!       CALL attr%destroy
+!       !
     ENDIF 
      !
   END SUBROUTINE

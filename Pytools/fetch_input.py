@@ -37,28 +37,29 @@ default["wstat_control"]["qlist"] = [ 1 ] # dynamically set to the actual number
 default["wfreq_control"] = {}
 default["wfreq_control"]["wfreq_calculation"] = "XWGQ"
 default["wfreq_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
-default["wfreq_control"]["qp_bandrange"] = [1,2]
+default["wfreq_control"]["qp_bandrange"] = [1, 2]
 default["wfreq_control"]["macropol_calculation"] = 'N'
 default["wfreq_control"]["n_lanczos"] = 30
 default["wfreq_control"]["n_imfreq"] = 128 
-default["wfreq_control"]["n_refreq"] = 272 # dynamically set so that ecut_refreq / n_refreq = 0.1 eV 
+default["wfreq_control"]["n_refreq"] = 272  
 default["wfreq_control"]["ecut_imfreq"] = 25. # dynamically set to ecutrho
-default["wfreq_control"]["ecut_refreq"] = 2. # dynamically set to contain eks + 0.5 Ry padding 
+default["wfreq_control"]["ecut_refreq"] = 2. 
 default["wfreq_control"]["wfreq_eta"] = 0.05 / rytoev
 default["wfreq_control"]["n_secant_maxiter"] = 21
 default["wfreq_control"]["trev_secant"] = 0.05 / rytoev
 default["wfreq_control"]["l_enable_lanczos"] = True
+default["wfreq_control"]["l_enable_gwetot"] = False
 default["wfreq_control"]["o_restart_time"] = 0.
-default["wfreq_control"]["ecut_spectralf"] = [-2.,1.] 
+default["wfreq_control"]["ecut_spectralf"] = [-2., 1.] 
 default["wfreq_control"]["n_spectralf"] = 204
 # westpp_control
 default["westpp_control"] = {}
 default["westpp_control"]["westpp_calculation"] = "r"
-default["westpp_control"]["westpp_range"] = [1,2]
+default["westpp_control"]["westpp_range"] = [1, 2]
 default["westpp_control"]["westpp_format"] = "C"
 default["westpp_control"]["westpp_sign"] = False
 default["westpp_control"]["westpp_n_pdep_eigen_to_use"] = 1
-default["westpp_control"]["westpp_r0"] = [0.,0.,0.]
+default["westpp_control"]["westpp_r0"] = [0., 0., 0.]
 default["westpp_control"]["westpp_nr"] = 100
 default["westpp_control"]["westpp_rmax"] = 1.
 default["westpp_control"]["westpp_epsinfty"] = 1.
@@ -78,22 +79,17 @@ def update_default_values(key,kwargs) :
        #
        assert("nelec") in kwargs.keys()
        nelec = kwargs["nelec"] 
-       default[key]["n_pdep_eigen"] = nelec
+       default[key]["n_pdep_eigen"] = int(nelec)
     #
     if key == "wfreq_control" :
        #
        assert("nelec") in kwargs.keys()
        nelec = kwargs["nelec"] 
-       default[key]["n_pdep_eigen_to_use"] = nelec
+       default[key]["n_pdep_eigen_to_use"] = int(nelec)
        #
        assert("ecutrho") in kwargs.keys()
        ecutrho = kwargs["ecutrho"] 
        default[key]["ecut_imfreq"] = ecutrho
-       #
-       assert("eksmax") in kwargs.keys()
-       eksmax = kwargs["eksmax"] 
-       default[key]["ecut_refreq"] = eksmax + 0.5
-       default[key]["n_refreq"] = int( default[key]["ecut_refreq"] * rytoev / 0.1 ) 
 
 ################
 # OPEN & PARSE #
@@ -206,6 +202,7 @@ def read_keyword_from_file(*args, **kwargs):
     #
     fileName = args[0]
     keyword = args[1] 
+    verbose = args[2]
     #
     # Assign static & dynamical defaults 
     # 
@@ -226,7 +223,8 @@ def read_keyword_from_file(*args, **kwargs):
     #
     # Print
     #
-    print_dict(keyword, data)
+    if (verbose) : 
+       print_dict(keyword, data)
     #
     return data
 
@@ -249,10 +247,10 @@ wstat_control :
    unknown_key : value # this line will be read but not passed 
 """)
     #
-    read_keyword_from_file(fileName,"input_west")
-    read_keyword_from_file(fileName,"wstat_control",nq=20,nelec=10)
-    read_keyword_from_file(fileName,"wfreq_control",nelec=10,ecutrho=30.,eksmax=2.)
-    read_keyword_from_file(fileName,"westpp_control")
+    read_keyword_from_file(fileName,"input_west",True)
+    read_keyword_from_file(fileName,"wstat_control",True,nq=20,nelec=10)
+    read_keyword_from_file(fileName,"wfreq_control",True,nelec=10,ecutrho=30.)
+    read_keyword_from_file(fileName,"westpp_control",True)
     #
     remove(fileName)
 

@@ -18,7 +18,6 @@ IFLAGS=
 
 IO_KERNEL_OBJS = \
 mpiio.o \
-my_mkdir.o \
 cubefile.o \
 function3d.o \
 pdep_io.o \

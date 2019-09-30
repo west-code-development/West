@@ -14,10 +14,16 @@
 SUBROUTINE my_mkdir( dirname )
   !------------------------------------------------------------------------
   !
-  USE wrappers,  ONLY : f_mkdir_safe
+!  USE wrappers,  ONLY : f_mkdir_safe
   USE mp,        ONLY : mp_barrier,mp_bcast
   USE mp_world,  ONLY : mpime, root, world_comm
-  USE io_files,  ONLY : check_writable
+!  USE io_files,  ONLY : check_writable
+   USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+   USE forpy_mod,  ONLY: tuple, tuple_create
+   USE forpy_mod,  ONLY: dict, dict_create
+   USE forpy_mod,  ONLY: list, list_create
+   USE forpy_mod,  ONLY: object, cast
+   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
   !
   ! I/O
   !
@@ -27,24 +33,43 @@ SUBROUTINE my_mkdir( dirname )
   !
   INTEGER                    :: ierr
   CHARACTER(LEN=6), EXTERNAL :: int_to_char
+   TYPE(tuple) :: args
+   TYPE(dict) :: kwargs
+   TYPE(module_py) :: pymod
   !
   ! BARRIER
   !
-  !
-  IF ( mpime == root ) ierr = f_mkdir_safe( TRIM( dirname ) )
-  CALL mp_bcast ( ierr, root, world_comm )
-  !
-  CALL errore( 'create_directory', &
-               'unable to create directory ' // TRIM( dirname ), ierr )
-  !
-  ! ... check whether the scratch directory is writable
-  !
-  IF ( mpime == root ) ierr = check_writable ( dirname, mpime )
-  CALL mp_bcast( ierr, root, world_comm )
-  !
-  CALL errore( 'create_directory:', &
-               TRIM( dirname ) // ' non existent or non writable', ierr )
-  CALL mp_barrier( world_comm )
+  IF ( mpime == root ) THEN 
+       !
+      IERR = import_py(pymod, "utils")
+      !  
+      IERR = tuple_create(args, 1)
+      IERR = args%setitem(0, TRIM(ADJUSTL(dirname)) )
+      IERR = dict_create(kwargs)
+
+      IERR = call_py_noret(pymod, "my_mkdir", args, kwargs)
+      !
+      CALL kwargs%destroy
+      CALL args%destroy
+      CALL pymod%destroy
+
+  ENDIF 
+  CALL mp_barrier(world_comm)
+
+!  IF ( mpime == root ) ierr = f_mkdir_safe( TRIM( dirname ) )
+!  CALL mp_bcast ( ierr, root, world_comm )
+!  !
+!  CALL errore( 'create_directory', &
+!               'unable to create directory ' // TRIM( dirname ), ierr )
+!  !
+!  ! ... check whether the scratch directory is writable
+!  !
+!  IF ( mpime == root ) ierr = check_writable ( dirname, mpime )
+!  CALL mp_bcast( ierr, root, world_comm )
+!  !
+!  CALL errore( 'create_directory:', &
+!               TRIM( dirname ) // ' non existent or non writable', ierr )
+!  CALL mp_barrier( world_comm )
   !
   RETURN
   !

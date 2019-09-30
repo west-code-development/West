@@ -36,7 +36,7 @@ SUBROUTINE wstat_readin()
   !
   ! READ INPUT_WEST
   !
-  CALL fetch_input1(1,(/1/),.FALSE.)
+  CALL fetch_input_yml(1,(/1/),.TRUE.,.FALSE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed
@@ -52,7 +52,7 @@ SUBROUTINE wstat_readin()
   !
   ! READ other sections of the input file
   !
-  CALL fetch_input1(1,(/2/),.FALSE.)
+  CALL fetch_input_yml(1,(/2/),.TRUE.,.FALSE.)
   !
   CALL stop_clock('wstat_readin')
   !

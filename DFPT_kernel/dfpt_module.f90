@@ -48,7 +48,6 @@ MODULE dfpt_module
       USE io_push,               ONLY : io_push_title
       USE mp_world,              ONLY : mpime,world_comm
       USE types_bz_grid,         ONLY : k_grid, q_grid, compute_phase
-      USE types_coulomb,         ONLY : pot3D
       !
       IMPLICIT NONE
       !
@@ -68,7 +67,7 @@ MODULE dfpt_module
       INTEGER :: npwkq
       !
       REAL(DP) :: g0(3)
-      REAL(DP) :: anorm, prod 
+      REAL(DP) :: anorm
       REAL(DP), ALLOCATABLE :: eprec(:)
       !
       COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:),dpsi(:,:)
@@ -171,14 +170,11 @@ MODULE dfpt_module
          !
          DO ipert = 1, m
             !
-            ALLOCATE( aux_g(npwqx) )
-            ALLOCATE( aux_r(dffts%nnr) )
+            ALLOCATE( aux_g(npwqx) ); aux_g = 0._DP
+            ALLOCATE( aux_r(dffts%nnr) ); aux_r = 0._DP
             !
-            aux_g=0._DP
-            aux_r=0._DP
-            !
-            DO ig = 1, npwq  ! perturbation acts only on body
-               aux_g(ig) = dvg(ig,ipert) * pot3D%sqvc(ig) 
+            DO CONCURRENT (ig = 1:npwq)  
+               aux_g(ig) = dvg(ig,ipert) 
             ENDDO
             !
             ! ... inverse Fourier transform of the perturbation: (q+)G ---> R
@@ -200,7 +196,7 @@ MODULE dfpt_module
                DO ibnd=1,nbndval-MOD(nbndval,2),2
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd+1),psic,'Wave')
-                  DO ir=1,dffts%nnr
+                  DO CONCURRENT (ir=1:dffts%nnr)
                      psic(ir) = psic(ir) * REAL(aux_r(ir),KIND=DP)
                   ENDDO
                   CALL double_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(1,ibnd),dvpsi(1,ibnd+1),'Wave')
@@ -212,7 +208,7 @@ MODULE dfpt_module
                   ibnd=nbndval
                   !
                   CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),psic,'Wave')
-                  DO ir=1,dffts%nnr
+                  DO CONCURRENT (ir=1:dffts%nnr)
                      psic(ir) = CMPLX( REAL(psic(ir),KIND=DP) * REAL(aux_r(ir),KIND=DP), 0._DP, KIND=DP)
                   ENDDO
                   CALL single_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(1,ibnd),'Wave')
@@ -230,7 +226,7 @@ MODULE dfpt_module
                   ! ... construct right-hand-side term of Sternheimer equation:
                   ! ... product of wavefunction at [k-q], phase and perturbation in real space
                   !
-                  DO ir = 1, dffts%nnr
+                  DO CONCURRENT (ir = 1:dffts%nnr)
                      psic(ir) = psic(ir) * phase(ir) * aux_r(ir)
                   ENDDO
                   !
@@ -248,7 +244,7 @@ MODULE dfpt_module
                      !
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
                      !
-                     DO ir = 1, dffts%nnr
+                     DO CONCURRENT (ir = 1:dffts%nnr)
                         psic(ir) = psic(ir) * phase(ir) * aux_r(ir)
                      ENDDO
                      !
@@ -292,9 +288,8 @@ MODULE dfpt_module
                DO ibnd=1,nbndval
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dpsi(1,ibnd),psic,'Wave')
-                  DO ir=1,dffts%nnr
-                     prod =  REAL( psic(ir),KIND=DP) * DIMAG( psic(ir))
-                     aux_r(ir) = aux_r(ir) + CMPLX( prod, 0.0_DP, KIND=DP)
+                  DO CONCURRENT (ir=1:dffts%nnr)
+                     aux_r(ir) = aux_r(ir) + CMPLX( REAL( psic(ir),KIND=DP) * DIMAG( psic(ir)) , 0.0_DP, KIND=DP)
                   ENDDO
                   !
                ENDDO
@@ -313,7 +308,7 @@ MODULE dfpt_module
                   !
                   CALL single_invfft_k(dffts,npw,npwx,dpsi(1,ibnd),dpsic,'Wave',igk_k(1,iks))
                   !
-                  DO ir = 1, dffts%nnr 
+                  DO CONCURRENT (ir = 1: dffts%nnr) 
                      aux_r(ir) = aux_r(ir) + CONJG( psic(ir) * phase(ir) ) * dpsic(ir)
                   ENDDO
                   !
@@ -326,7 +321,7 @@ MODULE dfpt_module
                      !
                      CALL single_invfft_k(dffts,npw,npwx,dpsi(npwx+1,ibnd),dpsic,'Wave',igk_k(1,iks))
                      !
-                     DO ir = 1, dffts%nnr 
+                     DO CONCURRENT (ir = 1: dffts%nnr)
                         aux_r(ir) = aux_r(ir) + CONJG( psic(ir) * phase(ir) ) * dpsic(ir)
                      ENDDO
                      !
@@ -347,8 +342,8 @@ MODULE dfpt_module
                CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,aux_g,'Wave',igq_q(1,iq))
             ENDIF
             !
-            DO ig = 1, npwq ! pert acts only on body
-               dng(ig,ipert) = dng(ig,ipert) + 2._DP * k_grid%weight(iks) * aux_g(ig) * pot3D%sqvc(ig) / omega
+            DO CONCURRENT( ig = 1: npwq) ! pert acts only on body
+               dng(ig,ipert) = dng(ig,ipert) + 2._DP * k_grid%weight(iks) * aux_g(ig) / omega
             ENDDO
             !
             DEALLOCATE( aux_g )

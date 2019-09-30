@@ -1,7 +1,7 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni 
 ! This file is distributed under the terms of the
-! GNU General Public License. See the file `License'
+! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
@@ -85,8 +85,8 @@ MODULE westin
   CHARACTER(LEN=512) :: west_prefix
   CHARACTER(LEN=512) :: qe_prefix
   CHARACTER(LEN=512) :: savedir            ! outdir/west_prefix.code.save
-  CHARACTER(LEN=512) :: main_input_file    ! input file (json format)
-  CHARACTER(LEN=512) :: logfile            ! savedir/logfile.json 
+  CHARACTER(LEN=512) :: main_input_file    ! input file
+  CHARACTER(LEN=512) :: logfile ! savedir/logfile.json 
   !
 END MODULE  
 !
@@ -99,7 +99,7 @@ MODULE wstat_center
   !
   ! INPUT FOR wstat_control
   !
-  CHARACTER(LEN=1) :: wstat_calculation 
+  CHARACTER(LEN=2) :: wstat_calculation 
   INTEGER :: n_pdep_basis
   INTEGER :: n_pdep_times
   INTEGER :: n_pdep_eigen
@@ -148,8 +148,8 @@ MODULE wfreq_center
   INTEGER :: n_secant_maxiter
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
-  CHARACTER(LEN=1) :: macropol_calculation
   LOGICAL :: l_enable_gwetot
+  CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
   REAL(DP) :: o_restart_time
   REAL(DP) :: ecut_spectralf(2)

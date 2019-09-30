@@ -5,6 +5,7 @@ include ../../make.inc
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
+          $(MOD_FLAG)../Libraries/Forpy \
           $(MOD_FLAG)../Libraries/Json \
           $(MOD_FLAG)../Libraries/Base64 \
           $(MOD_FLAG)../Modules \
@@ -25,11 +26,12 @@ wstat_setup.o \
 wstat_restart.o \
 wstat_memory_report.o \
 wstat_tools.o \
+apply_operator.o \
 davidson_diago.o \
 wstat.o
 
 PWOBJS = ../../PW/src/libpw.a 
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a 
 WESTLIBS = \
 ../IO_kernel/lib_io_kernel.a \
 ../DFPT_kernel/lib_dfpt_kernel.a \

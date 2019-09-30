@@ -38,37 +38,31 @@ EOF
 
 
 cat > wstat.in << EOF
-{
-  "input_west": {
-    "qe_prefix": "test",
-    "west_prefix": "test",
-    "outdir": "./"
-  },
-  "wstat_control": {
-    "wstat_calculation": "S",
-    "n_pdep_eigen": 50
-  }
-}
+input_west: 
+   qe_prefix: test
+   west_prefix: test
+   outdir: ./
+
+wstat_control: 
+   wstat_calculation: S
+   n_pdep_eigen: 50
 EOF
 
 
 cat > wfreq.in << EOF 
-{
-  "input_west": {
-    "qe_prefix": "test",
-    "west_prefix": "test",
-    "outdir": "./"
-  },
-  "wstat_control": {
-    "wstat_calculation": "S",
-    "n_pdep_eigen": 50
-  },
-  "wfreq_control": {
-    "wfreq_calculation": "XWGQ",
-    "n_pdep_eigen_to_use": 50,
-    "qp_bandrange": [1,5],
-    "n_refreq": 300,
-    "ecut_refreq": 2.0
-  }
-}
+input_west:
+   qe_prefix: test
+   west_prefix: test
+   outdir: ./
+
+wstat_control: 
+   wstat_calculation: S
+   n_pdep_eigen: 50
+
+wfreq_control: 
+   wfreq_calculation: XWGQ
+   n_pdep_eigen_to_use: 50
+   qp_bandrange: [1,5]
+   n_refreq: 300
+   ecut_refreq: 2.0
 EOF

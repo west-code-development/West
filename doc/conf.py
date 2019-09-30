@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'west'
-copyright = u'2018, Marco Govoni'
+copyright = u'2019, Marco Govoni'
 author = u'Marco Govoni'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -64,7 +64,7 @@ author = u'Marco Govoni'
 # built documents.
 #
 # The short X.Y version.
-version = '3.1.1'
+version = '4.0.0'
 # The full version, including alpha/beta/rc tags.
 release = version
 

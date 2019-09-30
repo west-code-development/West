@@ -1,12 +1,22 @@
 #!/usr/bin/python3
 
+#
+# Copyright (C) 2015-2019 M. Govoni 
+# This file is distributed under the terms of the
+# GNU General Public License. See the file `License'
+# in the root directory of the present distribution,
+# or http://www.gnu.org/copyleft/gpl.txt .
+#
+# This file is part of WEST.
+#
+
 from __future__ import print_function
 import sys
 from os import path, remove
 import yaml
 import json
 
-rytoev = 13.6056980659
+rytoev = 13.6056980659 # Ry to eV conversion factor
 
 #########################
 # STATIC DEFAULT VALUES #

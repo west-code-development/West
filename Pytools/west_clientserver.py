@@ -1,5 +1,15 @@
 #!/usr/bin/python3
 
+#
+# Copyright (C) 2015-2019 M. Govoni 
+# This file is distributed under the terms of the
+# GNU General Public License. See the file `License'
+# in the root directory of the present distribution,
+# or http://www.gnu.org/copyleft/gpl.txt .
+#
+# This file is part of WEST.
+#
+
 from time import sleep, perf_counter as pc
 from os import path, remove
 from abc import ABC, abstractmethod

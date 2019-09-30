@@ -30,13 +30,13 @@ Contributors
 - Tyler Smart (University of California, Santa Cruz)
 - Aditya Tanikanti (University of Chicago)
 - Feng Wu (University of California, Santa Cruz)
-- Huihuo Zheng (Argonne National Laboratory)
 
 Former Developers
 -----------------
 
-- Nicholas Brawand
-- Matteo Gerosa 
-- Ryan McAvoy
-- Ngoc Linh Nguyen
-- Peter Scherpelz
+- Nicholas Brawand (2016-2018)
+- Matteo Gerosa (2017-2018)
+- Ryan McAvoy (2017-2018)
+- Ngoc Linh Nguyen (2017-2018)
+- Peter Scherpelz (2016-2018)
+- Huihuo Zheng (2016-2018)

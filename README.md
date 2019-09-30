@@ -1,5 +1,5 @@
 # West
-WEST code repository. [www.west-code.org](http://www.west-code.org) 
+WEST code repository. [www.west-code.org](http://www.west-code.org)  
 
 ## About
 **WEST** (Without Empty STates) is a massively parallel software for large scale electronic structure calculations within many-body perturbation theory. 

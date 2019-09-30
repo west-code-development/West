@@ -29,12 +29,12 @@ The former list of developers, in alphabetical order:
 
 We would like to thank the following people for their contibution (beside generic comments and bugfixes), in alphabetical order:
 
-- Francois Gygi (University of California, Davis): for strategic discussions
-- Ikutaro Hamada (Osaka University): for the first implementation of k-points
-- Yuan Ping (University of California, Santa Cruz): for the first implementation of 2D cutoff
-- Jonathan Skone (University of Chicago): hybrid functionals
-- Tyler Smart (University of California, Santa Cruz): for the first implementation of 2D cutoff
-- Aditya Tanikanti (University of Chicago): for improving deployment and testing
-- Feng Wu (University of California, Santa Cruz): for the first implementation of 2D cutoff
+- Francois Gygi (University of California, Davis)
+- Ikutaro Hamada (Osaka University)
+- Yuan Ping (University of California, Santa Cruz)
+- Jonathan Skone (University of Chicago)
+- Tyler Smart (University of California, Santa Cruz)
+- Aditya Tanikanti (University of Chicago)
+- Feng Wu (University of California, Santa Cruz)
 
 Please, don't hesitate to contact us if you see that information is wrong or missing in this file.

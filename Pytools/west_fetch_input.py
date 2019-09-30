@@ -185,7 +185,7 @@ def print_dict(title="input_west", data={}) :
     print(s+"I/O Summary : "+str(title))
     print_bar(s,nmarks)
     for key in data.keys() :
-       print(s+key,"=",data[key])
+       print(s+key,":",data[key])
     print_bar(s,nmarks)
     sys.stdout.flush()
 

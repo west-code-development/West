@@ -39,13 +39,13 @@ EOF
 
 cat > wstat.in << EOF
 input_west:
-   qe_prefix: test
-   west_prefix: test
-   outdir: ./
+  qe_prefix: test
+  west_prefix: test
+  outdir: ./
 
 wstat_control: 
-   wstat_calculation: S
-    n_pdep_eigen: 50
+  wstat_calculation: S
+  n_pdep_eigen: 50
 EOF
 
 

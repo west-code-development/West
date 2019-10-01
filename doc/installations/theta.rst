@@ -4,7 +4,7 @@
 Theta-ALCF (XC40)
 =================
 
-Theta is a Cray XC40 located at Argonne National Laboratory. 
+Theta is a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF <https://www.alcf.anl.gov/>`_. 
 
 .. code-block:: bash 
 
@@ -42,7 +42,7 @@ WEST executables can be compiled using the following script:
 Running WEST Jobs
 ~~~~~~~~~~~~~~~~~
 
-The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Theta with 64 MPI ranks per node. The job can be submitted with command `qsub run_west.sh` where <project_name> is replaced with an active project allocation.
+The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Theta with 64 MPI ranks per node. The <project_name> must be replaced with an active project allocation.
 
 .. code-block:: bash 
 

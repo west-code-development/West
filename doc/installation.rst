@@ -17,7 +17,7 @@ Configure QuantumEspresso by running the ``configure`` script that comes with th
    $ ./configure LD_LIBS="`python3-config --ldflags`"
 
 .. note:: 
-   Note that since v4.0.0 WEST requires dynamic compilation and python3. 
+   Note that since v4.0.0 WEST requires dynamic linking and python3. 
 
 It's now time to create the ``pw.x``, ``wstat.x``, ``wfreq.x``, and ``westpp.x`` executables by doing:
 
@@ -49,3 +49,4 @@ Suggested configuration options
    :maxdepth: 1
 
    installations/theta.rst
+   installations/midway.rst

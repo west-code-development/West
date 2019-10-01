@@ -13,6 +13,7 @@
 from time import sleep, perf_counter as pc
 from os import path, remove
 from abc import ABC, abstractmethod
+import json 
 
 ##############
 # SUPERCLASS #
@@ -20,11 +21,12 @@ from abc import ABC, abstractmethod
 
 class ClientServer(ABC): 
    #
-   def __init__(self,client_lockfile,maxsec=21600,sleepsec=10):
+   def __init__(self,client_lockfile,maxsec=21600,sleepsec=10,document={}):
       #
       self.client_lockfile = client_lockfile
       self.maxsec = maxsec
       self.sleepsec = sleepsec
+      self.document = document 
       super().__init__()
    #
    @abstractmethod
@@ -73,6 +75,21 @@ class QboxServer(ClientServer) :
    #
    def before_sleep(self):
        #
+       command_suffix = ""
+       if "response" in self.document.keys() : 
+          if self.document["response"] == "RPA" :
+             command_suffix += "-RPA "
+          if self.document["response"] == "IPA" :
+             command_suffix += "-IPA "
+       if "amplitude" in self.document.keys() : 
+          command_suffix += f'-amplitude {self.document["amplitude"]} '
+       if "nitscf" in self.document.keys() : 
+          command_suffix += f'{self.document["nitscf"]} '
+       else : 
+          command_suffix += f'20 '
+       if "nite" in self.document.keys() : 
+          command_suffix += f'{self.document["nite"]}'
+       #
        # Determine the name of the server file 
        #
        client_image = self.client_lockfile.split(".")[1] 
@@ -87,13 +104,12 @@ class QboxServer(ClientServer) :
        #
        # Create the input file for the server 
        # 
-       with open(self.server_inputfile,"w") as f: 
-          f.write("load gs.xml\n")
-          f.write("set xc PBE\n")
-          f.write("set wf_dyn PSDA\n")
-          f.write("set scf_tol 1.e-8\n")
+       with open(self.server_inputfile,"w") as f:
+          if "script" in self.document.keys() :
+             for line in self.document["script"] :
+                f.write(line+"\n")
           for pert in perturbation_list : 
-              f.write(f"response -vext {pert} -IPA -amplitude 0 20\n")
+              f.write(f"response -vext {pert} "+command_suffix+"\n")
        #
        # Awake server, by removing its lockfile 
        #
@@ -120,6 +136,7 @@ def sleep_and_wait(*args, **kwargs):
     client_lockfile = args[0] # name of client lockfile 
     maxsec = 12 * 60 * 60 # 12 hours, Max sleep time (in s) 
     sleepsec = 1 # 1 second, Sleep interval (in s)
+    document = {}
     #
     # change defaults 
     #
@@ -127,8 +144,10 @@ def sleep_and_wait(*args, **kwargs):
        maxsec = kwargs["maxsec"]
     if "sleepsec" in kwargs.keys() : 
        sleepsec = kwargs["sleepsec"]
+    if "document" in kwargs.keys() :
+       document = json.loads(kwargs["document"])
     #
-    server = QboxServer(client_lockfile,maxsec,sleepsec)
+    server = QboxServer(client_lockfile,maxsec,sleepsec,document)
     return_int = server.start()
     #
     return return_int
@@ -139,8 +158,8 @@ def sleep_and_wait(*args, **kwargs):
 
 def test() :
     with open("I.1.lock","w") as f :
-       f.write(" ")
-    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2)
+       f.write("I.1_P.1.xml")
+    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2,document='{"response": "IPA", "amplitude": 0, "script" : ["set xc PBE"]}')
 
 if __name__ == "__main__":
     # execute only if run as a script

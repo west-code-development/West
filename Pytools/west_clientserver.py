@@ -86,7 +86,7 @@ class QboxServer(ClientServer) :
        if "nitscf" in self.document.keys() : 
           command_suffix += f'{self.document["nitscf"]} '
        else : 
-          command_suffix += f'20 '
+          command_suffix += '100 '
        if "nite" in self.document.keys() : 
           command_suffix += f'{self.document["nite"]}'
        #

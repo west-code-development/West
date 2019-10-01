@@ -13,8 +13,11 @@ Configure QuantumEspresso by running the ``configure`` script that comes with th
 
    $ git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
    $ cd QEdir
-   $ git clone -b 'v3.1.1' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
-   $ ./configure
+   $ git clone -b 'v4.0.0' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
+   $ ./configure LD_LIBS="`python3-config --ldflags`"
+
+.. note:: 
+   Note that since v4.0.0 WEST requires dynamic compilation and python3. 
 
 It's now time to create the ``pw.x``, ``wstat.x``, ``wfreq.x``, and ``westpp.x`` executables by doing:
 
@@ -37,3 +40,12 @@ You have succefully installed QuantumEspresso and WEST if you see the executable
    ... (other content) ...
 
 Congratulations, you are all set for running QuantumEspresso and WEST! 
+
+
+Suggested configuration options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+
+   installations/theta.rst

@@ -1,6 +1,15 @@
 Change Log
 ==========
 
+v4.0.0 (2019/09/30)
+-------------------
+
+- Added client/server mode
+- Added coupling to Qbox code (http://qbox-code.org)
+- Added python3 interface
+- Simplified the input format (now accepting both JSON and YAML formats)
+- Expanded documentation
+
 v3.1.1 (2018/09/19)
 -------------------
 

@@ -35,7 +35,7 @@ SUBROUTINE westpp_readin()
   !
   ! READ INPUT_WEST
   !
-  CALL fetch_input(1,(/1/),.TRUE.)
+  CALL fetch_input_yml(1,(/1/),.TRUE.,.FALSE.)
   !CALL fetch_input(3,(/1,2,4/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
@@ -52,7 +52,7 @@ SUBROUTINE westpp_readin()
   !
   ! READ other sections of the input file
   !
-  CALL fetch_input(2,(/2,4/),.TRUE.)
+  CALL fetch_input_yml(2,(/2,4/),.TRUE.,.FALSE.)
   !
   CALL stop_clock('westpp_readin')
   !

@@ -15,7 +15,7 @@ The complete **WEST** reference for input parameters.
    **WESTpy** is a Python package, designed to assist users of the WEST code in pre- and post-process massively parallel calculations. Click `here <http://www.west-code.org/doc/westpy/latest/>`_ to know more.
 
 .. seealso::
-   The input file is given according to the JavaScript Object Notation (`www.json.org <http://www.json.org/>`_).  
+   The input file is given according to the YAML Notation (`https://yaml.org/ <https://yaml.org//>`_).  
 
 |
 
@@ -56,6 +56,7 @@ wstat_control
  
       - "S" : Start from scratch
       - "R" : Restart from an interrupted run. You should restart with the same number of cores, and images. 
+      - "E" : Calculation is outsourced to a server
    
 .. data:: n_pdep_eigen
 
@@ -108,20 +109,20 @@ wstat_control
 .. data:: l_minimize_exx_if_active
 
    :type: boolean
-   :default: false
-   :description: If (true), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
+   :default: False
+   :description: If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
    
 .. data:: l_kinetic_only
 
    :type: boolean
-   :default: false
-   :description: If (true), then only the kinetic term in the Hamiltonian is kept.
+   :default: False
+   :description: If (True), then only the kinetic term in the Hamiltonian is kept.
    
 .. data:: l_use_ecutrho 
 
    :type: boolean
-   :default: false
-   :description: If (true), then the eigenpotentials are represented with ecutrho instead of ecutwfc.
+   :default: False
+   :description: If (True), then the eigenpotentials are represented with ecutrho instead of ecutwfc.
    
 .. data:: qlist 
 
@@ -221,13 +222,13 @@ wfreq_control
 .. data:: l_enable_lanczos
 
    :type: boolean
-   :default: true
-   :description: If (false), then Lanczos solvers are turned off.
+   :default: True
+   :description: If (False), then Lanczos solvers are turned off.
 
 .. data:: l_enable_gwetot
 
    :type: boolean
-   :default: false
+   :default: False
    :description: Deprecated parameter.
 
 .. data:: o_restart_time
@@ -290,8 +291,8 @@ westpp_control
 .. data:: westpp_sign
 
    :type: boolean
-   :default: false
-   :description: If (true), then the sign of the wavefunction/eigenpotential is kept in the output file.
+   :default: False
+   :description: If (True), then the sign of the wavefunction/eigenpotential is kept in the output file.
 
 .. data:: westpp_n_pdep_eigen_to_use
 
@@ -322,5 +323,17 @@ westpp_control
    :type: float
    :default: 1.0
    :description: Macroscopic relative dielectric constant. Used in the "S" runlevel.
+
+--------------
+server_control
+--------------
+
+.. data:: document
+
+   :type: jsonizable object 
+   :default: "{}"
+   :description: The document is serialized into a JSON string and passed to the server (see `West/Pytools/west_clientserver.py`).
+
+|
             
 

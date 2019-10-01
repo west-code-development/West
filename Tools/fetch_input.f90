@@ -96,6 +96,12 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         !
      ENDIF
      !
+     IF ( ANY(driver(:)==5) ) THEN
+        !
+        CALL json%add('input.server_control.document',TRIM(document))
+        !
+     ENDIF
+     !
   ENDIF
   !
 END SUBROUTINE
@@ -146,7 +152,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   CHARACTER(LEN=512), EXTERNAL :: trimcheck
   CHARACTER(LEN=:),ALLOCATABLE :: cvalue
   TYPE(json_file) :: json
-  INTEGER :: iunit
+  INTEGER :: iunit, lenc
   !
   CALL start_clock('fetch_input')
   !
@@ -317,7 +323,29 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
+     IF ( ANY(driver(:)==5) ) THEN
+        !  
+        IERR = tuple_create(args, 3)
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
+        IERR = args%setitem(1, "server_control" )
+        IERR = args%setitem(2, verbose )
+        IERR = dict_create(kwargs)
+        !
+        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = cast(return_dict, return_obj)
+        !
+        CALL args%destroy
+        CALL kwargs%destroy
+        CALL return_obj%destroy
+        !
+        IERR = return_dict%getitem(cvalue, "document"); document = TRIM(ADJUSTL(cvalue))
+        !
+        CALL return_dict%destroy
+        !
+     ENDIF
+     !
      CALL pymod%destroy
+     !
      !
   ENDIF
   !
@@ -442,6 +470,15 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
   ENDIF
   !
+  IF ( ANY(driver(:)==5) ) THEN
+     !
+     lenc = LEN(document)
+     CALL mp_bcast(lenc,root,world_comm)
+     IF(mpime/=root) ALLOCATE(CHARACTER(LEN=lenc) :: document)
+     CALL mp_bcast(document,root,world_comm)
+     !
+  ENDIF
+  !
   CALL mp_barrier(world_comm)
   !
   ! REPORT
@@ -540,6 +577,19 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('westpp_nr',westpp_nr,numsp)
         CALL io_push_value('westpp_rmax',westpp_rmax,numsp)
         CALL io_push_value('westpp_epsinfty',westpp_epsinfty,numsp)
+        !
+        CALL io_push_bar()
+        !
+     ENDIF
+     !
+     IF ( ANY(driver(:)==5) ) THEN
+        !
+        ! REPORT
+        !
+        CALL io_push_title('I/O Summary : server_control')
+        !
+        numsp=40
+        CALL io_push_value('document',document,numsp)
         !
         CALL io_push_bar()
         !

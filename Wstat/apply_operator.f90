@@ -95,7 +95,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   !
   USE kinds,           ONLY : DP
   USE mp,              ONLY : mp_barrier
-  USE westcom,         ONLY : npwq,npwqx,fftdriver,igq_q      
+  USE westcom,         ONLY : npwq,npwqx,fftdriver,igq_q 
   USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
   USE fft_at_k,        ONLY : single_fwfft_k,single_invfft_k
   USE fft_at_gamma,    ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
@@ -210,6 +210,7 @@ END SUBROUTINE
 
 SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile)
     !
+    USE westcom,    ONLY: document
     USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
     USE forpy_mod,  ONLY: tuple, tuple_create 
     USE forpy_mod,  ONLY: dict, dict_create 
@@ -233,6 +234,7 @@ SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile)
     IERR = tuple_create(args, 1)
     IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)) )
     IERR = dict_create(kwargs)
+    IERR = kwargs%setitem("document",document)
     !
     IERR = call_py(return_obj, pymod, "sleep_and_wait", args, kwargs)
     !

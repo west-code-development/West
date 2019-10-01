@@ -73,6 +73,10 @@ default["westpp_control"]["westpp_r0"] = [0., 0., 0.]
 default["westpp_control"]["westpp_nr"] = 100
 default["westpp_control"]["westpp_rmax"] = 1.
 default["westpp_control"]["westpp_epsinfty"] = 1.
+# server_control
+default["server_control"] = {}
+default["server_control"]["document"] = "{}"
+
 
 ############################
 # DYNAMICAL DEFAULT VALUES #
@@ -123,6 +127,11 @@ def open_and_parse_file(fileName="west.in") :
               print("Cannot parse file")
     except : 
        print("Cannot open file : ",fileName)
+    #
+    if "server_control" in data.keys() : 
+       if "document" in data["server_control"].keys() : 
+          jsonText = json.dumps(data["server_control"]["document"])
+          data["server_control"]["document"] = jsonText
     #
     return data
 
@@ -223,10 +232,9 @@ def read_keyword_from_file(*args, **kwargs):
     # Read input file  
     #
     input_data = open_and_parse_file(fileName)
+    parsed_data = {}
     if keyword in input_data.keys() :
        parsed_data = input_data[keyword]
-    else : 
-       parsed_data = {}
     #
     # Compare defaults and input variables 
     #
@@ -256,12 +264,15 @@ input_west :
 wstat_control : 
    wstat_calculation : R # this is a comment
    unknown_key : value # this line will be read but not passed 
+server_control : 
+   document : {} 
 """)
     #
     read_keyword_from_file(fileName,"input_west",True)
     read_keyword_from_file(fileName,"wstat_control",True,nq=20,nelec=10)
     read_keyword_from_file(fileName,"wfreq_control",True,nelec=10,ecutrho=30.)
     read_keyword_from_file(fileName,"westpp_control",True)
+    read_keyword_from_file(fileName,"server_control",True)
     #
     remove(fileName)
 

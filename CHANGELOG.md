@@ -5,7 +5,7 @@ v4.0.0 (2019/09/30)
 -------------------
 
 - Added client/server mode
-- Added coupling to Qbox code (http://qbox-code.org)
+- Added coupling to Qbox code (http://qboxcode.org)
 - Added python3 interface
 - Simplified the input format (now accepting both JSON and YAML formats)
 - Expanded documentation

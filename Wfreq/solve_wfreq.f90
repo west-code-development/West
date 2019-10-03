@@ -222,7 +222,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
         ! PHI 
         !
-        CALL occband%init(nbndval,'i','occband',.TRUE.)
+        CALL occband%init(nbndval,'i','occband',.FALSE.)
         !
         ALLOCATE(phis(npwx*npol,3,occband%nloc))
         !

@@ -52,6 +52,12 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    module load miniconda-3.6/conda-4.5.12 
    aprun -n 128 -N 64 -d 1 --cc depth -e OMP_NUM_THREADS=1 -j 1 ./wstat.x -i wstat.in > wstat.out
 
+Make the script executable: 
+
+.. code-block:: bash 
+
+   $ chmod +x run_west.sh
+
 Job submission is done with the following: 
 
 .. code-block:: bash 

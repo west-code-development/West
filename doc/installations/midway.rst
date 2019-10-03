@@ -1,4 +1,4 @@
-.. _theta:
+.. _midway:
 
 ===============
 Midway-UChicago

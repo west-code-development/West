@@ -17,7 +17,7 @@ WEST executables can be compiled using the following script:
 
 .. code-block:: bash 
 
-   $ cat build_midway.sh
+   $ cat build_west.sh
    #!/bin/bash
    
    module load intelmpi/5.1+intel-16.0 mkl/2017.up4 Anaconda3/5.1.0 
@@ -39,6 +39,12 @@ WEST executables can be compiled using the following script:
    
    cd West
    make
+
+To use the script do: 
+
+.. code-block:: bash 
+
+   $ bash build_west.sh
 
 
 Running WEST Jobs

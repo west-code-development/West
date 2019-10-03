@@ -17,7 +17,7 @@ WEST executables can be compiled using the following script:
 
 .. code-block:: bash 
 
-   $ cat build_theta.sh
+   $ cat build_west.sh
    #!/bin/bash
 
    module load miniconda-3.6/conda-4.5.12
@@ -38,6 +38,12 @@ WEST executables can be compiled using the following script:
 
    cd West
    make
+
+To use the script do: 
+
+.. code-block:: bash 
+
+   $ bash build_west.sh
 
 Running WEST Jobs
 ~~~~~~~~~~~~~~~~~

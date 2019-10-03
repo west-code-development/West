@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+vX.X.X (XXXX/XX/XX)
+-------------------
+
+- Improved usability of client/server mode
+- Reduced execution time of wfreq (W) for solids
+
 v4.0.0 (2019/09/30)
 -------------------
 

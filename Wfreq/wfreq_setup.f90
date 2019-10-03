@@ -25,7 +25,7 @@ SUBROUTINE wfreq_setup
   USE kinds,                  ONLY : DP
   USE gvect,                  ONLY : gstart,g
   USE io_files,               ONLY : tmp_dir
-  USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband
+  USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband
   USE class_idistribute,      ONLY : idistribute
   USE wavefunctions_module,   ONLY : evc
   USE mod_mpiio,              ONLY : set_io_comm
@@ -64,6 +64,7 @@ SUBROUTINE wfreq_setup
   CALL rfr%init(n_refreq,'z','n_refreq',.TRUE.)
   aband = idistribute()
   CALL aband%init(nbnd,'i','nbnd',.TRUE.)
+  occband = idistribute()
   !
   CALL set_freqlists( )
   !

@@ -50,3 +50,4 @@ Suggested configuration options
 
    installations/theta.rst
    installations/midway.rst
+   installations/macosx.rst

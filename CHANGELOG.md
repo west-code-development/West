@@ -6,7 +6,8 @@ vX.X.X (XXXX/XX/XX)
 
 - Improved usability of client/server mode with `server_control`
 - Reduced execution time of wfreq (W) for solids
-- Updated build instructions for RCC-Midway and ALCF-Theta
+- Added build instructions for RCC-Midway and MacOSX
+- Updated build instructions for ALCF-Theta
 - Updated manual
 
 v4.0.0 (2019/09/30)

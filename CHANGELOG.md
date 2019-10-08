@@ -4,8 +4,10 @@ Change Log
 vX.X.X (XXXX/XX/XX)
 -------------------
 
-- Improved usability of client/server mode
+- Improved usability of client/server mode with `server_control`
 - Reduced execution time of wfreq (W) for solids
+- Updated build instructions for RCC-Midway and ALCF-Theta
+- Updated manual
 
 v4.0.0 (2019/09/30)
 -------------------

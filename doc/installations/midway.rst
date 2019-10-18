@@ -8,7 +8,7 @@ Midway is the HPC cluster of the University of Chicago, maintained by UChicago's
 
 .. code-block:: bash 
 
-   $ ssh -XY <username>@midway.rcc.uchicago.edu
+   $ ssh -Y <username>@midway.rcc.uchicago.edu
 
 Building WEST
 ~~~~~~~~~~~~~
@@ -35,7 +35,7 @@ WEST executables can be compiled using the following script:
    export SCALAPACK_LIBS=" -lmkl_scalapack_lp64 -Wl,--start-group  -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -Wl,--end-group"
    
    ./configure --enable-parallel --with-scalapack --enable-openmp LD_LIBS="`python3-config --ldflags`"
-   make -j 8 pw
+   make -j 6 pw
    
    cd West
    make
@@ -64,7 +64,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    module load intelmpi/5.1+intel-16.0 mkl/2017.up4 Anaconda3/5.1.0
 
-   export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
+   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
    NTASKS=$(($SLURM_NTASKS_PER_NODE * $SLURM_JOB_NUM_NODES))
 
    mpirun -np $NTASKS ./wstat.x -i wstat.in > wstat.out

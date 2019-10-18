@@ -13,7 +13,7 @@ Configure QuantumEspresso by running the ``configure`` script that comes with th
 
    $ git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
    $ cd QEdir
-   $ git clone -b 'v4.0.0' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
+   $ git clone -b 'v4.1.0' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
    $ ./configure LD_LIBS="`python3-config --ldflags`"
 
 .. note:: 

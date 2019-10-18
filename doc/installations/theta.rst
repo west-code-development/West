@@ -8,7 +8,7 @@ Theta is a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF
 
 .. code-block:: bash 
 
-   $ ssh -XY <username>@theta.alcf.anl.gov
+   $ ssh -Y <username>@theta.alcf.anl.gov
 
 Building WEST
 ~~~~~~~~~~~~~
@@ -22,13 +22,12 @@ WEST executables can be compiled using the following script:
 
    module unload cray-libsci
    module load cray-python/3.6.5.3
-
    export CRAYPE_LINK_TYPE=dynamic
-   export LD_LIBRARY_PATH=/opt/python/3.6.5.3/lib:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2018.0.128/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
-   
-   ./configure MPIF90=ftn CC=cc --enable-openmp --with-scalapack=intel LD_LIBS="`python3-config --ldflags`" SCALAPACK_LIBS="${MKLROOT}/lib/intel64/libmkl_scalapack_lp64.a -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a ${MKLROOT}/lib/intel64/libmkl_intel_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_lp64.a -Wl,--end-group"
+   export LD_LIBRARY_PATH=/opt/python/3.6.5.3/lib:$LD_LIBRARY_PATH
+
+   ./configure MPIF90=ftn CC=cc CXX=CC --enable-openmp=yes --enable-parallel=yes --enable-shared=yes --with-scalapack=intel SCALAPACK_LIBS="${MKLROOT}/lib/intel64/libmkl_scalapack_lp64.so -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.so ${MKLROOT}/lib/intel64/libmkl_intel_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_lp64.so -Wl,--end-group" FFLAGS=" -xMIC-AVX512 -qopenmp -align array64byte -fp-model fast=2 -no-prec-div -assume byterecl" --with-hdf5=no CFLAGS=" -xMIC-AVX512" LDFLAGS=" -shared-intel -qopenmp" LD_LIBS="`python3-config --ldflags`"
 
    make pw -j 16
 
@@ -50,17 +49,29 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    $ cat run_west.sh
    #!/bin/bash
-   #COBALT -n 2 -t 10 -q debug-cache-quad -A <project_name> -O WEST
+
+   #COBALT -n 2
+   #COBALT -t 00:20:00
+   #COBALT -q debug-cache-quad
+   #COBALT -A <project_name>
+   #COBALT -O WEST
+
+   MPIRANKS_PERNODE=64
+   MPIRANKS=$((COBALT_PARTSIZE * MPIRANKS_PERNODE))
+   NTHREADS=1
+   HT=1
 
    module unload cray-libsci
    module load cray-python/3.6.5.3
-
    export CRAYPE_LINK_TYPE=dynamic
-   export LD_LIBRARY_PATH=/opt/python/3.6.5.3/lib:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2018.0.128/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=/opt/python/3.6.5.3/lib:$LD_LIBRARY_PATH
 
-   aprun -n 128 -N 64 -d 1 --cc depth -e OMP_NUM_THREADS=1 -j 1 ./wstat.x -i wstat.in > wstat.out
+   echo "Running Cobalt Job $COBALT_JOBID."
+
+   export OMP_NUM_THREADS=$NTHREADS
+   aprun -n $MPIRANKS -N $MPIRANKS_PERNODE -cc depth -d $NTHREADS -j $HT ./wstat.x -i wstat.in &> wstat.out
 
 Make the script executable: 
 

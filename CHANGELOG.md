@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-vX.X.X (XXXX/XX/XX)
+v4.1.0 (2019/10/18)
 -------------------
 
 - Improved usability of client/server mode with `server_control`

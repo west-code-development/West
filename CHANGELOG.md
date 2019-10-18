@@ -1,11 +1,20 @@
 Change Log
 ==========
 
+v4.1.0 (2019/10/18)
+-------------------
+
+- Improved usability of client/server mode with `server_control`
+- Reduced execution time of wfreq (W) for solids
+- Added build instructions for RCC-Midway and MacOSX
+- Updated build instructions for ALCF-Theta
+- Updated manual
+
 v4.0.0 (2019/09/30)
 -------------------
 
 - Added client/server mode
-- Added coupling to Qbox code (http://qbox-code.org)
+- Added coupling to Qbox code (http://qboxcode.org)
 - Added python3 interface
 - Simplified the input format (now accepting both JSON and YAML formats)
 - Expanded documentation

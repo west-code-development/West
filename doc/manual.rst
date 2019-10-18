@@ -323,5 +323,17 @@ westpp_control
    :type: float
    :default: 1.0
    :description: Macroscopic relative dielectric constant. Used in the "S" runlevel.
+
+--------------
+server_control
+--------------
+
+.. data:: document
+
+   :type: jsonizable object 
+   :default: "{}"
+   :description: The document is serialized into a JSON string and passed to the server (see `West/Pytools/west_clientserver.py`).
+
+|
             
 

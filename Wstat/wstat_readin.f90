@@ -52,7 +52,7 @@ SUBROUTINE wstat_readin()
   !
   ! READ other sections of the input file
   !
-  CALL fetch_input_yml(1,(/2/),.TRUE.,.FALSE.)
+  CALL fetch_input_yml(2,(/2,5/),.TRUE.,.FALSE.)
   !
   CALL stop_clock('wstat_readin')
   !

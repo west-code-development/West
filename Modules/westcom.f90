@@ -125,6 +125,14 @@ MODULE wstat_center
   CHARACTER(LEN=512) :: wstat_restart_dir
   LOGICAL :: l_is_wstat_converged
   !
+END MODULE
+!
+MODULE server_center
+  SAVE
+  !
+  ! INPUT for server_control
+  !
+  CHARACTER(LEN=:),ALLOCATABLE :: document
 END MODULE 
 !
 !
@@ -252,6 +260,7 @@ MODULE westcom
   USE scratch_area
   USE westin
   USE wstat_center
+  USE server_center
   USE wfreq_center
   USE westpp_center
   USE wan_center

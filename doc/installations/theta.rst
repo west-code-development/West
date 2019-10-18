@@ -49,7 +49,6 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    $ cat run_west.sh
    #!/bin/bash
-
    #COBALT -n 2
    #COBALT -t 00:20:00
    #COBALT -q debug-cache-quad

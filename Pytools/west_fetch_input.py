@@ -64,7 +64,7 @@ default["wfreq_control"]["ecut_spectralf"] = [-2., 1.]
 default["wfreq_control"]["n_spectralf"] = 204
 # westpp_control
 default["westpp_control"] = {}
-default["westpp_control"]["westpp_calculation"] = "r"
+default["westpp_control"]["westpp_calculation"] = "R"
 default["westpp_control"]["westpp_range"] = [1, 2]
 default["westpp_control"]["westpp_format"] = "C"
 default["westpp_control"]["westpp_sign"] = False

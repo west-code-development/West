@@ -26,8 +26,8 @@ WEST executables can be compiled using the following script:
    export CC=mpiicc
    export MPIF90=mpiifort
    export FC=mpiifort
-   export CFLAGS="-O3 -xHost -fno-alias -ansi-alias -g -mkl -Bdynamic"
-   export FFLAGS="-O3 -xHost -fno-alias -ansi-alias -g -mkl -Bdynamic"
+   export CFLAGS="-O3 -fno-alias -ansi-alias -g -mkl -Bdynamic"
+   export FFLAGS="-O3 -fno-alias -ansi-alias -g -mkl -Bdynamic"
    export BLAS_LIBS_SWITCH="external"
    export BLAS_LIBS=" -lmkl_intel_lp64  -lmkl_sequential -lmkl_core"
    export LAPACK_LIBS_SWITCH="external"

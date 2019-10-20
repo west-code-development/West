@@ -26,7 +26,7 @@ input_west
 .. data:: qe_prefix
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -40,7 +40,7 @@ input_west
 .. data:: west_prefix
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -54,7 +54,7 @@ input_west
 .. data:: outdir
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -74,7 +74,7 @@ wstat_control
 .. data:: wstat_calculation
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -92,7 +92,7 @@ wstat_control
 .. data:: n_pdep_eigen
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -106,7 +106,7 @@ wstat_control
 .. data:: n_pdep_times
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -120,7 +120,7 @@ wstat_control
 .. data:: n_pdep_maxiter
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -134,7 +134,7 @@ wstat_control
 .. data:: n_dfpt_maxiter
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -148,7 +148,7 @@ wstat_control
 .. data:: n_pdep_read_from_file
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -162,7 +162,7 @@ wstat_control
 .. data:: trev_pdep
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -176,7 +176,7 @@ wstat_control
 .. data:: trev_pdep_rel
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -190,7 +190,7 @@ wstat_control
 .. data:: tr2_dfpt
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -204,7 +204,7 @@ wstat_control
 .. data:: l_kinetic_only
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -218,7 +218,7 @@ wstat_control
 .. data:: l_minimize_exx_if_active
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -232,7 +232,7 @@ wstat_control
 .. data:: l_use_ecutrho
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -246,7 +246,7 @@ wstat_control
 .. data:: qlist
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -267,7 +267,7 @@ wfreq_control
 .. data:: wfreq_calculation
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -289,7 +289,7 @@ wfreq_control
 .. data:: n_pdep_eigen_to_use
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -303,7 +303,7 @@ wfreq_control
 .. data:: qp_bandrange
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -317,7 +317,7 @@ wfreq_control
 .. data:: macropol_calculation
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -334,7 +334,7 @@ wfreq_control
 .. data:: n_lanczos
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -348,7 +348,7 @@ wfreq_control
 .. data:: n_imfreq
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -362,7 +362,7 @@ wfreq_control
 .. data:: n_refreq
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -376,7 +376,7 @@ wfreq_control
 .. data:: ecut_imfreq
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -390,7 +390,7 @@ wfreq_control
 .. data:: ecut_refreq
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -404,7 +404,7 @@ wfreq_control
 .. data:: wfreq_eta
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -418,7 +418,7 @@ wfreq_control
 .. data:: n_secant_maxiter
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -432,7 +432,7 @@ wfreq_control
 .. data:: trev_secant
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -446,7 +446,7 @@ wfreq_control
 .. data:: l_enable_lanczos
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -460,7 +460,7 @@ wfreq_control
 .. data:: l_enable_gwetot
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -474,7 +474,7 @@ wfreq_control
 .. data:: o_restart_time
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -492,7 +492,7 @@ wfreq_control
 .. data:: ecut_spectralf
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -506,7 +506,7 @@ wfreq_control
 .. data:: n_spectralf
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -526,7 +526,7 @@ westpp_control
 .. data:: westpp_calculation
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -545,7 +545,7 @@ westpp_control
 .. data:: westpp_range
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -559,7 +559,7 @@ westpp_control
 .. data:: westpp_format
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -579,7 +579,7 @@ westpp_control
 .. data:: westpp_sign
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -593,7 +593,7 @@ westpp_control
 .. data:: westpp_n_pdep_eigen_to_use
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -607,7 +607,7 @@ westpp_control
 .. data:: westpp_r0
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -621,7 +621,7 @@ westpp_control
 .. data:: westpp_nr
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -635,7 +635,7 @@ westpp_control
 .. data:: westpp_rmax
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -649,7 +649,7 @@ westpp_control
 .. data:: westpp_epsinfty
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
@@ -668,7 +668,7 @@ server_control
 .. data:: document
 
 .. list-table::
-   :widths: 20 100
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**

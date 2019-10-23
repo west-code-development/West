@@ -26,7 +26,7 @@ It's now time to create the ``pw.x``, ``wstat.x``, ``wfreq.x``, and ``westpp.x``
    $ cd QEdir
    $ make pw
    $ cd QEdir/West
-   $ make
+   $ make PYT=python3
 
 You have succefully installed QuantumEspresso and WEST if you see the executables ``pw.x``, ``wstat.x``, ``wfreq.x``, and ``westpp.x`` created in the QEdir/bin directory.
 

@@ -2,7 +2,11 @@
 
 default: all
 
+pytools: \
+pytools_do
+
 wstat: \
+pytools_do \
 libraries_do \
 modules_do \
 tools_do \
@@ -24,9 +28,15 @@ wfreq \
 westpp_do
 
 all: \
+pytools \
 wstat \
 wfreq \
 westpp 
+
+pytools_do:
+	if test -d Pytools ; then \
+	( cd Pytools ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 libraries_do:
 	if test -d Libraries ; then \
@@ -89,6 +99,7 @@ westpp_do:
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 clean: \
+pytools_undo \
 libraries_undo \
 modules_undo \
 tools_undo \
@@ -101,6 +112,11 @@ io_kernel_undo \
 wstat_undo \
 wfreq_undo \
 westpp_undo 
+
+pytools_undo:
+	if test -d Pytools ; then \
+	( cd Pytools ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
 
 libraries_undo:
 	if test -d Libraries ; then \

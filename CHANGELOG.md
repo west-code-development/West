@@ -4,6 +4,7 @@ Change Log
 vX.X.X (XXXX/XX/XX)
 -------------------
 
+- Introduced automatic installation of missing python packages
 - Updated manual
 
 v4.1.0 (2019/10/18)

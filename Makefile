@@ -1,8 +1,54 @@
 # Makefile for the WEST software 
 
+include ../make.inc
+
 default: all
 
+report_build_vars :
+	@[ "${PYT}" ] || ( echo ">> PYT is not set. Please set Python, ex: make PYT=python3"; exit 1 )
+	@[ "${MPIF90}" ] || ( echo ">> MPIF90 is not set."; exit 1 )
+	@[ "${CC}" ] || ( echo ">> CC is not set."; exit 1 )
+	@echo "              "
+	@echo "##############"
+	@echo "# Build vars #"
+	@echo "##############"
+	@echo "              "
+	@echo "# TOPDIR : ${TOPDIR}"
+	@echo "# FDFLAGS : ${FDFLAGS}"
+	@echo "# IFLAGS : ${IFLAGS}"
+	@echo "# MOD_FLAG : ${MOD_FLAG}"
+	@echo "# MPIF90 : ${MPIF90}"
+	@echo "# CC : ${CC}"
+	@echo "# F77 : ${F77}"
+	@echo "# CPP : ${CPP}"
+	@echo "# CPPFLAGS : ${CPPFLAGS}"
+	@echo "# CFLAGS : ${CFLAGS}"
+	@echo "# F90FLAGS : ${F90FLAGS}"
+	@echo "# FFLAGS : ${FFLAGS}"
+	@echo "# FFLAGS_NOOPT : ${FFLAGS_NOOPT}"
+	@echo "# LD : ${LD}"
+	@echo "# LDFLAGS : ${LDFLAGS}"
+	@echo "# LD_LIBS : ${LD_LIBS}"
+	@echo "# BLAS_LIBS : ${BLAS_LIBS}"
+	@echo "# BLAS_LIBS_SWITCH : ${BLAS_LIBS_SWITCH}"
+	@echo "# LAPACK_LIBS : ${LAPACK_LIBS}"
+	@echo "# LAPACK_LIBS_SWITCH : ${LAPACK_LIBS_SWITCH}"
+	@echo "# SCALAPACK_LIBS : ${SCALAPACK_LIBS}"
+	@echo "# FFT_LIBS : ${FFT_LIBS}"
+	@echo "# MPI_LIBS : ${MPI_LIBS}"
+	@echo "# MASS_LIBS : ${MASS_LIBS}"
+	@echo "# AR : ${AR}"
+	@echo "# ARFLAGS : ${ARFLAGS}"
+	@echo "# RANLIB : ${RANLIB}"
+	@echo "# FLIB_TARGETS : ${FLIB_TARGETS}"
+	@echo "# LIBOBJS : ${LIBOBJS}"
+	@echo "# LIBS : ${LIBS}"
+	@echo "# WGET : ${WGET}"
+	@echo "# PYT : ${PYT}"
+	@echo " "
+
 pytools: \
+report_build_vars \
 pytools_do
 
 wstat: \

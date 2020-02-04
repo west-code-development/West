@@ -38,14 +38,14 @@ WEST executables can be compiled using the following script:
    export LAPACK_LIBS=${MY_LIB_PATH}/LAPACK/liblapack.a
    export SCALAPACK_LIBS=${MY_LIB_PATH}/SCALAPACK/libscalapack.a
    export FFT_LIBS="${MY_LIB_PATH}/FFTW3/lib/libfftw3.a ${MY_LIB_PATH}/FFTW3/lib/libfftw3_omp.a"
-   export PYT=python3
 
-   ./configure --with-scalapack --enable-openmp LD_LIBS="`${PYT}-config --ldflags`"
+   ./configure --with-scalapack --enable-openmp LD_LIBS="`python3-config --ldflags`"
    
    make -j 4 pw
    
    cd West
-   make
+   make conf PYT=python3
+   make all
 
 To use the script do: 
 

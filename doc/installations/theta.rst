@@ -26,14 +26,14 @@ WEST executables can be compiled using the following script:
    export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2018.0.128/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=/opt/python/3.6.5.3/lib:$LD_LIBRARY_PATH
-   export PYT=python3
 
-   ./configure MPIF90=ftn CC=cc CXX=CC --enable-openmp=yes --enable-parallel=yes --enable-shared=yes --with-scalapack=intel SCALAPACK_LIBS="${MKLROOT}/lib/intel64/libmkl_scalapack_lp64.so -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.so ${MKLROOT}/lib/intel64/libmkl_intel_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_lp64.so -Wl,--end-group" FFLAGS=" -xMIC-AVX512 -qopenmp -align array64byte -fp-model fast=2 -no-prec-div -assume byterecl" --with-hdf5=no CFLAGS=" -xMIC-AVX512" LDFLAGS=" -shared-intel -qopenmp" LD_LIBS="`${PYT}-config --ldflags`"
+   ./configure MPIF90=ftn CC=cc CXX=CC --enable-openmp=yes --enable-parallel=yes --enable-shared=yes --with-scalapack=intel SCALAPACK_LIBS="${MKLROOT}/lib/intel64/libmkl_scalapack_lp64.so -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.so ${MKLROOT}/lib/intel64/libmkl_intel_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so ${MKLROOT}/lib/intel64/libmkl_blacs_intelmpi_lp64.so -Wl,--end-group" FFLAGS=" -xMIC-AVX512 -qopenmp -align array64byte -fp-model fast=2 -no-prec-div -assume byterecl" --with-hdf5=no CFLAGS=" -xMIC-AVX512" LDFLAGS=" -shared-intel -qopenmp" LD_LIBS="`python3-config --ldflags`"
 
    make pw -j 16
 
    cd West
-   make
+   make conf PYT=python3
+   make all 
 
 To use the script do: 
 

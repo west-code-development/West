@@ -20,7 +20,7 @@ MODULE west_version
   !
   SAVE
   !
-  CHARACTER (LEN=6)  :: west_version_number = '4.1.0'
+  CHARACTER (LEN=6)  :: west_version_number = 'checkit'
   CHARACTER (LEN=512) :: west_git_revision = 'unknown'
   CHARACTER (LEN=512) :: west_forpy_path = 'unset'
   TYPE(list) :: paths 

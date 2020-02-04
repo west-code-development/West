@@ -1,6 +1,7 @@
 # Makefile for Modules
 
 include ../../make.inc
+include ../west_make.inc
 
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
@@ -23,7 +24,7 @@ all : title tldeps libmodules.a
 
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
-	./update_west_version ${TOPDIR}
+	./update_west_version ${TOPDIR} ${WEST_VERSION_NUMBER}
 
 libmodules.a : $(MODULES_OBJS)
 	$(AR) $(ARFLAGS) $@ $?

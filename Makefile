@@ -2,17 +2,31 @@
 
 include ../make.inc
 
+WEST_VERSION_NUMBER=4.1.1
+
 default: all
 
+conf:
+	@[ "${PYT}" ] || ( echo ">> PYT is not set. Ex: make conf PYT=python3"; exit 1 )
+	@echo " " > west_make.inc
+	@echo TOPDIR=${TOPDIR} >> west_make.inc
+	@echo PYT=${PYT} >> west_make.inc
+	@echo WEST_VERSION_NUMBER=${WEST_VERSION_NUMBER} >> west_make.inc
+	@echo "Generated file: west_make.inc"
+
+check_conf:
+	@[ -f "west_make.inc" ] || ( echo ">> Cannot find west_make.inc. Run: make conf PYT=python3"; exit 1 )
+	$(eval include ./west_make.inc)
+
 report_build_vars :
-	@[ "${PYT}" ] || ( echo ">> PYT is not set. Please set Python, ex: make PYT=python3"; exit 1 )
-	@[ "${MPIF90}" ] || ( echo ">> MPIF90 is not set."; exit 1 )
-	@[ "${CC}" ] || ( echo ">> CC is not set."; exit 1 )
 	@echo "              "
 	@echo "##############"
 	@echo "# Build vars #"
 	@echo "##############"
 	@echo "              "
+	@[ "${MPIF90}" ] || ( echo ">> MPIF90 is not set."; exit 1 )
+	@[ "${CC}" ] || ( echo ">> CC is not set."; exit 1 )
+	@echo "# WEST_VERSION_NUMBER : ${WEST_VERSION_NUMBER}"
 	@echo "# TOPDIR : ${TOPDIR}"
 	@echo "# FDFLAGS : ${FDFLAGS}"
 	@echo "# IFLAGS : ${IFLAGS}"
@@ -47,12 +61,13 @@ report_build_vars :
 	@echo "# PYT : ${PYT}"
 	@echo " "
 
+
 pytools: \
+check_conf \
 report_build_vars \
 pytools_do
 
 wstat: \
-pytools_do \
 libraries_do \
 modules_do \
 tools_do \
@@ -65,10 +80,12 @@ io_kernel_do \
 wstat_do
 
 wfreq: \
+pytools \
 wstat \
 wfreq_do
 
 westpp: \
+pytools \
 wstat \
 wfreq \
 westpp_do
@@ -224,4 +241,8 @@ westpp_undo:
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
-distclean: clean 
+unconf:
+	[ -f "west_make.inc" ] && ( rm west_make.inc )
+
+veryclean: clean \
+unconf

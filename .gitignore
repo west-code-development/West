@@ -7,8 +7,9 @@
 *.UPF
 *.dSYM
 *.a
-*.in
 *.out
 doc/_build/
 Modules/west_version.f90
+Pytools/setup.py
+west_make.inc
 */__pycache__

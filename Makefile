@@ -1,6 +1,75 @@
 # Makefile for the WEST software 
 
+include ./VERSION
+include ../make.inc
+
 default: all
+
+conf:
+	@[ "${PYT}" ] || ( echo ">> PYT is not set. Ex: make conf PYT=python3"; exit 1 )
+	@echo "# WEST_VERSION_NUMBER : ${WEST_VERSION_NUMBER}"
+	@echo " " > west_make.inc
+	@echo WESTDIR=`pwd` >> west_make.inc
+	@echo PYT=${PYT} >> west_make.inc
+	@if [ -z "${PYT_LDFLAGS}" ] ; then echo PYT_LDFLAGS="`${PYT}-config --ldflags`" >> west_make.inc ; else echo PYT_LDFLAGS=${PYT_LDFLAGS} >> west_make.inc ; fi
+	@echo " "
+	@echo "Generated file: west_make.inc"
+	@cat west_make.inc
+	@echo " "
+
+check_conf:
+	@[ -f "west_make.inc" ] || ( echo ">> Cannot find west_make.inc. Run: make conf PYT=python3"; exit 1 )
+	$(eval include ./west_make.inc)
+
+report_build_vars :
+	@echo "              "
+	@echo "##############"
+	@echo "# Build vars #"
+	@echo "##############"
+	@echo "              "
+	@[ "${MPIF90}" ] || ( echo ">> MPIF90 is not set."; exit 1 )
+	@[ "${CC}" ] || ( echo ">> CC is not set."; exit 1 )
+	@echo "# WEST_VERSION_NUMBER : ${WEST_VERSION_NUMBER}"
+	@echo "# WESTDIR : ${WESTDIR}"
+	@echo "# FDFLAGS : ${FDFLAGS}"
+	@echo "# IFLAGS : ${IFLAGS}"
+	@echo "# MOD_FLAG : ${MOD_FLAG}"
+	@echo "# MPIF90 : ${MPIF90}"
+	@echo "# CC : ${CC}"
+	@echo "# F77 : ${F77}"
+	@echo "# CPP : ${CPP}"
+	@echo "# CPPFLAGS : ${CPPFLAGS}"
+	@echo "# CFLAGS : ${CFLAGS}"
+	@echo "# F90FLAGS : ${F90FLAGS}"
+	@echo "# FFLAGS : ${FFLAGS}"
+	@echo "# FFLAGS_NOOPT : ${FFLAGS_NOOPT}"
+	@echo "# LD : ${LD}"
+	@echo "# LDFLAGS : ${LDFLAGS}"
+	@echo "# LD_LIBS : ${LD_LIBS}"
+	@echo "# BLAS_LIBS : ${BLAS_LIBS}"
+	@echo "# BLAS_LIBS_SWITCH : ${BLAS_LIBS_SWITCH}"
+	@echo "# LAPACK_LIBS : ${LAPACK_LIBS}"
+	@echo "# LAPACK_LIBS_SWITCH : ${LAPACK_LIBS_SWITCH}"
+	@echo "# SCALAPACK_LIBS : ${SCALAPACK_LIBS}"
+	@echo "# FFT_LIBS : ${FFT_LIBS}"
+	@echo "# MPI_LIBS : ${MPI_LIBS}"
+	@echo "# MASS_LIBS : ${MASS_LIBS}"
+	@echo "# AR : ${AR}"
+	@echo "# ARFLAGS : ${ARFLAGS}"
+	@echo "# RANLIB : ${RANLIB}"
+	@echo "# FLIB_TARGETS : ${FLIB_TARGETS}"
+	@echo "# LIBOBJS : ${LIBOBJS}"
+	@echo "# LIBS : ${LIBS}"
+	@echo "# WGET : ${WGET}"
+	@echo "# PYT : ${PYT}"
+	@echo "# PYT_LDFLAGS : ${PYT_LDFLAGS}"
+	@echo " "
+
+
+pytools: \
+check_conf \
+report_build_vars \
+pytools_do
 
 wstat: \
 libraries_do \
@@ -15,18 +84,26 @@ io_kernel_do \
 wstat_do
 
 wfreq: \
+pytools \
 wstat \
 wfreq_do
 
 westpp: \
+pytools \
 wstat \
 wfreq \
 westpp_do
 
 all: \
+pytools \
 wstat \
 wfreq \
 westpp 
+
+pytools_do:
+	if test -d Pytools ; then \
+	( cd Pytools ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 libraries_do:
 	if test -d Libraries ; then \
@@ -35,7 +112,8 @@ libraries_do:
 
 modules_do:
 	if test -d Modules ; then \
-	( cd Modules ; sh update_west_version; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	( cd Modules ; sh ./update_west_version ${WESTDIR} ${WEST_VERSION_NUMBER}; \
+	if  test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 tools_do:
@@ -75,20 +153,21 @@ io_kernel_do:
 
 wstat_do:
 	if test -d Wstat ; then \
-	( cd Wstat ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+	( cd Wstat ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
 wfreq_do:
 	if test -d Wfreq ; then \
-	( cd Wfreq ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+	( cd Wfreq ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
 westpp_do:
 	if test -d Westpp ; then \
-	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
 clean: \
+pytools_undo \
 libraries_undo \
 modules_undo \
 tools_undo \
@@ -101,6 +180,11 @@ io_kernel_undo \
 wstat_undo \
 wfreq_undo \
 westpp_undo 
+
+pytools_undo:
+	if test -d Pytools ; then \
+	( cd Pytools ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
 
 libraries_undo:
 	if test -d Libraries ; then \
@@ -162,4 +246,8 @@ westpp_undo:
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
-distclean: clean 
+unconf:
+	[ -f "west_make.inc" ] && ( rm west_make.inc )
+
+veryclean: clean \
+unconf

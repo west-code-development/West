@@ -34,11 +34,12 @@ WEST executables can be compiled using the following script:
    export LAPACK_LIBS=" "
    export SCALAPACK_LIBS=" -lmkl_scalapack_lp64 -Wl,--start-group  -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -Wl,--end-group"
    
-   ./configure --enable-parallel --with-scalapack --enable-openmp LD_LIBS="`python3-config --ldflags`"
+   ./configure --enable-parallel --with-scalapack --enable-openmp 
    make -j 6 pw
    
    cd West
-   make
+   make conf PYT=python3
+   make all
 
 To use the script do: 
 

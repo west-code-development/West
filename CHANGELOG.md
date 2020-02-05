@@ -1,9 +1,11 @@
 Change Log
 ==========
 
-vX.X.X (XXXX/XX/XX)
+v4.2.0p (XXXX/XX/XX)
 -------------------
 
+- Introduced automatic installation of missing python packages
+- Introduced the conf layer in the Makefile to ease installation 
 - Updated manual
 
 v4.1.0 (2019/10/18)

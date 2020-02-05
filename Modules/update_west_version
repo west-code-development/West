@@ -1,10 +1,10 @@
 #!/bin/sh
 
-top_dir=$1
-echo "TOPDIR = " $top_dir
+westdir_=$1
+echo "WESTDIR = " $westdir_
 
-west_version=$2
-echo "WEST_VERSION = " $west_version 
+west_version_number_=$2
+echo "WEST_VERSION_NUMBER = " $west_version_number_ 
 
 # check if svn info available (do not write anything)
 git remote -v 2> /dev/null > /dev/null
@@ -19,7 +19,7 @@ fi
 echo "GITREV = " $git_rev
 
 # write svn into file version_tmp.f90
-cat west_version.f90.in | sed "s,checkit,$west_version,;s/unknown/$git_rev/;s&unset&$top_dir&" > west_version.f90.tmp
+cat west_version.f90.in | sed "s,checkit,${west_version_number_},;s/unknown/$git_rev/;s&unset&${westdir_}&" > west_version.f90.tmp
 
 # check if a previous version.f90 file exists
 if test -f west_version.f90 ; then

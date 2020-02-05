@@ -1,18 +1,21 @@
 # Makefile for the WEST software 
 
+include ./VERSION
 include ../make.inc
-
-WEST_VERSION_NUMBER=4.1.1
 
 default: all
 
 conf:
 	@[ "${PYT}" ] || ( echo ">> PYT is not set. Ex: make conf PYT=python3"; exit 1 )
+	@echo "# WEST_VERSION_NUMBER : ${WEST_VERSION_NUMBER}"
 	@echo " " > west_make.inc
-	@echo TOPDIR=${TOPDIR} >> west_make.inc
+	@echo WESTDIR=`pwd` >> west_make.inc
 	@echo PYT=${PYT} >> west_make.inc
-	@echo WEST_VERSION_NUMBER=${WEST_VERSION_NUMBER} >> west_make.inc
+	@if [ -z "${PYT_LDFLAGS}" ] ; then echo PYT_LDFLAGS="`${PYT}-config --ldflags`" >> west_make.inc ; else echo PYT_LDFLAGS=${PYT_LDFLAGS} >> west_make.inc ; fi
+	@echo " "
 	@echo "Generated file: west_make.inc"
+	@cat west_make.inc
+	@echo " "
 
 check_conf:
 	@[ -f "west_make.inc" ] || ( echo ">> Cannot find west_make.inc. Run: make conf PYT=python3"; exit 1 )
@@ -27,7 +30,7 @@ report_build_vars :
 	@[ "${MPIF90}" ] || ( echo ">> MPIF90 is not set."; exit 1 )
 	@[ "${CC}" ] || ( echo ">> CC is not set."; exit 1 )
 	@echo "# WEST_VERSION_NUMBER : ${WEST_VERSION_NUMBER}"
-	@echo "# TOPDIR : ${TOPDIR}"
+	@echo "# WESTDIR : ${WESTDIR}"
 	@echo "# FDFLAGS : ${FDFLAGS}"
 	@echo "# IFLAGS : ${IFLAGS}"
 	@echo "# MOD_FLAG : ${MOD_FLAG}"
@@ -59,6 +62,7 @@ report_build_vars :
 	@echo "# LIBS : ${LIBS}"
 	@echo "# WGET : ${WGET}"
 	@echo "# PYT : ${PYT}"
+	@echo "# PYT_LDFLAGS : ${PYT_LDFLAGS}"
 	@echo " "
 
 
@@ -108,7 +112,8 @@ libraries_do:
 
 modules_do:
 	if test -d Modules ; then \
-	( cd Modules ; sh update_west_version; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	( cd Modules ; sh ./update_west_version ${WESTDIR} ${WEST_VERSION_NUMBER}; \
+	if  test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 tools_do:
@@ -148,18 +153,18 @@ io_kernel_do:
 
 wstat_do:
 	if test -d Wstat ; then \
-	( cd Wstat ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+	( cd Wstat ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
 wfreq_do:
 	if test -d Wfreq ; then \
-	( cd Wfreq ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+	( cd Wfreq ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
 westpp_do:
 	if test -d Westpp ; then \
-	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
-	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
 clean: \
 pytools_undo \

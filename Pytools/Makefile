@@ -1,6 +1,7 @@
 #PYT=python3
 
 include ../west_make.inc
+include ../VERSION
 
 all: \
 title \

@@ -39,7 +39,7 @@ WEST executables can be compiled using the following script:
    export SCALAPACK_LIBS=${MY_LIB_PATH}/SCALAPACK/libscalapack.a
    export FFT_LIBS="${MY_LIB_PATH}/FFTW3/lib/libfftw3.a ${MY_LIB_PATH}/FFTW3/lib/libfftw3_omp.a"
 
-   ./configure --with-scalapack --enable-openmp LD_LIBS="`python3-config --ldflags`"
+   ./configure --with-scalapack --enable-openmp 
    
    make -j 4 pw
    

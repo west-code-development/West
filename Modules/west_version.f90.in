@@ -22,7 +22,7 @@ MODULE west_version
   !
   CHARACTER (LEN=6)  :: west_version_number = 'checkit'
   CHARACTER (LEN=512) :: west_git_revision = 'unknown'
-  CHARACTER (LEN=512) :: west_forpy_path = 'unset'
+  CHARACTER (LEN=512) :: west_topdir = 'unset'
   TYPE(list) :: paths 
   !
   CONTAINS
@@ -38,7 +38,7 @@ MODULE west_version
      IERR = get_sys_path(paths)
      IF(IERR/=0) CALL errore('forpy','Err: cannot get_sys_path',1)
      !
-     IERR = paths%append(TRIM(ADJUSTL(west_forpy_path))//"West/Pytools")
+     IERR = paths%append(TRIM(ADJUSTL(west_topdir))//"/Pytools")
      IF(IERR/=0) CALL errore('forpy','Err: cannot append paths',1) 
   END SUBROUTINE
   !

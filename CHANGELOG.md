@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-vX.X.X (XXXX/XX/XX)
+v4.2.0p (XXXX/XX/XX)
 -------------------
 
 - Introduced automatic installation of missing python packages

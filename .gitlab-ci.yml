@@ -310,6 +310,6 @@ west_doc_build:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West
    - git describe
-   - cd doc
+   - cd Doc
    - make html
    - ls _build/html

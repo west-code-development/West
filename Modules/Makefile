@@ -1,6 +1,5 @@
 # Makefile for Modules
 
-include ../VERSION
 include ../west_make.inc
 include ../../make.inc
 
@@ -27,7 +26,7 @@ tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 update:	
-	./update_west_version ${WESTDIR} ${WEST_VERSION_NUMBER}
+	./update_west_version ${WESTDIR} `${PYT} ../Pytools/read_json.py ../VERSION.json version`
 
 libmodules.a : $(MODULES_OBJS)
 	$(AR) $(ARFLAGS) $@ $?

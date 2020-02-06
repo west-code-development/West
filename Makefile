@@ -1,13 +1,33 @@
 # Makefile for the WEST software 
 
-include ./VERSION
 include ../make.inc
 
-default: all
+default :
+	@echo "Welcome to WEST!"
+	@echo ' '
+	@echo 'to install WEST, type at the shell prompt:'
+	@echo '  make conf PYT=python-3'
+	@echo '  make [-j] target'
+	@echo ' '
+	@echo 'where target identifies one or multiple packages'
+	@echo '  wstat        calculation of static dielectric response using PDEP'
+	@echo '  wfreq        calculation of dynamical dielectric response and GW self-energy'
+	@echo '  westpp       postprocessing programs'
+	@echo '  all          same as "make wstat wfreq westpp"'
+	@echo ' '
+	@echo 'where target is one of the following operations:'
+	@echo '  doc          build WEST documentation'
+	@echo ' '
+	@echo '  clean        remove executables and objects'
+	@echo '  veryclean    remove files produced by "configure" as well'
 
 conf:
 	@[ "${PYT}" ] || ( echo ">> PYT is not set. Ex: make conf PYT=python3"; exit 1 )
-	@echo "# WEST_VERSION_NUMBER : ${WEST_VERSION_NUMBER}"
+	@echo "Welcome to WEST!"
+	@echo ' '
+	@echo "version : `${PYT} ./Pytools/read_json.py VERSION.json version`"
+	@echo "url : `${PYT} ./Pytools/read_json.py VERSION.json url`"
+	@echo "license : `${PYT} ./Pytools/read_json.py VERSION.json license`"
 	@echo " " > west_make.inc
 	@echo WESTDIR=`pwd` >> west_make.inc
 	@echo PYT=${PYT} >> west_make.inc
@@ -29,7 +49,7 @@ report_build_vars :
 	@echo "              "
 	@[ "${MPIF90}" ] || ( echo ">> MPIF90 is not set."; exit 1 )
 	@[ "${CC}" ] || ( echo ">> CC is not set."; exit 1 )
-	@echo "# WEST_VERSION_NUMBER : ${WEST_VERSION_NUMBER}"
+	@echo "# WEST_VERSION_NUMBER : `${PYT} ./Pytools/read_json.py VERSION.json version`"
 	@echo "# WESTDIR : ${WESTDIR}"
 	@echo "# FDFLAGS : ${FDFLAGS}"
 	@echo "# IFLAGS : ${IFLAGS}"
@@ -100,6 +120,12 @@ wstat \
 wfreq \
 westpp 
 
+doc: check_conf
+	if test -d doc ; then \
+	( cd doc ; if test "$(MAKE)" = "" ; then make $(MFLAGS) html; \
+	else $(MAKE) $(MFLAGS) html ; fi ) ; fi
+	@echo 'Open the file: ${WESTDIR}/doc/_build/html/index.html'
+
 pytools_do:
 	if test -d Pytools ; then \
 	( cd Pytools ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
@@ -112,7 +138,7 @@ libraries_do:
 
 modules_do:
 	if test -d Modules ; then \
-	( cd Modules ; sh ./update_west_version ${WESTDIR} ${WEST_VERSION_NUMBER}; \
+	( cd Modules ; sh ./update_west_version ${WESTDIR} `${PYT} ../Pytools/read_json.py ../VERSION.json version`; \
 	if  test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 

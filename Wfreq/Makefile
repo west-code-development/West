@@ -100,7 +100,7 @@ all : title tldeps wfreq.x
 
 wfreq.x : $(PWOBJS) $(WFREQ_OBJS) $(QEMODS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o wfreq.x \
-		$(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS)
+		$(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS) ${PYT_LDFLAGS}
 	- ( cd ../../bin ; ln -fs ../West/Wfreq/wfreq.x . )
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :

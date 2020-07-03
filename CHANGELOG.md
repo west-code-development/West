@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+v4.2.0 (2020/07/03)
+-------------------
+
+- Introduced automatic installation of missing python packages
+- Introduced the conf layer in the Makefile to ease installation 
+- Updated manual
+
 v4.1.0 (2019/10/18)
 -------------------
 

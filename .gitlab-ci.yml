@@ -26,13 +26,14 @@ stages:
     - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe
-    - ./configure LD_LIBS="`python3-config --ldflags`"
+    - ./configure 
     - make -j pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe
-    - make
+    - make conf PYT=python3
+    - make all
     - ls ../bin 
     
 .template_test:
@@ -41,12 +42,13 @@ stages:
     - git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe
-    - ./configure LD_LIBS="`python3-config --ldflags`"
+    - ./configure 
     - make -j pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West 
-    - make > /dev/null
+    - make conf PYT=python3
+    - make all > /dev/null
     - useradd -m qe
     - cp -r test-suite /home/qe
     - su - qe
@@ -308,6 +310,6 @@ west_doc_build:
    - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
    - cd West
    - git describe
-   - cd doc
+   - cd Doc
    - make html
    - ls _build/html

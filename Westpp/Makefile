@@ -51,7 +51,7 @@ all : title tldeps westpp.x
 
 westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o westpp.x \
-		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS)
+		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS) ${PYT_LDFLAGS}
 	- ( cd ../../bin ; ln -fs ../West/Westpp/westpp.x . )
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :

@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v4.2.0p (XXXX/XX/XX)
+v4.2.0 (2020/07/03)
 -------------------
 
 - Introduced automatic installation of missing python packages

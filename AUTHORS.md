@@ -11,6 +11,8 @@ The current list of developers, in alphabetical order:
 
 - Sijia Dong (Argonne National Laboratory)
 - Marco Govoni (Argonne National Laboratory and University of Chicago)
+- Lan Huang (Argonne National Laboratory)
+- Yu Jin (University of Chicago)
 - He Ma (University of Chicago)
 - Han Yang (University of Chicago)
 

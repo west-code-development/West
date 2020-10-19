@@ -26,12 +26,13 @@ WEST executables can be compiled using the following script:
 
    export MY_LIB_PATH=/Users/myname/LIBRARIES
 
-   export CPP='cpp-9'
-   export CC='gcc-9'
+   export CPP='cpp-10'
+   export CC='gcc-10'
    export CFLAGS='-m64 -Wall -Wextra'
    export F77='mpif77'
    export FFLAGS='-m64 -fopenmp'
    export FC='mpif90'
+   export MPIF90='mpif90'
    export F90='mpif90'
    export FCFLAGS='-m64 -fopenmp -Wall -fbacktrace -fbounds-check'
    export BLAS_LIBS=${MY_LIB_PATH}/BLAS/libblas.a
@@ -44,7 +45,7 @@ WEST executables can be compiled using the following script:
    make -j 4 pw
    
    cd West
-   make conf PYT=python3
+   make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
    make all
 
 To use the script do: 

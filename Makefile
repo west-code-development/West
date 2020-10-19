@@ -6,7 +6,7 @@ default :
 	@echo "Welcome to WEST!"
 	@echo ' '
 	@echo 'to install WEST, type at the shell prompt:'
-	@echo '  make conf PYT=python-3 PYT_LDFLAGS="`python3-config --ldflags --embed`"'
+	@echo '  make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"'
 	@echo '  make [-j] target'
 	@echo ' '
 	@echo 'where target identifies one or multiple packages'

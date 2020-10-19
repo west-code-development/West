@@ -6,7 +6,7 @@ default :
 	@echo "Welcome to WEST!"
 	@echo ' '
 	@echo 'to install WEST, type at the shell prompt:'
-	@echo '  make conf PYT=python-3'
+	@echo '  make conf PYT=python-3 PYT_LDFLAGS="`python3-config --ldflags --embed`"'
 	@echo '  make [-j] target'
 	@echo ' '
 	@echo 'where target identifies one or multiple packages'
@@ -31,7 +31,7 @@ conf:
 	@echo " " > west_make.inc
 	@echo WESTDIR=`pwd` >> west_make.inc
 	@echo PYT=${PYT} >> west_make.inc
-	@if [ -z "${PYT_LDFLAGS}" ] ; then echo PYT_LDFLAGS="`${PYT}-config --ldflags`" >> west_make.inc ; else echo PYT_LDFLAGS=${PYT_LDFLAGS} >> west_make.inc ; fi
+	@echo PYT_LDFLAGS=${PYT_LDFLAGS} >> west_make.inc
 	@echo " "
 	@echo "Generated file: west_make.inc"
 	@cat west_make.inc
@@ -92,6 +92,7 @@ report_build_vars \
 pytools_do
 
 wstat: \
+pytools \
 libraries_do \
 modules_do \
 tools_do \

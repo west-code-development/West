@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+v4.2.1 (2020/10/19)
+-------------------
+
+- Added support for python 3.8 (--embed)
+- Updated scripts for RCC-Midway and MacOSX
+- Solved bugs in reporting conf layer in Makefile
+- Updated documentation
+
 v4.2.0 (2020/07/03)
 -------------------
 

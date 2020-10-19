@@ -32,7 +32,7 @@ stages:
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe
-    - make conf PYT=python3
+    - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
     - make all
     - ls ../bin 
     
@@ -47,7 +47,7 @@ stages:
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West 
-    - make conf PYT=python3
+    - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
     - make all > /dev/null
     - useradd -m qe
     - cp -r test-suite /home/qe

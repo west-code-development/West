@@ -32,7 +32,7 @@ WEST executables can be compiled using the following script:
    make pw -j 16
 
    cd West
-   make conf PYT=python3
+   make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags`"
    make all 
 
 To use the script do: 

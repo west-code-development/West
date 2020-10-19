@@ -20,8 +20,8 @@ WEST executables can be compiled using the following script:
    $ cat build_west.sh
    #!/bin/bash
    
-   module load intelmpi/5.1+intel-16.0 mkl/2017.up4 Anaconda3/5.1.0 
-   
+   module load intelmpi/5.1+intel-16.0 mkl/2017.up4 python/cpython-3.8.5 
+  
    export F77=mpiifort
    export CC=mpiicc
    export MPIF90=mpiifort
@@ -34,11 +34,11 @@ WEST executables can be compiled using the following script:
    export LAPACK_LIBS=" "
    export SCALAPACK_LIBS=" -lmkl_scalapack_lp64 -Wl,--start-group  -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -Wl,--end-group"
    
-   ./configure --enable-parallel --with-scalapack --enable-openmp 
-   make -j 6 pw
+   ./configure --enable-openmp=yes --enable-parallel=yes --with-scalapack=intel --with-hdf5=no
+   make -j 2 pw
    
    cd West
-   make conf PYT=python3
+   make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
    make all
 
 To use the script do: 
@@ -63,7 +63,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --ntasks-per-node=28
    #SBATCH --cpus-per-task=1
 
-   module load intelmpi/5.1+intel-16.0 mkl/2017.up4 Anaconda3/5.1.0
+   module load intelmpi/5.1+intel-16.0 mkl/2017.up4 python/cpython-3.8.5
 
    export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
    NTASKS=$(($SLURM_NTASKS_PER_NODE * $SLURM_JOB_NUM_NODES))

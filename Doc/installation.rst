@@ -13,7 +13,7 @@ Configure QuantumEspresso by running the ``configure`` script that comes with th
 
    $ git clone -b 'qe-6.1.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
    $ cd QEdir
-   $ git clone -b 'v4.1.0' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
+   $ git clone -b 'v4.2.1' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
    $ ./configure 
 
 .. note:: 
@@ -26,7 +26,7 @@ It's now time to create the ``pw.x``, ``wstat.x``, ``wfreq.x``, and ``westpp.x``
    $ cd QEdir
    $ make pw
    $ cd QEdir/West
-   $ make conf PYT=python3
+   $ make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
    $ make all
 
 You have succefully installed QuantumEspresso and WEST if you see the executables ``pw.x``, ``wstat.x``, ``wfreq.x``, and ``westpp.x`` created in the QEdir/bin directory.

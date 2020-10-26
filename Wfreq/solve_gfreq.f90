@@ -53,6 +53,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 !  USE fft_at_k,             ONLY : SINGLEBAND_INVFFT_k,SINGLEBAND_FWFFT_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
   USE io_push,              ONLY : io_push_title
 !  USE control_flags,        ONLY : gamma_only
@@ -74,7 +75,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iks,m,im
-  CHARACTER(LEN=512)    :: fname
+  CHARACTER(LEN=:),ALLOCATABLE :: fname
+  CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
@@ -204,8 +206,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            ! Exhume dbs eigenvalue
            !
-           WRITE(my_label_b,'(i6.6)') glob_ip
-           fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
+           CALL generate_pdep_fname( filepot, glob_ip ) 
+           fname = TRIM( wstat_save_dir ) // "/"// filepot
            CALL pdep_read_G_and_distribute(fname,pertg)
            !
            ! Multiply by sqvc
@@ -331,6 +333,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
   USE io_push,              ONLY : io_push_title
   USE noncollin_module,     ONLY : noncolin,npol 
@@ -352,7 +355,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iv,iv_glob,iks,ik,m,im,ikks,ikk,iq,il
   INTEGER :: npwk
-  CHARACTER(LEN=512)    :: fname
+  CHARACTER(LEN=:),ALLOCATABLE :: fname
+  CHARACTER(LEN=25)     :: filepot
   CHARACTER(LEN=6)      :: my_label_b
   CHARACTER(LEN=5)      :: my_label_q
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
@@ -436,10 +440,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      npwk = ngk(ikks)
      !
-     IF (k_grid%nps>1) THEN
+!     IF (k_grid%nps>1) THEN
         IF(my_image_id==0) CALL get_buffer( evck, lrwfc, iuwfc, ikks )
         CALL mp_bcast(evck,0,inter_image_comm)
-     ENDIF
+!     ENDIF
      !
      nbndval = nbnd_occ(ikks)
      !
@@ -530,9 +534,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               ! Exhume dbs eigenvalue
               !
-              WRITE(my_label_b,'(i6.6)') glob_ip
-              WRITE(my_label_q,'(i5.5)') iq
-              fname = TRIM( wstat_save_dir ) // "/EQ"//TRIM(ADJUSTL(my_label_q))//"_"//TRIM(ADJUSTL(my_label_b))//".json"
+              CALL generate_pdep_fname( filepot, glob_ip, iq ) 
+              fname = TRIM( wstat_save_dir ) // "/"// filepot
               CALL pdep_read_G_and_distribute(fname,pertg,iq)
               !
               ! Multiply by sqvc

@@ -17,7 +17,6 @@ MODULE fft_at_gamma
   ! Everything is done following dffts
   !
   USE kinds,                ONLY : DP
-  USE gvect,                ONLY : nl,nlm
   USE gvecs,                ONLY : nls,nlsm
   USE fft_interfaces,       ONLY : fwfft,invfft
   USE fft_types,            ONLY : fft_type_descriptor

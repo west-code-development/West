@@ -1,7 +1,7 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni 
 ! This file is distributed under the terms of the
-! GNU General Public License. See the file `License'
+! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
@@ -15,6 +15,7 @@ MODULE scratch_area
   !-----------------------------------------------------------------------
   !
   USE kinds, ONLY :  DP
+  USE fft_types, ONLY : fft_type_descriptor
   !
   SAVE
   !
@@ -69,6 +70,7 @@ MODULE scratch_area
   ! I/O 
   !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
   !
+  TYPE ( fft_type_descriptor ) :: dfft_io
   !
 END MODULE
 !
@@ -83,8 +85,8 @@ MODULE westin
   CHARACTER(LEN=512) :: west_prefix
   CHARACTER(LEN=512) :: qe_prefix
   CHARACTER(LEN=512) :: savedir            ! outdir/west_prefix.code.save
-  CHARACTER(LEN=512) :: main_input_file    ! input file (json format)
-  CHARACTER(LEN=512) :: logfile            ! savedir/logfile.json 
+  CHARACTER(LEN=512) :: main_input_file    ! input file
+  CHARACTER(LEN=512) :: logfile ! savedir/logfile.json 
   !
 END MODULE  
 !
@@ -97,7 +99,7 @@ MODULE wstat_center
   !
   ! INPUT FOR wstat_control
   !
-  CHARACTER(LEN=1) :: wstat_calculation 
+  CHARACTER(LEN=2) :: wstat_calculation 
   INTEGER :: n_pdep_basis
   INTEGER :: n_pdep_times
   INTEGER :: n_pdep_eigen
@@ -123,6 +125,14 @@ MODULE wstat_center
   CHARACTER(LEN=512) :: wstat_restart_dir
   LOGICAL :: l_is_wstat_converged
   !
+END MODULE
+!
+MODULE server_center
+  SAVE
+  !
+  ! INPUT for server_control
+  !
+  CHARACTER(LEN=:),ALLOCATABLE :: document
 END MODULE 
 !
 !
@@ -146,8 +156,8 @@ MODULE wfreq_center
   INTEGER :: n_secant_maxiter
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
-  CHARACTER(LEN=1) :: macropol_calculation
   LOGICAL :: l_enable_gwetot
+  CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
   REAL(DP) :: o_restart_time
   REAL(DP) :: ecut_spectralf(2)
@@ -250,6 +260,7 @@ MODULE westcom
   USE scratch_area
   USE westin
   USE wstat_center
+  USE server_center
   USE wfreq_center
   USE westpp_center
   USE wan_center

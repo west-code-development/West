@@ -20,6 +20,7 @@ MODULE pdep_io
   USE westcom,      ONLY : npwq, npwq_g, npwqx, ngq, ngq_g, npwqx, igq_q !, igq_l2g_kdip
   USE gvect,        ONLY : ig_l2g
   USE json_module,  ONLY : json_file
+  USE control_flags,   ONLY : gamma_only
   USE base64_module 
   !
   IMPLICIT NONE
@@ -51,14 +52,21 @@ MODULE pdep_io
       INTEGER :: nbytes, ndim, iunit, nlen
       CHARACTER(LEN=30) :: endian
       INTEGER :: npwqx_g 
-      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
+      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:)
+      INTEGER, PARAMETER :: default_iq = 1
+      INTEGER :: iq_ 
       !
+      IF( PRESENT(iq) ) THEN 
+         iq_ = iq
+      ELSE
+         iq_ = default_iq
+      ENDIF 
       !
-      IF (PRESENT(iq)) THEN
+      IF ( .NOT. gamma_only) THEN
          !
          ! Resume all components 
          !
-         ndim = ngq_g(iq)
+         ndim = ngq_g(iq_)
          !
          ! <NEW>
          !
@@ -66,11 +74,11 @@ MODULE pdep_io
          ALLOCATE( igq_l2g_kdip(npwqx_g) )
          igq_l2g_kdip(:) = 0
          !
-         ALLOCATE( igq_l2g(ngq(iq)) )
-         DO ig = 1, ngq(iq)
-            igq_l2g(ig) = ig_l2g( igq_q(ig,iq) )
+         ALLOCATE( igq_l2g(ngq(iq_)) )
+         DO ig = 1, ngq(iq_)
+            igq_l2g(ig) = ig_l2g( igq_q(ig,iq_) )
          ENDDO
-         CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip )
+         CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
          DEALLOCATE( igq_l2g )
          !
          ! </NEW>
@@ -102,8 +110,8 @@ MODULE pdep_io
             !
             OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
             WRITE( iunit, '(a)' ) '{'
-            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "readme" : "eigenpotential", "type" : "complex double", "space" : "G",&
-                         "ndim" : ', ndim, ', "code" : "base64", '//TRIM(endian)//' }'
+            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "name" : "eigenpotential", "type" : "complex double", "space" : "G",&
+                         "ndim" : ', ndim, ', "encoding" : "base64", '//TRIM(endian)//' }'
             WRITE( iunit, '(a)') ', "data" : ' 
             WRITE( iunit, '(a)' ) '"'//charbase64//'"'
             WRITE( iunit, '(a)' ) '}'
@@ -142,8 +150,8 @@ MODULE pdep_io
             !
             OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
             WRITE( iunit, '(a)' ) '{'
-            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "readme" : "eigenpotential", "type" : "complex double", "space" : "G",&
-                         "ndim" : ', ndim, ', "code" : "base64", '//TRIM(endian)//' }'
+            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "name" : "eigenpotential", "type" : "complex double", "space" : "G",&
+                         "ndim" : ', ndim, ', "encoding" : "base64", '//TRIM(endian)//' }'
             WRITE( iunit, '(a)') ', "data" : ' 
             WRITE( iunit, '(a)' ) '"'//charbase64//'"'
             WRITE( iunit, '(a)' ) '}'
@@ -151,10 +159,10 @@ MODULE pdep_io
             !
             DEALLOCATE( charbase64 )
             !
-         END IF
+         ENDIF
          !
          DEALLOCATE( tmp_vec )
-      !
+         !
       ENDIF
     !
     END SUBROUTINE
@@ -190,12 +198,20 @@ MODULE pdep_io
       LOGICAL :: found, isle
       INTEGER :: npwqx_g
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:) 
+      INTEGER, PARAMETER :: default_iq = 1
+      INTEGER :: iq_ 
       !
-      IF ( PRESENT(iq) ) THEN
+      IF( PRESENT(iq) ) THEN 
+         iq_ = iq
+      ELSE
+         iq_ = default_iq
+      ENDIF 
+      !
+      IF ( .NOT. gamma_only ) THEN
          !
          ! Resume all components 
          !
-         ndim = ngq_g(iq)
+         ndim = ngq_g(iq_)
 !         npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
 !         CALL mp_max(npwq_g,intra_pool_comm)
 !         CALL mp_max(npwq_g,intra_bgrp_comm)
@@ -239,11 +255,11 @@ MODULE pdep_io
             ALLOCATE( igq_l2g_kdip(npwqx_g) )
             igq_l2g_kdip(:) = 0
             !
-            ALLOCATE( igq_l2g(ngq(iq)) )
-            DO ig = 1, ngq(iq)
-               igq_l2g(ig) = ig_l2g( igq_q(ig,iq) )
+            ALLOCATE( igq_l2g(ngq(iq_)) )
+            DO ig = 1, ngq(iq_)
+               igq_l2g(ig) = ig_l2g( igq_q(ig,iq_) )
             ENDDO
-            CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip )
+            CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
             DEALLOCATE( igq_l2g )
             !
             ! </NEW>

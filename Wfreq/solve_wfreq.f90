@@ -54,13 +54,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
 !  USE fft_at_k,             ONLY : SINGLEBAND_INVFFT_k,SINGLEBAND_FWFFT_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
   USE io_push,              ONLY : io_push_title
 !  USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,macropert,ifr,rfr
+  USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband
   USE class_idistribute,    ONLY : idistribute 
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE types_bz_grid,        ONLY : k_grid
@@ -75,15 +76,16 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ipol,m
-  CHARACTER(LEN=512)    :: fname
+  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,ivloc,iks,ipol,m
+  CHARACTER(LEN=25) :: filepot
+  CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:), braket(:, :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
-  COMPLEX(DP),ALLOCATABLE :: phi(:,:)
+  COMPLEX(DP),ALLOCATABLE :: phi(:,:), phis(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
   COMPLEX(DP) :: zkonstant
@@ -215,23 +217,24 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      bks%max_band = nbndval
      bks%min_band = 1
      !
-     ALLOCATE(dvpsi(npwx*npol,mypara%nlocx)) 
-     !
-     time_spent(1) = get_clock( 'wlanczos' ) 
-     !
-     ! LOOP over band states 
-     !
-     DO iv = 1, nbndval
-        IF(iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
+     ! Parallel macropol
+     IF(l_macropol) THEN
         !
-        ! MACROPOL CASE
+        ! PHI 
         !
-        IF(l_macropol) THEN
+        CALL occband%init(nbndval,'i','occband',.FALSE.)
+        !
+        ALLOCATE(phis(npwx*npol,3,occband%nloc))
+        !
+        phis = 0._DP
+        !
+        ALLOCATE(phi(npwx*npol,3))
+        ALLOCATE(phi_tmp(npwx*npol,3))
+        !
+        DO ivloc = 1, occband%nloc
            !
-           ! PHI 
+           iv = occband%l2g(ivloc)
            !
-           ALLOCATE(phi(npwx*npol,3))
-           ALLOCATE(phi_tmp(npwx*npol,3))
            CALL commutator_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
            CALL commutator_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
            CALL commutator_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
@@ -264,9 +267,40 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
            ENDIF
            !
+           phis(:,:,ivloc) = phi(:,:)
+           !
            DEALLOCATE( eprec )
            DEALLOCATE( e )
-           DEALLOCATE( phi_tmp )
+           !
+        END DO
+        !
+        DEALLOCATE( phi, phi_tmp )
+        !
+     ENDIF ! macropol
+     !
+     ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
+     !
+     time_spent(1) = get_clock( 'wlanczos' )
+     !
+     ! LOOP over band states
+     !
+     DO iv = 1, nbndval
+        IF(iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
+        !
+        ! MACROPOL CASE
+        !
+        IF(l_macropol) THEN
+           !
+           ALLOCATE(phi(npwx*npol,3))
+           phi = 0._DP
+           !
+           DO ivloc = 1, occband%nloc
+               IF( occband%l2g(ivloc) == iv ) THEN
+                   phi(:,:) = phis(:,:,ivloc)
+               ENDIF
+           END DO
+           !
+           CALL mp_sum(phi, inter_image_comm)
            !
         ENDIF
         !
@@ -293,8 +327,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               !
               ! Exhume dbs eigenvalue
               !
-              WRITE(my_label_b,'(i6.6)') glob_ip
-              fname = TRIM( wstat_save_dir ) // "/E"//TRIM(ADJUSTL(my_label_b))//".json"
+              CALL generate_pdep_fname( filepot, glob_ip ) 
+              fname = TRIM( wstat_save_dir ) // "/"// filepot
               CALL pdep_read_G_and_distribute(fname,pertg)
               !
               ! Multiply by sqvc
@@ -499,6 +533,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
      ENDDO ! BANDS
      !
+     IF(l_macropol) DEALLOCATE(phis)
+     !
      DEALLOCATE(dvpsi)
      !
   ENDDO ! KPOINT-SPIN 
@@ -603,13 +639,14 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
   USE io_push,              ONLY : io_push_title
 !  USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,macropert,ifr,rfr
+  USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband
   USE class_idistribute,    ONLY : idistribute 
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bksq_type
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
@@ -624,8 +661,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,iks,ik,is,iq,ikqs,ikq,ipol,m
-  CHARACTER(LEN=512)    :: fname
+  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,ivloc,iks,ik,is,iq,ikqs,ikq,ipol,m
+  CHARACTER(LEN=25) :: filepot 
+  CHARACTER(LEN=:),ALLOCATABLE    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   CHARACTER(LEN=5)      :: my_label_q
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
@@ -634,7 +672,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: braket(:, :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
-  COMPLEX(DP),ALLOCATABLE :: phi(:,:)
+  COMPLEX(DP),ALLOCATABLE :: phi(:,:), phis(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
   COMPLEX(DP),ALLOCATABLE :: evckpq(:,:)
@@ -813,23 +851,25 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         bksq%max_band = nbndval
         bksq%min_band = 1
         !
-        ALLOCATE(dvpsi(npwx*npol,mypara%nlocx)) 
+        ! MACROPOL CASE
         !
-        time_spent(1) = get_clock( 'wlanczos' ) 
-        !
-        ! LOOP over band states 
-        !
-        DO iv = 1, nbndval
-           IF(iq==bksq%lastdone_q .AND. iks==bksq%lastdone_ks .AND. iv <= bksq%lastdone_band ) CYCLE
+        IF(l_macropol .AND. l_gammaq) THEN
            !
-           ! MACROPOL CASE
+           ! PHI 
            !
-           IF(l_macropol .AND. l_gammaq) THEN
+           CALL occband%init(nbndval,'i','occband',.TRUE.)
+           !
+           ALLOCATE(phis(npwx*npol,3,occband%nloc))
+           !
+           phis = 0._DP
+           !
+           ALLOCATE(phi(npwx*npol,3))
+           ALLOCATE(phi_tmp(npwx*npol,3))
+           !
+           DO ivloc = 1, occband%nloc
               !
-              ! PHI 
+              iv = occband%l2g(ivloc)
               !
-              ALLOCATE(phi(npwx*npol,3))
-              ALLOCATE(phi_tmp(npwx*npol,3))
               CALL commutator_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
               CALL commutator_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
               CALL commutator_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
@@ -862,10 +902,40 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
               ENDIF
               !
+              phis(:,:,ivloc) = phi(:,:)
+              !
               DEALLOCATE( eprec )
               DEALLOCATE( e )
-              DEALLOCATE( phi_tmp )
               !
+           END DO
+           !
+           DEALLOCATE( phi, phi_tmp )
+           !
+        ENDIF ! macropol
+        !
+        ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
+        !
+        time_spent(1) = get_clock( 'wlanczos' )
+        !
+        ! LOOP over band states
+        !
+        DO iv = 1, nbndval
+           IF(iq==bksq%lastdone_q .AND. iks==bksq%lastdone_ks .AND. iv <= bksq%lastdone_band ) CYCLE
+           !
+           ! MACROPOL CASE
+           !
+           IF(l_macropol .AND. l_gammaq) THEN
+              !
+              ALLOCATE(phi(npwx*npol,3))
+              phi = 0._DP
+              !
+              DO ivloc = 1, occband%nloc
+                 IF( occband%l2g(ivloc) == iv ) THEN
+                    phi(:,:) = phis(:,:,ivloc)
+                 ENDIF
+              END DO
+              !
+              CALL mp_sum(phi, inter_image_comm)
               !
            ENDIF
            !
@@ -897,9 +967,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
                  ! Exhume dbs eigenvalue
                  !
-                 WRITE(my_label_b,'(i6.6)') glob_ip
-                 WRITE(my_label_q,'(i5.5)') iq
-                 fname = TRIM( wstat_save_dir ) // "/EQ"//TRIM(ADJUSTL(my_label_q))//"_"//TRIM(ADJUSTL(my_label_b))//".json"
+                 CALL generate_pdep_fname( filepot, glob_ip, iq ) 
+                 fname = TRIM( wstat_save_dir ) // "/"// filepot
                  CALL pdep_read_G_and_distribute(fname,pertg,iq)
                  !
                  ! Multiply by sqvc
@@ -1120,6 +1189,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            CALL update_bar_type( barra, 'wlanczos', 1 )
            !
         ENDDO ! BANDS
+        !
+        IF(l_macropol .AND. l_gammaq) DEALLOCATE(phis)
         !
         DEALLOCATE(dvpsi)
         !

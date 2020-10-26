@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -15,7 +15,7 @@ SUBROUTINE set_npwq()
   !-----------------------------------------------------------------------
   !
   USE kinds,           ONLY : DP
-  USE westcom,         ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,l_use_ecutrho,fftdriver
+  USE westcom,         ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,l_use_ecutrho,fftdriver,dfft_io
   USE mp,              ONLY : mp_max, mp_sum
   USE mp_global,       ONLY : intra_bgrp_comm, inter_bgrp_comm, nbgrp, inter_pool_comm, intra_pool_comm
   USE gvect,           ONLY : ig_l2g,ngm,ngmx,g
@@ -23,6 +23,7 @@ SUBROUTINE set_npwq()
   USE pwcom,           ONLY : npw,npwx
   USE control_flags,   ONLY : gamma_only
   USE types_bz_grid,   ONLY : q_grid
+  USE fft_base,        ONLY : dffts
   !
   IMPLICIT NONE
   !
@@ -40,10 +41,12 @@ SUBROUTINE set_npwq()
         npwq      = ngm
         npwqx     = ngmx
         fftdriver = 'Dense'
+        dfft_io   = dffts
      ELSE
         npwq      = npw
         npwqx     = npwx
         fftdriver = 'Wave'
+        CALL set_dfft_ecutwf( dfft_io )
      ENDIF
      !ALLOCATE(q0ig_l2g(npwq0))
      !q0ig_l2g(1:npwq0) = ig_l2g(1:npwq0)
@@ -55,6 +58,8 @@ SUBROUTINE set_npwq()
      !
      IF( l_use_ecutrho ) CALL errore("set_npwq", "Dense grid not implemented with q-points",1)
      fftdriver = 'Wave'
+     !
+     CALL set_dfft_ecutwf( dfft_io )
      !
      npwqx = n_plane_waves( gcutw, q_grid%np, q_grid%p_cart, g, ngm )
      !
@@ -294,3 +299,62 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
   RETURN
   !
 END SUBROUTINE
+ !
+ SUBROUTINE set_dfft_ecutwf (dfft)
+    ! 
+    ! OUTPUT  : dfft = FFT descriptor with real space set accorfing to ecutwfc
+    !
+    USE kinds,                ONLY : DP
+    USE klist,                ONLY : xk, nks
+    USE cell_base,            ONLY : at,bg
+    USE control_flags,        ONLY : gamma_only
+    USE fft_types,            ONLY : fft_type_descriptor, fft_type_init
+    USE gvecw,                ONLY : gcutw
+    USE mp,                   ONLY : mp_max
+    USE mp_global,            ONLY : intra_bgrp_comm,inter_pool_comm
+    USE stick_base,           ONLY : sticks_map
+    USE gvecs,                ONLY : gcutms 
+    !
+    ! I/O
+    !
+    TYPE ( fft_type_descriptor ), INTENT(OUT) :: dfft ! customized fft descriptor
+    !
+    ! Workspace 
+    !
+    REAL(DP) :: gkcut
+    TYPE( sticks_map ) :: smap
+    INTEGER :: ik
+    !
+#if defined (__MPI)
+  LOGICAL :: lpara = .true.
+#else
+  LOGICAL :: lpara = .false.
+#endif
+    !
+    ! ... calculate gkcut = max |k+G|^2, in (2pi/a)^2 units
+    !
+    IF (nks == 0) THEN
+       !
+       ! if k-points are automatically generated (which happens later)
+       ! use max(bg)/2 as an estimate of the largest k-point
+       !
+       gkcut = 0.5_DP * MAX ( &
+          SQRT (SUM(bg (1:3, 1)**2) ), &
+          SQRT (SUM(bg (1:3, 2)**2) ), &
+          SQRT (SUM(bg (1:3, 3)**2) ) )
+    ELSE
+       gkcut = 0._DP
+       DO ik = 1, nks
+          gkcut = MAX (gkcut, SQRT ( SUM(xk (1:3, ik)**2) ) )
+       ENDDO
+    ENDIF
+    !
+    gkcut = (SQRT (gcutw) + gkcut)**2
+    !
+    ! ... find maximum value among all the processors
+    !
+    CALL mp_max (gkcut, inter_pool_comm )
+    !
+    CALL fft_type_init( dfft, smap, "wave", gamma_only, lpara, intra_bgrp_comm, at, bg, gkcut, MAX(gcutms/gkcut/4.0_DP,1.0_DP) )
+    !
+END SUBROUTINE 

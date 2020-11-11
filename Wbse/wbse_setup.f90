@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2017 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -16,7 +16,8 @@ SUBROUTINE wbse_setup
   !
   USE westcom,                ONLY : alphapv_dfpt,npwq,west_prefix,&
                                    & n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,&
-                                   & wstat_save_dir, wstat_restart_dir, nbnd_occ
+                                   & wstat_save_dir, wstat_restart_dir, nbnd_occ, &
+                                   l_davidson, l_lanzcos, nbndval0x,l_qp_correction
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE kinds,                  ONLY : DP
@@ -25,38 +26,44 @@ SUBROUTINE wbse_setup
   USE cell_base,              ONLY : tpiba2
   USE io_files,               ONLY : tmp_dir
   USE control_flags,          ONLY : gamma_only
-  USE wbsecom,                ONLY : l_davidson, l_lanzcos, nbndval0x 
+  !wbsecom combined into westcom
+  !USE wbsecom,                ONLY : l_davidson, l_lanzcos, nbndval0x
   USE bse_module,             ONLY : bse_calc
+  USE types_coulomb,      ONLY : pot3D
+
   !
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: ig
   !
-  CALL do_setup ( ) 
+  CALL do_setup ( )
+  !
+  CALL wbse_input( )
   !
   ! Calculate ALPHA_PV
   !
   alphapv_dfpt = get_alpha_pv()
   !
+  l_use_ecutrho = .false.
+  !
   CALL set_npwq()
+  !TODO: Dense?   store_sqvc(sqvc,ngm,2,isz)
+  CALL pot3D%init('Dense',.FALSE.,'gb')
+  CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()
   !
   nbndval0x = maxval(nbnd_occ(:))
   !
-  CALL wbse_input( )
-  !
   CALL west_dv_setup(bse_calc)
-  !
-  n_pdep_basis = n_pdep_eigen * n_pdep_times
   !
   IF (l_lanzcos) THEN
      !
      wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
      !
   ELSEIF (l_davidson) THEN
-     ! 
+     !
      wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
      !
   ELSE
@@ -67,6 +74,22 @@ SUBROUTINE wbse_setup
   !
   CALL my_mkdir( wstat_save_dir )
   !
+  n_pdep_basis = n_pdep_eigen * n_pdep_times
+  !
+    IF (l_qp_correction) THEN
+     !
+     CALL read_qp_eigs ()
+     !CALL read_ks_wfc  ()
+     !
+  ENDIF
+  !
+  ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
+  !
+  IF (bse_calc) THEN
+     !
+     CALL bse_init()
+     !
+  ENDIF
 END SUBROUTINE
 !
 !
@@ -83,8 +106,12 @@ SUBROUTINE wbse_input
                             n_pdep_maxiter, &
                             n_pdep_read_from_file, &
                             trev_pdep, &
-                            trev_pdep_rel
-  USE wbsecom
+                            trev_pdep_rel, &
+                            wbse_calculation, n_plep_times,n_plep_eigen,n_plep_maxiter,&
+                            n_plep_read_from_file,trev_plep_rel,trev_plep, l_bse_calculation,&
+                             l_use_localise_repr, overlap_thr
+  !wbsecom combined into westcom
+  !USE wbsecom
   !
   !
   IMPLICIT NONE

@@ -10,7 +10,7 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   !-----------------------------------------------------------------------
   !
   !  This subroutine prepares some variables which are needed for derivatives
-  !  1) Set the nonlinear core correction 
+  !  1) Set the nonlinear core correction
   !  2) Computes dmuxc (derivative of the XC potential)
   !  3) Set gradient correction (GGA) if needed
   !
@@ -28,21 +28,22 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   !
   IMPLICIT NONE
   !
-  LOGICAL, INTENT(IN) :: l_bse_calc 
+  LOGICAL, INTENT(IN) :: l_bse_calc
   !
   CALL start_clock ('wbse_dv_setup')
+  !
+  ! 0) allocate dmuxc
+  !
+  ALLOCATE(dmuxc (dfftp%nnr, nspin, nspin))
   !
   IF (l_bse_calc) THEN ! BSE
      !
      dmuxc = (0.0_DP, 0.0_DP)
      !
      RETURN
-     ! 
-  ENDIF 
-  ! 
-  ! 0) allocate dmuxc
-  ! 
-  ALLOCATE(dmuxc (dfftp%nnr, nspin, nspin))
+     !
+  ENDIF
+
   !
   ! 1) Set the nonlinear core correction
   !

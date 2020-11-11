@@ -8,7 +8,7 @@
 SUBROUTINE wbse_calc_dens( devc, drho )
   !---------------------------------------------------------------------
   !
-  ! This subroutine calculates the response charge density 
+  ! This subroutine calculates the response charge density
   ! from linear response orbitals and ground state orbitals.
   !
   !
@@ -19,14 +19,15 @@ SUBROUTINE wbse_calc_dens( devc, drho )
   USE lsda_mod,               ONLY : nspin,lsda
   USE wavefunctions_module,   ONLY : psic, evc
   USE noncollin_module,       ONLY : npol
-  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg 
+  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg
   USE control_flags,          ONLY : gamma_only
   USE mp,                     ONLY : mp_sum, mp_bcast
   USE mp_global,              ONLY : inter_pool_comm, intra_bgrp_comm,&
-                                     inter_bgrp_comm, my_image_id, inter_image_comm 
+                                     inter_bgrp_comm, my_image_id, inter_image_comm
   USE buffers,                ONLY : get_buffer
-  USE wbsecom,                ONLY : nbndval0x, l_lanzcos
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ
+  !wbsecom combined into westcom
+  !USE wbsecom,                ONLY : nbndval0x, l_lanzcos
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ, nbndval0x, l_lanzcos
   USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
   USE distribution_center,    ONLY : aband
@@ -61,7 +62,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
      ! ... Set k-point and spin
      !
      current_k = iks
-     ! 
+     !
      IF ( lsda ) current_spin = isk(iks)
      !
      ! ... read in GS wavefunctions from the dir
@@ -87,7 +88,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
            !
            DO ir=1, dffts%nnr
               !
-              prod =  REAL( psic(ir),KIND=DP) * DIMAG( psic(ir)) 
+              prod =  REAL( psic(ir),KIND=DP) * DIMAG( psic(ir))
               !
               drho(ir,current_spin) = drho(ir,current_spin) + w1 * CMPLX( prod, 0.0_DP, KIND=DP)
               !
@@ -104,16 +105,16 @@ SUBROUTINE wbse_calc_dens( devc, drho )
         DO il1 = 1, nbvalloc
            !
            ibnd = aband%l2g(il1)
-           ! 
+           !
            w1 = wg(ibnd, iks)/omega
            !
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
            !
            CALL single_invfft_k(dffts,npw,npwx,devc(1,ibnd,iks),psic_aux,'Wave',igk_k(1,current_k))
-           ! 
+           !
            DO ir=1, dffts%nnr
               !
-              drho(ir,current_spin) = drho(ir,current_spin) + w1 * DCONJG(psic(ir))* psic_aux(ir) 
+              drho(ir,current_spin) = drho(ir,current_spin) + w1 * DCONJG(psic(ir))* psic_aux(ir)
               !
            ENDDO
            !
@@ -121,9 +122,9 @@ SUBROUTINE wbse_calc_dens( devc, drho )
         !
         IF (npol==2) THEN
            !
-           DO il1 = 1, nbvalloc 
+           DO il1 = 1, nbvalloc
               !
-              ibnd = aband%l2g(il1) 
+              ibnd = aband%l2g(il1)
               !
               w1 = wg(ibnd, iks)/omega
               !
@@ -144,7 +145,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
         DEALLOCATE ( psic_aux )
         !
      ENDIF
-     ! 
+     !
   ENDDO
   !
   IF (l_lanzcos) THEN

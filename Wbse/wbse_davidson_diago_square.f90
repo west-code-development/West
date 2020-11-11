@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -27,12 +27,16 @@ SUBROUTINE wbse_davidson_diago_square ( )
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE pwcom,                ONLY : nks,npw,npwx
   USE lsda_mod,             ONLY : nspin
-  USE wbsecom,              ONLY : dvg_exc,dng_exc,nbndval0x
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : dvg_exc,dng_exc,nbndval0x
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged
+                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,&
+                                   dvg_exc,dng_exc,nbndval0x, &
+                                   l_preconditioning
   USE plep_db,              ONLY : plep_db_write,plep_db_read
-  USE write_xml,            ONLY : wstat_xml_dump
+  !depracated in new version of west
+  !USE write_xml,            ONLY : wstat_xml_dump
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
   USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm
@@ -41,8 +45,10 @@ SUBROUTINE wbse_davidson_diago_square ( )
   USE wstat_tools,          ONLY : diagox,serial_diagox,symm_hr_distr,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
                                    wbse_refresh_with_vr_distr,apply_preconditioning_dvg
-  USE wbsecom,              ONLY : l_preconditioning         
-  USE bse_module,           ONLY : bse_calc,size_index_matrix_lz,bseparal
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : l_preconditioning
+  USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
+  USE distribution_center,  ONLY : bseparal
   !
   IMPLICIT NONE
   !
@@ -96,16 +102,16 @@ SUBROUTINE wbse_davidson_diago_square ( )
   CALL aband%init(nbndval0x,'b','band_paralel',.TRUE.)
   !
   ! ... DISTRIBUTE bse_kernel
-  ! 
+  !
   size_index_matrix = MAXVAL(size_index_matrix_lz(:))
   IF (bse_calc) THEN
      !
      bseparal  = idistribute()
      CALL bseparal%init(size_index_matrix,'i','bse_kernel',.TRUE.)
-     !  
+     !
   ENDIF
   !
-  CALL wbse_memory_report() ! Before allocating I report the memory required. 
+  CALL wbse_memory_report() ! Before allocating I report the memory required.
   !
   ! ... MEMORY ALLOCATION
   !
@@ -159,7 +165,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
   dvg_exc= 0._DP
   hr_distr(:,:) = 0._DP
   vr_distr(:,:) = 0._DP
-  notcnv  = nvec 
+  notcnv  = nvec
   dav_iter = -2
   !
   ! KIND OF CALCULATION
@@ -193,10 +199,10 @@ SUBROUTINE wbse_davidson_diago_square ( )
          & 'starting', nbase, nbase
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      mloc = 0
-     mstart = 1 
+     mstart = 1
      DO il1 = 1, pert%nloc
         ig1 = pert%l2g(il1)
         IF( ig1 < 1 .OR. ig1 > nvec ) CYCLE
@@ -204,7 +210,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         mloc = mloc + 1
      ENDDO
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
@@ -214,7 +220,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
            !
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !  
+           !
         ELSE
            !
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
@@ -223,7 +229,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         !
         CALL west_apply_liouvillian (dvg_exc_tmp(:,:,:), dng_exc_tmp(:,:,:))
         !
-        !dng_exc_tmp_tmp(:,:,:) = dng_exc_tmp(:,:,:) - epsilon_ref * dvg_exc_tmp(:,:,:)  
+        !dng_exc_tmp_tmp(:,:,:) = dng_exc_tmp(:,:,:) - epsilon_ref * dvg_exc_tmp(:,:,:)
         !
         !CALL west_apply_liouvillian (dng_exc_tmp_tmp(:,:,:), dng_exc_tmp(:,:,:))
         !
@@ -232,9 +238,9 @@ SUBROUTINE wbse_davidson_diago_square ( )
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)! - epsilon_ref * dng_exc_tmp_tmp(:,:,:)
            !
         ENDIF
-        !    
+        !
      ENDDO
-     ! 
+     !
      dav_iter = -1
      !
   CASE DEFAULT
@@ -243,11 +249,11 @@ SUBROUTINE wbse_davidson_diago_square ( )
      !
   END SELECT
   !
-  IF( dav_iter == -2 ) CALL errore( 'chidiago','Cannot find the 1st starting loop',1) 
+  IF( dav_iter == -2 ) CALL errore( 'chidiago','Cannot find the 1st starting loop',1)
   !
   IF( dav_iter == -1 ) THEN
      !
-     ! < EXTRA STEP > 
+     ! < EXTRA STEP >
      !
      dvg_exc = dng_exc
      CALL wbse_do_mgs( dvg_exc, 1, nvec)
@@ -258,10 +264,10 @@ SUBROUTINE wbse_davidson_diago_square ( )
          & 'starting', nbase, nbase
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      mloc = 0
-     mstart = 1 
+     mstart = 1
      DO il1 = 1, pert%nloc
         ig1 = pert%l2g(il1)
         IF( ig1 < 1 .OR. ig1 > nvec ) CYCLE
@@ -269,7 +275,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         mloc = mloc + 1
      ENDDO
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
@@ -279,7 +285,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
            !
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !  
+           !
         ELSE
            !
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
@@ -288,7 +294,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         !
         CALL west_apply_liouvillian (dvg_exc_tmp(:,:,:), dng_exc_tmp(:,:,:))
         !
-        dng_exc_tmp_tmp(:,:,:) = dng_exc_tmp(:,:,:) - epsilon_ref * dvg_exc_tmp(:,:,:)  
+        dng_exc_tmp_tmp(:,:,:) = dng_exc_tmp(:,:,:) - epsilon_ref * dvg_exc_tmp(:,:,:)
         !
         CALL west_apply_liouvillian (dng_exc_tmp_tmp(:,:,:), dng_exc_tmp(:,:,:))
         !
@@ -299,23 +305,25 @@ SUBROUTINE wbse_davidson_diago_square ( )
         ENDIF
         !
      ENDDO
-     ! 
+     !
      ! </ EXTRA STEP >
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, 1, nvec ) 
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, 1, nvec )
      !
      ! ... diagonalize the reduced hamiltonian
      !
-     CALL diagox( pert, nbase, nvec, hr_distr, nvecx, ew, vr_distr )     
+     CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
+     !new version call differ old version of west
+     !CALL diagox( pert, nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
      ev(1:nvec) = ew(1:nvec)
      !
      ! Write the eigenvalues & time spent
      !
      CALL wbse_output_ev_and_time(nvec,ev,time_spent)
-     ! 
+     !
      dav_iter = 0
      !CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
@@ -347,32 +355,34 @@ SUBROUTINE wbse_davidson_diago_square ( )
         !
         IF ( .NOT. conv(n) ) THEN
            !
-           ! ... this root not yet converged ... 
+           ! ... this root not yet converged ...
            !
            np = np + 1
            !
            ! ... reorder eigenvectors so that coefficients for unconverged
-           ! ... roots come first. This allows to use quick matrix-matrix 
+           ! ... roots come first. This allows to use quick matrix-matrix
            ! ... multiplications to set a new basis vector (see below)
            !
            !IF ( np /= n ) vr(:,np) = vr(:,n)
            ishift(nbase+np) = n
            !
            ew(nbase+np) = ev(n)
-           !   
+           !
         ENDIF
         !
      ENDDO
      !
      ! ... expand the basis set with new basis vectors ( H**2 - e*S )|psi> ...
      !
-     CALL redistribute_vr_distr(pert, notcnv, nbase, nvecx, vr_distr, ishift )
+     CALL redistribute_vr_distr_real(notcnv, nbase, nvecx, vr_distr, ishift)
+     !old version need pert
+     !CALL redistribute_vr_distr(pert, notcnv, nbase, nvecx, vr_distr, ishift )
      DEALLOCATE(ishift)
      CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew )
      !
      IF (l_preconditioning) THEN
-        ! 
-        IF (dav_iter < 4) THEN 
+        !
+        IF (dav_iter < 4) THEN
            CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .false., epsilon_ref)
         ELSE
            CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .true., epsilon_ref )
@@ -388,7 +398,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
      !
      ! determine image that actually compute dng first
      !
-     mloc = 0 
+     mloc = 0
      mstart = 1
      DO il1 = 1, pert%nloc
         ig1 = pert%l2g(il1)
@@ -397,7 +407,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         mloc = mloc + 1
      ENDDO
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
@@ -407,7 +417,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
            !
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !  
+           !
         ELSE
            !
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
@@ -416,10 +426,10 @@ SUBROUTINE wbse_davidson_diago_square ( )
         !
         CALL west_apply_liouvillian (dvg_exc_tmp(:,:,:), dng_exc_tmp(:,:,:))
         !
-        dng_exc_tmp_tmp(:,:,:) = dng_exc_tmp(:,:,:) - epsilon_ref * dvg_exc_tmp(:,:,:)  
+        dng_exc_tmp_tmp(:,:,:) = dng_exc_tmp(:,:,:) - epsilon_ref * dvg_exc_tmp(:,:,:)
         !
         CALL west_apply_liouvillian (dng_exc_tmp_tmp(:,:,:), dng_exc_tmp(:,:,:))
-        ! 
+        !
         IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
            !
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:) - epsilon_ref * dng_exc_tmp_tmp(:,:,:)
@@ -432,15 +442,19 @@ SUBROUTINE wbse_davidson_diago_square ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+1, nbase+notcnv ) 
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+1, nbase+notcnv )
      !
      nbase = nbase + notcnv
      !
-     CALL symm_hr_distr(pert,hr_distr,nbase,nvecx)
+     !old version of west need pert
+     CALL symm_hr_distr(hr_distr,nbase,nvecx)
+     !CALL symm_hr_distr(pert,hr_distr,nbase,nvecx)
      !
      ! ... diagonalize the reduced Liouville hamiltonian
      !
-     CALL diagox( pert, nbase, nvec, hr_distr, nvecx, ew, vr_distr )
+     !old version west need pert
+     CALL diagox(nbase, nvec, hr_distr, nvecx, ew, vr_distr )
+     !CALL diagox( pert, nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
      !
      ! ... test for convergence
@@ -486,13 +500,13 @@ SUBROUTINE wbse_davidson_diago_square ( )
            max_mloc = mloc
            CALL mp_max (max_mloc, inter_image_comm)
            !
-           ev(:) = 0.0_DP  
+           ev(:) = 0.0_DP
            DO ip = mstart, mstart+max_mloc-1
               !
               IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
                  !
                  dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-                 !  
+                 !
               ELSE
                  !
                  dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
@@ -502,25 +516,25 @@ SUBROUTINE wbse_davidson_diago_square ( )
               CALL west_apply_liouvillian (dvg_exc_tmp(:,:,:), dng_exc_tmp(:,:,:))
               !
               IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
-                 ! 
+                 !
                  ig1 = pert%l2g(ip)
                  !
-                 CALL wbse_dot (dvg_exc_tmp,dng_exc_tmp,npwx,nbndval0x,nks,norm_tmp(nspin)) 
+                 CALL wbse_dot (dvg_exc_tmp,dng_exc_tmp,npwx,nbndval0x,nks,norm_tmp(nspin))
                  !
-                 ev(ig1) = sum(norm_tmp(1:nspin)) 
+                 ev(ig1) = sum(norm_tmp(1:nspin))
                  !
               ENDIF
               !
            ENDDO
            !
-           CALL mp_sum(ev,inter_image_comm) 
+           CALL mp_sum(ev,inter_image_comm)
            !
            CALL io_push_title("Original eigenvalues at the last step")
            !
            DO ip = 1, nvec
               !
-              WRITE(stdout,*) ip, ev(ip) 
-              ! 
+              WRITE(stdout,*) ip, ev(ip)
+              !
            ENDDO
            !
            CALL plep_db_write( )
@@ -528,7 +542,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
            CALL wbse_output_a_report(-1)
            !
            WRITE(iter_label,'(i8)') kter
-           CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps") 
+           CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
            l_is_wstat_converged = .TRUE.
            !
            EXIT iterate
@@ -546,7 +560,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
            !
            WRITE( stdout, '(5X,"WARNING: ",I5, &
                 &   " eigenvalues not converged in chidiago")' ) notcnv
-           ! 
+           !
            EXIT iterate
            !
         END IF
@@ -567,7 +581,7 @@ SUBROUTINE wbse_davidson_diago_square ( )
         !
         DO il1 = 1, pert%nloc
            ig1 = pert%l2g(il1)
-           IF( ig1 > nbase ) CYCLE 
+           IF( ig1 > nbase ) CYCLE
            hr_distr(ig1,il1) = ev(ig1)
            vr_distr(ig1,il1) = 1._DP
         ENDDO

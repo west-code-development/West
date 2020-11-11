@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Matteo Gerosa
 !
 !-----------------------------------------------------------------------
@@ -26,9 +26,9 @@ MODULE class_bz_grid
       INTEGER :: np = 1                         ! total number of points
       INTEGER :: ns = 1                         ! total number of spin = nspin_lsda
       INTEGER :: nps = 1                        ! total number of points and spins = np * ns
-      INTEGER,ALLOCATABLE :: ip(:)              ! given ips --> ip   
-      INTEGER,ALLOCATABLE :: is(:)              ! given ips --> is   
-      REAL(DP), ALLOCATABLE :: p_cryst(:,:)     ! coordinates of point p in crystal                [ 1:np  ] 
+      INTEGER,ALLOCATABLE :: ip(:)              ! given ips --> ip
+      INTEGER,ALLOCATABLE :: is(:)              ! given ips --> is
+      REAL(DP), ALLOCATABLE :: p_cryst(:,:)     ! coordinates of point p in crystal                [ 1:np  ]
       REAL(DP), ALLOCATABLE :: p_cart(:,:)      ! coordinates of point p in cart ( tpiba units )   [ 1:np  ]
       REAL(DP), ALLOCATABLE :: weight(:)        ! weight of point p (sum of weights = nspin)       [ 1:nps ]
       LOGICAL, ALLOCATABLE :: l_pIsGamma(:)     ! .true. if point p = (0,0,0), else .false.        [ 1:np  ]
@@ -37,7 +37,7 @@ MODULE class_bz_grid
       !
       PROCEDURE :: init => k_or_q_grid_init
       PROCEDURE :: find => findp
-      PROCEDURE :: ipis2ips => from_ip_and_is_to_ips   !   
+      PROCEDURE :: ipis2ips => from_ip_and_is_to_ips   !
       !
    END TYPE bz_grid
    !
@@ -74,27 +74,27 @@ MODULE class_bz_grid
       CASE ( 'K', 'k')
          !
          ! This is a workaround to prevent ngrid(:) to be set to (/ 0, 0, 0 /) in the gamma_only case (espresso default)
-         IF ( .NOT. gamma_only ) this%ngrid(1:3) = (/ nk1, nk2, nk3 /) 
-         this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3) 
+         IF ( .NOT. gamma_only ) this%ngrid(1:3) = (/ nk1, nk2, nk3 /)
+         this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3)
          this%ns = nspin_lsda ! = 1 if nspin = 1 (unpolarized) or nspin = 4 (noncollinear)
          !                      = 2 if nspin = 2 (collinear)
-         this%nps = nkstot    ! = np * ns  
+         this%nps = nkstot    ! = np * ns
          !
-         ! generate p-vectors in cart 
+         ! generate p-vectors in cart
          !
          ALLOCATE ( this%p_cart (3,this%np) )
          DO ip = 1, this%np
             this%p_cart(:,ip) = xk(:,ip)
          ENDDO
          !
-         ! generate p-vectors in cryst  
+         ! generate p-vectors in cryst
          !
          ALLOCATE ( this%p_cryst  (3,this%np) )
-         this%p_cryst(:,:) = this%p_cart(:,:) 
+         this%p_cryst(:,:) = this%p_cart(:,:)
          !CALL cryst_to_cart( this%nps, this%p_cryst, at, -1 ) !M
-         CALL cryst_to_cart( this%np, this%p_cryst, at, -1 )   
+         CALL cryst_to_cart( this%np, this%p_cryst, at, -1 )
          !
-         ! set weights 
+         ! set weights
          !
          ALLOCATE ( this%weight (this%nps) )
          DO ips = 1, this%nps
@@ -103,26 +103,25 @@ MODULE class_bz_grid
          !
       CASE ( 'Q', 'q')
          !
-         !this%ngrid(1:3) = nq(1:3) 
+         !this%ngrid(1:3) = nq(1:3)
          IF ( .NOT. gamma_only ) this%ngrid(1:3) = (/ nk1, nk2, nk3 /)
-         !this%ngrid(1:3) = nq(1:3) 
+         !this%ngrid(1:3) = nq(1:3)
          !this%np = this%ngrid(1) * this%ngrid(2) * this%ngrid(3)
-         this%np = SIZE(qlist) 
+         this%np = SIZE(qlist)
          this%ns = 1
-         this%nps = this%np 
-         !
-         ! generate p-vectors in cryst 
+         this%nps = this%np
+         ! generate p-vectors in cryst
          !
          ALLOCATE ( this%p_cryst  (3,this%np) )
-         iqlist = 0 
+         iqlist = 0
          ip = 0
          DO iq1 = 1, this%ngrid(1)
             DO iq2 = 1, this%ngrid(2)
                DO iq3 = 1, this%ngrid(3)
                   ip = ip + 1
-                  IF ( ANY(qlist(:) == ip) ) THEN 
-                     iqlist = iqlist + 1 
-                     this%p_cryst(1,iqlist) = DBLE( iq1 - 1 ) / DBLE( this%ngrid(1) ) 
+                  IF ( ANY(qlist(:) == ip) ) THEN
+                     iqlist = iqlist + 1
+                     this%p_cryst(1,iqlist) = DBLE( iq1 - 1 ) / DBLE( this%ngrid(1) )
                      this%p_cryst(2,iqlist) = DBLE( iq2 - 1 ) / DBLE( this%ngrid(2) )
                      this%p_cryst(3,iqlist) = DBLE( iq3 - 1 ) / DBLE( this%ngrid(3) )
                   ENDIF
@@ -136,7 +135,7 @@ MODULE class_bz_grid
          this%p_cart(:,:) = this%p_cryst(:,:)
          CALL cryst_to_cart( this%np, this%p_cart, bg, +1 )
          !
-         ! set weights 
+         ! set weights
          !
          ALLOCATE ( this%weight (this%np)   )
          !
@@ -144,17 +143,17 @@ MODULE class_bz_grid
          !
       END SELECT
       !
-      ALLOCATE ( this%ip( this%nps ) ) 
-      ALLOCATE ( this%is( this%nps ) ) 
+      ALLOCATE ( this%ip( this%nps ) )
+      ALLOCATE ( this%is( this%nps ) )
       !
       ! generate map ips --> ip and is
       !
-      this%ip = 0 
-      this%is = 0 
-      k = 0 
+      this%ip = 0
+      this%is = 0
+      k = 0
       DO i = 1, this%ns
          DO j = 1, this%np
-            k = k+1 
+            k = k+1
             this%ip(k) = j
             this%is(k) = i
          ENDDO
@@ -171,41 +170,41 @@ MODULE class_bz_grid
    !
    !FUNCTION findp(this,p,unit_type) RESULT(ip)
    !SUBROUTINE findp( this, p, is, unit_type, ip, g0 )     !M
-   SUBROUTINE findp( this, p, unit_type, ip, g0 )          
-      ! 
+   SUBROUTINE findp( this, p, unit_type, ip, g0 )
+      !
       ! ... ip is the index of p (unit_type = [ "cryst", "cart"])
       ! ... if on exit ip == 0 --> p is not commensurate with this grid
       ! ... g0 relates p to an equivalent vector inside the 1BZ
       !
-      USE constants, ONLY : eps8 
+      USE constants, ONLY : eps8
       USE cell_base, ONLY : at, bg
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
-      CLASS(bz_grid), INTENT(IN) :: this 
+      CLASS(bz_grid), INTENT(IN) :: this
       REAL(DP), INTENT(IN) :: p(3)
       CHARACTER(LEN=*), INTENT(IN) :: unit_type
       INTEGER, INTENT(OUT) :: ip
       REAL(DP), INTENT(OUT) :: g0(3)
       !
       ! Workspace
-      ! 
+      !
       INTEGER :: i
       REAL(DP) :: deltap(3)
       !
-      SELECT CASE(unit_type) 
+      SELECT CASE(unit_type)
       CASE("cryst","cart")
       CASE DEFAULT
-         CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
-      END SELECT 
+         CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )
+      END SELECT
       !
       ! The search must be performed in crystalline coordinates
       !
       IF ( unit_type == "cart" ) CALL cryst_to_cart( 1, p, at, -1 )
       !
-      ip = 0                                                                          
+      ip = 0
       !DO i = 1, this%np                                                                !M
       !   deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )       !M
       !   IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN                                  !M
@@ -214,63 +213,63 @@ MODULE class_bz_grid
       !      EXIT                                                                       !M
       !   ENDIF                                                                         !M
       !ENDDO                                                                            !M
-      DO i = 1, this%np                                                                 
-         deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )        
-         IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN                                   
-            g0(:) = p(:) - this%p_cryst(:,i)                                             
-            ip=i                                                                        
-            EXIT                                                                        
-         ENDIF                                                                          
-      ENDDO                                                                             
+      DO i = 1, this%np
+         deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )
+         IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN
+            g0(:) = p(:) - this%p_cryst(:,i)
+            ip=i
+            EXIT
+         ENDIF
+      ENDDO
       !
       ! Tranform g0 back to cartesian coordinates if needed
       !
-      IF ( unit_type == "cart" ) CALL cryst_to_cart( 1, g0, bg, 1 ) 
-      !      
-      !ip = 0 
-      !SELECT CASE( unit_type ) 
+      IF ( unit_type == "cart" ) CALL cryst_to_cart( 1, g0, bg, 1 )
+      !
+      !ip = 0
+      !SELECT CASE( unit_type )
       !CASE("cryst")
       !   DO i = 1, this%np
-      !      IF( ( ALL( ABS ( p(:) - this%p_cryst(:,i) ) .LT. eps8 ) ) ) THEN 
-      !         ip = i 
+      !      IF( ( ALL( ABS ( p(:) - this%p_cryst(:,i) ) .LT. eps8 ) ) ) THEN
+      !         ip = i
       !         EXIT
       !      ENDIF
       !   ENDDO
       !CASE("cart")
       !   DO i = 1, this%np
-      !      IF( ( ALL( ABS ( p(:) - this%p_cart(:,i) ) .LT. eps8 ) ) ) THEN  
-      !         ip = i 
+      !      IF( ( ALL( ABS ( p(:) - this%p_cart(:,i) ) .LT. eps8 ) ) ) THEN
+      !         ip = i
       !         EXIT
       !      ENDIF
       !   ENDDO
       !CASE DEFAULT
-      !   CALL errore( "class_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
+      !   CALL errore( "class_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )
       !END SELECT
       !
    !END FUNCTION
    END SUBROUTINE
    !
    !
-   FUNCTION from_ip_and_is_to_ips(this,ip,is) RESULT(ips)  
-      !                                                    
-      IMPLICIT NONE                                        
-      !                                                    
-      ! I/O                                                
-      !                                                    
-      CLASS(bz_grid), INTENT(IN) :: this                   
-      INTEGER, INTENT(IN) :: ip,is                         
-      INTEGER :: ips                                       
-      !                                                    
-      ips = ip + (is-1) * this%np ! M     
-      !                                                    
-   END FUNCTION                                            
+   FUNCTION from_ip_and_is_to_ips(this,ip,is) RESULT(ips)
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      CLASS(bz_grid), INTENT(IN) :: this
+      INTEGER, INTENT(IN) :: ip,is
+      INTEGER :: ips
+      !
+      ips = ip + (is-1) * this%np ! M
+      !
+   END FUNCTION
    !
    !
    !SUBROUTINE addp( this, pin1, pin2, pout, g0, unit_type )
    !   !
-   !   ! ... out : pout and g0 
-   !   ! ... pout = pin1 + pin2 - g0   ( g0 makes sure that pout is in 1BZ ) 
-   !   ! ... unit_type determines the units of pin1, pin2 and pout, g0  
+   !   ! ... out : pout and g0
+   !   ! ... pout = pin1 + pin2 - g0   ( g0 makes sure that pout is in 1BZ )
+   !   ! ... unit_type determines the units of pin1, pin2 and pout, g0
    !   !
    !   USE cell_base,        ONLY : at, bg
    !   USE constants,        ONLY : eps8
@@ -280,33 +279,33 @@ MODULE class_bz_grid
    !   ! I/O
    !   !
    !   CLASS(bz_grid), INTENT(IN) :: this
-   !   REAL(DP), INTENT(IN) :: pin1(3), pin2(3) 
+   !   REAL(DP), INTENT(IN) :: pin1(3), pin2(3)
    !   REAL(DP), INTENT(OUT) :: pout(3)
    !   REAL(DP), INTENT(OUT) :: g0(3)
    !   CHARACTER(LEN=*),INTENT(IN) :: unit_type
    !   !
    !   ! Workspace
    !   !
-   !   REAL(DP) :: ptemp(3)  
+   !   REAL(DP) :: ptemp(3)
    !   !
-   !   SELECT CASE(unit_type) 
+   !   SELECT CASE(unit_type)
    !   CASE("cryst","cart")
    !   CASE DEFAULT
-   !      CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
-   !   END SELECT 
-   !   !   
+   !      CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )
+   !   END SELECT
+   !   !
    !   ptemp = pin1 + pin2
    !   IF( unit_type == "cart" ) CALL cryst_to_cart( 1, ptemp, at, -1 )
    !   !
-   !   ! ptemp is now in cryst  
+   !   ! ptemp is now in cryst
    !   !
-   !   g0 = NINT( ptemp ) ! in cryst 
-   !   pout = ptemp - g0  ! in cryst 
+   !   g0 = NINT( ptemp ) ! in cryst
+   !   pout = ptemp - g0  ! in cryst
    !   !
-   !   IF( unit_type == "cart" ) THEN 
+   !   IF( unit_type == "cart" ) THEN
    !      CALL cryst_to_cart( 1, pout , bg, 1 )
    !      CALL cryst_to_cart( 1, g0   , bg, 1 )
-   !   ENDIF  
+   !   ENDIF
    !   !
    !END SUBROUTINE
 !     !
@@ -335,7 +334,7 @@ MODULE class_bz_grid
 !     DO ik = 1, nks
 !        DO iq = 1, nqs
 !           !
-!           xkq(:) = kgrid%xp_cryst(:,ik) + DBLE(sig) * qgrid%xp_cryst(:,iq) 
+!           xkq(:) = kgrid%xp_cryst(:,ik) + DBLE(sig) * qgrid%xp_cryst(:,iq)
 !           !
 !           xk_not_found = .TRUE.
 !           !
@@ -463,7 +462,7 @@ MODULE class_bz_grid
 !        !
 !        DO ikk = 1, nks1
 !           !
-!           xq(:) = kgrid%xp_cryst(:,ik) - k1grid%xp_cryst(:,ikk) 
+!           xq(:) = kgrid%xp_cryst(:,ik) - k1grid%xp_cryst(:,ikk)
 !           !
 !           xq_not_found = .TRUE.
 !           !
@@ -556,5 +555,5 @@ MODULE class_bz_grid
 !     grid_aux%phase(1:dffts%nnr) = CONJG( grid_aux%phase(1:dffts%nnr) )
 !     !
 !  END SUBROUTINE
-   ! 
+   !
 END MODULE

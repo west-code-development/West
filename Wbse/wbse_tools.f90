@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -15,6 +15,8 @@ MODULE wbse_tools
   !----------------------------------------------------------------------------
   !
   USE kinds,     ONLY : DP
+  USE parallel_include
+  USE mp,        ONLY : mp_stop
   !
   IMPLICIT NONE
   !
@@ -26,18 +28,52 @@ MODULE wbse_tools
   !
   INTERFACE wbse_update_with_vr_distr
      MODULE PROCEDURE update_with_vr_distr_real, update_with_vr_distr_complex
-  END INTERFACE 
+  END INTERFACE
   !
   INTERFACE wbse_refresh_with_vr_distr
      MODULE PROCEDURE refresh_with_vr_distr_real, refresh_with_vr_distr_complex
-  END INTERFACE 
+  END INTERFACE
   !
   INTERFACE apply_preconditioning_dvg
      MODULE PROCEDURE preconditioner_complex
-     MODULE PROCEDURE preconditioner_complex_2nd 
-  END INTERFACE 
+     MODULE PROCEDURE preconditioner_complex_2nd
+  END INTERFACE
   !
   CONTAINS
+
+      SUBROUTINE mp_circular_shift_left_c4d( buf, itag, gid )
+       IMPLICIT NONE
+       COMPLEX(DP) :: buf( :, :, :, : )
+       INTEGER, INTENT(IN) :: itag
+       INTEGER, INTENT(IN) :: gid
+       INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
+
+#if defined (__MPI)
+
+       INTEGER :: istatus( mpi_status_size )
+       !
+       group = gid
+       !
+       CALL mpi_comm_size( group, npe, ierr )
+       IF (ierr/=0) CALL mp_stop( 8100 )
+       CALL mpi_comm_rank( group, mype, ierr )
+       IF (ierr/=0) CALL mp_stop( 8101 )
+       !
+       sour = mype + 1
+       IF( sour == npe ) sour = 0
+       dest = mype - 1
+       IF( dest == -1 ) dest = npe - 1
+       !
+       CALL MPI_Sendrecv_replace( buf, SIZE(buf), MPI_DOUBLE_COMPLEX, &
+            dest, itag, sour, itag, group, istatus, ierr)
+       !
+       IF (ierr/=0) CALL mp_stop( 8102 )
+       !
+#else
+       ! do nothing
+#endif
+       RETURN
+    END SUBROUTINE mp_circular_shift_left_c4d
     !
     !------------------------------------------------------------------------
     SUBROUTINE build_hr_real( ag, bg, l2_s, l2_e, c_distr, g_s, g_e )
@@ -49,8 +85,9 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
-      USE westcom,              ONLY : nbnd_occ
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ, nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       USE gvect,                ONLY : gstart
       !
       IMPLICIT NONE
@@ -81,7 +118,7 @@ MODULE wbse_tools
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
       tmp_l2g = 0
-      DO il1 = 1, pert%nloc 
+      DO il1 = 1, pert%nloc
          tmp_l2g(il1) = pert%l2g(il1)
       ENDDO
       !
@@ -95,7 +132,7 @@ MODULE wbse_tools
             DO il2=l2_s,l2_e
                !
                norm = 0.0_DP
-               !            
+               !
                DO iks=1, nks
                   !
                   nbndval = nbnd_occ(iks)
@@ -103,8 +140,8 @@ MODULE wbse_tools
                   DO ibnd=1, nbndval
                      !
                      norm = norm + 2.0_DP * DDOT(2*npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
-                     !  
-                     IF(gstart==2) norm = norm -  REAL(ag(1,ibnd,iks,il1),KIND=DP)*REAL(bg(1,ibnd,iks,il2),KIND=DP) 
+                     !
+                     IF(gstart==2) norm = norm -  REAL(ag(1,ibnd,iks,il1),KIND=DP)*REAL(bg(1,ibnd,iks,il2),KIND=DP)
                      !
                   ENDDO
                   !
@@ -116,9 +153,9 @@ MODULE wbse_tools
             !
          ENDDO
          !
-         ! Cycle the ag array 
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
+         ! Cycle the ag array
+         !
+         CALL mp_circular_shift_left_c4d( ag,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -145,8 +182,9 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
-      USE westcom,              ONLY : nbnd_occ
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ, nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -175,7 +213,7 @@ MODULE wbse_tools
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
       tmp_l2g = 0
-      DO il1 = 1, pert%nloc 
+      DO il1 = 1, pert%nloc
          tmp_l2g(il1) = pert%l2g(il1)
       ENDDO
       !
@@ -190,13 +228,13 @@ MODULE wbse_tools
                !
                DO iks  = 1, nks
                   !
-                  nbndval = nbnd_occ(iks) 
+                  nbndval = nbnd_occ(iks)
                   !
                   DO ibnd = 1, nbndval
                      !
                      c_distr(ig1,il2) = c_distr(ig1,il2) + ZDOTC(npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
                      !
-                  ENDDO 
+                  ENDDO
                   !
                ENDDO
                !
@@ -204,9 +242,9 @@ MODULE wbse_tools
             !
          ENDDO
          !
-         ! Cycle the ag array 
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
+         ! Cycle the ag array
+         !
+         CALL mp_circular_shift_left_c4d( ag,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -231,8 +269,9 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
-      USE westcom,              ONLY : nbnd_occ
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ, nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -252,17 +291,17 @@ MODULE wbse_tools
       COMPLEX(DP) :: zconst
       !
       CALL mp_barrier( world_comm )
-      !  
+      !
       CALL start_clock( 'update_vr' )
       !
       ALLOCATE( hg(npwx,nbndval0x,nks,pert%nlocx) )
-      hg = 0._DP 
+      hg = 0._DP
       !
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
       tmp_l2g = 0
       !
-      DO il1 = 1, pert%nloc 
+      DO il1 = 1, pert%nloc
          !
          tmp_l2g(il1) = pert%l2g(il1)
          !
@@ -278,11 +317,11 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
                !
                zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
                !
-               DO iks  = 1,nks 
+               DO iks  = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
                   !
@@ -298,8 +337,8 @@ MODULE wbse_tools
          ENDDO
          !
          ! Cycle the amat array
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
+         !
+         CALL mp_circular_shift_left_c4d( ag,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -315,9 +354,9 @@ MODULE wbse_tools
             nbndval = nbnd_occ(iks)
             !
             DO ibnd = 1, nbndval
-               ! 
+               !
                ag(:,ibnd,iks,il2) = - ew(ig2) * hg(:,ibnd,iks,il2)
-               ! 
+               !
             ENDDO
             !
          ENDDO
@@ -337,8 +376,8 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               ! 
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               !
+               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
                !
                zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
                !
@@ -346,8 +385,8 @@ MODULE wbse_tools
                   !
                   nbndval = nbnd_occ(iks)
                   !
-                  DO ibnd = 1, nbndval 
-                     ! 
+                  DO ibnd = 1, nbndval
+                     !
                      CALL ZAXPY(npw,zconst,bg(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
                      !
                   ENDDO
@@ -358,9 +397,9 @@ MODULE wbse_tools
             !
          ENDDO
          !
-         ! Cycle the bmat array 
-         ! 
-         CALL mp_circular_shift_left( bg,      icycl,        inter_image_comm)
+         ! Cycle the bmat array
+         !
+         CALL mp_circular_shift_left_c4d( bg,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -372,13 +411,13 @@ MODULE wbse_tools
          DO iks  = 1, nks
             !
             nbndval = nbnd_occ(iks)
-            !    
+            !
             DO ibnd = 1, nbndval
                !
                ag(:,ibnd,iks,il2) = ag(:,ibnd,iks,il2) + hg(:,ibnd,iks,il2)
-               ! 
+               !
             ENDDO
-            ! 
+            !
          ENDDO
          !
       ENDDO
@@ -398,8 +437,9 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
-      USE westcom,              ONLY : nbnd_occ
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ, nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -418,17 +458,17 @@ MODULE wbse_tools
       INTEGER :: il1, il2, ig1, ig2, icycl, ibnd, iks, nbndval
       !
       CALL mp_barrier( world_comm )
-      !  
+      !
       CALL start_clock( 'update_vr' )
       !
       ALLOCATE( hg(npwx,nbndval0x,nks,pert%nlocx) )
-      hg = 0._DP 
+      hg = 0._DP
       !
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
       tmp_l2g = 0
       !
-      DO il1 = 1, pert%nloc 
+      DO il1 = 1, pert%nloc
          tmp_l2g(il1) = pert%l2g(il1)
       ENDDO
       !
@@ -442,7 +482,7 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
                !
                DO iks  = 1, nks
                   !
@@ -457,8 +497,8 @@ MODULE wbse_tools
          ENDDO
          !
          ! Cycle the amat array
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
+         !
+         CALL mp_circular_shift_left_c4d( ag,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -490,7 +530,7 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
                !
                DO iks  = 1, nks
                   nbndval = nbnd_occ(iks)
@@ -502,9 +542,9 @@ MODULE wbse_tools
             ENDDO
          ENDDO
          !
-         ! Cycle the bmat array 
-         ! 
-         CALL mp_circular_shift_left( bg,      icycl,        inter_image_comm)
+         ! Cycle the bmat array
+         !
+         CALL mp_circular_shift_left_c4d( bg,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -537,8 +577,9 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
-      USE westcom,              ONLY : nbnd_occ
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ,nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -557,17 +598,17 @@ MODULE wbse_tools
       INTEGER :: il1, il2, ig1, ig2, icycl, ibnd, iks, nbndval
       !
       CALL mp_barrier( world_comm )
-      !  
+      !
       CALL start_clock( 'update_vr' )
       !
       ALLOCATE( hg(npwx,nbndval0x,nks,pert%nlocx) )
-      hg = 0._DP 
+      hg = 0._DP
       !
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
       tmp_l2g = 0
       !
-      DO il1 = 1, pert%nloc 
+      DO il1 = 1, pert%nloc
          tmp_l2g(il1) = pert%l2g(il1)
       ENDDO
       !
@@ -581,7 +622,7 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
                !
                DO iks  = 1, nks
                   !
@@ -596,8 +637,8 @@ MODULE wbse_tools
          ENDDO
          !
          ! Cycle the amat array
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
+         !
+         CALL mp_circular_shift_left_c4d( ag,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -629,7 +670,7 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
                !
                DO iks  = 1, nks
                   nbndval = nbnd_occ(iks)
@@ -641,9 +682,9 @@ MODULE wbse_tools
             ENDDO
          ENDDO
          !
-         ! Cycle the bmat array 
-         ! 
-         CALL mp_circular_shift_left( bg,      icycl,        inter_image_comm)
+         ! Cycle the bmat array
+         !
+         CALL mp_circular_shift_left_c4d( bg,      icycl,        inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -676,8 +717,9 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
-      USE westcom,              ONLY : nbnd_occ
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ,nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -695,16 +737,16 @@ MODULE wbse_tools
       COMPLEX(DP) :: zconst
       !
       CALL mp_barrier( world_comm )
-      !  
+      !
       CALL start_clock( 'refresh_vr' )
       !
       ALLOCATE( hg(npwx,nbndval0x,nks,pert%nlocx) )
-      hg = 0._DP 
+      hg = 0._DP
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
       tmp_l2g = 0
       !
-      DO il1 = 1, pert%nloc 
+      DO il1 = 1, pert%nloc
          tmp_l2g(il1) = pert%l2g(il1)
       ENDDO
       !
@@ -718,7 +760,7 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               IF( ig2 > nselect ) CYCLE 
+               IF( ig2 > nselect ) CYCLE
                !
                zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
                !
@@ -732,9 +774,9 @@ MODULE wbse_tools
             ENDDO
          ENDDO
          !
-         ! Cycle the amat array 
-         ! 
-         CALL mp_circular_shift_left( ag  ,           icycl, inter_image_comm)
+         ! Cycle the amat array
+         !
+         CALL mp_circular_shift_left_c4d( ag  ,           icycl, inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -751,7 +793,7 @@ MODULE wbse_tools
            ENDDO
            !
          ELSE
-           !  
+           !
            DO iks  = 1, nks
               nbndval = nbnd_occ(iks)
               DO ibnd = 1, nbndval
@@ -779,8 +821,9 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
-      USE westcom,              ONLY : nbnd_occ
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ,nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -797,16 +840,16 @@ MODULE wbse_tools
       INTEGER :: il1, il2, ig1, ig2, icycl, ibnd, iks, nbndval
       !
       CALL mp_barrier( world_comm )
-      !  
+      !
       CALL start_clock( 'refresh_vr' )
       !
       ALLOCATE( hg(npwx,nbndval0x,nks,pert%nlocx) )
-      hg = 0._DP 
+      hg = 0._DP
       ALLOCATE( tmp_l2g(1:pert%nlocx) )
       !
       tmp_l2g = 0
       !
-      DO il1 = 1, pert%nloc 
+      DO il1 = 1, pert%nloc
          tmp_l2g(il1) = pert%l2g(il1)
       ENDDO
       !
@@ -820,7 +863,7 @@ MODULE wbse_tools
             DO il2=1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               IF( ig2 > nselect ) CYCLE 
+               IF( ig2 > nselect ) CYCLE
                !
                DO iks  = 1, nks
                   nbndval = nbnd_occ(iks)
@@ -832,9 +875,9 @@ MODULE wbse_tools
             ENDDO
          ENDDO
          !
-         ! Cycle the amat array 
-         ! 
-         CALL mp_circular_shift_left( ag  ,           icycl, inter_image_comm)
+         ! Cycle the amat array
+         !
+         CALL mp_circular_shift_left_c4d( ag  ,           icycl, inter_image_comm)
          CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
          !
       ENDDO
@@ -878,8 +921,9 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE buffers,              ONLY : get_buffer
       USE pwcom,                ONLY : nks,npwx
-      USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc, nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       USE wvfct,                ONLY : g2kin,et
       !
       IMPLICIT NONE
@@ -902,7 +946,7 @@ MODULE wbse_tools
       minimum=0.001d0
       !
       CALL mp_barrier( world_comm )
-      !  
+      !
       CALL start_clock( 'precd_ag' )
       !
       mloc = 0
@@ -914,7 +958,7 @@ MODULE wbse_tools
          mloc = mloc + 1
       ENDDO
       !
-      ! Apply Liouville operator 
+      ! Apply Liouville operator
       !
       max_mloc = mloc
       CALL mp_max (max_mloc, inter_image_comm)
@@ -926,14 +970,14 @@ MODULE wbse_tools
          DO iks  = 1, nks
             !
             nbndval = nbnd_occ(iks)
-            ! 
+            !
             ! ... Set k-point, spin, kinetic energy, needed by Hpsi
             !
             current_k = iks
-            ! 
+            !
             CALL g2_kin( iks )
             !
-            ! ... read in GS wavefunctions iks 
+            ! ... read in GS wavefunctions iks
             !
             IF (nks>1) THEN
                !
@@ -984,8 +1028,9 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE buffers,              ONLY : get_buffer
       USE pwcom,                ONLY : nks,npwx
-      USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc
-      USE wbsecom,              ONLY : nbndval0x
+      USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : nbndval0x
       USE wvfct,                ONLY : g2kin,et
       !
       IMPLICIT NONE
@@ -1008,7 +1053,7 @@ MODULE wbse_tools
       minimum=0.001d0
       !
       CALL mp_barrier( world_comm )
-      !  
+      !
       CALL start_clock( 'precd_ag' )
       !
       mloc = 0
@@ -1020,7 +1065,7 @@ MODULE wbse_tools
          mloc = mloc + 1
       ENDDO
       !
-      ! Apply Liouville operator 
+      ! Apply Liouville operator
       !
       max_mloc = mloc
       CALL mp_max (max_mloc, inter_image_comm)
@@ -1032,14 +1077,14 @@ MODULE wbse_tools
          DO iks  = 1, nks
             !
             nbndval = nbnd_occ(iks)
-            ! 
+            !
             ! ... Set k-point, spin, kinetic energy, needed by Hpsi
             !
             current_k = iks
-            ! 
+            !
             CALL g2_kin( iks )
             !
-            ! ... read in GS wavefunctions iks 
+            ! ... read in GS wavefunctions iks
             !
             IF (nks>1) THEN
                !

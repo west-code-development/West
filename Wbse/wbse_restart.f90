@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -40,11 +40,13 @@ MODULE wbse_restart
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix
-      USE wbsecom,              ONLY : dvg_exc,dng_exc
+      USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,&
+                                       dvg_exc,dng_exc
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : dvg_exc,dng_exc
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
-      USE plep_io,              ONLY : plep_merge_and_write_G 
+      USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
@@ -72,7 +74,7 @@ MODULE wbse_restart
       !
       CALL mp_barrier(world_comm)
       !
-      ! MKDIR 
+      ! MKDIR
       !
       dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
       CALL my_mkdir( dirname )
@@ -95,7 +97,7 @@ MODULE wbse_restart
       !
       CALL errore( 'wbse_restart', 'cannot open restart file for writing', ierr )
       !
-      IF ( mpime == root ) THEN  
+      IF ( mpime == root ) THEN
          !
          CALL iotk_write_begin( iunout, "R-SUMMARY" )
          CALL iotk_write_dat( iunout, "dav_iter", dav_iter)
@@ -123,7 +125,7 @@ MODULE wbse_restart
       !
       CALL errore( 'wbse_restart', 'cannot open restart file for writing', ierr )
       !
-      IF ( mpime == root ) THEN  
+      IF ( mpime == root ) THEN
          !
          CALL iotk_write_begin( iunout, "RESTART_EIG" )
          CALL iotk_write_dat( iunout, "ev", ev(:))
@@ -155,7 +157,7 @@ MODULE wbse_restart
          IF(me_bgrp==0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_write_begin( iunout, "RESTART_HR_"//TRIM(my_label) )
             CALL iotk_write_dat( iunout, "hr", tmp_distr(:,:))
@@ -190,7 +192,7 @@ MODULE wbse_restart
          IF(me_bgrp==0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_write_begin( iunout, "RESTART_VR_"//TRIM(my_label) )
             CALL iotk_write_dat( iunout, "vr", tmp_distr(:,:))
@@ -213,7 +215,7 @@ MODULE wbse_restart
          global_j = pert%l2g(local_j)
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
-         ! 
+         !
          fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
          fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
@@ -228,8 +230,8 @@ MODULE wbse_restart
       CALL stop_clock('wbse_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -240,11 +242,13 @@ MODULE wbse_restart
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix
-      USE wbsecom,              ONLY : dvg_exc,dng_exc
+      USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix, &
+                                       dvg_exc,dng_exc
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : dvg_exc,dng_exc
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
-      USE plep_io,              ONLY : plep_merge_and_write_G 
+      USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
@@ -272,7 +276,7 @@ MODULE wbse_restart
       !
       CALL mp_barrier(world_comm)
       !
-      ! MKDIR 
+      ! MKDIR
       !
       dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
       CALL my_mkdir( dirname )
@@ -295,7 +299,7 @@ MODULE wbse_restart
       !
       CALL errore( 'wbse_restart', 'cannot open restart file for writing', ierr )
       !
-      IF ( mpime == root ) THEN  
+      IF ( mpime == root ) THEN
          !
          CALL iotk_write_begin( iunout, "R-SUMMARY" )
          CALL iotk_write_dat( iunout, "dav_iter", dav_iter)
@@ -323,7 +327,7 @@ MODULE wbse_restart
       !
       CALL errore( 'wbse_restart', 'cannot open restart file for writing', ierr )
       !
-      IF ( mpime == root ) THEN  
+      IF ( mpime == root ) THEN
          !
          CALL iotk_write_begin( iunout, "RESTART_EIG" )
          CALL iotk_write_dat( iunout, "ev", ev(:))
@@ -355,7 +359,7 @@ MODULE wbse_restart
          IF(me_bgrp==0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_write_begin( iunout, "RESTART_HR_"//TRIM(my_label) )
             CALL iotk_write_dat( iunout, "hr", tmp_distr(:,:))
@@ -390,7 +394,7 @@ MODULE wbse_restart
          IF(me_bgrp==0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_write_begin( iunout, "RESTART_VR_"//TRIM(my_label) )
             CALL iotk_write_dat( iunout, "vr", tmp_distr(:,:))
@@ -413,7 +417,7 @@ MODULE wbse_restart
          global_j = pert%l2g(local_j)
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
-         ! 
+         !
          fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
          fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
@@ -428,8 +432,8 @@ MODULE wbse_restart
       CALL stop_clock('wbse_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -442,7 +446,7 @@ MODULE wbse_restart
       !
       USE mp_world,             ONLY : root,mpime,world_comm
       USE mp,                   ONLY : mp_barrier,mp_bcast
-      USE io_global,            ONLY : stdout 
+      USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,west_prefix
       USE wrappers,             ONLY : f_rmdir
       USE io_files,             ONLY : delete_if_present
@@ -495,7 +499,7 @@ MODULE wbse_restart
       USE mp_global,           ONLY : world_comm
       USE mp,                  ONLY : mp_barrier
       USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis
-      USE io_global,           ONLY : stdout 
+      USE io_global,           ONLY : stdout
       USE distribution_center, ONLY : pert
       !
       IMPLICIT NONE
@@ -540,8 +544,8 @@ MODULE wbse_restart
       CALL stop_clock('wbse_restart')
       !
       WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -553,7 +557,7 @@ MODULE wbse_restart
       USE mp_global,           ONLY : world_comm
       USE mp,                  ONLY : mp_barrier
       USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis
-      USE io_global,           ONLY : stdout 
+      USE io_global,           ONLY : stdout
       USE distribution_center, ONLY : pert
       !
       IMPLICIT NONE
@@ -598,8 +602,8 @@ MODULE wbse_restart
       CALL stop_clock('wbse_restart')
       !
       WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -616,7 +620,7 @@ MODULE wbse_restart
       IMPLICIT NONE
       !
       ! I/O
-      !  
+      !
       INTEGER,INTENT(OUT) :: dav_iter, notcnv, nbase
       !
       ! Workspace
@@ -667,7 +671,7 @@ MODULE wbse_restart
       IMPLICIT NONE
       !
       ! I/O
-      !  
+      !
       REAL(DP),INTENT(OUT) :: ew(n_pdep_basis)
       !
       ! Workspace
@@ -716,7 +720,7 @@ MODULE wbse_restart
       IMPLICIT NONE
       !
       ! I/O
-      !  
+      !
       REAL(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       REAL(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
       CHARACTER(LEN=*), INTENT(IN)  :: dirname
@@ -744,7 +748,7 @@ MODULE wbse_restart
          !
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_scan_begin( iun, "RESTART_HR_"//TRIM(my_label) )
             CALL iotk_scan_dat( iun, "hr", tmp_distr(:,:))
@@ -779,7 +783,7 @@ MODULE wbse_restart
          !
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_scan_begin( iun, "RESTART_VR_"//TRIM(my_label) )
             CALL iotk_scan_dat( iun, "vr", tmp_distr(:,:))
@@ -814,7 +818,7 @@ MODULE wbse_restart
       IMPLICIT NONE
       !
       ! I/O
-      !  
+      !
       COMPLEX(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       COMPLEX(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
       CHARACTER(LEN=*), INTENT(IN)  :: dirname
@@ -842,7 +846,7 @@ MODULE wbse_restart
          !
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_scan_begin( iun, "RESTART_HR_"//TRIM(my_label) )
             CALL iotk_scan_dat( iun, "hr", tmp_distr(:,:))
@@ -877,7 +881,7 @@ MODULE wbse_restart
          !
          WRITE(my_label,'(i6.6)') im
          !
-         IF ( mpime == root ) THEN  
+         IF ( mpime == root ) THEN
             !
             CALL iotk_scan_begin( iun, "RESTART_VR_"//TRIM(my_label) )
             CALL iotk_scan_dat( iun, "vr", tmp_distr(:,:))
@@ -902,8 +906,10 @@ MODULE wbse_restart
       !------------------------------------------------------------------------
       !
       USE pwcom,               ONLY : nks
-      USE westcom,             ONLY : npwqx
-      USE wbsecom,             ONLY : dvg_exc,dng_exc,nbndval0x
+      USE westcom,             ONLY : npwqx, &
+                                      dvg_exc,dng_exc,nbndval0x
+      !wbsecom combined into westcom
+      !USE wbsecom,             ONLY : dvg_exc,dng_exc,nbndval0x
       USE mp_global,           ONLY : my_image_id
       USE plep_io,             ONLY : plep_read_G_and_distribute
       USE distribution_center, ONLY : pert
@@ -929,7 +935,7 @@ MODULE wbse_restart
          global_j = pert%l2g(local_j)
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
-         ! 
+         !
          fname = TRIM( dirname ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
          CALL plep_read_G_and_distribute(fname,dvg_exc(:,:,:,local_j))
          fname = TRIM( dirname ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"

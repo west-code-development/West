@@ -47,7 +47,11 @@ WESTLIBS = \
 
 TLDEPS= bindir mods libs pw
 
-all : title tldeps westpp.x
+all : title tldeps libwestpp.a westpp.x
+
+libwestpp.a : $(WESTPP_OBJS)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
 
 westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o westpp.x \

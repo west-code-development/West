@@ -1,4 +1,4 @@
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -6,7 +6,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !----------------------------------------------------------------------------
@@ -19,7 +19,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
-  USE westcom,              ONLY : nbnd_occ
+  USE westcom,              ONLY : nbnd_occ,l_use_bisection_thr,qbox_bisec_wfc_filename
   USE wavefunctions_module, ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G, plep_read_G_and_distribute
   USE fft_base,             ONLY : dfftp,dffts
@@ -32,8 +32,9 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   USE mp_global,            ONLY : inter_image_comm
   USE mp,                   ONLY : mp_sum
   USE bse_module,           ONLY : ovl_thr
-  USE qbox_interface,       ONLY : load_qbox_wfc, qbox_bisec_wfc_filename
-  USE wbsecom,              ONLY : l_use_bisection_thr
+  USE qbox_interface,       ONLY : load_qbox_wfc
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : l_use_bisection_thr
   USE check_ovl_wfc,        ONLY : check_ovl_wannier, read_bisection_loc, check_ovl_bisection
   !
   IMPLICIT NONE
@@ -69,7 +70,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
      ! Use wannier as representation
      !
      IF (l_load_qbox_loc_wfc) THEN
-        ! 
+        !
         CALL load_qbox_wfc(evc_loc, qbox_bisec_wfc_filename, current_spin, nbndval)
         !
      ENDIF
@@ -85,7 +86,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
      CALL plep_merge_and_write_G(fname,evc_loc(:,:),nbndval)
      !
      ! Compute unitary rotation matrix
-     !  
+     !
      u_matrix(:,:)   = (0.0_DP, 0.0_DP)
      !
      DO ibnd = 1, nbndval
@@ -97,9 +98,9 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
               u_matrix(ibnd, jbnd) = 2.0_DP*DDOT(2*npwx,evc(:,ibnd),1,evc_loc(:,jbnd),1)
               !
               IF (gstart==2) THEN
-                 !  
+                 !
                  u_matrix(ibnd, jbnd) = u_matrix(ibnd, jbnd) - CMPLX(DBLE(evc(1,ibnd))*DBLE(evc_loc(1,jbnd)), 0.0_DP)
-                 ! 
+                 !
               ENDIF
               !
            ELSE
@@ -121,29 +122,29 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
      IF (l_use_bisection_thr) THEN
         !
         ALLOCATE (bisec_loc(nbndval))
-        ! 
+        !
         ! read bisection localization from file
         !
-        CALL read_bisection_loc (current_spin, nbndval, bisec_loc)           
+        CALL read_bisection_loc (current_spin, nbndval, bisec_loc)
         !
         ! compute orbital overlap matrix, using besection indication
         !
         DO ibnd = 1, nbndval
-           ! 
+           !
            DO jbnd = 1, nbndval
               !
               bisec_i = bisec_loc(ibnd)
               !
               bisec_j = bisec_loc(jbnd)
               !
-              CALL check_ovl_bisection (bisec_i, bisec_j, ovl_value)      
+              CALL check_ovl_bisection (bisec_i, bisec_j, ovl_value)
               !
               ovl_matrix(ibnd,jbnd) = ovl_value
               !
            ENDDO
            !
         ENDDO
-        ! 
+        !
         DEALLOCATE (bisec_loc)
         !
      ELSE
@@ -151,7 +152,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
         ! compute orbital overlap matrix, using our method (see paper)
         !
         DO il1 = 1, aband%nloc
-           ! 
+           !
            ibnd = aband%l2g(il1) ! global index of n_total
            !
            DO jbnd = 1, nbndval
@@ -166,7 +167,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
                  !
                  CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
                  CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,jbnd),psic1,'Wave',igk_k(1,1)) !only 1 kpoint
-                 ! 
+                 !
                  CALL check_ovl_wannier (psic(:), psic1(:), ovl_value)
                  !
               ENDIF

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -34,10 +34,11 @@ MODULE lanzcos_db
       USE xml_io_base,          ONLY : create_directory
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout 
-      USE wbsecom,              ONLY : d0psi 
-      USE westcom,              ONLY : wstat_save_dir
-      USE plep_io,              ONLY : plep_merge_and_write_G 
+      USE io_global,            ONLY : stdout
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : d0psi
+      USE westcom,              ONLY : wstat_save_dir,  d0psi
+      USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
       !
       IMPLICIT NONE
@@ -67,7 +68,7 @@ MODULE lanzcos_db
          fname = TRIM( wstat_save_dir ) // "/D0PSI_"//TRIM( my_label )//".dat"
          CALL plep_merge_and_write_G(fname,d0psi(:,:,:,ipol))
          !
-      ENDDO 
+      ENDDO
       !
       ! MPI BARRIER
       !
@@ -80,7 +81,7 @@ MODULE lanzcos_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'D0PSI written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, 'D0PSI written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )
       CALL io_push_bar()
       !
@@ -95,9 +96,10 @@ MODULE lanzcos_db
     SUBROUTINE lanzcos_d0psi_read ()
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : wstat_save_dir
-      USE wbsecom,             ONLY : d0psi 
-      USE io_global,           ONLY : stdout 
+      USE westcom,             ONLY : wstat_save_dir, d0psi
+      !wbsecom combined into westcom
+      !USE wbsecom,             ONLY : d0psi
+      USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root
       USE plep_io,             ONLY : plep_read_G_and_distribute
@@ -121,11 +123,11 @@ MODULE lanzcos_db
       time_spent(1)=get_clock('lanzcos_d0psi_read')
       !
       DO ipol = 1, n_ipol
-         !  
-         WRITE (my_label,'(i6.6)')  ipol 
+         !
+         WRITE (my_label,'(i6.6)')  ipol
          fname = TRIM( wstat_save_dir ) // "/D0PSI_"//TRIM( my_label )//".dat"
          CALL plep_read_G_and_distribute(fname,d0psi(:,:,:,ipol))
-         ! 
+         !
       ENDDO
       !
       ! MPI BARRIER
@@ -139,7 +141,7 @@ MODULE lanzcos_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'D0PSI read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, 'D0PSI read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )
       CALL io_push_bar()
       !
@@ -154,16 +156,17 @@ MODULE lanzcos_db
       USE xml_io_base,          ONLY : create_directory
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout 
-      USE wbsecom,              ONLY : d0psi 
-      USE westcom,              ONLY : wstat_save_dir 
-      USE plep_io,              ONLY : plep_merge_and_write_G 
+      USE io_global,            ONLY : stdout
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : d0psi
+      USE westcom,              ONLY : wstat_save_dir,d0psi
+      USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
       !
       IMPLICIT NONE
       !
-      COMPLEX(DP), INTENT(IN) :: evc1(:,:,:) 
-      COMPLEX(DP), INTENT(IN) :: evc1_old(:,:,:) 
+      COMPLEX(DP), INTENT(IN) :: evc1(:,:,:)
+      COMPLEX(DP), INTENT(IN) :: evc1_old(:,:,:)
       !
       CHARACTER(LEN=256)    :: fname
       REAL(DP), EXTERNAL    :: GET_CLOCK
@@ -183,7 +186,7 @@ MODULE lanzcos_db
       !
       fname = TRIM( wstat_save_dir ) // "/EVC1.dat"
       CALL plep_merge_and_write_G(fname,evc1)
-      ! 
+      !
       fname = TRIM( wstat_save_dir ) // "/EVC1_OLD.dat"
       CALL plep_merge_and_write_G(fname,evc1_old)
       !
@@ -198,7 +201,7 @@ MODULE lanzcos_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'EVC1 EVC1_OLD written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, 'EVC1 EVC1_OLD written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )
       CALL io_push_bar()
       !
@@ -213,9 +216,10 @@ MODULE lanzcos_db
     SUBROUTINE lanzcos_evcs_read(evc1, evc1_old)
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : wstat_save_dir 
-      USE wbsecom,             ONLY : d0psi 
-      USE io_global,           ONLY : stdout 
+      USE westcom,             ONLY : wstat_save_dir, d0psi
+      !wbsecom combined into westcom
+      !USE wbsecom,             ONLY : d0psi
+      USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root
       USE plep_io,             ONLY : plep_read_G_and_distribute
@@ -223,7 +227,7 @@ MODULE lanzcos_db
       !
       IMPLICIT NONE
       !
-      COMPLEX(DP), INTENT(INOUT) :: evc1(:,:,:) 
+      COMPLEX(DP), INTENT(INOUT) :: evc1(:,:,:)
       COMPLEX(DP), INTENT(INOUT) :: evc1_old(:,:,:)
       !
       CHARACTER(LEN=256)  :: fname
@@ -237,7 +241,7 @@ MODULE lanzcos_db
       !
       CALL start_clock('lanzcos_evcs_read')
       time_spent(1)=get_clock('lanzcos_evcs_read')
-      ! 
+      !
       fname = TRIM( wstat_save_dir ) // "/EVC1.dat"
       CALL plep_read_G_and_distribute(fname,evc1)
       fname = TRIM( wstat_save_dir ) // "/EVC1_OLD.dat"
@@ -254,7 +258,7 @@ MODULE lanzcos_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'EVC1 EVC1_OLD read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
+      WRITE(stdout, "(5x, 'EVC1 EVC1_OLD read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wstat_save_dir )
       CALL io_push_bar()
       !

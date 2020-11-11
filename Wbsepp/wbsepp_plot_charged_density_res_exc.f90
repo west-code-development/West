@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -35,12 +35,13 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev
   USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
-  USE wbsecom,                ONLY : dvg_exc, n_plep_read_from_file
+  !wbsecom combined into westcom
+  !USE wbsecom,                ONLY : dvg_exc, n_plep_read_from_file
   USE wbseppcom,              ONLY : iexc_plot, r0_input
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute
-  USE westcom,                ONLY : westpp_format
+  USE westcom,                ONLY : westpp_format, dvg_exc, n_plep_read_from_file
   USE ions_base,              ONLY : nat,tau
   !
   IMPLICIT NONE
@@ -59,7 +60,7 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   CHARACTER(LEN=6)   :: my_label
   CHARACTER(LEN=256) :: fname
   !
-  INTEGER  :: iexc 
+  INTEGER  :: iexc
   !
   INTEGER  :: n_point, ni
   REAL(DP) :: dstep, ri1, ri0, dx,dy,dz, drr, summ, summ0, vi1, vi0
@@ -71,14 +72,14 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   nvec = n_plep_read_from_file
   pert = idistribute()
   CALL pert%init(nvec,'i','nvec',.TRUE.)
-  CALL wbse_memory_report() 
+  CALL wbse_memory_report()
   !
-  ! READ EIGENVALUES AND VECTORS FROM OUTPUT 
+  ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !
   CALL plep_db_read( n_plep_read_from_file )
   !
   ALLOCATE(rho_out(dfftp%nnr,nspin))
-  ! 
+  !
   rho_out(:,:) = 0.0_DP
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
@@ -96,7 +97,7 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
      ! ... read in wavefunctions from the previous iteration
      !
      IF (nks>1) THEN
-        !  
+        !
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         !
         CALL mp_bcast(evc,0,inter_image_comm)
@@ -112,13 +113,13 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
         IF (gamma_only) THEN
            !
            CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dvg_exc(1,ibnd,iks,iexc),psic,'Wave')
-           ! 
+           !
            rho_out(:, current_spin) = rho_out(:, current_spin) + w1 * DBLE(psic(:))*AIMAG(psic(:))
            !
         ELSE
            !
            ALLOCATE (psic_aux(dffts%nnr))
-           ! 
+           !
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
            CALL single_invfft_k(dffts,npw,npwx,dvg_exc(1,ibnd,iks,iexc),psic_aux,'Wave',igk_k(1,current_k))
            !
@@ -139,9 +140,9 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   !
   summ0 = summ0*omega/(dfftp%nr1*dfftp%nr2*dfftp%nr3)
   !
-  CALL mp_sum(summ0, intra_bgrp_comm) 
+  CALL mp_sum(summ0, intra_bgrp_comm)
   !
-  ! 
+  !
   WRITE (stdout,*) "Plot of charge density response of the exciton states (Ry unit): ", iexc, ev(iexc)
   WRITE (stdout,*) "summ0", summ0
   !

@@ -1,4 +1,4 @@
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -6,7 +6,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -19,7 +19,9 @@ SUBROUTINE wbse_init_fock_energy()
   USE constants,            ONLY : e2, fpi
   USE cell_base,            ONLY : alat, tpiba2, omega
   USE io_push,              ONLY : io_push_title
-  USE westcom,              ONLY : sqvc,isz, exx_etot
+  USE types_coulomb,         ONLY : pot3D
+  USE westcom,              ONLY :  exx_etot, nbndval0x
+  !USE westcom,              ONLY : sqvc,isz, exx_etot
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions_module, ONLY : evc,psic
   USE fft_base,             ONLY : dfftp,dffts
@@ -31,7 +33,8 @@ SUBROUTINE wbse_init_fock_energy()
   USE mp_global,            ONLY : inter_image_comm
   USE mp,                   ONLY : mp_sum
   USE bse_module,           ONLY : l_wannier_repr
-  USE wbsecom,              ONLY : nbndval0x
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : nbndval0x
   USE class_idistribute,    ONLY : idistribute
   USE distribution_center,  ONLY : aband
   !
@@ -41,7 +44,7 @@ SUBROUTINE wbse_init_fock_energy()
   !
   INTEGER :: ibnd, jbnd, ig, itr, num_intergration, nbndval
   REAL(DP):: ovl_value, etmp0, etmp1, fock_energy, ovl_thr, ekin
-  !REAL(DP), PARAMETER :: list_ovl(8) = (/0.0, 0.00001, 0.0001, 0.001, 0.01, 0.1, 0.2, 0.99/) 
+  !REAL(DP), PARAMETER :: list_ovl(8) = (/0.0, 0.00001, 0.0001, 0.001, 0.01, 0.1, 0.2, 0.99/)
   !REAL(DP), PARAMETER :: list_ovl(1) = (/0.001/)
   !REAL(DP), PARAMETER :: list_ovl(1) = (/0.1/)
   REAL(DP), PARAMETER :: list_ovl(1) = (/0.001/)
@@ -74,7 +77,7 @@ SUBROUTINE wbse_init_fock_energy()
   ekin = 0.0_DP
   DO ibnd = 1, nbndval
      DO ig = 1, npw
-        ekin = ekin + wg(ibnd,1)*CONJG(evc(ig,ibnd)) * g2kin (ig) * evc(ig,ibnd) 
+        ekin = ekin + wg(ibnd,1)*CONJG(evc(ig,ibnd)) * g2kin (ig) * evc(ig,ibnd)
      ENDDO
      !
      ! Note in gamma-only case, so |k+G|=0 for G=0
@@ -90,7 +93,7 @@ SUBROUTINE wbse_init_fock_energy()
   CALL mp_sum(ekin, intra_bgrp_comm)
   !
   WRITE(stdout,*) 'Kinetic energy:', ekin
-  ! 
+  !
   !
   IF (l_wannier_repr) THEN
      !
@@ -107,12 +110,12 @@ SUBROUTINE wbse_init_fock_energy()
   ALLOCATE (aux1_g(ngms))
   !
   DO itr = 1, size(list_ovl)
-     ! 
-     ovl_thr = list_ovl(itr) 
+     !
+     ovl_thr = list_ovl(itr)
      !
      num_intergration = 0
      fock_energy = 0.0_DP
-     ! 
+     !
      DO ibnd = 1, nbndval
         !
         DO jbnd = 1, nbndval
@@ -120,15 +123,15 @@ SUBROUTINE wbse_init_fock_energy()
            ovl_value = ovl_matrix(ibnd,jbnd)
            !
            IF (ovl_value .GE. ovl_thr) THEN
-              !  
+              !
               IF (gamma_only) THEN
                  !
-                 IF (l_wannier_repr) THEN  
+                 IF (l_wannier_repr) THEN
                     !
                     CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(1,ibnd),evc_loc(1,jbnd), psic,'Wave')
                     !
                  ELSE
-                    ! 
+                    !
                     CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,jbnd), psic,'Wave')
                     !
                  ENDIF
@@ -137,7 +140,7 @@ SUBROUTINE wbse_init_fock_energy()
                  !
               ELSE
                  !
-                 IF (l_wannier_repr) THEN  
+                 IF (l_wannier_repr) THEN
                     !
                     CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
                     CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,jbnd),psic_aux,'Wave',igk_k(1,1)) !only 1 kpoint
@@ -147,8 +150,8 @@ SUBROUTINE wbse_init_fock_energy()
                     CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
                     CALL single_invfft_k(dffts,npw,npwx,evc(1,jbnd),psic_aux,'Wave',igk_k(1,1)) !only 1 kpoint
                     !
-                 ENDIF 
-                 ! 
+                 ENDIF
+                 !
                  rho_aux(:) = DBLE(CONJG(psic(:)) * psic_aux(:))/omega
                  !
               ENDIF
@@ -158,9 +161,9 @@ SUBROUTINE wbse_init_fock_energy()
               ! aux_r -> aux1_g
               !
               IF (gamma_only) THEN
-                 ! 
+                 !
                  CALL single_fwfft_gamma(dffts,ngm,ngms,psic,aux1_g,'Dense' )
-                 ! 
+                 !
               ELSE
                  !
                  CALL single_fwfft_k(dffts,ngm,ngms,psic,aux1_g,'Dense')
@@ -171,8 +174,8 @@ SUBROUTINE wbse_init_fock_energy()
               !
               dvg(:) = (0.0_DP, 0.0_DP)
               DO ig = 1, ngm
-                 ! 
-                 dvg(ig) = aux1_g(ig) * sqvc(ig) 
+                 !
+                 dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig)
                  !
               ENDDO
               !
@@ -186,14 +189,15 @@ SUBROUTINE wbse_init_fock_energy()
                  !
               ENDIF
               !
-              IF( ibnd == jbnd .AND. gstart == 2 ) etmp0 = etmp0 - isz
+              IF( ibnd == jbnd .AND. gstart == 2 ) etmp0 = etmp0 - pot3D%div
+              !IF( ibnd == jbnd .AND. gstart == 2 ) etmp0 = etmp0 - isz
               !
               CALL mp_sum(etmp0, intra_bgrp_comm)
               !
               WRITE(stdout, *) " <n_ij|n_ij> :", ibnd, jbnd, etmp0
               !
               num_intergration = num_intergration + 1
-              ! 
+              !
               fock_energy = fock_energy + etmp0
               !
            ENDIF
@@ -202,9 +206,9 @@ SUBROUTINE wbse_init_fock_energy()
         !
      ENDDO
      !
-     WRITE(stdout, *) " Overlap threshold : ", ovl_thr 
+     WRITE(stdout, *) " Overlap threshold : ", ovl_thr
      WRITE(stdout, *) " The number of integrals : ", num_intergration
-     WRITE(stdout, *) " Fock energy =", fock_energy, " Ry" 
+     WRITE(stdout, *) " Fock energy =", fock_energy, " Ry"
      !
   ENDDO
   !

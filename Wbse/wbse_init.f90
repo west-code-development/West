@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,13 +7,13 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 PROGRAM wbse_init
   !-----------------------------------------------------------------------
-  ! 
+  !
   ! This is the main program that calculates the static screening.
   !
   USE io_global,            ONLY : stdout
@@ -21,14 +21,16 @@ PROGRAM wbse_init
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE mp,                   ONLY : mp_sum,mp_barrier
-  USE qbox_interface,       ONLY : use_qbox, init_qbox_interface, finalize_qbox_interface
-  USE wbsecom,              ONLY : l_test_ovl, use_wstat_pdep 
-  ! 
+  USE qbox_interface,       ONLY : init_qbox_interface, finalize_qbox_interface
+  USE westcom,              ONLY : l_test_ovl, use_wstat_pdep,use_qbox
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : l_test_ovl, use_wstat_pdep
+  !
   IMPLICIT NONE
   !
   CHARACTER(LEN=9) :: code = 'WBSE_INIT'
   !
-  ! *** START *** 
+  ! *** START ***
   !
   CALL check_stop_init ()
   !
@@ -43,7 +45,7 @@ PROGRAM wbse_init
   CALL wbse_init_readin ( )
   !
   IF (l_test_ovl) THEN
-     ! 
+     !
      use_qbox = .False.
      !
   ENDIF

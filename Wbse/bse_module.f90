@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -16,16 +16,16 @@
 MODULE bse_module
   !
   USE kinds,                ONLY : DP
-  USE class_idistribute,    ONLY : idistribute
+  !USE class_idistribute,    ONLY : idistribute
   !
   IMPLICIT NONE
-  ! 
+  !
   ! general vars
   !
   LOGICAL,     PUBLIC :: bse_calc = .false.
   LOGICAL,     PUBLIC :: l_wannier_repr   = .false.
   INTEGER,     PUBLIC :: ngm_g_max
-  REAL(DP),    PUBLIC :: ovl_thr 
+  REAL(DP),    PUBLIC :: ovl_thr
   REAL(DP),    PUBLIC, ALLOCATABLE :: et_qp(:,:)
   COMPLEX(DP), PUBLIC, ALLOCATABLE :: evc_ks(:,:,:)
   COMPLEX(DP), PUBLIC, ALLOCATABLE :: u_matrix(:,:,:)
@@ -43,9 +43,9 @@ MODULE bse_module
   INTEGER,     PUBLIC :: wstat_n_pdep_eigen = 10
   !
   ! bse parallel
-  ! 
+  !
   INTEGER, ALLOCATABLE    :: size_index_matrix_lz(:)
   REAL(DP),ALLOCATABLE    :: index_matrix_lz(:,:,:)
-  TYPE(idistribute)       :: bseparal
-  ! 
+  !TYPE(idistribute)       :: bseparal
+  !
 ENDMODULE bse_module

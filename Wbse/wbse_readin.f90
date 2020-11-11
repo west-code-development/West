@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -33,7 +33,9 @@ SUBROUTINE wbse_readin()
   !
   CALL start_clock('wbse_readin')
   !
-  CALL wbse_fetch_namelist(3,(/1,2,3/),.TRUE.)
+  !TODO: change to new vest fetch namelist
+  CALL fetch_input_yml(3,(/1,6,7/),.TRUE.,.FALSE.)
+  !CALL wbse_fetch_namelist(3,(/1,2,3/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed
@@ -74,7 +76,9 @@ SUBROUTINE wbse_init_readin()
   !
   CALL start_clock('wbse_init_readin')
   !
-  CALL wbse_fetch_namelist(3,(/1,2,4/))
+  !TODO: change to new west version of fech namelist
+  CALL fetch_input_yml(3,(/1,6,8/),.TRUE.,.FALSE.)
+  !CALL wbse_fetch_namelist(3,(/1,2,4/))
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

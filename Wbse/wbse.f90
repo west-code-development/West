@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2017 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,26 +7,28 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 PROGRAM wbse
   !-----------------------------------------------------------------------
-  ! 
+  !
   ! This is the main program that calculates the static screening.
   !
   USE check_stop,           ONLY : check_stop_init
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE mp,                   ONLY : mp_sum,mp_barrier
-  USE wbsecom,              ONLY : l_davidson, l_lanzcos 
-  ! 
+  USE westcom,              ONLY : l_davidson, l_lanzcos
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : l_davidson, l_lanzcos
+  !
   IMPLICIT NONE
   !
   CHARACTER(LEN=9) :: code = 'WBSE'
   !
-  ! *** START *** 
+  ! *** START ***
   !
   CALL check_stop_init ()
   !

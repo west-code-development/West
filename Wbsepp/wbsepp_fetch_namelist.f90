@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -17,14 +17,14 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
   USE pwcom
   USE westcom
   USE wbseppcom
-  USE wbsecom,          ONLY : n_plep_read_from_file, macropol_dfpt 
+  USE wbsecom,          ONLY : n_plep_read_from_file, macropol_dfpt
   USE qbox_interface
   USE io_files,         ONLY : tmp_dir, prefix
   USE io_global,        ONLY : stdout
   USE mp,               ONLY : mp_bcast
   USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
-  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c256 
+  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0
   !
   IMPLICIT NONE
   !
@@ -56,12 +56,12 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
       ! for eig_decomposion
       !
       & n_plep_read_from_file, &
-      & macropol_dfpt, & 
+      & macropol_dfpt, &
       !
       ! for exc plot
       !
       & r0_input,  &
-      & iexc_plot, & 
+      & iexc_plot, &
       !
       ! for lanzcos
       !
@@ -71,21 +71,21 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
       & sym_op, &
       & units, &
       & verbosity, &
-      & extrapolation, & 
+      & extrapolation, &
       & start, &
-      & end, & 
+      & end, &
       & increment, &
       & epsil, &
       & spin_channel
-      ! 
+      !
       ! for meg
       !
-  ! 
+  !
   CALL start_clock('wbsepp_fetch_nml')
   !
   ! Connect The INPUT FILE TO unit 5, then skip the title line
   !
-  IF ( mpime==root ) THEN 
+  IF ( mpime==root ) THEN
      CALL input_from_file ( )
   ENDIF
   !
@@ -163,7 +163,7 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
      ! BCAST
      !
      CALL mp_bcast(wbsepp_type,root,world_comm)
-     ! 
+     !
      CALL mp_bcast(n_plep_read_from_file,root,world_comm)
      CALL mp_bcast(macropol_dfpt,root,world_comm)
      !
@@ -211,13 +211,13 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
      IF ((spin_channel < 1) .OR. (spin_channel > 2)) THEN
         CALL errore('wbsepp_fetch_nml','Err: spin_channel/= 1,2', spin_channel)
      ENDIF
-     ! 
+     !
      ! DISPLAY
      !
      numsp=30
      !
      IF (l_eig_decomp) THEN
-        !  
+        !
         CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
         CALL io_push_value('n_plep_read_from_file',n_plep_read_from_file,numsp)
         CALL io_push_value('macropol_dfpt',macropol_dfpt,numsp)
@@ -225,7 +225,7 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
      ENDIF
      !
      IF (l_exc_rho_res_plot) THEN
-        !  
+        !
         CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
         CALL io_push_value('n_plep_read_from_file',n_plep_read_from_file,numsp)
         CALL io_push_value('iexc_plot',iexc_plot,numsp)
@@ -233,7 +233,7 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
      ENDIF
      !
      IF (l_exc_plot ) THEN
-        !  
+        !
         CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
         CALL io_push_value('n_plep_read_from_file',n_plep_read_from_file,numsp)
         CALL io_push_value('r0_input(1) [alat]',r0_input(1),numsp)
@@ -258,7 +258,7 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
         CALL io_push_value('spin_channel',spin_channel,numsp)
         !
      ENDIF
-     ! 
+     !
   ENDIF
   !
   CALL stop_clock('wbsepp_fetch_nml')

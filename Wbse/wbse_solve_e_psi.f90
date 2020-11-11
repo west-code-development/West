@@ -16,13 +16,15 @@ SUBROUTINE solve_e_psi ()
   USE uspp,                 ONLY : okvan
   USE gvect,                ONLY : gstart
   USE control_flags,        ONLY : gamma_only
-  USE wbsecom,              ONLY : d0psi,macropol_dfpt
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : d0psi,macropol_dfpt
+  USE westcom,              ONLY : d0psi,macropol_dfpt
   !
   IMPLICIT NONE
   !
   LOGICAL :: exst
   !
-  INTEGER, PARAMETER :: n_ipol = 3 
+  INTEGER, PARAMETER :: n_ipol = 3
   !
   IF (okvan) THEN
      !
@@ -36,15 +38,15 @@ SUBROUTINE solve_e_psi ()
   !
   CALL start_clock ('solve_e_psi')
   !
-  ! Compute dipole in the R space. This option can be used 
+  ! Compute dipole in the R space. This option can be used
   ! only for finite systems (e.g. molecules).
   !
   IF (macropol_dfpt) THEN
-     ! 
+     !
      CALL compute_d0psi_dfpt()
-     ! 
+     !
   ELSE
-     ! 
+     !
      CALL compute_d0psi_rs()
      !
   ENDIF
@@ -56,7 +58,7 @@ SUBROUTINE solve_e_psi ()
   !
   RETURN
   !
-ENDSUBROUTINE 
+ENDSUBROUTINE
 
 SUBROUTINE compute_d0psi_rs( )
   !
@@ -65,7 +67,7 @@ SUBROUTINE compute_d0psi_rs( )
   USE fft_base,             ONLY : dfftp,dffts
   USE io_global,            ONLY : stdout
   USE mp_global,            ONLY : me_bgrp,my_image_id,inter_image_comm
-  USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast 
+  USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE buffers,              ONLY : get_buffer
@@ -75,8 +77,9 @@ SUBROUTINE compute_d0psi_rs( )
   USE wavefunctions_module, ONLY : evc,psic
   USE noncollin_module,     ONLY : noncolin,npol
   USE pwcom,                ONLY : isk,igk_k,ngk,lsda
-  USE wbsecom,              ONLY : d0psi 
-  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : d0psi
+  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc, d0psi
   !
   IMPLICIT NONE
   !
@@ -95,10 +98,10 @@ SUBROUTINE compute_d0psi_rs( )
   IF (.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
   ALLOCATE(aux_r(dfftp%nnr))
   ALLOCATE(r(dfftp%nnr,n_ipol))
-  ! 
-  r(:,:) = 0.0d0 
   !
-  ! Calculate r 
+  r(:,:) = 0.0d0
+  !
+  ! Calculate r
   !
   inv_nr1 = 1.D0 / DBLE( dfftp%nr1 )
   inv_nr2 = 1.D0 / DBLE( dfftp%nr2 )
@@ -112,7 +115,7 @@ SUBROUTINE compute_d0psi_rs( )
   ir_end = dfftp%nnr
 #endif
   !
-  DO ir = 1, ir_end 
+  DO ir = 1, ir_end
      !
      ! ... three dimensional indexes
      !
@@ -127,7 +130,7 @@ SUBROUTINE compute_d0psi_rs( )
         r(ir,ip) = DBLE( i )*inv_nr1*at(ip,1) + &
                    DBLE( j )*inv_nr2*at(ip,2) + &
                    DBLE( k )*inv_nr3*at(ip,3)
-        ! 
+        !
      ENDDO
      !
   ENDDO
@@ -141,7 +144,7 @@ SUBROUTINE compute_d0psi_rs( )
      ! ... Set k-point, spin, number pw
      !
      current_k = iks
-     ! 
+     !
      IF ( lsda ) current_spin = isk(iks)
      !
      npw = ngk(iks)
@@ -149,10 +152,10 @@ SUBROUTINE compute_d0psi_rs( )
      ! ... read in wavefunctions from the previous iteration
      !
      IF (nks>1) THEN
-        !  
+        !
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         CALL mp_bcast(evc,0,inter_image_comm)
-        ! 
+        !
      ENDIF
      !
      nbndval = nbnd_occ(iks)
@@ -164,11 +167,11 @@ SUBROUTINE compute_d0psi_rs( )
            IF (ibnd<nbndval) THEN
               !
               ! double bands @ gamma
-              ! 
+              !
               ! G -> R
               !
               CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd+1),psic,'Wave')
-              ! 
+              !
               ! R -> G
               !
               aux_r(:) = (0.0_DP, 0.0_DP)
@@ -177,7 +180,7 @@ SUBROUTINE compute_d0psi_rs( )
               DO ip = 1, n_ipol
                  !
                  psic(:)  = (0.0_DP, 0.0_DP)
-                 psic(:) =  aux_r(:) * r(:,ip) * alat 
+                 psic(:) =  aux_r(:) * r(:,ip) * alat
                  !
                  CALL double_fwfft_gamma(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),d0psi(1,ibnd+1,iks,ip),'Wave')
                  !
@@ -185,15 +188,15 @@ SUBROUTINE compute_d0psi_rs( )
               !
            ELSE
               !
-              IF (nbndval == nbnd) THEN  
+              IF (nbndval == nbnd) THEN
                  !
                  ! single band @ gamma
                  !
                  CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),psic,'Wave')
-                 ! 
+                 !
                  aux_r(:) = (0.0_DP, 0.0_DP)
                  aux_r(:) = psic(:)
-                 ! 
+                 !
                  DO ip = 1, n_ipol
                     !
                     psic(:)  = (0.0_DP, 0.0_DP)
@@ -210,10 +213,10 @@ SUBROUTINE compute_d0psi_rs( )
                  ! single band @ gamma
                  !
                  CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd+1),psic,'Wave')
-                 ! 
+                 !
                  aux_r(:) = (0.0_DP, 0.0_DP)
                  aux_r(:) = psic(:)
-                 ! 
+                 !
                  DO ip = 1, n_ipol
                     !
                     psic(:)  = (0.0_DP, 0.0_DP)
@@ -243,20 +246,20 @@ SUBROUTINE compute_d0psi_rs( )
            DO ip = 1, n_ipol
               !
               psic(:)  = (0.0_DP, 0.0_DP)
-              psic(:) =  aux_r(:) * r(:,ip) * alat      
+              psic(:) =  aux_r(:) * r(:,ip) * alat
               !
               CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),'Wave',igk_k(1,current_k))
               !
            ENDDO
            !
         ENDDO
-        !  
+        !
         IF (npol==2) THEN
            !
            DO ibnd=1,nbndval
               !
               CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1,ibnd),psic,'Wave',igk_k(1,current_k))
-              ! 
+              !
               aux_r(:) = (0.0_DP, 0.0_DP)
               aux_r(:) = psic(:)
               !
@@ -264,13 +267,13 @@ SUBROUTINE compute_d0psi_rs( )
                  !
                  psic(:)  = (0.0_DP, 0.0_DP)
                  psic(:) = aux_r(:) * r(:,ip) * alat
-                 !  
+                 !
                  CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(npwx+1,ibnd,iks,ip),'Wave',igk_k(1,current_k))
                  !
               ENDDO
               !
            ENDDO
-           !    
+           !
         ENDIF
         !
      ENDIF
@@ -295,7 +298,7 @@ END SUBROUTINE compute_d0psi_rs
 
 SUBROUTINE shift_d0psi( r, n_ipol )
   !
-  ! Shift a position operator r to the center of the molecule 
+  ! Shift a position operator r to the center of the molecule
   ! for a proper calculation of d0psi in R-space.
   !
   USE fft_base,         ONLY : dfftp
@@ -320,9 +323,9 @@ SUBROUTINE shift_d0psi( r, n_ipol )
   check_cell = 0.d0
   !
   do ip1 = 1,3
-     ! 
+     !
      do ip2 = 1,3
-        ! 
+        !
         if(.not. ip1 .eq. ip2) check_cell = check_cell + at(ip1,ip2)**2
         !
     enddo
@@ -340,39 +343,39 @@ SUBROUTINE shift_d0psi( r, n_ipol )
   do ip = 1, n_ipol
      !
      do iatm = 1, nat
-        ! 
+        !
         mmin(ip) = min(mmin(ip), tau(ip,iatm))
-        !  
+        !
         mmax(ip) = max(mmax(ip), tau(ip,iatm))
-        ! 
+        !
      enddo
-     !  
+     !
   enddo
   !
   center(:)= 0.5d0*(mmin(:)+mmax(:))
   !
   do ip = 1, n_ipol
      !
-     origin(ip)= center(ip)-0.5d0*at(ip,ip) 
+     origin(ip)= center(ip)-0.5d0*at(ip,ip)
      !
   enddo
   !
   do ir = 1, dfftp%nnr
      !
-     do ip = 1, n_ipol 
+     do ip = 1, n_ipol
         !
         r(ir,ip)= r(ir,ip) - origin(ip)
         !
      enddo
-     ! 
-     do ip = 1, n_ipol 
+     !
+     do ip = 1, n_ipol
         !
         if(r(ir,ip) .lt. 0) r(ir,ip)=r(ir,ip)+at(ip,ip)
         !
         if(r(ir,ip) .gt. at(ip,ip)) r(ir,ip)=r(ir,ip)-at(ip,ip)
         !
      enddo
-     ! 
+     !
   enddo
   !
   return
@@ -398,10 +401,12 @@ SUBROUTINE compute_d0psi_dfpt( )
   USE wavefunctions_module, ONLY : evc,psic
   USE noncollin_module,     ONLY : noncolin,npol
   USE uspp,                 ONLY : vkb,nkb
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk 
-  USE wbsecom,              ONLY : d0psi, l_lanzcos
+  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : d0psi, l_lanzcos
   USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,&
-                                   n_dfpt_maxiter, l_kinetic_only                              
+                                   n_dfpt_maxiter, l_kinetic_only,&
+                                   d0psi, l_lanzcos
   USE distribution_center,  ONLY : aband
   !
   IMPLICIT NONE
@@ -428,7 +433,7 @@ SUBROUTINE compute_d0psi_dfpt( )
      current_k = iks
      !
      IF ( lsda ) current_spin = isk(iks)
-     !  
+     !
      CALL g2_kin( iks )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
@@ -438,7 +443,7 @@ SUBROUTINE compute_d0psi_dfpt( )
      ! ... read in wavefunctions from the previous iteration
      !
      IF (nks>1) THEN
-        !         
+        !
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         CALL mp_bcast(evc,0,inter_image_comm)
         !
@@ -446,17 +451,17 @@ SUBROUTINE compute_d0psi_dfpt( )
      !
      nbndval = nbnd_occ(iks)
      !
-     ! LOOP over band states 
+     ! LOOP over band states
      !
      d0psi(:,:,iks,:) = (0.0_DP,0.0_DP)
-     ! 
+     !
      DO il1 = 1, aband%nloc
         !
         iv = aband%l2g(il1)
         !
         ALLOCATE(phi(npwx*npol,3))
         ALLOCATE(phi_tmp(npwx*npol,3))
-        !  
+        !
         CALL commutator_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
         CALL commutator_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
         CALL commutator_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
@@ -474,7 +479,7 @@ SUBROUTINE compute_d0psi_dfpt( )
         e(2) = et(iv,iks)
         e(3) = et(iv,iks)
         !
-        CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec ) 
+        CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec )
         !
         tr2_dfpt = 1.d-12
         n_dfpt_maxiter = 250
@@ -482,7 +487,7 @@ SUBROUTINE compute_d0psi_dfpt( )
         !
         CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
         !
-        IF (ierr/=0) THEN 
+        IF (ierr/=0) THEN
            !
            WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
            !
@@ -498,11 +503,11 @@ SUBROUTINE compute_d0psi_dfpt( )
      ENDDO
      !
      IF (l_lanzcos) THEN
-        ! 
-        CALL mp_sum (d0psi(:,:,iks,:),inter_image_comm)     
+        !
+        CALL mp_sum (d0psi(:,:,iks,:),inter_image_comm)
         !
      ENDIF
-     ! 
+     !
      ! P_c|d0psi>
      !
      DO ip = 1, n_ipol
@@ -511,7 +516,7 @@ SUBROUTINE compute_d0psi_dfpt( )
         !
      ENDDO
      !
-  ENDDO     
+  ENDDO
   !
   IF (ALLOCATED(psic)) DEALLOCATE(psic)
   !

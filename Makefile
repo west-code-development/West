@@ -114,11 +114,21 @@ wstat \
 wfreq \
 westpp_do
 
+wbse: \
+wbse_do
+
+wbsepp: \
+westpp \
+wbse_do \
+wbsepp_do
+
 all: \
 pytools \
 wstat \
 wfreq \
-westpp 
+westpp \
+wbse \
+wbsepp
 
 doc: check_conf
 	if test -d doc ; then \
@@ -192,6 +202,20 @@ westpp_do:
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
+wbse_do:
+	if test -d ../LR_Modules; then \
+	( cd ../LR_Modules ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi        
+	cd ../West
+	if test -d Wbse ; then \
+	( cd Wbse ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
+
+wbsepp_do:
+	if test -d Wbsepp ; then \
+	( cd Wbsepp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
+
 clean: \
 pytools_undo \
 libraries_undo \
@@ -205,7 +229,9 @@ dfpt_kernel_undo \
 io_kernel_undo \
 wstat_undo \
 wfreq_undo \
-westpp_undo 
+westpp_undo \
+wbse_undo \
+wbsepp_undo 
 
 pytools_undo:
 	if test -d Pytools ; then \
@@ -270,6 +296,16 @@ wfreq_undo:
 westpp_undo:
 	if test -d Westpp ; then \
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
+
+wbse_undo:
+	if test -d Wbse ; then \
+	( cd Wbse ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
+
+wbsepp_undo:
+	if test -d Wbsepp ; then \
+	( cd Wbsepp ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
 unconf:

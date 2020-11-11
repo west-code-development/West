@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 SUBROUTINE bse_init()
@@ -20,8 +20,10 @@ SUBROUTINE bse_init()
                                     size_index_matrix_lz,&
                                     index_matrix_lz
      USE pwcom,              ONLY : isk,nks
-     USE westcom,            ONLY : nbnd_occ,n_pdep_eigen,fftdriver
-     USE wbsecom,            ONLY : nbndval0x,sigma_c_head,sigma_x_head,eps_macro,use_wstat_pdep
+     USE westcom,            ONLY : nbnd_occ,n_pdep_eigen,fftdriver,&
+                                    nbndval0x,sigma_c_head,sigma_x_head,eps_macro,use_wstat_pdep
+     !wbsecom combined into westcom
+     !USE wbsecom,            ONLY : nbndval0x,sigma_c_head,sigma_x_head,eps_macro,use_wstat_pdep
      USE control_flags,      ONLY : gamma_only
      USE lsda_mod,           ONLY : nspin
      USE mp,                 ONLY : mp_max
@@ -57,7 +59,7 @@ SUBROUTINE bse_init()
      CALL mp_max(ngm_g_max,intra_bgrp_comm)
      !
      ! allocate and read unitary matrix and overlap matrix, if any
-     !  
+     !
      IF (l_wannier_repr) THEN
         !
         ALLOCATE (u_matrix (nbndval0x, nbndval0x, nspin))
@@ -68,7 +70,7 @@ SUBROUTINE bse_init()
            CALL read_umatrix_and_omatrix(nbndval0x,is,u_matrix(:,:,is),ovl_matrix(:,:,is))
            !
         ENDDO
-        ! 
+        !
      ENDIF
      !
      IF (.NOT.use_wstat_pdep) THEN
@@ -77,34 +79,34 @@ SUBROUTINE bse_init()
         ! define an index_matrix_lz, for bse_kernel paralel
         !
         tmp_size = nbndval0x*nbndval0x
-        ALLOCATE (index_matrix_lz(tmp_size, 2, nspin)) 
+        ALLOCATE (index_matrix_lz(tmp_size, 2, nspin))
         !
-        index_matrix_lz(:,:,:) = 0.0 
+        index_matrix_lz(:,:,:) = 0.0
         !
         ALLOCATE(size_index_matrix_lz(nspin))
         !
-        size_index_matrix_lz(:) = 0 
+        size_index_matrix_lz(:) = 0
         !
         DO iks = 1, nks
            !
            nbndval = nbnd_occ(iks)
-           !      
+           !
            current_spin = isk(iks)
            !
            do_index = 0
-           ! 
+           !
            DO ibnd = 1, nbndval, 1
               !
               DO jbnd = 1, nbndval, 1
                  !
                  IF (l_wannier_repr) THEN
-                    ! 
+                    !
                     ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
                     !
                  ELSE
                     !
                     ovl_value = 0.0_DP
-                    !    
+                    !
                  ENDIF
                  !
                  IF (l_wannier_repr) THEN
@@ -120,11 +122,11 @@ SUBROUTINE bse_init()
                     !
                  ELSE
                     !
-                    do_index = do_index + 1 
+                    do_index = do_index + 1
                     !
-                    index_matrix_lz(do_index, 1, current_spin) = ibnd 
+                    index_matrix_lz(do_index, 1, current_spin) = ibnd
                     index_matrix_lz(do_index, 2, current_spin) = jbnd
-                    !   
+                    !
                  ENDIF
                  !
               ENDDO
@@ -152,7 +154,7 @@ SUBROUTINE bse_init()
         DO iks = 1, nks
            !
            nbndval = nbnd_occ(iks)
-           !      
+           !
            current_spin = isk(iks)
            !
            do_index = 0
@@ -164,13 +166,13 @@ SUBROUTINE bse_init()
                  DO jbnd = 1, nbndval
                     !
                     IF (l_wannier_repr) THEN
-                       ! 
+                       !
                        ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
                        !
                     ELSE
                        !
                        ovl_value = 0.0_DP
-                       !    
+                       !
                     ENDIF
                     !
                     IF (ovl_value >= ovl_thr ) THEN
@@ -196,7 +198,7 @@ SUBROUTINE bse_init()
                     ENDIF
                     !
                  ENDDO
-                 !  
+                 !
               ENDDO
               !
            ENDDO
@@ -211,9 +213,9 @@ SUBROUTINE bse_init()
      !
      !IF (bse_pdel) THEN
         !
-        ! 
-     !ENDIF 
-     ! 
+        !
+     !ENDIF
+     !
      RETURN
      !
 ENDSUBROUTINE
@@ -223,10 +225,10 @@ SUBROUTINE wbse_clear()
      !
      USE eqv,                ONLY: dmuxc
      USE bse_module,         ONLY: u_matrix,ovl_matrix,et_qp,evc_ks
-     USE bse_module,         ONLY: index_matrix_lz, size_index_matrix_lz 
+     USE bse_module,         ONLY: index_matrix_lz, size_index_matrix_lz
      !
      IMPLICIT NONE
-     ! 
+     !
      IF (ALLOCATED(u_matrix)) DEALLOCATE (u_matrix)
      IF (ALLOCATED(ovl_matrix)) DEALLOCATE (ovl_matrix)
      IF (ALLOCATED(dmuxc)) DEALLOCATE(dmuxc)

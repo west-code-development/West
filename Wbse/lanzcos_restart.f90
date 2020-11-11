@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -25,9 +25,9 @@ MODULE lanzcos_restart
   !
   INTEGER, PRIVATE :: iunout
   !
-  PUBLIC :: lanzcos_restart_write 
+  PUBLIC :: lanzcos_restart_write
   PUBLIC :: lanzcos_restart_read
-  PUBLIC :: lanzcos_postpro_write 
+  PUBLIC :: lanzcos_postpro_write
   !
   CONTAINS
     !
@@ -37,18 +37,22 @@ MODULE lanzcos_restart
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout 
-      USE westcom,              ONLY : west_prefix, wstat_save_dir
-      USE wbsecom,              ONLY : ipol_input, n_lzstep, &
+      USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : west_prefix, wstat_save_dir,&
+                                       ipol_input, n_lzstep, &
                                        alpha_store,beta_store,&
                                        gamma_store,zeta_store
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : ipol_input, n_lzstep, &
+      !                                 alpha_store,beta_store,&
+      !                                 gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      INTEGER,INTENT(IN)  :: nipol_input, pliter_stop, lriter_stop 
+      INTEGER,INTENT(IN)  :: nipol_input, pliter_stop, lriter_stop
       !
       ! Workspace
       !
@@ -81,7 +85,7 @@ MODULE lanzcos_restart
       !
       CALL errore( 'wbse_restart', 'cannot open restart file for writing', ierr )
       !
-      IF ( mpime == root ) THEN  
+      IF ( mpime == root ) THEN
          !
          CALL iotk_write_begin( iunout, "SUMMARY" )
          CALL iotk_write_dat( iunout, "nipol_input", nipol_input)
@@ -124,7 +128,7 @@ MODULE lanzcos_restart
          CALL iotk_write_begin( iunout, "ZETA_STORE" )
          DO ipol = 1, nipol_input
             CALL iotk_write_dat( iunout, "zeta_store_ipol_i", ipol )
-            DO ipol2 = 1, 3 
+            DO ipol2 = 1, 3
                CALL iotk_write_dat( iunout, "zeta_store_ipol_j", ipol2 )
                DO is = 1, nspin
                   CALL iotk_write_dat( iunout, "zeta_store_k", zeta_store(ipol,ipol2,:,is))
@@ -145,8 +149,8 @@ MODULE lanzcos_restart
       time_spent(2)=get_clock('wbse_lanzcos_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( dirname )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -158,18 +162,22 @@ MODULE lanzcos_restart
       USE mp_global,           ONLY : world_comm
       USE mp_world,            ONLY : mpime,root,world_comm
       USE mp,                  ONLY : mp_barrier, mp_bcast
-      USE io_global,           ONLY : stdout 
-      USE westcom,             ONLY : west_prefix, wstat_save_dir 
-      USE wbsecom,             ONLY : ipol_input, n_lzstep, &
+      USE io_global,           ONLY : stdout
+      USE westcom,             ONLY : west_prefix, wstat_save_dir, &
+                                      ipol_input, n_lzstep, &
                                       alpha_store,beta_store,&
                                       gamma_store,zeta_store
+      !wbsecom combined into westcom
+      !USE wbsecom,             ONLY : ipol_input, n_lzstep, &
+      !                                alpha_store,beta_store,&
+      !                                gamma_store,zeta_store
       USE mp_global,           ONLY : intra_image_comm
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      INTEGER, INTENT(IN)  :: nipol_input 
+      INTEGER, INTENT(IN)  :: nipol_input
       INTEGER, INTENT(OUT) :: pliter_stop, lriter_stop
 
       !
@@ -179,7 +187,7 @@ MODULE lanzcos_restart
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      CHARACTER(LEN=3)   :: ipol_input_tmp 
+      CHARACTER(LEN=3)   :: ipol_input_tmp
       INTEGER :: iun, ierr, ipol, ipol2, is
       INTEGER :: nipol_input_tmp, n_lzstep_tmp
       !
@@ -209,8 +217,8 @@ MODULE lanzcos_restart
          CALL iotk_scan_dat( iun, "pliter_stop", pliter_stop )
          CALL iotk_scan_dat( iun, "lriter_stop", lriter_stop )
          CALL iotk_scan_end( iun, "SUMMARY"  )
-         ! 
-      ENDIF 
+         !
+      ENDIF
       !
       CALL mp_bcast(nipol_input_tmp, root, world_comm )
       CALL mp_bcast(ipol_input_tmp, root, world_comm )
@@ -222,10 +230,10 @@ MODULE lanzcos_restart
          CALL errore( 'wbse_lanzcos_restart', 'there is inconsistent between previous ipol and ipol in input para', 1)
       ENDIF
       !
-      IF (n_lzstep_tmp .GT. n_lzstep) THEN 
+      IF (n_lzstep_tmp .GT. n_lzstep) THEN
          CALL errore( 'wbse_lanzcos_restart', 'last n_lzstep > n_lzstep', 1)
       ENDIF
-      !  
+      !
       IF (pliter_stop > nipol_input) THEN
          CALL errore( 'wbse_lanzcos_restart', 'ipol stopped > nipol_input', 1)
       ENDIF
@@ -245,13 +253,13 @@ MODULE lanzcos_restart
          !
          alpha_store(:,:,:) = 0.0_DP
          CALL iotk_scan_begin( iun, "ALPHA_STORE")
-         DO ipol = 1, nipol_input  
+         DO ipol = 1, nipol_input
             DO is = 1, nspin
                CALL iotk_scan_dat( iun, "alpha_store_k", alpha_store(ipol,1:n_lzstep_tmp,is) )
             ENDDO
          ENDDO
          CALL iotk_scan_end( iun, "ALPHA_STORE"  )
-         ! 
+         !
          beta_store(:,:,:) = 0.0_DP
          CALL iotk_scan_begin( iun, "BETA_STORE")
          DO ipol = 1, nipol_input
@@ -260,7 +268,7 @@ MODULE lanzcos_restart
             ENDDO
          ENDDO
          CALL iotk_scan_end( iun, "BETA_STORE"  )
-         ! 
+         !
          gamma_store(:,:,:) = 0.0_DP
          CALL iotk_scan_begin( iun, "GAMMA_STORE")
          DO ipol = 1, nipol_input
@@ -269,7 +277,7 @@ MODULE lanzcos_restart
             ENDDO
          ENDDO
          CALL iotk_scan_end( iun, "GAMMA_STORE"  )
-         ! 
+         !
          zeta_store(:,:,:,:) = 0.0_DP
          CALL iotk_scan_begin( iun, "ZETA_STORE")
          DO ipol = 1, nipol_input
@@ -282,7 +290,7 @@ MODULE lanzcos_restart
             ENDDO
          ENDDO
          CALL iotk_scan_end( iun, "ZETA_STORE"  )
-         ! 
+         !
          CALL iotk_close_read( iun )
          !
       ENDIF
@@ -300,8 +308,8 @@ MODULE lanzcos_restart
       time_spent(2)=get_clock('wbse_lanzcos_restart')
       !
       WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )  
+      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -312,10 +320,14 @@ MODULE lanzcos_restart
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout 
-      USE wbsecom,              ONLY : n_lzstep, &
+      USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : n_lzstep, &
                                        alpha_store,beta_store,&
                                        gamma_store,zeta_store
+      !wbsecom combined into westcom
+      !USE wbsecom,              ONLY : n_lzstep, &
+      !                                 alpha_store,beta_store,&
+      !                                 gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       !
       IMPLICIT NONE
@@ -352,7 +364,7 @@ MODULE lanzcos_restart
       !
       CALL errore( 'wbse_restart', 'cannot open restart file for writing', ierr )
       !
-      IF ( mpime == root ) THEN  
+      IF ( mpime == root ) THEN
          !
          CALL iotk_write_begin( iunout, "SUMMARY" )
          CALL iotk_write_dat( iunout, "nspin", nspin)
@@ -381,9 +393,9 @@ MODULE lanzcos_restart
          !
          CALL iotk_write_begin( iunout, "ZETA_STORE" )
          CALL iotk_write_dat  ( iunout, "zeta_store_ipol_i", ipol_iter )
-         DO ipol2 = 1, 3 
+         DO ipol2 = 1, 3
             CALL iotk_write_dat( iunout, "zeta_store_ipol_j", ipol2 )
-            DO is = 1, nspin  
+            DO is = 1, nspin
                CALL iotk_write_dat( iunout, "zeta_store_k", zeta_store(ipol_iter,ipol2,:,is))
             ENDDO
          ENDDO

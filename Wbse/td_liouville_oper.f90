@@ -28,11 +28,15 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,&
                                    double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE wbsecom,              ONLY : l_diag_term_only,scissor_ope,nbndval0x
-  USE wbsecom,              ONLY : l_qp_correction
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : l_diag_term_only,scissor_ope,nbndval0x
+  !USE wbsecom,              ONLY : l_qp_correction
   USE bse_module,           ONLY : bse_calc,et_qp
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ
-  USE wbsecom,              ONLY : l_bse_triplet, l_lanzcos, sigma_c_head, sigma_x_head
+  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ, &
+                                   l_diag_term_only,scissor_ope,nbndval0x,l_qp_correction,&
+                                   l_bse_triplet, l_lanzcos, sigma_c_head, sigma_x_head
+
+  !USE wbsecom,              ONLY : l_bse_triplet, l_lanzcos, sigma_c_head, sigma_x_head
   USE distribution_center,  ONLY : aband
   !
   IMPLICIT NONE
@@ -50,7 +54,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc1_aux(:,:)
   !
-  scissor = scissor_ope 
+  scissor = scissor_ope
   !
   CALL start_clock('west_apply_liouvillian')
   !
@@ -59,7 +63,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   IF (.NOT.ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
   ALLOCATE(dvrs(dfftp%nnr,nspin))
   !
-  ! Calculation of the charge density response 
+  ! Calculation of the charge density response
   !
   dvrs(:,:) = (0.0_DP, 0.0_DP)
   CALL wbse_calc_dens(evc1, dvrs)
@@ -67,17 +71,17 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   IF (bse_calc) THEN
      !
      CALL west_dv_of_drho(dvrs, .true., .false.)
-     !  
+     !
   ELSE
      !
      CALL west_dv_of_drho(dvrs, .false., .false.)
-     !  
+     !
   ENDIF
   !
   DO iks = 1, nks
      !
      nbndval = nbnd_occ(iks)
-     ! 
+     !
      nbvalloc = 0
      DO il1 = 1, aband%nloc
         ibnd = aband%l2g(il1)
@@ -96,7 +100,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      !
      IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
      !
-     ! ... read in GS wavefunctions iks 
+     ! ... read in GS wavefunctions iks
      !
      IF (nks>1) THEN
         !
@@ -104,7 +108,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         CALL mp_bcast(evc,0,inter_image_comm)
         !
      ENDIF
-     ! 
+     !
      IF (l_diag_term_only) GOTO 112
      !
      IF (l_bse_triplet)    GOTO 112
@@ -115,13 +119,13 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         !
         DO il1=1, nbvalloc - MOD(nbvalloc,2), 2
            !
-           ibnd   = aband%l2g(il1) 
-           ibnd_1 = aband%l2g(il1+1) 
+           ibnd   = aband%l2g(il1)
+           ibnd_1 = aband%l2g(il1+1)
            !
            CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd_1),psic,'Wave')
            !
            DO ir=1,dffts%nnr
-              ! 
+              !
               psic(ir) = psic(ir) * CMPLX(DBLE(dvrs(ir,current_spin)), 0.0_DP)
               !
            ENDDO
@@ -129,9 +133,9 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),evc1_new(1,ibnd_1,iks),'Wave')
            !
         ENDDO
-        ! 
+        !
         ! single band @ gamma
-        ! 
+        !
         IF ( MOD(nbvalloc,2) == 1 ) THEN
            !
            ibnd=aband%l2g(nbvalloc)
@@ -144,63 +148,63 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
               !
            ENDDO
            !
-           CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),'Wave') 
+           CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),'Wave')
            !
         ENDIF
         !
      ELSE
         !
         ! only single bands
-        !   
-        DO il1=1, nbvalloc 
+        !
+        DO il1=1, nbvalloc
            !
-           ibnd = aband%l2g(il1) 
-           ! 
+           ibnd = aband%l2g(il1)
+           !
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
            !
            DO ir=1, dffts%nnr
-              !   
-              psic(ir) = psic(ir) * dvrs(ir,current_spin) 
-              !   
+              !
+              psic(ir) = psic(ir) * dvrs(ir,current_spin)
+              !
            ENDDO
            !
-           CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),'Wave',igk_k(1,current_k)) 
+           CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),'Wave',igk_k(1,current_k))
            !
         ENDDO
         !
         IF (npol==2) THEN
            !
-           DO il1=1, nbvalloc 
+           DO il1=1, nbvalloc
               !
-              ibnd = aband%l2g(il1) 
+              ibnd = aband%l2g(il1)
               !
               CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1,ibnd),psic,'Wave',igk_k(1,current_k))
               !
               DO ir=1, dffts%nnr
-                 ! 
+                 !
                  psic(ir) = psic(ir) * dvrs(ir,current_spin)
                  !
               ENDDO
-              ! 
-              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1,ibnd,iks),'Wave',igk_k(1,current_k)) 
+              !
+              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1,ibnd,iks),'Wave',igk_k(1,current_k))
               !
            ENDDO
-           ! 
+           !
         ENDIF
         !
-     ENDIF   
+     ENDIF
      !
-  112 CONTINUE 
+  112 CONTINUE
      !
      ALLOCATE(hevc1(npwx*npol, nbvalloc))
      ALLOCATE(evc1_aux(npwx*npol, nbvalloc))
      !
-     hevc1(:,:)    = (0.0_DP, 0.0_DP) 
-     evc1_aux(:,:) = (0.0_DP, 0.0_DP) 
+     hevc1(:,:)    = (0.0_DP, 0.0_DP)
+     evc1_aux(:,:) = (0.0_DP, 0.0_DP)
      !
      DO il1 = 1, nbvalloc
         !
-        ibnd = aband%l2g(il1) 
+        ibnd = aband%l2g(il1)
         !
         evc1_aux(:,il1) = evc1(:,ibnd,iks)
         !
@@ -209,7 +213,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      CALL h_psi(npwx,npw,nbvalloc,evc1_aux(:,:),hevc1(:,:))
      !
      IF (l_qp_correction) THEN
-        !  
+        !
         CALL bse_hqp_psi(iks, current_spin, nbvalloc, evc1_aux(:,:), hevc1(:,:))
         !
      ENDIF
@@ -217,19 +221,19 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      DEALLOCATE(evc1_aux)
      !
      ! Subtract the eigenvalues
-     ! 
+     !
      IF (l_qp_correction) THEN
         !
         DO il1 = 1, nbvalloc
            !
-           ibnd = aband%l2g(il1) 
-           ! 
+           ibnd = aband%l2g(il1)
+           !
            IF (bse_calc) THEN
               !
               CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),0.0d0,DP), &
                          evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
-           ELSE 
+           ELSE
               !
               CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor),0.0d0,DP), &
                          evc1(:,ibnd,iks),1,hevc1(:,il1),1)
@@ -239,13 +243,13 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         ENDDO
         !
      ELSE
-        !   
+        !
         DO il1 = 1, nbvalloc
            !
-           ibnd = aband%l2g(il1) 
+           ibnd = aband%l2g(il1)
            !
            IF (bse_calc) THEN
-              ! 
+              !
               CALL zaxpy(npw,CMPLX(-(et(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),0.0d0,DP), &
                          evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
@@ -262,7 +266,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      !
      DO il1 = 1, nbvalloc
         !
-        ibnd = aband%l2g(il1) 
+        ibnd = aband%l2g(il1)
         !
         evc1_new(:,ibnd,iks) = hevc1(:,il1) + evc1_new(:,ibnd,iks)
         !
@@ -271,8 +275,8 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      DEALLOCATE(hevc1)
      !
      IF (l_lanzcos) THEN
-        ! 
-        CALL mp_sum (evc1_new(:,:,iks),inter_image_comm)     
+        !
+        CALL mp_sum (evc1_new(:,:,iks),inter_image_comm)
         !
      ELSE
         !
@@ -285,10 +289,10 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      IF (bse_calc) THEN
         !
         CALL wbse_bse_kernel(iks, current_spin, nbndval, evc1(:,:,:), evc1_new(:,:,iks))
-        ! 
+        !
      ENDIF
      !
-  113 CONTINUE 
+  113 CONTINUE
      !
      IF (gamma_only) THEN
         !
@@ -305,7 +309,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,evc1_new(:,:,iks),(1.0_DP,0.0_DP))
      !
   ENDDO
-  !  
+  !
   DEALLOCATE(dvrs)
   IF (ALLOCATED(psic)) DEALLOCATE(psic)
   !

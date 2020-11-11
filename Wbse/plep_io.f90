@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -18,8 +18,9 @@ MODULE plep_io
   USE kinds,       ONLY : DP
   USE mp_global,   ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
   USE mp,          ONLY : mp_max
-  USE westcom,     ONLY : npwq,npwq_g
-  USE wbsecom,     ONLY : nbndval0x
+  USE westcom,     ONLY : npwq,npwq_g,nbndval0x
+  !wbsecom combined into westcom
+  !USE wbsecom,     ONLY : nbndval0x
   USE pwcom,       ONLY : nks,npwx
   USE wvfct,       ONLY : npwx
   USE gvect,       ONLY : ig_l2g
@@ -28,13 +29,13 @@ MODULE plep_io
   !
   PUBLIC plep_merge_and_write_G_wfc
   PUBLIC plep_read_G_and_distribute_wfc
-  ! 
-  INTERFACE plep_merge_and_write_G 
+  !
+  INTERFACE plep_merge_and_write_G
      MODULE PROCEDURE plep_merge_and_write_G_2d, &
           plep_merge_and_write_G_3d
   END INTERFACE
   !
-  INTERFACE plep_read_G_and_distribute 
+  INTERFACE plep_read_G_and_distribute
      MODULE PROCEDURE plep_read_G_and_distribute_2d, &
           plep_read_G_and_distribute_3d
   END INTERFACE
@@ -42,7 +43,7 @@ MODULE plep_io
   CONTAINS
     !
     ! ******************************************
-    ! WRITE IN G SPACE 
+    ! WRITE IN G SPACE
     !       wfc is passed distributed in G space
     !       then merged and written in R space
     ! ******************************************
@@ -53,8 +54,8 @@ MODULE plep_io
       USE mp,           ONLY : mp_bcast
       !
       ! I/O
-      !    
-      INTEGER,      INTENT(IN) :: nbndval 
+      !
+      INTEGER,      INTENT(IN) :: nbndval
       CHARACTER(*), INTENT(IN) :: fname
       COMPLEX(DP),  INTENT(IN) :: plepg(npwx,nbndval)
       !
@@ -67,7 +68,7 @@ MODULE plep_io
       IF(my_pool_id.NE.0) RETURN
       IF(my_bgrp_id.NE.0) RETURN
       !
-      ! Resume all components 
+      ! Resume all components
       !
       IF(me_bgrp==root_bgrp) THEN
         !
@@ -82,14 +83,14 @@ MODULE plep_io
       ALLOCATE( tmp_vec(npwq_g) )
       !
       DO ibnd = 1, nbndval
-         ! 
+         !
          tmp_vec=0._DP
          !
-         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
-         IF(me_bgrp==root_bgrp) THEN 
+         IF(me_bgrp==root_bgrp) THEN
            !
            ! ... open XML descriptor
            !
@@ -99,9 +100,9 @@ MODULE plep_io
          ENDIF
          !
       ENDDO
-      !   
-      IF(me_bgrp==root_bgrp) THEN 
-        ! 
+      !
+      IF(me_bgrp==root_bgrp) THEN
+        !
         CALL iotk_write_end( iun, 'PLEP_GSPACE' )
         CALL iotk_close_write( iun )
         !
@@ -112,7 +113,7 @@ MODULE plep_io
     END SUBROUTINE
     !
     ! ******************************************
-    ! READ IN G SPACE 
+    ! READ IN G SPACE
     !       wfc is read merged in G space
     !       then split in G space
     ! ******************************************
@@ -124,8 +125,8 @@ MODULE plep_io
       USE mp_global,    ONLY : intra_bgrp_comm
       !
       ! I/O
-      !   
-      INTEGER,      INTENT(IN) :: nbndval 
+      !
+      INTEGER,      INTENT(IN) :: nbndval
       CHARACTER(*), INTENT(IN) :: fname
       COMPLEX(DP), INTENT(OUT) :: plepg(npwx,nbndval)
       !
@@ -134,7 +135,7 @@ MODULE plep_io
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr,ig,ibnd
       !
-      ! Resume all components 
+      ! Resume all components
       !
       ALLOCATE( tmp_vec(npwq_g) )
       tmp_vec=0._DP
@@ -143,7 +144,7 @@ MODULE plep_io
          !
          ! ONLY ROOT W/IN BGRP READS
          !
-         IF(me_bgrp==root_bgrp) THEN 
+         IF(me_bgrp==root_bgrp) THEN
             !
             ! ... open XML descriptor
             !
@@ -170,8 +171,8 @@ MODULE plep_io
          !
       ENDIF
       !
-      !      
-      DO ibnd = 1, nbndval 
+      !
+      DO ibnd = 1, nbndval
          !
          !
          IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
@@ -186,7 +187,7 @@ MODULE plep_io
             ENDIF
             !
             CALL splitwf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
-            ! 
+            !
          ENDIF
          !
       ENDDO
@@ -203,7 +204,7 @@ MODULE plep_io
             !
          ENDIF
          !
-      ENDIF  
+      ENDIF
       !
       DEALLOCATE( tmp_vec )
       !
@@ -214,7 +215,7 @@ MODULE plep_io
     !
     !
     ! ******************************************
-    ! WRITE IN G SPACE 
+    ! WRITE IN G SPACE
     !       wfc is passed distributed in G space
     !       then merged and written in R space
     ! ******************************************
@@ -225,7 +226,7 @@ MODULE plep_io
       USE mp,           ONLY : mp_bcast
       !
       ! I/O
-      !    
+      !
       CHARACTER(*), INTENT(IN) :: fname
       COMPLEX(DP), INTENT(IN)  :: plepg(npwx,nbndval0x,nks)
       !
@@ -240,7 +241,7 @@ MODULE plep_io
       IF(my_pool_id.NE.0) RETURN
       IF(my_bgrp_id.NE.0) RETURN
       !
-      ! Resume all components 
+      ! Resume all components
       !
       IF(me_bgrp==root_bgrp) THEN
         !
@@ -257,14 +258,14 @@ MODULE plep_io
       DO ik = 1, nks
          !
          DO ibnd = 1, nbndval0x
-            ! 
+            !
             tmp_vec=0._DP
             !
-            CALL mergewf( plepg(:,ibnd,ik), tmp_vec, npwx, ig_l2g(1:npwx), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+            CALL mergewf( plepg(:,ibnd,ik), tmp_vec, npwx, ig_l2g(1:npwx), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
             !
             ! ONLY ROOT W/IN BGRP WRITES
             !
-            IF(me_bgrp==root_bgrp) THEN 
+            IF(me_bgrp==root_bgrp) THEN
               !
               ! ... open XML descriptor
               !
@@ -278,9 +279,9 @@ MODULE plep_io
          ENDDO
          !
       ENDDO
-      !   
-      IF(me_bgrp==root_bgrp) THEN 
-        ! 
+      !
+      IF(me_bgrp==root_bgrp) THEN
+        !
         CALL iotk_write_end( iun, 'PLEP_GSPACE' )
         CALL iotk_close_write( iun )
         !
@@ -291,7 +292,7 @@ MODULE plep_io
     END SUBROUTINE
     !
     ! ******************************************
-    ! READ IN G SPACE 
+    ! READ IN G SPACE
     !       wfc is read merged in G space
     !       then split in G space
     ! ******************************************
@@ -303,7 +304,7 @@ MODULE plep_io
       USE mp_global,    ONLY : intra_bgrp_comm
       !
       ! I/O
-      !    
+      !
       CHARACTER(*), INTENT(IN) :: fname
       COMPLEX(DP), INTENT(OUT) :: plepg(npwx,nbndval0x,nks)
       !
@@ -315,7 +316,7 @@ MODULE plep_io
       npwx_g=MAXVAL(ig_l2g(1:npwx))
       CALL mp_max(npwx_g,intra_bgrp_comm)
       !
-      ! Resume all components 
+      ! Resume all components
       !
       ALLOCATE( tmp_vec(npwx_g) )
       tmp_vec=0._DP
@@ -324,7 +325,7 @@ MODULE plep_io
          !
          ! ONLY ROOT W/IN BGRP READS
          !
-         IF(me_bgrp==root_bgrp) THEN 
+         IF(me_bgrp==root_bgrp) THEN
             !
             ! ... open XML descriptor
             !
@@ -351,7 +352,7 @@ MODULE plep_io
          !
       ENDIF
       !
-      !      
+      !
       DO ik = 1, nks
          !
          DO ibnd = 1, nbndval0x
@@ -369,7 +370,7 @@ MODULE plep_io
               ENDIF
               !
               CALL splitwf( plepg(:,ibnd,ik), tmp_vec, npwx, ig_l2g(1:npwx), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
-              ! 
+              !
             ENDIF
             !
          ENDDO
@@ -388,7 +389,7 @@ MODULE plep_io
             !
          ENDIF
          !
-      ENDIF  
+      ENDIF
       !
       DEALLOCATE( tmp_vec )
       !
@@ -399,7 +400,7 @@ MODULE plep_io
     !
     !
     ! ******************************************
-    ! WRITE IN G SPACE 
+    ! WRITE IN G SPACE
     !       wfc is passed distributed in G space
     !       then merged and written in R space
     ! ******************************************
@@ -410,7 +411,7 @@ MODULE plep_io
       USE mp,           ONLY : mp_bcast
       !
       ! I/O
-      !    
+      !
       CHARACTER(*), INTENT(IN) :: fname
       INTEGER,      INTENT(IN) :: nbnd
       COMPLEX(DP),  INTENT(IN) :: plepg(npwx,nbnd)
@@ -424,7 +425,7 @@ MODULE plep_io
       IF(my_pool_id.NE.0) RETURN
       IF(my_bgrp_id.NE.0) RETURN
       !
-      ! Resume all components 
+      ! Resume all components
       !
       IF(me_bgrp==root_bgrp) THEN
         !
@@ -439,14 +440,14 @@ MODULE plep_io
       ALLOCATE( tmp_vec(npwq_g) )
       !
       DO ibnd = 1, nbnd
-         ! 
+         !
          tmp_vec=0._DP
          !
-         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm) 
+         CALL mergewf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
-         IF(me_bgrp==root_bgrp) THEN 
+         IF(me_bgrp==root_bgrp) THEN
            !
            ! ... open XML descriptor
            !
@@ -456,9 +457,9 @@ MODULE plep_io
          ENDIF
          !
       ENDDO
-      !   
-      IF(me_bgrp==root_bgrp) THEN 
-        ! 
+      !
+      IF(me_bgrp==root_bgrp) THEN
+        !
         CALL iotk_write_end( iun, 'PLEP_GSPACE' )
         CALL iotk_close_write( iun )
         !
@@ -469,7 +470,7 @@ MODULE plep_io
     END SUBROUTINE
     !
     ! ******************************************
-    ! READ IN G SPACE 
+    ! READ IN G SPACE
     !       wfc is read merged in G space
     !       then split in G space
     ! ******************************************
@@ -482,7 +483,7 @@ MODULE plep_io
       USE mp_global,    ONLY : intra_bgrp_comm
       !
       ! I/O
-      !    
+      !
       CHARACTER(*), INTENT(IN) :: fname
       INTEGER,      INTENT(IN) :: nbnd
       COMPLEX(DP), INTENT(OUT) :: plepg(npwx,nbnd)
@@ -495,7 +496,7 @@ MODULE plep_io
       REAL(DP):: scalef_
       CHARACTER(iotk_attlenx)  :: attr
       !
-      ! Resume all components 
+      ! Resume all components
       !
       ALLOCATE( tmp_vec(npwq_g) )
       !
@@ -506,7 +507,7 @@ MODULE plep_io
          !
          ! ONLY ROOT W/IN BGRP READS
          !
-         IF (me_bgrp==root_bgrp) THEN 
+         IF (me_bgrp==root_bgrp) THEN
             !
             ! ... open XML descriptor
             !
@@ -551,7 +552,7 @@ MODULE plep_io
       CALL mp_bcast( igwx_,   root_bgrp, intra_bgrp_comm)
       CALL mp_bcast( scalef_, root_bgrp, intra_bgrp_comm)
       !
-      DO ibnd = 1, nbnd_ 
+      DO ibnd = 1, nbnd_
          !
          IF (my_pool_id==0.AND.my_bgrp_id==0) THEN
             !
@@ -566,7 +567,7 @@ MODULE plep_io
             ENDIF
             !
             CALL splitwf( plepg(:,ibnd), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
-            ! 
+            !
          ENDIF
          !
       ENDDO
@@ -582,7 +583,7 @@ MODULE plep_io
             !
          ENDIF
          !
-      ENDIF  
+      ENDIF
       !
       DEALLOCATE( tmp_vec )
       !

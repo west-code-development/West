@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -31,13 +31,13 @@ MODULE wbse_init_restart
   INTERFACE wbse_index_matrix_read
      MODULE PROCEDURE wbse_index_matrix_read3d
   END INTERFACE
-  INTERFACE wbse_stat_restart_read 
+  INTERFACE wbse_stat_restart_read
      MODULE PROCEDURE wbse_stat_restart_read3d
   END INTERFACE
   INTERFACE wbse_stat_restart_write
      MODULE PROCEDURE wbse_stat_restart_write3d
   END INTERFACE
-  INTERFACE wbse_pdep_coeffie_read 
+  INTERFACE wbse_pdep_coeffie_read
      MODULE PROCEDURE wbse_pdep_coeffie_read3d
   END INTERFACE
   INTERFACE wbse_pdep_coeffie_write
@@ -104,7 +104,7 @@ MODULE wbse_init_restart
       !
     END SUBROUTINE
     !
-    SUBROUTINE wbse_index_matrix_read3d (filename,size_list0,size_list1,size_column,index_matrix) 
+    SUBROUTINE wbse_index_matrix_read3d (filename,size_list0,size_list1,size_column,index_matrix)
       !
       USE io_global,            ONLY : stdout,ionode
       USE mp_world,             ONLY : world_comm,root
@@ -136,7 +136,7 @@ MODULE wbse_init_restart
       !
       IF ( ierr /=0 ) CALL errore( 'wbse_index_matrix_read', 'cannot open restart file for reading', ierr )
       !
-      IF ( ionode ) THEN  
+      IF ( ionode ) THEN
          !
          CALL iotk_scan_begin(iunout, "WBSE_INDEX_SIZE")
          CALL iotk_scan_dat(  iunout, "size_list", size_list_tmp)
@@ -233,7 +233,7 @@ MODULE wbse_init_restart
       !
     END SUBROUTINE
     !
-    SUBROUTINE wbse_pdep_coeffie_read3d (filename,size_list,alpha_ija_vx,alpha_ija_vc) 
+    SUBROUTINE wbse_pdep_coeffie_read3d (filename,size_list,alpha_ija_vx,alpha_ija_vc)
       !
       USE io_global,            ONLY : stdout,ionode
       USE mp_world,             ONLY : world_comm,root
@@ -243,7 +243,7 @@ MODULE wbse_init_restart
       IMPLICIT NONE
       !
       ! I/O
-      ! 
+      !
       INTEGER,           INTENT(IN)   :: size_list
       REAL(DP),          INTENT(OUT)  :: alpha_ija_vx(size_list)
       REAL(DP),          INTENT(OUT)  :: alpha_ija_vc(size_list)
@@ -266,7 +266,7 @@ MODULE wbse_init_restart
       !
       IF ( ierr /=0 ) CALL errore( 'wbse_pdep_coeffie_read', 'cannot open restart file for reading', ierr )
       !
-      IF ( ionode ) THEN  
+      IF ( ionode ) THEN
          !
          CALL iotk_scan_begin(iunout, "WBSE_PDEP_COEFFS_SIZE" )
          CALL iotk_scan_dat(  iunout, "size_list", size_list_tmp)
@@ -294,7 +294,7 @@ MODULE wbse_init_restart
          CALL iotk_scan_end(  iunout, "WBSE_PDEP_COEFFS_VC")
          !
       ENDIF
-      ! 
+      !
       IF ( ionode ) CALL iotk_close_read( iunout )
       !
       CALL mp_bcast( tmp_distr_vx, 0 , intra_image_comm )
@@ -372,7 +372,7 @@ MODULE wbse_init_restart
       !
     END SUBROUTINE
     !
-    SUBROUTINE wbse_stat_restart_read3d (filename,size_list,restart_matrix,done_calc) 
+    SUBROUTINE wbse_stat_restart_read3d (filename,size_list,restart_matrix,done_calc)
       !
       USE io_global,            ONLY : stdout,ionode
       USE mp_world,             ONLY : world_comm,root
@@ -382,7 +382,7 @@ MODULE wbse_init_restart
       IMPLICIT NONE
       !
       ! I/O
-      ! 
+      !
       INTEGER,           INTENT(IN)   :: size_list
       REAL(DP),          INTENT(OUT)  :: restart_matrix(size_list)
       CHARACTER(LEN=256),INTENT(IN)   :: filename
@@ -404,7 +404,7 @@ MODULE wbse_init_restart
       !
       IF ( ierr /=0 ) CALL errore( 'wbse_stat_restart_read', 'cannot open restart file for reading', ierr )
       !
-      IF ( ionode ) THEN  
+      IF ( ionode ) THEN
          !
          CALL iotk_scan_begin(iunout,"STATUS_OF_CALCULATION")
          CALL iotk_scan_dat(  iunout,"status", done_calc)
@@ -428,7 +428,7 @@ MODULE wbse_init_restart
          CALL iotk_scan_end(  iunout, "WBSE_INIT_RESTART")
          !
          CALL iotk_close_read( iunout )
-         ! 
+         !
       ENDIF
       !
       CALL mp_bcast(restart_matrix_tmp, 0, intra_image_comm )
@@ -447,8 +447,8 @@ MODULE wbse_init_restart
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
                                        me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
-      USE bse_module,           ONLY : bseparal
-      USE westcom,              ONLY : wstat_dirname
+      USE distribution_center,  ONLY : bseparal
+      USE westcom,              ONLY : wstat_save_dir
       !
       IMPLICIT NONE
       !
@@ -470,12 +470,12 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM( wstat_dirname )//"/aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM( wstat_save_dir )//"/aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF(my_pool_id.NE.0) RETURN
       IF(my_bgrp_id.NE.0) RETURN
       !
-      ! Resume all components 
+      ! Resume all components
       !
       IF (me_bgrp==root_bgrp) THEN
          !
@@ -514,13 +514,13 @@ MODULE wbse_init_restart
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
                                        me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
-      USE bse_module,           ONLY : bseparal
-      USE westcom,              ONLY : wstat_dirname
+      USE distribution_center,  ONLY : bseparal
+      USE westcom,              ONLY : wstat_save_dir
       !
       IMPLICIT NONE
       !
       ! I/O
-      ! 
+      !
       INTEGER,           INTENT(IN)   :: size_list
       REAL(DP),          INTENT(OUT)  :: alpha_ija_vx(size_list)
       REAL(DP),          INTENT(OUT)  :: alpha_ija_vc(size_list)
@@ -538,7 +538,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM( wstat_dirname )//"/aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM( wstat_save_dir )//"/aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
          !
@@ -554,12 +554,12 @@ MODULE wbse_init_restart
          ENDIF
          !
       ENDIF
-      ! 
+      !
       CALL mp_bcast(ierr,0,inter_bgrp_comm)
       !
       CALL errore( 'wbse_init_restart_para_read ', &
                    'cannot open restart file for reading', ierr )
-      ! 
+      !
       IF (my_pool_id==0.AND.my_bgrp_id==0) THEN
          !
          ! ONLY ROOT W/IN BGRP READS
@@ -578,7 +578,7 @@ MODULE wbse_init_restart
       !
       ALLOCATE (alpha_ija_vx_tmp(size_list_tmp))
       ALLOCATE (alpha_ija_vc_tmp(size_list_tmp))
-      ! 
+      !
       IF (my_pool_id==0.AND.my_bgrp_id==0) THEN
          !
          ! ONLY ROOT W/IN BGRP READS

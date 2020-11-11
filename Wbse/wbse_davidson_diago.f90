@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -26,10 +26,12 @@ SUBROUTINE wbse_davidson_diago ( )
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE pwcom,                ONLY : nks,npw,npwx
-  USE wbsecom,              ONLY : dvg_exc,dng_exc,nbndval0x
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : dvg_exc,dng_exc,nbndval0x
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver
+                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver, &
+                                   dvg_exc,dng_exc,nbndval0x, l_preconditioning
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   !USE write_xml,            ONLY : wstat_xml_dump
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
@@ -40,8 +42,9 @@ SUBROUTINE wbse_davidson_diago ( )
   USE wstat_tools,          ONLY : diagox,serial_diagox,symm_hr_distr,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
                                    wbse_refresh_with_vr_distr,apply_preconditioning_dvg
-  USE wbsecom,              ONLY : l_preconditioning         
-  USE bse_module,           ONLY : bse_calc,size_index_matrix_lz,bseparal
+  !USE wbsecom,              ONLY : l_preconditioning
+  USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
+  USE distribution_center,  ONLY : bseparal
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -93,16 +96,16 @@ SUBROUTINE wbse_davidson_diago ( )
   CALL aband%init(nbndval0x,'b','band_paralel',.TRUE.)
   !
   ! ... DISTRIBUTE bse_kernel
-  ! 
+  !
   size_index_matrix = MAXVAL(size_index_matrix_lz(:))
   IF (bse_calc) THEN
      !
      bseparal  = idistribute()
      CALL bseparal%init(size_index_matrix,'i','bse_kernel',.TRUE.)
-     !  
+     !
   ENDIF
   !
-  CALL wbse_memory_report() ! Before allocating I report the memory required. 
+  CALL wbse_memory_report() ! Before allocating I report the memory required.
   !
   ! ... MEMORY ALLOCATION
   !
@@ -152,7 +155,7 @@ SUBROUTINE wbse_davidson_diago ( )
   dvg_exc= 0._DP
   hr_distr(:,:) = 0._DP
   vr_distr(:,:) = 0._DP
-  notcnv  = nvec 
+  notcnv  = nvec
   dav_iter = -2
   !
   ! KIND OF CALCULATION
@@ -188,10 +191,10 @@ write(stdout,*) n_pdep_read_from_file, nvec
          & 'starting', nbase, nbase
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      mloc = 0
-     mstart = 1 
+     mstart = 1
      DO il1 = 1, pert%nloc
         ig1 = pert%l2g(il1)
         IF( ig1 < 1 .OR. ig1 > nvec ) CYCLE
@@ -199,7 +202,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
         mloc = mloc + 1
      ENDDO
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
@@ -209,7 +212,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
         IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
            !
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !  
+           !
         ELSE
            !
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
@@ -225,18 +228,18 @@ write(stdout,*) n_pdep_read_from_file, nvec
         ENDIF
         !
      ENDDO
-     ! 
+     !
      dav_iter = -1
      !
   CASE DEFAULT
      CALL errore('chidiago', 'Wrong wstat_calculation',1)
   END SELECT
   !
-  IF( dav_iter == -2 ) CALL errore( 'chidiago','Cannot find the 1st starting loop',1) 
+  IF( dav_iter == -2 ) CALL errore( 'chidiago','Cannot find the 1st starting loop',1)
   !
   IF( dav_iter == -1 ) THEN
      !
-     ! < EXTRA STEP > 
+     ! < EXTRA STEP >
      !
      dvg_exc = dng_exc
      CALL wbse_do_mgs( dvg_exc, 1, nvec)
@@ -247,10 +250,10 @@ write(stdout,*) n_pdep_read_from_file, nvec
          & 'starting', nbase, nbase
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      mloc = 0
-     mstart = 1 
+     mstart = 1
      DO il1 = 1, pert%nloc
         ig1 = pert%l2g(il1)
         IF( ig1 < 1 .OR. ig1 > nvec ) CYCLE
@@ -258,7 +261,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
         mloc = mloc + 1
      ENDDO
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
@@ -268,7 +271,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
         IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
            !
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !  
+           !
         ELSE
            !
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
@@ -284,23 +287,23 @@ write(stdout,*) n_pdep_read_from_file, nvec
         ENDIF
         !
      ENDDO
-     ! 
+     !
      ! </ EXTRA STEP >
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, 1, nvec ) 
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, 1, nvec )
      !
      ! ... diagonalize the reduced hamiltonian
      !
-     CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )     
+     CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
      time_spent(2)=get_clock( 'chidiago' )
      ev(1:nvec) = ew(1:nvec)
      !
      ! Write the eigenvalues & time spent
      !
      CALL wbse_output_ev_and_time(nvec,ev,time_spent)
-     ! 
+     !
      dav_iter = 0
      !CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
      !
@@ -332,18 +335,18 @@ write(stdout,*) n_pdep_read_from_file, nvec
         !
         IF ( .NOT. conv(n) ) THEN
            !
-           ! ... this root not yet converged ... 
+           ! ... this root not yet converged ...
            !
            np = np + 1
            !
            ! ... reorder eigenvectors so that coefficients for unconverged
-           ! ... roots come first. This allows to use quick matrix-matrix 
+           ! ... roots come first. This allows to use quick matrix-matrix
            ! ... multiplications to set a new basis vector (see below)
            !
            ishift(nbase+np) = n
            !
            ew(nbase+np) = ev(n)
-           !   
+           !
         END IF
         !
      END DO
@@ -355,8 +358,8 @@ write(stdout,*) n_pdep_read_from_file, nvec
      CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew )
      !
      IF (l_preconditioning) THEN
-        ! 
-        IF (dav_iter < 4) THEN 
+        !
+        IF (dav_iter < 4) THEN
            CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .false. )
         ELSE
            CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .true. )
@@ -372,7 +375,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
      !
      ! determine image that actually compute dng first
      !
-     mloc = 0 
+     mloc = 0
      mstart = 1
      DO il1 = 1, pert%nloc
         ig1 = pert%l2g(il1)
@@ -381,7 +384,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
         mloc = mloc + 1
      ENDDO
      !
-     ! Apply Liouville operator 
+     ! Apply Liouville operator
      !
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
@@ -391,7 +394,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
         IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
            !
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !  
+           !
         ELSE
            !
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
@@ -412,7 +415,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+1, nbase+notcnv ) 
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+1, nbase+notcnv )
      !
      nbase = nbase + notcnv
      !
@@ -459,7 +462,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
            CALL wbse_output_a_report(-1)
            !
            WRITE(iter_label,'(i8)') kter
-           CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps") 
+           CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
            l_is_wstat_converged = .TRUE.
            !
            EXIT iterate
@@ -477,7 +480,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
            !
            WRITE( stdout, '(5X,"WARNING: ",I5, &
                 &   " eigenvalues not converged in chidiago")' ) notcnv
-           ! 
+           !
            EXIT iterate
            !
         END IF
@@ -498,7 +501,7 @@ write(stdout,*) n_pdep_read_from_file, nvec
         !
         DO il1 = 1, pert%nloc
            ig1 = pert%l2g(il1)
-           IF( ig1 > nbase ) CYCLE 
+           IF( ig1 > nbase ) CYCLE
            hr_distr(ig1,il1) = ev(ig1)
            vr_distr(ig1,il1) = 1._DP
         ENDDO
@@ -538,21 +541,22 @@ END SUBROUTINE
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
-SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end) 
+SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
   ! MGS of the vectors beloging to the interval [ m_global_start, m_global_end ]
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                  ONLY : DP
   USE io_global,              ONLY : stdout
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,nimage,world_comm 
+  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,nimage,world_comm
   USE gvect,                  ONLY : gstart
   USE mp,                     ONLY : mp_sum,mp_barrier,mp_bcast
   USE pwcom,                  ONLY : nks,npw,npwx
-  USE westcom,                ONLY : nbnd_occ
-  USE wbsecom,                ONLY : nbndval0x
+  USE westcom,                ONLY : nbnd_occ,nbndval0x
+  !wbsecom combined into westcom
+  !USE wbsecom,                ONLY : nbndval0x
   USE control_flags,          ONLY : gamma_only
-  USE io_push,                ONLY : io_push_title 
+  USE io_push,                ONLY : io_push_title
   USE distribution_center,    ONLY : pert
   !
   IMPLICIT NONE
@@ -562,7 +566,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   INTEGER, INTENT(IN) :: m_global_start,m_global_end
   COMPLEX(DP) :: amat(npwx,nbndval0x,nks,pert%nlocx)
   !
-  ! Workspace 
+  ! Workspace
   !
   INTEGER :: ig, ip, j, ncol, ibnd, il1, iks
   INTEGER :: k_global, k_local, j_local, k_id, nbndval
@@ -590,11 +594,11 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
   ! 2) Localize m_global_start
   !
-  m_local_start = 1 
+  m_local_start = 1
   DO ip = 1, pert%nloc
      ig = pert%l2g(ip)
      IF( ig < m_global_start ) CYCLE
-     m_local_start = ip 
+     m_local_start = ip
      EXIT
   ENDDO
   !
@@ -634,15 +638,15 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
                 DO ibnd = 1, nbndval
                    !
                    anorm = anorm + 2.0_DP * DDOT(2*npw,amat(1,ibnd,iks,k_local),1,amat(1,ibnd,iks,k_local),1)
-                   !    
+                   !
                    IF(gstart==2) THEN
                      !
                      anorm = anorm - REAL(amat(1,ibnd,iks,k_local),KIND=DP) * REAL(amat(1,ibnd,iks,k_local),KIND=DP)
-            
-                     ! 
+
+                     !
                    ENDIF
                    !
-                ENDDO 
+                ENDDO
                 !
              ENDDO
              !
@@ -675,11 +679,11 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               nbndval = nbnd_occ(iks)
               !
               DO ibnd = 1, nbndval
-                 ! 
+                 !
                  CALL ZSCAL(npw,za,amat(1,ibnd,iks,k_local),1)
                  !
               ENDDO
-              ! 
+              !
            ENDDO
            !
         ENDIF
@@ -689,9 +693,9 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
         DO iks  = 1, nks
            !
            nbndval = nbnd_occ(iks)
-           ! 
+           !
            DO ibnd = 1, nbndval
-              ! 
+              !
               CALL ZCOPY(npwx,amat(1,ibnd,iks,k_local),1,vec(1,ibnd,iks),1)
               !
            ENDDO
@@ -715,14 +719,14 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
         ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
         !
         IF (gamma_only) THEN
-           ! 
+           !
            DO ip = j_local,m_local_end !pert%nloc
               !
               anorm = 0.0_DP
               !
               DO iks  = 1, nks
                  !
-                 nbndval = nbnd_occ(iks) 
+                 nbndval = nbnd_occ(iks)
                  !
                  DO ibnd = 1, nbndval
                     !
@@ -737,7 +741,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
                  ENDDO
                  !
               ENDDO
-              ! 
+              !
               braket(ip) = anorm
               !
            ENDDO
@@ -745,13 +749,13 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
            CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
            !
            DO ip = j_local,m_local_end !pert%nloc
-              !  
+              !
               zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
               !
            ENDDO
-           ! 
+           !
         ELSE
-           ! 
+           !
            DO ip = j_local,m_local_end !pert%nloc
               !
               anormc = (0.0_DP,0.0_DP)
@@ -759,10 +763,10 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               DO iks  = 1, nks
                  !
                  nbndval = nbnd_occ(iks)
-                 ! 
+                 !
                  DO ibnd = 1, nbndval
                     !
-                    anormc = anormc +  ZDOTC(npw,vec(1,ibnd,iks),1,amat(1,ibnd,iks,ip),1) 
+                    anormc = anormc +  ZDOTC(npw,vec(1,ibnd,iks),1,amat(1,ibnd,iks,ip),1)
                     !
                  ENDDO
                  !
@@ -773,15 +777,15 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
            ENDDO
            !
            CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
-           ! 
+           !
         ENDIF
         !
         !ncol=m_local_end-j_local+1
         !
         DO ip = j_local, m_local_end
            !
-           amat(:,:,:,ip) = amat(:,:,:,ip) - vec(:,:,:)*zbraket(ip) 
-           ! 
+           amat(:,:,:,ip) = amat(:,:,:,ip) - vec(:,:,:)*zbraket(ip)
+           !
         ENDDO
         !
         !
@@ -801,7 +805,7 @@ END SUBROUTINE
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
-SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  ) 
+SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   !
   ! Randomize in dvg the vectors belonging to [ mglobalstart, mglobalend ]
   !
@@ -809,8 +813,9 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   USE random_numbers,       ONLY : randy
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
   USE pwcom,                ONLY : nks,npw,npwx
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ
-  USE wbsecom,              ONLY : dvg_exc,nbndval0x
+  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ, dvg_exc,nbndval0x
+  !wbsecom combined into westcom
+  !USE wbsecom,              ONLY : dvg_exc,nbndval0x
   USE constants,            ONLY : tpi
   USE distribution_center,  ONLY : pert
   USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
@@ -864,7 +869,7 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
      DO iks  = 1, nks
         !
         nbndval = nbnd_occ(iks)
-        !  
+        !
         DO ibnd = 1, nbndval
            !
            DO ig=1,ngm_g
@@ -881,12 +886,12 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
                             ( g(1,ig)*g(1,ig) + &
                               g(2,ig)*g(2,ig) + &
                               g(3,ig)*g(3,ig) + 1.0_DP )
-           ENDDO 
+           ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL
         ENDDO
         !
-        ! ... read in GS wavefunctions iks 
+        ! ... read in GS wavefunctions iks
         !
         IF (nks>1) THEN
            !
@@ -900,10 +905,10 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
         IF (.NOT.( ig1 < mglobalstart .OR. ig1 > mglobalend )) THEN
            !
            CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,amat(:,:,iks,il1),(1.0_DP,0.0_DP))
-           ! 
+           !
         ENDIF
         !
-     ENDDO 
+     ENDDO
      !
   ENDDO
   !
@@ -937,7 +942,7 @@ SUBROUTINE wbse_output_a_report(iteration)
       out_tab(ip,3) = 0._DP
       IF(conv(ip)) out_tab(ip,3) = 1._DP
    ENDDO
-   IF(iteration>=0) THEN 
+   IF(iteration>=0) THEN
       WRITE(pref,"('itr_',i5.5)") iteration
    ELSE
       pref='converged'

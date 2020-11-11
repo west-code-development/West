@@ -1,4 +1,4 @@
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -6,7 +6,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -20,8 +20,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   USE cell_base,            ONLY : alat, tpiba2, omega
   USE gvect,                ONLY : nl,ngm,g,nlm,gstart
   USE io_push,              ONLY : io_push_title
-  USE westcom,              ONLY : wstat_dirname,sqvc,fftdriver,npwq0,npwq0x,chi_driver
-  USE wbsecom,              ONLY : chi_kernel,l_xcchi
+   !sqvc not in westcom pot3D%sqvc  TODO: pot3d init
+  USE types_coulomb,         ONLY : pot3D
+  !USE westcom,              ONLY : wstat_save_dir,sqvc,fftdriver,npwq,npwqx
+  USE westcom,              ONLY : wstat_save_dir,fftdriver,chi_driver, chi_kernel,l_xcchi
+  !USE westcom,              ONLY : wstat_save_dir,sqvc,fftdriver,npwq0,npwq0x,chi_driver
+  !wbsecom combined with westcom
+  !USE wbsecom,              ONLY : chi_kernel,l_xcchi
   USE pwcom,                ONLY : omega
   USE gvect,                ONLY : gstart,ngm,ngmx
   USE control_flags,        ONLY : gamma_only
@@ -35,11 +40,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   USE mp_global,            ONLY : inter_image_comm
   USE mp,                   ONLY : mp_sum
   USE pdep_io,              ONLY : pdep_merge_and_write_G
-  USE bse_module,           ONLY : ovl_thr, l_wannier_repr, bseparal
+  USE bse_module,           ONLY : ovl_thr, l_wannier_repr
   USE wbse_init_restart,    ONLY : wbse_stat_restart_read, wbse_stat_restart_write
   USE wbse_init_restart,    ONLY : wbse_index_matrix_read, wbse_index_matrix_write
   USE class_idistribute,    ONLY : idistribute
-  USE distribution_center,  ONLY : aband
+  USE distribution_center,  ONLY : aband, bseparal
   !
   IMPLICIT NONE
   !
@@ -77,18 +82,18 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   IF (chi_kernel == 'XC_CHI') THEN
      !
      kernel  = "CHI"
-     l_xcchi = .true. 
+     l_xcchi = .true.
      !
   ELSEIF (chi_kernel == 'XC_CHI_RPA') THEN
      !
      kernel  = "CHI_RPA"
-     l_xcchi = .true. 
-     ! 
+     l_xcchi = .true.
+     !
   ELSE
      !
      kernel  = chi_kernel
      l_xcchi = .false.
-     ! 
+     !
   ENDIF
   !
   driver = "FF_QBOX"
@@ -164,16 +169,16 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
         !
      ENDDO
      !
-     filename = TRIM( wstat_dirname )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wstat_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_index_matrix_write(filename,do_index,2,index_matrix(1:do_index,:))
      !
   ELSE
      !
-     filename = TRIM( wstat_dirname )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wstat_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_index_matrix_read (filename,tmp_size,do_index,2,index_matrix)
-     ! 
+     !
   ENDIF
   !
   ALLOCATE (restart_matrix(do_index))
@@ -183,7 +188,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   calc_is_done = .FALSE.
   IF (l_restart_calc) THEN
      !
-     filename = TRIM( wstat_dirname )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wstat_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_stat_restart_read (filename,do_index,restart_matrix,calc_is_done)
      !
@@ -194,7 +199,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   ! initialize the paralellization
   !
   bseparal = idistribute()
-  CALL bseparal%init(do_index,'i','number_pairs',.TRUE.) 
+  CALL bseparal%init( do_index,'i','number_pairs', .TRUE.)
   !
   ! parallel loop
   !
@@ -206,10 +211,10 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      jbnd = INT(index_matrix(ig1,2))
      !
      IF (l_restart_calc) THEN
-        ! 
+        !
         IF (INT(restart_matrix(ig1)) > 0) GOTO 1111
         !
-     ENDIF 
+     ENDIF
      !
      IF ((ig1 < 1).or.(ig1 > do_index)) GOTO 1111
      !
@@ -220,12 +225,12 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      IF (gamma_only) THEN
         !
-        IF (l_wannier_repr) THEN  
+        IF (l_wannier_repr) THEN
            !
            CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(1,ibnd),evc_loc(1,jbnd), psic,'Wave')
            !
         ELSE
-           ! 
+           !
            CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,jbnd), psic,'Wave')
            !
         ENDIF
@@ -234,7 +239,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
         !
      ELSE
         !
-        IF (l_wannier_repr) THEN  
+        IF (l_wannier_repr) THEN
            !
            CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
            CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,jbnd),psic_aux,'Wave',igk_k(1,1)) !only 1 kpoint
@@ -244,14 +249,14 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
            CALL single_invfft_k(dffts,npw,npwx,evc(1,jbnd),psic_aux,'Wave',igk_k(1,1)) !only 1 kpoint
            !
-        ENDIF 
-        ! 
+        ENDIF
+        !
         rho_aux(:) = DBLE(CONJG(psic(:)) * psic_aux(:))
         !
      ENDIF
      !
      rho_aux(:) = rho_aux(:)/omega
-     ! 
+     !
      CALL couple_with_qbox_routine (kernel, current_spin, rho_aux, dvg)
      !
      ! write dvg vc_rho + vc_rho X vc_rho to disk
@@ -260,11 +265,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      WRITE(my_label2,'(i6.6)') jbnd
      WRITE(my_spin,'(i1)') current_spin
      !
-     filename = TRIM( wstat_dirname )//"/E"//TRIM(ADJUSTL(my_label1))//"_"//&
+     filename = TRIM( wstat_save_dir )//"/E"//TRIM(ADJUSTL(my_label1))//"_"//&
              TRIM(ADJUSTL(my_label2))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL pdep_merge_and_write_G(filename,dvg(:))
      !
-     DEALLOCATE(rho_aux, dvg) 
+     DEALLOCATE(rho_aux, dvg)
      !
      restart_matrix(ig1)  = 1.0
      !
@@ -281,21 +286,21 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      ENDDO
      !
      calc_is_done = .FALSE.
-     filename = TRIM( wstat_dirname )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wstat_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
-     ! 
+     !
   ENDDO
   !
   calc_is_done = .TRUE.
-  filename = TRIM( wstat_dirname )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+  filename = TRIM( wstat_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
              TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
   CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
   !
 2222 CONTINUE
   !
   DEALLOCATE (index_matrix)
-  DEALLOCATE (restart_matrix)
+  IF (ALLOCATED(restart_matrix))   DEALLOCATE (restart_matrix)
   DEALLOCATE (ovl_matrix)
   !
   IF (ALLOCATED(psic))    DEALLOCATE(psic)
@@ -315,7 +320,10 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   USE io_global,             ONLY : stdout
   USE lsda_mod,              ONLY : nspin
   USE fft_base,              ONLY : dffts
-  USE westcom,               ONLY : fftdriver, sqvc
+  USE types_coulomb,         ONLY : pot3D
+  USE westcom,               ONLY : fftdriver, l_xcchi
+  !old west has sqvc, new version use pot3D
+  !USE westcom,               ONLY : fftdriver, sqvc
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
   USE gvect,                 ONLY : gstart,g,ngm,ngmx
@@ -330,7 +338,8 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   USE io_push,               ONLY : io_push_title
   USE martyna_tuckerman,     ONLY : wg_corr_h, do_comp_mt
   USE qbox_interface,        ONLY : apply_kernel_by_qbox
-  USE wbsecom,               ONLY : l_xcchi
+  !wbsecom combined with westcom
+  !USE wbsecom,               ONLY : l_xcchi
   !
   IMPLICIT NONE
   !
@@ -352,7 +361,7 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   REAL(DP), EXTERNAL      :: get_clock
   CHARACTER(20),EXTERNAL  :: human_readable_time
   REAL(DP)                :: rtime(2)
-  REAL(DP)                :: itime(2), otime(2), wtime(2) 
+  REAL(DP)                :: itime(2), otime(2), wtime(2)
   REAL(DP)                :: gnorm2, eh_corr
   !
   TYPE(bar_type) :: barra
@@ -382,9 +391,9 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   ! aux_r -> aux1_g
   !
   IF (gamma_only) THEN
-     ! 
+     !
      CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
-     ! 
+     !
   ELSE
      !
      CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
@@ -395,23 +404,23 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   !
   dvg(:) = (0.0_DP, 0.0_DP)
   DO ig = 1, ngm
-     ! 
-     dvg(ig) = aux1_g(ig) * sqvc(ig) * sqvc(ig)
      !
-  ENDDO 
+     dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
+     !
+  ENDDO
   !
-  ! vc in correlation like term G->0 = 0 
+  ! vc in correlation like term G->0 = 0
   !
-  ! aux1_g -> aux_r 
+  ! aux1_g -> aux_r
   !
   IF (gamma_only) THEN
      !
      CALL single_invfft_gamma(dffts,ngm,ngmx,aux1_g,aux_r,'Dense')
-     ! 
+     !
   ELSE
-     ! 
+     !
      CALL single_invfft_k(dffts,ngm,ngmx,aux1_g,aux_r,'Dense')
-     !  
+     !
   ENDIF
   !
   aux1_r(:,:) = (0.0_DP,0.0_DP)
@@ -419,18 +428,18 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   !
   ! aux1_r = vc*aux1_r()
   !
-  CALL west_dv_of_drho(aux1_r, .true., .false.) 
+  CALL west_dv_of_drho(aux1_r, .true., .false.)
   !
   aux_r(:) = aux1_r(:,current_spin)
   !
   ! Send data to QBOX to compute X|vc rho>
   !
-  aux_rr(:) = DBLE(aux_r(:))/DSQRT(omega) ! scale down pert. 
+  aux_rr(:) = DBLE(aux_r(:))/DSQRT(omega) ! scale down pert.
   !
   CALL apply_kernel_by_qbox(kernel, aux_rr)
   !
-  DO ir = 1, dffts%nnr 
-     !   
+  DO ir = 1, dffts%nnr
+     !
      aux_r(ir) = CMPLX( aux_rr(ir)*DSQRT(omega), 0._DP, KIND=DP) ! rescale response
      !
   ENDDO
@@ -457,9 +466,9 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   aux1_g(:) = (0.0_DP, 0.0_DP)
   !
   IF (gamma_only) THEN
-     ! 
+     !
      CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
-     ! 
+     !
   ELSE
      !
      CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
@@ -467,7 +476,7 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
   ENDIF
   !
   ! vc + vc/fxc X vc
-  !  
+  !
   dvg(:) = dvg(:) + aux1_g(:)
   !
   DEALLOCATE (aux1_g)
@@ -493,7 +502,7 @@ SUBROUTINE couple_with_qbox_routine (kernel, current_spin, dnr, dvg)
                    & human_readable_time(itime(2) - itime(1)), &
                    & human_readable_time(otime(2) - otime(1)), &
                    & human_readable_time(wtime(2) - wtime(1))
-  ! 
+  !
   RETURN
   !
 END SUBROUTINE couple_with_qbox_routine

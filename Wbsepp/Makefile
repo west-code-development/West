@@ -7,6 +7,9 @@ LIBS+= -lstdc++
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
+          $(MOD_FLAG)../Libraries/Json \
+          $(MOD_FLAG)../Libraries/Base64 \
+          $(MOD_FLAG)../Libraries/Forpy \
           $(MOD_FLAG)../Modules \
           $(MOD_FLAG)../Tools \
           $(MOD_FLAG)../FFT_kernel \
@@ -19,11 +22,15 @@ MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LA
           $(MOD_FLAG)../Wbse \
           $(MOD_FLAG)../Westpp \
           $(MOD_FLAG).
+
+#wbsepp_fetch_namelist.o \
+#wbsepp_decompose_eig_contributions.o \
+
+
 IFLAGS=
 
 WBSE_OBJS = \
 wbseppcom.o \
-wbsepp_fetch_namelist.o \
 wbsepp_decompose_eig_contributions.o \
 wbsepp_ads_spectrum.o \
 wbsepp_plot_exc.o \
@@ -31,7 +38,7 @@ wbsepp_plot_charged_density_res_exc.o \
 wbsepp.o
 
 PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a 
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a  ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a ../Libraries/Forpy/libforpy.a
 WESTLIBS = \
 ../Wstat/libwstat.a \
 ../Wbse/libwbse.a \
@@ -51,7 +58,7 @@ all : title tldeps wbsepp.x
 
 wbsepp.x : $(PWOBJS) $(WBSE_OBJS) $(QEMODS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o wbsepp.x \
-	        $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS)
+	        $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wbsepp/wbsepp.x . )
 
 tldeps:

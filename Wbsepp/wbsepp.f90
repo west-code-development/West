@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2016 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,13 +7,13 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 PROGRAM wbse_pp
   !-----------------------------------------------------------------------
-  ! 
+  !
   ! This is the main program that calculates the static screening.
   !
   USE check_stop,           ONLY : check_stop_init
@@ -22,12 +22,12 @@ PROGRAM wbse_pp
   USE mp,                   ONLY : mp_sum,mp_barrier
   USE wbseppcom,            ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
                                    l_exc_rho_res_plot
-  ! 
+  !
   IMPLICIT NONE
   !
   CHARACTER(LEN=9) :: code = 'Wbsepp'
   !
-  ! *** START *** 
+  ! *** START ***
   !
   CALL check_stop_init ()
   !
@@ -70,9 +70,14 @@ END PROGRAM
     SUBROUTINE wbsepp_setup
       !
       USE io_global,              ONLY : stdout
-      USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,wstat_dirname,west_prefix,nbnd_occ,&
-                                       & n_pdep_basis,n_pdep_eigen,n_pdep_times,isz,l_use_ecutrho
-      USE wbsecom,                ONLY : nbndval0x
+      USE types_coulomb,         ONLY : pot3D
+      USE westcom,              ONLY : alphapv_dfpt,npwq,wstat_save_dir,west_prefix,nbnd_occ,&
+                                       & n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,nbndval0x
+
+      !USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,wstat_save_dir,west_prefix,nbnd_occ,&
+      !                                 & n_pdep_basis,n_pdep_eigen,n_pdep_times,isz,l_use_ecutrho
+      !wbsecom combined into westcom
+      !USE wbsecom,                ONLY : nbndval0x
       USE mp,                     ONLY : mp_max
       USE mp_global,              ONLY : intra_bgrp_comm
       USE pwcom,                  ONLY : npw,npwx
@@ -82,7 +87,8 @@ END PROGRAM
       USE constants,              ONLY : e2,fpi
       USE cell_base,              ONLY : tpiba2, alat
       USE io_files,               ONLY : tmp_dir
-      USE qbox_interface,         ONLY : l_load_qbox_wfc, load_qbox_wfc, qbox_ks_wfc_filename
+      !USE qbox_interface,         ONLY : load_qbox_wfc
+      !USE qbox_interface,         ONLY : l_load_qbox_wfc, load_qbox_wfc, qbox_ks_wfc_filename
       USE wbseppcom,              ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
                                          l_exc_rho_res_plot
       !
@@ -97,11 +103,14 @@ END PROGRAM
       !
       l_use_ecutrho = .false.
       !
-      CALL set_npwq0()
+      CALL set_npwq()
       !
-      ALLOCATE(sqvc(ngm))
+      CALL pot3D%init('Dense',.FALSE.,'gb')
+      !old west use store_sqvc to compute coul potential
       !
-      CALL store_sqvc(sqvc,ngm,2,isz)
+      !ALLOCATE(pot3D%sqvc(ngm))
+      !
+      !CALL store_sqvc(pot3D%sqvc,ngm,2,isz)
       !
       CALL set_nbndocc()
       !
@@ -109,11 +118,11 @@ END PROGRAM
       !
       IF (l_lz_spec) THEN
          !
-         wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
+         wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
          !
       ELSEIF (l_meg .or. l_eig_decomp .or. l_exc_plot .or. l_exc_rho_res_plot ) THEN
-         ! 
-         wstat_dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
+         !
+         wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
          !
       ENDIF
       !
@@ -148,7 +157,8 @@ SUBROUTINE wbsepp_readin()
   !
   CALL start_clock('wbsepp_readin')
   !
-  CALL wbsepp_fetch_namelist(2,(/1,2/))
+  !change to new version of fetch namelist
+  !CALL wbsepp_fetch_namelist(2,(/1,2/))
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

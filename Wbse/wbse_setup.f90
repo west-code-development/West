@@ -17,14 +17,13 @@ SUBROUTINE wbse_setup
   USE westcom,                ONLY : alphapv_dfpt,npwq,west_prefix,&
                                    & n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,&
                                    & wstat_save_dir, wstat_restart_dir, nbnd_occ, &
-                                   l_davidson, l_lanzcos, nbndval0x,l_qp_correction
+                                   l_davidson, l_lanzcos, nbndval0x,l_qp_correction, savedir,outdir
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE kinds,                  ONLY : DP
   USE gvect,                  ONLY : gstart,g,ngm,ngmx
   USE constants,              ONLY : e2,fpi
   USE cell_base,              ONLY : tpiba2
-  USE io_files,               ONLY : tmp_dir
   USE control_flags,          ONLY : gamma_only
   !wbsecom combined into westcom
   !USE wbsecom,                ONLY : l_davidson, l_lanzcos, nbndval0x
@@ -60,15 +59,15 @@ SUBROUTINE wbse_setup
   !
   IF (l_lanzcos) THEN
      !
-     wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
+     wstat_save_dir = TRIM( ADJUSTL(outdir) ) // TRIM( ADJUSTL(west_prefix) ) // ".wbse.lanzcos.save/"
      !
   ELSEIF (l_davidson) THEN
      !
-     wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
+     wstat_save_dir = TRIM( ADJUSTL(outdir) ) // TRIM( ADJUSTL(west_prefix) ) // ".wbse.david.save/"
      !
   ELSE
      !
-     wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
+     wstat_save_dir =  TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) //  ".wbse_init.save/"
      !
   ENDIF
   !

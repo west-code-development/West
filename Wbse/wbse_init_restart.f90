@@ -340,7 +340,7 @@ MODULE wbse_init_restart
          ! ... open XML descriptor
          !
          CALL iotk_free_unit(  iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( filename ), BINARY = .FALSE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM(filename), BINARY = .FALSE., IERR = ierr )
          !
       ENDIF
       !
@@ -351,20 +351,22 @@ MODULE wbse_init_restart
       IF ( ionode ) THEN
          !
          CALL iotk_write_begin(iunout,"STATUS_OF_CALCULATION")
-         CALL iotk_write_dat(  iunout,"status", done_calc)
-         CALL iotk_write_end(  iunout,"STATUS_OF_CALCULATION")
+         CALL iotk_write_dat(iunout,"status", done_calc)
+         CALL iotk_write_end(iunout,"STATUS_OF_CALCULATION")
          !
          CALL iotk_write_begin(iunout, "WBSE_INIT_SIZE")
-         CALL iotk_write_dat(  iunout, "size_list", size_list)
-         CALL iotk_write_end(  iunout, "WBSE_INIT_SIZE")
+         CALL iotk_write_dat(iunout, "size_list", size_list)
+         CALL iotk_write_end(iunout, "WBSE_INIT_SIZE")
          !
          CALL iotk_write_begin(iunout, "WBSE_INIT_RESTART")
-         CALL iotk_write_dat(  iunout, "restart_matrix", restart_matrix(:))
-         CALL iotk_write_end(  iunout, "WBSE_INIT_RESTART")
+         CALL iotk_write_dat(iunout, "restart_matrix", restart_matrix(:))
+         CALL iotk_write_end(iunout, "WBSE_INIT_RESTART")
+         !
+         CALL iotk_close_write( iunout )
          !
       ENDIF
       !
-      IF ( ionode ) CALL iotk_close_write( iunout )
+      !IF (ionode)  CALL iotk_close_write( iunout )
       !
       ! BARRIER
       !
@@ -470,7 +472,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM( wstat_save_dir )//"/aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM( wstat_save_dir )//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF(my_pool_id.NE.0) RETURN
       IF(my_bgrp_id.NE.0) RETURN
@@ -538,7 +540,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM( wstat_save_dir )//"/aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM( wstat_save_dir )//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
          !

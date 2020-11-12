@@ -21,7 +21,7 @@ MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LA
           $(MOD_FLAG)../Wstat \
           $(MOD_FLAG).
 
-#  bse_setup.o \
+
 #  wbse_fetch_namelist.o \
 #  wbsecom.o \
 IFLAGS=

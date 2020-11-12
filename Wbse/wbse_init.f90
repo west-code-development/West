@@ -76,12 +76,13 @@ PROGRAM wbse_init
   !
   CALL clean_scratchfiles( )
   !
-  CALL print_clock(' ')
+  CALL west_print_clocks( )
+  !CALL print_clock(' ')
   !
   CALL west_environment_end( code )
   !
   CALL mp_global_end()
   !
-9000 FORMAT (/5x,'Program ',a12,' starts ...',/5x,'Today is ',a9,' at ',a9)
+!9000 FORMAT (/5x,'Program ',a12,' starts ...',/5x,'Today is ',a9,' at ',a9)
   !
 END PROGRAM

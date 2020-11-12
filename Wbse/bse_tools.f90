@@ -18,11 +18,10 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      USE control_flags,  ONLY : gamma_only
      USE fft_base,       ONLY : dfftp, dffts
      USE io_global,      ONLY : ionode, stdout
-     USE io_files,       ONLY : tmp_dir
      USE pdep_io,        ONLY : pdep_read_G_and_distribute
      USE fft_at_gamma,   ONLY : single_invfft_gamma
      USE fft_at_k,       ONLY : single_invfft_k
-     USE westcom,        ONLY : west_prefix
+     USE westcom,        ONLY : savedir
      USE pwcom,          ONLY : npwx
      !
      IMPLICIT NONE
@@ -40,12 +39,12 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      CHARACTER(LEN=6)    :: my_labeli
      CHARACTER(LEN=6)    :: my_labelj
      CHARACTER(LEN=6)    :: my_spin
-     CHARACTER(LEN=256)  :: file_base, dirname
+     CHARACTER(LEN=256)  :: file_base
      CHARACTER(LEN=256)  :: which_bse_kernel
      !
      which_bse_kernel = 'PWSCF'
      !
-     dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
+     !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
      !
      IF (fixed_band_j .lt. fixed_band_i) THEN
         !
@@ -69,7 +68,7 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      !
      rhog = (0.0_DP, 0.0_DP)
      !
-     file_base = TRIM(dirname)//'/E'//TRIM(ADJUSTL(my_labeli))//"_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
+     file_base = TRIM(savedir)//'/E'//TRIM(ADJUSTL(my_labeli))//"_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL pdep_read_G_and_distribute(file_base, rhog(:))
      !
      RETURN
@@ -84,13 +83,12 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      USE control_flags,  ONLY : gamma_only
      USE fft_base,       ONLY : dfftp, dffts
      USE io_global,      ONLY : ionode, stdout
-     USE io_files,       ONLY : tmp_dir
      USE xml_io_base,    ONLY : read_rho_xml
      USE pdep_io,        ONLY : pdep_read_G_and_distribute
      USE gvect,          ONLY : ngm, ngmx
      USE fft_at_gamma,   ONLY : single_invfft_gamma
      USE fft_at_k,       ONLY : single_invfft_k
-     USE westcom,        ONLY : west_prefix
+     USE westcom,        ONLY : savedir
      !
      IMPLICIT NONE
      !
@@ -146,7 +144,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      rhoaux1(:) = 0.0_DP
      rhoaux2(:) = 0.0_DP
      !
-     dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
+     !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
      !
      IF (fixed_band_j .lt. fixed_band_i) THEN
         !
@@ -170,7 +168,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         write (my_labelj,'(i6.6)') band_j
         write (my_spin,  '(i1)') ispin
         !
-        file_base = TRIM(dirname)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//'_'//TRIM(my_spin)//".dat"
+        file_base = TRIM(savedir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//'_'//TRIM(my_spin)//".dat"
         !
         CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
                    dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
@@ -185,7 +183,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         !
         aux_g = (0.0_DP, 0.0_DP)
         !
-        file_base = TRIM(dirname)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+        file_base = TRIM(savedir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
                     "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
         CALL pdep_read_G_and_distribute(file_base, aux_g(:))
         !
@@ -231,7 +229,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            write (my_labelj,'(i6.6)')  band_j
            write (my_spin,  '(i1)') ispin
            !
-           file_base = TRIM(dirname)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//'_'//TRIM(my_spin)//".dat"
+           file_base = TRIM(savedir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//'_'//TRIM(my_spin)//".dat"
            !
            CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
                    dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
@@ -246,7 +244,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            !
            aux_g = (0.0_DP, 0.0_DP)
            !
-           file_base = TRIM(dirname)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+           file_base = TRIM(savedir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
                       "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
            CALL pdep_read_G_and_distribute(file_base,aux_g(:))
            !
@@ -295,7 +293,7 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
   USE mp,                 ONLY: mp_bcast
   USE lsda_mod,           ONLY: nspin
   USE bse_module,         ONLY: u_matrix,ovl_matrix
-  USE westcom,            ONLY: west_prefix
+  USE westcom,            ONLY: savedir
   !
   IMPLICIT NONE
   !
@@ -303,12 +301,12 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
   !
   LOGICAL :: exst
   INTEGER :: iw, jw, emptyunit, is
-  CHARACTER(LEN=256) :: fileempty, dirname
+  CHARACTER(LEN=256) :: fileempty
   CHARACTER(LEN=4)   :: my_spin
   !
   ! ... Subroutine Body
   !
-  dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
+  !dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
   !
   DO is = 1, nspin
      !
@@ -317,7 +315,7 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
      u_matrix(:,:,is) = (0.0_DP, 0.0_DP)
      !
      WRITE(my_spin,'(i1)') is
-     fileempty = TRIM(dirname)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+     fileempty = TRIM(savedir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
      WRITE(stdout,'(/,5X,"Reading U matrix from ", A256 )') fileempty
      !
      emptyunit = 100
@@ -345,7 +343,7 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
      ovl_matrix(:,:,is) = 0.0_DP
      !
      WRITE(my_spin,'(i1)') is
-     fileempty = TRIM(dirname)//'/overlap_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+     fileempty = TRIM(savedir)//'/overlap_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
      WRITE(stdout,'(/,5X,"Reading overlap matrix from ", A256 )') fileempty
      !
      emptyunit = 100
@@ -383,7 +381,7 @@ subroutine write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   USE kinds,              ONLY: DP
   USE io_global,          ONLY: ionode, stdout
   USE io_files,           ONLY: tmp_dir
-  USE westcom,            ONLY: west_prefix
+  USE westcom,            ONLY : savedir
   !
   IMPLICIT NONE
   !
@@ -392,15 +390,15 @@ subroutine write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   real(DP),          intent(in) :: ovl_matrix(num_wan,num_wan)
   !
   INTEGER            :: iw, jw, emptyunit
-  character(len=256) :: fileempty, dirname
+  character(len=256) :: fileempty
   character(len=4)   :: my_spin
   !
   ! ... Subroutine Body
   !
-  dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save/'
+  !dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save/'
   !
   WRITE(my_spin,'(i1)') ispin
-  fileempty = TRIM(dirname)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+  fileempty = TRIM(savedir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
   WRITE(stdout,'(/,5X,"Writing U matrix to file ", A256 )') fileempty
   !
   emptyunit = 100
@@ -419,7 +417,7 @@ subroutine write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   IF ( ionode ) CLOSE ( emptyunit )
   !
   WRITE(my_spin,'(i1)') ispin
-  fileempty = TRIM(dirname)//'/u_matrix.wan.occ.formated.'//TRIM(my_spin)//'.dat'
+  fileempty = TRIM(savedir)//'/u_matrix.wan.occ.formated.'//TRIM(my_spin)//'.dat'
   WRITE(stdout,'(/,5X,"Writing formatted U matrix to file ", A256 )') fileempty
   !
   emptyunit = 100
@@ -442,7 +440,7 @@ subroutine write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   IF ( ionode ) CLOSE ( emptyunit )
   !
   WRITE(my_spin,'(i1)') ispin
-  fileempty = TRIM(dirname)//'/overlap_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+  fileempty = TRIM(savedir)//'/overlap_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
   WRITE(stdout,'(/,5X,"Writing overlap matrix to file ", A256 )') fileempty
   !
   emptyunit = 100
@@ -461,7 +459,7 @@ subroutine write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   IF ( ionode ) CLOSE ( emptyunit )
   !
   WRITE(my_spin,'(i1)') ispin
-  fileempty = TRIM(dirname)//'/overlap_matrix.wan.occ.formated.'//TRIM(my_spin)//'.dat'
+  fileempty = TRIM(savedir)//'/overlap_matrix.wan.occ.formated.'//TRIM(my_spin)//'.dat'
   WRITE(stdout,'(/,5X,"Writing format overlap matrix to file ", A256 )') fileempty
   !
   emptyunit = 100
@@ -500,8 +498,7 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
                                    me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
   USE distribution_center,  ONLY : bseparal
-  USE io_files,             ONLY : tmp_dir
-  USE westcom,              ONLY : west_prefix
+  USE westcom,              ONLY : savedir
   !
   IMPLICIT NONE
   !
@@ -514,18 +511,17 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   ! Workspace
   !
   INTEGER :: ierr, iunout
-  CHARACTER(LEN=256)  :: filename,dirname
+  CHARACTER(LEN=256)  :: filename
   CHARACTER(LEN=4)    :: my_spin
   !
   ! BARRIER
   !
   CALL mp_barrier(world_comm)
   !
-  dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
   WRITE(my_spin,'(i1)') ispin
-  filename = TRIM(dirname) // '/' // 'u_matrix.wan.occ.' // TRIM(my_spin) // ".dat"
+  filename =  TRIM(savedir) // 'u_matrix.wan.occ.' // TRIM(my_spin) // ".dat"
   !
-  WRITE(stdout,'(5X,"Writing Omatrix & Umatrix to ", A256 )') filename
+  WRITE(stdout,'(/,5X,"Writing Omatrix & Umatrix to ", A256 )') filename
   !
   IF(my_pool_id.NE.0) RETURN
   IF(my_bgrp_id.NE.0) RETURN
@@ -536,20 +532,20 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
      !
      ! ... open XML descriptor
      !
-     CALL iotk_free_unit(  iunout, ierr )
-     CALL iotk_open_write( iunout, FILE =  filename, BINARY = .False., IERR = ierr )
+     CALL iotk_free_unit(iunout,ierr)
+     CALL iotk_open_write( iunout, FILE = filename, BINARY = .False., IERR = ierr )
      !
      CALL iotk_write_begin(iunout,"OUMATRIX_SIZE")
-     CALL iotk_write_dat(  iunout,"oumat_dim", oumat_dim)
-     CALL iotk_write_end(  iunout,"OUMATRIX_SIZE")
+     CALL iotk_write_dat(iunout,"oumat_dim", oumat_dim)
+     CALL iotk_write_end(iunout,"OUMATRIX_SIZE")
      !
      CALL iotk_write_begin(iunout, "UMATRIX_ELE")
-     CALL iotk_write_dat(  iunout, "umat_ele", umatrix(:,:))
-     CALL iotk_write_end(  iunout, "UMATRIX_ELE")
+     CALL iotk_write_dat(iunout, "umat_ele", umatrix(:,:))
+     CALL iotk_write_end(iunout, "UMATRIX_ELE")
      !
      CALL iotk_write_begin(iunout, "OMATRIX_ELE")
-     CALL iotk_write_dat(  iunout, "omat_ele", omatrix(:,:))
-     CALL iotk_write_end(  iunout, "OMATRIX_ELE")
+     CALL iotk_write_dat(iunout, "omat_ele", omatrix(:,:))
+     CALL iotk_write_end(iunout, "OMATRIX_ELE")
      !
      CALL iotk_close_write(iunout)
      !
@@ -571,8 +567,7 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   USE mp_world,             ONLY : world_comm,root
   USE mp,                   ONLY : mp_bcast,mp_barrier
   USE mp_global,            ONLY : intra_image_comm
-  USE westcom,              ONLY : west_prefix
-  USE io_files,             ONLY : tmp_dir
+  USE westcom,              ONLY : savedir
   !
   IMPLICIT NONE
   !
@@ -586,7 +581,7 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   INTEGER :: ierr,iunout
   INTEGER :: oumat_dim_tmp
-  CHARACTER(LEN=256)  :: filename,dirname
+  CHARACTER(LEN=256)  :: filename
   CHARACTER(LEN=4)    :: my_spin
   REAL(DP),    ALLOCATABLE :: omatrix_tmp(:,:)
   COMPLEX(DP), ALLOCATABLE :: umatrix_tmp(:,:)
@@ -596,9 +591,9 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   CALL mp_barrier(world_comm)
   !
-  dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
+  !dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
   WRITE(my_spin,'(i1)') ispin
-  filename = TRIM(dirname)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+  filename = TRIM(savedir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
   !
   WRITE(stdout,'(/,5X,"Reading Omatrix & Umatrix from ", A256 )') filename
   !

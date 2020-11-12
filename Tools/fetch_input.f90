@@ -469,7 +469,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(cvalue, "wbse_calculation");wbse_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(n_pdep_eigen, "n_pdep_eigen")
+        IERR = return_dict%getitem(n_plep_eigen, "n_plep_eigen")
         IERR = return_dict%getitem(n_plep_times, "n_plep_times")
         IERR = return_dict%getitem(n_plep_maxiter, "n_plep_maxiter")
         IERR = return_dict%getitem(n_plep_read_from_file, "n_plep_read_from_file")

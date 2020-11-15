@@ -16,8 +16,7 @@ SUBROUTINE wbse_setup
   !
   USE westcom,                ONLY : alphapv_dfpt,npwq,west_prefix,&
                                    & n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,&
-                                   & wstat_save_dir, wstat_restart_dir, nbnd_occ, &
-                                   l_davidson, l_lanzcos, nbndval0x,l_qp_correction, savedir,outdir
+                                   & wbse_init_save_dir, nbndval0x,l_qp_correction, nbnd_occ
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE kinds,                  ONLY : DP
@@ -57,28 +56,13 @@ SUBROUTINE wbse_setup
   !
   CALL west_dv_setup(bse_calc)
   !
-  IF (l_lanzcos) THEN
-     !
-     wstat_save_dir = TRIM( ADJUSTL(outdir) ) // TRIM( ADJUSTL(west_prefix) ) // ".wbse.lanzcos.save/"
-     !
-  ELSEIF (l_davidson) THEN
-     !
-     wstat_save_dir = TRIM( ADJUSTL(outdir) ) // TRIM( ADJUSTL(west_prefix) ) // ".wbse.david.save/"
-     !
-  ELSE
-     !
-     wstat_save_dir =  TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) //  ".wbse_init.save/"
-     !
-  ENDIF
-  !
-  CALL my_mkdir( wstat_save_dir )
+  CALL my_mkdir(wbse_init_save_dir)
   !
   n_pdep_basis = n_pdep_eigen * n_pdep_times
   !
     IF (l_qp_correction) THEN
      !
      CALL read_qp_eigs ()
-     !CALL read_ks_wfc  ()
      !
   ENDIF
   !

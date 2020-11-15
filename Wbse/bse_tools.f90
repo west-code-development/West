@@ -492,13 +492,13 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   USE kinds,                ONLY : DP
   USE iotk_module
-  USE mp_world,             ONLY : root,world_comm
-  USE io_global,            ONLY : ionode,stdout
-  USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
+  USE mp_world,             ONLY : world_comm
+  USE io_global,            ONLY : stdout
+  USE mp,                   ONLY : mp_barrier
   USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
                                    me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
-  USE distribution_center,  ONLY : bseparal
-  USE westcom,              ONLY : savedir
+  !USE distribution_center,  ONLY : bseparal
+  USE westcom,              ONLY : wbse_init_save_dir
   !
   IMPLICIT NONE
   !
@@ -512,6 +512,7 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   INTEGER :: ierr, iunout
   CHARACTER(LEN=256)  :: filename
+  !character (len=:), allocatable :: filename
   CHARACTER(LEN=4)    :: my_spin
   !
   ! BARRIER
@@ -519,9 +520,10 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   CALL mp_barrier(world_comm)
   !
   WRITE(my_spin,'(i1)') ispin
-  filename =  TRIM(savedir) // 'u_matrix.wan.occ.' // TRIM(my_spin) // ".dat"
   !
-  WRITE(stdout,'(/,5X,"Writing Omatrix & Umatrix to ", A256 )') filename
+  filename =  TRIM(wbse_init_save_dir) // "/u_matrix.wan.occ." // TRIM(my_spin) // ".dat"
+  !
+  WRITE(stdout,'(5X,"Writing Omatrix & Umatrix to ", A256 )') TRIM(filename)
   !
   IF(my_pool_id.NE.0) RETURN
   IF(my_bgrp_id.NE.0) RETURN
@@ -530,13 +532,14 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   IF (me_bgrp==root_bgrp) THEN
      !
+     !
      ! ... open XML descriptor
      !
      CALL iotk_free_unit(iunout,ierr)
-     CALL iotk_open_write( iunout, FILE = filename, BINARY = .False., IERR = ierr )
+     CALL iotk_open_write( iunout, FILE = TRIM(filename), BINARY = .False., IERR = ierr )
      !
      CALL iotk_write_begin(iunout,"OUMATRIX_SIZE")
-     CALL iotk_write_dat(iunout,"oumat_dim", oumat_dim)
+     CALL iotk_write_dat(iunout,"oumat_dim",oumat_dim)
      CALL iotk_write_end(iunout,"OUMATRIX_SIZE")
      !
      CALL iotk_write_begin(iunout, "UMATRIX_ELE")
@@ -567,7 +570,7 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   USE mp_world,             ONLY : world_comm,root
   USE mp,                   ONLY : mp_bcast,mp_barrier
   USE mp_global,            ONLY : intra_image_comm
-  USE westcom,              ONLY : savedir
+  USE westcom,              ONLY : wbse_init_save_dir
   !
   IMPLICIT NONE
   !
@@ -593,7 +596,7 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   !dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
   WRITE(my_spin,'(i1)') ispin
-  filename = TRIM(savedir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+  filename = TRIM(wbse_init_save_dir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
   !
   WRITE(stdout,'(/,5X,"Reading Omatrix & Umatrix from ", A256 )') filename
   !

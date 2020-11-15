@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 MODULE check_ovl_wfc
-  !      
+  !
   INTERFACE check_ovl_wannier
      !
      MODULE PROCEDURE check_ovl_wannier_real, check_ovl_wannier_cmplx
@@ -19,10 +19,10 @@ MODULE check_ovl_wfc
     !
     SUBROUTINE read_bisection_loc(current_spin, numband, bisec_loc)
       !
-      USE io_global,     ONLY : stdout, ionode, ionode_id 
+      USE io_global,     ONLY : stdout, ionode, ionode_id
       USE mp,            ONLY : mp_bcast, mp_barrier
       USE mp_world,      ONLY : world_comm
-      USE bse_module,    ONLY : et_qp 
+      USE bse_module,    ONLY : et_qp
       USE wvfct,         ONLY : nbnd, et
       USE pwcom,         ONLY : nks
       USE lsda_mod,      ONLY : lsda
@@ -32,7 +32,7 @@ MODULE check_ovl_wfc
       INTEGER, INTENT(IN)    :: current_spin, numband
       INTEGER, INTENT(INOUT) :: bisec_loc(numband)
       !
-      INTEGER :: ibnd, num_localized_orb
+      INTEGER :: ibnd, num_localized_orb,iunit
       CHARACTER(LEN=3) :: my_spin
       CHARACTER(LEN=256) :: file_bisection
       !
@@ -45,21 +45,21 @@ MODULE check_ovl_wfc
       WRITE(my_spin,'(i1)') current_spin
       !
       file_bisection = 'bisection_localization_'//TRIM(my_spin)//'.dat'
-      ! 
-      if (ionode) then 
+      !
+      if (ionode) then
          !
-         open(unit = 99, file =TRIM(file_bisection),form = 'formatted',status = 'old')
+         open(NEWUNIT=iunit, file =TRIM(file_bisection),form = 'formatted',status = 'old')
          !
-         read(99,*) num_localized_orb
-         ! 
+         read(iunit,*) num_localized_orb
+         !
          do ibnd = 1, num_localized_orb
             !
-            read (99, * ) bisec_loc(ibnd) 
+            read (iunit, * ) bisec_loc(ibnd)
             !
          enddo
          !
-         close (99)
-         !     
+         close (iunit)
+         !
       endif
       !
       call mp_bcast (num_localized_orb,ionode_id,world_comm )
@@ -67,11 +67,11 @@ MODULE check_ovl_wfc
       !
       return
       !
-    ENDSUBROUTINE 
+    ENDSUBROUTINE
     !
     SUBROUTINE check_ovl_bisection (orbital_i, orbital_j, ovl_value)
       !
-      ! input is the bitwise number of orb_i and orb_j 
+      ! input is the bitwise number of orb_i and orb_j
       !
       USE kinds,                ONLY : DP
       !
@@ -90,7 +90,7 @@ MODULE check_ovl_wfc
       loc_j = orbital_j
       !
       DO WHILE ( (loc_i .NE. 0) .and. (loc_j .NE. 0) )
-         ! 
+         !
          ! get the weight of projections for each state
          !
          int_p_right_i = AND(loc_i, 1)
@@ -129,7 +129,7 @@ MODULE check_ovl_wfc
             ovl_value = -1.0_DP
             !
             RETURN
-            ! 
+            !
          ENDIF
          !
          loc_i = ISHFT(loc_i, -2)
@@ -144,7 +144,7 @@ MODULE check_ovl_wfc
     ENDSUBROUTINE
     !
     SUBROUTINE check_ovl_wannier_real (orb_real_i, orb_real_j, ovl_value)
-      !      
+      !
       USE kinds,                ONLY : DP
       USE control_flags,        ONLY : gamma_only
       USE fft_base,             ONLY : dfftp,dffts
@@ -161,15 +161,15 @@ MODULE check_ovl_wfc
       INTEGER   :: ir
       !
       REAL (DP) :: summ_ib, summ_jb, summ_ij
-      ! 
-      ovl_value = 0.0_DP 
+      !
+      ovl_value = 0.0_DP
       summ_ib   = 0.0_DP
       summ_jb   = 0.0_DP
       summ_ij   = 0.0_DP
       !
       DO ir = 1, dfftp%nnr
          !
-         summ_ib = summ_ib +  orb_real_i(ir)**4 
+         summ_ib = summ_ib +  orb_real_i(ir)**4
          summ_jb = summ_jb +  orb_real_j(ir)**4
          summ_ij = summ_ij +  orb_real_i(ir)**2 * orb_real_j(ir)**2
          !
@@ -178,7 +178,7 @@ MODULE check_ovl_wfc
       summ_ib = summ_ib * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
       summ_jb = summ_jb * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
       summ_ij = summ_ij * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
-      ! 
+      !
       CALL mp_sum(summ_ib, intra_bgrp_comm)
       CALL mp_sum(summ_jb, intra_bgrp_comm)
       CALL mp_sum(summ_ij, intra_bgrp_comm)
@@ -187,10 +187,10 @@ MODULE check_ovl_wfc
       !
       RETURN
       !
-    ENDSUBROUTINE   
+    ENDSUBROUTINE
     !
     SUBROUTINE check_ovl_wannier_cmplx (orb_cmpl_i, orb_cmpl_j, ovl_value)
-      !       
+      !
       USE kinds,                ONLY : DP
       USE control_flags,        ONLY : gamma_only
       USE fft_base,             ONLY : dfftp,dffts
@@ -208,7 +208,7 @@ MODULE check_ovl_wfc
       !
       REAL (DP) :: summ_ib, summ_jb, summ_ij
       !
-      ovl_value = 0.0_DP 
+      ovl_value = 0.0_DP
       summ_ib = 0.0_DP
       summ_jb = 0.0_DP
       summ_ij = 0.0_DP
@@ -225,7 +225,7 @@ MODULE check_ovl_wfc
       summ_ib = summ_ib * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
       summ_jb = summ_jb * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
       summ_ij = summ_ij * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
-      ! 
+      !
       CALL mp_sum(summ_ib, intra_bgrp_comm)
       CALL mp_sum(summ_jb, intra_bgrp_comm)
       CALL mp_sum(summ_ij, intra_bgrp_comm)

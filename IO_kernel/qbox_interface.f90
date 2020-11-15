@@ -265,16 +265,16 @@ MODULE qbox_interface
       !
       ! compute size of vextr and drhor arrays
       !
-      ALLOCATE(nplocs(0:dffts%nproc - 1))
-      lastproc = 0
-      DO proc = 0, ( dffts%nproc - 1 )
-         nplocs(proc) = dffts%nnp * dffts%npp(proc+1)
-         IF ( nplocs(proc) > 0 ) lastproc = proc
-      ENDDO
-      nploc = nplocs(dffts%mype)
+      !ALLOCATE(nplocs(0:dffts%nproc - 1))
+      !lastproc = 0
+      !DO proc = 0, ( dffts%nproc - 1 )
+      !   nplocs(proc) = dffts%nnp * dffts%npp(proc+1)
+      !   IF ( nplocs(proc) > 0 ) lastproc = proc
+      !ENDDO
+      !nploc = nplocs(dffts%mype)
       !
-      CALL MPI_ALLREDUCE(nploc, np, 1, MPI_INT, MPI_SUM, intra_image_comm, ierr)
-      IF ( np /= dffts%nr1 * dffts%nr2 * dffts%nr3 ) CALL errore('qbox_interface', 'np /= dffts%nr1 * dffts%nr2 * dffts%nr3',1)
+      !CALL MPI_ALLREDUCE(nploc, np, 1, MPI_INT, MPI_SUM, intra_image_comm, ierr)
+      !IF ( np /= dffts%nr1 * dffts%nr2 * dffts%nr3 ) CALL errore('qbox_interface', 'np /= dffts%nr1 * dffts%nr2 * dffts%nr3',1)
       !
       ! define qbox working directory and file names
       !
@@ -458,26 +458,26 @@ MODULE qbox_interface
       !
       REAL(DP), INTENT(OUT)           :: vextr(:)
       !
-      REAL(DP),ALLOCATABLE            :: vextr_gathered(:)              ! gathered vextr on processor 0
-      REAL(DP),ALLOCATABLE            :: sbuf(:), rbuf(:)               ! send buf, receive buf
-      REAL(DP),ALLOCATABLE            :: vextr_adj(:)                   ! vextr with adjusted size for base64 encoding
+      !REAL(DP),ALLOCATABLE            :: vextr_gathered(:)              ! gathered vextr on processor 0
+      !REAL(DP),ALLOCATABLE            :: sbuf(:), rbuf(:)               ! send buf, receive buf
+      !REAL(DP),ALLOCATABLE            :: vextr_adj(:)                   ! vextr with adjusted size for base64 encoding
       !
-      CHARACTER,ALLOCATABLE           :: wbuf(:)                        ! write buf (of size nchars)
+      !CHARACTER,ALLOCATABLE           :: wbuf(:)                        ! write buf (of size nchars)
       !
-      INTEGER              :: sbufsize, rbufsize, sbufsize0, rbufsize0
-      INTEGER              :: nploc_adj                                 ! local size of vextr after adjusting
-      INTEGER              :: nchars                                    ! size of base64 encoded vextr
-      INTEGER              :: offset                                    ! offset for MPI_File_write_at_all
+      !INTEGER              :: sbufsize, rbufsize, sbufsize0, rbufsize0
+      !INTEGER              :: nploc_adj                                 ! local size of vextr after adjusting
+      !INTEGER              :: nchars                                    ! size of base64 encoded vextr
+      !INTEGER              :: offset                                    ! offset for MPI_File_write_at_all
       !
-      INTEGER              :: stat(MPI_STATUS_SIZE)
-      INTEGER              :: proc, fh, info, ierr, i
+      !INTEGER              :: stat(MPI_STATUS_SIZE)
+      !INTEGER              :: proc, fh, info, ierr, i
       !
       CALL mp_barrier(intra_image_comm)
       !
       CALL start_clock( 'write_vext' )
 
 
-      CALL write_function3d(path//TRIM(vext_file),vextr,dffts)
+      CALL write_function3d(path//TRIM(vext_file),vextr,dffts,onroot)
       !
       !SELECT CASE (TRIM(io))
       !CASE ("base64_parallel")
@@ -647,20 +647,20 @@ MODULE qbox_interface
       INTEGER, OPTIONAL, INTENT(IN)  :: ispin
       REAL(DP), INTENT(OUT)  :: drhor(:)
       !
-      REAL(DP),ALLOCATABLE   :: drhor_gathered(:)
-      REAL(DP),ALLOCATABLE   :: tmpr(:)
-#ifdef C_BINDING
-      REAL(C_DOUBLE),ALLOCATABLE   :: tmpr_C(:)
-#endif
+      !REAL(DP),ALLOCATABLE   :: drhor_gathered(:)
+      !REAL(DP),ALLOCATABLE   :: tmpr(:)
+!#ifdef C_BINDING
+!      REAL(C_DOUBLE),ALLOCATABLE   :: tmpr_C(:)
+!#endif
       !
-      CHARACTER,ALLOCATABLE  :: rbuf(:)
+      !CHARACTER,ALLOCATABLE  :: rbuf(:)
       !
-      INTEGER                :: fh
-      INTEGER                :: nstart, nend, gstart, gend, istart, iend
-      INTEGER                :: nfloats, offset, nbytes, nchars, rbufsize
-      INTEGER(KIND=MPI_OFFSET_KIND)   :: filesize
-      INTEGER                :: stat(MPI_STATUS_SIZE)
-      INTEGER                :: ierr, i
+      !INTEGER                :: fh
+      !INTEGER                :: nstart, nend, gstart, gend, istart, iend
+      !INTEGER                :: nfloats, offset, nbytes, nchars, rbufsize
+      !INTEGER(KIND=MPI_OFFSET_KIND)   :: filesize
+      !INTEGER                :: stat(MPI_STATUS_SIZE)
+      !INTEGER                :: ierr, i
       !
       CHARACTER(len=10)      :: mype
       CHARACTER(LEN=256)     :: resp_file_to_read
@@ -697,7 +697,7 @@ MODULE qbox_interface
       !
       CALL start_clock( 'read_resp' )
       !
-      CALL read_function3d(resp_file_to_read,drhor,dffts)
+      CALL read_function3d(resp_file_to_read,drhor,dffts,onroot)
 !      SELECT CASE (TRIM(io))
 !      CASE ('base64_parallel')
 !         !
@@ -930,7 +930,7 @@ MODULE qbox_interface
       !
       CALL delete_lock_file()
       !
-      DEALLOCATE(nplocs)
+      !DEALLOCATE(nplocs)
       !
     END SUBROUTINE
     !

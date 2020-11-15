@@ -58,21 +58,21 @@ SUBROUTINE wbse_init_readin()
   !-----------------------------------------------------------------------
   !
   USE pwcom
-  USE westcom
-  USE ions_base,        ONLY : nat
-  USE uspp,             ONLY : okvan
-  USE io_files,         ONLY : tmp_dir, prefix
-  USE io_global,        ONLY : stdout
-  USE noncollin_module, ONLY : noncolin
-  USE mp,               ONLY : mp_bcast
-  USE mp_world,         ONLY : nproc,mpime,root
+  !USE westcom
+  !USE ions_base,        ONLY : nat
+   USE uspp,             ONLY : okvan
+  !USE io_files,         ONLY : tmp_dir, prefix
+  !USE io_global,        ONLY : stdout
+  !USE noncollin_module, ONLY : noncolin
+  !USE mp,               ONLY : mp_bcast
+  !USE mp_world,         ONLY : nproc,mpime,root
   !
   IMPLICIT NONE
   !
   ! Workspace
   !
-  CHARACTER(LEN=256), EXTERNAL :: trimcheck
-  INTEGER :: iunit =5, ios
+  !CHARACTER(LEN=256), EXTERNAL :: trimcheck
+  !INTEGER :: iunit =5, ios
   !
   CALL start_clock('wbse_init_readin')
   !

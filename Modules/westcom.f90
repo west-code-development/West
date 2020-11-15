@@ -233,31 +233,52 @@ MODULE westpp_center
   !
 END MODULE
 !
-MODULE wbse_center
+!
+MODULE wbse_init_center
   !
   USE kinds, ONLY :  DP
   !
   SAVE
-  !TODO:  chi_driver   chi_kernel the same??
-  ! INPUT FOR wbse_control wbse_init_qboxcoupling.f90:26
-  !
-  !CHARACTER(LEN=256) :: davidson_kernel   ! which quantity to diagonalize? 'CHI0', 'CHI' or 'CHI_RPA'
-  !CHARACTER(LEN=256) :: chi0_driver       ! 'DFPT' or 'FF_QBOX'
-  CHARACTER(LEN=256) :: chi_driver        ! 'DFPT' or 'FF_QBOX'
-  !
   !
   ! INPUT FOR wbse_init
   !
   CHARACTER(LEN=1)   :: wbse_init_calculation
+  CHARACTER(LEN=256) :: which_bse_method
   CHARACTER(LEN=256) :: chi_kernel
   CHARACTER(LEN=256) :: qbox_bisec_wfc_filename
   INTEGER  :: which_spin_channel
   REAL(DP) :: overlap_thr
-  LOGICAL  :: use_qbox            = .FALSE.
-  LOGICAL  :: l_use_localise_repr = .FALSE.
-  LOGICAL  :: l_test_ovl          = .FALSE.
-  LOGICAL  :: use_wstat_pdep      = .FALSE.
+  !INTEGER :: n_pdep_eigen
+  LOGICAL  :: l_use_localise_repr = .FALSE.   !flag read from wbse_init.in
   LOGICAL  :: l_use_bisection_thr = .FALSE.
+  !
+  LOGICAL  :: use_qbox            = .FALSE.   !control flow in wbse_init
+  LOGICAL  :: l_test_ovl          = .FALSE.   !control flow in wbse_init
+  LOGICAL  :: use_wstat_pdep      = .FALSE.   !control flow in wbse_init
+  !
+  ! FOR qbox_control
+  !
+  INTEGER :: nrowmax
+  CHARACTER(LEN=256)  :: xml_file             ! xml file from qbox ground state calculation
+  CHARACTER(LEN=256) ::  xc                   ! xc functional
+  REAL(DP) ::            alpha_pbe0           ! alpha for PBE0 calculation
+  REAL(DP) ::            amplitude            ! amplitude for vext
+  CHARACTER(LEN=256) ::  wf_dyn               ! wavefunction update algorithm
+  REAL(DP) ::            btHF                 ! bisection threshold for HF exchange computation
+  CHARACTER(LEN=256) ::  blHF                 ! bisection levels for HF exchange computation
+  INTEGER :: nitscf
+  INTEGER :: nite
+  !
+  CHARACTER(LEN=512) :: wbse_init_save_dir
+  !
+END MODULE
+!
+!
+MODULE wbse_center
+  !
+  USE kinds, ONLY : DP
+  !
+  SAVE
   !
   ! INPUT FOR wbse_control
   !
@@ -267,8 +288,8 @@ MODULE wbse_center
   INTEGER  :: n_plep_maxiter
   INTEGER  :: n_plep_read_from_file
   !
-  LOGICAL  :: l_qp_correction
-  LOGICAL  :: l_bse_calculation
+  LOGICAL  :: l_qp_correction             !flag read from wbse.in to activate read qp file. TODO: need modify to filename
+  LOGICAL  :: l_bse_calculation           !flag read from wbse.in
   LOGICAL  :: l_diag_term_only
   LOGICAL  :: l_preconditioning
   !
@@ -278,15 +299,14 @@ MODULE wbse_center
   REAL(DP) :: eps_macro
   !
   CHARACTER(LEN=1)   :: wbse_calculation
-  CHARACTER(LEN=256) :: which_bse_method
   CHARACTER(LEN=256) :: wbse_diag_method
   CHARACTER(LEN=256) :: spin_excitation
   !
   ! FOR global variables
   !
-  INTEGER :: nbndval0x
-  LOGICAL :: l_lanzcos     = .FALSE.
-  LOGICAL :: l_davidson    = .FALSE.
+  INTEGER :: nbndval0x                 !wbse wbse_init
+  LOGICAL :: l_lanzcos     = .FALSE.   !wbse
+  LOGICAL :: l_davidson    = .FALSE.   !wbse
   LOGICAL :: l_bse_triplet = .FALSE.
   LOGICAL :: l_xcchi       = .FALSE.
   REAL(DP):: mac_isz
@@ -313,20 +333,18 @@ MODULE wbse_center
   COMPLEX(DP),ALLOCATABLE :: dng_exc(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: dvg_exc(:,:,:,:)
   !
-  ! FOR qbox_control  these values are in IO/qbox_interface move to here_
+  CHARACTER(LEN=512) :: wbse_save_dir
   !
-  INTEGER :: nrowmax
-  CHARACTER(LEN=256)  :: xml_file                ! xml file from qbox ground state calculation
-  CHARACTER(LEN=256) ::  xc                      ! xc functional
-  REAL(DP) :: alpha_pbe0                         ! alpha for PBE0 calculation
-  REAL(DP) :: amplitude                          ! amplitude for vext
-  CHARACTER(LEN=256) :: wf_dyn                   ! wavefunction update algorithm
-  REAL(DP) :: btHF              ! bisection threshold for HF exchange computation
-  CHARACTER(LEN=256) :: blHF    ! bisection levels for HF exchange computation
-  INTEGER :: nitscf
-  INTEGER :: nite
+END MODULE
+!
+!
+MODULE wbsepp_center
   !
-  ! For wbsepp_contrl these values are in wbsepp/wbseppcom.f90 move to here
+  USE kinds, ONLY : DP
+  !
+  SAVE
+  !
+  ! INPUT FOR wbsepp_control
   !
   LOGICAL :: l_meg
   LOGICAL :: l_eig_decomp
@@ -350,7 +368,10 @@ MODULE wbse_center
   REAL(dp) :: r0_input(3)
   INTEGER  :: iexc_plot
   !
+  CHARACTER(LEN=512) :: wbsepp_save_dir
+  !
 END MODULE
+!
 !
 MODULE wan_center
   !
@@ -385,6 +406,8 @@ MODULE westcom
   USE westpp_center
   USE wan_center
   USE io_unit_numbers
+  USE wbse_init_center
   USE wbse_center
+  USE wbsepp_center
   !
 END MODULE

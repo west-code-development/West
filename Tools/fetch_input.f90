@@ -731,6 +731,10 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      l_test_ovl = .FALSE.
      IF (wbse_init_calculation == 'I') l_test_ovl = .TRUE.
      !
+     CALL mp_bcast(use_qbox,root,world_comm)
+     CALL mp_bcast(use_wstat_pdep,root,world_comm)
+     CALL mp_bcast(l_test_ovl,root,world_comm)
+     !
   ENDIF
   !
   IF ( ANY(driver(:)==7) ) THEN

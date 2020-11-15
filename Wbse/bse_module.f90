@@ -26,7 +26,7 @@ MODULE bse_module
   LOGICAL,     PUBLIC :: l_wannier_repr   = .false.
   INTEGER,     PUBLIC :: ngm_g_max
   REAL(DP),    PUBLIC :: ovl_thr
-  REAL(DP),    PUBLIC, ALLOCATABLE :: et_qp(:,:)
+  REAL(DP),    PUBLIC, ALLOCATABLE :: et_qp(:,:)                   !qp correction
   COMPLEX(DP), PUBLIC, ALLOCATABLE :: evc_ks(:,:,:)
   COMPLEX(DP), PUBLIC, ALLOCATABLE :: u_matrix(:,:,:)
   REAL(DP),    PUBLIC, ALLOCATABLE :: ovl_matrix(:,:,:)

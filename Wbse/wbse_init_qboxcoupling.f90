@@ -22,9 +22,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   USE io_push,              ONLY : io_push_title
    !sqvc not in westcom pot3D%sqvc  TODO: pot3d init
   USE types_coulomb,         ONLY : pot3D
-  !USE westcom,              ONLY : wstat_save_dir,sqvc,fftdriver,npwq,npwqx
-  USE westcom,              ONLY : wstat_save_dir,fftdriver,chi_driver, chi_kernel,l_xcchi,savedir
-  !USE westcom,              ONLY : wstat_save_dir,sqvc,fftdriver,npwq0,npwq0x,chi_driver
+  !USE westcom,              ONLY : wbse_init_save_dir,sqvc,fftdriver,npwq,npwqx
+  USE westcom,              ONLY : wbse_init_save_dir,fftdriver, chi_kernel,l_xcchi,savedir
+  !USE westcom,              ONLY : wbse_init_save_dir,sqvc,fftdriver,npwq0,npwq0x,chi_driver
   !wbsecom combined with westcom
   !USE wbsecom,              ONLY : chi_kernel,l_xcchi
   USE pwcom,                ONLY : omega
@@ -170,13 +170,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
         !
      ENDDO
      !
-     filename = TRIM( wstat_save_dir )//"index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_index_matrix_write(filename,do_index,2,index_matrix(1:do_index,:))
      !
   ELSE
      !
-     filename = TRIM( wstat_save_dir )//"index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_index_matrix_read (filename,tmp_size,do_index,2,index_matrix)
      !
@@ -189,7 +189,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   calc_is_done = .FALSE.
   IF (l_restart_calc) THEN
      !
-     filename = TRIM( wstat_save_dir )//"restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_stat_restart_read (filename,do_index,restart_matrix,calc_is_done)
      !
@@ -266,7 +266,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      WRITE(my_label2,'(i6.6)') jbnd
      WRITE(my_spin,'(i1)') current_spin
      !
-     filename = TRIM( wstat_save_dir )//"E"//TRIM(ADJUSTL(my_label1))//"_"//&
+     filename = TRIM( wbse_init_save_dir )//"/E"//TRIM(ADJUSTL(my_label1))//"_"//&
              TRIM(ADJUSTL(my_label2))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL pdep_merge_and_write_G(filename,dvg(:))
      !
@@ -287,15 +287,15 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      ENDDO
      !
      calc_is_done = .FALSE.
-     filename = TRIM( wstat_save_dir )//"restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      !filename = trim(lowercase_string(filename))
-     CALL wbse_stat_restart_write (filename,do_index,restart_matrix(:),calc_is_done)
+     CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
      !
   ENDDO
   !
   calc_is_done = .TRUE.
-  filename = TRIM( wstat_save_dir )//"restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+  filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
              TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
   !filename = trim(lowercase_string(filename))
   CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)

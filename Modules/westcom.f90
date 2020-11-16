@@ -256,6 +256,8 @@ MODULE wbse_init_center
   LOGICAL  :: l_test_ovl          = .FALSE.   !control flow in wbse_init
   LOGICAL  :: use_wstat_pdep      = .FALSE.   !control flow in wbse_init
   !
+  LOGICAL :: l_xcchi       = .FALSE.   ! control XC CHI flow in wbse_init_qboxcoupling
+  !
   ! FOR qbox_control
   !
   INTEGER :: nrowmax
@@ -282,43 +284,40 @@ MODULE wbse_center
   !
   ! INPUT FOR wbse_control
   !
-  INTEGER  :: n_plep_basis
-  INTEGER  :: n_plep_times
-  INTEGER  :: n_plep_eigen
-  INTEGER  :: n_plep_maxiter
-  INTEGER  :: n_plep_read_from_file
+  INTEGER  :: n_plep_times          !  wbse input
+  INTEGER  :: n_plep_eigen          !  wbse input
+  INTEGER  :: n_plep_maxiter        !  wbse input
+  INTEGER  :: n_plep_read_from_file !  wbse input
   !
   LOGICAL  :: l_qp_correction             !flag read from wbse.in to activate read qp file. TODO: need modify to filename
   LOGICAL  :: l_bse_calculation           !flag read from wbse.in
-  LOGICAL  :: l_diag_term_only
-  LOGICAL  :: l_preconditioning
+  LOGICAL  :: l_diag_term_only            !flag read from wbse.in
+  LOGICAL  :: l_preconditioning           !flag read from wbse.in
   !
-  REAL(DP) :: trev_plep
-  REAL(DP) :: trev_plep_rel
-  REAL(DP) :: scissor_ope
-  REAL(DP) :: eps_macro
+  REAL(DP) :: trev_plep            !  wbse input
+  REAL(DP) :: trev_plep_rel        !  wbse input
+  REAL(DP) :: scissor_ope          !  wbse input
+  REAL(DP) :: eps_macro            !  wbse input
   !
-  CHARACTER(LEN=1)   :: wbse_calculation
-  CHARACTER(LEN=256) :: wbse_diag_method
-  CHARACTER(LEN=256) :: spin_excitation
+  CHARACTER(LEN=1)   :: wbse_calculation !  wbse input
+  CHARACTER(LEN=256) :: wbse_diag_method !  wbse input
+  CHARACTER(LEN=256) :: spin_excitation  !  wbse input
   !
   ! FOR global variables
   !
-  INTEGER :: nbndval0x                 !wbse wbse_init
-  LOGICAL :: l_lanzcos     = .FALSE.   !wbse
-  LOGICAL :: l_davidson    = .FALSE.   !wbse
-  LOGICAL :: l_bse_triplet = .FALSE.
-  LOGICAL :: l_xcchi       = .FALSE.
-  REAL(DP):: mac_isz
+  INTEGER :: nbndval0x                 !wbse  wbse_init
+  LOGICAL :: l_lanzcos     = .FALSE.   !wbse flag depend on wbse_diag_method  (no bcast)
+  LOGICAL :: l_davidson    = .FALSE.   !wbse flag depend on wbse_diag_method  (no bcast)
+  LOGICAL :: l_bse_triplet = .FALSE.   !wbse flag depend on spin_excitation   (no bcast)
   REAL(DP):: sigma_c_head  = 0.0_DP
   REAL(DP):: sigma_x_head  = 0.0_DP
   !
   ! FOR INPUT Lanzcos diago
   !
-  CHARACTER(LEN=1) :: wlz_calculation
-  CHARACTER(LEN=3) :: ipol_input
-  INTEGER          :: n_lzstep = 0
-  LOGICAL          :: macropol_dfpt = .FALSE.
+  CHARACTER(LEN=1) :: wlz_calculation  !wbse lanzcos calculation (no bcast)
+  CHARACTER(LEN=3) :: ipol_input       !wbse input
+  INTEGER          :: n_lzstep = 0     !wbse input
+  LOGICAL          :: macropol_dfpt = .FALSE.  !wbse input
   !
   ! FOR global Lanzcos diago vars
   !

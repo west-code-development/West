@@ -11,12 +11,13 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbse_setup
+SUBROUTINE wbse_setup(code)
   !-----------------------------------------------------------------------
   !
   USE westcom,                ONLY : alphapv_dfpt,npwq,west_prefix,&
                                    & n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,&
-                                   & wbse_init_save_dir, nbndval0x,l_qp_correction, nbnd_occ
+                                   & wbse_init_save_dir, wbse_save_dir,&
+                                   nbndval0x,l_qp_correction, nbnd_occ
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE kinds,                  ONLY : DP
@@ -28,12 +29,12 @@ SUBROUTINE wbse_setup
   !USE wbsecom,                ONLY : l_davidson, l_lanzcos, nbndval0x
   USE bse_module,             ONLY : bse_calc
   USE types_coulomb,      ONLY : pot3D
-
   !
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: ig
+  CHARACTER(LEN=9), INTENT(IN):: code
   !
   CALL do_setup ( )
   !
@@ -56,7 +57,11 @@ SUBROUTINE wbse_setup
   !
   CALL west_dv_setup(bse_calc)
   !
-  CALL my_mkdir(wbse_init_save_dir)
+  IF (TRIM(code) .eq. 'WBSE') THEN
+      CALL my_mkdir(wbse_save_dir)
+  ELSE
+      CALL my_mkdir(wbse_init_save_dir)
+  ENDIF
   !
   n_pdep_basis = n_pdep_eigen * n_pdep_times
   !

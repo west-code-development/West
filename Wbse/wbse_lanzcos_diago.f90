@@ -404,7 +404,7 @@ SUBROUTINE my_copy_lz(tmp_lz)
   USE mp_world,             ONLY : root,mpime,world_comm
   USE mp,                   ONLY : mp_barrier,mp_bcast
   USE wrappers,             ONLY : f_copy
-  USE westcom,              ONLY : wstat_save_dir
+  USE westcom,              ONLY : wbse_save_dir
   !
   IMPLICIT NONE
   !
@@ -425,7 +425,7 @@ SUBROUTINE my_copy_lz(tmp_lz)
   !
   IF(mpime==root) THEN
     !
-    cp_source = TRIM( wstat_save_dir ) // "/EVC1.dat"
+    cp_source = TRIM( wbse_save_dir ) // "/EVC1.dat"
     cp_dest   = TRIM( tmp_lz ) // "/EVC1.dat"
     cp_status = f_copy(cp_source, cp_dest)
     !
@@ -436,7 +436,7 @@ SUBROUTINE my_copy_lz(tmp_lz)
   !
   IF(mpime==root) THEN
     !
-    cp_source = TRIM( wstat_save_dir ) // "/EVC1_OLD.dat"
+    cp_source = TRIM( wbse_save_dir ) // "/EVC1_OLD.dat"
     cp_dest   = TRIM( tmp_lz ) // "/EVC1_OLD.dat"
     cp_status = f_copy(cp_source, cp_dest)
     !
@@ -447,7 +447,7 @@ SUBROUTINE my_copy_lz(tmp_lz)
   !
   IF(mpime==root) THEN
     !
-    cp_source = TRIM( wstat_save_dir ) // '/' // TRIM( 'summary.xml' )
+    cp_source = TRIM( wbse_save_dir ) // '/' // TRIM( 'summary.xml' )
     cp_dest   = TRIM( tmp_lz ) // '/' // TRIM( 'summary.xml' )
     cp_status = f_copy(cp_source, cp_dest)
     !

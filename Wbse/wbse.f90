@@ -42,7 +42,7 @@ PROGRAM wbse
   !
   CALL wbse_readin ( )
   !
-  CALL wbse_setup ( )
+  CALL wbse_setup ( code )
   !
   IF (l_davidson) THEN
      CALL wbse_davidson_diago ( )

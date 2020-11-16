@@ -13,6 +13,7 @@
 SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_only)
      !
      ! ... this routine writes the pot-density in xml format
+     !     seems the path is wbse_init_save_dir
      !
      USE kinds,          ONLY : DP
      USE control_flags,  ONLY : gamma_only
@@ -21,7 +22,7 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      USE pdep_io,        ONLY : pdep_read_G_and_distribute
      USE fft_at_gamma,   ONLY : single_invfft_gamma
      USE fft_at_k,       ONLY : single_invfft_k
-     USE westcom,        ONLY : savedir
+     USE westcom,        ONLY : wbse_init_save_dir
      USE pwcom,          ONLY : npwx
      !
      IMPLICIT NONE
@@ -68,7 +69,8 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      !
      rhog = (0.0_DP, 0.0_DP)
      !
-     file_base = TRIM(savedir)//'/E'//TRIM(ADJUSTL(my_labeli))//"_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
+     file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+              "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL pdep_read_G_and_distribute(file_base, rhog(:))
      !
      RETURN
@@ -78,6 +80,8 @@ END SUBROUTINE read_bse_pots_g2g
 SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single_only)
      !
      ! ... this routine writes the pot-density in xml format
+     !     call by wbse_bse_kernel -> wbse.x  but using wbse_init.x data
+     !     folder: wbse_init_save_dir
      !
      USE kinds,          ONLY : DP
      USE control_flags,  ONLY : gamma_only
@@ -88,7 +92,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      USE gvect,          ONLY : ngm, ngmx
      USE fft_at_gamma,   ONLY : single_invfft_gamma
      USE fft_at_k,       ONLY : single_invfft_k
-     USE westcom,        ONLY : savedir
+     USE westcom,        ONLY : wbse_init_save_dir
      !
      IMPLICIT NONE
      !
@@ -168,7 +172,8 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         write (my_labelj,'(i6.6)') band_j
         write (my_spin,  '(i1)') ispin
         !
-        file_base = TRIM(savedir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//'_'//TRIM(my_spin)//".dat"
+        file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//&
+                    '_'//TRIM(my_spin)//".dat"
         !
         CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
                    dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
@@ -183,7 +188,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         !
         aux_g = (0.0_DP, 0.0_DP)
         !
-        file_base = TRIM(savedir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+        file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
                     "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
         CALL pdep_read_G_and_distribute(file_base, aux_g(:))
         !
@@ -229,7 +234,8 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            write (my_labelj,'(i6.6)')  band_j
            write (my_spin,  '(i1)') ispin
            !
-           file_base = TRIM(savedir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//'_'//TRIM(my_spin)//".dat"
+           file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)&
+                       //'_'//TRIM(my_spin)//".dat"
            !
            CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
                    dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
@@ -244,7 +250,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            !
            aux_g = (0.0_DP, 0.0_DP)
            !
-           file_base = TRIM(savedir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+           file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
                       "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
            CALL pdep_read_G_and_distribute(file_base,aux_g(:))
            !
@@ -293,7 +299,7 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
   USE mp,                 ONLY: mp_bcast
   USE lsda_mod,           ONLY: nspin
   USE bse_module,         ONLY: u_matrix,ovl_matrix
-  USE westcom,            ONLY: savedir
+  USE westcom,            ONLY: wbse_save_dir
   !
   IMPLICIT NONE
   !
@@ -315,7 +321,7 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
      u_matrix(:,:,is) = (0.0_DP, 0.0_DP)
      !
      WRITE(my_spin,'(i1)') is
-     fileempty = TRIM(savedir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+     fileempty = TRIM(wbse_save_dir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
      WRITE(stdout,'(/,5X,"Reading U matrix from ", A256 )') fileempty
      !
      emptyunit = 100
@@ -343,7 +349,7 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
      ovl_matrix(:,:,is) = 0.0_DP
      !
      WRITE(my_spin,'(i1)') is
-     fileempty = TRIM(savedir)//'/overlap_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
+     fileempty = TRIM(wbse_save_dir)//'/overlap_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
      WRITE(stdout,'(/,5X,"Reading overlap matrix from ", A256 )') fileempty
      !
      emptyunit = 100

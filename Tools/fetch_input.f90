@@ -797,6 +797,11 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IF( n_plep_read_from_file > n_plep_eigen ) CALL errore('fetch_input','Err: n_plep_read_from_file>n_plep_eigen',1)
      ENDIF
      !
+     CALL mp_bcast(wlz_calculation,root,world_comm)
+     CALL mp_bcast(l_davidson,root,world_comm)
+     CALL mp_bcast(l_lanzcos,root,world_comm)
+     CALL mp_bcast(l_bse_triplet,root,world_comm)
+     !
   ENDIF
   !
   IF ( ANY(driver(:)==8) ) THEN

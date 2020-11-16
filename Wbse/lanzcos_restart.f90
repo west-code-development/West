@@ -38,7 +38,7 @@ MODULE lanzcos_restart
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : west_prefix, wstat_save_dir,&
+      USE westcom,              ONLY : west_prefix, wbse_save_dir,&
                                        ipol_input, n_lzstep, &
                                        alpha_store,beta_store,&
                                        gamma_store,zeta_store
@@ -71,13 +71,13 @@ MODULE lanzcos_restart
       !
       ! CREATE THE SUMMARY FILE
       !
-      dirname = TRIM( wstat_save_dir ) // '/' // TRIM("summary.xml")
+      dirname = TRIM( wbse_save_dir ) // '/' // TRIM("summary.xml")
       IF ( mpime == root ) THEN
          !
          ! ... open XML descriptor
          !
          CALL iotk_free_unit( iunout, ierr )
-         CALL iotk_open_write( iunout, FILE = TRIM( wstat_save_dir ) // '/' // TRIM("summary.xml") , BINARY = .FALSE., IERR = ierr )
+         CALL iotk_open_write( iunout, FILE = TRIM( wbse_save_dir ) // '/' // TRIM("summary.xml") , BINARY = .FALSE., IERR = ierr )
          !
       END IF
       !
@@ -163,7 +163,7 @@ MODULE lanzcos_restart
       USE mp_world,            ONLY : mpime,root,world_comm
       USE mp,                  ONLY : mp_barrier, mp_bcast
       USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : west_prefix, wstat_save_dir, &
+      USE westcom,             ONLY : west_prefix, wbse_save_dir, &
                                       ipol_input, n_lzstep, &
                                       alpha_store,beta_store,&
                                       gamma_store,zeta_store
@@ -198,10 +198,10 @@ MODULE lanzcos_restart
       CALL start_clock('wbse_lanzcos_restart')
       time_spent(1)=get_clock('wbse_lanzcos_restart')
       !
-      dirname = TRIM( wstat_save_dir ) // '/' // TRIM( 'summary.xml' )
+      dirname = TRIM( wbse_save_dir ) // '/' // TRIM( 'summary.xml' )
       IF ( mpime==root ) THEN
          CALL iotk_free_unit( iun, ierr )
-         CALL iotk_open_read( iun, FILE = TRIM( wstat_save_dir ) // '/' // TRIM( 'summary.xml' ), IERR = ierr )
+         CALL iotk_open_read( iun, FILE = TRIM( wbse_save_dir ) // '/' // TRIM( 'summary.xml' ), IERR = ierr )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm )

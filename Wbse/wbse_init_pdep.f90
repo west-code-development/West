@@ -164,7 +164,7 @@ SUBROUTINE wbse_init_pdep_single_q (iks,ikq,xq,current_spin,nbndval,n_pdep_eigen
   !sqvc not in westcom pot3D%sqvc  TODO: pot3d init
   USE types_coulomb,         ONLY : pot3D
   !USE westcom,              ONLY : wstat_save_dir,sqvc,fftdriver,npwq,npwqx
-  USE westcom,              ONLY : wstat_save_dir,fftdriver,npwq,npwqx
+  USE westcom,              ONLY : wbse_init_save_dir,fftdriver,npwq,npwqx
   USE pwcom,                ONLY : omega
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions_module, ONLY : evc,psic
@@ -289,13 +289,13 @@ SUBROUTINE wbse_init_pdep_single_q (iks,ikq,xq,current_spin,nbndval,n_pdep_eigen
         !
      ENDDO
      !
-     filename = TRIM( wstat_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_index_matrix_write(filename,do_index,3,index_matrix(1:do_index,:))
      !
   ELSE
      !
-     filename = TRIM( wstat_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/index_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_index_matrix_read (filename,tmp_size,do_index,3,index_matrix)
      !
@@ -312,7 +312,7 @@ SUBROUTINE wbse_init_pdep_single_q (iks,ikq,xq,current_spin,nbndval,n_pdep_eigen
   calc_is_done = .FALSE.
   IF (l_restart_calc) THEN
      !
-     filename = TRIM( wstat_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_stat_restart_read (filename,do_index,restart_matrix,calc_is_done)
      !
@@ -429,7 +429,7 @@ SUBROUTINE wbse_init_pdep_single_q (iks,ikq,xq,current_spin,nbndval,n_pdep_eigen
      ENDDO
      !
      calc_is_done = .FALSE.
-     filename = TRIM( wstat_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+     filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
      !
@@ -438,12 +438,12 @@ SUBROUTINE wbse_init_pdep_single_q (iks,ikq,xq,current_spin,nbndval,n_pdep_eigen
   CALL mp_sum(alpha_list_vx(1:do_index), inter_image_comm)
   CALL mp_sum(alpha_list_vc(1:do_index), inter_image_comm)
   !
-  filename = TRIM( wstat_save_dir )//"/PDEP_vc_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+  filename = TRIM( wbse_init_save_dir )//"/PDEP_vc_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
           TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
   CALL wbse_pdep_coeffie_write (filename,do_index,alpha_list_vx,alpha_list_vc)
   !
   calc_is_done = .TRUE.
-  filename = TRIM( wstat_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+  filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
              TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
   CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
   !

@@ -24,13 +24,11 @@ MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LA
           $(MOD_FLAG).
 
 #wbsepp_fetch_namelist.o \
-#wbsepp_decompose_eig_contributions.o \
-
+#wbseppcom.o \
 
 IFLAGS=
 
 WBSE_OBJS = \
-wbseppcom.o \
 wbsepp_decompose_eig_contributions.o \
 wbsepp_ads_spectrum.o \
 wbsepp_plot_exc.o \

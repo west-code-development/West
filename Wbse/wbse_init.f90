@@ -74,7 +74,7 @@ PROGRAM wbse_init
   !
   CALL wbse_clear ( )
   !
-  !CALL clean_scratchfiles( )
+  CALL clean_scratchfiles( )
   !
   CALL west_print_clocks( )
   !CALL print_clock(' ')

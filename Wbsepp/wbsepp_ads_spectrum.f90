@@ -22,8 +22,8 @@ SUBROUTINE wbsepp_ads_spectrum()
   USE mp_global,           ONLY : mp_startup,mp_global_end, my_image_id
   USE mp_world,            ONLY : world_comm
   USE mp,                  ONLY : mp_bcast, mp_barrier
-  USE westcom,             ONLY : qe_prefix  
-  USE wbseppcom,           ONLY : itermax, itermax0, extrapolation, & 
+  USE westcom,             ONLY : qe_prefix
+  USE westcom,           ONLY : itermax, itermax0, extrapolation, &
                                   start, end, increment, epsil, ipol, &
                                   sym_op, verbosity, units, spin_channel
   !
@@ -54,7 +54,7 @@ SUBROUTINE wbsepp_ads_spectrum()
             & average(3), av_amplitude(3), &
             & alpha_temp(3), scale, wl, &
             & omeg, z1,z2, degspin, integration_function, start_save, f_sum
-  ! 
+  !
   COMPLEX(kind=dp) :: omeg_c
   REAL(dp), ALLOCATABLE, DIMENSION(:,:) :: beta_store, gamma_store
   COMPLEX(dp), ALLOCATABLE, DIMENSION(:,:,:) :: zeta_store
@@ -86,7 +86,7 @@ SUBROUTINE wbsepp_ads_spectrum()
   ! User controlled variable initialisation
   !
   CALL mp_startup ( )
-  ! 
+  !
   IF (ionode) THEN
      WRITE (stdout,*) ' '
      WRITE (stdout,*) ' '
@@ -245,7 +245,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         perceived_intensity(:)=0.0d0
         perceived_evaluated(:)=-1.0d0
         perceived_renorm=-9999999.0d0
-        ! 
+        !
      ELSEIF (units == 2 .and. start<vis_end_wl .and. end>vis_start_wl .and. n_ipol == 3) THEN
         !
         WRITE (stdout,'(/,5x,"Will attempt to calculate perceived color")')
@@ -298,7 +298,7 @@ SUBROUTINE wbsepp_ads_spectrum()
      !
      ! In order to gain speed, we perform the first step seperately
      !
-     IF (n_ipol == 3) THEN 
+     IF (n_ipol == 3) THEN
         !
         ! Calculation of the susceptibility
         !
@@ -369,7 +369,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         ! Writing of chi
         !
         DO ip=1,n_ipol
-           ! 
+           !
            DO ip2=1,n_ipol
               !
               !eps(ip,ip2)=(1.d0,0.d0)-(32.d0*pi/omega)*green(ip,ip2)
@@ -416,8 +416,8 @@ SUBROUTINE wbsepp_ads_spectrum()
               perceived_iter = perceived_iter + 1
               !
               ! Renormalization to 1
-              !  
-              IF (alpha_temp(3) > perceived_renorm) perceived_renorm = alpha_temp(3) 
+              !
+              IF (alpha_temp(3) > perceived_renorm) perceived_renorm = alpha_temp(3)
               !
            ENDIF
            !
@@ -474,7 +474,7 @@ SUBROUTINE wbsepp_ads_spectrum()
            alpha_temp(3) = alpha_temp(3)*rytoev
         ENDIF
         !
-        ! alpha is ready 
+        ! alpha is ready
         !
         WRITE(18,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
         !
@@ -498,7 +498,7 @@ SUBROUTINE wbsepp_ads_spectrum()
      !------------------------------------------------------------------------!
      !
      IF (allocated(perceived_intensity)) THEN
-        ! 
+        !
         WRITE(stdout,'(5x,"Perceived color analysis is experimental")')
         perceived_intensity(:)=perceived_intensity(:)/perceived_renorm
         perceived_intensity(:)=1.0d0-perceived_intensity(:) !inverse spectrum
@@ -527,11 +527,11 @@ SUBROUTINE wbsepp_ads_spectrum()
               alpha_temp(:)=scale*alpha_temp(:)
               !
               ! Then the data from absorbtion spectrum
-              ! 
+              !
               alpha_temp(:)=perceived_intensity(i)*alpha_temp(:)
               !
               ! The perceived color can also be calculated here
-              ! 
+              !
               IF (j==1) THEN
                  perceived_red=perceived_red+alpha_temp(1)
                  perceived_green=perceived_green+alpha_temp(2)
@@ -547,7 +547,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         perceived_red  = perceived_red  /(1.0d0*perceived_itermax)
         perceived_green= perceived_green/(1.0d0*perceived_itermax)
         perceived_blue = perceived_blue /(1.0d0*perceived_itermax)
-        ! 
+        !
         WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') perceived_red,perceived_green,perceived_blue
         WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') perceived_red*255,perceived_green*255,perceived_blue*255
         !
@@ -568,7 +568,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         start = start + increment
         !
      ENDDO
-     ! 
+     !
      f_sum = f_sum + increment*start/3.0d0
      !
      WRITE(stdout,'(5x,"Integral test:",F15.8,"  Actual: ",F15.8:)') &
@@ -596,7 +596,7 @@ SUBROUTINE wbsepp_ads_spectrum()
   RETURN
   !
 CONTAINS
- 
+
 LOGICAL FUNCTION is_peak(omeg,alpha)
   !-------------------------------------------------------------------------
   !
@@ -623,7 +623,7 @@ LOGICAL FUNCTION is_peak(omeg,alpha)
   is_peak = .false.
   ! counter
   ! Rotate the variables
-  !   
+  !
   IF (current_iter < 3) THEN
       current_iter = current_iter + 1
       omeg_save = omeg
@@ -649,17 +649,17 @@ LOGICAL FUNCTION is_peak(omeg,alpha)
   !
   !The derivatives
   first_der = (alpha_save(3)-alpha_save(1))*thm1
-  second_der = (alpha_save(3)-2.0d0*alpha_save(2)+alpha_save(1))*h2m1 
+  second_der = (alpha_save(3)-2.0d0*alpha_save(2)+alpha_save(1))*h2m1
   ! second derivative corresponds to t, 3 steps before
-  !first_der = (-alpha_save(5)+8.0d0*(alpha_save(4)-alpha_save(2))+alpha_save(1))*thm1 
+  !first_der = (-alpha_save(5)+8.0d0*(alpha_save(4)-alpha_save(2))+alpha_save(1))*thm1
   !first derivative corresponds to t, 3 steps before
-  !second_der = (alpha_save(4)-2.0d0*alpha_save(3)+alpha_save(2))*h2m1 
+  !second_der = (alpha_save(4)-2.0d0*alpha_save(3)+alpha_save(2))*h2m1
   ! second derivative corresponds to t, 3 steps before
   !Decide
   !print *,"w",omeg-0.25d0/thm1,"f=",abs(first_der),"s=",second_der
   !print *,"w",omeg-0.5d0/thm1,"f=",abs(first_der),"s=",second_der
   !if (abs(first_der) < 1.0d-8 .and. second_der < 0 ) is_peak=.true.
-  !  
+  !
   IF (second_der < 0) THEN
      IF (trigger) THEN
         IF (abs(first_der) <abs(first_der_save)) THEN
@@ -683,7 +683,7 @@ END FUNCTION is_peak
 REAL(kind=dp) FUNCTION integrator(dh,alpha)
   !------------------------------------------------------------------------
   !
-  ! This function calculates an integral every 
+  ! This function calculates an integral every
   ! three points, using the Simpson's rule.
   !
   IMPLICIT NONE
@@ -697,7 +697,7 @@ REAL(kind=dp) FUNCTION integrator(dh,alpha)
   !
   integrator = 0.0d0
   !
-  IF (flag) THEN 
+  IF (flag) THEN
      ! odd steps
      integrator = (4.0d0/3.0d0)*dh*alpha
      flag = .false.
@@ -720,9 +720,9 @@ SUBROUTINE read_b_g_z_file_html()
   !
   IMPLICIT NONE
   !
-  INTEGER :: iun, ierr, is 
+  INTEGER :: iun, ierr, is
   INTEGER :: nipol_input_tmp, nspin
-  CHARACTER(LEN=3) :: ipol_label_tmp 
+  CHARACTER(LEN=3) :: ipol_label_tmp
   INTEGER :: n_lzstep_tmp
   REAL(DP), ALLOCATABLE :: beta_store_tmp(:,:)
   REAL(DP), ALLOCATABLE :: gamma_store_tmp(:,:)
@@ -750,26 +750,26 @@ SUBROUTINE read_b_g_z_file_html()
         WRITE (stdout,*) ' '
         WRITE (stdout,*) ' Reading alpha beta zeta of the polarzation : ', ipol_label_tmp, &
                           ' from file : ', file_ip
-        !  
-        IF (n_lzstep_tmp < itermax0) THEN 
+        !
+        IF (n_lzstep_tmp < itermax0) THEN
            CALL errore("read_b_g_z_file", "Error in lriter_stop < itermax0, reduce itermax0",1)
-        ENDIF 
+        ENDIF
         !
         ALLOCATE(beta_store_tmp (n_lzstep_tmp,nspin))
         ALLOCATE(gamma_store_tmp(n_lzstep_tmp,nspin))
-        !  
+        !
         CALL iotk_scan_begin( iun, "BETA_STORE")
         DO is = 1, nspin
            CALL iotk_scan_dat( iun, "beta_store_k", beta_store_tmp(1:n_lzstep_tmp,is) )
         ENDDO
         CALL iotk_scan_end( iun, "BETA_STORE"  )
-        ! 
+        !
         CALL iotk_scan_begin( iun, "GAMMA_STORE")
         DO is = 1, nspin
            CALL iotk_scan_dat( iun, "gamma_store_k", gamma_store_tmp(1:n_lzstep_tmp,is) )
         ENDDO
         CALL iotk_scan_end( iun, "GAMMA_STORE"  )
-        ! 
+        !
         ALLOCATE(zeta_store_tmp (3,n_lzstep_tmp,nspin))
         !
         CALL iotk_scan_begin( iun, "ZETA_STORE")
@@ -780,7 +780,7 @@ SUBROUTINE read_b_g_z_file_html()
            ENDDO
         ENDDO
         CALL iotk_scan_end( iun, "ZETA_STORE"  )
-        ! 
+        !
         CALL iotk_close_read( iun )
         !
         IF (nspin == 1) spin_channel = 1
@@ -823,7 +823,7 @@ END SUBROUTINE read_b_g_z_file_html
 
 SUBROUTINE extrapolate()
   !
-  ! This subroutine applies the "extrapolation" scheme 
+  ! This subroutine applies the "extrapolation" scheme
   ! for extrapolating the reduced matrix.
   !
   IMPLICIT NONE
@@ -948,7 +948,7 @@ SUBROUTINE calc_chi(freq,broad,chi)
      r(ip,1) = (1.0d0,0.0d0)
      !
      ! |w_t|=(w-L) |1,0,0,...,0|
-     ! 
+     !
      CALL zgtsv(itermax,1,b,a,c,r(ip,:),itermax,info)
      !
      IF (info /= 0) CALL errore("calc_chi", "Unable to solve tridiagonal system",1)
@@ -957,9 +957,9 @@ SUBROUTINE calc_chi(freq,broad,chi)
      ! p= chi . E
      ! Thus, chi = - <zeta|w_t>
      !
-     ! Notice that brodening has a positive sign, 
+     ! Notice that brodening has a positive sign,
      ! thus the abs. coefficient is Im(tr(chi)) not -Im(Tr(chi)) as usual
-     ! 
+     !
      DO ip2 = 1,n_ipol
          !
          chi(ip,ip2) = ZDOTC(itermax,zeta_store(ip,ip2,:),1,r(ip,:),1)
@@ -969,7 +969,7 @@ SUBROUTINE calc_chi(freq,broad,chi)
          chi(ip,ip2) = chi(ip,ip2) * cmplx(norm0(ip),0.0d0,dp)
          !
          ! The response charge density is defined as 2*evc0*q, see Eq. (43) in
-         ! JCP 128, 154105 (2008). 
+         ! JCP 128, 154105 (2008).
          ! Therefore, the dipole is given by 2*degspin* zeta^T *
          ! (w-T^itermax)^-1 * e_1. See also Eq. (15) in that paper.
          ! Optics: The minus sign accounts for the negative electron charge
@@ -988,7 +988,7 @@ END SUBROUTINE calc_chi
 SUBROUTINE wl_to_color(wavelength,red,green,blue)
   !----------------------------------------------------------------------------
   !
-  ! Gives the colour intensity of a given wavelength 
+  ! Gives the colour intensity of a given wavelength
   ! in terms of RGB (red, green and blue).
   !
   IMPLICIT NONE
@@ -1006,7 +1006,7 @@ SUBROUTINE wl_to_color(wavelength,red,green,blue)
      red = 0.
      green = (wavelength-440.)/(490.-440.)
      blue = 1.
-  ENDIF 
+  ENDIF
   !
   IF ((wavelength>=490.).and.(wavelength<=510.)) THEN
      red = 0.

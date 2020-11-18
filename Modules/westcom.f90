@@ -272,6 +272,7 @@ MODULE wbse_init_center
   INTEGER :: nite
   !
   CHARACTER(LEN=512) :: wbse_init_save_dir
+  CHARACTER(LEN=512) :: wbse_init_restart_dir
   !
 END MODULE
 !
@@ -333,6 +334,8 @@ MODULE wbse_center
   COMPLEX(DP),ALLOCATABLE :: dvg_exc(:,:,:,:)
   !
   CHARACTER(LEN=512) :: wbse_save_dir
+  CHARACTER(LEN=512) :: wbse_restart_dir
+  !
   !
 END MODULE
 !
@@ -345,11 +348,11 @@ MODULE wbsepp_center
   !
   ! INPUT FOR wbsepp_control
   !
-  LOGICAL :: l_meg
-  LOGICAL :: l_eig_decomp
-  LOGICAL :: l_lz_spec
-  LOGICAL :: l_exc_plot
-  LOGICAL :: l_exc_rho_res_plot
+  LOGICAL :: l_meg                 = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
+  LOGICAL :: l_eig_decomp          = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
+  LOGICAL :: l_lz_spec             = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
+  LOGICAL :: l_exc_plot            = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
+  LOGICAL :: l_exc_rho_res_plot    = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
   !
   INTEGER :: wbsepp_type
   !

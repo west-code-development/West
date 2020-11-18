@@ -18,7 +18,8 @@ SUBROUTINE set_dirs( )
   USE westcom,                ONLY : west_prefix, wstat_save_dir, wstat_restart_dir, &
                                      westpp_save_dir, wfreq_save_dir, wfreq_restart_dir,&
                                      l_lanzcos, l_davidson, &
-                                     wbse_init_save_dir, wbse_save_dir, wbsepp_save_dir
+                                     wbse_init_save_dir, wbse_save_dir, wbsepp_save_dir,&
+                                     wbse_init_restart_dir,wbse_restart_dir
   !
   IMPLICIT NONE
   !
@@ -29,13 +30,19 @@ SUBROUTINE set_dirs( )
   westpp_save_dir   = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.westpp.save'
   !
   wbse_init_save_dir    = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse_init.save'
+  wbse_init_restart_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse_init.restart'
+  !
   IF (l_lanzcos) THEN
       wbse_save_dir     = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
+      wbse_restart_dir  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.restart'
   ELSEIF (l_davidson) THEN
       wbse_save_dir     = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
+      wbse_restart_dir  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.restart'
   ELSE
       wbse_save_dir     = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
+      wbse_restart_dir  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
   END IF
+  !
   wbsepp_save_dir       = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbsepp.save'
   !
 END SUBROUTINE

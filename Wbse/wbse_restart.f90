@@ -42,7 +42,7 @@ MODULE wbse_restart
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,&
-                                       dvg_exc,dng_exc
+                                       dvg_exc,dng_exc, wbse_restart_dir
       !wbsecom combined into westcom
       !USE wbsecom,              ONLY : dvg_exc,dng_exc
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
@@ -76,7 +76,8 @@ MODULE wbse_restart
       !
       ! MKDIR
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      dirname = TRIM(wbse_restart_dir)
       CALL my_mkdir( dirname )
       !
       CALL start_clock('wbse_restart')
@@ -244,7 +245,7 @@ MODULE wbse_restart
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix, &
-                                       dvg_exc,dng_exc
+                                       dvg_exc,dng_exc, wbse_restart_dir
       !wbsecom combined into westcom
       !USE wbsecom,              ONLY : dvg_exc,dng_exc
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
@@ -278,7 +279,8 @@ MODULE wbse_restart
       !
       ! MKDIR
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      dirname = trim(wbse_restart_dir)
       CALL my_mkdir( dirname )
       !
       CALL start_clock('wbse_restart')
@@ -450,6 +452,7 @@ MODULE wbse_restart
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,west_prefix
       USE wrappers,             ONLY : f_rmdir
       USE io_files,             ONLY : delete_if_present
+      USE westcom,              ONLY : wbse_restart_dir
       !
       IMPLICIT NONE
       !
@@ -465,7 +468,8 @@ MODULE wbse_restart
       !
       ! ... clear the main restart directory
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      dirname = trim(wbse_restart_dir)
       !
       IF(mpime==root) THEN
          CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'summary.xml' ) )
@@ -498,7 +502,7 @@ MODULE wbse_restart
       !
       USE mp_global,           ONLY : world_comm
       USE mp,                  ONLY : mp_barrier
-      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis
+      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis, wbse_restart_dir
       USE io_global,           ONLY : stdout
       USE distribution_center, ONLY : pert
       !
@@ -526,7 +530,8 @@ MODULE wbse_restart
       CALL start_clock('wbse_restart')
       time_spent(1)=get_clock('wbse_restart')
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      dirname = TRIM( wbse_restart_dir )
       !
       CALL read_restart1_( dirname, dav_iter, notcnv, nbase )
       !
@@ -556,7 +561,7 @@ MODULE wbse_restart
       !
       USE mp_global,           ONLY : world_comm
       USE mp,                  ONLY : mp_barrier
-      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis
+      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis, wbse_restart_dir
       USE io_global,           ONLY : stdout
       USE distribution_center, ONLY : pert
       !
@@ -584,7 +589,8 @@ MODULE wbse_restart
       CALL start_clock('wbse_restart')
       time_spent(1)=get_clock('wbse_restart')
       !
-      dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
+      dirname =TRIM(wbse_restart_dir)
       !
       CALL read_restart1_( dirname, dav_iter, notcnv, nbase )
       !

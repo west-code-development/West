@@ -37,7 +37,7 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
   !wbsecom combined into westcom
   !USE wbsecom,                ONLY : dvg_exc, n_plep_read_from_file
-  USE wbseppcom,              ONLY : iexc_plot, r0_input
+  USE westcom,              ONLY : iexc_plot, r0_input
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute

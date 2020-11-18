@@ -20,7 +20,7 @@ PROGRAM wbse_pp
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE mp,                   ONLY : mp_sum,mp_barrier
-  USE wbseppcom,            ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
+  USE westcom,            ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
                                    l_exc_rho_res_plot
   !
   IMPLICIT NONE
@@ -46,6 +46,7 @@ PROGRAM wbse_pp
   IF (l_eig_decomp) CALL wbsepp_decompose_eig_contributions ( )
   IF (l_exc_plot)   CALL wbsepp_plot_exc ()
   IF (l_exc_rho_res_plot) CALL wbsepp_plot_charged_density_res_exc ()
+  !TODO: several version of wbsepp_meg()
   !IF (l_meg) CALL wbsepp_meg ()
   IF (l_lz_spec) CALL wbsepp_ads_spectrum ()
   !
@@ -89,8 +90,8 @@ END PROGRAM
       USE io_files,               ONLY : tmp_dir
       !USE qbox_interface,         ONLY : load_qbox_wfc
       !USE qbox_interface,         ONLY : l_load_qbox_wfc, load_qbox_wfc, qbox_ks_wfc_filename
-      USE wbseppcom,              ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
-                                         l_exc_rho_res_plot
+      USE westcom,              ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
+                                         l_exc_rho_res_plot, wbse_save_dir
       !
       IMPLICIT NONE
       !
@@ -118,11 +119,15 @@ END PROGRAM
       !
       IF (l_lz_spec) THEN
          !
-         wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
+         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
          !
       ELSEIF (l_meg .or. l_eig_decomp .or. l_exc_plot .or. l_exc_rho_res_plot ) THEN
          !
-         wstat_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
+         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
+         !
+      ELSE
+         !
+         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
          !
       ENDIF
       !
@@ -158,6 +163,7 @@ SUBROUTINE wbsepp_readin()
   CALL start_clock('wbsepp_readin')
   !
   !change to new version of fetch namelist
+  CALL fetch_input_yml(2,(/1,9/),.TRUE.,.FALSE.)
   !CALL wbsepp_fetch_namelist(2,(/1,2/))
   !
   !  read the input file produced by the pwscf program

@@ -521,9 +521,14 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ENDIF
      !
      IF ( ANY(driver(:)==9) ) THEN
+        !wbsepp gamma only qlist = [1]
+        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        ALLOCATE(qlist(1))
+        qlist = (/1/)
+        !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "qbox_control" )
+        IERR = args%setitem(1, "wbsepp_control" )
         IERR = args%setitem(2, verbose )
         IERR = dict_create(kwargs)
         !
@@ -820,6 +825,14 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   ENDIF
   !
   IF ( ANY(driver(:)==9) ) THEN
+     !GAMMA ONLY qlist init for wbsepp
+     IF(mpime == root) nq = SIZE(qlist)
+     CALL mp_bcast(nq,root,world_comm)
+     IF(mpime /= root) THEN
+        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        ALLOCATE(qlist(nq))
+     ENDIF
+     CALL mp_bcast(qlist,root,world_comm)
      !
      CALL mp_bcast(wbsepp_type,root,world_comm)
      CALL mp_bcast(n_plep_read_from_file,root,world_comm)
@@ -864,6 +877,13 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF ((spin_channel < 1) .OR. (spin_channel > 2)) THEN
         CALL errore('fetch_input','Err: spin_channel/= 1,2', spin_channel)
      ENDIF
+     !
+     CALL mp_bcast(l_meg,root,world_comm)
+     CALL mp_bcast(l_eig_decomp,root,world_comm)
+     CALL mp_bcast(l_lz_spec,root,world_comm)
+     CALL mp_bcast(l_exc_plot,root,world_comm)
+     CALL mp_bcast(l_exc_rho_res_plot,root,world_comm)
+     !
   ENDIF
 
   !

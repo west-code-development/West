@@ -79,7 +79,7 @@ MODULE qbox_interface
   !
   CHARACTER(LEN=256)  :: resp_command
   !
-  LOGICAL             :: onroot                  ! dffts%mype == dffts%root
+  !LOGICAL             :: onroot                  ! dffts%mype == dffts%root
   INTEGER             :: np                      ! global size of vextr and drhor array
   INTEGER             :: nploc                   ! size of vextr and drhor array on current processor
   INTEGER,ALLOCATABLE :: nplocs(:)               ! and other processors, determined by dffts
@@ -261,7 +261,7 @@ MODULE qbox_interface
       !
       !IF ( TRIM(io) == "base64_serial" .OR. TRIM(io) == "base64_parallel")  xcdr%object = c_base64__new()
       !
-      onroot = ( dffts%mype == dffts%root )
+      !onroot = ( dffts%mype == dffts%root )
       !
       ! compute size of vextr and drhor arrays
       !
@@ -477,7 +477,7 @@ MODULE qbox_interface
       CALL start_clock( 'write_vext' )
 
 
-      CALL write_function3d(path//TRIM(vext_file),vextr,dffts,onroot)
+      CALL write_function3d(path//TRIM(vext_file),vextr,dffts)
       !
       !SELECT CASE (TRIM(io))
       !CASE ("base64_parallel")
@@ -697,7 +697,7 @@ MODULE qbox_interface
       !
       CALL start_clock( 'read_resp' )
       !
-      CALL read_function3d(resp_file_to_read,drhor,dffts,onroot)
+      CALL read_function3d(resp_file_to_read,drhor,dffts)
 !      SELECT CASE (TRIM(io))
 !      CASE ('base64_parallel')
 !         !

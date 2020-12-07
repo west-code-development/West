@@ -2,10 +2,6 @@
 
 include ../../make.inc
 
-%.o : %.C
-	$(CXX) -c $<
-
-
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
           $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
@@ -30,8 +26,6 @@ wfreq_db.o \
 mod_west_io.o \
 wfreq_io.o \
 wfreq_restart.o \
-cpp_functions.o \
-cpp_wrappers.o \
 ft_interpolation.o \
 qbox_interface.o  
 

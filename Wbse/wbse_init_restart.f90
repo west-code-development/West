@@ -450,7 +450,7 @@ MODULE wbse_init_restart
       USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
                                        me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
       USE distribution_center,  ONLY : bseparal
-      USE westcom,              ONLY : wstat_save_dir
+      USE westcom,              ONLY : wbse_init_save_dir !wstat_save_dir
       !
       IMPLICIT NONE
       !
@@ -472,7 +472,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM( wstat_save_dir )//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM( wbse_init_save_dir )//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF(my_pool_id.NE.0) RETURN
       IF(my_bgrp_id.NE.0) RETURN
@@ -517,7 +517,7 @@ MODULE wbse_init_restart
       USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
                                        me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
       USE distribution_center,  ONLY : bseparal
-      USE westcom,              ONLY : wstat_save_dir
+      USE westcom,              ONLY : wbse_init_save_dir !wstat_save_dir
       !
       IMPLICIT NONE
       !
@@ -540,7 +540,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM( wstat_save_dir )//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM( wbse_init_save_dir )//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
       !
       IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
          !

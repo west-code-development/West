@@ -32,8 +32,8 @@ MODULE qbox_interface
   USE wrappers,       ONLY : f_copy
   !USE cpp_wrappers,   ONLY : c_sleep, c_wait_for_file
   USE pwcom,          ONLY : lsda
-  USE westcom,        ONLY : nrowmax, xml_file, xc, alpha_pbe0, amplitude, wf_dyn, &
-                             nitscf, nite, blHF, btHF, qbox_bisec_wfc_filename
+  !USE westcom,        ONLY : nrowmax, xml_file, xc, alpha_pbe0, amplitude, wf_dyn, &
+  !                           nitscf, nite, blHF, btHF, qbox_bisec_wfc_filename
   !
   IMPLICIT NONE
   !
@@ -44,7 +44,8 @@ MODULE qbox_interface
   PRIVATE
   SAVE
   !
-  PUBLIC :: load_qbox_wfc, init_qbox_interface, finalize_qbox_interface, apply_kernel_by_qbox !, add_debug_log
+  PUBLIC :: load_qbox_wfc
+  !, init_qbox_interface, finalize_qbox_interface, apply_kernel_by_qbox !, add_debug_log
   !
   ! parameters for doing qbox calculations
   !
@@ -70,9 +71,9 @@ MODULE qbox_interface
   CHARACTER(len=10)   :: mype
   !
   !
-  INTERFACE init_qbox_interface
-  MODULE PROCEDURE init_qbox, init_qbox_for_kernel
-  END INTERFACE
+  !INTERFACE init_qbox_interface
+  !MODULE PROCEDURE init_qbox, init_qbox_for_kernel
+  !END INTERFACE
   !
   CONTAINS
   !
@@ -217,264 +218,264 @@ MODULE qbox_interface
     END SUBROUTINE
     !
     !----------------------------------------------------------------------------
-    SUBROUTINE init_qbox()
-      !----------------------------------------------------------------------------
-      !
-      INTEGER                         ::  proc, ierr, numsp
-      !
-      ! initialize Qbox to load wavefunction, set parameters, etc.
-      !
-      WRITE(mype, '(I0.6)') dffts%mype
-      !
-      CALL mp_barrier(intra_image_comm)
-      !
-      ! first time to run init_qbox_interface
-      !
-      CALL io_push_title("Qbox interface setup")
-      !
-!#ifndef C_BINDING
-!      IF ( DP /= C_DOUBLE ) call errore( 'qbox_interface', 'DP /= C_DOUBLE but C_BINDING is not used', 1 )
-!#endif
-      !
-      WRITE(path,'(I6.6)') my_image_id
-      path = 'I' // TRIM(path) // '/'
-      server_input_file       = 'qb.in'
-      lock_file = TRIM(server_input_file) // '.lock'
-      server_output_file      = 'qb.out'
-      vext_file               = 'vext.dat'
-      resp_file = TRIM(vext_file) // '.response'
-      !
-      numsp = 30
-      CALL io_push_value("Qbox input file", TRIM(server_input_file), numsp)
-      CALL io_push_value("Qbox output file", TRIM(server_output_file), numsp)
-      CALL io_push_value("potential file", TRIM(vext_file), numsp)
-      CALL io_push_value("response file", TRIM(resp_file), numsp)
-      !
-      ! initialize qbox
-      !
-      IF(me_image == 0) THEN
-         OPEN(UNIT=iu, FILE=path//TRIM(server_input_file))
-         IF ( nrowmax /= 0 ) WRITE(iu,*) 'set nrowmax ', nrowmax
-         WRITE(iu,'(a)') 'load ../' // TRIM(xml_file)
-         WRITE(iu,'(a)') ' '
-         WRITE(iu,'(a)') 'set xc ' // TRIM( xc )
-         IF ( TRIM(xc) == 'PBE0' ) WRITE(iu, *) 'set alpha_PBE0 ', alpha_pbe0
-         WRITE(iu,'(a)') 'set wf_dyn ' // TRIM( wf_dyn )
-         WRITE(iu,'(a)') 'set blHF ' // TRIM( blHF )
-         WRITE(iu, *) 'set btHF ', btHF
-         CLOSE(iu)
-      ENDIF
-      !
-      CALL wait_for_lock_file()  ! wait for qbox to start
-      !
-      CALL delete_lock_file()    ! now qbox should start initialization
-      !
-      CALL io_push_title("Initializing Qbox")
-      !
-      CALL wait_for_lock_file()
-      !
-      ! archive input and output files for initialization
-      !
-      IF(me_image == 0) THEN
-         ierr = f_copy( path // TRIM( server_input_file), &
-                      & path // (TRIM( server_input_file ) ) // '.init')
-         IF ( ierr /= 0 ) CALL errore("qbox_interface", "fail to archive qbox input")
-      ENDIF
-      CALL archive_qbox_output()
-      !
-      CALL mp_barrier(intra_image_comm)
-      !
-    END SUBROUTINE
-    !
-    !
-    !----------------------------------------------------------------------------
-    SUBROUTINE init_qbox_for_kernel( kernel )
-      !----------------------------------------------------------------------------
-      !
-      CHARACTER(LEN=256), INTENT(IN)    ::  kernel
-      INTEGER                           ::  proc, ierr, numsp
-      CHARACTER(LEN=256)                ::  tmp
-      !
-      ! generate response command for given kernel
-      !
-      IF ( TRIM(ready_for_kernel) == TRIM(kernel) ) RETURN
-      !
-      resp_command = 'response -vext ' // TRIM( vext_file )
-      !
-      ! response mode
-      !
-      SELECT CASE( TRIM(kernel) )
-      CASE('CHI')
-      CASE('CHI_RPA')
-         resp_command = TRIM( resp_command ) // ' -RPA'
-      CASE('CHI0')
-         resp_command = TRIM( resp_command ) // ' -IPA'
-      CASE DEFAULT
-         CALL errore("init_qbox_for_kernel", "qbox_interface: wrong kernel: " // TRIM(kernel), 1)
-      END SELECT
-      !
-      ! amplitude
-      !
-      WRITE(tmp,'(E12.5)') amplitude
-      resp_command = TRIM( resp_command ) // ' -amplitude ' // TRIM(tmp)
-      !
-      ! nitscf and nite
-      !
-      WRITE(tmp,'(I5)') nitscf
-      resp_command = TRIM( resp_command ) // ' ' // TRIM(tmp)
-      WRITE(tmp,'(I5)') nite
-      resp_command = TRIM( resp_command ) // ' ' // TRIM(tmp)
-      !
-      ! write response command to file
-      !
-      IF(me_image == 0) THEN
-         !
-         OPEN(UNIT=iu, FILE=path//TRIM(server_input_file))
-         WRITE(iu,'(A)') TRIM(resp_command)
-         CLOSE(iu)
-         !
-      ENDIF
-      !
-      ready_for_kernel = kernel
-      !
-      CALL mp_barrier(intra_image_comm)
-      !
-    END SUBROUTINE
-    !
-    !
-    !----------------------------------------------------------------------------
-    SUBROUTINE apply_kernel_by_qbox(kernel, fr)
-      !----------------------------------------------------------------------------
-      !
-      ! Applying kernel to real space function fr using response command of Qbox
-      !
-      ! kernel: "CHI", "CHI_RPA" or "CHI0"
-      ! fr: real space function distributed according to dffts
-      !
-      CHARACTER(LEN=256), INTENT(IN)  ::  kernel
-      REAL(DP), INTENT(INOUT)         ::  fr(dffts%nnr)
-      REAL(DP), ALLOCATABLE           ::  frspin(:,:)
-      !
-      ! Generate response command to qbox
-      !
-      CALL init_qbox_interface(kernel)
-      !
-      fr = 0.5_DP * fr  ! change from rydberg to hartree
-      !
-      ! Write fr --> v.dat
-      !
-      CALL write_vext_file(fr)
-      !
-      ! Remove lock file, let qbox resume running
-      !
-      CALL delete_lock_file()
-      !
-      ! Wait for lock file to appear again, archive qbox output
-      !
-      CALL start_clock( 'wait_qbox' )
-      CALL wait_for_lock_file()
-      CALL stop_clock( 'wait_qbox' )
-      CALL archive_qbox_output()
-      !
-      ! Read v.dat.response --> fr
-      !
-      IF (lsda) THEN
-         !
-         ALLOCATE(frspin(dffts%nnr,2))
-         !
-         CALL read_resp_file(frspin(:,1), 0)
-         CALL read_resp_file(frspin(:,2), 1)
-         !
-         fr(:) = frspin(:,1) + frspin(:,2)
-         !
-         DEALLOCATE(frspin)
-         !
-      ELSE
-         !
-         CALL read_resp_file(fr)
-         !
-      ENDIF
-      !
-    END SUBROUTINE
-    !
-    !
-    !----------------------------------------------------------------------------
-    SUBROUTINE write_vext_file(vextr)
-      !----------------------------------------------------------------------------
-      !
-      REAL(DP), INTENT(OUT)           :: vextr(:)
-      !
-      CALL mp_barrier(intra_image_comm)
-      !
-      CALL start_clock( 'write_vext' )
-      !
-      CALL write_function3d(path//TRIM(vext_file),vextr,dffts)
-      !
-      CALL mp_barrier(intra_image_comm)
-      !
-      CALL stop_clock( 'write_vext' )
-      !
-    END SUBROUTINE
-    !
-    !----------------------------------------------------------------------------
-    SUBROUTINE read_resp_file(drhor, ispin)
-      !----------------------------------------------------------------------------
-      !
-      INTEGER, OPTIONAL, INTENT(IN)  :: ispin
-      REAL(DP), INTENT(OUT)  :: drhor(:)
-      !
-      CHARACTER(len=10)      :: mype
-      CHARACTER(LEN=256)     :: resp_file_to_read
-      !
-      IF (PRESENT(ispin)) THEN
-         !
-         IF (.NOT. lsda) CALL errore("present ispin, but not lsda calculation ", 1)
-         !
-         SELECT CASE (ispin)
-         !
-         CASE(0)
-             !
-             resp_file_to_read = path//TRIM(resp_file)//".spin0"
-             !
-         CASE(1)
-             !
-             resp_file_to_read = path//TRIM(resp_file)//".spin1"
-             !
-         CASE DEFAULT
-             !
-             CALL errore("present wrong ispin, ", 1)
-             !
-         END SELECT
-         !
-      ELSE
-         !
-         resp_file_to_read = path//TRIM(resp_file)
-         !
-      ENDIF
-      !
-      WRITE(mype, '(I0.6)') dffts%mype
-      !
-      CALL mp_barrier(intra_image_comm)
-      !
-      CALL start_clock( 'read_resp' )
-      !
-      CALL read_function3d(resp_file_to_read,drhor,dffts)
-      !
-      CALL mp_barrier(intra_image_comm)
-      !
-      CALL stop_clock( 'read_resp' )
-      !
-    END SUBROUTINE
-    !
-    !----------------------------------------------------------------------------
-    SUBROUTINE delete_lock_file()
-      !----------------------------------------------------------------------------
-      !
-      IF(me_image == 0) THEN
-         CALL delete_if_present( path // TRIM( lock_file ) )
-      ENDIF
-      !
-    END SUBROUTINE
+!    SUBROUTINE init_qbox()
+!      !----------------------------------------------------------------------------
+!      !
+!      INTEGER                         ::  proc, ierr, numsp
+!      !
+!      ! initialize Qbox to load wavefunction, set parameters, etc.
+!      !
+!      WRITE(mype, '(I0.6)') dffts%mype
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!      !
+!      ! first time to run init_qbox_interface
+!      !
+!      CALL io_push_title("Qbox interface setup")
+!      !
+!!#ifndef C_BINDING
+!!      IF ( DP /= C_DOUBLE ) call errore( 'qbox_interface', 'DP /= C_DOUBLE but C_BINDING is not used', 1 )
+!!#endif
+!      !
+!      WRITE(path,'(I6.6)') my_image_id
+!      path = 'I' // TRIM(path) // '/'
+!      server_input_file       = 'qb.in'
+!      lock_file = TRIM(server_input_file) // '.lock'
+!      server_output_file      = 'qb.out'
+!      vext_file               = 'vext.dat'
+!      resp_file = TRIM(vext_file) // '.response'
+!      !
+!      numsp = 30
+!      CALL io_push_value("Qbox input file", TRIM(server_input_file), numsp)
+!      CALL io_push_value("Qbox output file", TRIM(server_output_file), numsp)
+!      CALL io_push_value("potential file", TRIM(vext_file), numsp)
+!      CALL io_push_value("response file", TRIM(resp_file), numsp)
+!      !
+!      ! initialize qbox
+!      !
+!      IF(me_image == 0) THEN
+!         OPEN(UNIT=iu, FILE=path//TRIM(server_input_file))
+!         IF ( nrowmax /= 0 ) WRITE(iu,*) 'set nrowmax ', nrowmax
+!         WRITE(iu,'(a)') 'load ../' // TRIM(xml_file)
+!         WRITE(iu,'(a)') ' '
+!         WRITE(iu,'(a)') 'set xc ' // TRIM( xc )
+!         IF ( TRIM(xc) == 'PBE0' ) WRITE(iu, *) 'set alpha_PBE0 ', alpha_pbe0
+!         WRITE(iu,'(a)') 'set wf_dyn ' // TRIM( wf_dyn )
+!         WRITE(iu,'(a)') 'set blHF ' // TRIM( blHF )
+!         WRITE(iu, *) 'set btHF ', btHF
+!         CLOSE(iu)
+!      ENDIF
+!      !
+!      CALL wait_for_lock_file()  ! wait for qbox to start
+!      !
+!      CALL delete_lock_file()    ! now qbox should start initialization
+!      !
+!      CALL io_push_title("Initializing Qbox")
+!      !
+!      CALL wait_for_lock_file()
+!      !
+!      ! archive input and output files for initialization
+!      !
+!      IF(me_image == 0) THEN
+!         ierr = f_copy( path // TRIM( server_input_file), &
+!                      & path // (TRIM( server_input_file ) ) // '.init')
+!         IF ( ierr /= 0 ) CALL errore("qbox_interface", "fail to archive qbox input")
+!      ENDIF
+!      CALL archive_qbox_output()
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!      !
+!    END SUBROUTINE
+!    !
+!    !
+!    !----------------------------------------------------------------------------
+!    SUBROUTINE init_qbox_for_kernel( kernel )
+!      !----------------------------------------------------------------------------
+!      !
+!      CHARACTER(LEN=256), INTENT(IN)    ::  kernel
+!      INTEGER                           ::  proc, ierr, numsp
+!      CHARACTER(LEN=256)                ::  tmp
+!      !
+!      ! generate response command for given kernel
+!      !
+!      IF ( TRIM(ready_for_kernel) == TRIM(kernel) ) RETURN
+!      !
+!      resp_command = 'response -vext ' // TRIM( vext_file )
+!      !
+!      ! response mode
+!      !
+!      SELECT CASE( TRIM(kernel) )
+!      CASE('CHI')
+!      CASE('CHI_RPA')
+!         resp_command = TRIM( resp_command ) // ' -RPA'
+!      CASE('CHI0')
+!         resp_command = TRIM( resp_command ) // ' -IPA'
+!      CASE DEFAULT
+!         CALL errore("init_qbox_for_kernel", "qbox_interface: wrong kernel: " // TRIM(kernel), 1)
+!      END SELECT
+!      !
+!      ! amplitude
+!      !
+!      WRITE(tmp,'(E12.5)') amplitude
+!      resp_command = TRIM( resp_command ) // ' -amplitude ' // TRIM(tmp)
+!      !
+!      ! nitscf and nite
+!      !
+!      WRITE(tmp,'(I5)') nitscf
+!      resp_command = TRIM( resp_command ) // ' ' // TRIM(tmp)
+!      WRITE(tmp,'(I5)') nite
+!      resp_command = TRIM( resp_command ) // ' ' // TRIM(tmp)
+!      !
+!      ! write response command to file
+!      !
+!      IF(me_image == 0) THEN
+!         !
+!         OPEN(UNIT=iu, FILE=path//TRIM(server_input_file))
+!         WRITE(iu,'(A)') TRIM(resp_command)
+!         CLOSE(iu)
+!         !
+!      ENDIF
+!      !
+!      ready_for_kernel = kernel
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!      !
+!    END SUBROUTINE
+!    !
+!    !
+!    !----------------------------------------------------------------------------
+!    SUBROUTINE apply_kernel_by_qbox(kernel, fr)
+!      !----------------------------------------------------------------------------
+!      !
+!      ! Applying kernel to real space function fr using response command of Qbox
+!      !
+!      ! kernel: "CHI", "CHI_RPA" or "CHI0"
+!      ! fr: real space function distributed according to dffts
+!      !
+!      CHARACTER(LEN=256), INTENT(IN)  ::  kernel
+!      REAL(DP), INTENT(INOUT)         ::  fr(dffts%nnr)
+!      REAL(DP), ALLOCATABLE           ::  frspin(:,:)
+!      !
+!      ! Generate response command to qbox
+!      !
+!      CALL init_qbox_interface(kernel)
+!      !
+!      fr = 0.5_DP * fr  ! change from rydberg to hartree
+!      !
+!      ! Write fr --> v.dat
+!      !
+!      CALL write_vext_file(fr)
+!      !
+!      ! Remove lock file, let qbox resume running
+!      !
+!      CALL delete_lock_file()
+!      !
+!      ! Wait for lock file to appear again, archive qbox output
+!      !
+!      CALL start_clock( 'wait_qbox' )
+!      CALL wait_for_lock_file()
+!      CALL stop_clock( 'wait_qbox' )
+!      CALL archive_qbox_output()
+!      !
+!      ! Read v.dat.response --> fr
+!      !
+!      IF (lsda) THEN
+!         !
+!         ALLOCATE(frspin(dffts%nnr,2))
+!         !
+!         CALL read_resp_file(frspin(:,1), 0)
+!         CALL read_resp_file(frspin(:,2), 1)
+!         !
+!         fr(:) = frspin(:,1) + frspin(:,2)
+!         !
+!         DEALLOCATE(frspin)
+!         !
+!      ELSE
+!         !
+!         CALL read_resp_file(fr)
+!         !
+!      ENDIF
+!      !
+!    END SUBROUTINE
+!    !
+!    !
+!    !----------------------------------------------------------------------------
+!    SUBROUTINE write_vext_file(vextr)
+!      !----------------------------------------------------------------------------
+!      !
+!      REAL(DP), INTENT(OUT)           :: vextr(:)
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!      !
+!      CALL start_clock( 'write_vext' )
+!      !
+!      CALL write_function3d(path//TRIM(vext_file),vextr,dffts)
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!      !
+!      CALL stop_clock( 'write_vext' )
+!      !
+!    END SUBROUTINE
+!    !
+!    !----------------------------------------------------------------------------
+!    SUBROUTINE read_resp_file(drhor, ispin)
+!      !----------------------------------------------------------------------------
+!      !
+!      INTEGER, OPTIONAL, INTENT(IN)  :: ispin
+!      REAL(DP), INTENT(OUT)  :: drhor(:)
+!      !
+!      CHARACTER(len=10)      :: mype
+!      CHARACTER(LEN=256)     :: resp_file_to_read
+!      !
+!      IF (PRESENT(ispin)) THEN
+!         !
+!         IF (.NOT. lsda) CALL errore("present ispin, but not lsda calculation ", 1)
+!         !
+!         SELECT CASE (ispin)
+!         !
+!         CASE(0)
+!             !
+!             resp_file_to_read = path//TRIM(resp_file)//".spin0"
+!             !
+!         CASE(1)
+!             !
+!             resp_file_to_read = path//TRIM(resp_file)//".spin1"
+!             !
+!         CASE DEFAULT
+!             !
+!             CALL errore("present wrong ispin, ", 1)
+!             !
+!         END SELECT
+!         !
+!      ELSE
+!         !
+!         resp_file_to_read = path//TRIM(resp_file)
+!         !
+!      ENDIF
+!      !
+!      WRITE(mype, '(I0.6)') dffts%mype
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!      !
+!      CALL start_clock( 'read_resp' )
+!      !
+!      CALL read_function3d(resp_file_to_read,drhor,dffts)
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!      !
+!      CALL stop_clock( 'read_resp' )
+!      !
+!    END SUBROUTINE
+!    !
+!    !----------------------------------------------------------------------------
+!    SUBROUTINE delete_lock_file()
+!      !----------------------------------------------------------------------------
+!      !
+!      IF(me_image == 0) THEN
+!         CALL delete_if_present( path // TRIM( lock_file ) )
+!      ENDIF
+!      !
+!    END SUBROUTINE
     !
     !----------------------------------------------------------------------------
     SUBROUTINE wait_for_lock_file()
@@ -542,39 +543,39 @@ MODULE qbox_interface
     END SUBROUTINE
     !
     !----------------------------------------------------------------------------
-    SUBROUTINE archive_qbox_output()
-      !----------------------------------------------------------------------------
-      !
-      ! rename qbox output file to prevent it from being overwritten by next qbox run
-      !
-      LOGICAL             :: file_exists
-      CHARACTER(LEN=256)  :: new_server_output_file
-      CHARACTER (len=6)   :: file_index
-      INTEGER             :: i, ierr
-      !
-      IF( me_image == 0 ) THEN
-         !
-         file_exists = .FALSE.
-         INQUIRE( FILE= path // TRIM( server_output_file ) , EXIST = file_exists )
-         IF( .NOT. file_exists ) CALL errore( 'qbox_interface', 'file to achive not exist', 1 )
-         !
-         i = 0
-         DO
-            WRITE(file_index,'(i6.6)') i
-            new_server_output_file = TRIM(server_output_file) // "." // file_index
-            INQUIRE( FILE= path // TRIM( new_server_output_file ) , EXIST = file_exists )
-            IF( file_exists ) THEN
-               i = i + 1
-            ELSE
-               ierr = f_copy( path // TRIM( server_output_file ), path // TRIM( new_server_output_file ) )
-               IF ( ierr /= 0 ) CALL errore("qbox_interface", "fail to archive qbox output")
-               EXIT
-            ENDIF
-         ENDDO
-         !
-      ENDIF
-      !
-    END SUBROUTINE
+!    SUBROUTINE archive_qbox_output()
+!      !----------------------------------------------------------------------------
+!      !
+!      ! rename qbox output file to prevent it from being overwritten by next qbox run
+!      !
+!      LOGICAL             :: file_exists
+!      CHARACTER(LEN=256)  :: new_server_output_file
+!      CHARACTER (len=6)   :: file_index
+!      INTEGER             :: i, ierr
+!      !
+!      IF( me_image == 0 ) THEN
+!         !
+!         file_exists = .FALSE.
+!         INQUIRE( FILE= path // TRIM( server_output_file ) , EXIST = file_exists )
+!         IF( .NOT. file_exists ) CALL errore( 'qbox_interface', 'file to achive not exist', 1 )
+!         !
+!         i = 0
+!         DO
+!            WRITE(file_index,'(i6.6)') i
+!            new_server_output_file = TRIM(server_output_file) // "." // file_index
+!            INQUIRE( FILE= path // TRIM( new_server_output_file ) , EXIST = file_exists )
+!            IF( file_exists ) THEN
+!               i = i + 1
+!            ELSE
+!               ierr = f_copy( path // TRIM( server_output_file ), path // TRIM( new_server_output_file ) )
+!               IF ( ierr /= 0 ) CALL errore("qbox_interface", "fail to archive qbox output")
+!               EXIT
+!            ENDIF
+!         ENDDO
+!         !
+!      ENDIF
+!      !
+!    END SUBROUTINE
     !
     !----------------------------------------------------------------------------
     SUBROUTINE finalize_qbox_interface()

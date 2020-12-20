@@ -260,16 +260,16 @@ MODULE wbse_init_center
   !
   ! FOR qbox_control
   !
-  INTEGER :: nrowmax
-  CHARACTER(LEN=256)  :: xml_file             ! xml file from qbox ground state calculation
-  CHARACTER(LEN=256) ::  xc                   ! xc functional
-  REAL(DP) ::            alpha_pbe0           ! alpha for PBE0 calculation
-  REAL(DP) ::            amplitude            ! amplitude for vext
-  CHARACTER(LEN=256) ::  wf_dyn               ! wavefunction update algorithm
-  REAL(DP) ::            btHF                 ! bisection threshold for HF exchange computation
-  CHARACTER(LEN=256) ::  blHF                 ! bisection levels for HF exchange computation
-  INTEGER :: nitscf
-  INTEGER :: nite
+!  INTEGER :: nrowmax
+!  CHARACTER(LEN=256)  :: xml_file             ! xml file from qbox ground state calculation
+!  CHARACTER(LEN=256) ::  xc                   ! xc functional
+!  REAL(DP) ::            alpha_pbe0           ! alpha for PBE0 calculation
+!  REAL(DP) ::            amplitude            ! amplitude for vext
+!  CHARACTER(LEN=256) ::  wf_dyn               ! wavefunction update algorithm
+!  REAL(DP) ::            btHF                 ! bisection threshold for HF exchange computation
+!  CHARACTER(LEN=256) ::  blHF                 ! bisection levels for HF exchange computation
+!  INTEGER :: nitscf
+!  INTEGER :: nite
   !
   CHARACTER(LEN=512) :: wbse_init_save_dir
   CHARACTER(LEN=512) :: wbse_init_restart_dir

@@ -109,17 +109,17 @@ default["wbse_control"]["ipol_input"] = "XX"
 default["wbse_control"]["n_lzstep"] = 0
 default["wbse_control"]["macropol_dfpt"] = False
 # #qbox control
-default["qbox_control"] = {}
-default["qbox_control"]["nrowmax"] = 0
-default["qbox_control"]["xml_file"] = "qb.init.xml"
-default["qbox_control"]["xc"] = "PBE"
-default["qbox_control"]["alpha_pbe0"] = 0.25
-default["qbox_control"]["amplitude"] = 0
-default["qbox_control"]["wf_dyn"] = "PSDA"
-default["qbox_control"]["btHF"] = 0
-default["qbox_control"]["blHF"] = "2 2 2"
-default["qbox_control"]["nitscf"] = 10
-default["qbox_control"]["nite"] = 0
+#default["qbox_control"] = {}
+#default["qbox_control"]["nrowmax"] = 0
+#default["qbox_control"]["xml_file"] = "qb.init.xml"
+#default["qbox_control"]["xc"] = "PBE"
+#default["qbox_control"]["alpha_pbe0"] = 0.25
+#default["qbox_control"]["amplitude"] = 0
+#default["qbox_control"]["wf_dyn"] = "PSDA"
+#default["qbox_control"]["btHF"] = 0
+#default["qbox_control"]["blHF"] = "2 2 2"
+#default["qbox_control"]["nitscf"] = 10
+#default["qbox_control"]["nite"] = 0
 # #wbsepp control
 default["wbsepp_control"] = {}
 default["wbsepp_control"]["wbsepp_type"] =  0    #0:eig_decomposion, 1:meg, 2:ads_spect
@@ -339,7 +339,7 @@ server_control :
     read_keyword_from_file(fileName,"server_control",True)
     read_keyword_from_file(fileName,"wbse_init_control",True)
     read_keyword_from_file(fileName,"wbse_control",True)
-    read_keyword_from_file(fileName,"qbox_control",True)
+    #read_keyword_from_file(fileName,"qbox_control",True)
     read_keyword_from_file(fileName,"wbsepp_control",True)
     #
     remove(fileName)

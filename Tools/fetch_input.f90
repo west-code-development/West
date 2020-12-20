@@ -137,23 +137,23 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
      !
      END IF
      !
-     IF ( ANY(driver(:)==8)) THEN
-        !
-        CALL json%add('input.qbox_control.nrowmax',nrowmax)
-        CALL json%add('input.qbox_control.xml_file',TRIM(xml_file))
-        CALL json%add('input.qbox_control.xc',TRIM(xc))
-        CALL json%add('input.qbox_control.alpha_pbe0',alpha_pbe0)
-        CALL json%add('input.qbox_control.amplitude',amplitude)
-        CALL json%add('input.qbox_control.wf_dyn',TRIM(wf_dyn))
-        CALL json%add('input.qbox_control.btHF',btHF)
-        CALL json%add('input.qbox_control.blHF', TRIM(blHF))
-        CALL json%add('input.qbox_control.nitscf',nitscf)
-        CALL json%add('input.qbox_control.nite',nite)
-        !
+!     IF ( ANY(driver(:)==8)) THEN
+!        !
+!        CALL json%add('input.qbox_control.nrowmax',nrowmax)
+!        CALL json%add('input.qbox_control.xml_file',TRIM(xml_file))
+!        CALL json%add('input.qbox_control.xc',TRIM(xc))
+!        CALL json%add('input.qbox_control.alpha_pbe0',alpha_pbe0)
+!        CALL json%add('input.qbox_control.amplitude',amplitude)
+!        CALL json%add('input.qbox_control.wf_dyn',TRIM(wf_dyn))
+!        CALL json%add('input.qbox_control.btHF',btHF)
+!        CALL json%add('input.qbox_control.blHF', TRIM(blHF))
+!        CALL json%add('input.qbox_control.nitscf',nitscf)
+!        CALL json%add('input.qbox_control.nite',nite)
+!        !
+!     !
+!     END IF
      !
-     END IF
-     !
-     IF (ANY(driver(:)==9)) THEN
+     IF (ANY(driver(:)==8)) THEN
         !
         CALL json%add('input.wbsepp_control.wbsepp_type',wbsepp_type)
         CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_plep_read_from_file)
@@ -491,36 +491,36 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==8) ) THEN
-        IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "qbox_control" )
-        IERR = args%setitem(2, verbose )
-        IERR = dict_create(kwargs)
-        !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
-        IERR = cast(return_dict, return_obj)
-        !
-        CALL args%destroy
-        CALL kwargs%destroy
-        CALL return_obj%destroy
-        !
-        IERR = return_dict%getitem(nrowmax, "nrowmax")
-        IERR = return_dict%getitem(cvalue, "xml_file");xml_file = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "xc");xc = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(alpha_pbe0, "alpha_pbe0")
-        IERR = return_dict%getitem(amplitude, "amplitude")
-        IERR = return_dict%getitem(cvalue, "wf_dyn");wf_dyn = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(btHF, "btHF")
-        IERR = return_dict%getitem(cvalue, "blHF");blHF = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(nitscf, "nitscf")
-        IERR = return_dict%getitem(nite, "nite")
-        !
-        CALL return_dict%destroy
-        !
-     ENDIF
+!     IF ( ANY(driver(:)==8) ) THEN
+!        IERR = tuple_create(args, 3)
+!        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
+!        IERR = args%setitem(1, "qbox_control" )
+!        IERR = args%setitem(2, verbose )
+!        IERR = dict_create(kwargs)
+!        !
+!        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+!        IERR = cast(return_dict, return_obj)
+!        !
+!        CALL args%destroy
+!        CALL kwargs%destroy
+!        CALL return_obj%destroy
+!        !
+!        IERR = return_dict%getitem(nrowmax, "nrowmax")
+!        IERR = return_dict%getitem(cvalue, "xml_file");xml_file = TRIM(ADJUSTL(cvalue))
+!        IERR = return_dict%getitem(cvalue, "xc");xc = TRIM(ADJUSTL(cvalue))
+!        IERR = return_dict%getitem(alpha_pbe0, "alpha_pbe0")
+!        IERR = return_dict%getitem(amplitude, "amplitude")
+!        IERR = return_dict%getitem(cvalue, "wf_dyn");wf_dyn = TRIM(ADJUSTL(cvalue))
+!        IERR = return_dict%getitem(btHF, "btHF")
+!        IERR = return_dict%getitem(cvalue, "blHF");blHF = TRIM(ADJUSTL(cvalue))
+!        IERR = return_dict%getitem(nitscf, "nitscf")
+!        IERR = return_dict%getitem(nite, "nite")
+!        !
+!        CALL return_dict%destroy
+!        !
+!     ENDIF
      !
-     IF ( ANY(driver(:)==9) ) THEN
+     IF ( ANY(driver(:)==8) ) THEN
         !wbsepp gamma only qlist = [1]
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
         ALLOCATE(qlist(1))
@@ -809,22 +809,22 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==8) ) THEN
-     !
-     CALL mp_bcast(nrowmax,root,world_comm)
-     CALL mp_bcast(xml_file,root,world_comm)
-     CALL mp_bcast(xc,root,world_comm)
-     CALL mp_bcast(amplitude,root,world_comm)
-     CALL mp_bcast(alpha_pbe0,root,world_comm)
-     CALL mp_bcast(wf_dyn,root,world_comm)
-     CALL mp_bcast(blHF,root,world_comm)
-     CALL mp_bcast(btHF,root,world_comm)
-     CALL mp_bcast(nitscf,root,world_comm)
-     CALL mp_bcast(nite,root,world_comm)
-     !
-  ENDIF
+!  IF ( ANY(driver(:)==8) ) THEN
+!     !
+!     CALL mp_bcast(nrowmax,root,world_comm)
+!     CALL mp_bcast(xml_file,root,world_comm)
+!     CALL mp_bcast(xc,root,world_comm)
+!     CALL mp_bcast(amplitude,root,world_comm)
+!     CALL mp_bcast(alpha_pbe0,root,world_comm)
+!     CALL mp_bcast(wf_dyn,root,world_comm)
+!     CALL mp_bcast(blHF,root,world_comm)
+!     CALL mp_bcast(btHF,root,world_comm)
+!     CALL mp_bcast(nitscf,root,world_comm)
+!     CALL mp_bcast(nite,root,world_comm)
+!     !
+!  ENDIF
   !
-  IF ( ANY(driver(:)==9) ) THEN
+  IF ( ANY(driver(:)==8) ) THEN
      !GAMMA ONLY qlist init for wbsepp
      IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
@@ -1073,29 +1073,29 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
          !
     ENDIF
     !
-    IF ( ANY(driver(:)==8) ) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : qbox_control')
-        !
-        numsp=23
-        IF ( nrowmax /=0 ) CALL io_push_value('nrowmax',nrowmax,numsp)
-        CALL io_push_value('xml_file',xml_file,numsp)
-        CALL io_push_value('xc',xc,numsp)
-        IF ( TRIM(xc) == 'PBE0' ) CALL io_push_value('alpha_pbe0',alpha_pbe0,numsp)
-        CALL io_push_value('wf_dyn',wf_dyn,numsp)
-        CALL io_push_value('blHF',blHF,numsp)
-        CALL io_push_value('btHF',btHF,numsp)
-        CALL io_push_value('amplitude',amplitude,numsp)
-        CALL io_push_value('nitscf',nitscf,numsp)
-        CALL io_push_value('nite',nite,numsp)
-        !
-        CALL io_push_bar()
-        !
-    ENDIF
+!    IF ( ANY(driver(:)==8) ) THEN
+!        !
+!        ! REPORT
+!        !
+!        CALL io_push_title('I/O Summary : qbox_control')
+!        !
+!        numsp=23
+!        IF ( nrowmax /=0 ) CALL io_push_value('nrowmax',nrowmax,numsp)
+!        CALL io_push_value('xml_file',xml_file,numsp)
+!        CALL io_push_value('xc',xc,numsp)
+!        IF ( TRIM(xc) == 'PBE0' ) CALL io_push_value('alpha_pbe0',alpha_pbe0,numsp)
+!        CALL io_push_value('wf_dyn',wf_dyn,numsp)
+!        CALL io_push_value('blHF',blHF,numsp)
+!        CALL io_push_value('btHF',btHF,numsp)
+!        CALL io_push_value('amplitude',amplitude,numsp)
+!        CALL io_push_value('nitscf',nitscf,numsp)
+!        CALL io_push_value('nite',nite,numsp)
+!        !
+!        CALL io_push_bar()
+!        !
+!    ENDIF
     !
-    IF ( ANY(driver(:)==9) ) THEN
+    IF ( ANY(driver(:)==8) ) THEN
         !
         ! REPORT
         !

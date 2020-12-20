@@ -117,19 +117,20 @@ END PROGRAM
       !
       nbndval0x = nbnd_occ(1)
       !
-      IF (l_lz_spec) THEN
-         !
-         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
-         !
-      ELSEIF (l_meg .or. l_eig_decomp .or. l_exc_plot .or. l_exc_rho_res_plot ) THEN
-         !
-         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
-         !
-      ELSE
-         !
-         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
-         !
-      ENDIF
+      wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
+!      IF (l_lz_spec) THEN
+!         !
+!         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
+!         !
+!      ELSEIF (l_meg .or. l_eig_decomp .or. l_exc_plot .or. l_exc_rho_res_plot ) THEN
+!         !
+!         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
+!         !
+!      ELSE
+!         !
+!         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
+!         !
+!      ENDIF
       !
       ! if l_load_qbox_wfc == TRUE, overwrite evc by qbox wfc
       !
@@ -163,7 +164,7 @@ SUBROUTINE wbsepp_readin()
   CALL start_clock('wbsepp_readin')
   !
   !change to new version of fetch namelist
-  CALL fetch_input_yml(2,(/1,9/),.TRUE.,.FALSE.)
+  CALL fetch_input_yml(2,(/1,8/),.TRUE.,.FALSE.)
   !CALL wbsepp_fetch_namelist(2,(/1,2/))
   !
   !  read the input file produced by the pwscf program

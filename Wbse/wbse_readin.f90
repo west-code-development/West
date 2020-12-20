@@ -77,7 +77,7 @@ SUBROUTINE wbse_init_readin()
   CALL start_clock('wbse_init_readin')
   !
   !TODO: change to new west version of fech namelist
-  CALL fetch_input_yml(3,(/1,6,8/),.TRUE.,.FALSE.)
+  CALL fetch_input_yml(3,(/1,5,6/),.TRUE.,.FALSE.)
   !CALL wbse_fetch_namelist(3,(/1,2,4/))
   !
   !  read the input file produced by the pwscf program

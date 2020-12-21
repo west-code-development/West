@@ -9,7 +9,7 @@
 ! He Ma
 !
 !#define DEBUG_BASE64
-#define C_BINDING
+!#define C_BINDING
 !
 !-----------------------------------------------------------------------
 MODULE qbox_interface
@@ -478,69 +478,69 @@ MODULE qbox_interface
 !    END SUBROUTINE
     !
     !----------------------------------------------------------------------------
-    SUBROUTINE wait_for_lock_file()
-      !----------------------------------------------------------------------------
-      !
-      ! wait for qbox to finish (indicated by existance of a lock file)
-      !
-      USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
-      USE forpy_mod,  ONLY: tuple, tuple_create
-      USE forpy_mod,  ONLY: dict, dict_create
-      USE forpy_mod,  ONLY: list, list_create
-      USE forpy_mod,  ONLY: object, cast
-      USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
-      !
-      LOGICAL              :: file_exists = .FALSE.
-      !LOGICAL(KIND=C_BOOL) :: file_existss = .FALSE.
-      !
-      INTEGER :: IERR
-      TYPE(tuple) :: args
-      TYPE(dict) :: kwargs
-      TYPE(module_py) :: pymod
-      TYPE(object) :: return_obj
-      INTEGER :: return_int
-      !
-      IF( me_image == 0 ) THEN
-        !
-        IERR = import_py(pymod, "west_clientserver")
-        !
-        IERR = tuple_create(args, 1)
-        IERR = args%setitem(0, TRIM(path // TRIM( lock_file )) )
-        !IERR = dict_create(kwargs)
-        !
-        IERR = call_py(return_obj, pymod, "wait_for_lockfile", args)
-        !
-        IERR = cast(return_int, return_obj)
-        !
-        IF( return_int /= 0 ) CALL errore("sleep","wait for lockfile error",return_int)
-        !
-        !CALL kwargs%destroy
-        CALL args%destroy
-        CALL return_obj%destroy
-        CALL pymod%destroy
-        !CALL c_wait_for_file(INT(nsec_max, KIND=C_INT), file_existss, &
-        !                     & path // TRIM( lock_file ) // C_NULL_CHAR)
-        !
-        ! DO isec = 1,nsec_max
-        !    !
-        !    INQUIRE( FILE= path // TRIM( lock_file ) , EXIST = file_exists )
-        !    IF( file_exists ) THEN
-        !       EXIT
-        !    ELSE
-        !       CALL c_sleep(1000000_C_INT)
-        !    ENDIF
-        !    !
-        ! ENDDO
-        !
-        file_exists = (return_int == 0)
-        !file_exists = file_existss
-        !
-      ENDIF
-      !
-      CALL mp_bcast( file_exists, 0, intra_image_comm )
-      IF ( .NOT. file_exists ) CALL errore( 'qbox_interface', 'Lock file timeout', 1 )
-      !
-    END SUBROUTINE
+!    SUBROUTINE wait_for_lock_file()
+!      !----------------------------------------------------------------------------
+!      !
+!      ! wait for qbox to finish (indicated by existance of a lock file)
+!      !
+!      USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+!      USE forpy_mod,  ONLY: tuple, tuple_create
+!      USE forpy_mod,  ONLY: dict, dict_create
+!      USE forpy_mod,  ONLY: list, list_create
+!      USE forpy_mod,  ONLY: object, cast
+!      USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
+!      !
+!      LOGICAL              :: file_exists = .FALSE.
+!      !LOGICAL(KIND=C_BOOL) :: file_existss = .FALSE.
+!      !
+!      INTEGER :: IERR
+!      TYPE(tuple) :: args
+!      TYPE(dict) :: kwargs
+!      TYPE(module_py) :: pymod
+!      TYPE(object) :: return_obj
+!      INTEGER :: return_int
+!      !
+!      IF( me_image == 0 ) THEN
+!        !
+!        IERR = import_py(pymod, "west_clientserver")
+!        !
+!        IERR = tuple_create(args, 1)
+!        IERR = args%setitem(0, TRIM(path // TRIM( lock_file )) )
+!        !IERR = dict_create(kwargs)
+!        !
+!        IERR = call_py(return_obj, pymod, "wait_for_lockfile", args)
+!        !
+!        IERR = cast(return_int, return_obj)
+!        !
+!        IF( return_int /= 0 ) CALL errore("sleep","wait for lockfile error",return_int)
+!        !
+!        !CALL kwargs%destroy
+!        CALL args%destroy
+!        CALL return_obj%destroy
+!        CALL pymod%destroy
+!        !CALL c_wait_for_file(INT(nsec_max, KIND=C_INT), file_existss, &
+!        !                     & path // TRIM( lock_file ) // C_NULL_CHAR)
+!        !
+!        ! DO isec = 1,nsec_max
+!        !    !
+!        !    INQUIRE( FILE= path // TRIM( lock_file ) , EXIST = file_exists )
+!        !    IF( file_exists ) THEN
+!        !       EXIT
+!        !    ELSE
+!        !       CALL c_sleep(1000000_C_INT)
+!        !    ENDIF
+!        !    !
+!        ! ENDDO
+!        !
+!        file_exists = (return_int == 0)
+!        !file_exists = file_existss
+!        !
+!      ENDIF
+!      !
+!      CALL mp_bcast( file_exists, 0, intra_image_comm )
+!      IF ( .NOT. file_exists ) CALL errore( 'qbox_interface', 'Lock file timeout', 1 )
+!      !
+!    END SUBROUTINE
     !
     !----------------------------------------------------------------------------
 !    SUBROUTINE archive_qbox_output()
@@ -578,22 +578,22 @@ MODULE qbox_interface
 !    END SUBROUTINE
     !
     !----------------------------------------------------------------------------
-    SUBROUTINE finalize_qbox_interface()
-      !----------------------------------------------------------------------------
-      !
-      ! send quit command to qbox
-      !
-      IF(me_image == 0) THEN
-         OPEN(UNIT=iu, FILE=path//TRIM(server_input_file))
-         WRITE(iu,'(A)') 'quit'
-         CLOSE(iu)
-      ENDIF
-      !
-      CALL delete_lock_file()
-      !
-      !DEALLOCATE(nplocs)
-      !
-    END SUBROUTINE
+!    SUBROUTINE finalize_qbox_interface()
+!      !----------------------------------------------------------------------------
+!      !
+!      ! send quit command to qbox
+!      !
+!      IF(me_image == 0) THEN
+!         OPEN(UNIT=iu, FILE=path//TRIM(server_input_file))
+!         WRITE(iu,'(A)') 'quit'
+!         CLOSE(iu)
+!      ENDIF
+!      !
+!      CALL delete_lock_file()
+!      !
+!      !DEALLOCATE(nplocs)
+!      !
+!    END SUBROUTINE
     !
   ! !----------------------------------------------------------------------------
   ! SUBROUTINE movefile(from, to)

@@ -153,23 +153,6 @@ def sleep_and_wait(*args, **kwargs):
     return return_int
 
 
-def wait_for_lockfile(*args,maxsec=21600,sleepsec=1):
-    # For wbse qbox_interface
-    # wait for qbox to finish (indicated by existance of a lock file)
-    #
-    filename = args[0]
-    t0 = pc()
-    exists = False
-    while (pc()-t0 <= maxsec) :
-        exists = path.exists(filename)
-        if exists:
-           break
-        else :
-           sleep(sleepsec)
-    return 0 if exists else 1
-
-
-
 ########
 # TEST #
 ########

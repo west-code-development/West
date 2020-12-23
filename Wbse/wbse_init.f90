@@ -22,6 +22,7 @@ PROGRAM wbse_init
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   !USE mp,                   ONLY : mp_sum,mp_barrier
   !USE qbox_interface,       ONLY : init_qbox_interface, finalize_qbox_interface
+  USE qbox_interface,       ONLY : init_qbox,finalize_qbox
   USE westcom,              ONLY : l_test_ovl, use_wstat_pdep,use_qbox
   !wbsecom combined into westcom
   !USE wbsecom,              ONLY : l_test_ovl, use_wstat_pdep
@@ -54,10 +55,12 @@ PROGRAM wbse_init
   !
   IF ( use_qbox ) THEN
      !
+     CALL init_qbox()
      !CALL init_qbox_interface()
      !
      CALL wbse_init_methods (.TRUE.)
      !
+     CALL finalize_qbox()
      !CALL finalize_qbox_interface()
      !
   ELSEIF (use_wstat_pdep) THEN

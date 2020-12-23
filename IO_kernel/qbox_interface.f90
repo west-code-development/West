@@ -44,7 +44,7 @@ MODULE qbox_interface
   PRIVATE
   SAVE
   !
-  PUBLIC :: load_qbox_wfc
+  PUBLIC :: load_qbox_wfc, init_qbox, finalize_qbox,sleep_and_wait_for_lock_to_be_removed
   !, init_qbox_interface, finalize_qbox_interface, apply_kernel_by_qbox !, add_debug_log
   !
   ! parameters for doing qbox calculations
@@ -217,6 +217,32 @@ MODULE qbox_interface
       !
     END SUBROUTINE
     !
+    !----------------------------------------------------------------------------
+    SUBROUTINE init_qbox()
+      !----------------------------------------------------------------------------
+      !
+      USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
+      USE conversions,     ONLY : itoa
+      !
+      CHARACTER(LEN=:),ALLOCATABLE :: lockfile
+      INTEGER :: iu
+      !
+      ! DUMP A LOCK FILE
+      !
+      IF( me_bgrp == 0 ) THEN
+           lockfile = "I."//itoa(my_image_id)//".lock"
+           OPEN(NEWUNIT=iu,FILE=lockfile)
+           CLOSE(iu)
+           !
+           ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
+           !
+           CALL sleep_and_wait_for_lock_to_be_removed(lockfile, .TRUE.)
+           !
+      ENDIF
+      !
+      CALL mp_barrier(intra_image_comm)
+      !
+    END SUBROUTINE
     !----------------------------------------------------------------------------
 !    SUBROUTINE init_qbox()
 !      !----------------------------------------------------------------------------
@@ -578,6 +604,45 @@ MODULE qbox_interface
 !    END SUBROUTINE
     !
     !----------------------------------------------------------------------------
+!    SUBROUTINE finalize_qbox()
+!      !----------------------------------------------------------------------------
+!      !
+!      USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
+!      USE conversions,     ONLY : itoa
+!      !
+!      CHARACTER(LEN=:),ALLOCATABLE :: lockfile
+!      INTEGER :: iu
+!      !
+!      ! DUMP A LOCK FILE
+!      !
+!      IF( me_bgrp == 0 ) THEN
+!           lockfile = "I."//itoa(my_image_id)//".lock"
+!           OPEN(NEWUNIT=iu,FILE=lockfile)
+!           CLOSE(iu)
+!           !
+!           ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
+!           !
+!           CALL sleep_and_wait_to_quit(lockfile)
+!           !
+!      ENDIF
+!      !
+!      CALL mp_barrier(intra_image_comm)
+!    END SUBROUTINE
+    !
+    SUBROUTINE finalize_qbox()
+      !----------------------------------------------------------------------------
+      !
+      ! send quit command to qbox
+      !
+      USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
+      USE conversions,     ONLY : itoa
+      IF( me_bgrp == 0 ) THEN
+         OPEN(UNIT=iu, FILE="qb."//itoa(my_image_id)//".in")
+         WRITE(iu,'(A)') 'quit'
+         CLOSE(iu)
+         CALL delete_if_present( "qb."//itoa(my_image_id)//".in.lock" )
+      ENDIF
+    END SUBROUTINE
 !    SUBROUTINE finalize_qbox_interface()
 !      !----------------------------------------------------------------------------
 !      !
@@ -644,4 +709,104 @@ MODULE qbox_interface
   !  CALL c_sleep(100000_C_INT)
   !  !
   !END SUBROUTINE
+
+  SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile, l_attachscript)
+    !
+    USE westcom,    ONLY: document
+    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+    USE forpy_mod,  ONLY: tuple, tuple_create
+    USE forpy_mod,  ONLY: dict, dict_create
+    USE forpy_mod,  ONLY: list, list_create
+    USE forpy_mod,  ONLY: object, cast
+    USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
+    !
+    IMPLICIT NONE
+    !
+    CHARACTER(LEN=*),INTENT(IN) :: lockfile
+    !
+    LOGICAL,     INTENT(IN) :: l_attachscript
+    INTEGER :: IERR
+    TYPE(tuple) :: args
+    TYPE(dict) :: kwargs, kwargs_copy
+    TYPE(module_py) :: pymod
+    TYPE(object) :: return_obj
+    INTEGER :: return_int
+    !
+    IERR = import_py(pymod, "west_clientserver")
+    !
+    IERR = tuple_create(args, 1)
+    IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)) )
+    IERR = dict_create(kwargs)
+    IERR = kwargs%setitem("document",document)
+    !
+    ! no dict.pop function in forpy, pass the l_attachscript flag to python function sleep_and_wait
+    ! python function sleep_and_wait will decide to pop the document  [response,script] keys
+    !
+    IF (l_attachscript) THEN
+        IERR = kwargs%setitem("l_attachscript",1)
+    ELSE
+        IERR = kwargs%setitem("l_attachscript",0)
+    END IF
+    !
+    IERR = call_py(return_obj, pymod, "sleep_and_wait", args, kwargs)
+    !
+    IERR = cast(return_int, return_obj)
+    !
+    IF( return_int /= 0 ) CALL errore("sleep","Did not wake well",return_int)
+    !
+    CALL kwargs%destroy
+    CALL args%destroy
+    CALL return_obj%destroy
+    CALL pymod%destroy
+    !
+  END SUBROUTINE
+
+! SUBROUTINE sleep_and_wait_to_quit(lockfile)
+!  BUG!: ISSUES with quit
+!    !
+!    USE westcom,    ONLY: document
+!    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+!    USE forpy_mod,  ONLY: tuple, tuple_create
+!    USE forpy_mod,  ONLY: dict, dict_create
+!    USE forpy_mod,  ONLY: list, list_create
+!    USE forpy_mod,  ONLY: object, cast
+!    USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
+!    !
+!    IMPLICIT NONE
+!    !
+!    CHARACTER(LEN=*),INTENT(IN) :: lockfile
+!    !
+!    INTEGER :: IERR
+!    TYPE(tuple) :: args
+!    TYPE(dict) :: kwargs, kwargs_copy
+!    TYPE(module_py) :: pymod
+!    TYPE(object) :: return_obj
+!    INTEGER :: return_int
+!    !
+!    IERR = import_py(pymod, "west_clientserver")
+!    !
+!    IERR = tuple_create(args, 1)
+!    IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)) )
+!    IERR = dict_create(kwargs)
+!    !
+!    ! script only mode
+!    !
+!    IERR = kwargs%setitem("l_attachscript",1)
+!    !
+!    IERR = kwargs%setitem("document",'{"script" : ["quit \n"]}')
+!    !
+!    IERR = call_py(return_obj, pymod, "sleep_and_wait", args, kwargs)
+!    !
+!    !IERR = cast(return_int, return_obj)
+!    !
+!    !IF( return_int /= 0 ) CALL errore("sleep","Did not wake well",return_int)
+!    !
+!    CALL kwargs%destroy
+!    CALL args%destroy
+!    CALL return_obj%destroy
+!    CALL pymod%destroy
+!    return
+!    !
+!END SUBROUTINE
+
 END MODULE

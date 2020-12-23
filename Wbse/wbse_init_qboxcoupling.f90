@@ -53,6 +53,8 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
   USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
   USE conversions,     ONLY : itoa
+  !
+  USE qbox_interface,  ONLY : sleep_and_wait_for_lock_to_be_removed
   !USE json_string_utilities, ONLY : lowercase_string
   !
   IMPLICIT NONE
@@ -69,7 +71,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   REAL(DP),    ALLOCATABLE  :: restart_matrix(:)
   REAL(DP),    ALLOCATABLE  :: index_matrix(:,:)
   COMPLEX(DP), ALLOCATABLE  :: evc_loc(:,:)
-  COMPLEX(DP), ALLOCATABLE  :: dvg(:,:), psic_aux(:)
+  COMPLEX(DP), ALLOCATABLE  :: dvg(:), psic_aux(:)
   !
   INTEGER :: iu, ig, stat
   CHARACTER(LEN=:),ALLOCATABLE :: lockfile
@@ -197,30 +199,28 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
   ENDIF
   !
-  !--- IGNORE THE restart_matrix_iq_ik_spin.date read & write------------
-  !  !
-  !  ALLOCATE (restart_matrix(do_index))
-  !  !
-  !  restart_matrix(:) = 0.0_DP
-  !  !
-  !  calc_is_done = .FALSE.
-  !  IF (l_restart_calc) THEN
-  !     !
-  !     filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
-  !                TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
-  !     CALL wbse_stat_restart_read (filename,do_index,restart_matrix,calc_is_done)
-  !     !
-  !  ENDIF
-  !  !
-  !  IF (calc_is_done) GOTO 2222
-  !--- IGNORE THE restart_matrix_iq_ik_spin.date read & write------------
+  ALLOCATE (restart_matrix(do_index))
+  !
+  restart_matrix(:) = 0.0_DP
+  !
+  calc_is_done = .FALSE.
+  IF (l_restart_calc) THEN
+      !
+      filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+                  TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
+      CALL wbse_stat_restart_read (filename,do_index,restart_matrix,calc_is_done)
+      !
+  ENDIF
+  !
+  IF (calc_is_done) GOTO 2222
   !
   ! initialize the paralellization
   !
   bseparal = idistribute()
   CALL bseparal%init(do_index,'i','number_pairs', .TRUE.)
   !
-  ALLOCATE (dvg(ngmx,bseparal%nlocx))
+  ! parallel loop
+  !
   DO il1 = 1, bseparal%nlocx
      !
      ! WRITE PERTURBATIONS TO FILE
@@ -230,15 +230,16 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      ibnd = INT(index_matrix(ig1,1))
      jbnd = INT(index_matrix(ig1,2))
      !
-     !IF (l_restart_calc) THEN
-        !
-     !   IF (INT(restart_matrix(ig1)) > 0) GOTO 1111
-        !
-     !ENDIF
+     IF (l_restart_calc) THEN
+
+        IF (INT(restart_matrix(ig1)) > 0) GOTO 1111
+
+     ENDIF
      !
-     IF ((ig1 < 1).or.(ig1 > do_index)) CONTINUE !GOTO 1111
+     IF ((ig1 < 1).or.(ig1 > do_index)) GOTO 1111
      !
      ALLOCATE (rho_aux(dffts%nnr))
+     ALLOCATE (dvg(ngmx))
      !
      IF (gamma_only) THEN
         !
@@ -297,10 +298,10 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      ! vc in fock like term
      !
-     dvg(:,il1) = (0.0_DP, 0.0_DP)
+     dvg(:) = (0.0_DP, 0.0_DP)
      DO ig = 1, ngm
      !
-        dvg(ig,il1) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
+        dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
      !
      ENDDO
      !
@@ -339,46 +340,30 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      CALL write_function3d(filename,aux_rr,dffts)
      !
-     DEALLOCATE (aux1_g)
-     DEALLOCATE (aux_r, aux1_r, aux_rr)
-     DEALLOCATE (rho_aux)
+     !DEALLOCATE (aux1_g)
+     !DEALLOCATE (aux_r, aux1_r, aux_rr)
+     !DEALLOCATE (rho_aux)
      !
-  ENDDO
-  !
-  ! DUMP A LOCK FILE
-  !
-  IF( me_bgrp == 0 ) THEN
-    lockfile = "I."//itoa(my_image_id)//".lock"
-    OPEN(NEWUNIT=iu,FILE=lockfile)
-    DO il1 = 1, bseparal%nlocx
-           ig1  = bseparal%l2g(il1) ! global index of n_total
-           IF ((ig1 < 1).or.(ig1 > do_index)) CONTINUE
-           filename = "I."//itoa(my_image_id)//"_P."//itoa(il1)//".xml"
-           WRITE(iu,'(A)') filename
-    ENDDO
-    CLOSE(iu)
-    !
-    ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
-    !
-    CALL sleep_and_wait_for_lock_to_be_removed(lockfile)
-    !
-  ENDIF
-  !
-  CALL mp_barrier(intra_image_comm)
-  !
-  ! READ RESPONSES
-  !
-  DO il1 = 1, bseparal%nlocx
-        !
-        ALLOCATE( aux1_g(ngmx))
-        ALLOCATE( aux_r(dffts%nnr) )
-        ALLOCATE( aux1_r(dffts%nnr,nspin) )
-        ALLOCATE( aux_rr(dffts%nnr) )
-        !
-        ig1  = bseparal%l2g(il1) ! global index of n_total
-        IF ((ig1 < 1).or.(ig1 > do_index)) CONTINUE
-        !
-        IF (lsda) THEN
+     ! DUMP A LOCK FILE
+     !
+     IF( me_bgrp == 0 ) THEN
+          lockfile = "I."//itoa(my_image_id)//".lock"
+          OPEN(NEWUNIT=iu,FILE=lockfile)
+          filename = "I."//itoa(my_image_id)//"_P."//itoa(il1)//".xml"
+          WRITE(iu,'(A)') filename
+          CLOSE(iu)
+          !
+          ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
+          !
+          CALL sleep_and_wait_for_lock_to_be_removed(lockfile, .False.)
+          !
+     ENDIF
+     !
+     CALL mp_barrier(intra_image_comm)
+     !
+     ! READ RESPONSES
+     !
+     IF (lsda) THEN
           !
           ALLOCATE(frspin(dffts%nnr,2))
           !
@@ -391,89 +376,92 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
           !
           DEALLOCATE(frspin)
           !
-        ELSE
+     ELSE
           !
           filename = "I."//itoa(my_image_id)//"_P."//itoa(il1)//".xml.response"
           CALL read_function3d(filename,aux_rr,dffts)
           !
-        ENDIF
-        !
-        DO ir = 1, dffts%nnr
-        !
-           aux_r(ir) = CMPLX( aux_rr(ir)*DSQRT(omega), 0._DP, KIND=DP) ! rescale response
-        !
-        ENDDO
-        !
-        aux1_r(:,:) = (0.0_DP,0.0_DP)
-        aux1_r(:,current_spin) = aux_r(:)
-        !
-        ! aux1_r = vc*aux1_r()
-        !
-        IF (l_xcchi) THEN
-        !
-           CALL west_dv_of_drho(aux1_r, .false., .false.)
-        !
-        ELSE
-        !
-           CALL west_dv_of_drho(aux1_r, .true., .false.)
-        !
-        ENDIF
-        !
+     ENDIF
+     !
+     DO ir = 1, dffts%nnr
+     !
+          aux_r(ir) = CMPLX( aux_rr(ir)*DSQRT(omega), 0._DP, KIND=DP) ! rescale response
+     !
+     ENDDO
+     !
+     aux1_r(:,:) = (0.0_DP,0.0_DP)
+     aux1_r(:,current_spin) = aux_r(:)
+     !
+     ! aux1_r = vc*aux1_r()
+     !
+     IF (l_xcchi) THEN
+     !
+         CALL west_dv_of_drho(aux1_r, .false., .false.)
+     !
+     ELSE
+     !
+         CALL west_dv_of_drho(aux1_r, .true., .false.)
+     !
+     ENDIF
+     !
         aux_r(:) = aux1_r(:,current_spin)
-        !
-        ! aux_r -> aux_g
-        !
-        aux1_g(:) = (0.0_DP, 0.0_DP)
-        !
-        IF (gamma_only) THEN
-        !
-           CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
-        !
-        ELSE
-        !
-           CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
-        !
-        ENDIF
-        !
-        ! vc + vc/fxc X vc
-        !
-        dvg(:,il1) = dvg(:,il1) + aux1_g(:)
-        !
-        DEALLOCATE (aux1_g)
-        DEALLOCATE (aux_r, aux1_r, aux_rr)
-        !
-        ! write dvg vc_rho + vc_rho X vc_rho to disk
-        !
-        ig1  = bseparal%l2g(il1) ! global index of n_total
-        !
-        ibnd = INT(index_matrix(ig1,1))
-        jbnd = INT(index_matrix(ig1,2))
-        WRITE(my_label1,'(i6.6)') ibnd
-        WRITE(my_label2,'(i6.6)') jbnd
-        WRITE(my_spin,'(i1)') current_spin
-        !
-        filename = TRIM( wbse_init_save_dir )//"/E"//TRIM(ADJUSTL(my_label1))//"_"//&
+     !
+     ! aux_r -> aux_g
+     !
+     aux1_g(:) = (0.0_DP, 0.0_DP)
+     !
+     IF (gamma_only) THEN
+     !
+         CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
+     !
+     ELSE
+     !
+         CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
+     !
+     ENDIF
+     !
+     ! vc + vc/fxc X vc
+     !
+     dvg(:) = dvg(:) + aux1_g(:)
+     !
+     ! write dvg vc_rho + vc_rho X vc_rho to disk
+     !
+     WRITE(my_label1,'(i6.6)') ibnd
+     WRITE(my_label2,'(i6.6)') jbnd
+     WRITE(my_spin,'(i1)') current_spin
+     !
+     filename = TRIM( wbse_init_save_dir )//"/E"//TRIM(ADJUSTL(my_label1))//"_"//&
              TRIM(ADJUSTL(my_label2))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
-        CALL pdep_merge_and_write_G(filename,dvg(:,il1))
+     CALL pdep_merge_and_write_G(filename,dvg(:))
+     !
+     DEALLOCATE(rho_aux, dvg)
+     DEALLOCATE (aux1_g)
+     DEALLOCATE (aux_r, aux1_r, aux_rr)
+     !
+     restart_matrix(ig1)  = 1.0
+     !
+1111 CONTINUE
+     !
+     ! for restarting, update status of restart_matrix
+     !
+     CALL mp_sum(restart_matrix(1:do_index), inter_image_comm)
+     !
+     DO ir = 1, do_index
         !
-
-  ENDDO
-  DEALLOCATE(dvg)
-  !
-  DEALLOCATE (index_matrix)
-  IF (ALLOCATED(restart_matrix))   DEALLOCATE (restart_matrix)
-  DEALLOCATE (ovl_matrix)
-  !
-  IF (ALLOCATED(psic))    DEALLOCATE(psic)
-  IF (ALLOCATED(psic_aux))DEALLOCATE(psic_aux)
-  IF (ALLOCATED(evc_loc)) DEALLOCATE(evc_loc)
-  !
-  ! clean up
-  !
-  IF( me_bgrp == 0 ) THEN
-        DO il1 = 1, bseparal%nlocx
-           ig1  = bseparal%l2g(il1) ! global index of n_total
-           IF ((ig1 < 1).or.(ig1 > do_index)) CONTINUE
+        IF (restart_matrix(ir) > 0) restart_matrix(ir) = 1.0
+        !
+     ENDDO
+     !
+     calc_is_done = .FALSE.
+     filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+                TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
+     !filename = trim(lowercase_string(filename))
+     CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
+     !
+     !
+     ! clean up
+     !
+     IF( me_bgrp == 0 ) THEN
            filename = "I."//itoa(my_image_id)//"_P."//itoa(il1)//".xml"
            OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
            IF (stat == 0) CLOSE(iu, STATUS='DELETE')
@@ -489,8 +477,25 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
               OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
               IF (stat == 0) CLOSE(iu, STATUS='DELETE')
            END IF
-        ENDDO
      ENDIF
+     !
+  ENDDO
+  !
+  calc_is_done = .TRUE.
+  filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
+             TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
+  !filename = trim(lowercase_string(filename))
+  CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
+  !
+2222 CONTINUE
+  !
+  DEALLOCATE (index_matrix)
+  IF (ALLOCATED(restart_matrix))   DEALLOCATE (restart_matrix)
+  DEALLOCATE (ovl_matrix)
+  !
+  IF (ALLOCATED(psic))    DEALLOCATE(psic)
+  IF (ALLOCATED(psic_aux))DEALLOCATE(psic_aux)
+  IF (ALLOCATED(evc_loc)) DEALLOCATE(evc_loc)
   !
   CALL stop_clock( 'wbse_qbox_coupling' )
   !
@@ -999,43 +1004,3 @@ ENDSUBROUTINE
 !END SUBROUTINE couple_with_qbox_routine
 
 
-SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile)
-    !
-    USE westcom,    ONLY: document
-    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
-    USE forpy_mod,  ONLY: tuple, tuple_create
-    USE forpy_mod,  ONLY: dict, dict_create
-    USE forpy_mod,  ONLY: list, list_create
-    USE forpy_mod,  ONLY: object, cast
-    USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
-    !
-    IMPLICIT NONE
-    !
-    CHARACTER(LEN=*),INTENT(IN) :: lockfile
-    !
-    INTEGER :: IERR
-    TYPE(tuple) :: args
-    TYPE(dict) :: kwargs
-    TYPE(module_py) :: pymod
-    TYPE(object) :: return_obj
-    INTEGER :: return_int
-    !
-    IERR = import_py(pymod, "west_clientserver")
-    !
-    IERR = tuple_create(args, 1)
-    IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)) )
-    IERR = dict_create(kwargs)
-    IERR = kwargs%setitem("document",document)
-    !
-    IERR = call_py(return_obj, pymod, "sleep_and_wait", args, kwargs)
-    !
-    IERR = cast(return_int, return_obj)
-    !
-    IF( return_int /= 0 ) CALL errore("sleep","Did not wake well",return_int)
-    !
-    CALL kwargs%destroy
-    CALL args%destroy
-    CALL return_obj%destroy
-    CALL pymod%destroy
-    !
-END SUBROUTINE

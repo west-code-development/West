@@ -80,7 +80,7 @@ class QboxServer(ClientServer) :
        client_image = self.client_lockfile.split(".")[1]
        self.server_inputfile = f"qb.{client_image}.in" # we assume that server_number = client_image
        #
-       # Prepare reponse commands 
+       # Prepare reponse commands
        #
        command_suffix = ""
        perturbation_list = []
@@ -158,6 +158,17 @@ def sleep_and_wait(*args, **kwargs):
        sleepsec = kwargs["sleepsec"]
     if "document" in kwargs.keys() :
        document = json.loads(kwargs["document"])
+    #
+    #  add l_attachscript logic
+    #
+    if "l_attachscript" in kwargs.keys() :
+        if kwargs["l_attachscript"] == 1:
+            #script only mode
+            document.pop("response",None)
+        else:
+            #response only mode
+            document.pop("script",None)
+
     #
     server = QboxServer(client_lockfile,maxsec,sleepsec,document)
     return_int = server.start()

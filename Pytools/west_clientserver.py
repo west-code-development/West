@@ -159,16 +159,15 @@ def sleep_and_wait(*args, **kwargs):
     if "document" in kwargs.keys() :
        document = json.loads(kwargs["document"])
     #
-    #  add consider_only  logic
+    #  add consider_only  logic as a list
     #
     if "consider_only" in kwargs.keys() :
+        #kwargs["consider_only"] is string, need to eval to list
+        consider_only_list = eval(kwargs["consider_only"])
         temp_document = dict()
-        if kwargs["consider_only"] == "script":
-            #script only mode
-            temp_document["script"] = document["script"]
-        else:
-            #response only mode
-            temp_document["response"] = document["response"]
+        for consider_only_key in consider_only_list:
+            # if we can not get consider_only_key, default value is {}
+            temp_document[consider_only_key] = document.get(consider_only_key,{})
         #replace document with consider only document
         document = temp_document
 

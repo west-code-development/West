@@ -159,15 +159,18 @@ def sleep_and_wait(*args, **kwargs):
     if "document" in kwargs.keys() :
        document = json.loads(kwargs["document"])
     #
-    #  add l_attachscript logic
+    #  add consider_only  logic
     #
-    if "l_attachscript" in kwargs.keys() :
-        if kwargs["l_attachscript"] == 1:
+    if "consider_only" in kwargs.keys() :
+        temp_document = dict()
+        if kwargs["consider_only"] == "script":
             #script only mode
-            document.pop("response",None)
+            temp_document["script"] = document["script"]
         else:
             #response only mode
-            document.pop("script",None)
+            temp_document["response"] = document["response"]
+        #replace document with consider only document
+        document = temp_document
 
     #
     server = QboxServer(client_lockfile,maxsec,sleepsec,document)

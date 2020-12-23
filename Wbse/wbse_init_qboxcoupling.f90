@@ -355,7 +355,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
           !
           ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
           !
-          CALL sleep_and_wait_for_lock_to_be_removed(lockfile, .False.)
+          CALL sleep_and_wait_for_lock_to_be_removed(lockfile, "response")
           !
      ENDIF
      !

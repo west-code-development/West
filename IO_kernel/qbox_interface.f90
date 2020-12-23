@@ -236,7 +236,7 @@ MODULE qbox_interface
            !
            ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
            !
-           CALL sleep_and_wait_for_lock_to_be_removed(lockfile, .TRUE.)
+           CALL sleep_and_wait_for_lock_to_be_removed(lockfile, "script")
            !
       ENDIF
       !
@@ -710,7 +710,7 @@ MODULE qbox_interface
   !  !
   !END SUBROUTINE
 
-  SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile, l_attachscript)
+  SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile, consider_only)
     !
     USE westcom,    ONLY: document
     USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
@@ -724,7 +724,8 @@ MODULE qbox_interface
     !
     CHARACTER(LEN=*),INTENT(IN) :: lockfile
     !
-    LOGICAL,     INTENT(IN) :: l_attachscript
+    CHARACTER(LEN=*),INTENT(IN) :: consider_only
+    !
     INTEGER :: IERR
     TYPE(tuple) :: args
     TYPE(dict) :: kwargs, kwargs_copy
@@ -742,10 +743,10 @@ MODULE qbox_interface
     ! no dict.pop function in forpy, pass the l_attachscript flag to python function sleep_and_wait
     ! python function sleep_and_wait will decide to pop the document  [response,script] keys
     !
-    IF (l_attachscript) THEN
-        IERR = kwargs%setitem("l_attachscript",1)
+    IF (TRIM(consider_only)=="script")  THEN
+        IERR = kwargs%setitem("consider_only","script")
     ELSE
-        IERR = kwargs%setitem("l_attachscript",0)
+        IERR = kwargs%setitem("consider_only","response")
     END IF
     !
     IERR = call_py(return_obj, pymod, "sleep_and_wait", args, kwargs)

@@ -833,6 +833,8 @@ MODULE wstat_restart
       USE pdep_io,             ONLY : pdep_read_G_and_distribute
       USE distribution_center, ONLY : pert
       !
+      IMPLICIT NONE
+      !
       INTEGER, INTENT(IN) :: nbase
       INTEGER, INTENT(IN), OPTIONAL :: iq
       !

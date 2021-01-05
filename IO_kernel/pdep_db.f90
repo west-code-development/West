@@ -23,6 +23,8 @@ MODULE pdep_db
     !
     SUBROUTINE generate_pdep_fname( fname, j, iq)
        !
+       IMPLICIT NONE
+       !
        ! I/O 
        ! 
        CHARACTER(LEN=25), INTENT(OUT) :: fname

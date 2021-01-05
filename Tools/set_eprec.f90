@@ -23,6 +23,8 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   USE mp,                    ONLY : mp_sum
   USE mp_global,             ONLY : intra_bgrp_comm
   !
+  IMPLICIT NONE
+  !
   ! I/O
   !
   INTEGER,INTENT(IN) :: m

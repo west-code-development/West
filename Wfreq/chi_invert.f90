@@ -45,6 +45,8 @@ MODULE chi_invert
       USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol
       USE io_files,              ONLY : tmp_dir
       !
+      IMPLICIT NONE
+      !
       ! I/O
       !
       REAL(DP),INTENT(IN) :: matilda(nma,nma)
@@ -169,6 +171,8 @@ MODULE chi_invert
       USE linear_algebra_kernel, ONLY : matinvrs_zge 
       USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol
       USE io_files,              ONLY : tmp_dir
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !

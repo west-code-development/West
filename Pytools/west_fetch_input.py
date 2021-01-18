@@ -76,18 +76,16 @@ default["westpp_control"]["westpp_epsinfty"] = 1.
 # server_control
 default["server_control"] = {}
 default["server_control"]["document"] = "{}"
-# wbse control
-# #wbse_init_control
+# wbse_init_control
 default["wbse_init_control"] = {}
 default["wbse_init_control"]["wbse_init_calculation"] = "S"
-default["wbse_init_control"]["which_bse_method"] = "FF"
-default["wbse_init_control"]["n_pdep_eigen"] = 1
-default["wbse_init_control"]["chi_kernel"] = "CHI" # 'CHI_RPA'
-default["wbse_init_control"]["which_spin_channel"] = 0
-default["wbse_init_control"]["overlap_thr"] = 0.0
-default["wbse_init_control"]["l_use_localise_repr"] = False
-default["wbse_init_control"]["l_use_bisection_thr"] = False
-default["wbse_init_control"]["qbox_bisec_wfc_filename"] = "qb.bi.xml"
+default["wbse_init_control"]["which_reponse"] = "FF"
+default["wbse_init_control"]["localization"] = "N"
+default["wbse_init_control"]["wfc_from_qbox"] = "qb.xml"
+default["wbse_init_control"]["chi_kernel"] = "CHI" 
+#default["wbse_init_control"]["overlap_thr"] = 0.0
+#default["wbse_init_control"]["which_spin_channel"] = 0
+#default["wbse_init_control"]["n_pdep_eigen"] = 1
 # #wbse_control
 default["wbse_control"] = {}
 default["wbse_control"]["wbse_calculation"] = "S"
@@ -108,18 +106,6 @@ default["wbse_control"]["wbse_diag_method"] = "david"
 default["wbse_control"]["ipol_input"] = "XX"
 default["wbse_control"]["n_lzstep"] = 0
 default["wbse_control"]["macropol_dfpt"] = False
-# #qbox control
-#default["qbox_control"] = {}
-#default["qbox_control"]["nrowmax"] = 0
-#default["qbox_control"]["xml_file"] = "qb.init.xml"
-#default["qbox_control"]["xc"] = "PBE"
-#default["qbox_control"]["alpha_pbe0"] = 0.25
-#default["qbox_control"]["amplitude"] = 0
-#default["qbox_control"]["wf_dyn"] = "PSDA"
-#default["qbox_control"]["btHF"] = 0
-#default["qbox_control"]["blHF"] = "2 2 2"
-#default["qbox_control"]["nitscf"] = 10
-#default["qbox_control"]["nite"] = 0
 # #wbsepp control
 default["wbsepp_control"] = {}
 default["wbsepp_control"]["wbsepp_type"] =  0    #0:eig_decomposion, 1:meg, 2:ads_spect
@@ -339,7 +325,6 @@ server_control :
     read_keyword_from_file(fileName,"server_control",True)
     read_keyword_from_file(fileName,"wbse_init_control",True)
     read_keyword_from_file(fileName,"wbse_control",True)
-    #read_keyword_from_file(fileName,"qbox_control",True)
     read_keyword_from_file(fileName,"wbsepp_control",True)
     #
     remove(fileName)

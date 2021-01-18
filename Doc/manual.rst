@@ -679,5 +679,89 @@ server_control
      - The document is serialized into a JSON string and passed to the server (see `West/Pytools/west_clientserver.py`).
 
 |
-            
 
+--------------
+wbse_init_control
+--------------
+
+
+.. data:: wbse_init_calculation
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "S"
+   * - **Description**
+     - Available options are:
+
+       - "S" : Start from scratch
+       - "R" : Restart from an interrupted run. You should restart with the same number of cores and images. 
+
+
+.. data:: which_response
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "F"
+   * - **Description**
+     - Specify how the dielectric screening is obtained. Available options are: 
+       
+       - "F" : Finite-field (FF) method 
+       - "P" : Projective dielectric eigenpotential (PDEP) method
+
+.. data:: localization
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "N"
+   * - **Description**
+     - Available options for the output fortmat are:
+          
+       - "N" : Kohn-Sham orbitals are not localized
+       - "W" : Wannier functions are used
+       - "B" : Bisected orbitals are used
+
+.. data:: wfc_from_qbox
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "qb.xml"
+   * - **Description**
+     - Name of the Qbox sample file.
+
+
+.. data:: chi_kernel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "CHI"
+   * - **Description**
+     - Available options are:
+ 
+       - "CHI" : W = vc + vc X vc
+       - "CHI_RPA" : W = vc + vc X_RPA vc
+       - "XC_CHI_RPA" : W = vc + (vc+fxc) X vc 

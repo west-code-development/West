@@ -79,7 +79,6 @@ default["server_control"]["document"] = "{}"
 # wbse_init_control
 default["wbse_init_control"] = {}
 default["wbse_init_control"]["wbse_init_calculation"] = "S"
-default["wbse_init_control"]["which_reponse"] = "FF"
 default["wbse_init_control"]["localization"] = "N"
 default["wbse_init_control"]["wfc_from_qbox"] = "qb.xml"
 default["wbse_init_control"]["chi_kernel"] = "CHI" 

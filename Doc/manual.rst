@@ -701,23 +701,6 @@ wbse_init_control
        - "S" : Start from scratch
        - "R" : Restart from an interrupted run. You should restart with the same number of cores and images. 
 
-
-.. data:: which_response
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - string
-   * - **Default**
-     - "F"
-   * - **Description**
-     - Specify how the dielectric screening is obtained. Available options are: 
-       
-       - "F" : Finite-field (FF) method 
-       - "P" : Projective dielectric eigenpotential (PDEP) method
-
 .. data:: localization
 
 .. list-table::

@@ -731,6 +731,18 @@ wbse_init_control
    * - **Description**
      - Name of the Qbox sample file.
 
+.. data:: bisection_info
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "info.bis"
+   * - **Description**
+     - Name of the file that contains info about bisection.
 
 .. data:: chi_kernel
 

@@ -81,6 +81,7 @@ default["wbse_init_control"] = {}
 default["wbse_init_control"]["wbse_init_calculation"] = "S"
 default["wbse_init_control"]["localization"] = "N"
 default["wbse_init_control"]["wfc_from_qbox"] = "qb.xml"
+default["wbse_init_control"]["bisection_info"] = "info.bis"
 default["wbse_init_control"]["chi_kernel"] = "CHI" 
 #default["wbse_init_control"]["overlap_thr"] = 0.0
 #default["wbse_init_control"]["which_spin_channel"] = 0

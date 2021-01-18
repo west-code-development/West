@@ -979,3 +979,31 @@ wbse_control
        - "N" : None. Choice valid for isolated systems.
        - "C" : Include long-wavelength limit. Choice valid for condensed systems.
 
+.. data:: spin_excitation 
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "S"
+   * - **Description**
+     - Available options are:
+
+       - "S" : Singlet.
+       - "T" : Triplet.
+
+.. data:: l_preconditioning  
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - Preconditioning for the Davidson methos, for finite systems. 

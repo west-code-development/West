@@ -715,7 +715,6 @@ wbse_init_control
      - Available options for the output fortmat are:
           
        - "N" : Kohn-Sham orbitals are not localized
-       - "W" : Wannier functions are used
        - "B" : Bisected orbitals are used
 
 .. data:: wfc_from_qbox

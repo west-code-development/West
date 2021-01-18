@@ -712,7 +712,7 @@ wbse_init_control
    * - **Default**
      - "N"
    * - **Description**
-     - Available options for the output fortmat are:
+     - Available options are:
           
        - "N" : Kohn-Sham orbitals are not localized
        - "B" : Bisected orbitals are used
@@ -758,4 +758,224 @@ wbse_init_control
  
        - "CHI" : W = vc + vc X vc
        - "CHI_RPA" : W = vc + vc X_RPA vc
-       - "XC_CHI_RPA" : W = vc + (vc+fxc) X vc 
+       - "XC_CHI_RPA" : W = vc + (vc+fxc) X vc
+
+
+|
+
+--------------
+wbse_control
+--------------
+
+
+.. data:: wbse_calculation
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "D"
+   * - **Description**
+     - Available options are:
+
+       - "D" : Diagonalize the Liouville super-operator with the Davidson iterative solver. 
+       - "d" : Restart the calculation for wbse_calculation = "D" from an interrupted run. You should restart with the same number of cores and images. 
+       - "L" : Compute the absorption spectrum with the Lanczos method. 
+       - "l" : Restart the calculation for wbse_calculation = "L" from an interrupted run. You should restart with the same number of cores and images. 
+
+
+.. data:: qp_correction
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "None"
+   * - **Description**
+     - Available options are: 
+          
+       - "None" : Quasiparticle corrections are not added.
+       - specify the name of the file from which quasiparticle corrections are read (in eV).
+
+
+.. data:: scissor_operator
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 0.0
+   * - **Description**
+     - Value of the scissor operator (in eV). 
+
+.. data:: solver
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "BSE"
+   * - **Description**
+     - Available options are: 
+       
+       - "BSE" : Bethe-Salpeter equation
+       - "TDDFT" : Time-dependent density functional theory
+
+.. data:: n_liouville_eigen
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1
+   * - **Description**
+     - Number of Liouville eigenvectors and eigenvalues. 
+
+
+.. data:: n_liouville_times
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 4
+   * - **Description**
+     - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times.
+
+
+.. data:: n_liouville_maxiter
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 100
+   * - **Description**
+     - Maximum number of iterations of the Davidson method.
+
+
+.. data:: n_liouville_read_from_file
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - Number of Liouville eigenvectors that can be read from file.
+
+
+.. data:: trev_liouville
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 0.001
+   * - **Description**
+     - Absolute convergence threshold for Liouville eigenvalues.
+
+
+.. data:: trev_liouville_rel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 0.1
+   * - **Description**
+     - Relative convergence threshold for Liouville eigenvalues.
+
+
+.. data:: n_lanczos 
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 10
+   * - **Description**
+     - Number of Lanczos iterations to be performed.
+
+
+.. data:: ipol_input
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "XX"
+   * - **Description**
+     - Determine which components of the polarizability tensor (alpha) are computed:
+       - "XX": alpha_xx 
+       - "YY": alpha_yy
+       - "ZZ": alpha_zz
+        -"XYZ": three Lanczos chains are sequentially performed and the full polarizability tensor and the absorption coefficient are computed.
+
+
+.. data:: epsinfty
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1.0
+   * - **Description**
+     - Macroscopic relative dielectric constant.
+
+
+.. data:: macropol_calculation
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "N"
+   * - **Description**
+     - Available options are:
+
+       - "N" : None. Choice valid for isolated systems.
+       - "C" : Include long-wavelength limit. Choice valid for condensed systems.
+

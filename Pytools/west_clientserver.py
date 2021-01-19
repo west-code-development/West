@@ -159,19 +159,21 @@ def sleep_and_wait(*args, **kwargs):
     if "document" in kwargs.keys() :
        document = json.loads(kwargs["document"])
     #
-    #  add consider_only  logic as a list
+    #  consider_only allows to define a document with selected keys
     #
     if "consider_only" in kwargs.keys() :
-        #kwargs["consider_only"] is string, need to eval to list
-        consider_only_list = eval(kwargs["consider_only"])
-        temp_document = dict()
-        for consider_only_key in consider_only_list:
-            # if we can not get consider_only_key, default value is {}
-            temp_document[consider_only_key] = document.get(consider_only_key,{})
-        #replace document with consider only document
+        consider_only_list = json.loads(kwargs["consider_only"])
+        temp_document = {}
+        for key in consider_only_list:
+            if key in document.keys() : 
+               temp_document[key] = document[key]
+            else : 
+               print(f"Could not consider missing key: {key}")
+        #replace document 
         document = temp_document
 
     #
+    print(document)
     server = QboxServer(client_lockfile,maxsec,sleepsec,document)
     return_int = server.start()
     #
@@ -185,7 +187,7 @@ def sleep_and_wait(*args, **kwargs):
 def test() :
     with open("I.1.lock","w") as f :
        f.write("I.1_P.1.xml")
-    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2,document='{"response": {"approximation" : "IPA", "amplitude": 0}, "script" : ["set xc PBE"]}')
+    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2,document='{"response": {"approximation" : "IPA", "amplitude": 0}, "script" : ["set xc PBE"]}',consider_only='["response"]')
 
 if __name__ == "__main__":
     # execute only if run as a script

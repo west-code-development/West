@@ -76,50 +76,35 @@ default["westpp_control"]["westpp_epsinfty"] = 1.
 # server_control
 default["server_control"] = {}
 default["server_control"]["document"] = "{}"
-# wbse control
-# #wbse_init_control
+# wbse_init_control
 default["wbse_init_control"] = {}
 default["wbse_init_control"]["wbse_init_calculation"] = "S"
-default["wbse_init_control"]["which_bse_method"] = "FF"
-default["wbse_init_control"]["n_pdep_eigen"] = 1
-default["wbse_init_control"]["chi_kernel"] = "CHI" # 'CHI_RPA'
-default["wbse_init_control"]["which_spin_channel"] = 0
-default["wbse_init_control"]["overlap_thr"] = 0.0
-default["wbse_init_control"]["l_use_localise_repr"] = False
-default["wbse_init_control"]["l_use_bisection_thr"] = False
-default["wbse_init_control"]["qbox_bisec_wfc_filename"] = "qb.bi.xml"
+default["wbse_init_control"]["localization"] = "N"
+default["wbse_init_control"]["wfc_from_qbox"] = "qb.xml"
+default["wbse_init_control"]["bisection_info"] = "info.bis"
+default["wbse_init_control"]["chi_kernel"] = "CHI" 
+#default["wbse_init_control"]["overlap_thr"] = 0.0
+#default["wbse_init_control"]["which_spin_channel"] = 0
+#default["wbse_init_control"]["n_pdep_eigen"] = 1
 # #wbse_control
 default["wbse_control"] = {}
-default["wbse_control"]["wbse_calculation"] = "S"
-default["wbse_control"]["n_plep_eigen"] = 1
-default["wbse_control"]["n_plep_times"] = 4
-default["wbse_control"]["n_plep_maxiter"] = 100
-default["wbse_control"]["n_plep_read_from_file"] = 0
-default["wbse_control"]["spin_excitation"] = "singlet"
-default["wbse_control"]["l_bse_calculation"] =  True
-default["wbse_control"]["l_qp_correction"] = False
-default["wbse_control"]["l_diag_term_only"] = False
-default["wbse_control"]["l_preconditioning"] = False
-default["wbse_control"]["trev_plep"] = 0.001
-default["wbse_control"]["trev_plep_rel"] = 0.1
-default["wbse_control"]["scissor_ope"] = 0.0
-default["wbse_control"]["eps_macro"] = 1.0
-default["wbse_control"]["wbse_diag_method"] = "david"
+default["wbse_control"]["wbse_calculation"] = "D"
+default["wbse_control"]["solver"] =  "BSE"
+default["wbse_control"]["qp_correction"] = False
+default["wbse_control"]["scissor_operator"] = 0.0
+default["wbse_control"]["n_liouville_eigen"] = 1
+default["wbse_control"]["n_liouville_times"] = 4
+default["wbse_control"]["n_liouville_maxiter"] = 100
+default["wbse_control"]["n_liouville_read_from_file"] = 0
+default["wbse_control"]["trev_liouville"] = 0.001
+default["wbse_control"]["trev_liouville_rel"] = 0.1
+default["wbse_control"]["n_lanczos"] = 0
 default["wbse_control"]["ipol_input"] = "XX"
-default["wbse_control"]["n_lzstep"] = 0
-default["wbse_control"]["macropol_dfpt"] = False
-# #qbox control
-#default["qbox_control"] = {}
-#default["qbox_control"]["nrowmax"] = 0
-#default["qbox_control"]["xml_file"] = "qb.init.xml"
-#default["qbox_control"]["xc"] = "PBE"
-#default["qbox_control"]["alpha_pbe0"] = 0.25
-#default["qbox_control"]["amplitude"] = 0
-#default["qbox_control"]["wf_dyn"] = "PSDA"
-#default["qbox_control"]["btHF"] = 0
-#default["qbox_control"]["blHF"] = "2 2 2"
-#default["qbox_control"]["nitscf"] = 10
-#default["qbox_control"]["nite"] = 0
+default["wbse_control"]["macropol_calculation"] = "N"
+default["wbse_control"]["epsinfty"] = 1.0
+default["wbse_control"]["spin_excitation"] = "S"
+default["wbse_control"]["l_preconditioning"] = False
+#default["wbse_control"]["l_diag_term_only"] = False
 # #wbsepp control
 default["wbsepp_control"] = {}
 default["wbsepp_control"]["wbsepp_type"] =  0    #0:eig_decomposion, 1:meg, 2:ads_spect
@@ -339,7 +324,6 @@ server_control :
     read_keyword_from_file(fileName,"server_control",True)
     read_keyword_from_file(fileName,"wbse_init_control",True)
     read_keyword_from_file(fileName,"wbse_control",True)
-    #read_keyword_from_file(fileName,"qbox_control",True)
     read_keyword_from_file(fileName,"wbsepp_control",True)
     #
     remove(fileName)

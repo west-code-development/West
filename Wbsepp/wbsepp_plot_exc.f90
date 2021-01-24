@@ -36,12 +36,12 @@ SUBROUTINE wbsepp_plot_exc()
   USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
   !wbsecom combined into westcom
-  !USE wbsecom,                ONLY : dvg_exc, n_plep_read_from_file
+  !USE wbsecom,                ONLY : dvg_exc, n_liouville_read_from_file
   USE westcom,              ONLY : iexc_plot, r0_input
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute
-  USE westcom,                ONLY : westpp_format,dvg_exc, n_plep_read_from_file
+  USE westcom,                ONLY : westpp_format,dvg_exc, n_liouville_read_from_file
   USE ions_base,              ONLY : nat,tau
   !
   IMPLICIT NONE
@@ -82,14 +82,14 @@ SUBROUTINE wbsepp_plot_exc()
   !
   ! ... DISTRIBUTE nvec
   !
-  nvec = n_plep_read_from_file
+  nvec = n_liouville_read_from_file
   pert = idistribute()
   CALL pert%init(nvec,'i','nvec',.TRUE.)
   CALL wbse_memory_report()
   !
   ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !
-  CALL plep_db_read( n_plep_read_from_file )
+  CALL plep_db_read( n_liouville_read_from_file )
   !
   ALLOCATE(r(dfftp%nnr,n_ipol))
   ALLOCATE(dr(dfftp%nnr))

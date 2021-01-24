@@ -23,7 +23,7 @@ PROGRAM wbse_init
   !USE mp,                   ONLY : mp_sum,mp_barrier
   !USE qbox_interface,       ONLY : init_qbox_interface, finalize_qbox_interface
   USE qbox_interface,       ONLY : init_qbox,finalize_qbox
-  USE westcom,              ONLY : l_test_ovl, use_wstat_pdep,use_qbox
+  !USE westcom,              ONLY : l_test_ovl, use_wstat_pdep,use_qbox
   !wbsecom combined into westcom
   !USE wbsecom,              ONLY : l_test_ovl, use_wstat_pdep
   !
@@ -45,33 +45,33 @@ PROGRAM wbse_init
   !
   CALL wbse_init_readin ( )
   !
-  IF (l_test_ovl) THEN
+  !IF (l_test_ovl) THEN
      !
-     use_qbox = .False.
+  !   use_qbox = .False.
      !
-  ENDIF
+  !ENDIF
   !
   CALL wbse_setup ( )
   !
-  IF ( use_qbox ) THEN
+  !IF ( use_qbox ) THEN
      !
-     CALL init_qbox()
+  CALL init_qbox()
      !CALL init_qbox_interface()
      !
-     CALL wbse_init_methods (.TRUE.)
+  CALL wbse_init_methods()
      !
-     CALL finalize_qbox()
+  CALL finalize_qbox()
      !CALL finalize_qbox_interface()
      !
-  ELSEIF (use_wstat_pdep) THEN
+  !ELSEIF (use_wstat_pdep) THEN
      !
-     CALL wbse_init_methods (.False.)
+  !   CALL wbse_init_methods (.False.)
      !
-  ELSE
+  !ELSE
      !
-     CALL wbse_init_fock_energy()
+  !   CALL wbse_init_fock_energy()
      !
-  ENDIF
+  !ENDIF
   !
   CALL exx_ungo ( )
   !

@@ -39,11 +39,11 @@ MODULE lanzcos_restart
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : west_prefix, wbse_save_dir,&
-                                       ipol_input, n_lzstep, &
+                                       ipol_input, n_lanczos, &
                                        alpha_store,beta_store,&
                                        gamma_store,zeta_store
       !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : ipol_input, n_lzstep, &
+      !USE wbsecom,              ONLY : ipol_input, n_lanczos, &
       !                                 alpha_store,beta_store,&
       !                                 gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
@@ -90,7 +90,7 @@ MODULE lanzcos_restart
          CALL iotk_write_begin( iunout, "SUMMARY" )
          CALL iotk_write_dat( iunout, "nipol_input", nipol_input)
          CALL iotk_write_dat( iunout, "ipol_input", ipol_input)
-         CALL iotk_write_dat( iunout, "n_lzstep", n_lzstep)
+         CALL iotk_write_dat( iunout, "n_lanczos", n_lanczos)
          CALL iotk_write_dat( iunout, "pliter_stop", pliter_stop)
          CALL iotk_write_dat( iunout, "lriter_stop", lriter_stop)
          CALL iotk_write_end( iunout, "SUMMARY"  )
@@ -164,11 +164,11 @@ MODULE lanzcos_restart
       USE mp,                  ONLY : mp_barrier, mp_bcast
       USE io_global,           ONLY : stdout
       USE westcom,             ONLY : west_prefix, wbse_save_dir, &
-                                      ipol_input, n_lzstep, &
+                                      ipol_input, n_lanczos, &
                                       alpha_store,beta_store,&
                                       gamma_store,zeta_store
       !wbsecom combined into westcom
-      !USE wbsecom,             ONLY : ipol_input, n_lzstep, &
+      !USE wbsecom,             ONLY : ipol_input, n_lanczos, &
       !                                alpha_store,beta_store,&
       !                                gamma_store,zeta_store
       USE mp_global,           ONLY : intra_image_comm
@@ -189,7 +189,7 @@ MODULE lanzcos_restart
       CHARACTER(20),EXTERNAL :: human_readable_time
       CHARACTER(LEN=3)   :: ipol_input_tmp
       INTEGER :: iun, ierr, ipol, ipol2, is
-      INTEGER :: nipol_input_tmp, n_lzstep_tmp
+      INTEGER :: nipol_input_tmp, n_lanczos_tmp
       !
       ! BARRIER
       !
@@ -213,7 +213,7 @@ MODULE lanzcos_restart
          CALL iotk_scan_begin( iun, "SUMMARY")
          CALL iotk_scan_dat( iun, "nipol_input", nipol_input_tmp )
          CALL iotk_scan_dat( iun, "ipol_input",  ipol_input_tmp )
-         CALL iotk_scan_dat( iun, "n_lzstep",    n_lzstep_tmp )
+         CALL iotk_scan_dat( iun, "n_lanczos",    n_lanczos_tmp )
          CALL iotk_scan_dat( iun, "pliter_stop", pliter_stop )
          CALL iotk_scan_dat( iun, "lriter_stop", lriter_stop )
          CALL iotk_scan_end( iun, "SUMMARY"  )
@@ -222,7 +222,7 @@ MODULE lanzcos_restart
       !
       CALL mp_bcast(nipol_input_tmp, root, world_comm )
       CALL mp_bcast(ipol_input_tmp, root, world_comm )
-      CALL mp_bcast(n_lzstep_tmp, root, world_comm )
+      CALL mp_bcast(n_lanczos_tmp, root, world_comm )
       CALL mp_bcast(pliter_stop, root, world_comm )
       CALL mp_bcast(lriter_stop, root, world_comm )
       !
@@ -230,19 +230,19 @@ MODULE lanzcos_restart
          CALL errore( 'wbse_lanzcos_restart', 'there is inconsistent between previous ipol and ipol in input para', 1)
       ENDIF
       !
-      IF (n_lzstep_tmp .GT. n_lzstep) THEN
-         CALL errore( 'wbse_lanzcos_restart', 'last n_lzstep > n_lzstep', 1)
+      IF (n_lanczos_tmp .GT. n_lanczos) THEN
+         CALL errore( 'wbse_lanzcos_restart', 'last n_lanczos > n_lanczos', 1)
       ENDIF
       !
       IF (pliter_stop > nipol_input) THEN
          CALL errore( 'wbse_lanzcos_restart', 'ipol stopped > nipol_input', 1)
       ENDIF
       !
-      IF (lriter_stop > n_lzstep) THEN
-         CALL errore( 'wbse_lanzcos_restart', ' lriter_stop > n_lzstep', 1)
+      IF (lriter_stop > n_lanczos) THEN
+         CALL errore( 'wbse_lanzcos_restart', ' lriter_stop > n_lanczos', 1)
       ENDIF
       !
-      IF ((lriter_stop == n_lzstep).AND.(pliter_stop+1 <= nipol_input)) THEN
+      IF ((lriter_stop == n_lanczos).AND.(pliter_stop+1 <= nipol_input)) THEN
          !
          pliter_stop = pliter_stop+1
          lriter_stop = 0
@@ -255,7 +255,7 @@ MODULE lanzcos_restart
          CALL iotk_scan_begin( iun, "ALPHA_STORE")
          DO ipol = 1, nipol_input
             DO is = 1, nspin
-               CALL iotk_scan_dat( iun, "alpha_store_k", alpha_store(ipol,1:n_lzstep_tmp,is) )
+               CALL iotk_scan_dat( iun, "alpha_store_k", alpha_store(ipol,1:n_lanczos_tmp,is) )
             ENDDO
          ENDDO
          CALL iotk_scan_end( iun, "ALPHA_STORE"  )
@@ -264,7 +264,7 @@ MODULE lanzcos_restart
          CALL iotk_scan_begin( iun, "BETA_STORE")
          DO ipol = 1, nipol_input
             DO is = 1, nspin
-               CALL iotk_scan_dat( iun, "beta_store_k", beta_store(ipol,1:n_lzstep_tmp,is) )
+               CALL iotk_scan_dat( iun, "beta_store_k", beta_store(ipol,1:n_lanczos_tmp,is) )
             ENDDO
          ENDDO
          CALL iotk_scan_end( iun, "BETA_STORE"  )
@@ -273,7 +273,7 @@ MODULE lanzcos_restart
          CALL iotk_scan_begin( iun, "GAMMA_STORE")
          DO ipol = 1, nipol_input
             DO is = 1, nspin
-               CALL iotk_scan_dat( iun, "gamma_store_k", gamma_store(ipol,1:n_lzstep_tmp,is) )
+               CALL iotk_scan_dat( iun, "gamma_store_k", gamma_store(ipol,1:n_lanczos_tmp,is) )
             ENDDO
          ENDDO
          CALL iotk_scan_end( iun, "GAMMA_STORE"  )
@@ -285,7 +285,7 @@ MODULE lanzcos_restart
             DO ipol2 = 1, 3
                CALL iotk_scan_dat( iun, "zeta_store_ipol_j", ipol2 )
                DO is = 1, nspin
-                  CALL iotk_scan_dat( iun, "zeta_store_k", zeta_store(ipol,ipol2,1:n_lzstep_tmp,is) )
+                  CALL iotk_scan_dat( iun, "zeta_store_k", zeta_store(ipol,ipol2,1:n_lanczos_tmp,is) )
                ENDDO
             ENDDO
          ENDDO
@@ -321,11 +321,11 @@ MODULE lanzcos_restart
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : n_lzstep, &
+      USE westcom,              ONLY : n_lanczos, &
                                        alpha_store,beta_store,&
                                        gamma_store,zeta_store
       !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : n_lzstep, &
+      !USE wbsecom,              ONLY : n_lanczos, &
       !                                 alpha_store,beta_store,&
       !                                 gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
@@ -370,7 +370,7 @@ MODULE lanzcos_restart
          CALL iotk_write_dat( iunout, "nspin", nspin)
          CALL iotk_write_dat( iunout, "nipol_input", nipol_input)
          CALL iotk_write_dat( iunout, "ipol_label", ipol_label)
-         CALL iotk_write_dat( iunout, "n_lzstep", n_lzstep)
+         CALL iotk_write_dat( iunout, "n_lanczos", n_lanczos)
          CALL iotk_write_end( iunout, "SUMMARY"  )
          !
          CALL iotk_write_begin( iunout, "ALPHA_STORE" )

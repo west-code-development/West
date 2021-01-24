@@ -25,9 +25,9 @@ SUBROUTINE wbsepp_decompose_eig_contributions ( )
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE westcom,              ONLY : nbnd_occ,ev, &
-                                   dvg_exc, d0psi, n_plep_read_from_file
+                                   dvg_exc, d0psi, n_liouville_read_from_file
   !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : dvg_exc, d0psi, n_plep_read_from_file
+  !USE wbsecom,              ONLY : dvg_exc, d0psi, n_liouville_read_from_file
   USE pwcom,                ONLY : nks,npwx,npw
   USE plep_db,              ONLY : plep_db_read
   USE mp_world,             ONLY : mpime
@@ -56,7 +56,7 @@ SUBROUTINE wbsepp_decompose_eig_contributions ( )
   !
   ! ... INITIALIZATION
   !
-  nvec  = n_plep_read_from_file
+  nvec  = n_liouville_read_from_file
   nbndx_occ = MAXVAL(nbnd_occ)
   nbndx_emp = nbnd - nbndx_occ
   !
@@ -84,7 +84,7 @@ SUBROUTINE wbsepp_decompose_eig_contributions ( )
   !
   ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !
-  CALL plep_db_read( n_plep_read_from_file )
+  CALL plep_db_read( n_liouville_read_from_file )
   !
   ! CHECK IF KS EMPTY STATES WERE COMPUTED
   !

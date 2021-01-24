@@ -26,6 +26,7 @@ MODULE check_ovl_wfc
       USE wvfct,         ONLY : nbnd, et
       USE pwcom,         ONLY : nks
       USE lsda_mod,      ONLY : lsda
+      USE westcom,       ONLY : bisection_info
       !
       IMPLICIT NONE
       !
@@ -44,7 +45,8 @@ MODULE check_ovl_wfc
       !
       WRITE(my_spin,'(i1)') current_spin
       !
-      file_bisection = 'bisection_localization_'//TRIM(my_spin)//'.dat'
+      file_bisection =  TRIM(bisection_info)//'.'//TRIM(my_spin)
+      !file_bisection = 'bisection_localization_'//TRIM(my_spin)//'.dat'
       !
       if (ionode) then
          !

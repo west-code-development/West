@@ -21,7 +21,7 @@ SUBROUTINE bse_init()
                                     index_matrix_lz
      USE pwcom,              ONLY : isk,nks
      USE westcom,            ONLY : nbnd_occ,n_pdep_eigen,fftdriver,&
-                                    nbndval0x,sigma_c_head,sigma_x_head,eps_macro,use_wstat_pdep
+                                    nbndval0x,sigma_c_head,sigma_x_head,epsinfty
      !wbsecom combined into westcom
      !USE wbsecom,            ONLY : nbndval0x,sigma_c_head,sigma_x_head,eps_macro,use_wstat_pdep
      USE control_flags,      ONLY : gamma_only
@@ -48,7 +48,7 @@ SUBROUTINE bse_init()
      ! compute macroscopic term, it needs macroscopic dielectric constant
      ! from input.
      !
-     sigma_c_head = ((1.0_DP/eps_macro) - 1.0_DP)*(2.0_DP*e2/pi) * &
+     sigma_c_head = ((1.0_DP/epsinfty) - 1.0_DP)*(2.0_DP*e2/pi) * &
                     ((6.0_DP*pi*pi/omega)**(1.0_DP/3.0_DP))
      !
      WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:", f9.5)') sigma_c_head
@@ -73,7 +73,7 @@ SUBROUTINE bse_init()
         !
      ENDIF
      !
-     IF (.NOT.use_wstat_pdep) THEN
+     !IF (.NOT.use_wstat_pdep) THEN
         !
         ! Using Coupling approach, single k and q
         ! define an index_matrix_lz, for bse_kernel paralel
@@ -137,77 +137,77 @@ SUBROUTINE bse_init()
            !
         ENDDO
         !
-     ELSE
+     !ELSE
         !
         ! Using Coupling approach, single k and q
         ! define an index_matrix_lz, for bse_kernel paralel
         !
-        tmp_size = nbndval0x*nbndval0x*n_pdep_eigen
-        ALLOCATE (index_matrix_lz(tmp_size, 3, nspin))
-        !
-        index_matrix_lz(:,:,:) = 0.0
-        !
-        ALLOCATE(size_index_matrix_lz(nspin))
-        !
-        size_index_matrix_lz(:) = 0
-        !
-        DO iks = 1, nks
-           !
-           nbndval = nbnd_occ(iks)
-           !
-           current_spin = isk(iks)
-           !
-           do_index = 0
-           !
-           DO alnd = 1, n_pdep_eigen
-              !
-              DO ibnd = 1, nbndval
-                 !
-                 DO jbnd = 1, nbndval
-                    !
-                    IF (l_wannier_repr) THEN
-                       !
-                       ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
-                       !
-                    ELSE
-                       !
-                       ovl_value = 0.0_DP
-                       !
-                    ENDIF
-                    !
-                    IF (ovl_value >= ovl_thr ) THEN
-                       !
-                       IF (gamma_only) THEN
-                          !
-                          do_index = do_index + 1
-                          !
-                          index_matrix_lz(do_index, 1, current_spin) = ibnd
-                          index_matrix_lz(do_index, 2, current_spin) = jbnd
-                          index_matrix_lz(do_index, 3, current_spin) = alnd
-                          !
-                       ENDIF
-                       !
-                    ELSE
-                       !
-                       do_index = do_index + 1
-                       !
-                       index_matrix_lz(do_index, 1, current_spin) = ibnd
-                       index_matrix_lz(do_index, 2, current_spin) = jbnd
-                       index_matrix_lz(do_index, 3, current_spin) = alnd
-                       !
-                    ENDIF
-                    !
-                 ENDDO
-                 !
-              ENDDO
-              !
-           ENDDO
-           !
-           size_index_matrix_lz(current_spin) = do_index
-           !
-        ENDDO
-        !
-     ENDIF
+!        tmp_size = nbndval0x*nbndval0x*n_pdep_eigen
+!        ALLOCATE (index_matrix_lz(tmp_size, 3, nspin))
+!        !
+!        index_matrix_lz(:,:,:) = 0.0
+!        !
+!        ALLOCATE(size_index_matrix_lz(nspin))
+!        !
+!        size_index_matrix_lz(:) = 0
+!        !
+!        DO iks = 1, nks
+!           !
+!           nbndval = nbnd_occ(iks)
+!           !
+!           current_spin = isk(iks)
+!           !
+!           do_index = 0
+!           !
+!           DO alnd = 1, n_pdep_eigen
+!              !
+!              DO ibnd = 1, nbndval
+!                 !
+!                 DO jbnd = 1, nbndval
+!                    !
+!                    IF (l_wannier_repr) THEN
+!                       !
+!                       ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
+!                       !
+!                    ELSE
+!                       !
+!                       ovl_value = 0.0_DP
+!                       !
+!                    ENDIF
+!                    !
+!                    IF (ovl_value >= ovl_thr ) THEN
+!                       !
+!                       IF (gamma_only) THEN
+!                          !
+!                          do_index = do_index + 1
+!                          !
+!                          index_matrix_lz(do_index, 1, current_spin) = ibnd
+!                          index_matrix_lz(do_index, 2, current_spin) = jbnd
+!                          index_matrix_lz(do_index, 3, current_spin) = alnd
+!                          !
+!                       ENDIF
+!                       !
+!                    ELSE
+!                       !
+!                       do_index = do_index + 1
+!                       !
+!                       index_matrix_lz(do_index, 1, current_spin) = ibnd
+!                       index_matrix_lz(do_index, 2, current_spin) = jbnd
+!                       index_matrix_lz(do_index, 3, current_spin) = alnd
+!                       !
+!                    ENDIF
+!                    !
+!                 ENDDO
+!                 !
+!              ENDDO
+!              !
+!           ENDDO
+!           !
+!           size_index_matrix_lz(current_spin) = do_index
+!           !
+!        ENDDO
+!        !
+!     ENDIF
      !
      ! allocate and read pdep eigen-pots and -values from WSTAT output, if any
      !

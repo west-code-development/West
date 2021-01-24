@@ -9,7 +9,7 @@
 SUBROUTINE bse_hqp_psi(iks, current_spin, nbvalloc, psi, dpsi)
   !
   ! evc is qp wfcs, et_qp is qp eigenvalues
-  ! evc_ks is ks wfc, et is ks wfcs 
+  ! evc_ks is ks wfc, et is ks wfcs
   !
   ! This routine compute:
   ! dpsi = S|evc><evc|psi>*(et_qp - Delta)
@@ -46,7 +46,7 @@ ENDSUBROUTINE
 SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
   !
   ! evc is qp wfcs, et_qp is qp eigenvalues
-  ! evc_ks is ks wfc, et is ks wfcs 
+  ! evc_ks is ks wfc, et is ks wfcs
   !
   ! This routine compute:
   ! dpsi = S|evc><evc|psi>*(et_qp - Delta)
@@ -78,7 +78,7 @@ SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
   COMPLEX(DP), ALLOCATABLE   :: ps_c(:,:), ps_c_ks(:,:)
   !
   delta = et_qp(nbnd,iks) - et(nbnd,iks)
-  ! 
+  !
   IF( gamma_only ) THEN
      ALLOCATE( ps_r(nbnd, nbvalloc) )
      ALLOCATE( ps_r_ks(nbnd, nbvalloc) )
@@ -117,7 +117,7 @@ SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
      ps_c(ibnd,:) =  ps_c(ibnd,:) * (et_qp(ibnd,iks) - delta)
      ps_c_ks(ibnd,:) =  -ps_c_ks(ibnd,:) * et(ibnd,iks)
      !
-  ENDDO 
+  ENDDO
   !
   CALL ZGEMM('N','N',npwx*npol,nbvalloc,nbnd,(1.0_DP,0.0_DP), &
              evc,npwx*npol,ps_c,nbnd,(1.0_DP,0.0_DP),dpsi,npwx*npol)
@@ -198,7 +198,7 @@ SUBROUTINE bse_hqp_psi_nscf(iks, current_spin, nbvalloc, psi, dpsi)
      !
      ps_c(ibnd,:) =  ps_c(ibnd,:) * (et_qp(ibnd,iks) - et(ibnd,iks) - delta)
      !
-  ENDDO 
+  ENDDO
   !
   CALL ZGEMM('N','N',npwx*npol,nbvalloc,nbnd,(1.0_DP,0.0_DP), &
               evc,npwx*npol,ps_c,nbnd,(1.0_DP,0.0_DP),dpsi,npwx*npol)
@@ -219,12 +219,13 @@ ENDSUBROUTINE bse_hqp_psi_nscf
 !
 SUBROUTINE read_qp_eigs()
   !
-  USE io_global,     ONLY : stdout, ionode, ionode_id 
+  USE io_global,     ONLY : stdout, ionode, ionode_id
   USE mp,            ONLY : mp_bcast, mp_barrier
   USE mp_world,      ONLY : world_comm
-  USE bse_module,    ONLY : et_qp 
+  USE bse_module,    ONLY : et_qp
   USE pwcom,         ONLY : nks, nbnd, et
   USE lsda_mod,      ONLY : lsda
+  USE westcom,       ONLY : qp_correction
   !
   IMPLICIT NONE
   !
@@ -246,45 +247,46 @@ SUBROUTINE read_qp_eigs()
   ELSE
      !
      num_k_points = nks
-     ! 
+     !
   ENDIF
   !
   DO ik = 1, num_k_points
      !
      WRITE(my_ik,'(i1)') ik
      !
-     file_qp = 'qp_eigs_'//TRIM(my_ik)//'.dat'
-     ! 
-     if (ionode) then 
+     file_qp = TRIM(qp_correction)// "." //TRIM(my_ik)
+     !file_qp = 'qp_eigs_'//TRIM(my_ik)//'.dat'
+     !
+     if (ionode) then
         !
         open(unit = 99,file =TRIM(file_qp),form = 'formatted',status = 'old')
         !
         read(99,*) nqp_eigs
-        ! 
-     endif 
-     ! 
+        !
+     endif
+     !
      call mp_bcast (nqp_eigs,ionode_id,world_comm )
      !
      if (nqp_eigs .ne. nbnd) then
-        ! 
-        call errore ('read_qp_eigs', 'number qp eigenvalues not equal nbnd in pw.in', nqp_eigs) 
+        !
+        call errore ('read_qp_eigs', 'number qp eigenvalues not equal nbnd in pw.in', nqp_eigs)
         !
      endif
-     ! 
+     !
      if (ionode) then
-        !  
+        !
         do ibnd = 1, nqp_eigs
            !
-           IF ( lsda ) THEN 
+           IF ( lsda ) THEN
               read (99, * ) et_qp(ibnd,ik), et_qp(ibnd,ik+num_k_points)
-           ELSE   
+           ELSE
               read (99, * ) et_qp(ibnd,ik)
            ENDIF
            !
         enddo
         !
         close (99)
-        !     
+        !
      endif
      !
   ENDDO
@@ -318,7 +320,7 @@ SUBROUTINE read_ks_wfc()
   CALL mp_barrier(world_comm)
   !
   ALLOCATE(evc_ks(npwx,nbnd,nks))
-  !  
+  !
   DO iks = 1, nks
      !
      WRITE(my_ik,'(i1)') iks

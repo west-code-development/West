@@ -354,8 +354,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
           CLOSE(iu)
           !
           ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
-          !
-          CALL sleep_and_wait_for_lock_to_be_removed(lockfile, "['response',]")
+          CALL sleep_and_wait_for_lock_to_be_removed(lockfile, "["  // '"'//"response"//'"' //"]")
           !
      ENDIF
      !

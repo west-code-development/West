@@ -744,7 +744,7 @@ SUBROUTINE read_b_g_z_file_html()
         CALL iotk_scan_dat( iun, "nspin", nspin )
         CALL iotk_scan_dat( iun, "nipol_input", nipol_input_tmp )
         CALL iotk_scan_dat( iun, "ipol_label",  ipol_label_tmp )
-        CALL iotk_scan_dat( iun, "n_lzstep",    n_lzstep_tmp )
+        CALL iotk_scan_dat( iun, "n_lanczos",    n_lzstep_tmp )
         CALL iotk_scan_end( iun, "SUMMARY"  )
         !
         WRITE (stdout,*) ' '

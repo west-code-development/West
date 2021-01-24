@@ -236,7 +236,7 @@ MODULE qbox_interface
            !
            ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
            !
-           CALL sleep_and_wait_for_lock_to_be_removed(lockfile, "['script',]")
+           CALL sleep_and_wait_for_lock_to_be_removed(lockfile, "["  // '"'//"script"//'"' //"]")
            !
       ENDIF
       !

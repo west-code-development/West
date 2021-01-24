@@ -17,13 +17,13 @@ SUBROUTINE wbse_lanzcos_diago ()
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ, &
-                                   wlz_calculation, &
-                                   d0psi,ipol_input,n_lzstep,&
+                                   wbse_calculation, &
+                                   d0psi,ipol_input,n_lanczos,&
                                    alpha_store,beta_store,&
                                    gamma_store,zeta_store, nbndval0x
   !wbsecom combined into westcom
   !USE wbsecom,              ONLY : wlz_calculation, &
-  !                                 d0psi,ipol_input,n_lzstep,&
+  !                                 d0psi,ipol_input,n_lanczos,&
   !                                 alpha_store,beta_store,&
   !                                 gamma_store,zeta_store
   USE lanzcos_db,           ONLY : lanzcos_d0psi_read,&
@@ -91,9 +91,9 @@ SUBROUTINE wbse_lanzcos_diago ()
   !
   ! Main Lanzcos program
   !
-  IF (n_lzstep == 0) THEN
+  IF (n_lanczos == 0) THEN
      !
-     CALL errore('lanzcosdiago', ' n_lzstep shoudl be > 0 ', 1)
+     CALL errore('lanzcosdiago', ' n_lanczos shoudl be > 0 ', 1)
      !
   ENDIF
   !
@@ -142,14 +142,14 @@ SUBROUTINE wbse_lanzcos_diago ()
   END SELECT
   !
   ALLOCATE (d0psi(npwx,nbndval0x,nks,n_ipol))
-  ALLOCATE (alpha_store(nipol_input,n_lzstep,nspin),beta_store(nipol_input,n_lzstep,nspin))
-  ALLOCATE (gamma_store(nipol_input,n_lzstep,nspin),zeta_store(nipol_input,n_ipol,n_lzstep,nspin))
+  ALLOCATE (alpha_store(nipol_input,n_lanczos,nspin),beta_store(nipol_input,n_lanczos,nspin))
+  ALLOCATE (gamma_store(nipol_input,n_lanczos,nspin),zeta_store(nipol_input,n_ipol,n_lanczos,nspin))
   !
   ALLOCATE(evc1(npwx,nbndval0x,nks),evc1_old(npwx,nbndval0x,nks),evc1_new(npwx,nbndval0x,nks))
   !
-  SELECT CASE(wlz_calculation)
+  SELECT CASE(wbse_calculation)
   !
-  CASE('r','R')
+  CASE('l')
       !
       ! RESTART
       !
@@ -174,7 +174,7 @@ SUBROUTINE wbse_lanzcos_diago ()
       !
       l_from_scratch = .false.
       !
-  CASE('s','S')
+  CASE('L')
       !
       ! FROM SCRATCH
       !
@@ -200,7 +200,7 @@ SUBROUTINE wbse_lanzcos_diago ()
   !
   WRITE(stdout,'(/,5X,"LANCZOS LINEAR-RESPONSE ADSORPTION SPECTRUM CALCULATION")')
   WRITE(stdout,'(/,10X,"USING TAMM-DANCOFF LIOUVILLIAN OPERATOR ")')
-  WRITE(stdout,'(/,5x,"Number of Lanczos iterations = ",i6)') n_lzstep
+  WRITE(stdout,'(/,5x,"Number of Lanczos iterations = ",i6)') n_lanczos
   !
   polarization_loop : DO ip = pliter_restart, nipol_input
      !
@@ -222,7 +222,7 @@ SUBROUTINE wbse_lanzcos_diago ()
      !
      ! Loop on the Lanczos iterations
      !
-     lancz_loop : DO iteration = lriter_restart, n_lzstep
+     lancz_loop : DO iteration = lriter_restart, n_lanczos
         !
         lz_iteration = iteration
         !

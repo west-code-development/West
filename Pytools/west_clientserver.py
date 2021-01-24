@@ -165,13 +165,12 @@ def sleep_and_wait(*args, **kwargs):
         consider_only_list = json.loads(kwargs["consider_only"])
         temp_document = {}
         for key in consider_only_list:
-            if key in document.keys() : 
+            if key in document.keys() :
                temp_document[key] = document[key]
-            else : 
+            else :
                print(f"Could not consider missing key: {key}")
-        #replace document 
+        #replace document
         document = temp_document
-
     #
     print(document)
     server = QboxServer(client_lockfile,maxsec,sleepsec,document)

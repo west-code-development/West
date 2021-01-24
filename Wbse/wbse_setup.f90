@@ -95,8 +95,8 @@ SUBROUTINE wbse_input
                             n_pdep_read_from_file, &
                             trev_pdep, &
                             trev_pdep_rel, &
-                            wbse_calculation, n_plep_times,n_plep_eigen,n_plep_maxiter,&
-                            n_plep_read_from_file,trev_plep_rel,trev_plep, l_bse_calculation,&
+                            wbse_calculation, n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
+                            n_liouville_read_from_file,trev_liouville_rel,trev_liouville, l_bse_calculation,&
                              l_use_localise_repr, overlap_thr
   !wbsecom combined into westcom
   !USE wbsecom
@@ -104,13 +104,21 @@ SUBROUTINE wbse_input
   !
   IMPLICIT NONE
   !
-  wstat_calculation = wbse_calculation
-  n_pdep_times      = n_plep_times
-  n_pdep_eigen      = n_plep_eigen
-  n_pdep_maxiter    = n_plep_maxiter
-  n_pdep_read_from_file = n_plep_read_from_file
-  trev_pdep_rel         = trev_plep_rel
-  trev_pdep             = trev_plep
+   SELECT CASE(wbse_calculation)
+     CASE('l','d','r','R')
+        wstat_calculation = 'R'
+     CASE('L','D','s','S')
+        wstat_calculation = 'S'
+     CASE DEFAULT
+        wstat_calculation = wbse_calculation
+   END SELECT
+
+  n_pdep_times      = n_liouville_times
+  n_pdep_eigen      = n_liouville_eigen
+  n_pdep_maxiter    = n_liouville_maxiter
+  n_pdep_read_from_file = n_liouville_read_from_file
+  trev_pdep_rel         = trev_liouville_rel
+  trev_pdep             = trev_liouville
   !
   bse_calc          = l_bse_calculation
   l_wannier_repr    = l_use_localise_repr

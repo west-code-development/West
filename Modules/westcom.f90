@@ -243,18 +243,21 @@ MODULE wbse_init_center
   ! INPUT FOR wbse_init
   !
   CHARACTER(LEN=1)   :: wbse_init_calculation
-  CHARACTER(LEN=256) :: which_bse_method
+  CHARACTER(LEN=256) :: localization
   CHARACTER(LEN=256) :: chi_kernel
-  CHARACTER(LEN=256) :: qbox_bisec_wfc_filename
-  INTEGER  :: which_spin_channel
-  REAL(DP) :: overlap_thr
+  CHARACTER(LEN=256) :: wfc_from_qbox
+  CHARACTER(LEN=256) :: bisection_info      ! bisection info file name, the extension is spin channel. e.g. bisection_info='info.bis', default file = 'info.bis.1'
+  !CHARACTER(LEN=256) :: qbox_bisec_wfc_filename
+  INTEGER  :: which_spin_channel   ! when nspin>1,which_spin_channel determine the spin channel for func wbse_init_qboxcoupling_single_q
+
+  REAL(DP) :: overlap_thr !overlap threshold for index_matrix calculation from wbse_init_qboxcoupling.f90(ovl_thr)
   !INTEGER :: n_pdep_eigen
-  LOGICAL  :: l_use_localise_repr = .FALSE.   !flag read from wbse_init.in
-  LOGICAL  :: l_use_bisection_thr = .FALSE.
+  LOGICAL  :: l_use_localise_repr = .FALSE.   !flag  depend on localization
+  LOGICAL  :: l_use_bisection_thr = .FALSE.   !flag  depend on localization
   !
-  LOGICAL  :: use_qbox            = .FALSE.   !control flow in wbse_init
-  LOGICAL  :: l_test_ovl          = .FALSE.   !control flow in wbse_init
-  LOGICAL  :: use_wstat_pdep      = .FALSE.   !control flow in wbse_init
+  !LOGICAL  :: use_qbox            = .FALSE.   !control flow in wbse_init
+  !LOGICAL  :: l_test_ovl          = .FALSE.   !control flow in wbse_init
+  !LOGICAL  :: use_wstat_pdep      = .FALSE.   !control flow in wbse_init
   !
   LOGICAL :: l_xcchi       = .FALSE.   ! control XC CHI flow in wbse_init_qboxcoupling
   !
@@ -285,40 +288,50 @@ MODULE wbse_center
   !
   ! INPUT FOR wbse_control
   !
-  INTEGER  :: n_plep_times          !  wbse input
-  INTEGER  :: n_plep_eigen          !  wbse input
-  INTEGER  :: n_plep_maxiter        !  wbse input
-  INTEGER  :: n_plep_read_from_file !  wbse input
+  CHARACTER(LEN=1)   :: wbse_calculation !  wbse input
+  CHARACTER(LEN=256) :: solver           !  wbse input
+  CHARACTER(LEN=256) :: qp_correction    !  wbse input filename qp_correction
+  REAL(DP) :: scissor_ope          !  wbse input
+
+  INTEGER  :: n_liouville_times          !  wbse input
+  INTEGER  :: n_liouville_eigen          !  wbse input
+  INTEGER  :: n_liouville_maxiter        !  wbse input
+  INTEGER  :: n_liouville_read_from_file !  wbse input
+
+  REAL(DP) :: trev_liouville            !  wbse input
+  REAL(DP) :: trev_liouville_rel        !  wbse input
+
+  CHARACTER(LEN=3) :: ipol_input       !wbse input
+  CHARACTER(LEN=1)   :: wbse_macropol_calculation !  wbse input
   !
-  LOGICAL  :: l_qp_correction             !flag read from wbse.in to activate read qp file. TODO: need modify to filename
-  LOGICAL  :: l_bse_calculation           !flag read from wbse.in
-  LOGICAL  :: l_diag_term_only            !flag read from wbse.in
+  LOGICAL  :: l_qp_correction             !depend on qp_correction
+  LOGICAL  :: l_bse_calculation           !depend on solver if BSE True if TDDFT False
+  LOGICAL  :: l_diag_term_only  = .FALSE. !flag nolonger read from wbse.in, always FALSE. affect td_liouville_oper.f90
   LOGICAL  :: l_preconditioning           !flag read from wbse.in
   !
-  REAL(DP) :: trev_plep            !  wbse input
-  REAL(DP) :: trev_plep_rel        !  wbse input
-  REAL(DP) :: scissor_ope          !  wbse input
-  REAL(DP) :: eps_macro            !  wbse input
+  REAL(DP) :: epsinfty              !  wbse input
+  !REAL(DP) :: eps_macro            !  wbse input
   !
-  CHARACTER(LEN=1)   :: wbse_calculation !  wbse input
-  CHARACTER(LEN=256) :: wbse_diag_method !  wbse input
+  !CHARACTER(LEN=256) :: wbse_diag_method !  wbse input
   CHARACTER(LEN=256) :: spin_excitation  !  wbse input
   !
   ! FOR global variables
   !
   INTEGER :: nbndval0x                 !wbse  wbse_init
-  LOGICAL :: l_lanzcos     = .FALSE.   !wbse flag depend on wbse_diag_method  (no bcast)
-  LOGICAL :: l_davidson    = .FALSE.   !wbse flag depend on wbse_diag_method  (no bcast)
-  LOGICAL :: l_bse_triplet = .FALSE.   !wbse flag depend on spin_excitation   (no bcast)
+  LOGICAL :: l_lanzcos     = .FALSE.   !wbse flag depend on wbse_calculation
+  LOGICAL :: l_davidson    = .FALSE.   !wbse flag depend on wbse_calculation
+  LOGICAL :: l_bse_triplet = .FALSE.   !wbse flag depend on spin_excitation
   REAL(DP):: sigma_c_head  = 0.0_DP
   REAL(DP):: sigma_x_head  = 0.0_DP
+
+  LOGICAL          :: macropol_dfpt  !TODO: QUESTION  depend on wbse_macropol_calculation? macropol_calculation=N macropol_dfpt=False? affect wbse_solve_e_psi.f90
   !
   ! FOR INPUT Lanzcos diago
   !
-  CHARACTER(LEN=1) :: wlz_calculation  !wbse lanzcos calculation (no bcast)
-  CHARACTER(LEN=3) :: ipol_input       !wbse input
-  INTEGER          :: n_lzstep = 0     !wbse input
-  LOGICAL          :: macropol_dfpt = .FALSE.  !wbse input
+  !CHARACTER(LEN=1) :: wlz_calculation  !wbse lanzcos calculation (no bcast)
+
+  !INTEGER          :: n_lzstep = 0     !wbse input
+
   !
   ! FOR global Lanzcos diago vars
   !
@@ -353,6 +366,7 @@ MODULE wbsepp_center
   LOGICAL :: l_lz_spec             = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
   LOGICAL :: l_exc_plot            = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
   LOGICAL :: l_exc_rho_res_plot    = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
+  !
   !
   INTEGER :: wbsepp_type
   !

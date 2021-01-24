@@ -19,7 +19,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
-  USE westcom,              ONLY : nbnd_occ,l_use_bisection_thr,qbox_bisec_wfc_filename
+  USE westcom,              ONLY : nbnd_occ,l_use_bisection_thr,wfc_from_qbox
   USE wavefunctions_module, ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G, plep_read_G_and_distribute
   USE fft_base,             ONLY : dfftp,dffts
@@ -71,13 +71,14 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
      !
      IF (l_load_qbox_loc_wfc) THEN
         !
-        CALL load_qbox_wfc(evc_loc, qbox_bisec_wfc_filename, current_spin, nbndval)
+        CALL load_qbox_wfc(evc_loc, wfc_from_qbox, current_spin, nbndval)
+        !CALL load_qbox_wfc(evc_loc, qbox_bisec_wfc_filename, current_spin, nbndval)
         !
      ENDIF
      !
      IF (l_load_west_loc_wfc) THEN
         !
-        CALL read_pwscf_wannier_orbs (nbndval, npwx, evc_loc, qbox_bisec_wfc_filename )
+        CALL read_pwscf_wannier_orbs (nbndval, npwx, evc_loc, wfc_from_qbox )
         !
      ENDIF
      !

@@ -105,35 +105,39 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
      IF ( ANY(driver(:)==6)) THEN
         !
         CALL json%add('input.wbse_init_control.wbse_init_calculation',TRIM( wbse_init_calculation ))
-        CALL json%add('input.wbse_init_control.n_pdep_eigen',n_pdep_eigen)
+        !CALL json%add('input.wbse_init_control.n_pdep_eigen',n_pdep_eigen)
+        CALL json%add('input.wbse_init_control.localization',TRIM(localization))
         CALL json%add('input.wbse_init_control.chi_kernel',TRIM( chi_kernel ))
         CALL json%add('input.wbse_init_control.which_spin_channel',which_spin_channel)
         CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
-        CALL json%add('input.wbse_init_control.l_use_localise_repr',l_use_localise_repr)
-        CALL json%add('input.wbse_init_control.l_use_bisection_thr',l_use_bisection_thr)
-        CALL json%add('input.wbse_init_control.qbox_bisec_wfc_filename',TRIM( qbox_bisec_wfc_filename))
+        !CALL json%add('input.wbse_init_control.l_use_localise_repr',l_use_localise_repr)
+        !CALL json%add('input.wbse_init_control.l_use_bisection_thr',l_use_bisection_thr)
+        CALL json%add('input.wbse_init_control.wfc_from_qbox',TRIM(wfc_from_qbox))
         !
      END IF
      !
      IF ( ANY(driver(:)==7)) THEN
         CALL json%add('input.wbse_control.wbse_calculation',TRIM( wbse_calculation ))
-        CALL json%add('input.wbse_control.n_plep_eigen',n_plep_eigen)
-        CALL json%add('input.wbse_control.n_plep_times',n_plep_times)
-        CALL json%add('input.wbse_control.n_plep_maxiter',n_plep_maxiter)
-        CALL json%add('input.wbse_control.n_plep_read_from_file',n_plep_read_from_file)
-        CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
-        CALL json%add('input.wbse_control.l_bse_calculation',l_bse_calculation)
-        CALL json%add('input.wbse_control.l_qp_correction',l_qp_correction)
-        CALL json%add('input.wbse_control.l_diag_term_only',l_diag_term_only)
-        CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
-        CALL json%add('input.wbse_control.trev_plep',trev_plep)
-        CALL json%add('input.wbse_control.trev_plep_rel',trev_plep_rel)
+        CALL json%add('input.wbse_control.solver',TRIM( solver ))
+        CALL json%add('input.wbse_control.qp_correction',TRIM( qp_correction ))
         CALL json%add('input.wbse_control.scissor_ope',scissor_ope)
-        CALL json%add('input.wbse_control.eps_macro',eps_macro)
-        CALL json%add('input.wbse_control.wbse_diag_method',TRIM(wbse_diag_method))
+        CALL json%add('input.wbse_control.n_liouville_eigen',n_liouville_eigen)
+        CALL json%add('input.wbse_control.n_liouville_times',n_liouville_times)
+        CALL json%add('input.wbse_control.n_liouville_maxiter',n_liouville_maxiter)
+        CALL json%add('input.wbse_control.n_liouville_read_from_file',n_liouville_read_from_file)
+        CALL json%add('input.wbse_control.trev_plep',trev_liouville)
+        CALL json%add('input.wbse_control.trev_plep_rel',trev_liouville_rel)
+        CALL json%add('input.wbse_control.n_lanczos',n_lanczos)
         CALL json%add('input.wbse_control.ipol_input', TRIM(ipol_input))
-        CALL json%add('input.wbse_control.n_lzstep',n_lzstep)
-        CALL json%add('input.wbse_control.macropol_dfpt',macropol_dfpt)
+        CALL json%add('input.wbse_control.macropol_calculation', TRIM(wbse_macropol_calculation))
+        CALL json%add('input.wbse_control.epsinfty',epsinfty)
+        CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
+        !CALL json%add('input.wbse_control.l_bse_calculation',l_bse_calculation)
+        !CALL json%add('input.wbse_control.l_qp_correction',l_qp_correction)
+        !CALL json%add('input.wbse_control.l_diag_term_only',l_diag_term_only)
+        CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
+        !CALL json%add('input.wbse_control.wbse_diag_method',TRIM(wbse_diag_method))
+        !CALL json%add('input.wbse_control.macropol_dfpt',macropol_dfpt)
      !
      END IF
      !
@@ -156,7 +160,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
      IF (ANY(driver(:)==8)) THEN
         !
         CALL json%add('input.wbsepp_control.wbsepp_type',wbsepp_type)
-        CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_plep_read_from_file)
+        CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_liouville_read_from_file)
         CALL json%add('input.wbsepp_control.macropol_dfpt',macropol_dfpt)
         CALL json%add('input.wbsepp_control.r0_input', r0_input)
         CALL json%add('input.wbsepp_control.iexc_plot',iexc_plot)
@@ -439,15 +443,17 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         IERR = return_dict%getitem(cvalue, "wbse_init_calculation"); wbse_init_calculation = TRIM(&
                ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "which_bse_method"); which_bse_method = TRIM(&
-               ADJUSTL(cvalue))
-        IERR = return_dict%getitem(n_pdep_eigen, "n_pdep_eigen")
+        IERR = return_dict%getitem(cvalue, "localization"); localization = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, "bisection_info"); bisection_info = TRIM(ADJUSTL(cvalue))
+        !IERR = return_dict%getitem(cvalue, "which_bse_method"); which_bse_method = TRIM(&
+        !       ADJUSTL(cvalue))
+        !IERR = return_dict%getitem(n_pdep_eigen, "n_pdep_eigen")
         IERR = return_dict%getitem(cvalue, "chi_kernel"); chi_kernel = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(which_spin_channel, "which_spin_channel")
         IERR = return_dict%getitem(overlap_thr, "overlap_thr")
-        IERR = return_dict%getitem(l_use_localise_repr, "l_use_localise_repr")
-        IERR = return_dict%getitem(l_use_bisection_thr, "l_use_bisection_thr")
-        IERR = return_dict%getitem(cvalue, "qbox_bisec_wfc_filename"); qbox_bisec_wfc_filename = TRIM(&
+        !IERR = return_dict%getitem(l_use_localise_repr, "l_use_localise_repr")
+        !IERR = return_dict%getitem(l_use_bisection_thr, "l_use_bisection_thr")
+        IERR = return_dict%getitem(cvalue, "wfc_from_qbox"); wfc_from_qbox = TRIM(&
                ADJUSTL(cvalue))
         !
         CALL return_dict%destroy
@@ -469,23 +475,29 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(cvalue, "wbse_calculation");wbse_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(n_plep_eigen, "n_plep_eigen")
-        IERR = return_dict%getitem(n_plep_times, "n_plep_times")
-        IERR = return_dict%getitem(n_plep_maxiter, "n_plep_maxiter")
-        IERR = return_dict%getitem(n_plep_read_from_file, "n_plep_read_from_file")
-        IERR = return_dict%getitem(cvalue, "spin_excitation");spin_excitation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(l_bse_calculation, "l_bse_calculation")
-        IERR = return_dict%getitem(l_qp_correction, "l_qp_correction")
-        IERR = return_dict%getitem(l_diag_term_only, "l_diag_term_only")
-        IERR = return_dict%getitem(l_preconditioning, "l_preconditioning")
-        IERR = return_dict%getitem(trev_plep, "trev_plep")
-        IERR = return_dict%getitem(trev_plep_rel, "trev_plep_rel")
+        IERR = return_dict%getitem(cvalue, "solver");solver = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, "qp_correction"); qp_correction = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(scissor_ope, "scissor_ope")
-        IERR = return_dict%getitem(eps_macro, "eps_macro")
-        IERR = return_dict%getitem(cvalue, "wbse_diag_method");wbse_diag_method = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(n_liouville_eigen, "n_liouville_eigen")
+        IERR = return_dict%getitem(n_liouville_times, "n_liouville_times")
+        IERR = return_dict%getitem(n_liouville_maxiter, "n_liouville_maxiter")
+        IERR = return_dict%getitem(n_liouville_read_from_file, "n_liouville_read_from_file")
+        IERR = return_dict%getitem(trev_liouville, "trev_liouville")
+        IERR = return_dict%getitem(trev_liouville_rel, "trev_liouville_rel")
+        IERR = return_dict%getitem(n_lanczos,"n_lanczos")
+        !IERR = return_dict%getitem(n_lzstep, "n_lzstep")
         IERR = return_dict%getitem(cvalue, "ipol_input");ipol_input = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(n_lzstep, "n_lzstep")
-        IERR = return_dict%getitem(macropol_dfpt, "macropol_dfpt")
+        IERR = return_dict%getitem(cvalue, "macropol_calculation"); wbse_macropol_calculation =  TRIM(ADJUSTL(cvalue))
+        !IERR = return_dict%getitem(eps_macro, "eps_macro")
+        IERR = return_dict%getitem(epsinfty,"epsinfty")
+        IERR = return_dict%getitem(cvalue, "spin_excitation");spin_excitation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(l_preconditioning, "l_preconditioning")
+        !
+        !IERR = return_dict%getitem(l_bse_calculation, "l_bse_calculation")
+        !IERR = return_dict%getitem(l_qp_correction, "l_qp_correction")
+        !IERR = return_dict%getitem(l_diag_term_only, "l_diag_term_only")
+        !IERR = return_dict%getitem(cvalue, "wbse_diag_method");wbse_diag_method = TRIM(ADJUSTL(cvalue))
+        !IERR = return_dict%getitem(macropol_dfpt, "macropol_dfpt")
         !
         CALL return_dict%destroy
         !
@@ -540,7 +552,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(wbsepp_type, "wbsepp_type")
-        IERR = return_dict%getitem(n_plep_read_from_file, "n_plep_read_from_file")
+        IERR = return_dict%getitem(n_liouville_read_from_file, "n_liouville_read_from_file")
         IERR = return_dict%getitem(macropol_dfpt, "macropol_dfpt")
         IERR = return_dict%getitem(tmp_obj, "r0_input")
         IERR = cast(tmp_list,tmp_obj)
@@ -714,75 +726,113 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(qlist,root,world_comm)
      !
      CALL mp_bcast(wbse_init_calculation,root,world_comm)
-     CALL mp_bcast(which_bse_method,root,world_comm)
-     CALL mp_bcast(l_use_bisection_thr,root,world_comm)
+     !CALL mp_bcast(which_bse_method,root,world_comm)
+     !CALL mp_bcast(l_use_bisection_thr,root,world_comm)
      CALL mp_bcast(overlap_thr,root,world_comm)
      CALL mp_bcast(chi_kernel,root,world_comm)
-     CALL mp_bcast(n_pdep_eigen,root,world_comm)
+     !CALL mp_bcast(n_pdep_eigen,root,world_comm)
      CALL mp_bcast(which_spin_channel,root,world_comm)
-     CALL mp_bcast(l_use_localise_repr,root,world_comm)
-     CALL mp_bcast(qbox_bisec_wfc_filename,root,world_comm)
-     !
-     use_qbox = .FALSE.
-     use_wstat_pdep = .FALSE.
-     SELECT CASE(TRIM(which_bse_method))
-     CASE('finite-field','FF')
-     use_qbox = .TRUE.
-     CASE('PDEP','pdep')
-     use_wstat_pdep = .TRUE.
+     !CALL mp_bcast(l_use_localise_repr,root,world_comm)
+     CALL mp_bcast(localization,root,world_comm)
+     CALL mp_bcast(wfc_from_qbox,root,world_comm)
+     CALL mp_bcast(bisection_info,root,world_comm)
+
+     SELECT CASE(TRIM(localization))
+     CASE('N','n')
+     l_use_localise_repr = .FALSE.
+     l_use_bisection_thr = .FALSE.
+     CASE('B','b')
+     l_use_localise_repr = .TRUE.
+     l_use_bisection_thr = .TRUE.
      CASE DEFAULT
-        CALL errore('fetch_input','Err: which_bse_method != FF/PDEP', 1)
+        CALL errore('fetch_input','Err: localization != N/B', 1)
      END SELECT
-     l_test_ovl = .FALSE.
-     IF (wbse_init_calculation == 'I') l_test_ovl = .TRUE.
+     CALL mp_bcast(l_use_localise_repr,root,world_comm)
+     CALL mp_bcast(l_use_bisection_thr,root,world_comm)
      !
-     CALL mp_bcast(use_qbox,root,world_comm)
-     CALL mp_bcast(use_wstat_pdep,root,world_comm)
-     CALL mp_bcast(l_test_ovl,root,world_comm)
+     !use_qbox = .FALSE.
+     !use_wstat_pdep = .FALSE.
+     !SELECT CASE(TRIM(which_bse_method))
+     !CASE('finite-field','FF')
+     !use_qbox = .TRUE.
+     !CASE('PDEP','pdep')
+     !use_wstat_pdep = .TRUE.
+     !CASE DEFAULT
+     !   CALL errore('fetch_input','Err: which_bse_method != FF/PDEP', 1)
+     !END SELECT
+     !l_test_ovl = .FALSE.
+     !IF (wbse_init_calculation == 'I') l_test_ovl = .TRUE.
+     !
+     !CALL mp_bcast(use_qbox,root,world_comm)
+     !CALL mp_bcast(use_wstat_pdep,root,world_comm)
+     !CALL mp_bcast(l_test_ovl,root,world_comm)
      !
   ENDIF
   !
   IF ( ANY(driver(:)==7) ) THEN
      !
      CALL mp_bcast(wbse_calculation,root,world_comm)
-     CALL mp_bcast(n_plep_eigen,root,world_comm)
-     CALL mp_bcast(n_plep_times,root,world_comm)
-     CALL mp_bcast(n_plep_maxiter,root,world_comm)
-     CALL mp_bcast(n_plep_read_from_file,root,world_comm)
-     CALL mp_bcast(spin_excitation,root,world_comm)
-     CALL mp_bcast(l_bse_calculation,root,world_comm)
-     CALL mp_bcast(l_diag_term_only,root,world_comm)
-     CALL mp_bcast(l_preconditioning,root,world_comm)
-     CALL mp_bcast(wbse_diag_method,root,world_comm)
-     CALL mp_bcast(trev_plep,root,world_comm)
-     CALL mp_bcast(trev_plep_rel,root,world_comm)
+     CALL mp_bcast(solver,root,world_comm)
+     CALL mp_bcast(qp_correction,root,world_comm)
      CALL mp_bcast(scissor_ope,root,world_comm)
-     CALL mp_bcast(eps_macro,root,world_comm)
-     CALL mp_bcast(l_qp_correction,root,world_comm)
+     CALL mp_bcast(n_liouville_eigen,root,world_comm)
+     CALL mp_bcast(n_liouville_times,root,world_comm)
+     CALL mp_bcast(n_liouville_maxiter,root,world_comm)
+     CALL mp_bcast(n_liouville_read_from_file,root,world_comm)
+     CALL mp_bcast(trev_liouville,root,world_comm)
+     CALL mp_bcast(trev_liouville_rel,root,world_comm)
+     CALL mp_bcast(n_lanczos,root,world_comm)
      CALL mp_bcast(ipol_input,root,world_comm)
-     CALL mp_bcast(n_lzstep,root,world_comm)
-     CALL mp_bcast(macropol_dfpt,root,world_comm)
+     CALL mp_bcast(wbse_macropol_calculation,root,world_comm)
+     CALL mp_bcast(epsinfty,root,world_comm)
+     CALL mp_bcast(spin_excitation,root,world_comm)
+     CALL mp_bcast(l_preconditioning,root,world_comm)
+     !CALL mp_bcast(l_bse_calculation,root,world_comm)
+     !CALL mp_bcast(l_diag_term_only,root,world_comm)
+     !CALL mp_bcast(wbse_diag_method,root,world_comm)
+     !CALL mp_bcast(l_qp_correction,root,world_comm)
+     !CALL mp_bcast(n_lzstep,root,world_comm)
+     !CALL mp_bcast(macropol_dfpt,root,world_comm)
      !
      ! CHECKS
      !
+     !TODO: QUESTION, macropol_dfpt depend on wbse_macropol_calculation?
+     SELECT CASE(wbse_macropol_calculation)
+     CASE('N','n')
+        macropol_dfpt = .FALSE.
+     CASE('C','c')
+        macropol_dfpt = .TRUE.
+     CASE DEFAULT
+        CALL errore('fetch_input','Err: wbse_macropol_calculation /= N or C',1)
+     END SELECT
+     !
+     SELECT CASE(TRIM(solver))
+     CASE('BSE','bse')
+        l_bse_calculation = .TRUE.
+     CASE('TDDFT','tddft')
+        l_bse_calculation = .FALSE.
+     CASE DEFAULT
+        CALL errore('fetch_input','Err: solver /= BSE or TDDFT',1)
+     END SELECT
+
+
      SELECT CASE(wbse_calculation)
-     CASE('r','R','s','S')
+     CASE('D','d')
+        l_davidson = .TRUE.
+     CASE('L','l')
+        l_lanzcos  = .TRUE.
      CASE DEFAULT
-        CALL errore('fetch_input','Err: wbse_calculation /= S or R',1)
+        CALL errore('fetch_input','Err: wbse_calculation /= D d L l',1)
      END SELECT
+
+     IF ( TRIM(qp_correction) == "" ) THEN
+        l_qp_correction = .FALSE.
+     ELSE
+        l_qp_correction = .TRUE.
+     ENDIF
+
      !
-     wlz_calculation = wbse_calculation
-     l_davidson = .FALSE.
-     l_lanzcos  = .FALSE.
-     !
-     SELECT CASE(wbse_diag_method)
-     CASE('david', 'davidson')
-         l_davidson = .TRUE.
-     CASE('lanzcos', 'Lanzcos')
-         l_lanzcos  = .TRUE.
-     CASE DEFAULT
-        CALL errore('fetch_input','Err: wbse_diag_method /= david or lanzcos',1)
-     END SELECT
+     !wlz_calculation = wbse_calculation
      !
      SELECT CASE(spin_excitation)
      CASE('s', 'S', 'singlet')
@@ -794,18 +844,25 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      END SELECT
      !
      IF (l_davidson) THEN
-        IF( n_plep_times < 2 ) CALL errore('fetch_input','Err: n_plep_times<2',1)
-        IF( n_plep_eigen < 1 ) CALL errore('fetch_input','Err: n_plep_eigen<1',1)
-        IF( n_plep_eigen*n_plep_times < nimage ) CALL errore('fetch_input','Err: n_plep_eigen*n_plep_times<nimage',1)
-        IF( n_plep_maxiter < 1 ) CALL errore('fetch_input','Err: n_plep_maxiter<1',1)
-        IF( n_plep_read_from_file < 0 ) CALL errore('fetch_input','Err: n_plep_read_from_file<0',1)
-        IF( n_plep_read_from_file > n_plep_eigen ) CALL errore('fetch_input','Err: n_plep_read_from_file>n_plep_eigen',1)
+        IF( n_liouville_times < 2 ) CALL errore('fetch_input','Err: n_liouville_times<2',1)
+        IF( n_liouville_eigen < 1 ) CALL errore('fetch_input','Err: n_liouville_eigen<1',1)
+        IF( n_liouville_eigen*n_liouville_times < nimage ) THEN
+           CALL errore('fetch_input','Err: n_liouville_eigen*n_liouville_times<nimage',1)
+        ENDIF
+        IF( n_liouville_maxiter < 1 ) CALL errore('fetch_input','Err: n_liouville_maxiter<1',1)
+        IF( n_liouville_read_from_file < 0 ) CALL errore('fetch_input','Err: n_liouville_read_from_file<0',1)
+        IF( n_liouville_read_from_file > n_liouville_eigen ) THEN
+            CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
+        ENDIF
      ENDIF
      !
-     CALL mp_bcast(wlz_calculation,root,world_comm)
+     !CALL mp_bcast(wlz_calculation,root,world_comm)
      CALL mp_bcast(l_davidson,root,world_comm)
      CALL mp_bcast(l_lanzcos,root,world_comm)
      CALL mp_bcast(l_bse_triplet,root,world_comm)
+     CALL mp_bcast(l_qp_correction,root,world_comm)
+     CALL mp_bcast(l_bse_calculation,root,world_comm)
+     CALL mp_bcast(macropol_dfpt,root,world_comm)
      !
   ENDIF
   !
@@ -835,7 +892,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(qlist,root,world_comm)
      !
      CALL mp_bcast(wbsepp_type,root,world_comm)
-     CALL mp_bcast(n_plep_read_from_file,root,world_comm)
+     CALL mp_bcast(n_liouville_read_from_file,root,world_comm)
      CALL mp_bcast(macropol_dfpt,root,world_comm)
      CALL mp_bcast(r0_input,root,world_comm)
      CALL mp_bcast(iexc_plot,root,world_comm)
@@ -1011,14 +1068,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         numsp = 23
         CALL io_push_value('wbse_init_calculation',wbse_init_calculation,numsp)
-        CALL io_push_value('which_bse_method', which_bse_method,numsp)
-        CALL io_push_value('n_pdep_eigen',n_pdep_eigen,numsp)
+        !CALL io_push_value('which_bse_method', which_bse_method,numsp)
+        !CALL io_push_value('n_pdep_eigen',n_pdep_eigen,numsp)
         CALL io_push_value('chi_kernel',chi_kernel,numsp)
         CALL io_push_value('which_spin_channel',which_spin_channel,numsp)
-        CALL io_push_value('l_use_localise_repr',l_use_localise_repr,numsp)
+        !CALL io_push_value('l_use_localise_repr',l_use_localise_repr,numsp)
         CALL io_push_value('overlap_thr',overlap_thr,numsp)
-        CALL io_push_value('l_use_bisection_thr',l_use_bisection_thr,numsp)
-        CALL io_push_value('qbox_bisec_wfc_filename',qbox_bisec_wfc_filename,numsp)
+        !CALL io_push_value('l_use_bisection_thr',l_use_bisection_thr,numsp)
+        CALL io_push_value('localization',localization,numsp)
+        CALL io_push_value('bisection_info',bisection_info,numsp)
+        CALL io_push_value('wfc_from_qbox',wfc_from_qbox,numsp)
         !
         CALL io_push_bar()
         !
@@ -1035,36 +1094,38 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         IF (l_davidson) THEN
             !
-            CALL io_push_value('wbse_diag_method',wbse_diag_method,numsp)
             CALL io_push_value('wbse_calculation',wbse_calculation,numsp)
-            CALL io_push_value('n_plep_eigen',n_plep_eigen,numsp)
-            CALL io_push_value('n_plep_times',n_plep_times,numsp)
-            CALL io_push_value('n_plep_maxiter',n_plep_maxiter,numsp)
-            CALL io_push_value('n_plep_read_from_file',n_plep_read_from_file,numsp)
+            CALL io_push_value('solver',solver,numsp)
+            CALL io_push_value('qp_correction',qp_correction,numsp)
+            CALL io_push_value('n_liouville_eigen',n_liouville_eigen,numsp)
+            CALL io_push_value('n_liouville_times',n_liouville_times,numsp)
+            CALL io_push_value('n_liouville_maxiter',n_liouville_maxiter,numsp)
+            CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
             CALL io_push_value('l_bse_calculation',l_bse_calculation,numsp)
-            CALL io_push_value('l_diag_term_only',l_diag_term_only,numsp)
+            !CALL io_push_value('l_diag_term_only',l_diag_term_only,numsp)
             CALL io_push_value('l_preconditioning',l_preconditioning,numsp)
-            CALL io_push_value('l_qp_correction',l_qp_correction,numsp)
+            !CALL io_push_value('l_qp_correction',l_qp_correction,numsp)
             CALL io_push_value('spin_excitation', spin_excitation,numsp)
-            CALL io_push_value('trev_plep',trev_plep,numsp)
-            CALL io_push_value('trev_plep_rel',trev_plep_rel,numsp)
+            CALL io_push_value('trev_liouville',trev_liouville,numsp)
+            CALL io_push_value('trev_liouville_rel',trev_liouville_rel,numsp)
             CALL io_push_value('scissor_ope',scissor_ope,numsp)
-            CALL io_push_value('eps_macro',eps_macro,numsp)
+            CALL io_push_value('epsinfty',epsinfty,numsp)
             !
         ENDIF
         !
         IF (l_lanzcos) THEN
             !
-            CALL io_push_value('wbse_diag_method',wbse_diag_method,numsp)
             CALL io_push_value('wbse_calculation',wbse_calculation,numsp)
+            CALL io_push_value('solver',solver,numsp)
+            CALL io_push_value('qp_correction',qp_correction,numsp)
             CALL io_push_value('ipol_input',ipol_input,numsp)
-            CALL io_push_value('n_lzstep',n_lzstep,numsp)
+            CALL io_push_value('n_lanczos',n_lanczos,numsp)
             CALL io_push_value('l_bse_calculation',l_bse_calculation,numsp)
             CALL io_push_value('l_diag_term_only',l_diag_term_only,numsp)
-            CALL io_push_value('l_qp_correction',l_qp_correction,numsp)
+            !CALL io_push_value('l_qp_correction',l_qp_correction,numsp)
             CALL io_push_value('spin_excitation', spin_excitation,numsp)
             CALL io_push_value('scissor_ope',scissor_ope,numsp)
-            CALL io_push_value('eps_macro',eps_macro,numsp)
+            CALL io_push_value('epsinfty',epsinfty,numsp)
             CALL io_push_value('macropol_dfpt',macropol_dfpt,numsp)
             !
          ENDIF
@@ -1106,7 +1167,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IF (l_eig_decomp) THEN
            !
            CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
-           CALL io_push_value('n_plep_read_from_file',n_plep_read_from_file,numsp)
+           CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
            CALL io_push_value('macropol_dfpt',macropol_dfpt,numsp)
            !
         ENDIF
@@ -1114,7 +1175,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IF (l_exc_rho_res_plot) THEN
            !
            CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
-           CALL io_push_value('n_plep_read_from_file',n_plep_read_from_file,numsp)
+           CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
            CALL io_push_value('iexc_plot',iexc_plot,numsp)
            !
         ENDIF
@@ -1122,7 +1183,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IF (l_exc_plot ) THEN
            !
            CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
-           CALL io_push_value('n_plep_read_from_file',n_plep_read_from_file,numsp)
+           CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
            CALL io_push_value('r0_input(1) [alat]',r0_input(1),numsp)
            CALL io_push_value('r0_input(2) [alat]',r0_input(2),numsp)
            CALL io_push_value('r0_input(3) [alat]',r0_input(3),numsp)

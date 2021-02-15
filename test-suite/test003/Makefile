@@ -4,25 +4,24 @@ include ../maketest.inc
 
 default: title description all
 
-all: prepare_inputs run 
+all: prepare_inputs run
 
-prepare_inputs: 
+prepare_inputs:
 	bash prepare_inputs.sh
 
-run: pw wstat wfreq 
+run: pw wstat wfreq
 
-pw:  
-	${PARA_PREFIX} ${BINDIR}/pw.x -i pw.in > pw.out
-	tail -5 pw.out
-wstat: 
-	${PARA_PREFIX} ${BINDIR}/wstat.x -nimage ${NIMAGE} -i wstat.in > wstat.out
-	tail -5 wstat.out
-wfreq:
-	${PARA_PREFIX} ${BINDIR}/wfreq.x -nimage ${NIMAGE} -i wfreq.in > wfreq.out
-	tail -5 wfreq.out
+pw:
+	${PARA_PREFIX_QE} ${BINDIR}/pw.x -i pw.in > pw.out 2> pw.err
+
+wstat: pw
+	${PARA_PREFIX} ${BINDIR}/wstat.x -nimage ${NIMAGE} -i wstat.in > wstat.out 2> wstat.err
+
+wfreq: wstat
+	${PARA_PREFIX} ${BINDIR}/wfreq.x -nimage ${NIMAGE} -i wfreq.in > wfreq.out 2> wfreq.err
 
 clean:
-	- /bin/rm -rf *out *in *upf *tab *restart *save >& /dev/null
+	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1
 
 title:
 	@echo "               "

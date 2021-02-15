@@ -10,7 +10,7 @@ restart_mode = 'from_scratch'
 pseudo_dir   = './'
 outdir       = './'
 prefix       = 'test'
-wf_collect   = .TRUE.
+wf_collect   = .true.
 /
 &system
 ibrav           = 1
@@ -19,10 +19,10 @@ nat             = 5
 ntyp            = 2
 ecutwfc         = 25.0
 nbnd            = 10
-assume_isolated ='mp'
+assume_isolated = 'mp'
 /
 &electrons
-diago_full_acc = .TRUE.
+diago_full_acc = .true.
 /
 ATOMIC_SPECIES
 C  12.0107   C_ONCV_PBE-1.0.upf
@@ -37,7 +37,7 @@ K_POINTS {gamma}
 EOF
 
 
-cat > wstat1.in << EOF
+cat > wstat.in << EOF
 {
   "input_west": {
     "qe_prefix": "test",
@@ -46,38 +46,29 @@ cat > wstat1.in << EOF
   },
   "wstat_control": {
     "wstat_calculation": "S",
-    "n_pdep_eigen": 10
+    "n_pdep_eigen": 50
   }
 }
 EOF
 
-cat > wstat2.in << EOF
-input_west: 
-  qe_prefix: test
-  west_prefix: test
-  outdir: ./
 
-wstat_control: 
-  wstat_calculation: S
-  n_pdep_eigen: 50 
-  n_pdep_read_from_file: 5 
-EOF
-
-
-cat > wfreq.in << EOF 
-input_west: 
-  qe_prefix: test
-  west_prefix: test
-  outdir: ./
-
-wstat_control: 
-  wstat_calculation: S
-  n_pdep_eigen: 50
-
-wfreq_control: 
-  wfreq_calculation: XWGQ
-  n_pdep_eigen_to_use: 50
-  qp_bandrange: [1,5]
-  n_refreq: 300
-  ecut_refreq: 2.0
+cat > wfreq.in << EOF
+{
+  "input_west": {
+    "qe_prefix": "test",
+    "west_prefix": "test",
+    "outdir": "./"
+  },
+  "wstat_control": {
+    "wstat_calculation": "S",
+    "n_pdep_eigen": 50
+  },
+  "wfreq_control": {
+    "wfreq_calculation": "XWGQ",
+    "n_pdep_eigen_to_use": 50,
+    "qp_bandrange": [1,5],
+    "n_refreq": 300,
+    "ecut_refreq": 2.0
+  }
+}
 EOF

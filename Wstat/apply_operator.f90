@@ -28,15 +28,12 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   INTEGER, INTENT(IN) :: m
   COMPLEX(DP), INTENT(IN) :: dvg(npwqx,m)
   COMPLEX(DP), INTENT(OUT) :: dng(npwqx,m)
-  REAL(DP),INTENT(IN), OPTIONAL :: tr2
-  INTEGER, INTENT(IN), OPTIONAL :: iq
+  REAL(DP),INTENT(IN) :: tr2
+  INTEGER, INTENT(IN) :: iq
   !
   ! Workspace
   !
   INTEGER :: ipert, ig, i
-  INTEGER :: iq_
-  !
-  REAL(DP) :: tr2_
   !
   COMPLEX(DP), ALLOCATABLE ::aux_g(:,:)
   !
@@ -49,17 +46,6 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
      IF( wstat_calculation(i:i) == 'E' ) l_outsource = .TRUE.
   ENDDO
   !
-  IF(PRESENT(iq)) THEN
-     iq_ = iq
-  ELSE
-     iq_ = 1
-  ENDIF
-  IF(PRESENT(tr2)) THEN
-     tr2_ = tr2
-  ELSE
-     tr2_ = 1.d-8
-  ENDIF
-  !
   dng=0._DP
   !
   ALLOCATE( aux_g(npwqx,m) ); aux_g=0._DP
@@ -71,9 +57,9 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   ENDDO
   !
   IF( l_outsource ) THEN
-     CALL calc_outsourced(m,aux_g,dng,iq_)
-  ELSE
-     CALL dfpt(m,aux_g,dng,tr2_,iq_)
+     CALL calc_outsourced(m,aux_g,dng,iq)
+  ELSE 
+     CALL dfpt(m,aux_g,dng,tr2,iq)
   ENDIF
   !
   DEALLOCATE( aux_g )
@@ -96,10 +82,10 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   USE kinds,           ONLY : DP
   USE mp,              ONLY : mp_barrier
   USE westcom,         ONLY : npwq,npwqx,fftdriver,igq_q
-  USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
+  USE mp_global,       ONLY : intra_image_comm,my_image_id,me_bgrp
   USE fft_at_k,        ONLY : single_fwfft_k,single_invfft_k
-  USE fft_at_gamma,    ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
-  USE fft_base,        ONLY : dfftp,dffts
+  USE fft_at_gamma,    ONLY : single_fwfft_gamma,single_invfft_gamma
+  USE fft_base,        ONLY : dffts
   USE control_flags,   ONLY : gamma_only
   USE function3d,      ONLY : write_function3d,read_function3d
   USE conversions,     ONLY : itoa
@@ -211,12 +197,10 @@ END SUBROUTINE
 SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile)
     !
     USE westcom,    ONLY: document
-    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
+    USE forpy_mod,  ONLY: call_py, import_py, module_py
     USE forpy_mod,  ONLY: tuple, tuple_create
     USE forpy_mod,  ONLY: dict, dict_create
-    USE forpy_mod,  ONLY: list, list_create
     USE forpy_mod,  ONLY: object, cast
-    USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
     !
     IMPLICIT NONE
     !

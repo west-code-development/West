@@ -40,6 +40,8 @@ CONTAINS
     USE west_version,    ONLY : start_forpy
     !USE logfile_mod,     ONLY : clear_log
     !
+    IMPLICIT NONE
+    !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
     LOGICAL           :: exst, debug = .false.
@@ -205,6 +207,8 @@ CONTAINS
     USE base64_module,   ONLY : islittleendian
     USE forpy_mod,        ONLY : dict, dict_create
     !USE logfile_mod,      ONLY : append_log, itoa, ltoa, dtoa
+    !
+    IMPLICIT NONE
     !
     ! I/O
     !

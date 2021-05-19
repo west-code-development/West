@@ -38,6 +38,8 @@ MODULE pdep_io
       USE mp_wave,      ONLY : mergewf
       USE mp,           ONLY : mp_bcast, mp_max
       !
+      IMPLICIT NONE
+      !
       ! I/O
       !    
       CHARACTER(*), INTENT(IN) :: fname
@@ -179,6 +181,8 @@ MODULE pdep_io
       USE mp,           ONLY : mp_bcast, mp_max
       USE mp_global,    ONLY : intra_bgrp_comm
       USE base64_module
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !    

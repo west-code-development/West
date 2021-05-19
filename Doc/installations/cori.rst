@@ -1,14 +1,14 @@
-.. _theta:
+.. _cori:
 
 =================
-Theta-ALCF (XC40)
+Cori-NERSC (XC40)
 =================
 
-Theta is a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF <https://www.alcf.anl.gov/>`_.
+Cori is a Cray XC40 located at National Energy Research Scientific Computing Center (`NERSC <https://www.nersc.gov/>`_).
 
 .. code-block:: bash
 
-   $ ssh <username>@theta.alcf.anl.gov
+   $ ssh <username>@cori.nersc.gov
 
 Building WEST
 ~~~~~~~~~~~~~
@@ -25,7 +25,7 @@ WEST executables can be compiled using the following script (tested on May 12, 2
 
    export CRAYPE_LINK_TYPE=dynamic
    export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2020.0.166/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=/opt/python/3.8.2.1/lib:$LD_LIBRARY_PATH
    export MPIF90=ftn
    export F77=ftn
@@ -50,46 +50,43 @@ To use the script do:
 Running WEST Jobs
 ~~~~~~~~~~~~~~~~~
 
-The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Theta with 64 MPI ranks per node. The <project_name> must be replaced with an active project allocation.
+The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Cori (Haswell partition) with 32 MPI ranks per node. The <project_name> must be replaced with an active project allocation.
 
 .. code-block:: bash
 
    $ cat run_west.sh
    #!/bin/bash
-   #COBALT -n 2
-   #COBALT -t 00:20:00
-   #COBALT -q debug-cache-quad
-   #COBALT -A <project_name>
-   #COBALT -O WEST
 
-   MPIRANKS_PERNODE=64
-   MPIRANKS=$((COBALT_PARTSIZE * MPIRANKS_PERNODE))
-   NTHREADS=1
-   HT=1
+   #SBATCH --job-name=WEST
+   #SBATCH --time=00:20:00
+   #SBATCH --account=<project_name>
+   #SBATCH --constraint=haswell
+   #SBATCH --qos=debug
+   #SBATCH --nodes=2
+   #SBATCH --ntasks-per-node=32
+   #SBATCH --cpus-per-task=2
 
    module unload cray-libsci
    module load cray-python/3.8.2.1
 
    export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2020.0.166/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=/opt/python/3.8.2.1/lib:$LD_LIBRARY_PATH
 
-   echo "Running Cobalt Job $COBALT_JOBID."
+   export OMP_NUM_THREADS=1
+   export OMP_PLACE=threads
+   export OMP_PROC_BIND=spread
+   export MKL_NUM_THREADS=$OMP_NUM_THREADS
 
-   export OMP_NUM_THREADS=$NTHREADS
-   aprun -n $MPIRANKS -N $MPIRANKS_PERNODE -cc depth -d $NTHREADS -j $HT ./wstat.x -i wstat.in &> wstat.out
+   NTASKS=$(($SLURM_NTASKS_PER_NODE * $SLURM_JOB_NUM_NODES))
 
-Make the script executable:
-
-.. code-block:: bash
-
-   $ chmod 755 run_west.sh
+   srun -N $SLURM_JOB_NUM_NODES -n $SLURM_NTASKS_PER_NODE -c $SLURM_CPUS_PER_TASK ./wstat.x -i wstat.in &> wstat.out
 
 Job submission is done with the following:
 
 .. code-block:: bash
 
-   $ qsub run_west.sh
+   $ sbatch run_west.sh
 
 .. seealso::
-   For more information, visit the `ALCF user guide <https://www.alcf.anl.gov/user-guides/xc40-system-overview/>`_.
+   For more information, visit the `NERSC user guide <https://docs.nersc.gov/systems/cori/>`_.

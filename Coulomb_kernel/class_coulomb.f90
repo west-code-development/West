@@ -169,6 +169,8 @@ MODULE class_coulomb
       USE gvect,                ONLY : g, ngm
       USE types_bz_grid,        ONLY : q_grid
       !
+      IMPLICIT NONE
+      !
       ! I/O
       !
       CLASS(coulomb) :: this 
@@ -303,6 +305,8 @@ MODULE class_coulomb
       !
       USE io_global,      ONLY : stdout
       USE types_bz_grid,   ONLY : q_grid
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !

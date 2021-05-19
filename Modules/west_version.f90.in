@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -20,33 +20,51 @@ MODULE west_version
   !
   SAVE
   !
-  CHARACTER (LEN=6)  :: west_version_number = 'checkit'
-  CHARACTER (LEN=512) :: west_git_revision = 'unknown'
-  CHARACTER (LEN=512) :: west_topdir = 'unset'
-  TYPE(list) :: paths 
+  CHARACTER(LEN=*), PARAMETER :: west_version_number = 'checkit'
+  CHARACTER(LEN=*), PARAMETER :: west_git_revision = 'unknown'
+  CHARACTER(LEN=*), PARAMETER :: west_topdir = 'unset'
+  LOGICAL, PARAMETER :: forpy_use_numpy = .FALSE.
+  TYPE(list) :: paths
   !
   CONTAINS
   !
   SUBROUTINE start_forpy()
-     USE forpy_mod, ONLY: forpy_initialize, get_sys_path
-     IMPLICIT NONE
-     INTEGER :: IERR
      !
-     IERR = forpy_initialize()
+     USE forpy_mod, ONLY: forpy_initialize,get_sys_path,module_py,import_py,forpy_finalize
+     !
+     IMPLICIT NONE
+     !
+     INTEGER :: IERR
+     TYPE(module_py) :: pymod
+     !
+     IERR = forpy_initialize(forpy_use_numpy)
      IF(IERR/=0) CALL errore('forpy','Err: cannot init forpy',1)
      !
      IERR = get_sys_path(paths)
      IF(IERR/=0) CALL errore('forpy','Err: cannot get_sys_path',1)
      !
      IERR = paths%append(TRIM(ADJUSTL(west_topdir))//"/Pytools")
-     IF(IERR/=0) CALL errore('forpy','Err: cannot append paths',1) 
+     IF(IERR/=0) CALL errore('forpy','Err: cannot append paths',1)
+     !
+     ! Test: import west_fetch_input
+     !
+     IERR = import_py(pymod,'west_fetch_input')
+     IF(IERR/=0) THEN
+        CALL forpy_finalize()
+        CALL errore('forpy','Err: cannot import module',1)
+     ENDIF
+     !
   END SUBROUTINE
   !
   SUBROUTINE end_forpy()
+     !
      USE forpy_mod, ONLY: forpy_finalize
+     !
      IMPLICIT NONE
+     !
      CALL paths%destroy()
      CALL forpy_finalize()
+     !
   END SUBROUTINE
   !
-END MODULE 
+END MODULE

@@ -56,7 +56,7 @@ wbse_init_qboxcoupling.o \
 wbse_init_fock_energy.o 
 
 PWOBJS = ../../PW/src/libpw.a 
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../../LR_Modules/liblrmod.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a ../Libraries/Forpy/libforpy.a  ../../iotk/src/libiotk.a
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../../LR_Modules/liblrmod.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a ../Libraries/Forpy/libforpy.a  #../../iotk/src/libiotk.a
 WESTLIBS = \
 ../Wstat/libwstat.a \
 ../IO_kernel/lib_io_kernel.a \
@@ -92,7 +92,7 @@ tldeps:
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L
-	- /bin/rm -f ../../bin/wbse.x ../../bin/wbse_stat.x
+	- /bin/rm -f ../../bin/wbse.x ../../bin/wbse_init.x
 
 title :
 	@echo "              "

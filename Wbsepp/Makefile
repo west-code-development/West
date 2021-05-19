@@ -4,7 +4,7 @@ include ../../make.inc
 
 # location of needed modules
 MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
-          $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
+          $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src $(MOD_FLAG)../../LR_Modules \
           $(MOD_FLAG)../Libraries/Json \
           $(MOD_FLAG)../Libraries/Base64 \
           $(MOD_FLAG)../Libraries/Forpy \
@@ -34,7 +34,8 @@ wbsepp_plot_charged_density_res_exc.o \
 wbsepp.o
 
 PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a  ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a ../Libraries/Forpy/libforpy.a
+#QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a  ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a ../Libraries/Forpy/libforpy.a
+QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../../LR_Modules/liblrmod.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a ../Libraries/Forpy/libforpy.a  #../../iotk/src/libiotk.a
 WESTLIBS = \
 ../Wstat/libwstat.a \
 ../Wbse/libwbse.a \
@@ -62,7 +63,7 @@ tldeps:
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L
-	- /bin/rm -f ../../bin/wbsepp_spectrum.x
+	- /bin/rm -f ../../bin/wbsepp.x
 
 title :
 	@echo "              "

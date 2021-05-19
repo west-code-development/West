@@ -450,7 +450,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            CALL solve_deflated_lanczos_w_full_ortho ( nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
            !
            ALLOCATE( braket   ( mypara%nglob, n_lanczos   , mypara%nloc ) )
-           CALL get_brak_hyper_parallel(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara%nloc,mypara%nlocx,mypara%nglob)
+           CALL get_brak_hyper_parallel(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
            DEALLOCATE( q_s )
            !
            DO ip = 1, mypara%nloc
@@ -1105,7 +1105,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               CALL solve_deflated_lanczos_w_full_ortho ( nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
               !
               ALLOCATE( braket   ( mypara%nglob, n_lanczos   , mypara%nloc ) )
-              CALL get_brak_hyper_parallel_complex(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara%nloc,mypara%nlocx,mypara%nglob)
+              CALL get_brak_hyper_parallel_complex(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
               DEALLOCATE( q_s )
               !
               DO ip = 1, mypara%nloc

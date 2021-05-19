@@ -17,6 +17,8 @@ MODULE scratch_area
   USE kinds, ONLY :  DP
   USE fft_types, ONLY : fft_type_descriptor
   !
+  IMPLICIT NONE
+  !
   SAVE
   !
   ! COULOMB
@@ -79,6 +81,8 @@ MODULE westin
   !
   USE kinds, ONLY :  DP
   !
+  IMPLICIT NONE
+  !
   SAVE
   !
   CHARACTER(LEN=512) :: outdir             ! main directory 
@@ -94,6 +98,8 @@ END MODULE
 MODULE wstat_center
   !
   USE kinds, ONLY :  DP
+  !
+  IMPLICIT NONE
   !
   SAVE
   !
@@ -128,6 +134,9 @@ MODULE wstat_center
 END MODULE
 !
 MODULE server_center
+  !
+  IMPLICIT NONE
+  !
   SAVE
   !
   ! INPUT for server_control
@@ -139,6 +148,8 @@ END MODULE
 MODULE wfreq_center
   !
   USE kinds, ONLY : DP
+  !
+  IMPLICIT NONE
   !
   SAVE
   !
@@ -211,6 +222,8 @@ MODULE westpp_center
   !
   USE kinds, ONLY : DP
   !
+  IMPLICIT NONE
+  !
   SAVE
   !
   ! INPUT FOR wfreq_control
@@ -236,6 +249,8 @@ MODULE wan_center
   !
   USE kinds, ONLY : DP
   !
+  IMPLICIT NONE
+  !
   SAVE
   !
   REAL(DP),ALLOCATABLE :: wanc(:,:)
@@ -246,6 +261,8 @@ END MODULE
 !
 !
 MODULE io_unit_numbers
+  !
+  IMPLICIT NONE
   !
   SAVE
   !

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,14 +7,14 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 MODULE io_push
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : DP 
+  USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE
@@ -41,7 +41,7 @@ MODULE io_push
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
       CHARACTER(LEN=*) :: labelin
       !

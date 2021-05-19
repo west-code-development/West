@@ -47,7 +47,7 @@ WESTLIBS = \
 
 TLDEPS= bindir mods libs pw
 
-all : title tldeps westpp.x
+all : title tldeps westpp.x libwestpp.a
 
 westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o westpp.x \
@@ -55,6 +55,11 @@ westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(LIBOBJS)
 	- ( cd ../../bin ; ln -fs ../West/Westpp/westpp.x . )
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
+
+libwestpp.a : $(WESTPP_OBJS)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
+
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L

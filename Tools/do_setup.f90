@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2019 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -44,7 +44,7 @@ SUBROUTINE do_setup
   INTEGER :: iunit
   INTEGER :: auxi,ib
   INTEGER :: ipol,ik,iq,npwx_g, nkbl, nkl, nkr, iks, ike, spin, ip, is
-  INTEGER,ALLOCATABLE :: ngm_i(:), npw_i(:) 
+  INTEGER,ALLOCATABLE :: ngm_i(:), npw_i(:)
   INTEGER, ALLOCATABLE :: ngk_g(:)
 !  REAL(DP) :: xkg(3)
   REAL(DP) :: alat
@@ -70,7 +70,7 @@ SUBROUTINE do_setup
      CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
   ENDIF
   !
-  IF( mpime == root ) THEN 
+  IF( mpime == root ) THEN
      CALL json%initialize()
      CALL json%load_file(filename=TRIM(logfile))
   ENDIF
@@ -98,14 +98,14 @@ SUBROUTINE do_setup
   ! SYSTEM OVERVIEW
   !
   ALLOCATE( npw_i(0:nproc_bgrp-1), ngm_i(0:nproc_bgrp-1) )
-  npw_i = 0 
+  npw_i = 0
   ngm_i = 0
   npw_i(me_bgrp) = npw
   ngm_i(me_bgrp) = ngm
-  CALL mp_sum( npw_i, intra_bgrp_comm ) 
-  CALL mp_sum( ngm_i, intra_bgrp_comm ) 
+  CALL mp_sum( npw_i, intra_bgrp_comm )
+  CALL mp_sum( ngm_i, intra_bgrp_comm )
   IF( mpime == root ) THEN
-     DO ip = 0, nproc_bgrp-1 
+     DO ip = 0, nproc_bgrp-1
         WRITE(cip,'(i6)') ip+1
         CALL json%add('system.basis.npw.proc('//TRIM(ADJUSTL(cip))//')',npw_i(ip))
         CALL json%add('system.basis.ngm.proc('//TRIM(ADJUSTL(cip))//')',ngm_i(ip))
@@ -117,7 +117,7 @@ SUBROUTINE do_setup
         CALL json%add('system.basis.ngm.sum',SUM(ngm_i(:)))
      ENDDO
   ENDIF
-  DEALLOCATE( npw_i, ngm_i ) 
+  DEALLOCATE( npw_i, ngm_i )
   !
   CALL io_push_title('System Overview')
   CALL io_push_value('gamma_only',gamma_only,20)
@@ -182,10 +182,10 @@ SUBROUTINE do_setup
   !
   alat = celldm(1)
   !
-  WRITE( stdout, '(/5x,"3DFFT grid")') 
+  WRITE( stdout, '(/5x,"3DFFT grid")')
   WRITE( stdout, '( 8x,"s : (",i4,",",i4,",",i4,")")') dffts%nr1, dffts%nr2, dffts%nr3
   WRITE( stdout, '( 8x,"p : (",i4,",",i4,",",i4,")")') dfftp%nr1, dfftp%nr2, dfftp%nr3
-  WRITE( stdout, '(/5x,"Direct Lattice Cell [a.u.]")') 
+  WRITE( stdout, '(/5x,"Direct Lattice Cell [a.u.]")')
   WRITE( stdout, '( 8x,"a1 = (",3f14.7,")")') alat*at(1:3,1)
   WRITE( stdout, '( 8x,"a2 = (",3f14.7,")")') alat*at(1:3,2)
   WRITE( stdout, '( 8x,"a3 = (",3f14.7,")")') alat*at(1:3,3)
@@ -194,7 +194,7 @@ SUBROUTINE do_setup
   WRITE( stdout, '( 8x,"b2 = (",3f14.7,")")') tpiba*bg(1:3,2)
   WRITE( stdout, '( 8x,"b3 = (",3f14.7,")")') tpiba*bg(1:3,3)
   WRITE( stdout, '( 5x," ")')
-  IF( mpime == root ) THEN 
+  IF( mpime == root ) THEN
      CALL json%add('system.3dfft.s',(/ dffts%nr1, dffts%nr2, dffts%nr3 /) )
      CALL json%add('system.3dfft.p',(/ dfftp%nr1, dfftp%nr2, dfftp%nr3 /) )
      CALL json%add('system.cell.a1',alat*at(1:3,1))
@@ -207,11 +207,11 @@ SUBROUTINE do_setup
      CALL json%add('system.cell.tpiba',tpiba)
   ENDIF
   !
-  WRITE( stdout, '(/5x,"Brillouin Zone sampling [cryst. coord.]")') 
-  WRITE( stdout, * ) 
+  WRITE( stdout, '(/5x,"Brillouin Zone sampling [cryst. coord.]")')
+  WRITE( stdout, * )
   DO ik = 1, k_grid%np
      WRITE( cik, '(i6)') ik
-     WRITE( stdout, '(8x,"k(",i6.6,") = (",3f14.7,")")') ik, k_grid%p_cryst(1:3,ik) 
+     WRITE( stdout, '(8x,"k(",i6.6,") = (",3f14.7,")")') ik, k_grid%p_cryst(1:3,ik)
      IF( mpime == root ) THEN
         CALL json%add('system.bzsamp.k('//TRIM(ADJUSTL(cik))//').id',ik)
         CALL json%add('system.bzsamp.k('//TRIM(ADJUSTL(cik))//').crystcoord',k_grid%p_cryst(1:3,ik))
@@ -221,11 +221,11 @@ SUBROUTINE do_setup
   ! q-point grid
   !
   IF (.NOT. gamma_only ) THEN
-     WRITE( stdout, * ) 
+     WRITE( stdout, * )
      DO iq = 1, q_grid%np
         WRITE( ciq, '(i6)') iq
-        WRITE( stdout, '(8x,"q(",i6.6,") = (",3f14.7,")")') iq, q_grid%p_cryst(1:3,iq) 
-        IF( mpime == root ) THEN 
+        WRITE( stdout, '(8x,"q(",i6.6,") = (",3f14.7,")")') iq, q_grid%p_cryst(1:3,iq)
+        IF( mpime == root ) THEN
            CALL json%add('system.bzsamp.q('//TRIM(ADJUSTL(ciq))//').id',iq)
            CALL json%add('system.bzsamp.q('//TRIM(ADJUSTL(ciq))//').crystcoord',q_grid%p_cryst(1:3,iq))
         ENDIF
@@ -238,9 +238,9 @@ SUBROUTINE do_setup
      CALL json%print_file( iunit )
      CLOSE( iunit )
      CALL json%destroy()
-  ENDIF 
+  ENDIF
   !
   !
   CALL stop_clock('do_setup')
   !
-END SUBROUTINE 
+END SUBROUTINE

@@ -25,7 +25,9 @@ pdep_db.o \
 wfreq_db.o \
 mod_west_io.o \
 wfreq_io.o \
-wfreq_restart.o  
+wfreq_restart.o \
+ft_interpolation.o \
+qbox_interface.o  
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2017 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,25 +7,25 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 ! -------------------------------------------------------------------
-MODULE function3d 
+MODULE function3d
  ! -----------------------------------------------------------------
  !
  IMPLICIT NONE
  !
  INTERFACE write_function3d
     MODULE PROCEDURE write_function3d_real !, write_function3d_complex
- END INTERFACE  
+ END INTERFACE
  !
  INTERFACE read_function3d
     MODULE PROCEDURE read_function3d_real !, read_function3d_complex
- END INTERFACE  
+ END INTERFACE
  !
  CONTAINS
- ! 
+ !
  !-----------------------------------------------------------------
    SUBROUTINE write_function3d_real ( fname, f_r, dfft )
    ! -----------------------------------------------------------------
@@ -37,22 +37,22 @@ MODULE function3d
    USE scatter_mod,                 ONLY : gather_grid
    USE fft_types,                   ONLY : fft_type_descriptor
    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
-   USE forpy_mod,  ONLY: tuple, tuple_create 
-   USE forpy_mod,  ONLY: dict, dict_create 
-   USE forpy_mod,  ONLY: list, list_create 
+   USE forpy_mod,  ONLY: tuple, tuple_create
+   USE forpy_mod,  ONLY: dict, dict_create
+   USE forpy_mod,  ONLY: list, list_create
    USE forpy_mod,  ONLY: object, cast
-   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print 
+   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
    USE conversions, ONLY : ltoa, itoa, dtoa
    USE base64_module
    !
    IMPLICIT NONE
    !
-   ! I/O 
+   ! I/O
    !
    CHARACTER(LEN=*),INTENT(IN) :: fname
    TYPE(fft_type_descriptor), INTENT(IN) :: dfft
    REAL(DP),INTENT(IN) :: f_r(dfft%nnr)
-   ! 
+   !
    ! Workspace
    !
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
@@ -65,7 +65,7 @@ MODULE function3d
    INTEGER :: return_int
    INTEGER :: IERR
    !
-   ! Gather the function 
+   ! Gather the function
    !
    ALLOCATE(f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)); f_r_gathered = 0._DP
    CALL gather_grid(dfft,f_r,f_r_gathered)
@@ -86,7 +86,7 @@ MODULE function3d
       DEALLOCATE(f_r_gathered_nopadded)
       !
       IERR = import_py(pymod, "west_function3d")
-      !  
+      !
       IERR = tuple_create(args, 1)
       IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
       IERR = dict_create(kwargs)
@@ -106,10 +106,10 @@ MODULE function3d
       CALL pymod%destroy
       !
    ENDIF
-   ! 
+   !
    DEALLOCATE(f_r_gathered)
    !
- END SUBROUTINE 
+ END SUBROUTINE
  !
  !-----------------------------------------------------------------
    SUBROUTINE read_function3d_real ( fname, f_r, dfft )
@@ -122,21 +122,21 @@ MODULE function3d
    USE scatter_mod,                 ONLY : scatter_grid
    USE fft_types,                   ONLY : fft_type_descriptor
    USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
-   USE forpy_mod,  ONLY: tuple, tuple_create 
-   USE forpy_mod,  ONLY: dict, dict_create 
-   USE forpy_mod,  ONLY: list, list_create 
+   USE forpy_mod,  ONLY: tuple, tuple_create
+   USE forpy_mod,  ONLY: dict, dict_create
+   USE forpy_mod,  ONLY: list, list_create
    USE forpy_mod,  ONLY: object, cast
-   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print 
+   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
    USE base64_module
    !
    IMPLICIT NONE
    !
-   ! I/O 
+   ! I/O
    !
    CHARACTER(LEN=*),INTENT(IN) :: fname
    TYPE(fft_type_descriptor), INTENT(IN) :: dfft
    REAL(DP),INTENT(OUT) :: f_r(dfft%nnr)
-   ! 
+   !
    ! Workspace
    !
    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
@@ -157,7 +157,7 @@ MODULE function3d
       !
       !
       IERR = import_py(pymod, "west_function3d")
-      !  
+      !
       IERR = tuple_create(args, 1)
       IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
       IERR = dict_create(kwargs)
@@ -182,17 +182,18 @@ MODULE function3d
       CALL pymod%destroy
       !
       CALL add_padding_real(dfft,f_r_gathered_nopadded,f_r_gathered)
-      DEALLOCATE(f_r_gathered_nopadded) 
+      DEALLOCATE(f_r_gathered_nopadded)
       !
    ENDIF
    !
    CALL scatter_grid(dfft,f_r_gathered,f_r)
-   ! 
+   !
    DEALLOCATE(f_r_gathered)
    !
  END SUBROUTINE
  !
- SUBROUTINE add_padding_real(dfft,f_r_gathered_nopadded,f_r_gathered) 
+ !
+ SUBROUTINE add_padding_real(dfft,f_r_gathered_nopadded,f_r_gathered)
    USE kinds, ONLY :DP
    USE fft_types,                   ONLY : fft_type_descriptor
    IMPLICIT NONE
@@ -200,9 +201,9 @@ MODULE function3d
    REAL(DP),INTENT(IN) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
    REAL(DP),INTENT(OUT) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
    INTEGER :: i,j,k,ir_notpadded,ir_padded
-   IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN 
+   IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN
       f_r_gathered = f_r_gathered_nopadded
-   ELSE 
+   ELSE
       f_r_gathered = 0._DP
       DO k = 1, dfft%nr3
          DO j = 1, dfft%nr2
@@ -216,7 +217,7 @@ MODULE function3d
    ENDIF
  END SUBROUTINE
  !
- SUBROUTINE remove_padding_real(dfft,f_r_gathered,f_r_gathered_nopadded) 
+ SUBROUTINE remove_padding_real(dfft,f_r_gathered,f_r_gathered_nopadded)
    USE kinds, ONLY :DP
    USE fft_types,                   ONLY : fft_type_descriptor
    IMPLICIT NONE
@@ -224,9 +225,9 @@ MODULE function3d
    REAL(DP),INTENT(IN) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
    REAL(DP),INTENT(OUT) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
    INTEGER :: i,j,k,ir_notpadded,ir_padded
-   IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN 
+   IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN
       f_r_gathered_nopadded = f_r_gathered
-   ELSE 
+   ELSE
       f_r_gathered_nopadded = 0._DP
       DO k = 1, dfft%nr3
          DO j = 1, dfft%nr2

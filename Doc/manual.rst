@@ -3,19 +3,19 @@
 Manual
 ======
 
-The complete **WEST** reference for input parameters. 
+The complete **WEST** reference for input parameters.
 
 .. contents:: :local:
               :depth: 1
 
-.. note:: 
-   Not all input parameters listed below are mandatory. Check :ref:`quickreference` or :ref:`tutorial` pages to see examples of input files. 
+.. note::
+   Not all input parameters listed below are mandatory. Check :ref:`quickreference` or :ref:`tutorial` pages to see examples of input files.
 
 .. seealso::
    **WESTpy** is a Python package, designed to assist users of the WEST code in pre- and post-process massively parallel calculations. Click `here <http://www.west-code.org/doc/westpy/latest/>`_ to know more.
 
 .. seealso::
-   The input file is given according to the YAML Notation (`https://yaml.org/ <https://yaml.org//>`_).  
+   The input file is given according to the YAML Notation (`https://yaml.org/ <https://yaml.org//>`_).
 
 |
 
@@ -48,7 +48,7 @@ input_west
    * - **Default**
      - "west"
    * - **Description**
-     - Prefix prepended to the WEST save and restart folders.  
+     - Prefix prepended to the WEST save and restart folders.
 
 
 .. data:: outdir
@@ -62,8 +62,8 @@ input_west
    * - **Default**
      - "./"
    * - **Description**
-     - Directory for: input, temporary, and output files. 
- 
+     - Directory for: input, temporary, and output files.
+
 
 |
 
@@ -86,8 +86,8 @@ wstat_control
 
        - "S" : Start from scratch.
        - "R" : Restart from an interrupted run. You should restart with the same number of cores, and images.
-       - "E" : Calculation of the response is external, i.e. outsourced to a server. 
-   
+       - "E" : Calculation of the response is external, i.e. outsourced to a server.
+
 
 .. data:: n_pdep_eigen
 
@@ -284,7 +284,7 @@ wfreq_control
        - "XWO" : Compute the optical properties.
        - "XWGQP" : Compute the QP corrections, and plot spectral functions.
        - "XWGQOP" : Compute all.
-                    
+
 
 .. data:: n_pdep_eigen_to_use
 
@@ -382,7 +382,7 @@ wfreq_control
    * - **Type**
      - float
    * - **Default**
-     - dynamically se to the cutoff energy of the density, read from the ground state
+     - dynamically set to the cutoff energy of the density, read from the ground state
    * - **Description**
      - Cutoff for the imaginary frequencies (in Ry).
 
@@ -568,7 +568,7 @@ westpp_control
      - "C"
    * - **Description**
      - Available options for the output fortmat are:
-          
+
        - "c" : Cube.
        - "x" : Planar average yz.
        - "y" : Planar average xz.
@@ -679,5 +679,5 @@ server_control
      - The document is serialized into a JSON string and passed to the server (see `West/Pytools/west_clientserver.py`).
 
 |
-            
+
 

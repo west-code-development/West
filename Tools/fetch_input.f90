@@ -153,6 +153,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   CHARACTER(LEN=:),ALLOCATABLE :: cvalue
   TYPE(json_file) :: json
   INTEGER :: iunit, lenc
+  INTEGER, PARAMETER :: DUMMY_DEFAULT = -1210
   !
   CALL start_clock('fetch_input')
   !
@@ -207,11 +208,11 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(cvalue, "wstat_calculation"); wstat_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(n_pdep_eigen, "n_pdep_eigen")
-        IERR = return_dict%getitem(n_pdep_times, "n_pdep_times")
-        IERR = return_dict%getitem(n_pdep_maxiter, "n_pdep_maxiter")
-        IERR = return_dict%getitem(n_dfpt_maxiter, "n_dfpt_maxiter")
-        IERR = return_dict%getitem(n_pdep_read_from_file, "n_pdep_read_from_file")
+        IERR = return_dict%get(n_pdep_eigen, "n_pdep_eigen", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_pdep_times, "n_pdep_times", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_pdep_maxiter, "n_pdep_maxiter", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_dfpt_maxiter, "n_dfpt_maxiter", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_pdep_read_from_file, "n_pdep_read_from_file", DUMMY_DEFAULT)
         IERR = return_dict%getitem(trev_pdep, "trev_pdep")
         IERR = return_dict%getitem(trev_pdep_rel, "trev_pdep_rel")
         IERR = return_dict%getitem(tr2_dfpt, "tr2_dfpt")
@@ -251,7 +252,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(cvalue, "wfreq_calculation"); wfreq_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(n_pdep_eigen_to_use, "n_pdep_eigen_to_use")
+        IERR = return_dict%get(n_pdep_eigen_to_use, "n_pdep_eigen_to_use", DUMMY_DEFAULT)
         IERR = return_dict%getitem(tmp_obj, "qp_bandrange")
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
@@ -260,13 +261,13 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL tmp_list%destroy 
         CALL tmp_obj%destroy
         IERR = return_dict%getitem(cvalue, "macropol_calculation"); macropol_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(n_lanczos, "n_lanczos")
-        IERR = return_dict%getitem(n_imfreq, "n_imfreq")
-        IERR = return_dict%getitem(n_refreq, "n_refreq")
+        IERR = return_dict%get(n_lanczos, "n_lanczos", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_imfreq, "n_imfreq", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_refreq, "n_refreq", DUMMY_DEFAULT)
         IERR = return_dict%getitem(ecut_imfreq, "ecut_imfreq")
         IERR = return_dict%getitem(ecut_refreq, "ecut_refreq")
         IERR = return_dict%getitem(wfreq_eta, "wfreq_eta")
-        IERR = return_dict%getitem(n_secant_maxiter, "n_secant_maxiter")
+        IERR = return_dict%get(n_secant_maxiter, "n_secant_maxiter", DUMMY_DEFAULT)
         IERR = return_dict%getitem(trev_secant, "trev_secant")
         IERR = return_dict%getitem(l_enable_lanczos, "l_enable_lanczos")
         IERR = return_dict%getitem(l_enable_gwetot, "l_enable_gwetot")
@@ -277,7 +278,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = tmp_list%getitem(ecut_spectralf(2), 1) ! Fortran indices start at 1 
         CALL tmp_list%destroy 
         CALL tmp_obj%destroy 
-        IERR = return_dict%getitem(n_spectralf, "n_spectralf")
+        IERR = return_dict%get(n_spectralf, "n_spectralf", DUMMY_DEFAULT)
         !
         CALL return_dict%destroy
         !
@@ -307,7 +308,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL tmp_obj%destroy 
         IERR = return_dict%getitem(cvalue, "westpp_format"); westpp_format = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(westpp_sign, "westpp_sign")
-        IERR = return_dict%getitem(westpp_n_pdep_eigen_to_use, "westpp_n_pdep_eigen_to_use")
+        IERR = return_dict%get(westpp_n_pdep_eigen_to_use, "westpp_n_pdep_eigen_to_use", DUMMY_DEFAULT)
         IERR = return_dict%getitem(tmp_obj, "westpp_r0")
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%getitem(westpp_r0(1), 0) ! Fortran indices start at 1 
@@ -315,7 +316,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = tmp_list%getitem(westpp_r0(3), 2) ! Fortran indices start at 1 
         CALL tmp_list%destroy 
         CALL tmp_obj%destroy 
-        IERR = return_dict%getitem(westpp_nr, "westpp_nr")
+        IERR = return_dict%get(westpp_nr, "westpp_nr", DUMMY_DEFAULT)
         IERR = return_dict%getitem(westpp_rmax, "westpp_rmax")
         IERR = return_dict%getitem(westpp_epsinfty, "westpp_epsinfty")
         !
@@ -393,6 +394,11 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF(tr2_dfpt<=0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
      IF(trev_pdep<=0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
      IF(trev_pdep_rel<=0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
+     IF( n_pdep_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_eigen')
+     IF( n_pdep_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_times')
+     IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_maxiter')
+     IF( n_dfpt_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_dfpt_maxiter')
+     IF( n_pdep_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_read_from_file')
      IF(gamma_only) THEN
         IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1.',1)
      ELSE 
@@ -438,6 +444,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( wfreq_eta<=0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
      IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1) 
      IF( trev_secant<=0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
+     IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_eigen_to_use')
+     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_lanczos')
+     IF( n_imfreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_imfreq')
+     IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_refreq')
+     IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_secant_maxiter')
+     IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_spectralf')
      SELECT CASE(macropol_calculation) 
      CASE('N','n','C','c')
      CASE DEFAULT
@@ -465,8 +477,10 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( westpp_range(2) < westpp_range(1) ) CALL errore('fetch_input','Err: westpp_range(2)<westpp_range(1)',1)
      IF( westpp_nr < 1 ) CALL errore('fetch_input','Err: westpp_nr<1',1)
      IF( westpp_n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: westpp_n_pdep_eigen_to_use<1',1)
-     IF( westpp_rmax < 0.d0 ) CALL errore('fetch_input','Err: westpp_rmax<0',1)
-     IF( westpp_epsinfty < 1.d0 ) CALL errore('fetch_input','Err: westpp_epsinfty<1',1)
+     IF( westpp_rmax < 0._DP ) CALL errore('fetch_input','Err: westpp_rmax<0.',1)
+     IF( westpp_epsinfty < 1._DP ) CALL errore('fetch_input','Err: westpp_epsinfty<1.',1)
+     IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read westpp_n_pdep_eigen_to_use')
+     IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read westpp_nr')
      !
   ENDIF
   !

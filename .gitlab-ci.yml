@@ -7,6 +7,8 @@ stages:
   - test
   - doc
 
+# Templates
+
 .template_bot_start:
   tags: [rcc,docker,node-01]
   image: miccomcenter/bot:$CI_JOB_NAME
@@ -52,7 +54,7 @@ stages:
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
     - make all
     - cd test-suite
-    - make NP=8 NI=1 NT=1
+    - make NP=$CI_NP NI=$CI_NI NT=$CI_NT
   artifacts:
     when: on_failure
     paths:
@@ -62,6 +64,8 @@ stages:
       - QEDIR/West/test-suite/test*/test*/*.xml
       - QEDIR/West/test-suite/test*/test*/*.json
     expire_in: 3 days
+
+# Builds
 
 gcc840:
   extends:
@@ -73,17 +77,55 @@ gcc930:
     - .template_bot_start
     - .template_build
 
+# Tests
+
 gcc840_t:
+  variables:
+    CI_NP: 8
+    CI_NI: 1
+    CI_NT: 1
   extends:
     - .template_bot_start
     - .template_test
   image: miccomcenter/bot:gcc840
 
 gcc930_t:
+  variables:
+    CI_NP: 8
+    CI_NI: 1
+    CI_NT: 1
   extends:
     - .template_bot_start
     - .template_test
   image: miccomcenter/bot:gcc930
+
+# Nightly tests
+
+gcc840_t2:
+  variables:
+    CI_NP: 4
+    CI_NI: 2
+    CI_NT: 1
+  only:
+    - schedules
+  extends:
+    - .template_bot_start
+    - .template_test
+  image: miccomcenter/bot:gcc840
+
+gcc930_t2:
+  variables:
+    CI_NP: 2
+    CI_NI: 2
+    CI_NT: 2
+  only:
+    - schedules
+  extends:
+    - .template_bot_start
+    - .template_test
+  image: miccomcenter/bot:gcc930
+
+# Doc
 
 west_doc_build:
   tags: [rcc,docker,node-01]

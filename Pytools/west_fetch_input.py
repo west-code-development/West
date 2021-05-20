@@ -36,6 +36,7 @@ default["wstat_control"]["n_pdep_times"] = 4
 default["wstat_control"]["n_pdep_maxiter"] = 100
 default["wstat_control"]["n_dfpt_maxiter"] = 250
 default["wstat_control"]["n_pdep_read_from_file"] = 0
+default["wstat_control"]["n_steps_write_restart"] = 1
 default["wstat_control"]["trev_pdep"] = 1.e-3
 default["wstat_control"]["trev_pdep_rel"] = 1.e-1
 default["wstat_control"]["tr2_dfpt"] = 1.e-12

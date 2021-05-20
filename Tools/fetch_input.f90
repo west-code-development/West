@@ -50,6 +50,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wstat_control.n_pdep_maxiter',n_pdep_maxiter)
         CALL json%add('input.wstat_control.n_dfpt_maxiter',n_dfpt_maxiter)
         CALL json%add('input.wstat_control.n_pdep_read_from_file',n_pdep_read_from_file)
+        CALL json%add('input.wstat_control.n_steps_write_restart',n_steps_write_restart)
         CALL json%add('input.wstat_control.trev_pdep',trev_pdep)
         CALL json%add('input.wstat_control.trev_pdep_rel',trev_pdep_rel)
         CALL json%add('input.wstat_control.tr2_dfpt',tr2_dfpt)
@@ -213,6 +214,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%get(n_pdep_maxiter, "n_pdep_maxiter", DUMMY_DEFAULT)
         IERR = return_dict%get(n_dfpt_maxiter, "n_dfpt_maxiter", DUMMY_DEFAULT)
         IERR = return_dict%get(n_pdep_read_from_file, "n_pdep_read_from_file", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_steps_write_restart, "n_steps_write_restart", DUMMY_DEFAULT)
         IERR = return_dict%getitem(trev_pdep, "trev_pdep")
         IERR = return_dict%getitem(trev_pdep_rel, "trev_pdep_rel")
         IERR = return_dict%getitem(tr2_dfpt, "tr2_dfpt")
@@ -368,6 +370,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(n_pdep_maxiter,root,world_comm)
      CALL mp_bcast(n_dfpt_maxiter,root,world_comm)
      CALL mp_bcast(n_pdep_read_from_file,root,world_comm)
+     CALL mp_bcast(n_steps_write_restart,root,world_comm)
      CALL mp_bcast(trev_pdep,root,world_comm)
      CALL mp_bcast(trev_pdep_rel,root,world_comm)
      CALL mp_bcast(tr2_dfpt,root,world_comm)
@@ -399,6 +402,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_maxiter')
      IF( n_dfpt_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_dfpt_maxiter')
      IF( n_pdep_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_read_from_file')
+     IF( n_steps_write_restart == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_steps_write_restart')
      IF(gamma_only) THEN
         IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1.',1)
      ELSE 
@@ -520,13 +524,14 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         CALL io_push_title('I/O Summary : wstat_control')
         !
-        numsp=30
+        numsp = 30
         CALL io_push_value('wstat_calculation',wstat_calculation,numsp)
         CALL io_push_value('n_pdep_eigen',n_pdep_eigen,numsp)
         CALL io_push_value('n_pdep_times',n_pdep_times,numsp)
         CALL io_push_value('n_pdep_maxiter',n_pdep_maxiter,numsp)
         CALL io_push_value('n_dfpt_maxiter',n_dfpt_maxiter,numsp)
         CALL io_push_value('n_pdep_read_from_file',n_pdep_read_from_file,numsp)
+        CALL io_push_value('n_steps_write_restart',n_steps_write_restart,numsp)
         CALL io_push_es0('trev_pdep',trev_pdep,numsp)
         CALL io_push_es0('trev_pdep_rel',trev_pdep_rel,numsp)
         CALL io_push_es0('tr2_dfpt',tr2_dfpt,numsp)
@@ -547,7 +552,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         CALL io_push_title('I/O Summary : wfreq_control')
         !
-        numsp=40
+        numsp = 40
         CALL io_push_value('wfreq_calculation',wfreq_calculation,numsp)
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
@@ -578,7 +583,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         CALL io_push_title('I/O Summary : westpp_control')
         !
-        numsp=40
+        numsp = 40
         CALL io_push_value('westpp_calculation',westpp_calculation,numsp)
         CALL io_push_value('westpp_range(1)',westpp_range(1),numsp)
         CALL io_push_value('westpp_range(2)',westpp_range(2),numsp)
@@ -602,7 +607,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         CALL io_push_title('I/O Summary : server_control')
         !
-        numsp=40
+        numsp = 40
         CALL io_push_value('document',document,numsp)
         !
         CALL io_push_bar()

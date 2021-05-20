@@ -4,14 +4,26 @@ Change Log
 v5.0.0 (2021/05/XX)
 -------------------
 
-- Update the initialization for Forpy, such that in case of a module import error, the code has a better chance to print a clear error message.
-- Fix an undefined variable in `Tools/set_npwq.f90`. Add `IMPLICIT NONE to all program units to let the compiler catch such errors in the future.
-- Avoid overflow in `Wstat/wstat_memory_report.f90` in large-scale runs.
-- Fix non-standard Fortran codes that do not work with NVIDIA/PGI Fortran compiler.
-- Fix file mode for source files in Westpp. All files were executable before.
-- Work around an input parsing issue encountered with pgfortran and nvfortran.
-- Update build instructions for ALCF/Theta, NERSC/Cori, UChicago/RCC/Midway3, macOS 
-- Updated documentation
+- New variables
+   - Restart info was written out in every Davidson iteration. Now this can be changed by setting the `n_steps_write_restart` keyword. Default is `1`, i.e., same behavior as before.
+
+- Bug fixes 
+   - Update the initialization for Forpy, such that in case of a module import error, the code has a better chance to print a clear error message.
+   - Fix an undefined variable in `Tools/set_npwq.f90`. Add `IMPLICIT NONE to all program units to let the compiler catch such errors in the future.
+   - Avoid overflow in `Wstat/wstat_memory_report.f90` in large-scale runs.
+   - Fix non-standard Fortran codes that do not work with NVIDIA/PGI Fortran compiler.
+   - Fix file mode for source files in Westpp. All files were executable before.
+   - Work around an input parsing issue encountered with pgfortran and nvfortran.
+
+- CI
+   - Use updated Docker images
+   - Check numerical results and fail the CI if results don't match. (see check.py). DFT checks error in total energy, WSTAT checks maximum error in PDEP eigenvalues, WFREQ checks maximum error in QP energies
+   - Add tests of images and OpenMP threads to nightly test
+
+- Documentation
+   - Fix doc build with sphinx 3.5.0+. (see also https://github.com/sphinx-doc/sphinx/issues/8885)
+   - Update build instructions for ALCF/Theta, NERSC/Cori, UChicago/RCC/Midway3, macOS 
+   - Updated documentation
 
 v4.2.1 (2020/10/19)
 -------------------

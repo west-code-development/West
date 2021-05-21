@@ -3,8 +3,7 @@
 include ../../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG).
-IFLAGS=
+MODFLAGS = $(MOD_FLAG).
 
 BASE64_OBJS = \
 cbase64.o \
@@ -26,4 +25,3 @@ title :
 	@echo "### Base64 ###"
 	@echo "##############"
 	@echo "              "
-

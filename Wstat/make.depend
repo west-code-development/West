@@ -43,6 +43,7 @@ wstat_memory_report.o : ../../Modules/control_flags.o
 wstat_memory_report.o : ../../Modules/fft_base.o
 wstat_memory_report.o : ../../Modules/io_global.o
 wstat_memory_report.o : ../../Modules/kind.o
+wstat_memory_report.o : ../../Modules/mp_bands.o
 wstat_memory_report.o : ../../Modules/mp_world.o
 wstat_memory_report.o : ../../Modules/noncol.o
 wstat_memory_report.o : ../../Modules/recvec.o
@@ -51,15 +52,12 @@ wstat_memory_report.o : ../../PW/src/pwcom.o
 wstat_memory_report.o : ../Libraries/Json/json_module.o
 wstat_memory_report.o : ../Modules/westcom.o
 wstat_memory_report.o : ../Para_kernel/distribution_center.o
-wstat_readin.o : ../../Modules/io_files.o
-wstat_readin.o : ../../Modules/io_global.o
-wstat_readin.o : ../../Modules/ions_base.o
-wstat_readin.o : ../../Modules/mp.o
-wstat_readin.o : ../../Modules/mp_world.o
-wstat_readin.o : ../../Modules/noncol.o
+wstat_readin.o : ../../Modules/funct.o
+wstat_readin.o : ../../Modules/mp_bands.o
 wstat_readin.o : ../../Modules/recvec.o
 wstat_readin.o : ../../Modules/uspp.o
 wstat_readin.o : ../../PW/src/pwcom.o
+wstat_readin.o : ../Modules/westcom.o
 wstat_restart.o : ../../Modules/io_files.o
 wstat_restart.o : ../../Modules/io_global.o
 wstat_restart.o : ../../Modules/kind.o

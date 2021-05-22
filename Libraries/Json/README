@@ -1,10 +1,10 @@
 ==========================================
-Based on the library: json-fortran v 6.3.0
+Based on the library: json-fortran v 8.2.1
 ==========================================
 JSON-Fortran: A Fortran 2008 JSON API
 <https://github.com/jacobwilliams/json-fortran>
 
-Copyright (c) 2014-2018, Jacob Williams
+Copyright (c) 2014-2020, Jacob Williams
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,

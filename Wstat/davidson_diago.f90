@@ -1273,17 +1273,17 @@ END SUBROUTINE
 !      !
 !      CALL json%initialize()
 !      !
-!      CALL json%load_file(filename=TRIM(logfile))
+!      CALL json%load(filename=TRIM(logfile))
 !      !
 !      CALL json%add('output.davitr'//TRIM(pref)//.'egvl',  ev        ( 1:n_pdep_eigen ) )
 !      CALL json%add('output.davitr'//TRIM(pref)//.'conv',  converged ( 1:n_pdep_eigen ) )
 !      !
 !      !OPEN(UNIT=4000,FILE=TRIM(ADJUSTL(wstat_output_dir))//"/o-wstat."//TRIM(ADJUSTL(pref))//".json",IOSTAT=ierr)
-!      !CALL json%print_file( 4000 )
+!      !CALL json%print( 4000 )
 !      !CLOSE( 4000, IOSTAT=ierr )
 !      !
 !      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-!      CALL json%print_file( iunit )
+!      CALL json%print( iunit )
 !      CLOSE( iunit )
 !      !
 !      CALL json%destroy()
@@ -1340,7 +1340,7 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
       !
       CALL json%initialize()
       !
-      CALL json%load_file(filename=TRIM(logfile))
+      CALL json%load(filename=TRIM(logfile))
       !
       CALL json%get('exec.ndav', ndav, found )
       !
@@ -1367,7 +1367,7 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
       CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
       !
       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-      CALL json%print_file( iunit )
+      CALL json%print( iunit )
       CLOSE( iunit )
       !
       CALL json%destroy()
@@ -1424,7 +1424,7 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
       !
       CALL json%initialize()
       !
-      CALL json%load_file(filename=TRIM(logfile))
+      CALL json%load(filename=TRIM(logfile))
       !
       WRITE(cq,'(i5)') iq
       !
@@ -1457,7 +1457,7 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
       CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
       !
       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-      CALL json%print_file( iunit )
+      CALL json%print( iunit )
       CLOSE( iunit )
       !
       CALL json%destroy()

@@ -72,7 +72,7 @@ SUBROUTINE do_setup
   !
   IF( mpime == root ) THEN 
      CALL json%initialize()
-     CALL json%load_file(filename=TRIM(logfile))
+     CALL json%load(filename=TRIM(logfile))
   ENDIF
   !
   IF ( lsda ) THEN
@@ -235,7 +235,7 @@ SUBROUTINE do_setup
   !
   IF( mpime == root ) THEN
      OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
-     CALL json%print_file( iunit )
+     CALL json%print( iunit )
      CLOSE( iunit )
      CALL json%destroy()
   ENDIF 

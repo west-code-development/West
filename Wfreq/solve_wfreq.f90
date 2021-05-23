@@ -686,7 +686,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: phi(:,:), phis(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
-  COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evckpq(:,:)
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
   COMPLEX(DP),ALLOCATABLE :: phase(:)
@@ -782,24 +782,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      CALL start_bar_type ( barra, 'wlanczos', barra_load )
   ENDIF
   !
-  ! Read PDEP
-  !
-  ALLOCATE(pertg_all(npwqx,mypara%nloc,q_grid%np))
-  pertg_all = 0._DP
-  !
-  DO iq = 1,q_grid%np
-     npwq = ngq(iq)
-     !
-     DO ip = 1,mypara%nloc
-        glob_ip = mypara%l2g(ip)
-        IF(glob_ip <= n_pdep_eigen_to_use) THEN
-           CALL generate_pdep_fname(filepot,glob_ip,iq)
-           fname = TRIM(wstat_save_dir)//"/"//filepot
-           CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip,iq),iq)
-        ENDIF
-     ENDDO
-  ENDDO
-  !
   ! LOOP
   !
   DO iq = 1, q_grid%np   ! Q-POINT
@@ -809,6 +791,20 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      l_gammaq = q_grid%l_pIsGamma(iq)
      !
      CALL pot3D%init('Wave',.TRUE.,'default',iq)
+     !
+     ! Read PDEP
+     !
+     ALLOCATE(pertg_all(npwqx,mypara%nloc))
+     pertg_all = 0._DP
+     !
+     DO ip = 1,mypara%nloc
+        glob_ip = mypara%l2g(ip)
+        IF(glob_ip <= n_pdep_eigen_to_use) THEN
+           CALL generate_pdep_fname(filepot,glob_ip,iq)
+           fname = TRIM(wstat_save_dir)//"/"//filepot
+           CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip),iq)
+        ENDIF
+     ENDDO
      !
      DO iks = 1, k_grid%nps   ! KPOINT-SPIN
         !
@@ -993,7 +989,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               IF(glob_ip<=n_pdep_eigen_to_use) THEN
                  !
-                 pertg = pertg_all(:,ip,iq)
+                 pertg = pertg_all(:,ip)
                  !
                  ! Multiply by sqvc
                  DO ig = 1, npwq

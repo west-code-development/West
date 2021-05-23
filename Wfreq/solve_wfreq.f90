@@ -1216,9 +1216,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
      ENDDO ! KPOINT-SPIN
      !
+     DEALLOCATE(pertg_all)
+     !
   ENDDO ! QPOINT
-  !
-  DEALLOCATE(pertg_all)
   !
   CALL stop_bar_type( barra, 'wlanczos' )
   !

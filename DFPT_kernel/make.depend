@@ -7,13 +7,9 @@ apply_sternheimerop_to_m_wfcs.o : ../../Modules/uspp.o
 apply_sternheimerop_to_m_wfcs.o : ../../Modules/wavefunctions.o
 apply_sternheimerop_to_m_wfcs.o : ../../PW/src/pwcom.o
 apply_sternheimerop_to_m_wfcs.o : ../Modules/westcom.o
-dfpt_module.o : ../../FFTXlib/fft_interfaces.o
 dfpt_module.o : ../../Modules/cell_base.o
-dfpt_module.o : ../../Modules/constants.o
 dfpt_module.o : ../../Modules/control_flags.o
 dfpt_module.o : ../../Modules/fft_base.o
-dfpt_module.o : ../../Modules/gvecw.o
-dfpt_module.o : ../../Modules/io_files.o
 dfpt_module.o : ../../Modules/io_global.o
 dfpt_module.o : ../../Modules/kind.o
 dfpt_module.o : ../../Modules/mp.o
@@ -28,6 +24,8 @@ dfpt_module.o : ../../PW/src/pwcom.o
 dfpt_module.o : ../FFT_kernel/fft_at_gamma.o
 dfpt_module.o : ../FFT_kernel/fft_at_k.o
 dfpt_module.o : ../Modules/westcom.o
+dfpt_module.o : ../Para_kernel/class_idistribute.o
+dfpt_module.o : ../Para_kernel/distribution_center.o
 dfpt_module.o : ../Tools/bar.o
 dfpt_module.o : ../Tools/io_push.o
 dfpt_module.o : ../Tools/types_bz_grid.o

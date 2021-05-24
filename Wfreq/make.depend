@@ -204,11 +204,8 @@ wfreq.o : ../../Modules/mp.o
 wfreq.o : ../../Modules/mp_global.o
 wfreq.o : ../Modules/westcom.o
 wfreq.o : ../Tools/west_environment.o
-wfreq_readin.o : ../../Modules/io_files.o
-wfreq_readin.o : ../../Modules/io_global.o
-wfreq_readin.o : ../../Modules/ions_base.o
-wfreq_readin.o : ../../Modules/mp.o
-wfreq_readin.o : ../../Modules/noncol.o
+wfreq_readin.o : ../../Modules/funct.o
+wfreq_readin.o : ../../Modules/mp_bands.o
 wfreq_readin.o : ../../Modules/recvec.o
 wfreq_readin.o : ../../Modules/uspp.o
 wfreq_readin.o : ../../PW/src/pwcom.o

@@ -72,7 +72,7 @@ MODULE wfreq_db
          !
          CALL json%initialize()
          !
-         CALL json%load_file(filename=TRIM(logfile))
+         CALL json%load(filename=TRIM(logfile))
          !
          l_generate_plot = .FALSE.
          l_optics = .FALSE.
@@ -157,7 +157,7 @@ MODULE wfreq_db
          ENDDO
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
-         CALL json%print_file( iunit )
+         CALL json%print( iunit )
          CLOSE( iunit )
          CALL json%destroy()
          !

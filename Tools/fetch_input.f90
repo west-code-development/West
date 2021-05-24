@@ -619,12 +619,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   IF ( verbose .AND. mpime == root ) THEN
      !
      CALL json%initialize()
-     CALL json%load_file(filename=TRIM(logfile))
+     CALL json%load(filename=TRIM(logfile))
      !
      CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
      ! 
      OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
-     CALL json%print_file( iunit )
+     CALL json%print( iunit )
      CLOSE( iunit )
      CALL json%destroy()
      !

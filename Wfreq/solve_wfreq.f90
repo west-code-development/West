@@ -1383,7 +1383,7 @@ SUBROUTINE output_eps_head( )
         CALL json%add("pol",out_tabella(:,8))
         !
         OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/optics.json" )
-        CALL json%print_file( iunit )
+        CALL json%print( iunit )
         CLOSE( iunit )
         !
         CALL json%destroy()

@@ -22,6 +22,7 @@ SUBROUTINE wstat_memory_report()
   USE gvecs,               ONLY : ngms
   USE uspp,                ONLY : nkb
   USE control_flags,       ONLY : gamma_only
+  USE mp_bands,            ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
   USE westcom,             ONLY : nbnd_occ,n_pdep_basis,npwqx,logfile
   USE distribution_center, ONLY : pert
@@ -42,7 +43,7 @@ SUBROUTINE wstat_memory_report()
   IF( mpime == root ) THEN
      !
      CALL json%initialize()
-     CALL json%load_file(filename=TRIM(logfile))
+     CALL json%load(filename=TRIM(logfile))
      CALL json%add( 'memory.units', 'Mb' )
      !
   ENDIF
@@ -141,15 +142,15 @@ SUBROUTINE wstat_memory_report()
   WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
-  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbnd_occ(1)
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)
   WRITE( stdout, '(5x,"[MEM] dvpsi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx*npol, nbnd_occ(1)
+     mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)
   IF( mpime == root ) CALL json%add( 'memory.dvpsi', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
-  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbnd_occ(1)
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)
   WRITE( stdout, '(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx*npol, nbnd_occ(1)
+     mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)
   IF( mpime == root ) CALL json%add( 'memory.dpsi', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
@@ -183,7 +184,7 @@ SUBROUTINE wstat_memory_report()
   IF( mpime == root ) THEN
      !
      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-     CALL json%print_file( iunit )
+     CALL json%print( iunit )
      CLOSE( iunit )
      CALL json%destroy()
      !

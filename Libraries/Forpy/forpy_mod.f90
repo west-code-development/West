@@ -1,12 +1,12 @@
-! Copyright (C) 2017-2018  Elias Rabel
+! Copyright (C) 2017-2020  Elias Rabel
 !
 ! This program is free software: you can redistribute it and/or modify
-! it under the terms of the GNU Lesser General Public License as published by 
-! the Free Software Foundation, either version 3 of the License, or 
+! it under the terms of the GNU Lesser General Public License as published by
+! the Free Software Foundation, either version 3 of the License, or
 ! (at your option) any later version.
 !
 ! This program is distributed in the hope that it will be useful,
-! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of
 ! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ! GNU Lesser General Public License for more details.
 !
@@ -17,7 +17,7 @@ module forpy_mod
 !! author: Elias Rabel
 !!
 !! Forpy: A library for Fortran-Python interoperability.
-!! 
+!!
 !! Forpy allows you to use Python features within Fortran ("Python in Fortran")
 !! For example: Python modules, datastructures such as list, dict, tuple
 !! Furthermore you can write Python (extension) modules in Fortran ("Fortran in Python")
@@ -30,7 +30,7 @@ module forpy_mod
 !  This project uses the fypp preprocessor (https://github.com/aradi/fypp)
 !  to generate the code
 !  Do not edit forpy_mod.F90, edit forpy_mod.fypp
-! 
+!
 
 #ifdef PYTHON2_32
 #define PYTHON2
@@ -42,15 +42,15 @@ use, intrinsic :: iso_c_binding, only: C_CHAR, C_NULL_CHAR, C_INT, C_LONG, C_LON
 
 use, intrinsic :: iso_fortran_env, only: int64, int32, real32, real64
 
-implicit none 
+implicit none
 
 public :: object, type_py, list, dict, tuple, bytes, str, unicode, module_py, &
 NoneType, ndarray, Sequence, MutableSequence, ImmutableSequence, Mapping, &
 tuple_create, list_create, dict_create, bytes_create, str_create, &
-unicode_create, NoneType_create, ndarray_create, ndarray_create_nocopy, & 
+unicode_create, NoneType_create, ndarray_create, ndarray_create_nocopy, &
 ndarray_create_empty, ndarray_create_zeros, ndarray_create_ones, &
 import_py, call_py, call_py_noret, assign_py, cast, cast_nonstrict, &
-PythonMethodTable, PythonModule, forpy_initialize, forpy_initialize_ext, &
+PythonMethodTable, PythonModule, forpy_initialize, &
 forpy_finalize, is_long, is_list, is_tuple, is_bytes, is_dict, &
 is_float, is_complex, is_bool, is_unicode, is_int, is_str, is_none, &
 is_null, is_ndarray, exception_matches, err_clear, err_print, have_exception, &
@@ -72,6 +72,7 @@ PRIVATE
 
 ! These global variables shall be set in
 ! forpy_initialize only and never changed afterwards!
+integer, private, save :: global_forpy_initialized = 0
 type(c_ptr), private, save :: global_numpy_mod = C_NULL_PTR
 type(c_ptr), private, save :: global_numpy_asarray_method = C_NULL_PTR
 ! the location of the singleton Python Py_NoneStruct method
@@ -225,7 +226,7 @@ end type
 type, bind(c) :: PyModuleDef_Base
   integer(kind=PY_SSIZE_T_KIND) :: ob_refcnt !PyObject_HEAD  (init to 1)
   type(c_ptr) :: ob_type ! from PyObject_HEAD (init to NULL)
-    
+
   type(c_ptr) :: m_init
   integer(kind=PY_SSIZE_T_KIND) :: m_index
   type(c_ptr) :: m_copy
@@ -246,6 +247,11 @@ end type
 interface
   subroutine Py_Initialize() bind(c, name="Py_Initialize")
   end subroutine
+
+  function Py_IsInitialized() bind(c, name="Py_IsInitialized") result(r)
+    import C_INT
+    integer(kind=C_INT) :: r
+  end function
 
   subroutine Py_Finalize() bind(c, name="Py_Finalize")
   end subroutine
@@ -280,19 +286,19 @@ interface
     type(c_ptr), value :: item
     integer(kind=C_INT) :: r
   end function
-  
+
   function PyList_Sort(list) bind(c, name="PyList_Sort") result(r)
     import c_ptr, C_INT
     type(c_ptr), value :: list
     integer(kind=C_INT) :: r
   end function
-  
+
   function PyList_Reverse(list) bind(c, name="PyList_Reverse") result(r)
     import c_ptr, C_INT
     type(c_ptr), value :: list
     integer(kind=C_INT) :: r
   end function
-  
+
   !int PyList_Insert(PyObject *list, Py_ssize_t index, PyObject *item)
   function PyList_Insert(list, index, item) bind(c, name="PyList_Insert") result(r)
     import c_ptr, C_INT, PY_SSIZE_T_KIND
@@ -301,14 +307,14 @@ interface
     type(c_ptr), value :: item
     integer(kind=C_INT) :: r
   end function
-  
+
   !PyObject* PyLong_FromLongLong(long long ival)
   function PyLong_FromLongLong(ival) bind(c, name="PyLong_FromLongLong") result(r)
     import c_ptr, C_LONG_LONG
     integer(kind=C_LONG_LONG), value :: ival
     type(c_ptr) :: r
   end function
-  
+
   !PY_LONG_LONG PyLong_AsLongLongAndOverflow(PyObject *obj, int *overflow)
   function PyLong_AsLongLongAndOverflow(obj, overflow) bind(c, name="PyLong_AsLongLongAndOverflow") result(r)
     import c_ptr, C_LONG_LONG, C_INT
@@ -354,7 +360,7 @@ interface
     type(c_ptr), value :: v
     integer(kind=C_INT) :: r
   end function
-  
+
   !Py_ssize_t PyObject_Length(PyObject *o)
   function PyObject_Length(o) bind(c, name="PyObject_Length") result(r)
     import c_ptr, PY_SSIZE_T_KIND
@@ -368,7 +374,7 @@ interface
     type(c_ptr), value :: o
     integer(kind=C_INT) :: r
   end function
-  
+
   !PyObject* PyObject_Str(PyObject *o)
   function PyObject_Str(o) bind(c, name="PyObject_Str") result(r)
     import c_ptr
@@ -422,7 +428,7 @@ interface
     real(kind=C_DOUBLE), value :: v
     type(c_ptr) :: r
   end function
-  
+
   !double PyFloat_AsDouble(PyObject *pyfloat)
   function PyFloat_AsDouble(pyfloat) bind(c, name="PyFloat_AsDouble") result(r)
     import c_ptr, C_DOUBLE
@@ -475,7 +481,7 @@ interface
     character(kind=C_CHAR), dimension(*), intent(in) :: v
     type(c_ptr) :: r
   end function
-  
+
   !char* PyBytes_AsString(PyObject *o)
 #ifdef PYTHON2
   function PyBytes_AsString(o) bind(c, name="PyString_AsString") result(r)
@@ -493,27 +499,27 @@ interface
     type(c_ptr), value :: o, attr_name
     type(c_ptr) :: r
   end function
-  
+
   function PyObject_SetAttr(o, attr_name, v) bind(c, name="PyObject_SetAttr") result(r)
     import c_ptr, C_INT
     type(c_ptr), value :: o, attr_name, v
     integer(kind=C_INT) :: r
   end function
-  
+
   !int PyObject_DelItem(PyObject *o, PyObject *key)
   function PyObject_DelItem(o, key) bind(c, name="PyObject_DelItem") result(r)
     import c_ptr, C_INT
     type(c_ptr), value :: o, key
     integer(kind=C_INT) :: r
   end function
-  
+
   !int PySequence_DelItem(PyObject *o, Py_ssize_t i)
   function PySequence_DelItem(o, i) bind(c, name="PySequence_DelItem") result(r)
     import c_ptr, C_INT, PY_SSIZE_T_KIND
     type(c_ptr), value :: o
     integer(kind=PY_SSIZE_T_KIND), value :: i
     integer(kind=C_INT) :: r
-  end function  
+  end function
 
   !PyObject* PyObject_Call(PyObject *callable_object, PyObject *args, PyObject *kw)
   function PyObject_Call(callable_object, args, kw) bind(c, name="PyObject_Call") result(r)
@@ -589,7 +595,7 @@ interface
 
 #ifdef PYTHON2
 #ifdef PYTHON_NARROW
-  function PyUnicode_DecodeUTF8(s, size, errors) bind(c, name="PyUnicodeUCS2_DecodeUTF8") result(r)  
+  function PyUnicode_DecodeUTF8(s, size, errors) bind(c, name="PyUnicodeUCS2_DecodeUTF8") result(r)
 #else
   function PyUnicode_DecodeUTF8(s, size, errors) bind(c, name="PyUnicodeUCS4_DecodeUTF8") result(r)
 #endif
@@ -600,7 +606,7 @@ interface
     character(kind=C_CHAR), dimension(*) :: errors
     type(c_ptr) :: r
   end function
-  
+
 #ifndef PYTHON2
   ! Since Python 3.3 in C-API
   !char* PyUnicode_AsUTF8AndSize(PyObject *unicode, Py_ssize_t *size)
@@ -609,14 +615,27 @@ interface
     type(c_ptr), value :: unicode
     integer(kind=PY_SSIZE_T_KIND) :: size
     type(c_ptr) :: r
-  end function  
+  end function
+#endif
+
+  !PyObject* PyUnicode_AsUTF8String(PyObject *unicode)
+#ifdef PYTHON2
+#ifdef PYTHON2_NARROW
+  function PyUnicode_AsUTF8String(unicode) bind(c, name="PyUnicodeUCS2_AsUTF8String") result(r)
+#else
+  function PyUnicode_AsUTF8String(unicode) bind(c, name="PyUnicodeUCS4_AsUTF8String") result(r)
+#endif
+    import c_ptr
+    type(c_ptr), value :: unicode
+    type(c_ptr) :: r
+  end function
 #endif
 
   function PyEval_GetBuiltins() bind(c, name="PyEval_GetBuiltins") result(r)
     import c_ptr
     type(c_ptr) :: r
   end function
-  
+
   !PyObject* PyDict_GetItemString(PyObject *p, const char *key)
   function PyDict_GetItemString(p, key) bind(c, name="PyDict_GetItemString") result(r)
     import c_ptr, C_CHAR
@@ -696,35 +715,35 @@ end subroutine
 function PySequence_Contains(o, a_value) bind(c, name="PySequence_Contains") result(r)
   import c_ptr, C_INT
   type(c_ptr), value :: o
-  type(c_ptr), value :: a_value  
+  type(c_ptr), value :: a_value
   integer(kind=C_INT) :: r
 end function
 
 function PySequence_Index(o, a_value) bind(c, name="PySequence_Index") result(r)
   import c_ptr, PY_SSIZE_T_KIND
   type(c_ptr), value :: o
-  type(c_ptr), value :: a_value  
+  type(c_ptr), value :: a_value
   integer(kind=PY_SSIZE_T_KIND) :: r
 end function
 
 function PySequence_Count(o, a_value) bind(c, name="PySequence_Count") result(r)
   import c_ptr, PY_SSIZE_T_KIND
   type(c_ptr), value :: o
-  type(c_ptr), value :: a_value  
+  type(c_ptr), value :: a_value
   integer(kind=PY_SSIZE_T_KIND) :: r
 end function
 
 function PyMapping_HasKey(o, a_value) bind(c, name="PyMapping_HasKey") result(r)
   import c_ptr, C_INT
   type(c_ptr), value :: o
-  type(c_ptr), value :: a_value  
+  type(c_ptr), value :: a_value
   integer(kind=C_INT) :: r
 end function
 
 function PySequence_Concat(o1, o2) bind(c, name="PySequence_Concat") result(r)
   import c_ptr
   type(c_ptr), value :: o1, o2
-  type(c_ptr) :: r 
+  type(c_ptr) :: r
 end function
 
 !PyObject *PySys_GetObject(const char *name)
@@ -826,7 +845,11 @@ interface unbox_value
   module procedure unbox_value_complex_real32
   module procedure unbox_value_complex_real64
   module procedure unbox_value_logical
+#ifdef PYTHON2
+  module procedure unbox_value_chars_py2
+#else
   module procedure unbox_value_chars
+#endif
   module procedure unbox_value_char_1d
 end interface
 
@@ -836,11 +859,6 @@ interface tuple_from_array
 end interface
 
 !--------- High-level API to Python's datastructures -------------------
-
-
-
-
-
 
 !> Type to represent an arbitrary Python object
 type object
@@ -873,12 +891,12 @@ type, abstract, extends(object) :: Sequence
       generic, public :: len => sequence_len_int32
       procedure, private :: sequence_count_int32
       generic, public :: count => sequence_count_int32
-      
+
       !index - does not support optional start and stop indices as the Python function does
       procedure, private :: sequence_index_int32
       !> Get the first index of a value.
       generic, public :: index => sequence_index_int32
-    
+
       procedure, private :: sequence_getitem_int32_object
       !> Get item at a certain index
       generic, public :: getitem => sequence_getitem_int32_object
@@ -915,12 +933,12 @@ type, abstract, extends(object) :: Sequence
       generic, public :: len => sequence_len_int64
       procedure, private :: sequence_count_int64
       generic, public :: count => sequence_count_int64
-      
+
       !index - does not support optional start and stop indices as the Python function does
       procedure, private :: sequence_index_int64
       !> Get the first index of a value.
       generic, public :: index => sequence_index_int64
-    
+
       procedure, private :: sequence_getitem_int64_object
       !> Get item at a certain index
       generic, public :: getitem => sequence_getitem_int64_object
@@ -952,7 +970,6 @@ type, abstract, extends(object) :: Sequence
         !> Get item at a certain index
         generic, public :: getitem => sequence_getitem_int64_chars
 
-    
     !> Checks if a given item is contained in the sequence.
     procedure, public :: contains => sequence_contains
 end type
@@ -1033,7 +1050,7 @@ type, extends(MutableSequence) :: list
     procedure, private :: list_append_object
     !> Append an item at the end of a list
     generic, public :: append => list_append_object
-    
+
     !> Creates a copy of a list
     procedure, public :: copy => list_copy
     !> Sorts the list.
@@ -1055,7 +1072,7 @@ type, extends(MutableSequence) :: list
     procedure, private :: list_delitem_int64
     !> Deletes item at given index from list.
     generic, public :: delitem => list_delitem_int64
-    
+
     procedure, private :: list_append_int32
     !> Append an item at the end of a list
     generic, public :: append => list_append_int32
@@ -1091,17 +1108,17 @@ type, abstract, extends(object) :: Mapping
   contains
      procedure, private :: mapping_getitem_object_object
      !> Get value at a given key. KeyError if key does not exist
-     generic, public :: getitem => mapping_getitem_object_object   
+     generic, public :: getitem => mapping_getitem_object_object
      procedure, private :: mapping_setitem_object_object
      !> Inserts value at given key. Sets value if key already exists.
      generic, public :: setitem => mapping_setitem_object_object
      procedure, private :: mapping_delitem_object
      !> Delete key-value pair with given key.
      generic, public :: delitem => mapping_delitem_object
-     
+
        procedure, private :: mapping_getitem_int32_object
        !> Get value at a given key. KeyError if key does not exist
-       generic, public :: getitem => mapping_getitem_int32_object   
+       generic, public :: getitem => mapping_getitem_int32_object
        procedure, private :: mapping_setitem_int32_object
        !> Inserts value at given key. Sets value if key already exists.
        generic, public :: setitem => mapping_setitem_int32_object
@@ -1110,61 +1127,61 @@ type, abstract, extends(object) :: Mapping
        generic, public :: delitem => mapping_delitem_int32
          procedure, private :: mapping_getitem_int32_int32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_int32    
+         generic, public :: getitem => mapping_getitem_int32_int32
          procedure, private :: mapping_setitem_int32_int32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_int32
          procedure, private :: mapping_getitem_int32_int64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_int64    
+         generic, public :: getitem => mapping_getitem_int32_int64
          procedure, private :: mapping_setitem_int32_int64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_int64
          procedure, private :: mapping_getitem_int32_real32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_real32    
+         generic, public :: getitem => mapping_getitem_int32_real32
          procedure, private :: mapping_setitem_int32_real32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_real32
          procedure, private :: mapping_getitem_int32_real64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_real64    
+         generic, public :: getitem => mapping_getitem_int32_real64
          procedure, private :: mapping_setitem_int32_real64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_real64
          procedure, private :: mapping_getitem_int32_complex_real32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_complex_real32    
+         generic, public :: getitem => mapping_getitem_int32_complex_real32
          procedure, private :: mapping_setitem_int32_complex_real32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_complex_real32
          procedure, private :: mapping_getitem_int32_complex_real64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_complex_real64    
+         generic, public :: getitem => mapping_getitem_int32_complex_real64
          procedure, private :: mapping_setitem_int32_complex_real64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_complex_real64
          procedure, private :: mapping_getitem_int32_logical
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_logical    
+         generic, public :: getitem => mapping_getitem_int32_logical
          procedure, private :: mapping_setitem_int32_logical
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_logical
          procedure, private :: mapping_getitem_int32_char_1d
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_char_1d    
+         generic, public :: getitem => mapping_getitem_int32_char_1d
          procedure, private :: mapping_setitem_int32_char_1d
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_char_1d
          procedure, private :: mapping_getitem_int32_chars
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int32_chars    
+         generic, public :: getitem => mapping_getitem_int32_chars
          procedure, private :: mapping_setitem_int32_chars
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int32_chars
        procedure, private :: mapping_getitem_int64_object
        !> Get value at a given key. KeyError if key does not exist
-       generic, public :: getitem => mapping_getitem_int64_object   
+       generic, public :: getitem => mapping_getitem_int64_object
        procedure, private :: mapping_setitem_int64_object
        !> Inserts value at given key. Sets value if key already exists.
        generic, public :: setitem => mapping_setitem_int64_object
@@ -1173,61 +1190,61 @@ type, abstract, extends(object) :: Mapping
        generic, public :: delitem => mapping_delitem_int64
          procedure, private :: mapping_getitem_int64_int32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_int32    
+         generic, public :: getitem => mapping_getitem_int64_int32
          procedure, private :: mapping_setitem_int64_int32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_int32
          procedure, private :: mapping_getitem_int64_int64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_int64    
+         generic, public :: getitem => mapping_getitem_int64_int64
          procedure, private :: mapping_setitem_int64_int64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_int64
          procedure, private :: mapping_getitem_int64_real32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_real32    
+         generic, public :: getitem => mapping_getitem_int64_real32
          procedure, private :: mapping_setitem_int64_real32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_real32
          procedure, private :: mapping_getitem_int64_real64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_real64    
+         generic, public :: getitem => mapping_getitem_int64_real64
          procedure, private :: mapping_setitem_int64_real64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_real64
          procedure, private :: mapping_getitem_int64_complex_real32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_complex_real32    
+         generic, public :: getitem => mapping_getitem_int64_complex_real32
          procedure, private :: mapping_setitem_int64_complex_real32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_complex_real32
          procedure, private :: mapping_getitem_int64_complex_real64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_complex_real64    
+         generic, public :: getitem => mapping_getitem_int64_complex_real64
          procedure, private :: mapping_setitem_int64_complex_real64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_complex_real64
          procedure, private :: mapping_getitem_int64_logical
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_logical    
+         generic, public :: getitem => mapping_getitem_int64_logical
          procedure, private :: mapping_setitem_int64_logical
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_logical
          procedure, private :: mapping_getitem_int64_char_1d
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_char_1d    
+         generic, public :: getitem => mapping_getitem_int64_char_1d
          procedure, private :: mapping_setitem_int64_char_1d
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_char_1d
          procedure, private :: mapping_getitem_int64_chars
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_int64_chars    
+         generic, public :: getitem => mapping_getitem_int64_chars
          procedure, private :: mapping_setitem_int64_chars
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_int64_chars
        procedure, private :: mapping_getitem_chars_object
        !> Get value at a given key. KeyError if key does not exist
-       generic, public :: getitem => mapping_getitem_chars_object   
+       generic, public :: getitem => mapping_getitem_chars_object
        procedure, private :: mapping_setitem_chars_object
        !> Inserts value at given key. Sets value if key already exists.
        generic, public :: setitem => mapping_setitem_chars_object
@@ -1236,55 +1253,55 @@ type, abstract, extends(object) :: Mapping
        generic, public :: delitem => mapping_delitem_chars
          procedure, private :: mapping_getitem_chars_int32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_int32    
+         generic, public :: getitem => mapping_getitem_chars_int32
          procedure, private :: mapping_setitem_chars_int32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_int32
          procedure, private :: mapping_getitem_chars_int64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_int64    
+         generic, public :: getitem => mapping_getitem_chars_int64
          procedure, private :: mapping_setitem_chars_int64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_int64
          procedure, private :: mapping_getitem_chars_real32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_real32    
+         generic, public :: getitem => mapping_getitem_chars_real32
          procedure, private :: mapping_setitem_chars_real32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_real32
          procedure, private :: mapping_getitem_chars_real64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_real64    
+         generic, public :: getitem => mapping_getitem_chars_real64
          procedure, private :: mapping_setitem_chars_real64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_real64
          procedure, private :: mapping_getitem_chars_complex_real32
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_complex_real32    
+         generic, public :: getitem => mapping_getitem_chars_complex_real32
          procedure, private :: mapping_setitem_chars_complex_real32
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_complex_real32
          procedure, private :: mapping_getitem_chars_complex_real64
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_complex_real64    
+         generic, public :: getitem => mapping_getitem_chars_complex_real64
          procedure, private :: mapping_setitem_chars_complex_real64
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_complex_real64
          procedure, private :: mapping_getitem_chars_logical
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_logical    
+         generic, public :: getitem => mapping_getitem_chars_logical
          procedure, private :: mapping_setitem_chars_logical
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_logical
          procedure, private :: mapping_getitem_chars_char_1d
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_char_1d    
+         generic, public :: getitem => mapping_getitem_chars_char_1d
          procedure, private :: mapping_setitem_chars_char_1d
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_char_1d
          procedure, private :: mapping_getitem_chars_chars
          !> Get value at a given key. KeyError if key does not exist
-         generic, public :: getitem => mapping_getitem_chars_chars    
+         generic, public :: getitem => mapping_getitem_chars_chars
          procedure, private :: mapping_setitem_chars_chars
          !> Inserts value at given key. Sets value if key already exists.
          generic, public :: setitem => mapping_setitem_chars_chars
@@ -1298,7 +1315,7 @@ type, abstract, extends(object) :: Mapping
 
     !> Checks if key is contained in datastructure.
     procedure, public :: mapping_contains
-    
+
 end type
 
 type, extends(Mapping) :: dict
@@ -1307,109 +1324,109 @@ type, extends(Mapping) :: dict
       procedure, public :: clear => dict_clear
       !> Creates a copy of dict
       procedure, public :: copy => dict_copy
-      !> Creates a list of a dict's keys 
+      !> Creates a list of a dict's keys
       procedure, public :: keys => dict_keys
       !> Creates a list of a dict's key-value pairs.
       procedure, public :: items => dict_items
       !> Creates a list of a dict's values
       procedure, public :: values => dict_values
 
-      procedure, private :: dict_get_object_object 
+      procedure, private :: dict_get_object_object
       !> Get value at a given key. If key does not exist, return a default value.
-      generic, public :: get => dict_get_object_object    
-        procedure, private :: dict_get_int32_object 
+      generic, public :: get => dict_get_object_object
+        procedure, private :: dict_get_int32_object
         !> Get value at a given key. If key does not exist, return a default value.
         generic, public :: get => dict_get_int32_object
-        procedure, private :: dict_get_int32_int32 
+        procedure, private :: dict_get_int32_int32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_int32        
-        procedure, private :: dict_get_int32_int64 
+        generic, public :: get => dict_get_int32_int32
+        procedure, private :: dict_get_int32_int64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_int64        
-        procedure, private :: dict_get_int32_real32 
+        generic, public :: get => dict_get_int32_int64
+        procedure, private :: dict_get_int32_real32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_real32        
-        procedure, private :: dict_get_int32_real64 
+        generic, public :: get => dict_get_int32_real32
+        procedure, private :: dict_get_int32_real64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_real64        
-        procedure, private :: dict_get_int32_complex_real32 
+        generic, public :: get => dict_get_int32_real64
+        procedure, private :: dict_get_int32_complex_real32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_complex_real32        
-        procedure, private :: dict_get_int32_complex_real64 
+        generic, public :: get => dict_get_int32_complex_real32
+        procedure, private :: dict_get_int32_complex_real64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_complex_real64        
-        procedure, private :: dict_get_int32_logical 
+        generic, public :: get => dict_get_int32_complex_real64
+        procedure, private :: dict_get_int32_logical
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_logical        
-        procedure, private :: dict_get_int32_char_1d 
+        generic, public :: get => dict_get_int32_logical
+        procedure, private :: dict_get_int32_char_1d
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_char_1d        
-        procedure, private :: dict_get_int32_chars 
+        generic, public :: get => dict_get_int32_char_1d
+        procedure, private :: dict_get_int32_chars
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int32_chars        
-        procedure, private :: dict_get_int64_object 
+        generic, public :: get => dict_get_int32_chars
+        procedure, private :: dict_get_int64_object
         !> Get value at a given key. If key does not exist, return a default value.
         generic, public :: get => dict_get_int64_object
-        procedure, private :: dict_get_int64_int32 
+        procedure, private :: dict_get_int64_int32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_int32        
-        procedure, private :: dict_get_int64_int64 
+        generic, public :: get => dict_get_int64_int32
+        procedure, private :: dict_get_int64_int64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_int64        
-        procedure, private :: dict_get_int64_real32 
+        generic, public :: get => dict_get_int64_int64
+        procedure, private :: dict_get_int64_real32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_real32        
-        procedure, private :: dict_get_int64_real64 
+        generic, public :: get => dict_get_int64_real32
+        procedure, private :: dict_get_int64_real64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_real64        
-        procedure, private :: dict_get_int64_complex_real32 
+        generic, public :: get => dict_get_int64_real64
+        procedure, private :: dict_get_int64_complex_real32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_complex_real32        
-        procedure, private :: dict_get_int64_complex_real64 
+        generic, public :: get => dict_get_int64_complex_real32
+        procedure, private :: dict_get_int64_complex_real64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_complex_real64        
-        procedure, private :: dict_get_int64_logical 
+        generic, public :: get => dict_get_int64_complex_real64
+        procedure, private :: dict_get_int64_logical
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_logical        
-        procedure, private :: dict_get_int64_char_1d 
+        generic, public :: get => dict_get_int64_logical
+        procedure, private :: dict_get_int64_char_1d
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_char_1d        
-        procedure, private :: dict_get_int64_chars 
+        generic, public :: get => dict_get_int64_char_1d
+        procedure, private :: dict_get_int64_chars
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_int64_chars        
-        procedure, private :: dict_get_chars_object 
+        generic, public :: get => dict_get_int64_chars
+        procedure, private :: dict_get_chars_object
         !> Get value at a given key. If key does not exist, return a default value.
         generic, public :: get => dict_get_chars_object
-        procedure, private :: dict_get_chars_int32 
+        procedure, private :: dict_get_chars_int32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_int32        
-        procedure, private :: dict_get_chars_int64 
+        generic, public :: get => dict_get_chars_int32
+        procedure, private :: dict_get_chars_int64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_int64        
-        procedure, private :: dict_get_chars_real32 
+        generic, public :: get => dict_get_chars_int64
+        procedure, private :: dict_get_chars_real32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_real32        
-        procedure, private :: dict_get_chars_real64 
+        generic, public :: get => dict_get_chars_real32
+        procedure, private :: dict_get_chars_real64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_real64        
-        procedure, private :: dict_get_chars_complex_real32 
+        generic, public :: get => dict_get_chars_real64
+        procedure, private :: dict_get_chars_complex_real32
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_complex_real32        
-        procedure, private :: dict_get_chars_complex_real64 
+        generic, public :: get => dict_get_chars_complex_real32
+        procedure, private :: dict_get_chars_complex_real64
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_complex_real64        
-        procedure, private :: dict_get_chars_logical 
+        generic, public :: get => dict_get_chars_complex_real64
+        procedure, private :: dict_get_chars_logical
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_logical        
-        procedure, private :: dict_get_chars_char_1d 
+        generic, public :: get => dict_get_chars_logical
+        procedure, private :: dict_get_chars_char_1d
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_char_1d        
-        procedure, private :: dict_get_chars_chars 
+        generic, public :: get => dict_get_chars_char_1d
+        procedure, private :: dict_get_chars_chars
         !> Get value at a given key. If key does not exist, return a default value.
-        generic, public :: get => dict_get_chars_chars        
+        generic, public :: get => dict_get_chars_chars
 
       !> Get value at a given key. If key does not exist, set value at key to default value and return default.
-      procedure, public :: setdefault => dict_setdefault_object_object       
+      procedure, public :: setdefault => dict_setdefault_object_object
 end type
 
 !> Type that corresponds to a Python tuple. Create with tuple_create.
@@ -1501,7 +1518,7 @@ end type
 !> Creates a bytes object from Fortran character string or character array.
 interface bytes_create
   module procedure bytes_create_chars
-  module procedure bytes_create_char_1d  
+  module procedure bytes_create_char_1d
 end interface
 
 !> Type corresponding to Python 'str' - Python's string type.
@@ -1512,7 +1529,8 @@ end type
 !> Creates a str object from Fortran character string or character array.
 interface str_create
   module procedure str_create_chars
-  module procedure str_create_char_1d  
+  module procedure str_create_char_1d
+  module procedure str_create_object
 end interface
 
 !> Type corresponding to Python 2 'unicode' or Python 3 'str'.
@@ -1523,10 +1541,10 @@ end type
 !> Creates a unicode string from Fortran character string or character array.
 interface unicode_create
   module procedure unicode_create_chars
-  module procedure unicode_create_char_1d  
+  module procedure unicode_create_char_1d
 end interface
 
-!> Type representing a Python module 
+!> Type representing a Python module
 type, extends(object) :: module_py
 end type
 
@@ -1650,7 +1668,7 @@ type, extends(object) :: ndarray
   procedure, public :: is_ordered => ndarray_is_ordered
   !> Get numpy.dtype type identifier of the array. Python equivalent: self.dtype.name
   procedure, public :: get_dtype_name => ndarray_get_dtype_name
-  
+
   procedure, private :: ndarray_ndim_int32
   procedure, private :: ndarray_ndim_int64
   !> Get dimension of array
@@ -1688,7 +1706,7 @@ interface ndarray_create
   module procedure ndarray_create_complex_real64_4d
 end interface
 
-!> Create a ndarray wrapper for a Fortran array. NO copy is made, changes 
+!> Create a ndarray wrapper for a Fortran array. NO copy is made, changes
 !> to the Fortran array affect the ndarray and vice versa.
 !>
 !> Only pass contiguous Fortran arrays to this function. This is not checked!
@@ -1772,32 +1790,37 @@ interface cast
   module procedure cast_to_tuple
   module procedure cast_to_NoneType
   module procedure cast_to_ndarray
+  module procedure cast_to_str
+  module procedure cast_to_bytes
+  module procedure cast_to_unicode
   module procedure cast_to_object
-  
+
   module procedure cast_to_char_1d
   module procedure cast_to_chars
-  
+  module procedure cast_from_char_1d
+  module procedure cast_from_chars
+
   module procedure cast_to_int32
   module procedure cast_to_int32_flex
-  module procedure cast_from_int32  
+  module procedure cast_from_int32
   module procedure cast_to_int64
   module procedure cast_to_int64_flex
-  module procedure cast_from_int64  
+  module procedure cast_from_int64
   module procedure cast_to_real32
   module procedure cast_to_real32_flex
-  module procedure cast_from_real32  
+  module procedure cast_from_real32
   module procedure cast_to_real64
   module procedure cast_to_real64_flex
-  module procedure cast_from_real64  
+  module procedure cast_from_real64
   module procedure cast_to_complex_real32
   module procedure cast_to_complex_real32_flex
-  module procedure cast_from_complex_real32  
+  module procedure cast_from_complex_real32
   module procedure cast_to_complex_real64
   module procedure cast_to_complex_real64_flex
-  module procedure cast_from_complex_real64  
+  module procedure cast_from_complex_real64
   module procedure cast_to_logical
   module procedure cast_to_logical_flex
-  module procedure cast_from_logical  
+  module procedure cast_from_logical
 end interface
 
 !> Non-strict casts/transforms between Fortran and Python datatypes
@@ -1807,33 +1830,34 @@ end interface
 !> In contrast to [[cast]], cast_nonstrict tries to convert to the type specified
 !> by the 1st argument even when there is no exact correspondence of types.
 !> Non-strict cast might lead to loss of information (e. g. when casting
-!> a float to an integer) or might need additional memory and time for 
-!> making a copy (e. g. casting a list to a tuple) 
+!> a float to an integer) or might need additional memory and time for
+!> making a copy (e. g. casting a list to a tuple)
 !>
 !> Use to cast/transform a Python [[object]] into a Fortran value
 !> and to cast an unspecific Python [[object]] into more specific objects, such
 !> as [[list]] or [[tuple]], converting between types when necessary.
 !> Fortran values can be scalars or character strings.
-!> 
+!>
 !> Can be used to get the string representation of a Python object
 !> as a Fortran character string.
 !> Python strings are encoded as UTF-8
 interface cast_nonstrict
   module procedure cast_nonstrict_to_list
   module procedure cast_nonstrict_to_tuple
-  
-  ! no cast_nonstrict_to_char_1d, because one can 
+  module procedure cast_nonstrict_to_str
+
+  ! no cast_nonstrict_to_char_1d, because one can
   ! not always return a pointer to a character buffer
-  
+
   module procedure cast_nonstrict_to_chars
-  
-  module procedure cast_nonstrict_to_int32 
-  module procedure cast_nonstrict_to_int64 
-  module procedure cast_nonstrict_to_real32 
-  module procedure cast_nonstrict_to_real64 
-  module procedure cast_nonstrict_to_complex_real32 
-  module procedure cast_nonstrict_to_complex_real64 
-  module procedure cast_nonstrict_to_logical 
+
+  module procedure cast_nonstrict_to_int32
+  module procedure cast_nonstrict_to_int64
+  module procedure cast_nonstrict_to_real32
+  module procedure cast_nonstrict_to_real64
+  module procedure cast_nonstrict_to_complex_real32
+  module procedure cast_nonstrict_to_complex_real64
+  module procedure cast_nonstrict_to_logical
 end interface
 
 ! Class objects that correspond to Python standard exceptions
@@ -1898,7 +1922,7 @@ end type
 !> Only used for writing Python extension modules. Datastructure to hold table of methods of your Python extension module.
 !> Put exactly one instance at Fortran module level.
 !>
-!> Python 3: initialise and configure in PyInit_*module name* function with bind(c, name="PyInit_*module_name*") 
+!> Python 3: initialise and configure in PyInit_*module name* function with bind(c, name="PyInit_*module_name*")
 !>           attribute and type(c_ptr) return value.
 !> Python 2: initialise in init*module name* subroutine with bind(c) attribute
 !>
@@ -1918,10 +1942,10 @@ contains
   procedure, public :: get_method_table => PythonMethodTable_get
 end type
 
-!> Only used for writing Python extension modules. Datastructure to hold information about 
+!> Only used for writing Python extension modules. Datastructure to hold information about
 !> your Python extension module. Put exactly one instance at Fortran module level.
 !>
-!> Python 3: initialise and configure in PyInit_<module name> function with bind(c, name="PyInit_<module_name>") 
+!> Python 3: initialise and configure in PyInit_<module name> function with bind(c, name="PyInit_<module_name>")
 !>           attribute and type(c_ptr) return value.
 !>
 !> Python 2: initialise in init<module name> subroutine with bind(c) attribute
@@ -1938,7 +1962,7 @@ contains
   !>
   !> Python 2: call in init*module name*, ignore return value
   procedure, public :: init => PythonModule_init
-  !> Adds a Python object to the module that can be accessed by 
+  !> Adds a Python object to the module that can be accessed by
   !> my_module.the_name_of_object_added
   !> Useful to add constants to a Python module
   procedure, public :: add_object => PythonModule_add_object
@@ -1951,44 +1975,37 @@ function forpy_initialize(use_numpy) result(ierror)
   !> Set to .false., if you do not need the array features of forpy powered by numpy. (Default: .true.)
   logical, optional, intent(in) :: use_numpy
   integer(kind=C_INT) :: ierror
-  
+
   logical :: numpy_flag
+
   if (present(use_numpy)) then
     numpy_flag = use_numpy
   else
     numpy_flag = .true.
   endif
 
-  ierror = forpy_initialize_helper(.false., numpy_flag)
-end function
-
-!> Deprecated: use forpy_initialize instead
-function forpy_initialize_ext(use_numpy) result(ierror)
-  !> Set to .false., if you do not need the array features of forpy powered by numpy. (Default: .true.)
-  logical, optional, intent(in) :: use_numpy
-  integer(kind=C_INT) :: ierror
-  
-  logical :: numpy_flag
-  if (present(use_numpy)) then
-    numpy_flag = use_numpy
-  else
-    numpy_flag = .true.
-  endif
-
-  ierror = forpy_initialize_helper(.true., numpy_flag)
-end function
-
-function forpy_initialize_helper(is_extension, use_numpy) result(ierror)
-  logical, intent(in) :: is_extension
-  logical, intent(in) :: use_numpy
-  integer(kind=C_INT) :: ierror
-  
-  ! might remove this in the future, since it is required that
-  ! calling Py_Initialize multiple times is safe
-  if (.not. is_extension) then
+  ierror = 1_C_INT
+  if (Py_IsInitialized() == 0_C_INT) then
     call Py_Initialize()
   endif
-  
+
+  ierror = 0_C_INT
+  if (global_forpy_initialized == 0) then
+    ierror = forpy_initialize_forpy_globals()
+    if (ierror == 0_C_INT) then
+      global_forpy_initialized = 1
+    endif
+  endif
+
+  if (ierror == 0_C_INT .and. numpy_flag &
+      .and. .not. c_associated(global_numpy_mod)) then
+    ierror = forpy_initialize_numpy()
+  endif
+end function
+
+function forpy_initialize_forpy_globals() result(ierror)
+  integer(kind=C_INT) :: ierror
+
   ! Initialise Python's None object
   ierror = forpy_initialize_none()
   if (ierror /= 0) then
@@ -2009,7 +2026,7 @@ function forpy_initialize_helper(is_extension, use_numpy) result(ierror)
   if (ierror /= 0) then
     return
   endif
-  
+
   ierror = forpy_initialize_unicode()
   if (ierror /= 0) then
     return
@@ -2020,9 +2037,23 @@ function forpy_initialize_helper(is_extension, use_numpy) result(ierror)
     return
   endif
 
-  if (use_numpy) then
-    ierror = forpy_initialize_numpy()
+  ierror = forpy_initialize_sys_argv()
+  if (ierror /= 0) then
+    return
   endif
+end function
+
+!> Sets sys.argv = [''], since some 3rd party Python modules require
+!> sys.argv[0] - before Python 3.8 sys.argv does not exist in embedded Python,
+!> see https://bugs.python.org/issue32573
+function forpy_initialize_sys_argv() result(ierror)
+  integer(kind=C_INT) :: ierror
+
+  ! there also exist C-API functions to set sys.argv, but they involve wchar_t
+  ! which iso_c_binding does not support and that has platform dep. size
+  ierror = PyRun_SimpleString("import sys" // C_NEW_LINE // &
+                              "if not hasattr(sys, 'argv') or sys.argv==[]:" // C_NEW_LINE // &
+                              "  sys.argv=['']" // C_NEW_LINE // C_NULL_CHAR)
 end function
 
 function forpy_initialize_numpy() result(ierror)
@@ -2038,10 +2069,10 @@ function forpy_initialize_numpy() result(ierror)
     call err_clear
     return
   else
-  
+
     ! TODO: exception checks?
     ierror = box_value(asarray_str, "asarray")
-    
+
     if (.not. c_associated(asarray_str)) then
       ierror = NO_NUMPY_ERROR
       call err_clear
@@ -2169,14 +2200,14 @@ function forpy_initialize_unicode() result(ierror)
 
   type(c_ptr) :: a_unicode
   type(PyObject), pointer :: ptr
-  
+
   character(kind=C_CHAR), dimension(1) :: a
-  character(kind=C_CHAR), dimension(7) :: b 
-  
+  character(kind=C_CHAR), dimension(7) :: b
+
   a = [C_NULL_CHAR]
   b = ['s','t','r','i','c','t', C_NULL_CHAR]
 
-  ! fix for PGI compiler: pgi does not like if a and b are 
+  ! fix for PGI compiler: pgi does not like if a and b are
   ! string literals in this function call
   a_unicode = PyUnicode_DecodeUTF8(a, 0_PY_SSIZE_T_KIND, b)
 
@@ -2226,10 +2257,10 @@ end function
 ! initialise Python standard exceptions
 function forpy_initialize_exceptions() result(ierror)
   integer(kind=C_INT) :: ierror
-  
+
   type(c_ptr) :: tmp
   type(c_ptr) :: builtin_dict
-  
+
   ierror = 0_C_INT
 
   builtin_dict = PyEval_GetBuiltins()
@@ -2237,156 +2268,156 @@ function forpy_initialize_exceptions() result(ierror)
     ierror = 1_C_INT
     return
   endif
-  
-  tmp = PyDict_GetItemString(builtin_dict, "ArithmeticError" // C_NULL_CHAR) 
+
+  tmp = PyDict_GetItemString(builtin_dict, "ArithmeticError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   ArithmeticError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "AssertionError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "AssertionError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   AssertionError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "AttributeError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "AttributeError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   AttributeError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "BaseException" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "BaseException" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   BaseException%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "BufferError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "BufferError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   BufferError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "BytesWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "BytesWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   BytesWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "DeprecationWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "DeprecationWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   DeprecationWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "EOFError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "EOFError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   EOFError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "EnvironmentError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "EnvironmentError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   EnvironmentError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "Exception" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "Exception" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   Exception%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "FloatingPointError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "FloatingPointError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   FloatingPointError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "FutureWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "FutureWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   FutureWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "GeneratorExit" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "GeneratorExit" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   GeneratorExit%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "IOError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "IOError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   IOError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "ImportError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "ImportError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   ImportError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "ImportWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "ImportWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   ImportWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "IndentationError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "IndentationError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   IndentationError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "IndexError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "IndexError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   IndexError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "KeyError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "KeyError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   KeyError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "KeyboardInterrupt" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "KeyboardInterrupt" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   KeyboardInterrupt%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "LookupError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "LookupError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   LookupError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "MemoryError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "MemoryError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   MemoryError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "NameError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "NameError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   NameError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "NotImplementedError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "NotImplementedError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   NotImplementedError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "OSError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "OSError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   OSError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "OverflowError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "OverflowError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   OverflowError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "PendingDeprecationWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "PendingDeprecationWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   PendingDeprecationWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "ReferenceError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "ReferenceError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   ReferenceError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "RuntimeError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "RuntimeError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   RuntimeError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "RuntimeWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "RuntimeWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   RuntimeWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "StandardError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "StandardError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   StandardError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "StopIteration" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "StopIteration" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   StopIteration%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "SyntaxError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "SyntaxError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   SyntaxError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "SyntaxWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "SyntaxWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   SyntaxWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "SystemError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "SystemError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   SystemError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "SystemExit" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "SystemExit" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   SystemExit%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "TabError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "TabError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   TabError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "TypeError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "TypeError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   TypeError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "UnboundLocalError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "UnboundLocalError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   UnboundLocalError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "UnicodeDecodeError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "UnicodeDecodeError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   UnicodeDecodeError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "UnicodeEncodeError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "UnicodeEncodeError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   UnicodeEncodeError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "UnicodeError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "UnicodeError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   UnicodeError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "UnicodeTranslateError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "UnicodeTranslateError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   UnicodeTranslateError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "UnicodeWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "UnicodeWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   UnicodeWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "UserWarning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "UserWarning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   UserWarning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "ValueError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "ValueError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   ValueError%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "Warning" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "Warning" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   Warning%py_object = tmp
-  tmp = PyDict_GetItemString(builtin_dict, "ZeroDivisionError" // C_NULL_CHAR) 
+  tmp = PyDict_GetItemString(builtin_dict, "ZeroDivisionError" // C_NULL_CHAR)
   if (.not. c_associated(tmp)) then; call PyErr_Clear(); endif
   ZeroDivisionError%py_object = tmp
 end function
 
 !> Frees resources used by Python interpreter. Call when finished using forpy.
 subroutine forpy_finalize()
-
+  global_forpy_initialized = 0
   call Py_Decref(global_numpy_asarray_method)
   call Py_Decref(global_numpy_mod)
   global_numpy_asarray_method = C_NULL_PTR
@@ -2394,7 +2425,6 @@ subroutine forpy_finalize()
 
   call Py_Finalize()
 end subroutine
-
 
 !-------------------------------------------------------------------------------------
 ! Functions to check type
@@ -2437,7 +2467,6 @@ logical function is_dict(obj)
 
   is_dict = (check_tp_flags(obj%py_object, ishft(1_C_LONG, 29)) /= 0)
 end function
-
 
 !> Checks if object is a Python float.
 logical function is_float(obj)
@@ -2510,7 +2539,6 @@ logical function is_unicode(obj)
     is_unicode = (PyType_IsSubtype(obj_ptr%ob_type, global_pyunicode_type_ptr) /= 0) ! Check if subtype
   endif
 end function
-
 
 #ifdef PYTHON2
 logical function is_short_int(obj)
@@ -2635,11 +2663,11 @@ function list_create_object(r, obj) result(ierror)
   class(object), intent(in) :: obj
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   r%py_object = PySequence_List(obj%py_object)
-  
-  if (.not. c_associated(r%py_object)) then 
+
+  if (.not. c_associated(r%py_object)) then
     ierror = EXCEPTION_ERROR
   endif
 end function
@@ -2684,17 +2712,16 @@ function tuple_create_int64(r, len) result(ierror)
   endif
 end function
 
-
 function tuple_create_object(r, obj) result(ierror)
   !> the created tuple
   type(tuple), intent(out) :: r
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   r%py_object = PySequence_Tuple(obj%py_object)
-  
-  if (.not. c_associated(r%py_object)) then 
+
+  if (.not. c_associated(r%py_object)) then
     ierror = EXCEPTION_ERROR
   endif
 
@@ -2709,7 +2736,7 @@ function NoneType_create(r) result(ierror)
 
   r%py_object = global_Py_NoneStruct_ptr
   call Py_IncRef(global_Py_NoneStruct_ptr)
-  ierror = 0_C_INT  
+  ierror = 0_C_INT
 
 end function
 
@@ -2719,9 +2746,9 @@ function dict_create(r) result(ierror)
   type(dict), intent(out) :: r
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   r%py_object = PyDict_New()
-  ierror = 0_C_INT 
+  ierror = 0_C_INT
 
   if (.not. c_associated(r%py_object)) then
     ierror = EXCEPTION_ERROR
@@ -2737,7 +2764,7 @@ function dict_copy(self, dest) result(ierror)
   class(dict), intent(in) :: self
   type(dict), intent(out) :: dest
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   dest%py_object = PyDict_Copy(self%py_object)
   if (.not. c_associated(dest%py_object)) then
@@ -2749,7 +2776,7 @@ function dict_keys(self, keys) result(ierror)
   class(dict), intent(in) :: self
   type(list), intent(out) :: keys
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   keys%py_object = PyDict_Keys(self%py_object)
   if (.not. c_associated(keys%py_object)) then
@@ -2761,7 +2788,7 @@ function dict_items(self, items) result(ierror)
   class(dict), intent(in) :: self
   type(list), intent(out) :: items
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   items%py_object = PyDict_Items(self%py_object)
   if (.not. c_associated(items%py_object)) then
@@ -2773,7 +2800,7 @@ function dict_values(self, values) result(ierror)
   class(dict), intent(in) :: self
   type(list), intent(out) :: values
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   values%py_object = PyDict_Values(self%py_object)
   if (.not. c_associated(values%py_object)) then
@@ -2924,26 +2951,25 @@ function list_append_chars(self, item) result(ierror)
   endif
 end function
 
-
 function list_copy(self, dest) result(ierror)
   class(list), intent(in) :: self
   type(list), intent(out) :: dest
   integer(kind=C_INT) :: ierror
-  
+
   ierror = list_create(dest, self)
 end function
 
 function list_sort(self) result(ierror)
   class(list), intent(inout) :: self
   integer(kind=C_INT) :: ierror
-  
+
   ierror = PyList_Sort(self%py_object)
 end function
 
 function list_reverse(self) result(ierror)
   class(list), intent(inout) :: self
   integer(kind=C_INT) :: ierror
-  
+
   ierror = PyList_Reverse(self%py_object)
 end function
 
@@ -2953,7 +2979,7 @@ function list_add(self, result_list, list_to_concatenate) result(ierror)
   type(list), intent(out) :: result_list
   class(list), intent(in) :: list_to_concatenate
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   result_list%py_object = PySequence_Concat(self%py_object, list_to_concatenate%py_object)
   if (.not. c_associated(result_list%py_object)) then
@@ -2966,22 +2992,22 @@ function list_insert_int32(self, ind, item) result(ierror)
   integer(kind=int32), intent(in) :: ind
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: ind_tmp
-  
+
   ind_tmp = int(ind, PY_SSIZE_T_KIND)
-  ierror = PyList_Insert(self%py_object, ind_tmp, item%py_object) 
+  ierror = PyList_Insert(self%py_object, ind_tmp, item%py_object)
 end function
 
 function list_delitem_int32(self, ind) result(ierror)
   class(list), intent(inout) :: self
   integer(kind=int32), intent(in) :: ind
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: ind_tmp
-  
+
   ind_tmp = int(ind, PY_SSIZE_T_KIND)
-  ierror = PySequence_DelItem(self%py_object, ind_tmp) 
+  ierror = PySequence_DelItem(self%py_object, ind_tmp)
 end function
 
 function list_insert_int64(self, ind, item) result(ierror)
@@ -2989,24 +3015,23 @@ function list_insert_int64(self, ind, item) result(ierror)
   integer(kind=int64), intent(in) :: ind
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: ind_tmp
-  
+
   ind_tmp = int(ind, PY_SSIZE_T_KIND)
-  ierror = PyList_Insert(self%py_object, ind_tmp, item%py_object) 
+  ierror = PyList_Insert(self%py_object, ind_tmp, item%py_object)
 end function
 
 function list_delitem_int64(self, ind) result(ierror)
   class(list), intent(inout) :: self
   integer(kind=int64), intent(in) :: ind
   integer(kind=C_INT) :: ierror
-  
-  integer(kind=PY_SSIZE_T_KIND) :: ind_tmp
-  
-  ind_tmp = int(ind, PY_SSIZE_T_KIND)
-  ierror = PySequence_DelItem(self%py_object, ind_tmp) 
-end function
 
+  integer(kind=PY_SSIZE_T_KIND) :: ind_tmp
+
+  ind_tmp = int(ind, PY_SSIZE_T_KIND)
+  ierror = PySequence_DelItem(self%py_object, ind_tmp)
+end function
 
 function sequence_getitem_int32_object(self, item, ind) result(ierror)
   class(Sequence), intent(inout) :: self
@@ -3438,171 +3463,168 @@ function sequence_getitem_int64_chars(self, item, ind) result(ierror)
   endif
 end function
 
-
 function Sequence_len_int32(self, length) result(ierror)
   class(Sequence), intent(in) :: self
   integer(kind=int32), intent(out) :: length
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: length_tmp
-  
+
   ierror = 0_C_INT
   length_tmp = PyObject_Length(self%py_object)
   length = int(length_tmp, int32)
-  
+
   ! TODO: overflow check
   if (length_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
+
 end function
 
 function Sequence_len_int64(self, length) result(ierror)
   class(Sequence), intent(in) :: self
   integer(kind=int64), intent(out) :: length
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: length_tmp
-  
+
   ierror = 0_C_INT
   length_tmp = PyObject_Length(self%py_object)
   length = int(length_tmp, int64)
-  
+
   ! TODO: overflow check
   if (length_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
+
 end function
 
 function Mapping_len_int32(self, length) result(ierror)
   class(Mapping), intent(in) :: self
   integer(kind=int32), intent(out) :: length
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: length_tmp
-  
+
   ierror = 0_C_INT
   length_tmp = PyObject_Length(self%py_object)
   length = int(length_tmp, int32)
-  
+
   ! TODO: overflow check
   if (length_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
+
 end function
 
 function Mapping_len_int64(self, length) result(ierror)
   class(Mapping), intent(in) :: self
   integer(kind=int64), intent(out) :: length
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: length_tmp
-  
+
   ierror = 0_C_INT
   length_tmp = PyObject_Length(self%py_object)
   length = int(length_tmp, int64)
-  
+
   ! TODO: overflow check
   if (length_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
-end function
 
+end function
 
 function sequence_index_int32(self, ind, item) result(ierror)
   class(Sequence), intent(in) :: self
-  integer(kind=int32), intent(out) :: ind  
+  integer(kind=int32), intent(out) :: ind
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: ind_tmp
-  
+
   ierror = 0_C_INT
   ind_tmp = PySequence_Index(self%py_object, item%py_object)
   ind = int(ind_tmp, int32)
-  
+
   ! TODO: overflow check
   if (ind_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
+
 end function
 
 function sequence_count_int32(self, the_count, item) result(ierror)
   class(Sequence), intent(in) :: self
-  integer(kind=int32), intent(out) :: the_count  
+  integer(kind=int32), intent(out) :: the_count
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: the_count_tmp
-  
+
   ierror = 0_C_INT
   the_count_tmp = PySequence_Count(self%py_object, item%py_object)
   the_count = int(the_count_tmp, int32)
-  
+
   ! TODO: overflow check
   if (the_count_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
+
 end function
 
 function sequence_index_int64(self, ind, item) result(ierror)
   class(Sequence), intent(in) :: self
-  integer(kind=int64), intent(out) :: ind  
+  integer(kind=int64), intent(out) :: ind
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: ind_tmp
-  
+
   ierror = 0_C_INT
   ind_tmp = PySequence_Index(self%py_object, item%py_object)
   ind = int(ind_tmp, int64)
-  
+
   ! TODO: overflow check
   if (ind_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
+
 end function
 
 function sequence_count_int64(self, the_count, item) result(ierror)
   class(Sequence), intent(in) :: self
-  integer(kind=int64), intent(out) :: the_count  
+  integer(kind=int64), intent(out) :: the_count
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: the_count_tmp
-  
+
   ierror = 0_C_INT
   the_count_tmp = PySequence_Count(self%py_object, item%py_object)
   the_count = int(the_count_tmp, int64)
-  
+
   ! TODO: overflow check
   if (the_count_tmp == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
   endif
-  
-end function
 
+end function
 
 function sequence_contains(self, contain_flag, item) result(ierror)
   class(sequence), intent(in) :: self
   logical, intent(out) :: contain_flag
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   ! returns -1 on error, 0 if item not contained, 1 if contained
   ierror = PySequence_Contains(self%py_object, item%py_object)
   contain_flag = (ierror == 1_C_INT)
-  
+
   if (contain_flag) then
     ierror = 0_C_INT
   endif
-  
+
 end function
 
 function mutablesequence_setitem_int32_object(self, ind, item) result(ierror)
@@ -3956,8 +3978,6 @@ function mutablesequence_setitem_int64_chars(self, ind, item) result(ierror)
     call Py_DecRef(item_py)
   endif
 end function
-
-
 
 ! See also: http://stackoverflow.com/questions/6111843/limitations-of-pytuple-setitem
 ! Tuple ref-count must be 1 - otherwise cannot set items
@@ -4321,7 +4341,6 @@ function tuple_setitem_int64_chars(self, ind, item) result(ierror)
   endif
 end function
 
-
 function tuple_setitem_int32_object(self, ind, item) result(ierror)
   class(tuple), intent(inout) :: self
   integer(kind=int32), intent(in) :: ind
@@ -4329,7 +4348,7 @@ function tuple_setitem_int32_object(self, ind, item) result(ierror)
   integer(kind=C_INT):: ierror
 
   integer(kind=PY_SSIZE_T_KIND) :: ind_py_ssize_t
-  
+
   ind_py_ssize_t = int(ind, PY_SSIZE_T_KIND)
 
   !tuple: must use PyTuple_SetItem
@@ -4338,7 +4357,7 @@ function tuple_setitem_int32_object(self, ind, item) result(ierror)
 
   call Py_IncRef(item%py_object)
   ierror = PyTuple_SetItem(self%py_object, ind_py_ssize_t, item%py_object)
-  
+
 end function
 
 function tuple_setitem_int64_object(self, ind, item) result(ierror)
@@ -4348,7 +4367,7 @@ function tuple_setitem_int64_object(self, ind, item) result(ierror)
   integer(kind=C_INT):: ierror
 
   integer(kind=PY_SSIZE_T_KIND) :: ind_py_ssize_t
-  
+
   ind_py_ssize_t = int(ind, PY_SSIZE_T_KIND)
 
   !tuple: must use PyTuple_SetItem
@@ -4357,16 +4376,15 @@ function tuple_setitem_int64_object(self, ind, item) result(ierror)
 
   call Py_IncRef(item%py_object)
   ierror = PyTuple_SetItem(self%py_object, ind_py_ssize_t, item%py_object)
-  
-end function
 
+end function
 
 function tuple_add(self, result_tuple, tuple_to_concatenate) result(ierror)
   class(tuple), intent(inout) :: self
   type(tuple), intent(out) :: result_tuple
   class(tuple), intent(inout) :: tuple_to_concatenate
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   result_tuple%py_object = PySequence_Concat(self%py_object, tuple_to_concatenate%py_object)
   if (.not. c_associated(result_tuple%py_object)) then
@@ -5221,7 +5239,6 @@ function mapping_getitem_chars_chars(self, item, key) result(ierror)
 
 end function
 
-
 function mapping_setitem_object_object(self, key, item) result(ierror)
   class(Mapping), intent(inout) :: self
   class(object), intent(in) :: key
@@ -5229,7 +5246,7 @@ function mapping_setitem_object_object(self, key, item) result(ierror)
   integer(kind=C_INT):: ierror
 
   ierror = PyObject_SetItem(self%py_object, key%py_object, item%py_object)
-  
+
 end function
 
 function mapping_delitem_object(self, key) result(ierror)
@@ -5238,7 +5255,7 @@ function mapping_delitem_object(self, key) result(ierror)
   integer(kind=C_INT):: ierror
 
   ierror = PyObject_DelItem(self%py_object, key%py_object)
-  
+
 end function
 
 function mapping_setitem_int32_object(self, key, item) result(ierror)
@@ -5302,7 +5319,7 @@ function mapping_setitem_int32_int32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_int64(self, key, item) result(ierror)
@@ -5329,7 +5346,7 @@ function mapping_setitem_int32_int64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_real32(self, key, item) result(ierror)
@@ -5356,7 +5373,7 @@ function mapping_setitem_int32_real32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_real64(self, key, item) result(ierror)
@@ -5383,7 +5400,7 @@ function mapping_setitem_int32_real64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_complex_real32(self, key, item) result(ierror)
@@ -5410,7 +5427,7 @@ function mapping_setitem_int32_complex_real32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_complex_real64(self, key, item) result(ierror)
@@ -5437,7 +5454,7 @@ function mapping_setitem_int32_complex_real64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_logical(self, key, item) result(ierror)
@@ -5464,7 +5481,7 @@ function mapping_setitem_int32_logical(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_char_1d(self, key, item) result(ierror)
@@ -5491,7 +5508,7 @@ function mapping_setitem_int32_char_1d(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int32_chars(self, key, item) result(ierror)
@@ -5518,7 +5535,7 @@ function mapping_setitem_int32_chars(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_object(self, key, item) result(ierror)
@@ -5582,7 +5599,7 @@ function mapping_setitem_int64_int32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_int64(self, key, item) result(ierror)
@@ -5609,7 +5626,7 @@ function mapping_setitem_int64_int64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_real32(self, key, item) result(ierror)
@@ -5636,7 +5653,7 @@ function mapping_setitem_int64_real32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_real64(self, key, item) result(ierror)
@@ -5663,7 +5680,7 @@ function mapping_setitem_int64_real64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_complex_real32(self, key, item) result(ierror)
@@ -5690,7 +5707,7 @@ function mapping_setitem_int64_complex_real32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_complex_real64(self, key, item) result(ierror)
@@ -5717,7 +5734,7 @@ function mapping_setitem_int64_complex_real64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_logical(self, key, item) result(ierror)
@@ -5744,7 +5761,7 @@ function mapping_setitem_int64_logical(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_char_1d(self, key, item) result(ierror)
@@ -5771,7 +5788,7 @@ function mapping_setitem_int64_char_1d(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_int64_chars(self, key, item) result(ierror)
@@ -5798,7 +5815,7 @@ function mapping_setitem_int64_chars(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_object(self, key, item) result(ierror)
@@ -5862,7 +5879,7 @@ function mapping_setitem_chars_int32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_int64(self, key, item) result(ierror)
@@ -5889,7 +5906,7 @@ function mapping_setitem_chars_int64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_real32(self, key, item) result(ierror)
@@ -5916,7 +5933,7 @@ function mapping_setitem_chars_real32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_real64(self, key, item) result(ierror)
@@ -5943,7 +5960,7 @@ function mapping_setitem_chars_real64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_complex_real32(self, key, item) result(ierror)
@@ -5970,7 +5987,7 @@ function mapping_setitem_chars_complex_real32(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_complex_real64(self, key, item) result(ierror)
@@ -5997,7 +6014,7 @@ function mapping_setitem_chars_complex_real64(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_logical(self, key, item) result(ierror)
@@ -6024,7 +6041,7 @@ function mapping_setitem_chars_logical(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_char_1d(self, key, item) result(ierror)
@@ -6051,7 +6068,7 @@ function mapping_setitem_chars_char_1d(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
+
 end function
 
 function mapping_setitem_chars_chars(self, key, item) result(ierror)
@@ -6078,16 +6095,15 @@ function mapping_setitem_chars_chars(self, key, item) result(ierror)
     call Py_DecRef(item_py)
     call Py_DecRef(ind_py)
   endif
-  
-end function
 
+end function
 
 function mapping_contains(self, contain_flag, item) result(ierror)
   class(Mapping), intent(in) :: self
   logical, intent(out) :: contain_flag
   class(object), intent(in) :: item
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=C_INT) :: cont
   ierror = 0_C_INT
   ! returns 0 if item not contained, 1 if contained
@@ -6096,24 +6112,24 @@ function mapping_contains(self, contain_flag, item) result(ierror)
   ! therefore we have ierror=0 as return value
   cont = PyMapping_HasKey(self%py_object, item%py_object)
   contain_flag = (cont == 1_C_INT)
-  
+
 end function
 
 function dict_get_object_object(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  type(object), intent(out) :: item  
+  type(object), intent(out) :: item
   class(object), intent(in) :: key
   class(object), intent(in) :: default_value
 
   integer(kind=C_INT) :: ierror
 
   ierror = dict_get_helper(self, item%py_object, key%py_object, default_value%py_object, .false.)
-  
+
 end function
 
 function dict_get_int32_object(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  type(object), intent(out) :: item  
+  type(object), intent(out) :: item
   integer(kind=int32), intent(in) :: key
   class(object), intent(in) :: default_value
 
@@ -6129,7 +6145,7 @@ end function
 
 function dict_get_int32_int32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  integer(kind=int32), intent(out) :: item  
+  integer(kind=int32), intent(out) :: item
   integer(kind=int32), intent(in) :: key
   integer(kind=int32), intent(in) :: default_value
 
@@ -6142,21 +6158,21 @@ function dict_get_int32_int32(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_int64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  integer(kind=int64), intent(out) :: item  
+  integer(kind=int64), intent(out) :: item
   integer(kind=int32), intent(in) :: key
   integer(kind=int64), intent(in) :: default_value
 
@@ -6169,21 +6185,21 @@ function dict_get_int32_int64(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_real32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  real(kind=real32), intent(out) :: item  
+  real(kind=real32), intent(out) :: item
   integer(kind=int32), intent(in) :: key
   real(kind=real32), intent(in) :: default_value
 
@@ -6196,21 +6212,21 @@ function dict_get_int32_real32(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_real64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  real(kind=real64), intent(out) :: item  
+  real(kind=real64), intent(out) :: item
   integer(kind=int32), intent(in) :: key
   real(kind=real64), intent(in) :: default_value
 
@@ -6223,21 +6239,21 @@ function dict_get_int32_real64(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_complex_real32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  complex(kind=real32), intent(out) :: item  
+  complex(kind=real32), intent(out) :: item
   integer(kind=int32), intent(in) :: key
   complex(kind=real32), intent(in) :: default_value
 
@@ -6250,21 +6266,21 @@ function dict_get_int32_complex_real32(self, item, key, default_value) result(ie
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_complex_real64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  complex(kind=real64), intent(out) :: item  
+  complex(kind=real64), intent(out) :: item
   integer(kind=int32), intent(in) :: key
   complex(kind=real64), intent(in) :: default_value
 
@@ -6277,21 +6293,21 @@ function dict_get_int32_complex_real64(self, item, key, default_value) result(ie
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_logical(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  logical, intent(out) :: item  
+  logical, intent(out) :: item
   integer(kind=int32), intent(in) :: key
   logical, intent(in) :: default_value
 
@@ -6304,21 +6320,21 @@ function dict_get_int32_logical(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_char_1d(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  character(kind=C_CHAR), dimension(:), pointer, intent(out) :: item  
+  character(kind=C_CHAR), dimension(:), pointer, intent(out) :: item
   integer(kind=int32), intent(in) :: key
   character(kind=C_CHAR), dimension(:), pointer, intent(in) :: default_value
 
@@ -6331,21 +6347,21 @@ function dict_get_int32_char_1d(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int32_chars(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  character(kind=C_CHAR, len=:), allocatable, intent(out) :: item  
+  character(kind=C_CHAR, len=:), allocatable, intent(out) :: item
   integer(kind=int32), intent(in) :: key
   character(kind=C_CHAR, len=:), allocatable, intent(in) :: default_value
 
@@ -6358,21 +6374,21 @@ function dict_get_int32_chars(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_object(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  type(object), intent(out) :: item  
+  type(object), intent(out) :: item
   integer(kind=int64), intent(in) :: key
   class(object), intent(in) :: default_value
 
@@ -6388,7 +6404,7 @@ end function
 
 function dict_get_int64_int32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  integer(kind=int32), intent(out) :: item  
+  integer(kind=int32), intent(out) :: item
   integer(kind=int64), intent(in) :: key
   integer(kind=int32), intent(in) :: default_value
 
@@ -6401,21 +6417,21 @@ function dict_get_int64_int32(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_int64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  integer(kind=int64), intent(out) :: item  
+  integer(kind=int64), intent(out) :: item
   integer(kind=int64), intent(in) :: key
   integer(kind=int64), intent(in) :: default_value
 
@@ -6428,21 +6444,21 @@ function dict_get_int64_int64(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_real32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  real(kind=real32), intent(out) :: item  
+  real(kind=real32), intent(out) :: item
   integer(kind=int64), intent(in) :: key
   real(kind=real32), intent(in) :: default_value
 
@@ -6455,21 +6471,21 @@ function dict_get_int64_real32(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_real64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  real(kind=real64), intent(out) :: item  
+  real(kind=real64), intent(out) :: item
   integer(kind=int64), intent(in) :: key
   real(kind=real64), intent(in) :: default_value
 
@@ -6482,21 +6498,21 @@ function dict_get_int64_real64(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_complex_real32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  complex(kind=real32), intent(out) :: item  
+  complex(kind=real32), intent(out) :: item
   integer(kind=int64), intent(in) :: key
   complex(kind=real32), intent(in) :: default_value
 
@@ -6509,21 +6525,21 @@ function dict_get_int64_complex_real32(self, item, key, default_value) result(ie
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_complex_real64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  complex(kind=real64), intent(out) :: item  
+  complex(kind=real64), intent(out) :: item
   integer(kind=int64), intent(in) :: key
   complex(kind=real64), intent(in) :: default_value
 
@@ -6536,21 +6552,21 @@ function dict_get_int64_complex_real64(self, item, key, default_value) result(ie
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_logical(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  logical, intent(out) :: item  
+  logical, intent(out) :: item
   integer(kind=int64), intent(in) :: key
   logical, intent(in) :: default_value
 
@@ -6563,21 +6579,21 @@ function dict_get_int64_logical(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_char_1d(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  character(kind=C_CHAR), dimension(:), pointer, intent(out) :: item  
+  character(kind=C_CHAR), dimension(:), pointer, intent(out) :: item
   integer(kind=int64), intent(in) :: key
   character(kind=C_CHAR), dimension(:), pointer, intent(in) :: default_value
 
@@ -6590,21 +6606,21 @@ function dict_get_int64_char_1d(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_int64_chars(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  character(kind=C_CHAR, len=:), allocatable, intent(out) :: item  
+  character(kind=C_CHAR, len=:), allocatable, intent(out) :: item
   integer(kind=int64), intent(in) :: key
   character(kind=C_CHAR, len=:), allocatable, intent(in) :: default_value
 
@@ -6617,21 +6633,21 @@ function dict_get_int64_chars(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_object(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  type(object), intent(out) :: item  
+  type(object), intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   class(object), intent(in) :: default_value
 
@@ -6647,7 +6663,7 @@ end function
 
 function dict_get_chars_int32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  integer(kind=int32), intent(out) :: item  
+  integer(kind=int32), intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   integer(kind=int32), intent(in) :: default_value
 
@@ -6660,21 +6676,21 @@ function dict_get_chars_int32(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_int64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  integer(kind=int64), intent(out) :: item  
+  integer(kind=int64), intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   integer(kind=int64), intent(in) :: default_value
 
@@ -6687,21 +6703,21 @@ function dict_get_chars_int64(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_real32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  real(kind=real32), intent(out) :: item  
+  real(kind=real32), intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   real(kind=real32), intent(in) :: default_value
 
@@ -6714,21 +6730,21 @@ function dict_get_chars_real32(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_real64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  real(kind=real64), intent(out) :: item  
+  real(kind=real64), intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   real(kind=real64), intent(in) :: default_value
 
@@ -6741,21 +6757,21 @@ function dict_get_chars_real64(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_complex_real32(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  complex(kind=real32), intent(out) :: item  
+  complex(kind=real32), intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   complex(kind=real32), intent(in) :: default_value
 
@@ -6768,21 +6784,21 @@ function dict_get_chars_complex_real32(self, item, key, default_value) result(ie
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_complex_real64(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  complex(kind=real64), intent(out) :: item  
+  complex(kind=real64), intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   complex(kind=real64), intent(in) :: default_value
 
@@ -6795,21 +6811,21 @@ function dict_get_chars_complex_real64(self, item, key, default_value) result(ie
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_logical(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  logical, intent(out) :: item  
+  logical, intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   logical, intent(in) :: default_value
 
@@ -6822,21 +6838,21 @@ function dict_get_chars_logical(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_char_1d(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  character(kind=C_CHAR), dimension(:), pointer, intent(out) :: item  
+  character(kind=C_CHAR), dimension(:), pointer, intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   character(kind=C_CHAR), dimension(:), pointer, intent(in) :: default_value
 
@@ -6849,21 +6865,21 @@ function dict_get_chars_char_1d(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
+
   call Py_Decref(key_ptr)
-  
+
 end function
 
 function dict_get_chars_chars(self, item, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
-  character(kind=C_CHAR, len=:), allocatable, intent(out) :: item  
+  character(kind=C_CHAR, len=:), allocatable, intent(out) :: item
   character(kind=C_CHAR, len=*), intent(in) :: key
   character(kind=C_CHAR, len=:), allocatable, intent(in) :: default_value
 
@@ -6876,18 +6892,17 @@ function dict_get_chars_chars(self, item, key, default_value) result(ierror)
   endif
 
   ierror = dict_get_helper2(self, item_ptr, key_ptr)
-  
+
   if (c_associated(item_ptr) .and. ierror == 0_C_INT) then
     ierror = unbox_value(item, item_ptr)
     call Py_Decref(item_ptr)
   else
     item = default_value
   endif
-  
-  call Py_Decref(key_ptr)
-  
-end function
 
+  call Py_Decref(key_ptr)
+
+end function
 
 function dict_setdefault_object_object(self, the_value, key, default_value) result(ierror)
   class(dict), intent(inout) :: self
@@ -6901,12 +6916,12 @@ function dict_setdefault_object_object(self, the_value, key, default_value) resu
   integer(kind=C_INT) :: ierror
 
   ierror = dict_get_helper(self, the_value%py_object, key%py_object, default_value%py_object, .true.)
-  
+
 end function
 
 function dict_get_helper(self, item_ptr, key_ptr, default_value_ptr, setdefault) result(ierror)
   class(dict), intent(inout) :: self
-  type(c_ptr), intent(out) :: item_ptr  
+  type(c_ptr), intent(out) :: item_ptr
   type(c_ptr), intent(in) :: key_ptr
   type(c_ptr), intent(in) :: default_value_ptr
   logical, intent(in) :: setdefault
@@ -6919,12 +6934,12 @@ function dict_get_helper(self, item_ptr, key_ptr, default_value_ptr, setdefault)
     !always return default value, when lookup fails
     item_ptr = default_value_ptr
     call Py_IncRef(default_value_ptr)
-  
+
     if (exception_matches(KeyError)) then
       call err_clear()
-      
+
       if (setdefault) then
-        ierror = PyObject_SetItem(self%py_object, key_ptr, default_value_ptr)  
+        ierror = PyObject_SetItem(self%py_object, key_ptr, default_value_ptr)
       endif
     else
       ierror = EXCEPTION_ERROR
@@ -6935,7 +6950,7 @@ end function
 
 function dict_get_helper2(self, item_ptr, key_ptr) result(ierror)
   class(dict), intent(inout) :: self
-  type(c_ptr), intent(out) :: item_ptr  
+  type(c_ptr), intent(out) :: item_ptr
   type(c_ptr), intent(in) :: key_ptr
   integer(kind=C_INT) :: ierror
 
@@ -7011,6 +7026,18 @@ function str_create_char_1d(r, string) result(ierror)
 #endif
 end function
 
+function str_create_object(r, obj) result(ierror)
+  type(str), intent(out) :: r
+  class(object), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  ierror = 0_C_INT
+  r%py_object = PyObject_Str(obj%py_object)
+  if (.not. c_associated(r%py_object)) then
+    ierror = EXCEPTION_ERROR
+  endif
+end function
+
 !-----------------------------------------------------------------------------------------------------
 !> Import a Python module.
 !>
@@ -7050,7 +7077,7 @@ function call_py_attribute(return_value, obj, attr_name, args, kwargs) result(ie
   ierror = obj%getattribute(obj_to_call, attr_name)
 
   if (ierror == 0) then
-  
+
     if (present(kwargs) .and. present(args)) then
       ierror = call_py_object(return_value, obj_to_call, args, kwargs)
     elseif (present(args)) then
@@ -7060,7 +7087,7 @@ function call_py_attribute(return_value, obj, attr_name, args, kwargs) result(ie
     else
       ierror = call_py_object_noargs(return_value, obj_to_call)
     endif
-    
+
     call obj_to_call%destroy()
   endif
 end function
@@ -7147,7 +7174,7 @@ function call_py_noret_attribute(obj, attr_name, args, kwargs) result(ierror)
 
   integer(kind=C_INT) :: ierror
   type(object) :: return_value
-  
+
   if (present(kwargs) .and. present(args)) then
     ierror = call_py(return_value, obj, attr_name, args, kwargs)
   elseif (present(args)) then
@@ -7158,7 +7185,7 @@ function call_py_noret_attribute(obj, attr_name, args, kwargs) result(ierror)
     ierror = call_py(return_value, obj, attr_name)
   endif
 
-  call return_value%destroy    
+  call return_value%destroy
 
 end function
 
@@ -7170,7 +7197,7 @@ function call_py_noret_object(obj_to_call, args, kwargs) result(ierror)
 
   integer(kind=C_INT) :: ierror
   type(object) :: return_value
-  
+
   if (present(kwargs) .and. present(args)) then
     ierror = call_py(return_value, obj_to_call, args, kwargs)
   elseif (present(args)) then
@@ -7181,7 +7208,7 @@ function call_py_noret_object(obj_to_call, args, kwargs) result(ierror)
     ierror = call_py(return_value, obj_to_call)
   endif
 
-  call return_value%destroy    
+  call return_value%destroy
 end function
 
 !-----------------------------------------------------------------------------------------------------
@@ -7192,18 +7219,18 @@ function ndarray_create_nocopy_int32_1d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int32), dimension(:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 1
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "i" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int32")
 #endif
 
@@ -7216,9 +7243,9 @@ function ndarray_create_int32_1d(res, array) result(ierror)
   integer(kind=int32), dimension(:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int32), dimension(:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7231,7 +7258,7 @@ function ndarray_create_int32_1d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int32_1d(self, ptr, order) result(ierror)
@@ -7247,7 +7274,7 @@ function get_data_int32_1d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 1
@@ -7258,8 +7285,8 @@ function get_data_int32_1d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "i" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7276,18 +7303,18 @@ function ndarray_create_nocopy_int64_1d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int64), dimension(:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 1
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "l" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int64")
 #endif
 
@@ -7300,9 +7327,9 @@ function ndarray_create_int64_1d(res, array) result(ierror)
   integer(kind=int64), dimension(:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int64), dimension(:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7315,7 +7342,7 @@ function ndarray_create_int64_1d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int64_1d(self, ptr, order) result(ierror)
@@ -7331,7 +7358,7 @@ function get_data_int64_1d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 1
@@ -7342,8 +7369,8 @@ function get_data_int64_1d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "l" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7360,18 +7387,18 @@ function ndarray_create_nocopy_real32_1d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real32), dimension(:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 1
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "f" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float32")
 #endif
 
@@ -7384,9 +7411,9 @@ function ndarray_create_real32_1d(res, array) result(ierror)
   real(kind=real32), dimension(:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real32), dimension(:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7399,7 +7426,7 @@ function ndarray_create_real32_1d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real32_1d(self, ptr, order) result(ierror)
@@ -7415,7 +7442,7 @@ function get_data_real32_1d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 1
@@ -7426,8 +7453,8 @@ function get_data_real32_1d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "f" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7444,18 +7471,18 @@ function ndarray_create_nocopy_real64_1d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real64), dimension(:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 1
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "d" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float64")
 #endif
 
@@ -7468,9 +7495,9 @@ function ndarray_create_real64_1d(res, array) result(ierror)
   real(kind=real64), dimension(:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real64), dimension(:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7483,7 +7510,7 @@ function ndarray_create_real64_1d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real64_1d(self, ptr, order) result(ierror)
@@ -7499,7 +7526,7 @@ function get_data_real64_1d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 1
@@ -7510,8 +7537,8 @@ function get_data_real64_1d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "d" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7528,18 +7555,18 @@ function ndarray_create_nocopy_complex_real32_1d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real32), dimension(:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 1
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zf" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex64")
 #endif
 
@@ -7552,9 +7579,9 @@ function ndarray_create_complex_real32_1d(res, array) result(ierror)
   complex(kind=real32), dimension(:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real32), dimension(:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7567,7 +7594,7 @@ function ndarray_create_complex_real32_1d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real32_1d(self, ptr, order) result(ierror)
@@ -7583,7 +7610,7 @@ function get_data_complex_real32_1d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 1
@@ -7594,8 +7621,8 @@ function get_data_complex_real32_1d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zf" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7612,18 +7639,18 @@ function ndarray_create_nocopy_complex_real64_1d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real64), dimension(:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 1
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 16_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zd" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex128")
 #endif
 
@@ -7636,9 +7663,9 @@ function ndarray_create_complex_real64_1d(res, array) result(ierror)
   complex(kind=real64), dimension(:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real64), dimension(:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex128")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7651,7 +7678,7 @@ function ndarray_create_complex_real64_1d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real64_1d(self, ptr, order) result(ierror)
@@ -7667,7 +7694,7 @@ function get_data_complex_real64_1d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 1
@@ -7678,8 +7705,8 @@ function get_data_complex_real64_1d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zd" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7696,18 +7723,18 @@ function ndarray_create_nocopy_int32_2d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int32), dimension(:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 2
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "i" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int32")
 #endif
 
@@ -7720,9 +7747,9 @@ function ndarray_create_int32_2d(res, array) result(ierror)
   integer(kind=int32), dimension(:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int32), dimension(:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7735,7 +7762,7 @@ function ndarray_create_int32_2d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int32_2d(self, ptr, order) result(ierror)
@@ -7751,7 +7778,7 @@ function get_data_int32_2d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 2
@@ -7762,8 +7789,8 @@ function get_data_int32_2d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "i" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7780,18 +7807,18 @@ function ndarray_create_nocopy_int64_2d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int64), dimension(:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 2
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "l" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int64")
 #endif
 
@@ -7804,9 +7831,9 @@ function ndarray_create_int64_2d(res, array) result(ierror)
   integer(kind=int64), dimension(:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int64), dimension(:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7819,7 +7846,7 @@ function ndarray_create_int64_2d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int64_2d(self, ptr, order) result(ierror)
@@ -7835,7 +7862,7 @@ function get_data_int64_2d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 2
@@ -7846,8 +7873,8 @@ function get_data_int64_2d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "l" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7864,18 +7891,18 @@ function ndarray_create_nocopy_real32_2d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real32), dimension(:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 2
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "f" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float32")
 #endif
 
@@ -7888,9 +7915,9 @@ function ndarray_create_real32_2d(res, array) result(ierror)
   real(kind=real32), dimension(:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real32), dimension(:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7903,7 +7930,7 @@ function ndarray_create_real32_2d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real32_2d(self, ptr, order) result(ierror)
@@ -7919,7 +7946,7 @@ function get_data_real32_2d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 2
@@ -7930,8 +7957,8 @@ function get_data_real32_2d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "f" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -7948,18 +7975,18 @@ function ndarray_create_nocopy_real64_2d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real64), dimension(:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 2
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "d" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float64")
 #endif
 
@@ -7972,9 +7999,9 @@ function ndarray_create_real64_2d(res, array) result(ierror)
   real(kind=real64), dimension(:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real64), dimension(:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -7987,7 +8014,7 @@ function ndarray_create_real64_2d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real64_2d(self, ptr, order) result(ierror)
@@ -8003,7 +8030,7 @@ function get_data_real64_2d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 2
@@ -8014,8 +8041,8 @@ function get_data_real64_2d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "d" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8032,18 +8059,18 @@ function ndarray_create_nocopy_complex_real32_2d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real32), dimension(:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 2
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zf" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex64")
 #endif
 
@@ -8056,9 +8083,9 @@ function ndarray_create_complex_real32_2d(res, array) result(ierror)
   complex(kind=real32), dimension(:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real32), dimension(:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8071,7 +8098,7 @@ function ndarray_create_complex_real32_2d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real32_2d(self, ptr, order) result(ierror)
@@ -8087,7 +8114,7 @@ function get_data_complex_real32_2d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 2
@@ -8098,8 +8125,8 @@ function get_data_complex_real32_2d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zf" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8116,18 +8143,18 @@ function ndarray_create_nocopy_complex_real64_2d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real64), dimension(:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 2
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 16_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zd" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex128")
 #endif
 
@@ -8140,9 +8167,9 @@ function ndarray_create_complex_real64_2d(res, array) result(ierror)
   complex(kind=real64), dimension(:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real64), dimension(:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex128")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8155,7 +8182,7 @@ function ndarray_create_complex_real64_2d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real64_2d(self, ptr, order) result(ierror)
@@ -8171,7 +8198,7 @@ function get_data_complex_real64_2d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 2
@@ -8182,8 +8209,8 @@ function get_data_complex_real64_2d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zd" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8200,18 +8227,18 @@ function ndarray_create_nocopy_int32_3d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int32), dimension(:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 3
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "i" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int32")
 #endif
 
@@ -8224,9 +8251,9 @@ function ndarray_create_int32_3d(res, array) result(ierror)
   integer(kind=int32), dimension(:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int32), dimension(:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8239,7 +8266,7 @@ function ndarray_create_int32_3d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int32_3d(self, ptr, order) result(ierror)
@@ -8255,7 +8282,7 @@ function get_data_int32_3d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 3
@@ -8266,8 +8293,8 @@ function get_data_int32_3d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "i" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8284,18 +8311,18 @@ function ndarray_create_nocopy_int64_3d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int64), dimension(:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 3
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "l" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int64")
 #endif
 
@@ -8308,9 +8335,9 @@ function ndarray_create_int64_3d(res, array) result(ierror)
   integer(kind=int64), dimension(:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int64), dimension(:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8323,7 +8350,7 @@ function ndarray_create_int64_3d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int64_3d(self, ptr, order) result(ierror)
@@ -8339,7 +8366,7 @@ function get_data_int64_3d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 3
@@ -8350,8 +8377,8 @@ function get_data_int64_3d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "l" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8368,18 +8395,18 @@ function ndarray_create_nocopy_real32_3d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real32), dimension(:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 3
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "f" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float32")
 #endif
 
@@ -8392,9 +8419,9 @@ function ndarray_create_real32_3d(res, array) result(ierror)
   real(kind=real32), dimension(:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real32), dimension(:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8407,7 +8434,7 @@ function ndarray_create_real32_3d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real32_3d(self, ptr, order) result(ierror)
@@ -8423,7 +8450,7 @@ function get_data_real32_3d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 3
@@ -8434,8 +8461,8 @@ function get_data_real32_3d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "f" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8452,18 +8479,18 @@ function ndarray_create_nocopy_real64_3d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real64), dimension(:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 3
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "d" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float64")
 #endif
 
@@ -8476,9 +8503,9 @@ function ndarray_create_real64_3d(res, array) result(ierror)
   real(kind=real64), dimension(:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real64), dimension(:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8491,7 +8518,7 @@ function ndarray_create_real64_3d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real64_3d(self, ptr, order) result(ierror)
@@ -8507,7 +8534,7 @@ function get_data_real64_3d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 3
@@ -8518,8 +8545,8 @@ function get_data_real64_3d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "d" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8536,18 +8563,18 @@ function ndarray_create_nocopy_complex_real32_3d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real32), dimension(:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 3
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zf" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex64")
 #endif
 
@@ -8560,9 +8587,9 @@ function ndarray_create_complex_real32_3d(res, array) result(ierror)
   complex(kind=real32), dimension(:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real32), dimension(:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8575,7 +8602,7 @@ function ndarray_create_complex_real32_3d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real32_3d(self, ptr, order) result(ierror)
@@ -8591,7 +8618,7 @@ function get_data_complex_real32_3d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 3
@@ -8602,8 +8629,8 @@ function get_data_complex_real32_3d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zf" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8620,18 +8647,18 @@ function ndarray_create_nocopy_complex_real64_3d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real64), dimension(:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 3
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 16_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zd" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex128")
 #endif
 
@@ -8644,9 +8671,9 @@ function ndarray_create_complex_real64_3d(res, array) result(ierror)
   complex(kind=real64), dimension(:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real64), dimension(:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex128")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8659,7 +8686,7 @@ function ndarray_create_complex_real64_3d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real64_3d(self, ptr, order) result(ierror)
@@ -8675,7 +8702,7 @@ function get_data_complex_real64_3d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 3
@@ -8686,8 +8713,8 @@ function get_data_complex_real64_3d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zd" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8704,18 +8731,18 @@ function ndarray_create_nocopy_int32_4d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int32), dimension(:,:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 4
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "i" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int32")
 #endif
 
@@ -8728,9 +8755,9 @@ function ndarray_create_int32_4d(res, array) result(ierror)
   integer(kind=int32), dimension(:,:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int32), dimension(:,:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8743,7 +8770,7 @@ function ndarray_create_int32_4d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int32_4d(self, ptr, order) result(ierror)
@@ -8759,7 +8786,7 @@ function get_data_int32_4d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 4
@@ -8770,8 +8797,8 @@ function get_data_int32_4d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "i" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8788,18 +8815,18 @@ function ndarray_create_nocopy_int64_4d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   integer(kind=int64), dimension(:,:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 4
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "l" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "int64")
 #endif
 
@@ -8812,9 +8839,9 @@ function ndarray_create_int64_4d(res, array) result(ierror)
   integer(kind=int64), dimension(:,:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int64), dimension(:,:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "int64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8827,7 +8854,7 @@ function ndarray_create_int64_4d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_int64_4d(self, ptr, order) result(ierror)
@@ -8843,7 +8870,7 @@ function get_data_int64_4d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 4
@@ -8854,8 +8881,8 @@ function get_data_int64_4d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "l" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8872,18 +8899,18 @@ function ndarray_create_nocopy_real32_4d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real32), dimension(:,:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 4
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 4_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "f" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float32")
 #endif
 
@@ -8896,9 +8923,9 @@ function ndarray_create_real32_4d(res, array) result(ierror)
   real(kind=real32), dimension(:,:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real32), dimension(:,:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float32")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8911,7 +8938,7 @@ function ndarray_create_real32_4d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real32_4d(self, ptr, order) result(ierror)
@@ -8927,7 +8954,7 @@ function get_data_real32_4d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 4
@@ -8938,8 +8965,8 @@ function get_data_real32_4d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "f" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -8956,18 +8983,18 @@ function ndarray_create_nocopy_real64_4d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   real(kind=real64), dimension(:,:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 4
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "d" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "float64")
 #endif
 
@@ -8980,9 +9007,9 @@ function ndarray_create_real64_4d(res, array) result(ierror)
   real(kind=real64), dimension(:,:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   real(kind=real64), dimension(:,:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "float64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -8995,7 +9022,7 @@ function ndarray_create_real64_4d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_real64_4d(self, ptr, order) result(ierror)
@@ -9011,7 +9038,7 @@ function get_data_real64_4d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 4
@@ -9022,8 +9049,8 @@ function get_data_real64_4d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "d" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -9040,18 +9067,18 @@ function ndarray_create_nocopy_complex_real32_4d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real32), dimension(:,:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 4
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 8_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zf" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex64")
 #endif
 
@@ -9064,9 +9091,9 @@ function ndarray_create_complex_real32_4d(res, array) result(ierror)
   complex(kind=real32), dimension(:,:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real32), dimension(:,:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex64")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -9079,7 +9106,7 @@ function ndarray_create_complex_real32_4d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real32_4d(self, ptr, order) result(ierror)
@@ -9095,7 +9122,7 @@ function get_data_complex_real32_4d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 4
@@ -9106,8 +9133,8 @@ function get_data_complex_real32_4d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zf" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -9124,18 +9151,18 @@ function ndarray_create_nocopy_complex_real64_4d(res, array) result(ierror)
   type(ndarray), intent(out) :: res
   !> The Fortran array to wrap as ndarray. NO copy is made. Changes to the ndarray affect the Fortran array and
   !> vice versa. MUST be a contiguous array (this is not checked).
-  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a 
+  ! Note: can not use the F2008 CONTIGUOUS attribute here, because a
   ! temporary copy of array could be created with limited lifetime.
   complex(kind=real64), dimension(:,:,:,:), target, intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer, parameter :: NDIM = 4
   integer(kind=PY_SSIZE_T_KIND), parameter :: ITEMSIZE = 16_PY_SSIZE_T_KIND
 
-#ifndef PYTHON2  
+#ifndef PYTHON2
   ierror = ndarray_create_nocopy_helper(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "Zd" // C_NULL_CHAR)
-#else  
+#else
   ierror = ndarray_create_nocopy_helper_py2(res, c_loc(array), shape(array, kind=PY_SSIZE_T_KIND), NDIM, ITEMSIZE, "complex128")
 #endif
 
@@ -9148,9 +9175,9 @@ function ndarray_create_complex_real64_4d(res, array) result(ierror)
   complex(kind=real64), dimension(:,:,:,:), intent(in) :: array
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   complex(kind=real64), dimension(:,:,:,:), pointer :: ptr
-  
+
   ierror = ndarray_create_empty(res, shape(array, kind=PY_SSIZE_T_KIND), "complex128")
   if (ierror /= 0_C_INT) return
   ierror = res%get_data(ptr)
@@ -9163,7 +9190,7 @@ function ndarray_create_complex_real64_4d(res, array) result(ierror)
 end function
 
 !> Get pointer to data of numpy array
-!> 
+!>
 !> Raises BufferError, if array is not contiguous (does not have the required Fortran or C storage order)
 !> Raises TypeError, if Fortran pointer datatype is not compatible with numpy datatype.
 function get_data_complex_real64_4d(self, ptr, order) result(ierror)
@@ -9179,7 +9206,7 @@ function get_data_complex_real64_4d(self, ptr, order) result(ierror)
   character(kind=C_CHAR), optional, intent(in) :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(c_ptr) :: raw_ptr
   integer, parameter :: NDIM = 4
@@ -9190,8 +9217,8 @@ function get_data_complex_real64_4d(self, ptr, order) result(ierror)
   else
     the_order = order
   endif
-  
-  nullify(ptr)  
+
+  nullify(ptr)
   ierror = get_data_helper(self, raw_ptr, shape_info, NDIM, "Zd" // C_NULL_CHAR, the_order)
 
   if (ierror == 0_C_INT) then
@@ -9203,7 +9230,6 @@ function get_data_complex_real64_4d(self, ptr, order) result(ierror)
   endif
 end function
 
-
 #ifndef PYTHON2
 function ndarray_create_nocopy_helper(res, array_c_loc, array_shape, ndim, itemsize, format_c_string) result(ierror)
   type(ndarray), intent(inout) :: res
@@ -9211,7 +9237,7 @@ function ndarray_create_nocopy_helper(res, array_c_loc, array_shape, ndim, items
   integer, intent(in) :: ndim
   integer(kind=PY_SSIZE_T_KIND), target, dimension(ndim), intent(in) :: array_shape
   integer(kind=PY_SSIZE_T_KIND) :: itemsize
-  character(kind=C_CHAR, len=*), target, intent(in) :: format_c_string  
+  character(kind=C_CHAR, len=*), target, intent(in) :: format_c_string
   integer(kind=C_INT) :: ierror
 
   type(Py_buffer) :: buffer
@@ -9225,7 +9251,7 @@ function ndarray_create_nocopy_helper(res, array_c_loc, array_shape, ndim, items
 
   ierror = 0_C_INT
   res%py_object = C_NULL_PTR
-  
+
   length = 1
   do ii = 1, ndim
     length = length * array_shape(ii)
@@ -9263,14 +9289,14 @@ function ndarray_create_nocopy_helper(res, array_c_loc, array_shape, ndim, items
       call Py_Decref(args)
       return
     endif
-    
+
     res%py_object = PyObject_Call(global_numpy_asarray_method, args, C_NULL_PTR)
     call Py_Decref(args)
 
     if (.not. c_associated(res%py_object)) then
       ierror = -1_C_INT
     endif
-    
+
   else ! .not. c_associated(args)
     call Py_Decref(mem_view)
     ierror = -1_C_INT
@@ -9281,16 +9307,16 @@ end function
 
 #ifdef PYTHON2
 ! Python 2 array wrapper creation using old-style, py2-only buffer object + np.frombuffer.
-! In principle with Py 2.7 it would be possible to use the same code as 
+! In principle with Py 2.7 it would be possible to use the same code as
 ! in the Py 3 case, but the memoryview + np.asarray
-! approach is somewhat buggy in Py 2 and one reference is lost 
+! approach is somewhat buggy in Py 2 and one reference is lost
 function ndarray_create_nocopy_helper_py2(res, array_c_loc, array_shape, ndim, itemsize, dtype) result(ierror)
   type(ndarray), intent(inout) :: res
   type(c_ptr), intent(in) :: array_c_loc
   integer, intent(in) :: ndim
   integer(kind=PY_SSIZE_T_KIND), target, dimension(ndim), intent(in) :: array_shape
   integer(kind=PY_SSIZE_T_KIND) :: itemsize
-  character(kind=C_CHAR, len=*), target, intent(in) :: dtype 
+  character(kind=C_CHAR, len=*), target, intent(in) :: dtype
   integer(kind=C_INT) :: ierror
 
   integer(kind=PY_SSIZE_T_KIND) :: length
@@ -9304,7 +9330,7 @@ function ndarray_create_nocopy_helper_py2(res, array_c_loc, array_shape, ndim, i
 
   ierror = -1_C_INT
   res%py_object = C_NULL_PTR
-  
+
   length = 1
   do ii = 1, ndim
     length = length * array_shape(ii)
@@ -9314,45 +9340,45 @@ function ndarray_create_nocopy_helper_py2(res, array_c_loc, array_shape, ndim, i
   if (.not. c_associated(buffer_obj)) then
     return
   endif
-  
+
   buffer%py_object = buffer_obj
-  
+
   ierror = tuple_create(args, 2_PY_SSIZE_T_KIND)
   if (ierror /= 0_C_INT) then
     call buffer%destroy
     return
   endif
-  
+
   ierror = args%setitem(0_PY_SSIZE_T_KIND, buffer)
   if (ierror /= 0_C_INT) then
     call args%destroy
     call buffer%destroy
     return
   endif
-  
+
   ierror = args%setitem(1_PY_SSIZE_T_KIND, dtype)
   if (ierror /= 0_C_INT) then
     call args%destroy
     call buffer%destroy
     return
-  endif 
-  
+  endif
+
   numpy%py_object = global_numpy_mod
   ierror = call_py(retval, numpy, "frombuffer", args)
   call args%destroy
   call buffer%destroy
-  
+
   if (ierror == 0_C_INT) then
     res%py_object = retval%py_object
   else
     call retval%destroy
     return
   endif
-  
+
   if (ndim > 1) then
     ierror = ndarray_reshape_helper(reshaped_array, res, array_shape, 'F')
     call res%destroy
-    
+
     if (ierror == 0_C_INT) then
       res%py_object = reshaped_array%py_object
     else
@@ -9367,56 +9393,56 @@ function ndarray_reshape_helper(reshaped_array, array, new_shape, order) result(
   integer(kind=PY_SSIZE_T_KIND), dimension(:), intent(in) :: new_shape
   character(kind=C_CHAR), intent(in) :: order
   integer(kind=C_INT) :: ierror
-  
+
   type(tuple) :: args
   type(dict) :: kwargs
   type(tuple) :: new_shape_tuple
   type(object) :: retval
-  
+
   reshaped_array%py_object = C_NULL_PTR
-  
+
   ierror = tuple_from_array(new_shape_tuple, new_shape)
   if (ierror /= 0_C_INT) then
     return
   endif
-  
+
   ierror = tuple_create(args, 1_PY_SSIZE_T_KIND)
   if (ierror /= 0_C_INT) then
     call new_shape_tuple%destroy
     return
   endif
-  
+
   ierror = args%setitem(0_PY_SSIZE_T_KIND, new_shape_tuple)
   if (ierror /= 0_C_INT) then
     call args%destroy
     call new_shape_tuple%destroy
     return
   endif
-  
+
   ierror = dict_create(kwargs)
   if (ierror /= 0_C_INT) then
     call args%destroy
     call new_shape_tuple%destroy
     return
   endif
-  
+
   ierror = kwargs%setitem("order", order)
   if (ierror /= 0_C_INT) then
     call kwargs%destroy
     call args%destroy
     call new_shape_tuple%destroy
     return
-  endif   
-  
+  endif
+
   ierror = call_py(retval, array, "reshape", args, kwargs)
   if (ierror == 0_C_INT) then
     ierror = cast(reshaped_array, retval)
     call retval%destroy
   endif
-  
+
   call kwargs%destroy
   call args%destroy
-  call new_shape_tuple%destroy 
+  call new_shape_tuple%destroy
 end function
 #endif
 
@@ -9424,11 +9450,11 @@ end function
 function get_data_helper(self, raw_ptr, shape_info, ndim, format_c_string, order) result(ierror)
   class(ndarray), intent(in) :: self
   type(c_ptr), intent(out) :: raw_ptr
-  integer, intent(in) :: ndim  
+  integer, intent(in) :: ndim
   integer(kind=PY_SSIZE_T_KIND), dimension(ndim), intent(out) :: shape_info
   character(kind=C_CHAR, len=*), target, intent(in) :: format_c_string
   character(kind=C_CHAR), intent(in) :: order
-  
+
   integer(kind=C_INT) :: ierror, flag
   type(Py_buffer) :: buffer
   integer(kind=PY_SSIZE_T_KIND), dimension(:), pointer :: shape_ptr
@@ -9447,7 +9473,7 @@ function get_data_helper(self, raw_ptr, shape_info, ndim, format_c_string, order
 
   ! raises BufferError exception if array is not contiguous, Python 2: ValueError
   ierror = PyObject_GetBuffer(self%py_object, buffer, 156_C_INT) !flags (PyBUF_FORMAT | PyBUF_ANY_CONTIGUOUS) - we need the format info and PyBUF_FORMAT alone gives error
-  
+
   if (ierror /= 0) then
     if (exception_matches(BufferError) .or. exception_matches(ValueError)) then ! make error message more informative
       call err_clear
@@ -9466,7 +9492,7 @@ function get_data_helper(self, raw_ptr, shape_info, ndim, format_c_string, order
       detected_order = 'C'
     endif
   endif
-  
+
   if ((detected_order == 'N') .or. (ndim > 1 .and. order /= 'A' .and. order /= detected_order)) then
     ierror = EXCEPTION_ERROR
     if (order=='F') then
@@ -9518,14 +9544,14 @@ end function
 function get_data_helper_check_dtype(buffer_format, format_c_string) result(flag)
   type(c_ptr), intent(in) :: buffer_format
   character(kind=C_CHAR, len=*), target, intent(in) :: format_c_string
-  
+
   character(kind=C_CHAR, len=2), target :: format_code
   integer(kind=C_INT) :: flag
-  
+
   flag = 1_C_INT
-      
-  ! the Python buffer format codes corresponding to int32 and int64 are systems dependent... 
-   
+
+  ! the Python buffer format codes corresponding to int32 and int64 are systems dependent...
+
   if (format_c_string == "i" // C_NULL_CHAR) then  ! buffer type compatible with int32 requested
     if (int32 == C_INT) then
       format_code = "i" // C_NULL_CHAR
@@ -9539,7 +9565,7 @@ function get_data_helper_check_dtype(buffer_format, format_c_string) result(flag
     endif
     return
   endif
-  
+
   if (format_c_string == "l" // C_NULL_CHAR) then  ! buffer type compatible with int64 requested
     if (int64 == C_LONG) then
       format_code = "l" // C_NULL_CHAR
@@ -9559,8 +9585,8 @@ function get_data_helper_check_dtype(buffer_format, format_c_string) result(flag
     endif
     return
   endif
-  
-  ! this handles all the non-integer cases    
+
+  ! this handles all the non-integer cases
   flag = strcmp(buffer_format, c_loc(format_c_string))
 end function
 
@@ -9568,9 +9594,9 @@ subroutine get_shape_info_helper(shape_info, shape_ptr, order)
   integer(kind=PY_SSIZE_T_KIND), dimension(:), intent(out) :: shape_info
   integer(kind=PY_SSIZE_T_KIND), dimension(:), intent(in) :: shape_ptr
   character(kind=C_CHAR), intent(in) :: order
-  
+
   integer ii, length
-  
+
   if (order == 'F') then
     shape_info = shape_ptr
   elseif (order == 'C') then ! C-order: reverse shape information ("transpose")
@@ -9586,9 +9612,9 @@ function ndarray_transpose(self, transposed_array) result(ierror)
   class(ndarray), intent(in) :: self
   type(ndarray), intent(out) :: transposed_array
   integer(kind=C_INT) :: ierror
-  
+
   type(object) :: retval
-  
+
   ierror = call_py(retval, self, "transpose")
   if (ierror == 0_C_INT) then
     ierror = cast(transposed_array, retval)
@@ -9598,36 +9624,36 @@ end function
 
 !> Returns copy of a ndarray
 !>
-!> order (optional) can be 'F', 'C', 'A' or 'K' 
+!> order (optional) can be 'F', 'C', 'A' or 'K'
 !> (default is 'F' - in numpy it is 'C')
 function ndarray_copy(self, array_copy, order) result(ierror)
   class(ndarray), intent(in) :: self
   type(ndarray), intent(out) :: array_copy
   character(kind=C_CHAR), intent(in), optional :: order
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR) :: the_order
   type(object) :: retval
   type(tuple) :: args
-  
+
   if (.not. present(order)) then
     the_order = 'F'
   else
     the_order = order
   endif
-  
+
   ierror = tuple_create(args, 1_PY_SSIZE_T_KIND)
   if (ierror /= 0_C_INT) then
     return
   endif
-    
+
   ierror = args%setitem(0_PY_SSIZE_T_KIND, the_order)
   if (ierror == 0_C_INT) then
     ierror = call_py(retval, self, "copy", args)
   endif
 
   call args%destroy
-  
+
   if (ierror == 0_C_INT) then
     ierror = cast(array_copy, retval)
     call retval%destroy
@@ -9641,24 +9667,24 @@ function ndarray_is_ordered(self, order) result(is_ordered)
   class(ndarray), intent(in) :: self
   character(kind=C_CHAR), intent(in) :: order
   logical :: is_ordered
-  
+
   type(object) :: retval, flags
   integer(kind=C_INT) :: ierror
   logical :: c_ordered, fortran_ordered, check_c, check_f
-  
+
   is_ordered = .false.
   c_ordered = .false.
   fortran_ordered = .false.
-  
+
   if (have_exception()) return
-  
+
   ierror = self%getattribute(flags, "flags")
   if (ierror /= 0_C_INT) then
     call err_clear
     return
   endif
- 
-  check_f = (order == 'F') .or. (order == 'A') 
+
+  check_f = (order == 'F') .or. (order == 'A')
 
   if (check_f) then
     ierror = flags%getattribute(retval, "f_contiguous")
@@ -9675,9 +9701,9 @@ function ndarray_is_ordered(self, order) result(is_ordered)
       return
     endif
   endif
-  
+
   check_c = (order == 'C') .or. (order == 'A' .and. .not. fortran_ordered)
-  
+
   if (check_c) then
     ierror = flags%getattribute(retval, "c_contiguous")
     if (ierror /= 0_C_INT) then
@@ -9693,10 +9719,10 @@ function ndarray_is_ordered(self, order) result(is_ordered)
       return
     endif
   endif
-  
+
   call flags%destroy
   is_ordered = fortran_ordered .or. c_ordered
-  
+
 end function
 
 !> Returns type string of ndarray.
@@ -9706,20 +9732,20 @@ function ndarray_get_dtype_name(self, dtype_name) result(ierror)
   class(ndarray), intent(in) :: self
   character(kind=C_CHAR, len=:), allocatable, intent(out) :: dtype_name
   integer(kind=C_INT) :: ierror
-  
+
   type(object) :: dtype, dname
-  
+
   ierror = self%getattribute(dtype, "dtype")
   if (ierror /= 0_C_INT) then
     return
   endif
-  
+
   ierror = dtype%getattribute(dname, "name")
   if (ierror /= 0_C_INT) then
     call dtype%destroy
     return
   endif
-  
+
   ierror = cast(dtype_name, dname)
   call dtype%destroy
   call dname%destroy
@@ -9731,14 +9757,14 @@ function ndarray_ndim_int32(self, ndim) result(ierror)
   !> Output: dimensionality of array.
   integer(kind=int32), intent(out) :: ndim
   integer(kind=C_INT) :: ierror
-  
+
   type(object) :: ndim_obj
-  
+
   ierror = self%getattribute(ndim_obj, "ndim")
   if (ierror /= 0_C_INT) then
     return
   endif
-  
+
   ierror = cast(ndim, ndim_obj)
   call ndim_obj%destroy
 end function
@@ -9749,18 +9775,17 @@ function ndarray_ndim_int64(self, ndim) result(ierror)
   !> Output: dimensionality of array.
   integer(kind=int64), intent(out) :: ndim
   integer(kind=C_INT) :: ierror
-  
+
   type(object) :: ndim_obj
-  
+
   ierror = self%getattribute(ndim_obj, "ndim")
   if (ierror /= 0_C_INT) then
     return
   endif
-  
+
   ierror = cast(ndim, ndim_obj)
   call ndim_obj%destroy
 end function
-
 
 !---Routines for creating ndarrays with Python managed storage ---------
 !   numpy.empty, numpy.ones, numpy.zeros
@@ -9776,20 +9801,20 @@ function ndarray_create_empty_aint32(array, a_shape, dtype, order) result(ierror
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -9804,23 +9829,22 @@ function ndarray_create_empty_aint64(array, a_shape, dtype, order) result(ierror
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, "", "F")
+    endif
   endif
 end function
-
 
 function ndarray_create_empty_int32(array, length, dtype, order) result(ierror)
   !> The resulting one dimensional ndarray.
@@ -9833,23 +9857,23 @@ function ndarray_create_empty_int32(array, length, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int32) :: a_shape(1)
   a_shape(1) = length
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int32(array, "empty", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -9864,23 +9888,23 @@ function ndarray_create_empty_int64(array, length, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int64) :: a_shape(1)
   a_shape(1) = length
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int64(array, "empty", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -9895,20 +9919,20 @@ function ndarray_create_zeros_aint32(array, a_shape, dtype, order) result(ierror
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -9923,23 +9947,22 @@ function ndarray_create_zeros_aint64(array, a_shape, dtype, order) result(ierror
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, "", "F")
+    endif
   endif
 end function
-
 
 function ndarray_create_zeros_int32(array, length, dtype, order) result(ierror)
   !> The resulting one dimensional ndarray.
@@ -9952,23 +9975,23 @@ function ndarray_create_zeros_int32(array, length, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int32) :: a_shape(1)
   a_shape(1) = length
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int32(array, "zeros", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -9983,23 +10006,23 @@ function ndarray_create_zeros_int64(array, length, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int64) :: a_shape(1)
   a_shape(1) = length
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int64(array, "zeros", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -10014,20 +10037,20 @@ function ndarray_create_ones_aint32(array, a_shape, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -10042,23 +10065,22 @@ function ndarray_create_ones_aint64(array, a_shape, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, "", "F")
+    endif
   endif
 end function
-
 
 function ndarray_create_ones_int32(array, length, dtype, order) result(ierror)
   !> The resulting one dimensional ndarray.
@@ -10071,23 +10093,23 @@ function ndarray_create_ones_int32(array, length, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int32) :: a_shape(1)
   a_shape(1) = length
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int32(array, "ones", a_shape, "", "F")
+    endif
   endif
 end function
 
@@ -10102,26 +10124,25 @@ function ndarray_create_ones_int64(array, length, dtype, order) result(ierror)
   character(kind=C_CHAR), intent(in), optional :: order
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=int64) :: a_shape(1)
   a_shape(1) = length
-  
+
   if (present(dtype)) then
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, dtype, order)
     else
       ! Fortran order as default, in contrast to numpy
-      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, dtype, "F") 
+      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, dtype, "F")
     endif
   else
     if (present(order)) then
       ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, "", order)
     else
-      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, "", "F") 
-    endif    
+      ierror = ndarray_create_special_impl_int64(array, "ones", a_shape, "", "F")
+    endif
   endif
 end function
-
 
 function ndarray_create_special_impl_int32(array, creator_function, a_shape, dtype, order) result(ierror)
   type(ndarray), intent(out) :: array
@@ -10130,12 +10151,12 @@ function ndarray_create_special_impl_int32(array, creator_function, a_shape, dty
   character(kind=C_CHAR, len=*), intent(in) :: dtype
   character(kind=C_CHAR), intent(in) :: order
   integer(kind=C_INT) :: ierror
-  
+
   type(dict) :: kwargs
-  
+
   ierror = dict_create(kwargs)
   if (ierror /= 0_C_INT) return
-  
+
   if (len(dtype) > 0) then
     ierror = kwargs%setitem("dtype", dtype)
     if (ierror /= 0_C_INT) then
@@ -10143,13 +10164,13 @@ function ndarray_create_special_impl_int32(array, creator_function, a_shape, dty
       return
     endif
   endif
-  
+
   ierror = kwargs%setitem("order", order)
- 
+
   if (ierror == 0_C_INT) then
     ierror = ndarray_create_special_helper_int32(array, creator_function, a_shape, kwargs)
   endif
-  
+
   call kwargs%destroy
 end function
 
@@ -10157,18 +10178,18 @@ function ndarray_create_special_getargs_int32(args, a_shape) result(ierror)
   type(tuple), intent(out) :: args
   integer(kind=int32), dimension(:), intent(in) :: a_shape
   integer(kind=C_INT) :: ierror
-  
+
   type(tuple) :: shape_tuple
-  
+
   ierror = tuple_from_array_int32(shape_tuple, a_shape)
   if (ierror /= 0_C_INT) return
-  
+
   ierror = tuple_create(args, 1_PY_SSIZE_T_KIND)
   if (ierror /= 0_C_INT) then
     call shape_tuple%destroy
     return
   endif
-  
+
   ierror = args%setitem(0_PY_SSIZE_T_KIND, shape_tuple)
   call shape_tuple%destroy
 end function
@@ -10179,22 +10200,22 @@ function ndarray_create_special_helper_int32(array, creator_function, a_shape, k
   integer(kind=int32), dimension(:), intent(in) :: a_shape
   type(dict), intent(in) :: kwargs
   integer(kind=C_INT) :: ierror
-  
+
   type(tuple) :: args
   type(object) :: retval
   type(module_py) :: numpy_mod
-  
+
   ierror = ndarray_create_special_getargs_int32(args, a_shape)
   if (ierror /= 0_C_INT) return
 
-  numpy_mod%py_object = global_numpy_mod 
+  numpy_mod%py_object = global_numpy_mod
   ierror = call_py(retval, numpy_mod, creator_function, args, kwargs)
-  
-  if (ierror == 0_C_INT) then  
+
+  if (ierror == 0_C_INT) then
     ierror = cast(array, retval)
     call retval%destroy
   endif
-  
+
   call args%destroy
 
 end function
@@ -10204,13 +10225,13 @@ function tuple_from_array_int32(tu, arr) result(ierror)
   type(tuple), intent(out) :: tu
   integer(kind=int32), dimension(:), intent(in) :: arr
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: ii, ndim
   ndim = size(arr, kind=PY_SSIZE_T_KIND)
-  
+
   ierror = tuple_create(tu, ndim)
   if (ierror /= 0_C_INT) return
-  
+
   do ii = 1, ndim
     ierror = tu%setitem(ii-1, arr(ii))
     if (ierror /= 0_C_INT) then
@@ -10227,12 +10248,12 @@ function ndarray_create_special_impl_int64(array, creator_function, a_shape, dty
   character(kind=C_CHAR, len=*), intent(in) :: dtype
   character(kind=C_CHAR), intent(in) :: order
   integer(kind=C_INT) :: ierror
-  
+
   type(dict) :: kwargs
-  
+
   ierror = dict_create(kwargs)
   if (ierror /= 0_C_INT) return
-  
+
   if (len(dtype) > 0) then
     ierror = kwargs%setitem("dtype", dtype)
     if (ierror /= 0_C_INT) then
@@ -10240,13 +10261,13 @@ function ndarray_create_special_impl_int64(array, creator_function, a_shape, dty
       return
     endif
   endif
-  
+
   ierror = kwargs%setitem("order", order)
- 
+
   if (ierror == 0_C_INT) then
     ierror = ndarray_create_special_helper_int64(array, creator_function, a_shape, kwargs)
   endif
-  
+
   call kwargs%destroy
 end function
 
@@ -10254,18 +10275,18 @@ function ndarray_create_special_getargs_int64(args, a_shape) result(ierror)
   type(tuple), intent(out) :: args
   integer(kind=int64), dimension(:), intent(in) :: a_shape
   integer(kind=C_INT) :: ierror
-  
+
   type(tuple) :: shape_tuple
-  
+
   ierror = tuple_from_array_int64(shape_tuple, a_shape)
   if (ierror /= 0_C_INT) return
-  
+
   ierror = tuple_create(args, 1_PY_SSIZE_T_KIND)
   if (ierror /= 0_C_INT) then
     call shape_tuple%destroy
     return
   endif
-  
+
   ierror = args%setitem(0_PY_SSIZE_T_KIND, shape_tuple)
   call shape_tuple%destroy
 end function
@@ -10276,22 +10297,22 @@ function ndarray_create_special_helper_int64(array, creator_function, a_shape, k
   integer(kind=int64), dimension(:), intent(in) :: a_shape
   type(dict), intent(in) :: kwargs
   integer(kind=C_INT) :: ierror
-  
+
   type(tuple) :: args
   type(object) :: retval
   type(module_py) :: numpy_mod
-  
+
   ierror = ndarray_create_special_getargs_int64(args, a_shape)
   if (ierror /= 0_C_INT) return
 
-  numpy_mod%py_object = global_numpy_mod 
+  numpy_mod%py_object = global_numpy_mod
   ierror = call_py(retval, numpy_mod, creator_function, args, kwargs)
-  
-  if (ierror == 0_C_INT) then  
+
+  if (ierror == 0_C_INT) then
     ierror = cast(array, retval)
     call retval%destroy
   endif
-  
+
   call args%destroy
 
 end function
@@ -10301,13 +10322,13 @@ function tuple_from_array_int64(tu, arr) result(ierror)
   type(tuple), intent(out) :: tu
   integer(kind=int64), dimension(:), intent(in) :: arr
   integer(kind=C_INT) :: ierror
-  
+
   integer(kind=PY_SSIZE_T_KIND) :: ii, ndim
   ndim = size(arr, kind=PY_SSIZE_T_KIND)
-  
+
   ierror = tuple_create(tu, ndim)
   if (ierror /= 0_C_INT) return
-  
+
   do ii = 1, ndim
     ierror = tu%setitem(ii-1, arr(ii))
     if (ierror /= 0_C_INT) then
@@ -10316,7 +10337,6 @@ function tuple_from_array_int64(tu, arr) result(ierror)
     endif
   enddo
 end function
-
 
 !------------------ Routines for wrapping values into Python objects ("boxing") ----------------------
 #ifndef PYTHON2
@@ -10392,7 +10412,7 @@ function box_value_int64(obj, the_value) result(ierror)
         ierror = box_value_int64_as_long(obj, the_value)
         return
       endif
-    endif  
+    endif
   endif
 
   tmp = int(the_value, C_LONG)
@@ -10575,7 +10595,6 @@ function box_value_char_1d_as_unicodestr(obj, the_value) result(ierror)
 
 end function
 
-
 function box_value_logical(obj, the_value) result(ierror)
   type(c_ptr), intent(out) :: obj
   logical, intent(in) :: the_value
@@ -10602,25 +10621,25 @@ function unbox_value_int32(the_value, obj) result(ierror)
   integer(kind=C_LONG_LONG) :: tmp
   integer :: overflow
   type(c_ptr) :: err_obj
-  
+
   ierror = 0_C_INT
   tmp = PyLong_AsLongLongAndOverflow(obj, overflow)
   the_value = int(tmp, int32)
-  
+
   if (tmp == -1_C_LONG_LONG) then
     if (overflow == 0) then
       err_obj = PyErr_Occurred()
       if (c_associated(err_obj)) then
         ierror = EXCEPTION_ERROR
         return
-      endif 
+      endif
     else
       ierror = EXCEPTION_ERROR
       call raise_exception(OverflowError, "int too big to convert")
       return
     endif
   endif
-  
+
   if (huge(the_value) < huge(tmp)) then
     if (tmp > huge(the_value) .or. tmp < -huge(the_value)) then
       if (tmp /= (-huge(the_value) - 1)) then
@@ -10640,25 +10659,25 @@ function unbox_value_int64(the_value, obj) result(ierror)
   integer(kind=C_LONG_LONG) :: tmp
   integer :: overflow
   type(c_ptr) :: err_obj
-  
+
   ierror = 0_C_INT
   tmp = PyLong_AsLongLongAndOverflow(obj, overflow)
   the_value = int(tmp, int64)
-  
+
   if (tmp == -1_C_LONG_LONG) then
     if (overflow == 0) then
       err_obj = PyErr_Occurred()
       if (c_associated(err_obj)) then
         ierror = EXCEPTION_ERROR
         return
-      endif 
+      endif
     else
       ierror = EXCEPTION_ERROR
       call raise_exception(OverflowError, "int too big to convert")
       return
     endif
   endif
-  
+
   if (huge(the_value) < huge(tmp)) then
     if (tmp > huge(the_value) .or. tmp < -huge(the_value)) then
       if (tmp /= (-huge(the_value) - 1)) then
@@ -10670,7 +10689,6 @@ function unbox_value_int64(the_value, obj) result(ierror)
 
 end function
 
-
 function unbox_value_real32(the_value, obj) result(ierror)
   real(kind=real32), intent(out) :: the_value
   type(c_ptr), intent(in) :: obj
@@ -10678,17 +10696,17 @@ function unbox_value_real32(the_value, obj) result(ierror)
 
   real(kind=C_DOUBLE) :: tmp
   type(c_ptr) :: err_obj
-  
+
   ierror = 0_C_INT
   tmp = PyFloat_AsDouble(obj)
   the_value = real(tmp, real32)
-  
+
   if (tmp == -1.0_C_DOUBLE) then
     err_obj = PyErr_Occurred()
     if (c_associated(err_obj)) then
       ierror = EXCEPTION_ERROR
       return
-    endif 
+    endif
   endif
 
 end function
@@ -10700,21 +10718,20 @@ function unbox_value_real64(the_value, obj) result(ierror)
 
   real(kind=C_DOUBLE) :: tmp
   type(c_ptr) :: err_obj
-  
+
   ierror = 0_C_INT
   tmp = PyFloat_AsDouble(obj)
   the_value = real(tmp, real64)
-  
+
   if (tmp == -1.0_C_DOUBLE) then
     err_obj = PyErr_Occurred()
     if (c_associated(err_obj)) then
       ierror = EXCEPTION_ERROR
       return
-    endif 
+    endif
   endif
 
 end function
-
 
 function unbox_value_complex_real32(the_value, obj) result(ierror)
   complex(kind=real32), intent(out) :: the_value
@@ -10723,18 +10740,18 @@ function unbox_value_complex_real32(the_value, obj) result(ierror)
 
   type(Py_complex) :: tmp
   type(c_ptr) :: err_obj
-  
+
   ierror = 0_C_INT
   tmp = PyComplex_AsCComplex(obj) !this handles objects with __complex__ method correctly
-  
+
   the_value = cmplx(tmp%real_part, tmp%imag_part, kind=real32)
-  
+
   if (tmp%real_part == -1.0_C_DOUBLE) then
     err_obj = PyErr_Occurred()
     if (c_associated(err_obj)) then
       ierror = EXCEPTION_ERROR
       return
-    endif 
+    endif
   endif
 
 end function
@@ -10746,28 +10763,27 @@ function unbox_value_complex_real64(the_value, obj) result(ierror)
 
   type(Py_complex) :: tmp
   type(c_ptr) :: err_obj
-  
+
   ierror = 0_C_INT
   tmp = PyComplex_AsCComplex(obj) !this handles objects with __complex__ method correctly
-  
+
   the_value = cmplx(tmp%real_part, tmp%imag_part, kind=real64)
-  
+
   if (tmp%real_part == -1.0_C_DOUBLE) then
     err_obj = PyErr_Occurred()
     if (c_associated(err_obj)) then
       ierror = EXCEPTION_ERROR
       return
-    endif 
+    endif
   endif
 
 end function
-
 
 function unbox_value_logical(the_value, obj) result(ierror)
   logical, intent(out) :: the_value
   type(c_ptr), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   the_value = .false.
   ierror = PyObject_IsTrue(obj)
   if (ierror /= -1_C_INT) then
@@ -10786,21 +10802,21 @@ function unbox_value_char_1d(the_value, obj) result(ierror)
 
   type(c_ptr) :: char_ptr
   integer(PY_SSIZE_T_KIND) :: length(1)
-  
+
   logical :: obj_is_bytes
   type(object) :: dummy_obj ! just to be able to use is_bytes and is_unicode
 
   ierror = 0_C_INT
   dummy_obj%py_object = obj
-      
+
   obj_is_bytes = is_bytes(dummy_obj)
 
   if (obj_is_bytes) then
-    char_ptr = PyBytes_AsString(obj)  
+    char_ptr = PyBytes_AsString(obj)
   elseif (is_unicode(dummy_obj)) then
 #ifndef PYTHON2
     !C-API-function not available in PY2
-    char_ptr = PyUnicode_AsUTF8AndSize(obj, length(1)) 
+    char_ptr = PyUnicode_AsUTF8AndSize(obj, length(1))
 #else
     char_ptr = C_NULL_PTR
     call raise_exception(TypeError, "forpy: cast of unicode object to character array not supported when using Python 2")
@@ -10808,7 +10824,7 @@ function unbox_value_char_1d(the_value, obj) result(ierror)
   else
     char_ptr = C_NULL_PTR
   endif
-  
+
   if (.not. c_associated(char_ptr)) then
     ierror = EXCEPTION_ERROR
     if (.not. have_exception()) then
@@ -10816,169 +10832,256 @@ function unbox_value_char_1d(the_value, obj) result(ierror)
     endif
     return
   endif
-  
+
   if (obj_is_bytes) then
     length(1) = PyObject_Length(obj)
   endif
-  
+
   if (length(1) == -1_PY_SSIZE_T_KIND) then
     ierror = EXCEPTION_ERROR
     call raise_exception(TypeError, "forpy: Cannot cast to character array")
     return
   endif
-  
+
   ! length 0 strings also seem to work
-  
+
   call c_f_pointer(char_ptr, the_value, length)
 
 end function
 
-! unboxes making a copy
+! unboxes by making a copy
 function unbox_value_chars(the_value, obj) result(ierror)
   character(kind=C_CHAR, len=:), allocatable, intent(out) :: the_value
   type(c_ptr), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   character(kind=C_CHAR), dimension(:), pointer :: char_ptr
-  
+
   ierror = unbox_value_char_1d(char_ptr, obj)
-  
+
   if (ierror == 0_C_INT) then
     call char_1d_to_chars(char_ptr, the_value)
   endif
-  
+
 end function
+
+#ifdef PYTHON2
+function unbox_value_chars_py2(the_value, obj) result(ierror)
+
+  character(kind=C_CHAR, len=:), allocatable, intent(out) :: the_value
+  type(c_ptr), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  type(c_ptr) :: bytes_obj
+  type(object) :: dummy_obj
+
+  dummy_obj%py_object = obj
+  ierror = EXCEPTION_ERROR
+
+  ! py2 unicode strategy: convert to Python str object first
+  if (is_unicode(dummy_obj)) then
+    bytes_obj = PyUnicode_AsUTF8String(obj)
+    if (c_associated(bytes_obj)) then
+      ierror = unbox_value_chars(the_value, bytes_obj)
+      call Py_Decref(bytes_obj)
+    endif
+  else
+    ierror = unbox_value_chars(the_value, obj)
+  endif
+end function
+#endif
 
 subroutine char_1d_to_chars(inp, outp)
   character(kind=C_CHAR), dimension(:), intent(in) :: inp
   character(kind=C_CHAR, len=:), allocatable, intent(inout) :: outp
-  
+
   integer :: length, ii
-  
+
   length = size(inp)
-  
-  ! Check allocation fails?
+
   if (allocated(outp)) then
     deallocate(outp)
   endif
-  
+
   allocate(character(kind=C_CHAR, len=length) :: outp)
-  
+
   do ii = 1, length
     outp(ii:ii) = inp(ii)
   enddo
-  
+
 end subroutine
 
 !------------- Routines for (safely) casting types ---------------------
 ! Note: They do not transfer ownership to casted object - both input and
 ! output object have to be destroyed
 
-function cast_to_list(li, obj) result(ierror)
-  type(list), intent(out) :: li
+function cast_to_list(list_out, obj) result(ierror)
+  type(list), intent(out) :: list_out
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
 
   if (is_list(obj)) then
     ierror = 0_C_INT
-    li%py_object = obj%py_object
+    list_out%py_object = obj%py_object
     call Py_IncRef(obj%py_object)
   else
-    li%py_object = C_NULL_PTR
+    list_out%py_object = C_NULL_PTR
     ierror = EXCEPTION_ERROR
     call raise_exception(TypeError, "forpy: Could not cast to list.")
   endif
 end function
 
-function cast_nonstrict_to_list(li, obj) result(ierror)
-  type(list), intent(out) :: li
-  class(object), intent(in) :: obj
-  integer(kind=C_INT) :: ierror
-
-  if (is_list(obj)) then
-    ierror = 0_C_INT
-    li%py_object = obj%py_object
-    call Py_IncRef(obj%py_object)
-  else
-    ierror = list_create(li, obj)
-  endif
-end function
-
-function cast_to_dict(di, obj) result(ierror)
-  type(dict), intent(out) :: di
+function cast_to_dict(dict_out, obj) result(ierror)
+  type(dict), intent(out) :: dict_out
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
 
   if (is_dict(obj)) then
     ierror = 0_C_INT
-    di%py_object = obj%py_object
+    dict_out%py_object = obj%py_object
     call Py_IncRef(obj%py_object)
   else
-    di%py_object = C_NULL_PTR
+    dict_out%py_object = C_NULL_PTR
     ierror = EXCEPTION_ERROR
     call raise_exception(TypeError, "forpy: Could not cast to dict.")
   endif
 end function
 
-function cast_to_tuple(tu, obj) result(ierror)
-  type(tuple), intent(out) :: tu
+function cast_to_tuple(tuple_out, obj) result(ierror)
+  type(tuple), intent(out) :: tuple_out
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
 
   if (is_tuple(obj)) then
     ierror = 0_C_INT
-    tu%py_object = obj%py_object
+    tuple_out%py_object = obj%py_object
     call Py_IncRef(obj%py_object)
   else
-    tu%py_object = C_NULL_PTR
+    tuple_out%py_object = C_NULL_PTR
     ierror = EXCEPTION_ERROR
     call raise_exception(TypeError, "forpy: Could not cast to tuple.")
   endif
 end function
 
-function cast_nonstrict_to_tuple(tu, obj) result(ierror)
-  type(tuple), intent(out) :: tu
-  class(object), intent(in) :: obj
-  integer(kind=C_INT) :: ierror
-
-  if (is_tuple(obj)) then
-    ierror = 0_C_INT
-    tu%py_object = obj%py_object
-    call Py_IncRef(obj%py_object)
-  else
-    ierror = tuple_create(tu, obj)
-  endif
-end function
-
-function cast_to_NoneType(no, obj) result(ierror)
-  type(NoneType), intent(out) :: no
+function cast_to_NoneType(NoneType_out, obj) result(ierror)
+  type(NoneType), intent(out) :: NoneType_out
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
 
   if (is_none(obj)) then
     ierror = 0_C_INT
-    no%py_object = obj%py_object
+    NoneType_out%py_object = obj%py_object
     call Py_IncRef(obj%py_object)
   else
-    no%py_object = C_NULL_PTR
+    NoneType_out%py_object = C_NULL_PTR
     ierror = EXCEPTION_ERROR
     call raise_exception(TypeError, "forpy: Could not cast to NoneType.")
   endif
 end function
 
-function cast_to_ndarray(nd, obj) result(ierror)
-  type(ndarray), intent(out) :: nd
+function cast_to_ndarray(ndarray_out, obj) result(ierror)
+  type(ndarray), intent(out) :: ndarray_out
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
 
   if (is_ndarray(obj)) then
     ierror = 0_C_INT
-    nd%py_object = obj%py_object
+    ndarray_out%py_object = obj%py_object
     call Py_IncRef(obj%py_object)
   else
-    nd%py_object = C_NULL_PTR
+    ndarray_out%py_object = C_NULL_PTR
     ierror = EXCEPTION_ERROR
     call raise_exception(TypeError, "forpy: Could not cast to ndarray.")
+  endif
+end function
+
+function cast_to_str(str_out, obj) result(ierror)
+  type(str), intent(out) :: str_out
+  class(object), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  if (is_str(obj)) then
+    ierror = 0_C_INT
+    str_out%py_object = obj%py_object
+    call Py_IncRef(obj%py_object)
+  else
+    str_out%py_object = C_NULL_PTR
+    ierror = EXCEPTION_ERROR
+    call raise_exception(TypeError, "forpy: Could not cast to str.")
+  endif
+end function
+
+function cast_to_bytes(bytes_out, obj) result(ierror)
+  type(bytes), intent(out) :: bytes_out
+  class(object), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  if (is_bytes(obj)) then
+    ierror = 0_C_INT
+    bytes_out%py_object = obj%py_object
+    call Py_IncRef(obj%py_object)
+  else
+    bytes_out%py_object = C_NULL_PTR
+    ierror = EXCEPTION_ERROR
+    call raise_exception(TypeError, "forpy: Could not cast to bytes.")
+  endif
+end function
+
+function cast_to_unicode(unicode_out, obj) result(ierror)
+  type(unicode), intent(out) :: unicode_out
+  class(object), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  if (is_unicode(obj)) then
+    ierror = 0_C_INT
+    unicode_out%py_object = obj%py_object
+    call Py_IncRef(obj%py_object)
+  else
+    unicode_out%py_object = C_NULL_PTR
+    ierror = EXCEPTION_ERROR
+    call raise_exception(TypeError, "forpy: Could not cast to unicode.")
+  endif
+end function
+
+function cast_nonstrict_to_list(list_out, obj) result(ierror)
+  type(list), intent(out) :: list_out
+  class(object), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  if (is_list(obj)) then
+    ierror = 0_C_INT
+    list_out%py_object = obj%py_object
+    call Py_IncRef(obj%py_object)
+  else
+    ierror = list_create(list_out, obj)
+  endif
+end function
+
+function cast_nonstrict_to_tuple(tuple_out, obj) result(ierror)
+  type(tuple), intent(out) :: tuple_out
+  class(object), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  if (is_tuple(obj)) then
+    ierror = 0_C_INT
+    tuple_out%py_object = obj%py_object
+    call Py_IncRef(obj%py_object)
+  else
+    ierror = tuple_create(tuple_out, obj)
+  endif
+end function
+
+function cast_nonstrict_to_str(str_out, obj) result(ierror)
+  type(str), intent(out) :: str_out
+  class(object), intent(in) :: obj
+  integer(kind=C_INT) :: ierror
+
+  if (is_str(obj)) then
+    ierror = 0_C_INT
+    str_out%py_object = obj%py_object
+    call Py_IncRef(obj%py_object)
+  else
+    ierror = str_create(str_out, obj)
   endif
 end function
 
@@ -10986,7 +11089,7 @@ function cast_to_object(plain_obj, obj) result(ierror)
   type(object), intent(out) :: plain_obj
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = 0_C_INT
   plain_obj%py_object = obj%py_object
   call Py_IncRef(obj%py_object)
@@ -11024,7 +11127,7 @@ function cast_nonstrict_to_int32(out_value, obj) result(ierror)
   integer(kind=int32), intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = cast(out_value, obj, .false.)
 end function
 
@@ -11058,7 +11161,7 @@ function cast_nonstrict_to_int64(out_value, obj) result(ierror)
   integer(kind=int64), intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = cast(out_value, obj, .false.)
 end function
 
@@ -11092,7 +11195,7 @@ function cast_nonstrict_to_real32(out_value, obj) result(ierror)
   real(kind=real32), intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = cast(out_value, obj, .false.)
 end function
 
@@ -11126,7 +11229,7 @@ function cast_nonstrict_to_real64(out_value, obj) result(ierror)
   real(kind=real64), intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = cast(out_value, obj, .false.)
 end function
 
@@ -11160,7 +11263,7 @@ function cast_nonstrict_to_complex_real32(out_value, obj) result(ierror)
   complex(kind=real32), intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = cast(out_value, obj, .false.)
 end function
 
@@ -11194,7 +11297,7 @@ function cast_nonstrict_to_complex_real64(out_value, obj) result(ierror)
   complex(kind=real64), intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = cast(out_value, obj, .false.)
 end function
 
@@ -11228,23 +11331,38 @@ function cast_nonstrict_to_logical(out_value, obj) result(ierror)
   logical, intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   ierror = cast(out_value, obj, .false.)
 end function
 
-
-! casts to strings
+! casts to/from strings
 function cast_to_chars(out_value, obj) result(ierror)
   character(kind=C_CHAR, len=:), allocatable, intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   if (is_str(obj) .or. is_bytes(obj) .or. is_unicode(obj)) then
     ierror = unbox_value(out_value, obj%py_object)
   else
     ierror = EXCEPTION_ERROR
     call raise_exception(TypeError, "forpy: Could not cast to character(kind=C_CHAR, len=:).")
   endif
+end function
+
+function cast_from_chars(obj, in_value) result(ierror)
+  type(object), intent(out) :: obj
+  character(kind=C_CHAR, len=*), intent(in) :: in_value
+  integer(kind=C_INT) :: ierror
+
+  ierror = box_value(obj%py_object, in_value)
+end function
+
+function cast_from_char_1d(obj, in_value) result(ierror)
+  type(object), intent(out) :: obj
+  character(kind=C_CHAR), dimension(:), intent(in) :: in_value
+  integer(kind=C_INT) :: ierror
+
+  ierror = box_value(obj%py_object, in_value)
 end function
 
 function cast_to_char_1d(out_value, obj) result(ierror)
@@ -11264,21 +11382,21 @@ function cast_nonstrict_to_chars(out_value, obj) result(ierror)
   character(kind=C_CHAR, len=:), allocatable, intent(out) :: out_value
   class(object), intent(in) :: obj
   integer(kind=C_INT) :: ierror
-  
+
   type(c_ptr) :: str_obj
-  
+
   if (is_str(obj) .or. is_bytes(obj) .or. is_unicode(obj)) then
     ierror = unbox_value(out_value, obj%py_object)
     return
   endif
-  
+
   str_obj = PyObject_Str(obj%py_object)
-  
+
   if (.not. c_associated(str_obj)) then
     ierror = EXCEPTION_ERROR
     return
   endif
-  
+
   ierror = unbox_value(out_value, str_obj)
   call Py_DecRef(str_obj)
 end function
@@ -11289,7 +11407,7 @@ function cast_from_int32(obj, in_value) result(ierror)
   type(object), intent(out) :: obj
   integer(kind=int32), intent(in) :: in_value
   integer(kind=C_INT) :: ierror
-  
+
   ierror = box_value(obj%py_object, in_value)
 end function
 
@@ -11297,7 +11415,7 @@ function cast_from_int64(obj, in_value) result(ierror)
   type(object), intent(out) :: obj
   integer(kind=int64), intent(in) :: in_value
   integer(kind=C_INT) :: ierror
-  
+
   ierror = box_value(obj%py_object, in_value)
 end function
 
@@ -11305,7 +11423,7 @@ function cast_from_real32(obj, in_value) result(ierror)
   type(object), intent(out) :: obj
   real(kind=real32), intent(in) :: in_value
   integer(kind=C_INT) :: ierror
-  
+
   ierror = box_value(obj%py_object, in_value)
 end function
 
@@ -11313,7 +11431,7 @@ function cast_from_real64(obj, in_value) result(ierror)
   type(object), intent(out) :: obj
   real(kind=real64), intent(in) :: in_value
   integer(kind=C_INT) :: ierror
-  
+
   ierror = box_value(obj%py_object, in_value)
 end function
 
@@ -11321,7 +11439,7 @@ function cast_from_complex_real32(obj, in_value) result(ierror)
   type(object), intent(out) :: obj
   complex(kind=real32), intent(in) :: in_value
   integer(kind=C_INT) :: ierror
-  
+
   ierror = box_value(obj%py_object, in_value)
 end function
 
@@ -11329,7 +11447,7 @@ function cast_from_complex_real64(obj, in_value) result(ierror)
   type(object), intent(out) :: obj
   complex(kind=real64), intent(in) :: in_value
   integer(kind=C_INT) :: ierror
-  
+
   ierror = box_value(obj%py_object, in_value)
 end function
 
@@ -11337,10 +11455,9 @@ function cast_from_logical(obj, in_value) result(ierror)
   type(object), intent(out) :: obj
   logical, intent(in) :: in_value
   integer(kind=C_INT) :: ierror
-  
+
   ierror = box_value(obj%py_object, in_value)
 end function
-
 
 !===============================================================================
 ! Assignment with Python semantics
@@ -11354,7 +11471,7 @@ end function
 subroutine assign_py_object(lhs, rhs)
   type(object), intent(out) :: lhs
   class(object), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
@@ -11365,7 +11482,7 @@ end subroutine
 subroutine assign_py_list(lhs, rhs)
   type(list), intent(out) :: lhs
   class(list), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
@@ -11376,7 +11493,7 @@ end subroutine
 subroutine assign_py_tuple(lhs, rhs)
   type(tuple), intent(out) :: lhs
   class(tuple), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
@@ -11387,7 +11504,7 @@ end subroutine
 subroutine assign_py_dict(lhs, rhs)
   type(dict), intent(out) :: lhs
   class(dict), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
@@ -11398,7 +11515,7 @@ end subroutine
 subroutine assign_py_ndarray(lhs, rhs)
   type(ndarray), intent(out) :: lhs
   class(ndarray), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
@@ -11409,7 +11526,7 @@ end subroutine
 subroutine assign_py_type_py(lhs, rhs)
   type(type_py), intent(out) :: lhs
   class(type_py), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
@@ -11420,7 +11537,7 @@ end subroutine
 subroutine assign_py_module_py(lhs, rhs)
   type(module_py), intent(out) :: lhs
   class(module_py), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
@@ -11431,11 +11548,10 @@ end subroutine
 subroutine assign_py_NoneType(lhs, rhs)
   type(NoneType), intent(out) :: lhs
   class(NoneType), intent(in) :: rhs
-  
+
   lhs%py_object = rhs%py_object
   call Py_IncRef(lhs%py_object)
 end subroutine
-
 
 !===============================================================================
 ! Exception handling
@@ -11448,22 +11564,22 @@ end subroutine
 function exception_matches(exc) result(is_match)
   class(object), intent(in) :: exc
   logical :: is_match
-  
+
   type(c_ptr) :: err_obj
-  
+
   err_obj = PyErr_Occurred()
-  
+
   if (c_associated(err_obj) .and. c_associated(exc%py_object)) then
     is_match = (PyErr_GivenExceptionMatches(err_obj, exc%py_object) == 1)
     return
   endif
-  
+
   is_match = .false.
 end function
 
 !> Clears an exception.
 !>
-!> No effect if no exception happened. Must be called 
+!> No effect if no exception happened. Must be called
 !> after handling an exception, otherwise
 !> future forpy/Python operations can fail in strange ways.
 subroutine err_clear()
@@ -11483,7 +11599,7 @@ end subroutine
 !> returns .true. if an exception has occurred
 function have_exception()
   logical :: have_exception
-  
+
   type(c_ptr) :: err_obj
   err_obj = PyErr_Occurred()
   have_exception = c_associated(err_obj)
@@ -11496,7 +11612,7 @@ subroutine raise_exception(exc_type, message)
   !> Example: call raise_exception(ValueError, "bad value")
   class(object), intent(in) :: exc_type
   character(kind=C_CHAR, len=*), intent(in) :: message
-  
+
   call PyErr_SetString(exc_type%py_object, message // C_NULL_CHAR)
 end subroutine
 
@@ -11518,9 +11634,9 @@ function PythonModule_init(self, module_name, doc_string, method_table) result(m
 
   module_ptr = C_NULL_PTR
   self%module_ptr = C_NULL_PTR
-  
+
   allocate(self%module_def) ! never deallocated, for reasons given in PythonMethodTable_init
-  
+
   self%module_def = PyModuleDef(PyModuleDef_Base(1_PY_SSIZE_T_KIND, C_NULL_PTR, C_NULL_PTR, &
                                                  0_PY_SSIZE_T_KIND, C_NULL_PTR), &
                                C_NULL_PTR, C_NULL_PTR, -1_PY_SSIZE_T_KIND, C_NULL_PTR, C_NULL_PTR, &
@@ -11530,11 +11646,11 @@ function PythonModule_init(self, module_name, doc_string, method_table) result(m
   self%module_name = module_name // C_NULL_CHAR
   allocate(character(kind=C_CHAR,len=len(doc_string)+1) :: self%doc_string)
   self%doc_string = doc_string // C_NULL_CHAR
-                               
+
   self%module_def%m_methods = method_table%get_method_table()
   self%module_def%m_name = c_loc(self%module_name)
   self%module_def%m_doc = c_loc(self%doc_string)
-  
+
 #ifndef PYTHON2
   module_ptr = PyModule_Create2(c_loc(self%module_def), PYTHON_API_VERSION)
 #else
@@ -11553,7 +11669,7 @@ function PythonModule_add_object(self, object_name, obj) result(ierror)
   class(object), intent(in) :: obj
   !> Error code, 0 on success.
   integer(kind=C_INT) :: ierror
-  
+
   call Py_IncRef(obj%py_object)  !PyModule_AddObject steals a reference
   ierror = PyModule_AddObject(self%module_ptr, object_name // C_NULL_CHAR, obj%py_object)
 end function
@@ -11562,7 +11678,7 @@ subroutine PythonMethodTable_init(self, num_methods)
   class(PythonMethodTable), intent(inout) :: self
   !> The number of methods your Python module shall have.
   integer, intent(in) :: num_methods
-  
+
   integer :: ii
   self%num_methods = num_methods
   self%method_count = 0
@@ -11571,7 +11687,7 @@ subroutine PythonMethodTable_init(self, num_methods)
   ! sometimes impossible. There exist kind of a finish method, so this could be a TODO
   allocate(self%methods(num_methods+1)) !need extra space for sentinel entry
   allocate(self%strings(num_methods))
-  
+
   do ii = 1, num_methods + 1
     ! at the end of methods array there has to be this sentinel value
     ! just to be safe, initialise complete method array with it
@@ -11604,26 +11720,26 @@ subroutine PythonMethodTable_add_method(self, method_name, doc_string, flags, me
   !> The function must return a Python object type(c_ptr).
   !> Use object%get_c_ptr() to retrieve the c_ptr from a forpy object.
   type(c_funptr), intent(in) :: method_funptr
-  
+
   integer :: ind
   type(c_ptr) :: method_name_loc, doc_string_loc
-  
+
   if (self%method_count >= self%num_methods) then
     call raise_exception(ImportError, "forpy: Could not add method. Increase num_methods in PythonMethodTable%init")
     return
   endif
-  
+
   ind = self%method_count + 1
-  
+
   allocate(character(kind=C_CHAR,len=len(method_name)+1) :: self%strings(ind)%method_name)
   self%strings(ind)%method_name = method_name // C_NULL_CHAR
-  
+
   allocate(character(kind=C_CHAR,len=len(doc_string)+1) :: self%strings(ind)%doc_string)
   self%strings(ind)%doc_string = doc_string // C_NULL_CHAR
-  
+
   method_name_loc = c_loc(self%strings(ind)%method_name)
   doc_string_loc = c_loc(self%strings(ind)%doc_string)
-  
+
   self%methods(ind) = PyMethodDef(method_name_loc, method_funptr, flags, doc_string_loc)
   self%method_count = self%method_count + 1
 end subroutine
@@ -11643,7 +11759,7 @@ subroutine unsafe_cast_from_c_ptr(obj, ptr)
   class(object), intent(out) :: obj
   !> C pointer to cast from
   type(c_ptr), intent(in) :: ptr
-  
+
   call Py_IncRef(ptr)
   obj%py_object = ptr
 end subroutine
@@ -11670,24 +11786,24 @@ function print_py(obj, kwargs) result(ierror)
     ierror = EXCEPTION_ERROR
     return
   endif
-  
+
   tmp = PyDict_GetItemString(builtin_dict, "print" // C_NULL_CHAR) !borrowed ref
   print_fun%py_object = tmp
 
   ierror = tuple_create(args, 1)
   if (ierror /= 0_C_INT) return
-  
+
   ierror = args%setitem(0, obj)
   if (ierror /= 0_C_INT) then
     call args%destroy
   endif
-  
+
   if (present(kwargs)) then
     ierror = call_py_noret(print_fun, args, kwargs)
   else
     ierror = call_py_noret(print_fun, args)
   endif
-  
+
   call args%destroy
   ! do not destroy print_fun: borrowed ref
 
@@ -11699,11 +11815,11 @@ end function
 function get_sys_path(paths) result(ierror)
   !> Output: list of module search paths
   type(list), intent(out) :: paths
-  !> Error code, 0 on success  
+  !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   type(object) :: tmp
-  
+
   tmp%py_object = PySys_GetObject("path" // C_NULL_CHAR)
   ierror = cast(paths, tmp)
   ! not destroying tmp, because PySys_GetObject returns borrowed reference
@@ -11715,7 +11831,7 @@ function run_string(string) result(ierror)
   character(kind=C_CHAR, len=*), intent(in) :: string
   !> Error code, 0 on success
   integer(kind=C_INT) :: ierror
-  
+
   integer :: length
   length = len(string)
   ! check if null-byte is at and of string, if not append it, which can

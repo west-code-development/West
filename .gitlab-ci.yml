@@ -30,13 +30,13 @@ stages:
     - cd QEDIR
     - git describe --tags --always
     - ./configure
-    - make -j8 pw
+    - make -j4 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe --tags --always
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-    - make all
+    - make -j4 all
     - ls ../bin
 
 .template_test:
@@ -46,15 +46,15 @@ stages:
     - cd QEDIR
     - git describe --tags --always
     - ./configure
-    - make -j8 pw
+    - make -j4 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe --tags --always
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-    - make all
+    - make -j4 all
     - cd test-suite
-    - make NP=$CI_NP NI=$CI_NI NT=$CI_NT
+    - make NP=$CI_NP NI=$CI_NI NB=$CI_NB NT=$CI_NT
   artifacts:
     when: on_failure
     paths:
@@ -83,6 +83,7 @@ gcc840_t:
   variables:
     CI_NP: 8
     CI_NI: 1
+    CI_NB: 1
     CI_NT: 1
   extends:
     - .template_bot_start
@@ -92,7 +93,8 @@ gcc840_t:
 gcc930_t:
   variables:
     CI_NP: 8
-    CI_NI: 1
+    CI_NI: 2
+    CI_NB: 2
     CI_NT: 1
   extends:
     - .template_bot_start
@@ -103,9 +105,10 @@ gcc930_t:
 
 gcc840_t2:
   variables:
-    CI_NP: 4
+    CI_NP: 8
     CI_NI: 2
-    CI_NT: 1
+    CI_NB: 1
+    CI_NT: 2
   only:
     - schedules
   extends:
@@ -115,8 +118,9 @@ gcc840_t2:
 
 gcc930_t2:
   variables:
-    CI_NP: 2
-    CI_NI: 2
+    CI_NP: 8
+    CI_NI: 1
+    CI_NB: 2
     CI_NT: 2
   only:
     - schedules

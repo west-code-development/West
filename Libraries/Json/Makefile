@@ -3,8 +3,7 @@
 include ../../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG).
-IFLAGS=
+MODFLAGS = $(MOD_FLAG).
 
 JSON_OBJS = \
 json_kinds.o \
@@ -12,15 +11,9 @@ json_parameters.o \
 json_string_utilities.o \
 json_value_module.o \
 json_file_module.o \
-json_module.o  
+json_module.o
 
-#TLDEPS= bindir mods libs pw
-
-#all : title tldeps libjson.a
 all : title libjson.a
-
-#tldeps:
-#	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 libjson.a : $(JSON_OBJS)
 	$(AR) $(ARFLAGS) $@ $?
@@ -37,3 +30,4 @@ title :
 	@echo "##############"
 	@echo "              "
 
+include make.depend

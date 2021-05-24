@@ -4,6 +4,7 @@
 
 export NP=2 # Number of MPI processes
 export NI=1 # Number of images
+export NB=1 # Number of band groups
 export NT=1 # Number of OpenMP threads
 
 #
@@ -25,5 +26,6 @@ export WGET=wget -N -q
 ###### DO NOT TOUCH BELOW ######
 
 export NIMAGE=${NI}
+export NBAND=${NB}
 export OMP_NUM_THREADS=${NT}
 

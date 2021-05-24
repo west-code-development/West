@@ -3,26 +3,21 @@
 include ../../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG)../Json \
+MODFLAGS = $(MOD_FLAG)../Json \
           $(MOD_FLAG).
-IFLAGS=
-
 
 JSONTEST_OBJS = \
-test.o 
+test.o
 
 JSON_OBJS = ../Json/libjson.a
 
-TLDEPS= bindir mods libs pw
-
-#all : title tldeps wstat.x
 all : title test.x
 
 test.x : $(JSONTEST_OBJS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o test.x \
 		$(JSONTEST_OBJS) $(JSON_OBJS) $(LIBOBJS) $(LIBS)
 	- ./test.x
-	- python check.py 
+	- python check.py
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L *.json

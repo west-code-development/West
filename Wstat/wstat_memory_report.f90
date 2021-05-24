@@ -43,7 +43,7 @@ SUBROUTINE wstat_memory_report()
   IF( mpime == root ) THEN
      !
      CALL json%initialize()
-     CALL json%load_file(filename=TRIM(logfile))
+     CALL json%load(filename=TRIM(logfile))
      CALL json%add( 'memory.units', 'Mb' )
      !
   ENDIF
@@ -184,7 +184,7 @@ SUBROUTINE wstat_memory_report()
   IF( mpime == root ) THEN
      !
      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-     CALL json%print_file( iunit )
+     CALL json%print( iunit )
      CLOSE( iunit )
      CALL json%destroy()
      !

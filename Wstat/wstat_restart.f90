@@ -94,7 +94,7 @@ MODULE wstat_restart
          CALL json%add('ew',ew(:))
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
-         CALL json%print_file( iunit )
+         CALL json%print( iunit )
          CLOSE( iunit )
          CALL json%destroy()
          !
@@ -219,7 +219,7 @@ MODULE wstat_restart
          ENDIF
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
-         CALL json%print_file( iunit )
+         CALL json%print( iunit )
          CLOSE( iunit )
          CALL json%destroy()
          !
@@ -552,7 +552,7 @@ MODULE wstat_restart
       IF ( mpime==root ) THEN
          !
          CALL json%initialize()
-         CALL json%load_file( filename = TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
+         CALL json%load( filename = TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
          ! 
          CALL json%get('dav_iter', ival, found) 
          IF( found ) dav_iter = ival

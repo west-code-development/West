@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -192,7 +192,9 @@ SUBROUTINE davidson_diago_gamma ( )
      ENDDO
      !
      pccg_res_tr2 = -1._DP
+     PRINT*, "HERE1"
      CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, 1 )
+     PRINT*, "HERE2"
      dav_iter = -1
      IF(n_steps_write_restart == 1) CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !

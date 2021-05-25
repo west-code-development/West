@@ -14,6 +14,7 @@ clean:
 	- rm -rf build 
 	- rm -rf dist
 	- rm files.txt
+	- rm -rf __pycache__
 
 title :
 	@echo "              "

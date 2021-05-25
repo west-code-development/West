@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2019 M. Govoni 
+# Copyright (C) 2015-2021 M. Govoni 
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -221,6 +221,8 @@ def read_keyword_from_file(*args, **kwargs):
 
     """
     #
+    with open("hello","w") as f:
+       f.write("world!")
     fileName = args[0]
     keyword = args[1] 
     verbose = args[2]
@@ -246,6 +248,8 @@ def read_keyword_from_file(*args, **kwargs):
     if (verbose) : 
        print_dict(keyword, data)
     #
+    with open("hello","w") as f:
+       f.write("world!")
     return data
 
 ########

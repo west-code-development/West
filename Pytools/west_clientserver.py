@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2019 M. Govoni 
+# Copyright (C) 2015-2021 M. Govoni 
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -107,7 +107,7 @@ class QboxServer(ClientServer) :
        with open(self.server_inputfile,"w") as f:
           if "script" in self.document.keys() :
              for line in self.document["script"] :
-                f.write(line+"\n")
+                f.write(line+"aaa \n")
           for pert in perturbation_list : 
               f.write(f"response -vext {pert} "+command_suffix+"\n")
        #

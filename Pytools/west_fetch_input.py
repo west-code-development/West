@@ -221,8 +221,6 @@ def read_keyword_from_file(*args, **kwargs):
 
     """
     #
-    with open("hello","w") as f:
-       f.write("world!")
     fileName = args[0]
     keyword = args[1] 
     verbose = args[2]
@@ -248,8 +246,6 @@ def read_keyword_from_file(*args, **kwargs):
     if (verbose) : 
        print_dict(keyword, data)
     #
-    with open("hello","w") as f:
-       f.write("world!")
     return data
 
 ########

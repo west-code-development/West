@@ -60,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = data["name"]
-copyright = u'2020, Marco Govoni'
+copyright = u'2021, Marco Govoni'
 author = u'Marco Govoni'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -311,6 +311,5 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3.6', None),
-    'pymongo': ('https://api.mongodb.com/python/current/', None)
+    'python': ('https://docs.python.org/3.6', None)
 }

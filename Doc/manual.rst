@@ -531,7 +531,7 @@ wfreq_control
    * - **Default**
      - 204
    * - **Description**
-     - Number of frequecies used to plot the spectral function (runlevel "P"), sampling the interval [-ecut_spectralf[0],ecut_spectralf[1]].
+     - Number of frequecies used to plot the spectral function (runlevel "P"), sampling the interval [ecut_spectralf[0],ecut_spectralf[1]].
 
 |
 

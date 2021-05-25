@@ -1,29 +1,26 @@
 Change Log
 ==========
 
-v5.0.0 (2021/05/XX)
+v4.3.0 (2021/05/25)
 -------------------
 
-- New variables
-   - Restart info was written out in every Davidson iteration. Now this can be changed by setting the `n_steps_write_restart` keyword. Default is `1`, i.e., same behavior as before.
-
-- Bug fixes 
-   - Update the initialization for Forpy, such that in case of a module import error, the code has a better chance to print a clear error message.
-   - Fix an undefined variable in `Tools/set_npwq.f90`. Add `IMPLICIT NONE to all program units to let the compiler catch such errors in the future.
-   - Avoid overflow in `Wstat/wstat_memory_report.f90` in large-scale runs.
-   - Fix non-standard Fortran codes that do not work with NVIDIA/PGI Fortran compiler.
-   - Fix file mode for source files in Westpp. All files were executable before.
-   - Work around an input parsing issue encountered with pgfortran and nvfortran.
-
-- CI
-   - Use updated Docker images
-   - Check numerical results and fail the CI if results don't match. (see check.py). DFT checks error in total energy, WSTAT checks maximum error in PDEP eigenvalues, WFREQ checks maximum error in QP energies
-   - Add tests of images and OpenMP threads to nightly test
-
-- Documentation
-   - Fix doc build with sphinx 3.5.0+. (see also https://github.com/sphinx-doc/sphinx/issues/8885)
-   - Update build instructions for ALCF/Theta, NERSC/Cori, UChicago/RCC/Midway3, macOS 
-   - Updated documentation
+- Introduced new data layout. Parallelization over bands allows to distribute data in a more flexible way in `wstat`. This feature also helps reduce memory per image. Band parallelization is enabled by specifying -nb xxx from the command line.
+- Introduced checkpointing in `wstat`. With the new keyword `n_steps_write_restart` one can control how often the code produces restarts (default value is `1`). 
+- Improved I/O in `wfreq`. The number of I/O operations is reduced in `solve_wfreq`, and in the gamma case of `solve_gfreq`.
+- Updated library dependency to Json-Fortran 8.2.1, resolving compilation issues with PGI 19.10.
+- Updated the initialization of Forpy, such that in case of a module import error, the code has a better chance to print a clear error message.
+- Updated build. Now the code builds with the NVIDIA/PGI Fortran compiler. 
+- Bug fix. Fixed an undefined variable in `Tools/set_npwq.f90`. Added `IMPLICIT NONE to all program units to let the compiler catch such errors in the future.
+- Bug fix. Avoid overflow in `Wstat/wstat_memory_report.f90` in large-scale runs.
+- Bug fix. Reset permissions to all source files in Westpp. All files appeared to be executable before.
+- Bug fix. Reset `make.depend` files, added support to `make -j`.
+- Updated CI/CD. Use updated Docker images.
+- Updated CI/CD. Check numerical results and fail the CI if results don't match (see `check.py`). DFT checks error in total energy, WSTAT checks maximum error in PDEP eigenvalues, WFREQ checks maximum error in QP energies.
+- Updated CI/CD. Added tests of images and OpenMP threads to nightly tests.
+- Updated documentation. Fixed doc build with sphinx 3.5.0+. 
+- Updated documentation. Update build instructions for ALCF/Theta, NERSC/Cori, UChicago/RCC/Midway3, macOS. 
+- Updated documentation. Added more tutorials.
+- Updated documentation. Updated manual.
 
 v4.2.1 (2020/10/19)
 -------------------

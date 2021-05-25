@@ -59,7 +59,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --partition=<partition_name>
    #SBATCH --account=<account_name>
    #SBATCH --nodes=2
-   #SBATCH --ntasks-per-node=32
+   #SBATCH --ntasks-per-node=48
    #SBATCH --cpus-per-task=1
 
    module load intel/19.1.1
@@ -67,11 +67,11 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    module load mkl/2020.up1
    module load python/anaconda-2020.11
 
+   export I_MPI_PMI_LIBRARY=/software/slurm-current-$DISTARCH/lib/libpmi.so
    export LD_LIBRARY_PATH=/software/python-anaconda-2020.11-el8-x86_64/lib:$LD_LIBRARY_PATH
-   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-   NTASKS=$(($SLURM_NTASKS_PER_NODE * $SLURM_JOB_NUM_NODES))
+   export OMP_NUM_THREADS=1
 
-   mpirun -np $NTASKS ./wstat.x -i wstat.in > wstat.out
+   srun -n 96 -N 2 ./wstat.x -i wstat.in > wstat.out
 
 Job submission is done with the following:
 

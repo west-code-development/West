@@ -15,7 +15,6 @@ Project Leads
 Developers
 ----------
 
-- Sijia Dong (Argonne National Laboratory)
 - Marco Govoni (Argonne National Laboratory and University of Chicago)
 - Yu Jin (University of Chicago)
 - Nan Sheng (University of Chicago)

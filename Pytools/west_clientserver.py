@@ -107,7 +107,7 @@ class QboxServer(ClientServer) :
        with open(self.server_inputfile,"w") as f:
           if "script" in self.document.keys() :
              for line in self.document["script"] :
-                f.write(line+"aaa \n")
+                f.write(line+"\n")
           for pert in perturbation_list : 
               f.write(f"response -vext {pert} "+command_suffix+"\n")
        #

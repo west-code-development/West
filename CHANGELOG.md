@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v4.3.0 (2021/05/25)
+v4.3.0 (2021/05/26)
 -------------------
 
 - Introduced new data layout. Parallelization over bands allows to distribute data in a more flexible way in `wstat`. This feature also helps reduce memory per image. Band parallelization is enabled by specifying -nb xxx from the command line.

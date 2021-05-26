@@ -1,9 +1,0 @@
-input_west:
-    qe_prefix : pwscf
-    west_prefix : west
-    outdir : ./
-    
-wbsepp_control:
-    wbsepp_type : 1
-    n_liouville_read_from_file : 10
-    macropol_dfpt : 'N'

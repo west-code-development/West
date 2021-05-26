@@ -108,7 +108,8 @@ default["wbse_control"]["l_preconditioning"] = False
 # #wbsepp control
 default["wbsepp_control"] = {}
 default["wbsepp_control"]["wbsepp_type"] =  0    #0:eig_decomposion, 1:meg, 2:ads_spect
-default["wbsepp_control"]["n_plep_read_from_file"] = 0
+#default["wbsepp_control"]["n_plep_read_from_file"] = 0
+default["wbsepp_control"]["n_liouville_read_from_file"] = 0
 default["wbsepp_control"]["macropol_dfpt"] = False
 default["wbsepp_control"]["r0_input"] = [0., 0., 0.]
 default["wbsepp_control"]["iexc_plot"] = 1

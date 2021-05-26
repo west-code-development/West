@@ -251,6 +251,8 @@ MODULE wbse_init_center
   !
   USE kinds, ONLY :  DP
   !
+  IMPLICIT NONE
+  !
   SAVE
   !
   ! INPUT FOR wbse_init
@@ -296,6 +298,8 @@ END MODULE
 MODULE wbse_center
   !
   USE kinds, ONLY : DP
+  !
+  IMPLICIT NONE
   !
   SAVE
   !
@@ -369,6 +373,8 @@ END MODULE
 MODULE wbsepp_center
   !
   USE kinds, ONLY : DP
+  !
+  IMPLICIT NONE
   !
   SAVE
   !

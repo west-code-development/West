@@ -224,6 +224,8 @@ MODULE qbox_interface
       USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
       USE conversions,     ONLY : itoa
       !
+      IMPLICIT NONE
+      !
       CHARACTER(LEN=:),ALLOCATABLE :: lockfile
       INTEGER :: iu
       !
@@ -636,6 +638,9 @@ MODULE qbox_interface
       !
       USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
       USE conversions,     ONLY : itoa
+      !
+      IMPLICIT NONE
+      !
       IF( me_bgrp == 0 ) THEN
          OPEN(UNIT=iu, FILE="qb."//itoa(my_image_id)//".in")
          WRITE(iu,'(A)') 'quit'

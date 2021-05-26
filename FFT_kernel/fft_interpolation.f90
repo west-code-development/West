@@ -645,6 +645,8 @@ MODULE fourier_interpolation
    USE mp_images,     ONLY : intra_image_comm, me_image, my_image_id
    USE mp,            ONLY : mp_bcast
    !
+   IMPLICIT NONE
+   !
    INTEGER,     INTENT(IN) :: n1, n2, n3, npw, npwx
    INTEGER,     INTENT(IN) :: nls(npw)
    COMPLEX(DP), INTENT(IN) :: fr(n1*n2*n3)

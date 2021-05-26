@@ -110,6 +110,7 @@ MODULE class_bz_grid
          this%np = SIZE(qlist)
          this%ns = 1
          this%nps = this%np
+         !
          ! generate p-vectors in cryst
          !
          ALLOCATE ( this%p_cryst  (3,this%np) )

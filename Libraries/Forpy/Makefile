@@ -2,25 +2,13 @@
 
 include ../../../make.inc
 
-.SUFFIXES : .o .c .f .f90 .F90
-
-.F90.o:
-	$(MPIF90) $(F90FLAGS) -c $<
-
 # location of needed modules
-MODFLAGS= $(MOD_FLAG).
-IFLAGS=
+MODFLAGS = $(MOD_FLAG).
 
 FORPY_OBJS = \
 forpy_mod.o
 
-#TLDEPS= bindir mods libs pw
-
-#all : title tldeps libjson.a
 all : title libforpy.a
-
-#tldeps:
-#	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 libforpy.a : $(FORPY_OBJS)
 	$(AR) $(ARFLAGS) $@ $?
@@ -36,4 +24,3 @@ title :
 	@echo "### Forpy ####"
 	@echo "##############"
 	@echo "              "
-

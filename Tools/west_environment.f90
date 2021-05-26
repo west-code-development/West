@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -174,14 +174,14 @@ CONTAINS
     IF( mpime == root ) THEN
       !
       CALL json%initialize()
-      CALL json%load_file(filename=TRIM(logfile))
+      CALL json%load(filename=TRIM(logfile))
       !
       CALL json%update('runjob.completed', .TRUE., found)
       CALL json%add('runjob.endtime', TRIM(ctime) )
       CALL json%add('runjob.enddate', TRIM(cdate) )
       !
       OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-      CALL json%print_file( iunit )
+      CALL json%print( iunit )
       CLOSE( iunit )
       !
       CALL json%destroy()
@@ -270,7 +270,7 @@ CONTAINS
       CALL json%add('config.io.islittleendian', islittleendian() )
       !
       OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
-      CALL json%print_file( iunit )
+      CALL json%print( iunit )
       CLOSE( iunit )
       !
       CALL json%destroy()
@@ -367,7 +367,7 @@ CONTAINS
        !
        CALL json%initialize()
        !
-       CALL json%load_file(filename=TRIM(logfile))
+       CALL json%load(filename=TRIM(logfile))
        !
        CALL json%add('parallel.nranks', nproc )
        CALL json%add('parallel.nimage', nimage )
@@ -380,7 +380,7 @@ CONTAINS
 #endif
        !
        OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-       CALL json%print_file( iunit )
+       CALL json%print( iunit )
        CLOSE( iunit )
        !
        CALL json%destroy()

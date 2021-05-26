@@ -159,6 +159,23 @@ wstat_control
      - Number of PDEP eigenpotentials that can be read from file.
 
 
+.. data:: n_steps_write_restart
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1
+   * - **Description**
+     - Available options are:
+
+       - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the PDEP loop.
+       - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the PDEP loop. Restart will not be possible.
+
+
 .. data:: trev_pdep
 
 .. list-table::
@@ -514,7 +531,7 @@ wfreq_control
    * - **Default**
      - 204
    * - **Description**
-     - Number of frequecies used to plot the spectral function (runlevel "P"), sampling the interval [-ecut_spectralf[0],ecut_spectralf[1]].
+     - Number of frequecies used to plot the spectral function (runlevel "P"), sampling the interval [ecut_spectralf[0],ecut_spectralf[1]].
 
 |
 

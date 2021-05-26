@@ -1,4 +1,4 @@
-# Makefile for the WEST software 
+# Makefile for the WEST software
 
 include ../make.inc
 
@@ -149,58 +149,58 @@ libraries_do:
 	( cd Libraries ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-modules_do:
+modules_do: libraries_do
 	if test -d Modules ; then \
 	( cd Modules ; sh ./update_west_version ${WESTDIR} `${PYT} ../Pytools/read_json.py ../VERSION.json version`; \
 	if  test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-tools_do:
+tools_do: modules_do libraries_do
 	if test -d Tools ; then \
 	( cd Tools ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-fft_kernel_do:
+fft_kernel_do: modules_do
 	if test -d FFT_kernel ; then \
 	( cd FFT_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-coulomb_kernel_do:
+coulomb_kernel_do: tools_do modules_do
 	if test -d Coulomb_kernel ; then \
 	( cd Coulomb_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-para_kernel_do:
+para_kernel_do: tools_do
 	if test -d Para_kernel ; then \
 	( cd Para_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-hamiltonian_kernel_do:
+hamiltonian_kernel_do: modules_do
 	if test -d Hamiltonian_kernel ; then \
 	( cd Hamiltonian_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-dfpt_kernel_do:
+dfpt_kernel_do: para_kernel_do fft_kernel_do tools_do modules_do
 	if test -d DFPT_kernel ; then \
 	( cd DFPT_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-io_kernel_do:
+io_kernel_do: para_kernel_do tools_do modules_do libraries_do
 	if test -d IO_kernel ; then \
 	( cd IO_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-wstat_do:
+wstat_do: io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wstat ; then \
 	( cd Wstat ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wfreq_do:
+wfreq_do: io_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wfreq ; then \
 	( cd Wfreq ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-westpp_do:
+westpp_do: io_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Westpp ; then \
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi

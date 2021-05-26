@@ -11,3 +11,4 @@ Contents:
    :maxdepth: 1
 
    tutorials/west_100.ipynb
+   tutorials/west_200.ipynb

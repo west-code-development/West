@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,34 +7,34 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 SUBROUTINE solve_wfreq(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
-  USE control_flags,        ONLY : gamma_only 
+  USE control_flags,        ONLY : gamma_only
   !
   IMPLICIT NONE
   !
-  ! I/O 
+  ! I/O
   !
   LOGICAL,INTENT(IN) :: l_read_restart,l_generate_plot
   !
-  IF( gamma_only ) THEN 
+  IF( gamma_only ) THEN
     CALL solve_wfreq_gamma( l_read_restart,l_generate_plot )
   ELSE
     CALL solve_wfreq_k( l_read_restart,l_generate_plot )
   ENDIF
   !
-END SUBROUTINE 
+END SUBROUTINE
 !
 !-----------------------------------------------------------------------
 SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : DP 
+  USE kinds,                ONLY : DP
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir
@@ -55,14 +55,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
   USE pdep_db,              ONLY : generate_pdep_fname
-  USE pdep_io,              ONLY : pdep_read_G_and_distribute 
+  USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
 !  USE control_flags,        ONLY : gamma_only
-  USE noncollin_module,     ONLY : noncolin,npol 
+  USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband
-  USE class_idistribute,    ONLY : idistribute 
+  USE class_idistribute,    ONLY : idistribute
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE types_bz_grid,        ONLY : k_grid
   USE chi_invert,           ONLY : chi_invert_real, chi_invert_complex
@@ -88,6 +88,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: phi(:,:), phis(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
+  COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP) :: zkonstant
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
@@ -110,7 +111,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   REAL(DP),ALLOCATABLE :: e(:)
   !
   CALL io_push_title("(W)-Lanczos")
-  ! 
+  !
   ! DISTRIBUTING...
   !
   mypara = idistribute()
@@ -123,7 +124,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ! This is to reduce memory
   !
   CALL deallocate_bec_type( becp )
-  IF(l_macropol) THEN 
+  IF(l_macropol) THEN
      CALL allocate_bec_type ( nkb, MAX(mypara%nloc,3), becp ) ! I just need 2 becp at a time
   ELSE
      CALL allocate_bec_type ( nkb, mypara%nloc, becp ) ! I just need 2 becp at a time
@@ -139,33 +140,47 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bks, dmati, zmatr, mypara%nglob, mypara%nloc )
   ELSE
-     bks%lastdone_ks   = 0 
-     bks%lastdone_band = 0 
-     bks%old_ks        = 0 
-     bks%old_band      = 0 
-     bks%max_ks        = k_grid%nps 
-     bks%min_ks        = 1 
+     bks%lastdone_ks   = 0
+     bks%lastdone_band = 0
+     bks%old_ks        = 0
+     bks%old_band      = 0
+     bks%max_ks        = k_grid%nps
+     bks%min_ks        = 1
   ENDIF
   !
   barra_load = 0
-  DO iks = 1, k_grid%nps 
+  DO iks = 1, k_grid%nps
      IF(iks<bks%lastdone_ks) CYCLE
      DO iv = 1, nbnd_occ(iks)
         IF(iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
         barra_load = barra_load + 1
      ENDDO
   ENDDO
-  ! 
-  IF( barra_load == 0 ) THEN 
+  !
+  IF( barra_load == 0 ) THEN
      CALL start_bar_type ( barra, 'wlanczos', 1 )
-     CALL update_bar_type( barra, 'wlanczos', 1 ) 
+     CALL update_bar_type( barra, 'wlanczos', 1 )
   ELSE
      CALL start_bar_type ( barra, 'wlanczos', barra_load )
   ENDIF
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
   !
-  ! LOOP 
+  ! Read PDEP
+  !
+  ALLOCATE(pertg_all(npwqx,mypara%nloc))
+  pertg_all = 0._DP
+  !
+  DO ip = 1,mypara%nloc
+     glob_ip = mypara%l2g(ip)
+     IF(glob_ip <= n_pdep_eigen_to_use) THEN
+        CALL generate_pdep_fname(filepot,glob_ip)
+        fname = TRIM(wstat_save_dir)//"/"//filepot
+        CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip))
+     ENDIF
+  ENDDO
+  !
+  ! LOOP
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      IF(iks<bks%lastdone_ks) CYCLE
@@ -185,7 +200,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      IF(k_grid%nps>1) THEN
         !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol 
+        !lrwfc = nbnd * npwx * npol
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         !CALL mp_bcast(evc,0,inter_image_comm)
@@ -220,7 +235,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ! Parallel macropol
      IF(l_macropol) THEN
         !
-        ! PHI 
+        ! PHI
         !
         CALL occband%init(nbndval,'i','occband',.FALSE.)
         !
@@ -240,9 +255,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            CALL commutator_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
            phi = 0._DP
            DO i1 = 1, 3
-              DO i2 = 1, 3 
-                 zkonstant = CMPLX( bg(i1,i2) , 0._DP, KIND=DP )  
-                 CALL ZAXPY(npwx*npol,zkonstant,phi_tmp(1,i2),1,phi(1,i1),1) 
+              DO i2 = 1, 3
+                 zkonstant = CMPLX( bg(i1,i2) , 0._DP, KIND=DP )
+                 CALL ZAXPY(npwx*npol,zkonstant,phi_tmp(1,i2),1,phi(1,i1),1)
               ENDDO
            ENDDO
            !
@@ -259,11 +274,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            e(2) = et(iv,iks)
            e(3) = et(iv,iks)
            !
-           CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec ) 
+           CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec )
            !
-           CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr ) 
+           CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
            !
-           IF(ierr/=0) THEN 
+           IF(ierr/=0) THEN
               WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
            ENDIF
            !
@@ -306,30 +321,24 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
         ! PSIC
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),psic,'Wave') 
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),psic,'Wave')
         !
         ! ZEROS
         !
-        dvpsi = 0._DP   
+        dvpsi = 0._DP
         !
-        ! Read PDEP
-        !
-        ALLOCATE( pertg(npwqx) )
+        ALLOCATE( pertg( npwqx ) )
         ALLOCATE( pertr( dffts%nnr ) )
         !
         DO ip=1,mypara%nloc
            !
            glob_ip = mypara%l2g(ip)
            !
-           ! Decide whether read dbs E or dhpi 
+           ! Decide whether read dbs E or dhpi
            !
            IF(glob_ip<=n_pdep_eigen_to_use) THEN
               !
-              ! Exhume dbs eigenvalue
-              !
-              CALL generate_pdep_fname( filepot, glob_ip ) 
-              fname = TRIM( wstat_save_dir ) // "/"// filepot
-              CALL pdep_read_G_and_distribute(fname,pertg)
+              pertg = pertg_all(:,ip)
               !
               ! Multiply by sqvc
               DO ig = 1, npwq
@@ -338,7 +347,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               !
               ! Bring it to R-space
               CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
-              DO ir=1,dffts%nnr 
+              DO ir=1,dffts%nnr
                  pertr(ir)=psic(ir)*pertr(ir)
               ENDDO
               CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave')
@@ -353,7 +362,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            ENDIF
            !
         ENDDO ! pert
-        ! 
+        !
         DEALLOCATE(pertr)
         DEALLOCATE(pertg)
         IF(l_macropol) THEN
@@ -367,7 +376,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
         ALLOCATE(ps_r(nbnd-nbndval,mypara%nloc))
         CALL glbrak_gamma(evc(1,nbndval+1),dvpsi(1,1),ps_r,npw,npwx,nbnd-nbndval,mypara%nloc,nbnd-nbndval,npol)
-        CALL mp_sum(ps_r,intra_bgrp_comm) 
+        CALL mp_sum(ps_r,intra_bgrp_comm)
         !
         IF(ALLOCATED(overlap)) DEALLOCATE(overlap)
         ALLOCATE(overlap(mypara%nglob, nbndval+1:nbnd ) )
@@ -380,15 +389,15 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         ENDDO
         !
         DEALLOCATE(ps_r)
-        CALL mp_sum(overlap,inter_image_comm) 
+        CALL mp_sum(overlap,inter_image_comm)
         !
         ! Update dmati with cond
         !
         DO ifreq = 1, ifr%nloc
            !
-           frequency = imfreq_list( ifreq ) 
+           frequency = imfreq_list( ifreq )
            !
-           DO ic = nbndval+1, nbnd 
+           DO ic = nbndval+1, nbnd
               !
               ecv = et(ic,iks)-et(iv,iks)
               dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
@@ -409,14 +418,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
         DO ifreq = 1, rfr%nloc
            !
-           frequency = refreq_list( ifreq ) 
+           frequency = refreq_list( ifreq )
            !
-           DO ic = nbndval+1, nbnd 
+           DO ic = nbndval+1, nbnd
               !
               ecv = et(ic,iks)-et(iv,iks)
               zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )
               zm = CMPLX( ecv - frequency, - wfreq_eta, KIND=DP )
-              zfactor = zmwo / zp + zmwo / zm 
+              zfactor = zmwo / zp + zmwo / zm
               !
               DO ip = 1, mypara%nloc
                  glob_ip = mypara%l2g(ip)
@@ -429,7 +438,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               ENDDO
               !
            ENDDO ! ic
-        ENDDO ! ifreq 
+        ENDDO ! ifreq
         !
         DEALLOCATE(overlap)
         !
@@ -440,12 +449,12 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
         ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
         !
-        IF( l_enable_lanczos ) THEN  
+        IF( l_enable_lanczos ) THEN
            !
            ALLOCATE( bnorm    (                             mypara%nloc ) )
            ALLOCATE( diago    (               n_lanczos   , mypara%nloc ) )
            ALLOCATE( subdiago (               n_lanczos-1 , mypara%nloc ) )
-           ALLOCATE( q_s      ( npwx*npol   , mypara%nloc , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM 
+           ALLOCATE( q_s      ( npwx*npol   , mypara%nloc , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
            !
            CALL solve_deflated_lanczos_w_full_ortho ( nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
            !
@@ -464,13 +473,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            DO ifreq = 1, ifr%nloc
               !
-              frequency = imfreq_list( ifreq ) 
+              frequency = imfreq_list( ifreq )
               !
-              DO il = 1, n_lanczos 
+              DO il = 1, n_lanczos
                  !
                  DO ip = 1, mypara%nloc
                     glob_ip = mypara%l2g(ip)
-                    ecv = diago( il, ip ) - et(iv,iks) 
+                    ecv = diago( il, ip ) - et(iv,iks)
                     dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
                     DO glob_jp = 1, mypara%nglob
                        !
@@ -486,13 +495,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            DO ifreq = 1, rfr%nloc
               !
-              frequency = refreq_list( ifreq ) 
+              frequency = refreq_list( ifreq )
               !
-              DO il = 1, n_lanczos 
+              DO il = 1, n_lanczos
                  !
                  DO ip = 1, mypara%nloc
                     glob_ip = mypara%l2g(ip)
-                    ecv = diago( il, ip ) - et(iv,iks) 
+                    ecv = diago( il, ip ) - et(iv,iks)
                     zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )
                     zm = CMPLX( ecv - frequency, - wfreq_eta, KIND=DP )
                     zfactor = zmwo / zp + zmwo / zm
@@ -507,23 +516,23 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               ENDDO ! il
            ENDDO ! ifreq
            !
-           ! MPI-IO 
+           ! MPI-IO
            !
            !CALL writeout_solvewfreq( iks_l2g(iks), iv, diago, braket, io_comm, mypara%nloc, mypara%nglob, mypara%myoffset )
            !
-           DEALLOCATE( diago ) 
+           DEALLOCATE( diago )
            DEALLOCATE( braket )
            !
         ENDIF ! l_enable_lanczos
         !
-        time_spent(2) = get_clock( 'wlanczos' ) 
+        time_spent(2) = get_clock( 'wlanczos' )
         !
-        IF( o_restart_time >= 0._DP ) THEN 
-           IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. iv == nbndval ) THEN 
+        IF( o_restart_time >= 0._DP ) THEN
+           IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. iv == nbndval ) THEN
               bks%lastdone_ks=iks
               bks%lastdone_band=iv
               CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
-              bks%old_ks = iks 
+              bks%old_ks = iks
               bks%old_band = iv
               time_spent(1) = get_clock( 'wlanczos' )
            ENDIF
@@ -537,14 +546,16 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      DEALLOCATE(dvpsi)
      !
-  ENDDO ! KPOINT-SPIN 
+  ENDDO ! KPOINT-SPIN
+  !
+  DEALLOCATE(pertg_all)
   !
   CALL stop_bar_type( barra, 'wlanczos' )
   !
   ! EPS-1 imfreq
   !
   ALLOCATE( dmatilda( mypara%nglob, mypara%nglob ) )
-  ALLOCATE( dlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use) ) 
+  ALLOCATE( dlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use) )
   ALLOCATE( d_epsm1_ifr( pert%nglob, pert%nloc, ifr%nloc) )
   d_epsm1_ifr = 0._DP
   IF(l_macropol) ALLOCATE( d_head_ifr( ifr%nloc) )
@@ -555,18 +566,18 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      dmatilda = 0._DP
      DO ip = 1, mypara%nloc
-        glob_ip = mypara%l2g(ip) 
+        glob_ip = mypara%l2g(ip)
         dmatilda( :, glob_ip) = dmati( :, ip, ifreq )
      ENDDO
      !
      CALL mp_sum( dmatilda, inter_image_comm )
-     ! 
+     !
      CALL chi_invert_real( dmatilda, dhead, dlambda, mypara%nglob)
      !
      DO ip = 1, pert%nloc
         glob_ip = pert%l2g(ip)
         d_epsm1_ifr(1:n_pdep_eigen_to_use,ip,ifreq) = dlambda( 1:n_pdep_eigen_to_use, glob_ip)
-     ENDDO 
+     ENDDO
      IF( l_macropol ) d_head_ifr( ifreq) = dhead
      !
   ENDDO
@@ -580,7 +591,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ! EPS-1 refreq
   !
   ALLOCATE( zmatilda( mypara%nglob, mypara%nglob ) )
-  ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use ) ) 
+  ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use ) )
   ALLOCATE( z_epsm1_rfr( pert%nglob, pert%nloc, rfr%nloc) )
   z_epsm1_rfr = 0._DP
   IF(l_macropol) ALLOCATE( z_head_rfr( rfr%nloc) )
@@ -589,36 +600,36 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      zmatilda = 0._DP
      DO ip = 1, mypara%nloc
-        glob_ip = mypara%l2g(ip) 
+        glob_ip = mypara%l2g(ip)
         zmatilda( :, glob_ip) = zmatr( :, ip, ifreq )
      ENDDO
      !
-     CALL mp_sum( zmatilda, inter_image_comm ) 
+     CALL mp_sum( zmatilda, inter_image_comm )
      CALL chi_invert_complex( zmatilda, zhead, zlambda, mypara%nglob)
      !
      DO ip = 1, pert%nloc
         glob_ip = pert%l2g(ip)
         z_epsm1_rfr(1:n_pdep_eigen_to_use,ip,ifreq) = zlambda( 1:n_pdep_eigen_to_use, glob_ip)
-     ENDDO 
+     ENDDO
      IF( l_macropol ) z_head_rfr( ifreq) = zhead
      !
   ENDDO
   !
   DEALLOCATE( zlambda )
   DEALLOCATE( zmatilda )
-  DEALLOCATE( zmatr ) 
+  DEALLOCATE( zmatr )
   !
   IF(l_generate_plot) THEN
      CALL output_eps_head( )
   ENDIF
   !
-END SUBROUTINE 
+END SUBROUTINE
 !
 !-----------------------------------------------------------------------
 SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : DP 
+  USE kinds,                ONLY : DP
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,z_epsm1_ifr_q,&
                                  &  z_epsm1_rfr_q,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir,&
@@ -640,14 +651,14 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
   USE pdep_db,              ONLY : generate_pdep_fname
-  USE pdep_io,              ONLY : pdep_read_G_and_distribute 
+  USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
 !  USE control_flags,        ONLY : gamma_only
-  USE noncollin_module,     ONLY : noncolin,npol 
+  USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband
-  USE class_idistribute,    ONLY : idistribute 
+  USE class_idistribute,    ONLY : idistribute
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bksq_type
   USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
   USE chi_invert,           ONLY : chi_invert_complex
@@ -662,7 +673,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! Workspace
   !
   INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,ivloc,iks,ik,is,iq,ikqs,ikq,ipol,m
-  CHARACTER(LEN=25) :: filepot 
+  CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE    :: fname
   CHARACTER(LEN=6)      :: my_label_b
   CHARACTER(LEN=5)      :: my_label_q
@@ -675,6 +686,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: phi(:,:), phis(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
+  COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evckpq(:,:)
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
   COMPLEX(DP),ALLOCATABLE :: phase(:)
@@ -699,10 +711,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   REAL(DP),ALLOCATABLE :: eprec(:)
   INTEGER :: ierr
   REAL(DP),ALLOCATABLE :: e(:)
-  REAL(DP) :: kpq(3), g0(3) 
+  REAL(DP) :: kpq(3), g0(3)
   !
   CALL io_push_title("(W)-Lanczos")
-  ! 
+  !
   ! DISTRIBUTING...
   !
   mypara = idistribute()
@@ -714,7 +726,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! This is to reduce memory
   !
-  CALL deallocate_bec_type( becp ) 
+  CALL deallocate_bec_type( becp )
   IF(l_macropol) THEN
      CALL allocate_bec_type ( nkb, MAX(mypara%nloc,3), becp ) ! I just need 2 becp at a time
   ELSE
@@ -739,16 +751,16 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bksq, zmati_q, zmatr_q, mypara%nglob, mypara%nloc )
   ELSE
-     bksq%lastdone_ks   = 0 
-     bksq%lastdone_q    = 0 
-     bksq%lastdone_band = 0 
-     bksq%old_ks        = 0 
-     bksq%old_q         = 0 
-     bksq%old_band      = 0 
+     bksq%lastdone_ks   = 0
+     bksq%lastdone_q    = 0
+     bksq%lastdone_band = 0
+     bksq%old_ks        = 0
+     bksq%old_q         = 0
+     bksq%old_band      = 0
      bksq%max_q         = q_grid%np
      bksq%max_ks        = k_grid%np
-     bksq%min_q         = 1 
-     bksq%min_ks        = 1 
+     bksq%min_q         = 1
+     bksq%min_ks        = 1
   ENDIF
   !
   barra_load = 0
@@ -762,15 +774,15 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ENDDO
      ENDDO
   ENDDO
-  ! 
-  IF( barra_load == 0 ) THEN 
+  !
+  IF( barra_load == 0 ) THEN
      CALL start_bar_type ( barra, 'wlanczos', 1 )
-     CALL update_bar_type( barra, 'wlanczos', 1 ) 
+     CALL update_bar_type( barra, 'wlanczos', 1 )
   ELSE
      CALL start_bar_type ( barra, 'wlanczos', barra_load )
   ENDIF
   !
-  ! LOOP 
+  ! LOOP
   !
   DO iq = 1, q_grid%np   ! Q-POINT
      IF (iq<bksq%lastdone_q) CYCLE
@@ -780,10 +792,24 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      !
      CALL pot3D%init('Wave',.TRUE.,'default',iq)
      !
+     ! Read PDEP
+     !
+     ALLOCATE(pertg_all(npwqx,mypara%nloc))
+     pertg_all = 0._DP
+     !
+     DO ip = 1,mypara%nloc
+        glob_ip = mypara%l2g(ip)
+        IF(glob_ip <= n_pdep_eigen_to_use) THEN
+           CALL generate_pdep_fname(filepot,glob_ip,iq)
+           fname = TRIM(wstat_save_dir)//"/"//filepot
+           CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip),iq)
+        ENDIF
+     ENDDO
+     !
      DO iks = 1, k_grid%nps   ! KPOINT-SPIN
         !
-        ik = k_grid%ip(iks) 
-        is = k_grid%is(iks) 
+        ik = k_grid%ip(iks)
+        is = k_grid%is(iks)
         !
         IF(iq==bksq%lastdone_q .AND. iks<bksq%lastdone_ks) CYCLE
         !
@@ -802,7 +828,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         IF(k_grid%nps>1) THEN
            !iuwfc = 20
-           !lrwfc = nbnd * npwx * npol 
+           !lrwfc = nbnd * npwx * npol
            !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
            IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
            !CALL mp_bcast(evc,0,inter_image_comm)
@@ -830,8 +856,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !npwkq = ngk(ikqs)
         !
         !CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 ) !M
-        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), 'cart', ikq, g0 )       
-        ikqs = k_grid%ipis2ips(ikq,is)                                                                                   
+        CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), 'cart', ikq, g0 )
+        ikqs = k_grid%ipis2ips(ikq,is)
         !
         npwkq = ngk(ikqs)
         !
@@ -839,7 +865,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         ! Set wavefunctions at [k+q] in G space, for all bands,
         ! and store them in evckpq
-        ! 
+        !
         IF ( my_image_id == 0 ) CALL get_buffer( evckpq, lrwfc, iuwfc, ikqs )
         CALL mp_bcast( evckpq, 0, inter_image_comm )
         !
@@ -855,7 +881,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         IF(l_macropol .AND. l_gammaq) THEN
            !
-           ! PHI 
+           ! PHI
            !
            CALL occband%init(nbndval,'i','occband',.TRUE.)
            !
@@ -875,9 +901,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               CALL commutator_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
               phi = 0._DP
               DO i1 = 1, 3
-                 DO i2 = 1, 3 
-                    zkonstant = CMPLX( bg(i1,i2) , 0._DP, KIND=DP )  
-                    CALL ZAXPY(npwx*npol,zkonstant,phi_tmp(1,i2),1,phi(1,i1),1) 
+                 DO i2 = 1, 3
+                    zkonstant = CMPLX( bg(i1,i2) , 0._DP, KIND=DP )
+                    CALL ZAXPY(npwx*npol,zkonstant,phi_tmp(1,i2),1,phi(1,i1),1)
                  ENDDO
               ENDDO
               !
@@ -894,11 +920,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               e(2) = et(iv,iks)
               e(3) = et(iv,iks)
               !
-              CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec ) 
+              CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec )
               !
-              CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr ) 
+              CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
               !
-              IF(ierr/=0) THEN 
+              IF(ierr/=0) THEN
                  WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
               ENDIF
               !
@@ -950,26 +976,20 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            ! ZEROS
            !
-           dvpsi = 0._DP   
+           dvpsi = 0._DP
            !
-           ! Read PDEP
-           !
-           ALLOCATE( pertg(npwqx) )
+           ALLOCATE( pertg( npwqx ) )
            ALLOCATE( pertr( dffts%nnr ) )
            !
            DO ip=1,mypara%nloc
               !
               glob_ip = mypara%l2g(ip)
               !
-              ! Decide whether read dbs E or dhpi 
+              ! Decide whether read dbs E or dhpi
               !
               IF(glob_ip<=n_pdep_eigen_to_use) THEN
                  !
-                 ! Exhume dbs eigenvalue
-                 !
-                 CALL generate_pdep_fname( filepot, glob_ip, iq ) 
-                 fname = TRIM( wstat_save_dir ) // "/"// filepot
-                 CALL pdep_read_G_and_distribute(fname,pertg,iq)
+                 pertg = pertg_all(:,ip)
                  !
                  ! Multiply by sqvc
                  DO ig = 1, npwq
@@ -979,26 +999,26 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  ! Bring it to R-space
                  IF(noncolin) THEN
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
-                    DO ir=1,dffts%nnr 
+                    DO ir=1,dffts%nnr
                        pertr(ir)=phase(ir)*psick_nc(ir,1)*DCONJG(pertr(ir))
                     ENDDO
                     CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
-                    DO ir=1,dffts%nnr 
+                    DO ir=1,dffts%nnr
                        pertr(ir)=phase(ir)*psick_nc(ir,2)*DCONJG(pertr(ir))
                     ENDDO
                     CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(npwx+1,ip),'Wave',igk_k(1,current_k))
                  ELSE
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
-                    DO ir=1,dffts%nnr 
+                    DO ir=1,dffts%nnr
                        pertr(ir)=phase(ir)*psick(ir)*DCONJG(pertr(ir))
                     ENDDO
                     CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
-                 ENDIF 
+                 ENDIF
                  !
               ELSE
                  !
-                 IF (l_gammaq) THEN 
+                 IF (l_gammaq) THEN
                     ipol = glob_ip-n_pdep_eigen_to_use
                     dvpsi(:,ip) = phi(:,ipol) * DSQRT(fpi * e2)
                  ENDIF
@@ -1006,7 +1026,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               ENDIF
               !
            ENDDO ! pert
-           ! 
+           !
            DEALLOCATE(pertr)
            DEALLOCATE(pertg)
            IF(l_macropol.AND.l_gammaq) THEN
@@ -1020,7 +1040,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            IF(ALLOCATED(ps_c)) DEALLOCATE(ps_c)
            ALLOCATE(ps_c(nbnd-nbndval,mypara%nloc))
            CALL glbrak_k(evc(1,nbndval+1),dvpsi(1,1),ps_c,npw,npwx,nbnd-nbndval,mypara%nloc,nbnd-nbndval,npol)
-           CALL mp_sum(ps_c,intra_bgrp_comm) 
+           CALL mp_sum(ps_c,intra_bgrp_comm)
            !
            IF(ALLOCATED(overlap)) DEALLOCATE(overlap)
            ALLOCATE(overlap(mypara%nglob, nbndval+1:nbnd ) )
@@ -1033,15 +1053,15 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            ENDDO
            !
            DEALLOCATE(ps_c)
-           CALL mp_sum(overlap,inter_image_comm) 
+           CALL mp_sum(overlap,inter_image_comm)
            !
            ! Update zmati with cond
            !
            DO ifreq = 1, ifr%nloc
               !
-              frequency = imfreq_list( ifreq ) 
+              frequency = imfreq_list( ifreq )
               !
-              DO ic = nbndval+1, nbnd 
+              DO ic = nbndval+1, nbnd
                  !
                  ecv = et(ic,iks)-et(iv,ikqs)
                  dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
@@ -1064,14 +1084,14 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            DO ifreq = 1, rfr%nloc
               !
-              frequency = refreq_list( ifreq ) 
+              frequency = refreq_list( ifreq )
               !
-              DO ic = nbndval+1, nbnd 
+              DO ic = nbndval+1, nbnd
                  !
                  ecv = et(ic,iks)-et(iv,ikqs)
                  zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )
                  zm = CMPLX( ecv - frequency, - wfreq_eta, KIND=DP )
-                 zfactor = zmwo / zp + zmwo / zm 
+                 zfactor = zmwo / zp + zmwo / zm
                  !
                  DO ip = 1, mypara%nloc
                     glob_ip = mypara%l2g(ip)
@@ -1084,7 +1104,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  ENDDO
                  !
               ENDDO ! ic
-           ENDDO ! ifreq 
+           ENDDO ! ifreq
            !
            DEALLOCATE(overlap)
            !
@@ -1095,12 +1115,12 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
            ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
            !
-           IF( l_enable_lanczos ) THEN  
+           IF( l_enable_lanczos ) THEN
               !
               ALLOCATE( bnorm    (                             mypara%nloc ) )
               ALLOCATE( diago    (               n_lanczos   , mypara%nloc ) )
               ALLOCATE( subdiago (               n_lanczos-1 , mypara%nloc ) )
-              ALLOCATE( q_s      ( npwx*npol   , mypara%nloc , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM 
+              ALLOCATE( q_s      ( npwx*npol   , mypara%nloc , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
               !
               CALL solve_deflated_lanczos_w_full_ortho ( nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
               !
@@ -1119,13 +1139,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               DO ifreq = 1, ifr%nloc
                  !
-                 frequency = imfreq_list( ifreq ) 
+                 frequency = imfreq_list( ifreq )
                  !
-                 DO il = 1, n_lanczos 
+                 DO il = 1, n_lanczos
                     !
                     DO ip = 1, mypara%nloc
                        glob_ip = mypara%l2g(ip)
-                       ecv = diago( il, ip ) - et(iv,ikqs) 
+                       ecv = diago( il, ip ) - et(iv,ikqs)
                        dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
                        zfactor = CMPLX( dfactor, 0._DP, KIND=DP )
                        DO glob_jp = 1, mypara%nglob
@@ -1142,13 +1162,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               DO ifreq = 1, rfr%nloc
                  !
-                 frequency = refreq_list( ifreq ) 
+                 frequency = refreq_list( ifreq )
                  !
-                 DO il = 1, n_lanczos 
+                 DO il = 1, n_lanczos
                     !
                     DO ip = 1, mypara%nloc
                        glob_ip = mypara%l2g(ip)
-                       ecv = diago( il, ip ) - et(iv,ikqs) 
+                       ecv = diago( il, ip ) - et(iv,ikqs)
                        zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )
                        zm = CMPLX( ecv - frequency, - wfreq_eta, KIND=DP )
                        zfactor = zmwo / zp + zmwo / zm
@@ -1162,25 +1182,25 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  ENDDO ! il
               ENDDO ! ifreq
               !
-              ! MPI-IO 
+              ! MPI-IO
               !
               !CALL writeout_solvewfreq( iks_l2g(iks), iv, diago, braket, io_comm, mypara%nloc, mypara%nglob, mypara%myoffset )
               !
-              DEALLOCATE( diago ) 
+              DEALLOCATE( diago )
               DEALLOCATE( braket )
               !
            ENDIF ! l_enable_lanczos
            !
-           time_spent(2) = get_clock( 'wlanczos' ) 
+           time_spent(2) = get_clock( 'wlanczos' )
            !
-           IF( o_restart_time >= 0._DP ) THEN 
+           IF( o_restart_time >= 0._DP ) THEN
               IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. iv == nbndval) THEN
                  bksq%lastdone_q=iq
                  bksq%lastdone_ks=iks
                  bksq%lastdone_band=iv
                  CALL solvewfreq_restart_write(bksq,zmati_q(:,:,:,:),zmatr_q(:,:,:,:),mypara%nglob,mypara%nloc)
                  bksq%old_q = iq
-                 bksq%old_ks = iks 
+                 bksq%old_ks = iks
                  bksq%old_band = iv
                  time_spent(1) = get_clock( 'wlanczos' )
               ENDIF
@@ -1194,7 +1214,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         DEALLOCATE(dvpsi)
         !
-     ENDDO ! KPOINT-SPIN 
+     ENDDO ! KPOINT-SPIN
+     !
+     DEALLOCATE(pertg_all)
      !
   ENDDO ! QPOINT
   !
@@ -1211,7 +1233,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! EPS-1 imfreq
   !
   ALLOCATE( zmatilda( mypara%nglob, mypara%nglob ) )
-  ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use) ) 
+  ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use) )
   ALLOCATE( z_epsm1_ifr_q( pert%nglob, pert%nloc, ifr%nloc, q_grid%np) )
   z_epsm1_ifr_q = 0._DP
   IF(l_macropol) ALLOCATE( z_head_ifr( ifr%nloc) )
@@ -1226,18 +1248,18 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         zmatilda = 0._DP
         DO ip = 1, mypara%nloc
-           glob_ip = mypara%l2g(ip) 
+           glob_ip = mypara%l2g(ip)
            zmatilda( :, glob_ip) = zmati_q( :, ip, ifreq, iq )
         ENDDO
         !
         CALL mp_sum( zmatilda, inter_image_comm )
-        ! 
+        !
         CALL chi_invert_complex( zmatilda, zhead, zlambda, mypara%nglob, l_gammaq)
         !
         DO ip = 1, pert%nloc
            glob_ip = pert%l2g(ip)
            z_epsm1_ifr_q(1:n_pdep_eigen_to_use,ip,ifreq,iq) = zlambda( 1:n_pdep_eigen_to_use, glob_ip)
-        ENDDO 
+        ENDDO
         IF( l_macropol .AND. l_gammaq ) z_head_ifr( ifreq) = zhead
         !
      ENDDO
@@ -1253,7 +1275,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! EPS-1 refreq
   !
   ALLOCATE( zmatilda( mypara%nglob, mypara%nglob ) )
-  ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use ) ) 
+  ALLOCATE( zlambda( n_pdep_eigen_to_use, n_pdep_eigen_to_use ) )
   ALLOCATE( z_epsm1_rfr_q( pert%nglob, pert%nloc, rfr%nloc, q_grid%np) )
   z_epsm1_rfr_q = 0._DP
   IF(l_macropol) ALLOCATE( z_head_rfr( rfr%nloc) )
@@ -1266,17 +1288,17 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         zmatilda = 0._DP
         DO ip = 1, mypara%nloc
-           glob_ip = mypara%l2g(ip) 
+           glob_ip = mypara%l2g(ip)
            zmatilda( :, glob_ip) = zmatr_q( :, ip, ifreq, iq )
         ENDDO
         !
-        CALL mp_sum( zmatilda, inter_image_comm ) 
+        CALL mp_sum( zmatilda, inter_image_comm )
         CALL chi_invert_complex( zmatilda, zhead, zlambda, mypara%nglob, l_gammaq)
         !
         DO ip = 1, pert%nloc
            glob_ip = pert%l2g(ip)
            z_epsm1_rfr_q(1:n_pdep_eigen_to_use,ip,ifreq,iq) = zlambda( 1:n_pdep_eigen_to_use, glob_ip)
-        ENDDO 
+        ENDDO
         IF( l_macropol .AND. l_gammaq ) z_head_rfr( ifreq ) = zhead
         !
      ENDDO
@@ -1285,13 +1307,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   DEALLOCATE( zlambda )
   DEALLOCATE( zmatilda )
-  DEALLOCATE( zmatr_q ) 
+  DEALLOCATE( zmatr_q )
   !
-  IF(l_generate_plot) THEN 
+  IF(l_generate_plot) THEN
      CALL output_eps_head( )
   ENDIF
   !
-END SUBROUTINE 
+END SUBROUTINE
 !
 !
 SUBROUTINE output_eps_head( )
@@ -1303,13 +1325,13 @@ SUBROUTINE output_eps_head( )
   USE mp_world,             ONLY : mpime,root
   USE distribution_center,  ONLY : ifr,rfr
   USE mp,                   ONLY : mp_sum
-  USE mp_global,            ONLY : intra_bgrp_comm 
+  USE mp_global,            ONLY : intra_bgrp_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE json_module,          ONLY : json_file
-  ! 
+  !
   IMPLICIT NONE
   !
   ! Workspace
@@ -1317,7 +1339,7 @@ SUBROUTINE output_eps_head( )
   CHARACTER(LEN=9) :: prefisso
   REAL(DP),ALLOCATABLE :: out_tabella(:,:)
   INTEGER :: ifreq,glob_ifreq
-  REAL(DP) :: lf, rf, ep1, ep2, nn, kk, rr 
+  REAL(DP) :: lf, rf, ep1, ep2, nn, kk, rr
   TYPE(bar_type) :: barra
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
@@ -1325,28 +1347,28 @@ SUBROUTINE output_eps_head( )
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
-  IF(l_macropol) THEN 
+  IF(l_macropol) THEN
      !
-     CALL io_push_title("(O)ptics") 
+     CALL io_push_title("(O)ptics")
      !
      CALL start_bar_type ( barra, 'optics', rfr%nloc )
      !
-     time_spent(1) = get_clock( 'optics' ) 
+     time_spent(1) = get_clock( 'optics' )
      !
      ! head_rfr
      !
      ALLOCATE( out_tabella(rfr%nglob,8) )
      !
      out_tabella = 0._DP
-     DO ifreq = 1, rfr%nloc 
+     DO ifreq = 1, rfr%nloc
         glob_ifreq = rfr%l2g(ifreq)
         rf =  REAL( z_head_rfr( ifreq ), KIND=DP ) + 1._DP
         lf = -AIMAG( z_head_rfr( ifreq ) )
         ep1 = rf / (rf**2+lf**2)
         ep2 = lf / (rf**2+lf**2)
-        nn = DSQRT( 0.5_DP * ( ep1 + DSQRT( ep1**2 + ep2**2 ) ) ) 
+        nn = DSQRT( 0.5_DP * ( ep1 + DSQRT( ep1**2 + ep2**2 ) ) )
         kk = DSQRT( 0.5_DP * (-ep1 + DSQRT( ep1**2 + ep2**2 ) ) )
-        rr = ((1._DP-nn)**2+kk**2)/((1._DP+nn)**2+kk**2) 
+        rr = ((1._DP-nn)**2+kk**2)/((1._DP+nn)**2+kk**2)
         !
         out_tabella( glob_ifreq, 1 ) = refreq_list( ifreq )*rytoev
         out_tabella( glob_ifreq, 2 ) = ep1
@@ -1363,13 +1385,13 @@ SUBROUTINE output_eps_head( )
      !
      CALL stop_bar_type( barra, 'optics' )
      !
-     CALL mp_sum( out_tabella, intra_bgrp_comm ) 
+     CALL mp_sum( out_tabella, intra_bgrp_comm )
      !
      !CALL serial_table_output(mpime==root,4000,'optics',out_tabella,&
      !& rfr%nglob,8,&
      !& (/'     E[eV]','      eps1','      eps2','      EELF','         n','         k','      Refl',' pol[au^3]'/))
      !
-     IF( mpime == root ) THEN 
+     IF( mpime == root ) THEN
         !
         CALL json%initialize()
         !
@@ -1383,21 +1405,21 @@ SUBROUTINE output_eps_head( )
         CALL json%add("pol",out_tabella(:,8))
         !
         OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/optics.json" )
-        CALL json%print_file( iunit )
+        CALL json%print( iunit )
         CLOSE( iunit )
         !
         CALL json%destroy()
         !
      ENDIF
      !
-     time_spent(2) = get_clock( 'optics' ) 
+     time_spent(2) = get_clock( 'optics' )
      !
      WRITE(stdout,'(  5x," ")')
      CALL io_push_bar()
      WRITE(stdout, "(5x, 'File ',a,' written in ',a20)") TRIM(wfreq_save_dir)//"/optics.json",&
      & human_readable_time(time_spent(2)-time_spent(1))
      CALL io_push_bar()
-     ! 
+     !
      DEALLOCATE( out_tabella )
      !
   ENDIF

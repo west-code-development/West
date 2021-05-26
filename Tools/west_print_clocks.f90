@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -33,7 +33,7 @@ SUBROUTINE west_print_clocks( )
   !
   IF( mpime == root ) THEN 
      CALL json%initialize()
-     CALL json%load_file(filename=TRIM(logfile))
+     CALL json%load(filename=TRIM(logfile))
   ENDIF
   !
   DO n = 1, nclock
@@ -71,7 +71,7 @@ SUBROUTINE west_print_clocks( )
   !
   IF( mpime == root ) THEN
      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile))
-     CALL json%print_file( iunit )
+     CALL json%print( iunit )
      CLOSE( iunit )
      !
      CALL json%destroy()

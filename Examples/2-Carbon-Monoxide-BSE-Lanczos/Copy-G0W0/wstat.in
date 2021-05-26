@@ -1,0 +1,8 @@
+input_west:
+    qe_prefix: pwscf
+    west_prefix: west
+    outdir: ./
+
+wstat_control:
+    wstat_calculation: S
+    n_pdep_eigen: 256

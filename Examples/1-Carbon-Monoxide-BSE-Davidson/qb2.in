@@ -1,0 +1,12 @@
+load qb.gs.xml  
+
+bisection 1 1 1 0.0
+save -text qb.bis.0.0.xml
+
+set xc HF
+set btHF 0.0
+set blHF 1 1 1
+
+set wf_dyn LOCKED
+
+run 0

@@ -1,0 +1,65 @@
+=============
+1) Run QBOX
+=============
+
+# DFT scf calculation
+srun -n 40 ./qb < qb.in > qb.out
+
+# recursive bisection
+srun -n 40 ./qb < qb2.in > qb2.out
+
+=============
+2) Parse output (note that the name bisection_localization.1 is hardcoded)
+=============
+
+grep localization qb2.out | awk 'END{print NR}' > bisection_localization.1; grep localization qb2.out | awk '{print $2}' >> bisection_localization.1
+
+=============
+3) Run QE
+=============
+
+# DFT scf calculation
+srun -n 40 ./pw.x < pw.in > pw.out
+
+=============
+4) Run wbse_init.x together with Qbox 
+=============
+
+# Compute the screen Coulomb integrals \tau_{vv'}
+# Note: make sure to request the right number of nodes (total number of nodes for Qbox + number of nodes for WEST)
+
+nimages=1
+# This is going to submit <nimages> copies of Qbox (1 node each)
+for (( i=0; i<$nimages; i++ ))
+do
+    qb_in=`printf "qb.%d.in" $i`
+    qb_out=`printf "qb.%d.out" $i`
+    srun -n 40 -N 1 ./qb -server ${qb_in} ${qb_out} &
+    sleep 1
+done
+# This is going to submit ONE copy of West (1 node)
+srun -n 40 -N 1 ./wbse_init.x -nimage ${nimages} -i wbse_init.in > wbse_init.out &
+wait 
+
+=============
+5) Run wbse.x 
+=============
+
+# Lanczos calculation for frequency-dependent \epsilon or \chi
+# Note that a GW is read from file (qp_eigs.1) 
+
+srun -n 80 -N 2 ./wbse.x -nimage 1 -i wbse.in > wbse.out 
+
+=============
+6) Run wbsepp.x
+=============
+
+# Post-processing of Lanczos chain -> absorption spectrum
+
+srun -n 40 -N 1 /wbsepp.x -i wbsepp.in > wbsepp.out
+
+=============
+7) Plot
+=============
+
+# prefix.abs_spectrum.dat can be used to plot the absorption spectrum. The second row is the energy (Ry). The third row is the intensity

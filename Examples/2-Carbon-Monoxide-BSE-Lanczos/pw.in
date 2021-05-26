@@ -1,0 +1,32 @@
+&control
+    calculation = 'scf',
+    prefix='pwscf',
+    pseudo_dir='./',
+    outdir = './',
+    verbosity='high',
+    tprnfor=.TRUE.,
+    tstress=.TRUE.,
+    wf_collect=.TRUE.
+/
+&system
+    ibrav=0,
+    nat=2,
+    ntyp= 2,
+    ecutwfc = 80,
+    nbnd = 50
+/
+&electrons
+    diago_full_acc=.true.,
+    conv_thr=1.0D-8
+/
+ATOMIC_SPECIES
+C 12.01  C_ONCV_PBE-1.0.upf
+O 16.00  O_ONCV_PBE-1.0.upf
+K_POINTS gamma
+CELL_PARAMETERS {angstrom}
+15 0 0
+0 15 0
+0 0 15
+ATOMIC_POSITIONS {crystal}
+C        0.46000000   0.46000000   0.46000000
+O        0.50359137   0.50359137   0.50359137

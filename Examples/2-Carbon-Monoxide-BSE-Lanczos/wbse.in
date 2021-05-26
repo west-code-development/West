@@ -1,0 +1,25 @@
+input_west:
+    qe_prefix                : pwscf
+    west_prefix              : west
+    outdir                   : ./
+
+server_control:
+    document: {"response": {"amplitude": 0, "nitscf":20, "nite":0}, "script" : ["load ./qb.gs.xml \n set xc PBE \n set wf_dyn PSDA \n set blHF 1 1 1 \n set btHF 0.00 \n "]}
+
+wbse_init_control:
+    wbse_init_calculation    : 'S'
+    localization             : 'B'
+    bisection_info           : 'bisection_localization'
+    chi_kernel               : 'CHI'
+    which_spin_channel       : 0
+    overlap_thr              : 0.0
+    wfc_from_qbox            : 'qb.bis.0.0.xml'
+
+wbse_control:
+    wbse_calculation         : 'L'
+    solver                   : 'BSE'
+    qp_correction            : 'qp_eigs'    
+    macropol_calculation     : 'N'        
+    ipol_input               : 'XYZ'
+    n_lanczos                :  3000
+    epsinfty                 :  1.0

@@ -15,7 +15,7 @@ glbrak.o \
 apply_alpha_pc_to_m_wfcs.o \
 apply_alpha_pv_to_m_wfcs.o \
 k_psi.o \
-commutator_Hx_psi.o 
+commut_Hx_psi.o
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a

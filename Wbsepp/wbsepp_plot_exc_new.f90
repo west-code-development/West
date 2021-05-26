@@ -30,13 +30,12 @@ SUBROUTINE wbsepp_plot_exc()
   USE control_flags,          ONLY : gamma_only
   USE mp,                     ONLY : mp_sum, mp_bcast, mp_min
   USE mp_global,              ONLY : me_bgrp, inter_pool_comm, intra_bgrp_comm,&
-                                     inter_bgrp_comm, my_image_id, inter_image_comm
+                                   & inter_bgrp_comm, my_image_id, inter_image_comm
   USE buffers,                ONLY : get_buffer
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev,dvg_exc,n_plep_read_from_file,&
+                                   & iexc_plot,r0_input
   USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
-  USE wbsecom,                ONLY : dvg_exc, n_plep_read_from_file
-  USE wbseppcom,              ONLY : iexc_plot, r0_input
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute

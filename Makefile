@@ -2,7 +2,7 @@
 
 include ../make.inc
 
-default :
+default:
 	@echo "Welcome to WEST!"
 	@echo ' '
 	@echo 'to install WEST, type at the shell prompt:'
@@ -43,7 +43,7 @@ check_conf:
 	@[ -f "west_make.inc" ] || ( echo ">> Cannot find west_make.inc. Run: make conf PYT=python3"; exit 1 )
 	$(eval include ./west_make.inc)
 
-report_build_vars :
+report_build_vars: check_conf
 	@echo "              "
 	@echo "##############"
 	@echo "# Build vars #"
@@ -185,36 +185,36 @@ dfpt_kernel_do: para_kernel_do fft_kernel_do tools_do modules_do
 	( cd DFPT_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-io_kernel_do: para_kernel_do tools_do modules_do libraries_do
+io_kernel_do: para_kernel_do tools_do fft_kernel_do modules_do libraries_do
 	if test -d IO_kernel ; then \
 	( cd IO_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-wstat_do: io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+wstat_do: io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wstat ; then \
 	( cd Wstat ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wfreq_do: io_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+wfreq_do: io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wfreq ; then \
 	( cd Wfreq ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-westpp_do: io_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+westpp_do: io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Westpp ; then \
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wbse_do:
+wbse_do: wstat_do io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d ../LR_Modules; then \
 	( cd ../LR_Modules ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
-	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi        
+	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 	cd ../West
 	if test -d Wbse ; then \
 	( cd Wbse ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wbsepp_do:
+wbsepp_do: wbse_do westpp_do wstat_do io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wbsepp ; then \
 	( cd Wbsepp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
@@ -234,7 +234,7 @@ wstat_undo \
 wfreq_undo \
 westpp_undo \
 wbse_undo \
-wbsepp_undo 
+wbsepp_undo
 
 pytools_undo:
 	if test -d Pytools ; then \

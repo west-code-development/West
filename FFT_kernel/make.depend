@@ -7,7 +7,12 @@ fft_at_k.o : ../../FFTXlib/fft_types.o
 fft_at_k.o : ../../Modules/kind.o
 fft_at_k.o : ../../Modules/recvec.o
 fft_interpolation.o : ../../FFTXlib/fft_interfaces.o
+fft_interpolation.o : ../../FFTXlib/fft_scalar.o
 fft_interpolation.o : ../../FFTXlib/fft_types.o
 fft_interpolation.o : ../../Modules/cell_base.o
+fft_interpolation.o : ../../Modules/control_flags.o
+fft_interpolation.o : ../../Modules/io_global.o
 fft_interpolation.o : ../../Modules/kind.o
+fft_interpolation.o : ../../Modules/mp.o
+fft_interpolation.o : ../../Modules/mp_images.o
 fft_interpolation.o : ../../Modules/recvec.o

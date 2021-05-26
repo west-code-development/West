@@ -26,7 +26,6 @@ wfreq_db.o \
 mod_west_io.o \
 wfreq_io.o \
 wfreq_restart.o \
-ft_interpolation.o \
 qbox_interface.o  
 
 PWOBJS = ../../PW/src/libpw.a

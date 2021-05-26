@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -44,6 +44,8 @@ MODULE chi_invert
       USE linear_algebra_kernel, ONLY : matinvrs_dge 
       USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol
       USE io_files,              ONLY : tmp_dir
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !
@@ -169,6 +171,8 @@ MODULE chi_invert
       USE linear_algebra_kernel, ONLY : matinvrs_zge 
       USE westcom,               ONLY : west_prefix,n_pdep_eigen_to_use,l_macropol
       USE io_files,              ONLY : tmp_dir
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !

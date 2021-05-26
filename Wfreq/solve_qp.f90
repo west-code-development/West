@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -1228,7 +1228,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      !
      CALL json%initialize()
      !
-     CALL json%load_file(filename=TRIM(logfile))
+     CALL json%load(filename=TRIM(logfile))
      !
      CALL json%get('exec.Q.secitr',secitr, found )
      !
@@ -1258,7 +1258,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      ENDDO
      !
      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-     CALL json%print_file( iunit )
+     CALL json%print( iunit )
      CLOSE( iunit )
      !
      CALL json%destroy()

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2019 M. Govoni 
+# Copyright (C) 2015-2021 M. Govoni 
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -36,6 +36,7 @@ default["wstat_control"]["n_pdep_times"] = 4
 default["wstat_control"]["n_pdep_maxiter"] = 100
 default["wstat_control"]["n_dfpt_maxiter"] = 250
 default["wstat_control"]["n_pdep_read_from_file"] = 0
+default["wstat_control"]["n_steps_write_restart"] = 1
 default["wstat_control"]["trev_pdep"] = 1.e-3
 default["wstat_control"]["trev_pdep_rel"] = 1.e-1
 default["wstat_control"]["tr2_dfpt"] = 1.e-12

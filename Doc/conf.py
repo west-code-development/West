@@ -60,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = data["name"]
-copyright = u'2020, Marco Govoni'
+copyright = u'2021, Marco Govoni'
 author = u'Marco Govoni'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -157,11 +157,7 @@ html_logo = "images/logo.jpg"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
-        ],
-     }
+html_ccs_files = ['theme_overrides.css']  # override wide tables in RTD theme
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -315,6 +311,5 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3.6', None),
-    'pymongo': ('https://api.mongodb.com/python/current/', None)
+    'python': ('https://docs.python.org/3.6', None)
 }

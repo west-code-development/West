@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -57,6 +57,7 @@ MODULE west_io
     ! CHECK IF FILE IS PRESENT
     !
     LOGICAL FUNCTION file_is_present(lproc,fname,suffix)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       CHARACTER(*),INTENT(IN) :: fname
       CHARACTER(*),INTENT(IN) :: suffix
@@ -78,6 +79,7 @@ MODULE west_io
     ! WRITE I0
     !
     SUBROUTINE serial_i0_data_write(lproc,iunit,fname,i0dummy)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -101,6 +103,7 @@ MODULE west_io
     ! WRITE I1
     !
     SUBROUTINE serial_i1_data_write(lproc,iunit,fname,i1dummy,n)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -128,6 +131,7 @@ MODULE west_io
     ! WRITE I2
     !
     SUBROUTINE serial_i2_data_write(lproc,iunit,fname,i2dummy,n,m)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -158,6 +162,7 @@ MODULE west_io
     ! WRITE I3
     !
     SUBROUTINE serial_i3_data_write(lproc,iunit,fname,i3dummy,n,m,l)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -191,6 +196,7 @@ MODULE west_io
     ! WRITE I4
     !
     SUBROUTINE serial_i4_data_write(lproc,iunit,fname,i4dummy,n,m,l,q)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -227,6 +233,7 @@ MODULE west_io
     ! WRITE D0
     !
     SUBROUTINE serial_d0_data_write(lproc,iunit,fname,d0dummy)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -252,6 +259,7 @@ MODULE west_io
     ! WRITE D1
     !
     SUBROUTINE serial_d1_data_write(lproc,iunit,fname,d1dummy,n)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -278,6 +286,7 @@ MODULE west_io
     ! WRITE D2
     !
     SUBROUTINE serial_d2_data_write(lproc,iunit,fname,d2dummy,n,m)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -304,6 +313,7 @@ MODULE west_io
     ! WRITE D3
     !
     SUBROUTINE serial_d3_data_write(lproc,iunit,fname,d3dummy,n,m,l)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -330,6 +340,7 @@ MODULE west_io
     ! WRITE D4
     !
     SUBROUTINE serial_d4_data_write(lproc,iunit,fname,d4dummy,n,m,l,q)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -356,6 +367,7 @@ MODULE west_io
     ! WRITE Z0 
     !
     SUBROUTINE serial_z0_data_write(lproc,iunit,fname,z0dummy)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -381,6 +393,7 @@ MODULE west_io
     ! WRITE Z1
     !
     SUBROUTINE serial_z1_data_write(lproc,iunit,fname,z1dummy,n)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -407,6 +420,7 @@ MODULE west_io
     ! WRITE Z2 
     !
     SUBROUTINE serial_z2_data_write(lproc,iunit,fname,z2dummy,n,m)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -433,6 +447,7 @@ MODULE west_io
     ! WRITE Z3 
     !
     SUBROUTINE serial_z3_data_write(lproc,iunit,fname,z3dummy,n,m,l)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -459,6 +474,7 @@ MODULE west_io
     ! WRITE Z4
     !
     SUBROUTINE serial_z4_data_write(lproc,iunit,fname,z4dummy,n,m,l,q)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -491,6 +507,7 @@ MODULE west_io
     ! READ I0
     !
     SUBROUTINE serial_i0_data_read(lproc,iunit,fname,i0dummy)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -514,6 +531,7 @@ MODULE west_io
     ! READ I1
     !
     SUBROUTINE serial_i1_data_read(lproc,iunit,fname,i1dummy,n)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -541,6 +559,7 @@ MODULE west_io
     ! READ I2
     !
     SUBROUTINE serial_i2_data_read(lproc,iunit,fname,i2dummy,n,m)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -571,6 +590,7 @@ MODULE west_io
     ! READ I3
     !
     SUBROUTINE serial_i3_data_read(lproc,iunit,fname,i3dummy,n,m,l)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -604,6 +624,7 @@ MODULE west_io
     ! READ I4
     !
     SUBROUTINE serial_i4_data_read(lproc,iunit,fname,i4dummy,n,m,l,q)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -640,6 +661,7 @@ MODULE west_io
     ! READ D0
     !
     SUBROUTINE serial_d0_data_read(lproc,iunit,fname,d0dummy)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -665,6 +687,7 @@ MODULE west_io
     ! READ D1
     !
     SUBROUTINE serial_d1_data_read(lproc,iunit,fname,d1dummy,n)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -691,6 +714,7 @@ MODULE west_io
     ! READ D2
     !
     SUBROUTINE serial_d2_data_read(lproc,iunit,fname,d2dummy,n,m)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -717,6 +741,7 @@ MODULE west_io
     ! READ D3
     !
     SUBROUTINE serial_d3_data_read(lproc,iunit,fname,d3dummy,n,m,l)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -743,6 +768,7 @@ MODULE west_io
     ! READ D4
     !
     SUBROUTINE serial_d4_data_read(lproc,iunit,fname,d4dummy,n,m,l,q)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -769,6 +795,7 @@ MODULE west_io
     ! READ Z0
     !
     SUBROUTINE serial_z0_data_read(lproc,iunit,fname,z0dummy)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -794,6 +821,7 @@ MODULE west_io
     ! READ Z1
     !
     SUBROUTINE serial_z1_data_read(lproc,iunit,fname,z1dummy,n)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -820,6 +848,7 @@ MODULE west_io
     ! READ Z2
     !
     SUBROUTINE serial_z2_data_read(lproc,iunit,fname,z2dummy,n,m)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -846,6 +875,7 @@ MODULE west_io
     ! READ Z3
     !
     SUBROUTINE serial_z3_data_read(lproc,iunit,fname,z3dummy,n,m,l)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -872,6 +902,7 @@ MODULE west_io
     ! READ Z4
     !
     SUBROUTINE serial_z4_data_read(lproc,iunit,fname,z4dummy,n,m,l,q)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
@@ -905,6 +936,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_i1_data_write(fname,i1dummy,nloc,offset,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
@@ -932,6 +964,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_i1_irrdata_write(fname,i1dummy,nloc,map,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
@@ -986,6 +1019,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_d1_data_write(fname,d1dummy,nloc,offset,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
@@ -1013,6 +1047,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_d1_irrdata_write(fname,d1dummy,nloc,map,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
@@ -1040,6 +1075,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_z1_data_write(fname,z1dummy,nloc,offset,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
@@ -1067,6 +1103,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_z1_irrdata_write(fname,z1dummy,nloc,map,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
@@ -1095,6 +1132,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_i1_data_read(fname,i1dummy,nloc,offset,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
@@ -1121,6 +1159,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_i1_irrdata_read(fname,i1dummy,nloc,map,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
@@ -1148,6 +1187,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_d1_data_read(fname,d1dummy,nloc,offset,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
@@ -1174,6 +1214,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_d1_irrdata_read(fname,d1dummy,nloc,map,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
@@ -1201,6 +1242,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_z1_data_read(fname,z1dummy,nloc,offset,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
@@ -1227,6 +1269,7 @@ MODULE west_io
     !
     SUBROUTINE parallel_z1_irrdata_read(fname,z1dummy,nloc,map,comm)
       USE parallel_include
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)

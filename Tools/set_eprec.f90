@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -22,6 +22,8 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   USE pwcom,                 ONLY : npw,npwx
   USE mp,                    ONLY : mp_sum
   USE mp_global,             ONLY : intra_bgrp_comm
+  !
+  IMPLICIT NONE
   !
   ! I/O
   !

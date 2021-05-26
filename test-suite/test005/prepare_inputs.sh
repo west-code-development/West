@@ -10,7 +10,7 @@ restart_mode = 'from_scratch'
 pseudo_dir   = './'
 outdir       = './'
 prefix       = 'test'
-wf_collect   = .TRUE.
+wf_collect   = .true.
 /
 &system
 ibrav           = 1
@@ -19,10 +19,10 @@ nat             = 5
 ntyp            = 2
 ecutwfc         = 25.0
 nbnd            = 10
-assume_isolated ='mp'
+assume_isolated = 'mp'
 /
 &electrons
-diago_full_acc = .TRUE.
+diago_full_acc = .true.
 /
 ATOMIC_SPECIES
 Si 28.0855  Si_ONCV_PBE-1.1.upf
@@ -43,23 +43,23 @@ input_west:
   west_prefix: test
   outdir: ./
 
-wstat_control: 
+wstat_control:
   wstat_calculation: S
   n_pdep_eigen: 50
 EOF
 
 
-cat > wfreq.in << EOF 
+cat > wfreq.in << EOF
 input_west:
   qe_prefix: test
   west_prefix: test
   outdir: ./
 
-wstat_control: 
+wstat_control:
   wstat_calculation: S
   n_pdep_eigen: 50
 
-wfreq_control: 
+wfreq_control:
   wfreq_calculation: XWGQ
   n_pdep_eigen_to_use: 50
   qp_bandrange: [1,5]
@@ -68,19 +68,19 @@ wfreq_control:
 EOF
 
 
-cat > westpp.in << EOF 
+cat > westpp.in << EOF
 input_west:
   qe_prefix: test
   west_prefix: test
   outdir: ./
 
-wstat_control: 
+wstat_control:
   wstat_calculation: S
   n_pdep_eigen: 50
 
 westpp_control:
   westpp_calculation: E
-  westpp_range: [1,2] 
-  westpp_format: C 
+  westpp_range: [1,2]
+  westpp_format: C
   westpp_sign: True
 EOF

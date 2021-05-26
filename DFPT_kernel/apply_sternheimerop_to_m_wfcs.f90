@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -40,7 +40,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   ! input: the vector
   ! output: the operator applied to the vector
   !
-  ! Workspace 
+  ! Workspace
   !
   INTEGER :: ibnd, ig
   COMPLEX(DP) :: za
@@ -50,11 +50,15 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !   compute the product of the hamiltonian with the h vector
   !
   hpsi=(0.0_DP,0.0_DP)
-  !  
+  !
   IF(l_kinetic_only) THEN
      CALL k_psi( npwx, npw, m, psi, hpsi )
   ELSE
-     CALL h_psi( npwx, npw, m, psi, hpsi )
+     !
+     ! use h_psi_, i.e. h_psi without band parallelization, as wstat
+     ! handles band parallelization separately in dfpt_module
+     !
+     CALL h_psi_( npwx, npw, m, psi, hpsi )
   ENDIF
   !
   !   then we compute the operator H-epsilon S
@@ -74,4 +78,4 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !
   CALL stop_clock ('stern')
   !
-END SUBROUTINE 
+END SUBROUTINE

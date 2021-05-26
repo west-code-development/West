@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -94,7 +94,7 @@ MODULE wstat_restart
          CALL json%add('ew',ew(:))
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
-         CALL json%print_file( iunit )
+         CALL json%print( iunit )
          CLOSE( iunit )
          CALL json%destroy()
          !
@@ -219,7 +219,7 @@ MODULE wstat_restart
          ENDIF
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
-         CALL json%print_file( iunit )
+         CALL json%print( iunit )
          CLOSE( iunit )
          CALL json%destroy()
          !
@@ -552,7 +552,7 @@ MODULE wstat_restart
       IF ( mpime==root ) THEN
          !
          CALL json%initialize()
-         CALL json%load_file( filename = TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
+         CALL json%load( filename = TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
          ! 
          CALL json%get('dav_iter', ival, found) 
          IF( found ) dav_iter = ival
@@ -832,6 +832,8 @@ MODULE wstat_restart
       USE mp_global,           ONLY : my_image_id
       USE pdep_io,             ONLY : pdep_read_G_and_distribute
       USE distribution_center, ONLY : pert
+      !
+      IMPLICIT NONE
       !
       INTEGER, INTENT(IN) :: nbase
       INTEGER, INTENT(IN), OPTIONAL :: iq

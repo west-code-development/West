@@ -160,7 +160,9 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
      IF (ANY(driver(:)==8)) THEN
         !
         CALL json%add('input.wbsepp_control.wbsepp_type',wbsepp_type)
-        CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_liouville_read_from_file)
+! Typo
+!        CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_liouville_read_from_file)
+        CALL json%add('input.wbsepp_control.n_liouville_read_from_file',n_liouville_read_from_file)
         CALL json%add('input.wbsepp_control.macropol_dfpt',macropol_dfpt)
         CALL json%add('input.wbsepp_control.r0_input', r0_input)
         CALL json%add('input.wbsepp_control.iexc_plot',iexc_plot)

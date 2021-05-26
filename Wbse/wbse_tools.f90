@@ -1007,7 +1007,7 @@ MODULE wbse_tools
                !
                ! Pc amat
                !
-               CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,ag(:,:,iks,il1),(1.0_DP,0.0_DP))
+!               CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,ag(:,:,iks,il1),(1.0_DP,0.0_DP))
                !
             ENDIF
             !

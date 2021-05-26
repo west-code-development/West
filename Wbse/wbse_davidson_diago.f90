@@ -31,13 +31,13 @@ SUBROUTINE wbse_davidson_diago ( )
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver, &
-                                   dvg_exc,dng_exc,nbndval0x, l_preconditioning
+                                   dvg_exc,dng_exc,nbndval0x,l_preconditioning,nbnd_occ,lrwfc,iuwfc
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   !USE write_xml,            ONLY : wstat_xml_dump
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
   USE mp_world,             ONLY : mpime
-  USE mp_global,            ONLY : inter_image_comm
-  USE mp,                   ONLY : mp_sum,mp_max
+  USE mp_global,            ONLY : inter_image_comm, my_image_id
+  USE mp,                   ONLY : mp_sum,mp_max,mp_bcast
   USE gvect,                ONLY : gstart
   USE wstat_tools,          ONLY : diagox,serial_diagox,symm_hr_distr,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
@@ -46,6 +46,8 @@ SUBROUTINE wbse_davidson_diago ( )
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
   USE distribution_center,  ONLY : bseparal
   USE types_coulomb,        ONLY : pot3D
+  USE buffers,              ONLY : get_buffer
+  USE wavefunctions_module, ONLY : evc
   !
   IMPLICIT NONE
   !
@@ -70,6 +72,7 @@ SUBROUTINE wbse_davidson_diago ( )
   COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
   !
   INTEGER :: il1,il2,ig1,ig2,i
+  INTEGER :: iks, nbndval
   INTEGER :: size_index_matrix
   REAL(DP) :: time_spent(2)
   CHARACTER(LEN=8) :: iter_label
@@ -366,6 +369,49 @@ write(stdout,*) n_pdep_read_from_file, nvec
         ENDIF
         !
      ENDIF
+     !
+     ! apply P_c to the new basis vectors
+     !
+     mloc = 0
+     mstart = 1
+     DO il1 = 1, pert%nloc
+        ig1 = pert%l2g(il1)
+        IF( ig1 <= nbase .OR. ig1 > nbase+notcnv ) CYCLE
+        IF( mloc==0 ) mstart = il1
+        mloc = mloc + 1
+     ENDDO
+     !
+     max_mloc = mloc
+     CALL mp_max (max_mloc, inter_image_comm)
+     !
+     DO il1 = mstart, mstart+max_mloc-1
+        !
+        ig1 = pert%l2g(il1)
+        !
+        DO iks  = 1, nks
+           !
+           nbndval = nbnd_occ(iks)
+           !
+           ! ... read in GS wavefunctions iks
+           !
+           IF (nks>1) THEN
+              !
+              IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+              CALL mp_bcast(evc,0,inter_image_comm)
+              !
+           ENDIF
+           !
+           IF (.NOT.( ig1 <= nbase .OR. ig1 > nbase+notcnv )) THEN
+              !
+              ! Pc amat
+              !
+              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,dvg_exc(:,:,iks,il1),(1.0_DP,0.0_DP))
+              !
+           ENDIF
+           !
+        ENDDO
+        !
+     ENDDO
      !
      ! ... MGS
      !

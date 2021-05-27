@@ -920,6 +920,8 @@ MODULE wbse_restart
       USE plep_io,             ONLY : plep_read_G_and_distribute
       USE distribution_center, ONLY : pert
       !
+      IMPLICIT NONE
+      !
       CHARACTER(LEN=*), INTENT(IN)  :: dirname
       INTEGER, INTENT(IN) :: nbase
       !

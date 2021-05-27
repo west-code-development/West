@@ -22,8 +22,8 @@ SUBROUTINE wbsepp_meg ( )
   USE distribution_center,  ONLY : pert
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE westcom,              ONLY : nbnd_occ,ev,npwq0x,npwq0,dvg,sqvc,fftdriver
-  USE wbsecom,              ONLY : dvg_exc, d0psi, n_plep_read_from_file
+  USE westcom,              ONLY : nbnd_occ,ev,npwq0x,npwq0,dvg,sqvc,fftdriver,&
+                                 & dvg_exc,d0psi,n_plep_read_from_file
   USE pwcom,                ONLY : wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,omega,npw,npwx,lsda,nkstot,&
                                  & current_k,ngk,nbnd,wg
   USE fft_base,             ONLY : dfftp,dffts

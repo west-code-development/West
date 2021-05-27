@@ -16,8 +16,6 @@ SUBROUTINE wbsepp_fetch_namelist(num_namelists,driver)
   !
   USE pwcom
   USE westcom
-  USE wbseppcom
-  USE wbsecom,          ONLY : n_plep_read_from_file, macropol_dfpt
   USE qbox_interface
   USE io_files,         ONLY : tmp_dir, prefix
   USE io_global,        ONLY : stdout

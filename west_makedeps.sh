@@ -17,7 +17,8 @@ then
 
     dirs=" West/Coulomb_kernel West/DFPT_kernel West/FFT_kernel \
            West/Hamiltonian_kernel West/IO_kernel West/Modules \
-           West/Para_kernel West/Tools West/Westpp West/Wfreq West/Wstat "
+           West/Para_kernel West/Tools West/Wbse West/Wbsepp \
+           West/Westpp West/Wfreq West/Wstat "
 
 elif
     test $1 = "-addson"
@@ -54,30 +55,34 @@ for dir in $dirs; do
     # for convenience, used later
     DEPEND1="$LEVEL1/include $LEVEL1/iotk/src $LEVEL1/FFTXlib $LEVEL1/LAXlib"
     DEPEND2="$LEVEL2/include $LEVEL2/iotk/src $LEVEL2/FFTXlib $LEVEL2/LAXlib \
-             $LEVEL2/Modules"
+             $LEVEL2/Modules $LEVEL2/LR_Modules"
     case $DIR in
         West/Coulomb_kernel )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/DFPT_kernel )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/FFT_kernel )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Hamiltonian_kernel )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/IO_kernel )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Modules )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Para_kernel )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Tools )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+        West/Wbse )
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+        West/Wbsepp )
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Westpp )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Wfreq )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wstat" ;;
         West/Wstat )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq" ;;
     *)
 # if addson needs a make.depend file
         DEPENDS="$DEPENDS $add_deps"

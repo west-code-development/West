@@ -53,6 +53,8 @@ MODULE plep_io
       USE mp_wave,      ONLY : mergewf
       USE mp,           ONLY : mp_bcast
       !
+      IMPLICIT NONE
+      !
       ! I/O
       !
       INTEGER,      INTENT(IN) :: nbndval
@@ -123,6 +125,8 @@ MODULE plep_io
       USE mp_wave,      ONLY : splitwf
       USE mp,           ONLY : mp_bcast
       USE mp_global,    ONLY : intra_bgrp_comm
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !
@@ -225,6 +229,8 @@ MODULE plep_io
       USE mp_wave,      ONLY : mergewf
       USE mp,           ONLY : mp_bcast
       !
+      IMPLICIT NONE
+      !
       ! I/O
       !
       CHARACTER(*), INTENT(IN) :: fname
@@ -302,6 +308,8 @@ MODULE plep_io
       USE mp_wave,      ONLY : splitwf
       USE mp,           ONLY : mp_bcast
       USE mp_global,    ONLY : intra_bgrp_comm
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !
@@ -410,6 +418,8 @@ MODULE plep_io
       USE mp_wave,      ONLY : mergewf
       USE mp,           ONLY : mp_bcast
       !
+      IMPLICIT NONE
+      !
       ! I/O
       !
       CHARACTER(*), INTENT(IN) :: fname
@@ -481,6 +491,8 @@ MODULE plep_io
       USE mp_wave,      ONLY : splitwf
       USE mp,           ONLY : mp_bcast
       USE mp_global,    ONLY : intra_bgrp_comm
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !

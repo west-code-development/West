@@ -7,6 +7,8 @@
 !
 MODULE check_ovl_wfc
   !
+  IMPLICIT NONE
+  !
   INTERFACE check_ovl_wannier
      !
      MODULE PROCEDURE check_ovl_wannier_real, check_ovl_wannier_cmplx
@@ -156,6 +158,8 @@ MODULE check_ovl_wfc
       USE mp_global,            ONLY : inter_image_comm
       USE bse_module,           ONLY : ovl_thr
       !
+      IMPLICIT NONE
+      !
       REAL(DP), INTENT(IN)  :: orb_real_i(dfftp%nnr)
       REAL(DP), INTENT(IN)  :: orb_real_j(dfftp%nnr)
       REAL(DP), INTENT(OUT) :: ovl_value
@@ -201,6 +205,8 @@ MODULE check_ovl_wfc
       USE mp,                   ONLY : mp_sum
       USE mp_global,            ONLY : inter_image_comm
       USE bse_module,           ONLY : ovl_thr
+      !
+      IMPLICIT NONE
       !
       COMPLEX(DP), INTENT(IN)  :: orb_cmpl_i(dfftp%nnr)
       COMPLEX(DP), INTENT(IN)  :: orb_cmpl_j(dfftp%nnr)

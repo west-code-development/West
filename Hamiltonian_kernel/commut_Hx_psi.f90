@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE commutator_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
+SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >
@@ -60,7 +60,7 @@ SUBROUTINE commutator_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   COMPLEX(DP),ALLOCATABLE :: ps2(:,:,:), dvkb (:,:), dvkb1 (:,:), work (:,:), psc(:,:,:,:), deff_nc(:,:,:,:)
   REAL(DP),ALLOCATABLE :: deff(:,:,:)
   !
-  CALL start_clock ('commutator_Hx_psi')
+  CALL start_clock ('commut_Hx_psi')
   !
   ALLOCATE( gk(3,npwx) )    
   !
@@ -231,7 +231,7 @@ SUBROUTINE commutator_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
         ENDDO  ! na
      ENDDO  ! nt
   ENDDO ! nbnd
-  IF (ikb /= nkb .OR. jkb /= nkb) call errore ('commutator_Hx_psi', 'unexpected error',1)
+  IF (ikb /= nkb .OR. jkb /= nkb) call errore ('commut_Hx_psi', 'unexpected error',1)
   !
   CALL deallocate_bec_type( becp1 )
   CALL deallocate_bec_type( becp2 )
@@ -263,6 +263,6 @@ SUBROUTINE commutator_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !
   111 CONTINUE
   !
-  CALL stop_clock ('commutator_Hx_psi')
+  CALL stop_clock ('commut_Hx_psi')
   RETURN
-END SUBROUTINE commutator_Hx_psi
+END SUBROUTINE commut_Hx_psi

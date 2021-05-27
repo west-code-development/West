@@ -380,7 +380,7 @@ ENDSUBROUTINE
 !
 !
 !
-subroutine write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
+SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   !
   ! ...   This subroutine writes orbs to unit emptyunitc0
   !
@@ -662,7 +662,7 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
 END SUBROUTINE
 !
-subroutine read_pwscf_wannier_orbs ( ne, npw, c_emp, filename )
+SUBROUTINE read_pwscf_wannier_orbs ( ne, npw, c_emp, filename )
   !
   ! ... This subroutine reads wannier orbital from unit emptyunit
   !

@@ -8,4 +8,6 @@ parallel_distributed_diago.o : ../../Modules/kind.o
 parallel_distributed_diago.o : ../../Modules/mp.o
 parallel_distributed_diago.o : ../../Modules/mp_global.o
 parallel_distributed_diago.o : ../../Modules/mp_world.o
+parallel_distributed_diago.o : ../../Modules/parallel_include.o
+parallel_distributed_diago.o : ../Tools/heapsort.o
 parallel_distributed_diago.o : class_idistribute.o

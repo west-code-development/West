@@ -12,6 +12,7 @@
 !
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
+#define MONE (-1.D0, 0.D0 )
 !
 !----------------------------------------------------------------------------
 SUBROUTINE davidson_diago ( )
@@ -919,7 +920,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                  ONLY : DP
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id
+  USE mp_global,              ONLY : intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id,inter_image_comm,my_image_id
   USE gvect,                  ONLY : gstart
   USE mp,                     ONLY : mp_sum,mp_bcast
   USE westcom,                ONLY : npwq,npwqx
@@ -931,8 +932,8 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: m_global_start,m_global_end
-  COMPLEX(DP) :: amat(npwqx,pert%nlocx)
+  INTEGER,INTENT(IN) :: m_global_start,m_global_end
+  COMPLEX(DP),INTENT(INOUT) :: amat(npwqx,pert%nlocx)
   !
   ! Workspace
   !
@@ -951,114 +952,112 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   CALL start_clock ('paramgs')
   !
-  ALLOCATE( vec(npwqx), zbraket(pert%nloc), braket(pert%nloc) )
-  !
   ! 1) Run some checks
   !
   IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
      & CALL errore( 'mgs', 'do_mgs problem', 1 )
   !
-  ! 2) Localize m_global_start
-  !
-  m_local_start = 1
-  DO ip = 1, pert%nloc
-     ig = pert%l2g(ip)
-     IF( ig < m_global_start ) CYCLE
-     m_local_start = ip
-     EXIT
-  ENDDO
-  !
-  ! 3) Localize m_global_end
-  !
-  m_local_end = pert%nloc
-  DO ip = pert%nloc, 1, -1
-     ig = pert%l2g(ip)
-     IF( ig > m_global_end ) CYCLE
-     m_local_end = ip
-     EXIT
-  ENDDO
-  !
-  j_local=1
-  unfinished=.true.
-  !
-  !DO k_global=m_global_start,m_global_end
-  DO k_global=1,m_global_end
+  IF(my_bgrp_id == 0) THEN
      !
-     CALL pert%g2l(k_global,k_local,k_id)
-     !CALL distr_g2l(k_global,k_local,k_id,nimage)
+     ALLOCATE( vec(npwqx), zbraket(pert%nloc), braket(pert%nloc) )
      !
-     IF(my_image_id==k_id) THEN
+     ! 2) Localize m_global_start
+     !
+     m_local_start = 1
+     DO ip = 1, pert%nloc
+        ig = pert%l2g(ip)
+        IF( ig < m_global_start ) CYCLE
+        m_local_start = ip
+        EXIT
+     ENDDO
+     !
+     ! 3) Localize m_global_end
+     !
+     m_local_end = pert%nloc
+     DO ip = pert%nloc, 1, -1
+        ig = pert%l2g(ip)
+        IF( ig > m_global_end ) CYCLE
+        m_local_end = ip
+        EXIT
+     ENDDO
+     !
+     j_local=1
+     unfinished=.true.
+     !
+     DO k_global=1,m_global_end
         !
-        ! 4) Eventually, normalize the current vector
+        CALL pert%g2l(k_global,k_local,k_id)
         !
-        IF( k_global >= m_global_start ) THEN
+        IF(my_image_id==k_id) THEN
            !
-           ! anorm = < k_l | k_l >
+           ! 4) Eventually, normalize the current vector
            !
-           IF(gamma_only) THEN
-              anorm = 2.0_DP * DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
-              IF(gstart==2) anorm = anorm - REAL(amat(1,k_local),KIND=DP) * REAL(amat(1,k_local),KIND=DP)
-           ELSE
-              anorm = DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
+           IF( k_global >= m_global_start ) THEN
+              !
+              ! anorm = < k_l | k_l >
+              !
+              IF(gamma_only) THEN
+                 anorm = 2._DP * DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
+                 IF(gstart==2) anorm = anorm - REAL(amat(1,k_local),KIND=DP) * REAL(amat(1,k_local),KIND=DP)
+              ELSE
+                 anorm = DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
+              ENDIF
+              !
+              CALL mp_sum(anorm,intra_bgrp_comm)
+              !
+              ! normalize | k_l >
+              !
+              za = CMPLX( 1._DP/SQRT(anorm), 0._DP,KIND=DP)
+              CALL ZSCAL(npwq,za,amat(1,k_local),1)
+              !
            ENDIF
            !
-           CALL mp_sum(anorm,intra_bgrp_comm)
+           ! 5) Copy the current vector into V
            !
-           ! normalize | k_l >
+           CALL ZCOPY(npwqx,amat(1,k_local),1,vec(1),1)
            !
-           za = CMPLX( 1._DP/SQRT(anorm), 0._DP,KIND=DP)
-           CALL ZSCAL(npwq,za,amat(1,k_local),1)
+           j_local=MAX(k_local+1,m_local_start)
+           !
+           IF(j_local>m_local_end) unfinished=.false.
            !
         ENDIF
         !
-        ! 5) Copy the current vector into V
+        ! BCAST | vec >
         !
-        CALL ZCOPY(npwqx,amat(1,k_local),1,vec(1),1)
+        CALL mp_bcast(vec,k_id,inter_image_comm)
         !
-        j_local=MAX(k_local+1,m_local_start)
+        ! Update when needed
         !
-        !IF(j_local>pert%nloc) unfinished=.false.
-        IF(j_local>m_local_end) unfinished=.false.
-        !
-     ENDIF
-     !
-     ! BCAST | vec >
-     !
-     CALL mp_bcast(vec,k_id,inter_image_comm)
-     !
-     ! Update when needed
-     !
-     IF(unfinished) THEN
-        !
-        ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
-        !
-        IF(gamma_only) THEN
-           DO ip = j_local,m_local_end !pert%nloc
-              braket(ip) = 2._DP * DDOT(2*npwq,vec(1),1,amat(1,ip),1)
-           ENDDO
-           !IF (gstart==2) FORALL( ip=j_local:pert%nloc ) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
-           IF (gstart==2) FORALL( ip=j_local:m_local_end ) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
-           !CALL mp_sum(braket(j_local:pert%nloc),intra_bgrp_comm)
-           CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
-           !FORALL(ip=j_local:pert%nloc) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
-           FORALL(ip=j_local:m_local_end) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
-        ELSE
-           DO ip = j_local,m_local_end !pert%nloc
-              zbraket(ip) = ZDOTC(npwq,vec(1),1,amat(1,ip),1)
-           ENDDO
-           !CALL mp_sum(zbraket(j_local:pert%nloc),intra_bgrp_comm)
-           CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
+        IF(unfinished) THEN
+           !
+           ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
+           !
+           IF(gamma_only) THEN
+              DO ip = j_local,m_local_end !pert%nloc
+                 braket(ip) = 2._DP * DDOT(2*npwq,vec(1),1,amat(1,ip),1)
+              ENDDO
+              IF(gstart==2) FORALL(ip=j_local:m_local_end) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
+              CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
+              FORALL(ip=j_local:m_local_end) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
+           ELSE
+              DO ip = j_local,m_local_end !pert%nloc
+                 zbraket(ip) = ZDOTC(npwq,vec(1),1,amat(1,ip),1)
+              ENDDO
+              CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
+           ENDIF
+           !
+           ncol=m_local_end-j_local+1
+           CALL ZGERU(npwqx,ncol,MONE,vec(1),1,zbraket(j_local),1,amat(1,j_local),npwqx)
+           !
         ENDIF
         !
-        ncol=m_local_end-j_local+1
-        !ncol=m_global_end-j_local+1
-        CALL ZGERU(npwqx,ncol,(-1._DP,0._DP),vec(1),1,zbraket(j_local),1,amat(1,j_local),npwqx)
-        !
-     ENDIF
+     ENDDO
      !
-  ENDDO
+     DEALLOCATE( vec,zbraket,braket )
+     !
+  ENDIF
   !
-  DEALLOCATE( vec,zbraket,braket )
+  CALL mp_bcast(amat,0,inter_bgrp_comm)
   !
   CALL stop_clock ('paramgs')
   !

@@ -45,13 +45,9 @@ SUBROUTINE davidson_diago_gamma ( )
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwqx,npwq,&
                                    & npwqx,npwq,trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
-  USE mp_world,             ONLY : mpime
-  USE mp_global,            ONLY : inter_image_comm
-  USE mp,                   ONLY : mp_sum
-  USE gvect,                ONLY : gstart
-  USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
-                                   & update_with_vr_distr,refresh_with_vr_distr
+  USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
+  USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
+                                   & refresh_with_vr_distr
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -333,7 +329,8 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      nbase = nbase + notcnv
      !
-     CALL symm_hr_distr(hr_distr,nbase,nvecx)
+     ! ... note that hr_distr is no longer symmetrized here, as the eigensolver
+     ! ... only uses half of the matrix anyway
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -458,17 +455,10 @@ SUBROUTINE davidson_diago_k ( )
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged, &
-                                   & ngq,npwq,igq_q,npwqx
+                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,ngq,npwq,igq_q,npwqx
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
-  USE mp_world,             ONLY : mpime
-  USE mp_global,            ONLY : inter_image_comm
-  USE mp,                   ONLY : mp_sum
-  USE gvect,                ONLY : gstart, g, ngm
-  USE gvecw,                ONLY : gcutw
-  USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
-                                   & update_with_vr_distr,refresh_with_vr_distr
+  USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
+  USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,refresh_with_vr_distr
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
   !
@@ -806,7 +796,8 @@ SUBROUTINE davidson_diago_k ( )
         !
         nbase = nbase + notcnv
         !
-        CALL symm_hr_distr(hr_distr,nbase,nvecx)
+        ! ... note that hr_distr is no longer symmetrized here, as the eigensolver
+        ! ... only uses half of the matrix anyway
         !
         ! ... diagonalize the reduced hamiltonian
         !
@@ -1153,7 +1144,7 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   !
   USE kinds,                ONLY : DP
   USE random_numbers,       ONLY : randy
-  USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
+  USE gvect,                ONLY : g,ngm_g,ig_l2g
   USE westcom,              ONLY : dvg,npwqx,ngq,igq_q
   USE constants,            ONLY : tpi,eps8
   USE cell_base,            ONLY : tpiba2

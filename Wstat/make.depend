@@ -16,7 +16,6 @@ apply_operator.o : ../Tools/io_push.o
 davidson_diago.o : ../../Modules/cell_base.o
 davidson_diago.o : ../../Modules/constants.o
 davidson_diago.o : ../../Modules/control_flags.o
-davidson_diago.o : ../../Modules/gvecw.o
 davidson_diago.o : ../../Modules/io_global.o
 davidson_diago.o : ../../Modules/kind.o
 davidson_diago.o : ../../Modules/mp.o
@@ -83,8 +82,10 @@ wstat_tools.o : ../../Modules/kind.o
 wstat_tools.o : ../../Modules/mp.o
 wstat_tools.o : ../../Modules/mp_global.o
 wstat_tools.o : ../../Modules/mp_world.o
+wstat_tools.o : ../../Modules/parallel_include.o
 wstat_tools.o : ../../Modules/recvec.o
 wstat_tools.o : ../Modules/westcom.o
 wstat_tools.o : ../Para_kernel/distribution_center.o
+wstat_tools.o : ../Tools/heapsort.o
 wstat_tools.o : ../Tools/io_push.o
 wstat_tools.o : ../Tools/linear_algebra_kernel.o

@@ -507,12 +507,16 @@ MODULE wstat_tools
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE redistribute_vr_distr_real( nselect, n, lda, vr_distr, ishift)
+    SUBROUTINE redistribute_vr_distr_real( nselect, n, lda, vr_distr, ishift )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_bgrp_id
-      USE mp,                   ONLY : mp_circular_shift_left
+      USE mp_global,            ONLY : me_bgrp, my_bgrp_id, nbgrp, nproc_bgrp, &
+                                     & intra_bgrp_comm, my_image_id
+      USE mp_world,             ONLY : world_comm, nproc
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
+      USE sort_tools,           ONLY : heapsort
+      USE parallel_include
       !
       IMPLICIT NONE
       !
@@ -524,53 +528,158 @@ MODULE wstat_tools
       !
       ! Workspace
       !
-      REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl
+      INTEGER :: i_col, n_col, j_loc, j_loc2, j_glob, i_proc
+      INTEGER :: ierr, this_dest, this_sour
+      INTEGER,ALLOCATABLE :: idx_send(:)
+      INTEGER,ALLOCATABLE :: idx_recv(:)
+      INTEGER,ALLOCATABLE :: send_count(:)
+      INTEGER,ALLOCATABLE :: recv_count(:)
+      INTEGER,ALLOCATABLE :: send_displ(:)
+      INTEGER,ALLOCATABLE :: recv_displ(:)
+      INTEGER,ALLOCATABLE :: dest(:)
+      INTEGER,ALLOCATABLE :: swap(:)
+      INTEGER,ALLOCATABLE :: tmp_i(:)
+      REAL(DP),ALLOCATABLE :: tmp_r(:,:)
+      REAL(DP),ALLOCATABLE :: val_send(:,:)
+      REAL(DP),ALLOCATABLE :: val_recv(:,:)
       !
       CALL start_clock( 'redistr_vr' )
       !
-      IF(my_bgrp_id == 0) THEN
+      ! vr_distr only needed by band group 0 in the next step
+      !
+      ALLOCATE(send_count(nproc))
+      ALLOCATE(recv_count(nproc))
+      !
+      send_count = 0
+      recv_count = 0
+      !
+      IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+         n_col = 0
          !
-         ALLOCATE( tmp_distr(lda,pert%nlocx) )
-         tmp_distr = vr_distr
-         ALLOCATE( tmp_l2g(1:pert%nlocx) )
-         tmp_l2g = 0
-         !
-         DO il1 = 1, pert%nloc
-            tmp_l2g(il1) = pert%l2g(il1)
-         ENDDO
-         !
-         DO icycl=0,nimage-1
+         DO j_glob = n+1,n+nselect
             !
-            DO il2=1,pert%nloc
-               ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
                !
-               DO il1=1,pert%nlocx
-                  !
-                  ig1 = tmp_l2g(il1)
-                  IF( ig1 == 0 ) CYCLE
-                  IF( ig1 .NE. ishift(ig2) ) CYCLE
-                  !
-                  vr_distr(:,il2) = tmp_distr(:,il1)
-                  !
-               ENDDO
-            ENDDO
-            !
-            ! Cycle the tmp_distr array
-            !
-            CALL mp_circular_shift_left( tmp_distr ,        icycl, inter_image_comm)
-            CALL mp_circular_shift_left( tmp_l2g   , icycl+nimage, inter_image_comm)
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+               ENDIF
+            ENDIF
             !
          ENDDO
          !
-         DEALLOCATE( tmp_distr )
-         DEALLOCATE( tmp_l2g )
+         ALLOCATE(val_send(lda,n_col))
+         ALLOCATE(idx_send(n_col))
+         ALLOCATE(dest(n_col))
+         ALLOCATE(swap(n_col))
          !
+         n_col = 0
+         !
+         DO j_glob = n+1,n+nselect
+            !
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
+               !
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+                  !
+                  CALL pert%g2l(j_glob,j_loc2,this_dest)
+                  !
+                  val_send(:,n_col) = vr_distr(:,j_loc)
+                  idx_send(n_col) = j_loc2
+                  dest(n_col) = this_dest*nbgrp*nproc_bgrp
+                  send_count(dest(n_col)+1) = send_count(dest(n_col)+1)+1
+               ENDIF
+            ENDIF
+            !
+         ENDDO
+         !
+         CALL heapsort(n_col,dest,swap)
+         !
+         DEALLOCATE(dest)
+         ALLOCATE(tmp_r(lda,n_col))
+         ALLOCATE(tmp_i(n_col))
+         !
+         DO i_col = 1,n_col
+            tmp_r(:,i_col) = val_send(:,swap(i_col))
+            tmp_i(i_col) = idx_send(swap(i_col))
+         ENDDO
+         !
+         val_send = tmp_r
+         idx_send = tmp_i
+         !
+         DEALLOCATE(swap)
+         DEALLOCATE(tmp_r)
+         DEALLOCATE(tmp_i)
+         !
+         n_col = 0
+         !
+         DO j_loc = 1,pert%nloc
+            !
+            j_glob = pert%l2g(j_loc)
+            !
+            IF(j_glob > n .AND. j_glob <= n+nselect .AND. ishift(j_glob) /= 0) THEN
+               n_col = n_col+1
+               !
+               CALL pert%g2l(ishift(j_glob),j_loc2,this_sour)
+               !
+               this_sour = this_sour*nbgrp*nproc_bgrp
+               recv_count(this_sour+1) = recv_count(this_sour+1)+1
+            ENDIF
+            !
+         ENDDO
+         !
+         ALLOCATE(val_recv(lda,n_col))
+         ALLOCATE(idx_recv(n_col))
+         !
+      ELSE
+         ALLOCATE(val_send(1,1))
+         ALLOCATE(idx_send(1))
+         ALLOCATE(val_recv(1,1))
+         ALLOCATE(idx_recv(1))
       ENDIF
       !
-      ! vr_distr only needed by band group 0 in the next step, so no bcast
+      ALLOCATE(send_displ(nproc))
+      ALLOCATE(recv_displ(nproc))
+      !
+      send_displ = 0
+      recv_displ = 0
+      !
+      DO i_proc = 2,nproc
+         send_displ(i_proc) = SUM(send_count(1:i_proc-1))
+         recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
+      ENDDO
+      !
+      CALL MPI_ALLTOALLV(idx_send,send_count,send_displ,MPI_INTEGER,idx_recv,&
+      & recv_count,recv_displ,MPI_INTEGER,world_comm,ierr)
+      !
+      send_count = send_count*lda
+      recv_count = recv_count*lda
+      send_displ = send_displ*lda
+      recv_displ = recv_displ*lda
+      !
+      CALL MPI_ALLTOALLV(val_send,send_count,send_displ,MPI_DOUBLE_PRECISION,val_recv,&
+      & recv_count,recv_displ,MPI_DOUBLE_PRECISION,world_comm,ierr)
+      !
+      DEALLOCATE(val_send)
+      DEALLOCATE(idx_send)
+      DEALLOCATE(send_count)
+      DEALLOCATE(recv_count)
+      DEALLOCATE(send_displ)
+      DEALLOCATE(recv_displ)
+      !
+      IF(my_bgrp_id == 0) THEN
+         IF(me_bgrp == 0) THEN
+            DO i_col = 1,n_col
+               vr_distr(:,idx_recv(i_col)) = val_recv(:,i_col)
+            ENDDO
+         ENDIF
+         !
+         CALL mp_bcast(vr_distr,0,intra_bgrp_comm)
+      ENDIF
+      !
+      DEALLOCATE(val_recv)
+      DEALLOCATE(idx_recv)
       !
       CALL stop_clock( 'redistr_vr' )
       !
@@ -579,12 +688,16 @@ MODULE wstat_tools
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE redistribute_vr_distr_complex( nselect, n, lda, vr_distr, ishift)
+    SUBROUTINE redistribute_vr_distr_complex( nselect, n, lda, vr_distr, ishift )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_bgrp_id
-      USE mp,                   ONLY : mp_circular_shift_left
+      USE mp_global,            ONLY : me_bgrp, my_bgrp_id, nbgrp, nproc_bgrp, &
+                                     & intra_bgrp_comm, my_image_id
+      USE mp_world,             ONLY : world_comm, nproc
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
+      USE sort_tools,           ONLY : heapsort
+      USE parallel_include
       !
       IMPLICIT NONE
       !
@@ -596,54 +709,158 @@ MODULE wstat_tools
       !
       ! Workspace
       !
-      COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl
+      INTEGER :: i_col, n_col, j_loc, j_loc2, j_glob, i_proc
+      INTEGER :: ierr, this_dest, this_sour
+      INTEGER,ALLOCATABLE :: idx_send(:)
+      INTEGER,ALLOCATABLE :: idx_recv(:)
+      INTEGER,ALLOCATABLE :: send_count(:)
+      INTEGER,ALLOCATABLE :: recv_count(:)
+      INTEGER,ALLOCATABLE :: send_displ(:)
+      INTEGER,ALLOCATABLE :: recv_displ(:)
+      INTEGER,ALLOCATABLE :: dest(:)
+      INTEGER,ALLOCATABLE :: swap(:)
+      INTEGER,ALLOCATABLE :: tmp_i(:)
+      COMPLEX(DP),ALLOCATABLE :: tmp_c(:,:)
+      COMPLEX(DP),ALLOCATABLE :: val_send(:,:)
+      COMPLEX(DP),ALLOCATABLE :: val_recv(:,:)
       !
       CALL start_clock( 'redistr_vr' )
       !
-      IF(my_bgrp_id == 0) THEN
+      ! vr_distr only needed by band group 0 in the next step
+      !
+      ALLOCATE(send_count(nproc))
+      ALLOCATE(recv_count(nproc))
+      !
+      send_count = 0
+      recv_count = 0
+      !
+      IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+         n_col = 0
          !
-         ALLOCATE( tmp_distr(lda,pert%nlocx) )
-         tmp_distr = vr_distr
-         ALLOCATE( tmp_l2g(1:pert%nlocx) )
-         !
-         tmp_l2g = 0
-         !
-         DO il1 = 1, pert%nloc
-            tmp_l2g(il1) = pert%l2g(il1)
-         ENDDO
-         !
-         DO icycl=0,nimage-1
+         DO j_glob = n+1,n+nselect
             !
-            DO il2=1,pert%nloc
-               ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
                !
-               DO il1=1,pert%nlocx
-                  !
-                  ig1 = tmp_l2g(il1)
-                  IF( ig1 == 0 ) CYCLE
-                  IF( ig1 .NE. ishift(ig2) ) CYCLE
-                  !
-                  vr_distr(:,il2) = tmp_distr(:,il1)
-                  !
-               ENDDO
-            ENDDO
-            !
-            ! Cycle the tmp_distr array
-            !
-            CALL mp_circular_shift_left( tmp_distr ,        icycl, inter_image_comm)
-            CALL mp_circular_shift_left( tmp_l2g   , icycl+nimage, inter_image_comm)
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+               ENDIF
+            ENDIF
             !
          ENDDO
          !
-         DEALLOCATE( tmp_distr )
-         DEALLOCATE( tmp_l2g )
+         ALLOCATE(val_send(lda,n_col))
+         ALLOCATE(idx_send(n_col))
+         ALLOCATE(dest(n_col))
+         ALLOCATE(swap(n_col))
          !
+         n_col = 0
+         !
+         DO j_glob = n+1,n+nselect
+            !
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
+               !
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+                  !
+                  CALL pert%g2l(j_glob,j_loc2,this_dest)
+                  !
+                  val_send(:,n_col) = vr_distr(:,j_loc)
+                  idx_send(n_col) = j_loc2
+                  dest(n_col) = this_dest*nbgrp*nproc_bgrp
+                  send_count(dest(n_col)+1) = send_count(dest(n_col)+1)+1
+               ENDIF
+            ENDIF
+            !
+         ENDDO
+         !
+         CALL heapsort(n_col,dest,swap)
+         !
+         DEALLOCATE(dest)
+         ALLOCATE(tmp_c(lda,n_col))
+         ALLOCATE(tmp_i(n_col))
+         !
+         DO i_col = 1,n_col
+            tmp_c(:,i_col) = val_send(:,swap(i_col))
+            tmp_i(i_col) = idx_send(swap(i_col))
+         ENDDO
+         !
+         val_send = tmp_c
+         idx_send = tmp_i
+         !
+         DEALLOCATE(swap)
+         DEALLOCATE(tmp_c)
+         DEALLOCATE(tmp_i)
+         !
+         n_col = 0
+         !
+         DO j_loc = 1,pert%nloc
+            !
+            j_glob = pert%l2g(j_loc)
+            !
+            IF(j_glob > n .AND. j_glob <= n+nselect .AND. ishift(j_glob) /= 0) THEN
+               n_col = n_col+1
+               !
+               CALL pert%g2l(ishift(j_glob),j_loc2,this_sour)
+               !
+               this_sour = this_sour*nbgrp*nproc_bgrp
+               recv_count(this_sour+1) = recv_count(this_sour+1)+1
+            ENDIF
+            !
+         ENDDO
+         !
+         ALLOCATE(val_recv(lda,n_col))
+         ALLOCATE(idx_recv(n_col))
+         !
+      ELSE
+         ALLOCATE(val_send(1,1))
+         ALLOCATE(idx_send(1))
+         ALLOCATE(val_recv(1,1))
+         ALLOCATE(idx_recv(1))
       ENDIF
       !
-      ! vr_distr only needed by band group 0 in the next step, so no bcast
+      ALLOCATE(send_displ(nproc))
+      ALLOCATE(recv_displ(nproc))
+      !
+      send_displ = 0
+      recv_displ = 0
+      !
+      DO i_proc = 2,nproc
+         send_displ(i_proc) = SUM(send_count(1:i_proc-1))
+         recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
+      ENDDO
+      !
+      CALL MPI_ALLTOALLV(idx_send,send_count,send_displ,MPI_INTEGER,idx_recv,&
+      & recv_count,recv_displ,MPI_INTEGER,world_comm,ierr)
+      !
+      send_count = send_count*lda
+      recv_count = recv_count*lda
+      send_displ = send_displ*lda
+      recv_displ = recv_displ*lda
+      !
+      CALL MPI_ALLTOALLV(val_send,send_count,send_displ,MPI_DOUBLE_COMPLEX,val_recv,&
+      & recv_count,recv_displ,MPI_DOUBLE_COMPLEX,world_comm,ierr)
+      !
+      DEALLOCATE(val_send)
+      DEALLOCATE(idx_send)
+      DEALLOCATE(send_count)
+      DEALLOCATE(recv_count)
+      DEALLOCATE(send_displ)
+      DEALLOCATE(recv_displ)
+      !
+      IF(my_bgrp_id == 0) THEN
+         IF(me_bgrp == 0) THEN
+            DO i_col = 1,n_col
+               vr_distr(:,idx_recv(i_col)) = val_recv(:,i_col)
+            ENDDO
+         ENDIF
+         !
+         CALL mp_bcast(vr_distr,0,intra_bgrp_comm)
+      ENDIF
+      !
+      DEALLOCATE(val_recv)
+      DEALLOCATE(idx_recv)
       !
       CALL stop_clock( 'redistr_vr' )
       !

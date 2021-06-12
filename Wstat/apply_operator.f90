@@ -15,9 +15,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE mp,                    ONLY : mp_barrier
   USE westcom,               ONLY : npwqx,npwq,wstat_calculation
-  USE mp_world,              ONLY : world_comm
   USE types_coulomb,         ONLY : pot3D
   USE dfpt_module,           ONLY : dfpt
   !
@@ -38,8 +36,6 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   COMPLEX(DP), ALLOCATABLE ::aux_g(:,:)
   !
   LOGICAL :: l_outsource
-  !
-  CALL mp_barrier( world_comm )
   !
   l_outsource = .FALSE.
   DO i = 1,2
@@ -69,8 +65,6 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
         dng(ig,ipert) = dng(ig,ipert) * pot3D%sqvc(ig) ! perturbation acts only on body
      ENDDO
   ENDDO
-  !
-  CALL mp_barrier( world_comm )
   !
 END SUBROUTINE
 !

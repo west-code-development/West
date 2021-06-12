@@ -357,8 +357,8 @@ MODULE wstat_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,nimage
+      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       USE gvect,                ONLY : gstart
@@ -378,8 +378,6 @@ MODULE wstat_tools
       REAL(DP),EXTERNAL :: DDOT
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
-      !
-      CALL mp_barrier(world_comm)
       !
       CALL start_clock ('build_hr')
       !
@@ -428,7 +426,7 @@ MODULE wstat_tools
       !
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "build_hr" )
+      CALL stop_clock( 'build_hr' )
       !
     END SUBROUTINE
     !
@@ -440,8 +438,8 @@ MODULE wstat_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,nimage
+      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -460,8 +458,6 @@ MODULE wstat_tools
       COMPLEX(DP),EXTERNAL :: ZDOTC
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
-      !
-      CALL mp_barrier(world_comm)
       !
       CALL start_clock ('build_hr')
       !
@@ -506,7 +502,7 @@ MODULE wstat_tools
       !
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "build_hr" )
+      CALL stop_clock( 'build_hr' )
       !
     END SUBROUTINE
     !
@@ -516,8 +512,8 @@ MODULE wstat_tools
     SUBROUTINE symm_hr_distr_real( hr_distr, n, lda )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
@@ -533,8 +529,6 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'symm_hr' )
       !
       ALLOCATE( tmp_distr(lda,pert%nlocx) )
@@ -572,7 +566,7 @@ MODULE wstat_tools
       DEALLOCATE( tmp_distr )
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "symm_hr" )
+      CALL stop_clock( 'symm_hr' )
       !
     END SUBROUTINE
     !
@@ -582,8 +576,8 @@ MODULE wstat_tools
     SUBROUTINE symm_hr_distr_complex( hr_distr, n, lda )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
@@ -599,8 +593,6 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'symm_hr' )
       !
       ALLOCATE( tmp_distr(lda,pert%nlocx) )
@@ -638,7 +630,7 @@ MODULE wstat_tools
       DEALLOCATE( tmp_distr )
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "symm_hr" )
+      CALL stop_clock( 'symm_hr' )
       !
     END SUBROUTINE
     !
@@ -648,8 +640,8 @@ MODULE wstat_tools
     SUBROUTINE redistribute_vr_distr_real( nselect, n, lda, vr_distr, ishift)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
@@ -666,8 +658,6 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'redistr_vr' )
       !
       ALLOCATE( tmp_distr(lda,pert%nlocx) )
@@ -707,7 +697,7 @@ MODULE wstat_tools
       DEALLOCATE( tmp_distr )
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "redistr_vr" )
+      CALL stop_clock( 'redistr_vr' )
       !
     END SUBROUTINE
     !
@@ -717,8 +707,8 @@ MODULE wstat_tools
     SUBROUTINE redistribute_vr_distr_complex( nselect, n, lda, vr_distr, ishift)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
@@ -735,8 +725,6 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'redistr_vr' )
       !
       ALLOCATE( tmp_distr(lda,pert%nlocx) )
@@ -776,7 +764,7 @@ MODULE wstat_tools
       DEALLOCATE( tmp_distr )
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "redistr_vr" )
+      CALL stop_clock( 'redistr_vr' )
       !
     END SUBROUTINE
     !
@@ -786,8 +774,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_real( ag, bg, nselect, n, lda, vr_distr, ew )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -808,8 +796,6 @@ MODULE wstat_tools
       INTEGER :: il1, il2, ig1, ig2, icycl
       COMPLEX(DP) :: zconst
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'update_vr' )
       !
       ALLOCATE( hg(npwqx,pert%nlocx) )
@@ -892,7 +878,7 @@ MODULE wstat_tools
       DEALLOCATE( tmp_l2g )
       DEALLOCATE( hg )
       !
-      CALL stop_clock( "update_vr" )
+      CALL stop_clock( 'update_vr' )
       !
     END SUBROUTINE
     !
@@ -902,8 +888,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_complex( ag, bg, nselect, n, lda, vr_distr, ew )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -923,8 +909,6 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'update_vr' )
       !
       ALLOCATE( hg(npwqx,pert%nlocx) )
@@ -1005,7 +989,7 @@ MODULE wstat_tools
       DEALLOCATE( tmp_l2g )
       DEALLOCATE( hg )
       !
-      CALL stop_clock( "update_vr" )
+      CALL stop_clock( 'update_vr' )
       !
     END SUBROUTINE
     !
@@ -1015,8 +999,8 @@ MODULE wstat_tools
     SUBROUTINE refresh_with_vr_distr_real( ag, nselect, n, lda, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -1035,8 +1019,6 @@ MODULE wstat_tools
       INTEGER :: il1, il2, ig1, ig2, icycl
       COMPLEX(DP) :: zconst
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'refresh_vr' )
       !
       ALLOCATE( hg(npwqx,pert%nlocx) )
@@ -1087,7 +1069,7 @@ MODULE wstat_tools
       DEALLOCATE( hg )
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "refresh_vr" )
+      CALL stop_clock( 'refresh_vr' )
       !
     END SUBROUTINE
     !
@@ -1097,8 +1079,8 @@ MODULE wstat_tools
     SUBROUTINE refresh_with_vr_distr_complex( ag, nselect, n, lda, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -1116,8 +1098,6 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'refresh_vr' )
       !
       ALLOCATE( hg(npwqx,pert%nlocx) )
@@ -1167,7 +1147,7 @@ MODULE wstat_tools
       DEALLOCATE( hg )
       DEALLOCATE( tmp_l2g )
       !
-      CALL stop_clock( "refresh_vr" )
+      CALL stop_clock( 'refresh_vr' )
       !
     END SUBROUTINE
     !

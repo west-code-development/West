@@ -3,7 +3,6 @@ apply_operator.o : ../../Modules/fft_base.o
 apply_operator.o : ../../Modules/kind.o
 apply_operator.o : ../../Modules/mp.o
 apply_operator.o : ../../Modules/mp_global.o
-apply_operator.o : ../../Modules/mp_world.o
 apply_operator.o : ../Coulomb_kernel/types_coulomb.o
 apply_operator.o : ../DFPT_kernel/dfpt_module.o
 apply_operator.o : ../FFT_kernel/fft_at_gamma.o

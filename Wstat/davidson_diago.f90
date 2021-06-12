@@ -928,10 +928,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                  ONLY : DP
-  USE io_global,              ONLY : stdout
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,nimage,world_comm
+  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id
   USE gvect,                  ONLY : gstart
-  USE mp,                     ONLY : mp_sum,mp_barrier,mp_bcast
+  USE mp,                     ONLY : mp_sum,mp_bcast
   USE westcom,                ONLY : npwq,npwqx
   USE control_flags,          ONLY : gamma_only
   USE io_push,                ONLY : io_push_title
@@ -958,8 +957,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   REAL(DP),EXTERNAL :: DDOT
   COMPLEX(DP),EXTERNAL :: ZDOTC
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL start_clock ('paramgs')
   !
@@ -1072,8 +1069,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   DEALLOCATE( vec,zbraket,braket )
   !
-  CALL mp_barrier(world_comm)
-  !
   CALL stop_clock ('paramgs')
   !
 END SUBROUTINE
@@ -1091,8 +1086,6 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
   USE westcom,              ONLY : npwq,dvg,npwqx
   USE constants,            ONLY : tpi
-  USE mp,                   ONLY : mp_barrier
-  USE mp_global,            ONLY : world_comm
   USE distribution_center,  ONLY : pert
   !
   IMPLICIT NONE
@@ -1108,8 +1101,6 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   INTEGER :: il1,ig1,ig
   REAL(DP) :: aux_real
   REAL(DP) :: rr, arg
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL start_clock ('randomize')
   !
@@ -1166,8 +1157,6 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   USE westcom,              ONLY : dvg,npwqx,ngq,igq_q
   USE constants,            ONLY : tpi,eps8
   USE cell_base,            ONLY : tpiba2
-  USE mp,                   ONLY : mp_barrier
-  USE mp_global,            ONLY : world_comm
   USE distribution_center,  ONLY : pert
   USE types_bz_grid,        ONLY : q_grid
   !
@@ -1185,8 +1174,6 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   INTEGER :: il1,ig1,ig
   REAL(DP) :: aux_real
   REAL(DP) :: rr, arg, qg(3), qgnorm2
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL start_clock ('randomize')
   !

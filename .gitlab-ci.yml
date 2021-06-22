@@ -29,7 +29,7 @@ stages:
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
-    - ./configure
+    - ./configure --enable-openmp=yes
     - make -j4 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
@@ -45,7 +45,7 @@ stages:
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
-    - ./configure
+    - ./configure --enable-openmp=yes
     - make -j4 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
@@ -96,6 +96,7 @@ gcc930_t:
     CI_NI: 2
     CI_NB: 2
     CI_NT: 1
+    SCALAPACK_LIBS: "-lscalapack-openmpi"
   extends:
     - .template_bot_start
     - .template_test
@@ -122,6 +123,7 @@ gcc930_t2:
     CI_NI: 1
     CI_NB: 2
     CI_NT: 2
+    SCALAPACK_LIBS: "-lscalapack-openmpi"
   only:
     - schedules
   extends:

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -72,6 +72,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! Workspace
   !
+  LOGICAL :: l_write_restart
   INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iks,m,im
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
@@ -143,7 +144,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! LOOP
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
-     IF(iks<bks%lastdone_ks) CYCLE
+     !
+     ! Exit loop if no work to do
+     !
+     IF(barra_load == 0) EXIT
+     !
+     IF(iks < bks%lastdone_ks) CYCLE
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -290,16 +296,25 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         ENDIF ! l_enable_lanczos
         !
         time_spent(2) = get_clock( 'glanczos' )
+        l_write_restart = .FALSE.
         !
         IF( o_restart_time >= 0._DP ) THEN
-           IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN
-              bks%lastdone_ks=iks
-              bks%lastdone_band=ib
-              CALL solvegfreq_restart_write( bks )
-              bks%old_ks=iks
-              bks%old_band=ib
-              time_spent(1) = get_clock( 'glanczos' )
-           ENDIF
+           IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+           IF( ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+        ELSE
+           !
+           ! Write final restart file when everything is done
+           !
+           IF( iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+        ENDIF
+        !
+        IF( l_write_restart ) THEN
+           bks%lastdone_ks = iks
+           bks%lastdone_band = ib
+           CALL solvegfreq_restart_write( bks )
+           bks%old_ks = iks
+           bks%old_band = ib
+           time_spent(1) = get_clock( 'glanczos' )
         ENDIF
         !
         CALL update_bar_type( barra, 'glanczos', 1 )
@@ -358,6 +373,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   ! Workspace
   !
+  LOGICAL :: l_write_restart
   INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iv,iv_glob,iks,ik,m,im,ikks,ikk,iq,il
   INTEGER :: npwk
   CHARACTER(LEN=:),ALLOCATABLE :: fname
@@ -439,7 +455,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! ... Inner k-point loop (wfc summed over k'): iks, npw, evc (passed to h_psi: current_k = iks)
   !
   DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
-     IF(ikks<bksks%lastdone_ks) CYCLE
+     !
+     ! Exit loop if no work to do
+     !
+     IF(barra_load == 0) EXIT
+     !
+     IF(ikks < bksks%lastdone_ks) CYCLE
      !
      ikk = k_grid%ip(ikks)
      !
@@ -632,18 +653,27 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            ENDIF ! l_enable_lanczos
            !
            time_spent(2) = get_clock( 'glanczos' )
+           l_write_restart = .FALSE.
            !
            IF( o_restart_time >= 0._DP ) THEN
-              IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN
-                 bksks%lastdone_ks=ikks
-                 bksks%lastdone_kks=iks
-                 bksks%lastdone_band=ib
-                 CALL solvegfreq_restart_write_q( bksks )
-                 bksks%old_ks=ikks
-                 bksks%old_kks=iks
-                 bksks%old_band=ib
-                 time_spent(1) = get_clock( 'glanczos' )
-              ENDIF
+              IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+              IF( ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+           ELSE
+              !
+              ! Write final restart file when everything is done
+              !
+              IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+           ENDIF
+           !
+           IF( l_write_restart ) THEN
+              bksks%lastdone_ks = ikks
+              bksks%lastdone_kks = iks
+              bksks%lastdone_band = ib
+              CALL solvegfreq_restart_write_q( bksks )
+              bksks%old_ks = ikks
+              bksks%old_kks = iks
+              bksks%old_band = ib
+              time_spent(1) = get_clock( 'glanczos' )
            ENDIF
            !
            CALL update_bar_type( barra, 'glanczos', 1 )

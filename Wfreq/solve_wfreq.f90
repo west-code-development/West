@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -76,6 +76,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
+  LOGICAL :: l_write_restart
   INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,ivloc,iks,ipol,m
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
@@ -183,7 +184,12 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ! LOOP
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
-     IF(iks<bks%lastdone_ks) CYCLE
+     !
+     ! Exit loop if no work to do
+     !
+     IF(barra_load == 0) EXIT
+     !
+     IF(iks < bks%lastdone_ks) CYCLE
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -526,16 +532,25 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         ENDIF ! l_enable_lanczos
         !
         time_spent(2) = get_clock( 'wlanczos' )
+        l_write_restart = .FALSE.
         !
         IF( o_restart_time >= 0._DP ) THEN
-           IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. iv == nbndval ) THEN
-              bks%lastdone_ks=iks
-              bks%lastdone_band=iv
-              CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
-              bks%old_ks = iks
-              bks%old_band = iv
-              time_spent(1) = get_clock( 'wlanczos' )
-           ENDIF
+           IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+           IF( iv == nbndval ) l_write_restart = .TRUE.
+        ELSE
+           !
+           ! Write final restart file when everything is done
+           !
+           IF( iks == k_grid%nps .AND. iv == nbndval ) l_write_restart = .TRUE.
+        ENDIF
+        !
+        IF( l_write_restart ) THEN
+           bks%lastdone_ks = iks
+           bks%lastdone_band = iv
+           CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
+           bks%old_ks = iks
+           bks%old_band = iv
+           time_spent(1) = get_clock( 'wlanczos' )
         ENDIF
         !
         CALL update_bar_type( barra, 'wlanczos', 1 )
@@ -582,8 +597,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
   ENDDO
   !
-  CALL stop_clock('chi0_diag')
-  !
   DEALLOCATE( dlambda )
   DEALLOCATE( dmatilda )
   DEALLOCATE(dmati)
@@ -618,6 +631,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   DEALLOCATE( zlambda )
   DEALLOCATE( zmatilda )
   DEALLOCATE( zmatr )
+  !
+  CALL stop_clock('chi0_diag')
   !
   IF(l_generate_plot) THEN
      CALL output_eps_head( )
@@ -672,6 +687,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
+  LOGICAL :: l_write_restart
   INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,ivloc,iks,ik,is,iq,ikqs,ikq,ipol,m
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE    :: fname
@@ -785,7 +801,12 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! LOOP
   !
   DO iq = 1, q_grid%np   ! Q-POINT
-     IF (iq<bksq%lastdone_q) CYCLE
+     !
+     ! Exit loop if no work to do
+     !
+     IF(barra_load == 0) EXIT
+     !
+     IF(iq < bksq%lastdone_q) CYCLE
      !
      npwq = ngq(iq)
      l_gammaq = q_grid%l_pIsGamma(iq)
@@ -883,7 +904,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            ! PHI
            !
-           CALL occband%init(nbndval,'i','occband',.TRUE.)
+           CALL occband%init(nbndval,'i','occband',.FALSE.)
            !
            ALLOCATE(phis(npwx*npol,3,occband%nloc))
            !
@@ -1192,18 +1213,27 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            ENDIF ! l_enable_lanczos
            !
            time_spent(2) = get_clock( 'wlanczos' )
+           l_write_restart = .FALSE.
            !
            IF( o_restart_time >= 0._DP ) THEN
-              IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. iv == nbndval) THEN
-                 bksq%lastdone_q=iq
-                 bksq%lastdone_ks=iks
-                 bksq%lastdone_band=iv
-                 CALL solvewfreq_restart_write(bksq,zmati_q(:,:,:,:),zmatr_q(:,:,:,:),mypara%nglob,mypara%nloc)
-                 bksq%old_q = iq
-                 bksq%old_ks = iks
-                 bksq%old_band = iv
-                 time_spent(1) = get_clock( 'wlanczos' )
-              ENDIF
+              IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+              IF( iv == nbndval ) l_write_restart = .TRUE.
+           ELSE
+              !
+              ! Write final restart file when everything is done
+              !
+              IF( iq == q_grid%np .AND. iks == k_grid%nps .AND. iv == nbndval ) l_write_restart = .TRUE.
+           ENDIF
+           !
+           IF( l_write_restart ) THEN
+              bksq%lastdone_q = iq
+              bksq%lastdone_ks = iks
+              bksq%lastdone_band = iv
+              CALL solvewfreq_restart_write(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
+              bksq%old_q = iq
+              bksq%old_ks = iks
+              bksq%old_band = iv
+              time_spent(1) = get_clock( 'wlanczos' )
            ENDIF
            !
            CALL update_bar_type( barra, 'wlanczos', 1 )
@@ -1266,8 +1296,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      !
   ENDDO
   !
-  CALL stop_clock('chi0_diag')
-  !
   DEALLOCATE( zlambda )
   DEALLOCATE( zmatilda )
   DEALLOCATE( zmati_q )
@@ -1308,6 +1336,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   DEALLOCATE( zlambda )
   DEALLOCATE( zmatilda )
   DEALLOCATE( zmatr_q )
+  !
+  CALL stop_clock('chi0_diag')
   !
   IF(l_generate_plot) THEN
      CALL output_eps_head( )

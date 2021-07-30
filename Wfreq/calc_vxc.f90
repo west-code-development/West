@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -16,32 +16,30 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   ! store in sigma_vxc(n,iks) = < n,iks | V_xc  | n,iks >     n = qp_bandrange(1):qp_bandrange(2)
   !
-  USE kinds,                ONLY : DP 
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,my_image_id,nimage
+  USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,my_image_id
   USE mp,                   ONLY : mp_sum,mp_bcast
-  USE io_global,            ONLY : stdout, ionode
-  USE io_files,             ONLY : nwordwfc, iunwfc
-  USE scf,                  ONLY : rho, rho_core, rhog_core
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
+  USE io_global,            ONLY : stdout
+  USE io_files,             ONLY : nwordwfc,iunwfc
+  USE scf,                  ONLY : rho,rho_core,rhog_core
+  USE gvect,                ONLY : g,gstart,ngm
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2
   USE fft_base,             ONLY : dfftp,dffts
-  USE fft_interfaces,       ONLY : fwfft, invfft
-  USE constants,            ONLY : tpi,fpi,rytoev
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,nspin,current_k,ngk
-  USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
-  USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
-  USE wavefunctions_module, ONLY : evc,psic
+  USE pwcom,                ONLY : npw,npwx,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,nspin,current_k,ngk
+  USE fft_at_gamma,         ONLY : single_invfft_gamma
+  USE fft_at_k,             ONLY : single_invfft_k
+  USE wavefunctions,        ONLY : evc,psic
   USE westcom,              ONLY : qp_bandrange,iuwfc,lrwfc
   USE control_flags,        ONLY : gamma_only
-  USE noncollin_module,     ONLY : noncolin,npol 
+  USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE uspp,                 ONLY : vkb,nkb
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar
-  USE funct,                ONLY : dft_is_hybrid,get_exx_fraction
+  USE xc_lib,               ONLY : xclib_dft_is
   USE class_idistribute,    ONLY : idistribute
-  USE exx,                  ONLY : vexx,exxalfa
+  USE exx,                  ONLY : vexx
   USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE
@@ -58,14 +56,14 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   REAL(DP), ALLOCATABLE :: vxc(:,:)
   INTEGER :: ib,iv,i1,ir,iks
   COMPLEX(DP) :: braket
-  REAL(DP) :: nnr 
+  REAL(DP) :: nnr
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   COMPLEX(DP), ALLOCATABLE :: xpsi(:,:),vxpsi(:,:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
   INTEGER :: numbandegw
-  TYPE(idistribute) :: gwbnd 
+  TYPE(idistribute) :: gwbnd
   !
   ALLOCATE( vxc(dfftp%nnr,nspin) )
   !
@@ -76,9 +74,9 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   numbandegw = qp_bandrange(2)-qp_bandrange(1)+1
   gwbnd = idistribute()
-  CALL gwbnd%init(numbandegw,'i','numbandegw',.FALSE.) 
+  CALL gwbnd%init(numbandegw,'i','numbandegw',.FALSE.)
   !
-  CALL v_xc( rho, rho_core, rhog_core, etxc_, vtxc_, vxc ) 
+  CALL v_xc( rho, rho_core, rhog_core, etxc_, vtxc_, vxc )
   !
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
@@ -88,7 +86,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   barra_load = k_grid%nps
   CALL start_bar_type( barra, 'sigmavxc', barra_load )
   !
-  ! LOOP 
+  ! LOOP
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
@@ -107,7 +105,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      IF(k_grid%nps>1) THEN
         !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol 
+        !lrwfc = nbnd * npwx * npol
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         !CALL mp_bcast(evc,0,inter_image_comm)
@@ -137,13 +135,13 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      IF( gwbnd%nloc>0 ) THEN
         !
-        IF(gamma_only) THEN 
+        IF(gamma_only) THEN
            !
            DO ib = 1, gwbnd%nloc
-              CALL single_invfft_gamma(dfftp,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
               braket = 0._DP
               DO ir = 1, dfftp%nnr
-                 braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin) 
+                 braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
               sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL(braket,KIND=DP) / nnr
            ENDDO
@@ -154,7 +152,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               CALL single_invfft_k(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
               braket = 0._DP
               DO ir = 1, dfftp%nnr
-                 braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin) 
+                 braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
               sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL(braket,KIND=DP) / nnr
            ENDDO
@@ -165,7 +163,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
                  braket = 0._DP
                  DO ir = 1, dfftp%nnr
-                    braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin) 
+                    braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
                  ENDDO
                  sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = &
                 &sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) + REAL(braket,KIND=DP) / nnr
@@ -179,7 +177,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      ! HYBRID CONTRIBUTION TO VXC
      !
-     IF(  dft_is_hybrid() ) THEN
+     IF(  xclib_dft_is('hybrid') ) THEN
         !
         IF( gwbnd%nloc>0 ) THEN
            !
@@ -218,7 +216,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               ENDIF
               !
            ENDIF
-           ! 
+           !
            DEALLOCATE( vxpsi )
            DEALLOCATE(  xpsi )
            !
@@ -228,7 +226,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      CALL update_bar_type( barra, 'sigmavxc', 1 )
      !
-  ENDDO 
+  ENDDO
   !
   CALL stop_bar_type( barra, 'sigmavxc' )
   !
@@ -239,4 +237,4 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   DEALLOCATE( vxc )
   !
-END SUBROUTINE 
+END SUBROUTINE

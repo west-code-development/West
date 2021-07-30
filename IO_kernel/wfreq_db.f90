@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -30,16 +30,15 @@ MODULE wfreq_db
     SUBROUTINE wfreq_db_write( )
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_bcast,mp_barrier
+      USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp_global,            ONLY : my_image_id
-      USE io_global,            ONLY : stdout 
+      USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,iks_l2g,qp_bandrange,wfreq_calculation,n_spectralf,logfile, &
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
                                      & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_freq,sigma_spectralf
-      USE pwcom,                ONLY : npw,nbnd,nkstot,nspin,nelec,nelup,neldw,lspinorb,domag,lsda,nks,et
+      USE pwcom,                ONLY : et
       USE io_push,              ONLY : io_push_bar
-      USE json_module,          ONLY : json_file 
+      USE json_module,          ONLY : json_file
       USE constants,            ONLY : rytoev
       USE types_bz_grid,        ONLY : k_grid
       !
@@ -53,9 +52,9 @@ MODULE wfreq_db
       INTEGER :: ierr, iks, ik, is, ib
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       !
-      TYPE(json_file) :: json 
+      TYPE(json_file) :: json
       INTEGER :: iunit, i, counter
-      INTEGER,ALLOCATABLE :: ilist(:) 
+      INTEGER,ALLOCATABLE :: ilist(:)
       LOGICAL :: l_generate_plot, l_optics
       CHARACTER(LEN=10) :: ccounter
       !
@@ -89,7 +88,7 @@ MODULE wfreq_db
          DEALLOCATE(ilist)
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
-         !counter = 0 
+         !counter = 0
          !DO iks = 1, k_grid%nps
          !   ik = k_grid%ip(iks)
          !   is = k_grid%is(iks)
@@ -109,7 +108,7 @@ MODULE wfreq_db
          !        (/DBLE(sigma_sc_eks(ib,iks)*rytoev),AIMAG(sigma_sc_eks(ib,iks)*rytoev)/) )
          !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eqpLin',&
          !        (/DBLE(sigma_sc_eqplin(ib,iks)*rytoev),AIMAG(sigma_sc_eqplin(ib,iks)*rytoev)/) )
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eqpSec',& 
+         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eqpSec',&
          !        (/DBLE(sigma_sc_eqpsec(ib,iks)*rytoev),AIMAG(sigma_sc_eqpsec(ib,iks)*rytoev)/) )
          !   ENDDO
          !ENDDO
@@ -140,9 +139,9 @@ MODULE wfreq_db
             & AIMAG(sigma_sc_eqpsec(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             !
-            IF( l_generate_plot ) THEN 
+            IF( l_generate_plot ) THEN
                DO ib = qp_bandrange(1), qp_bandrange(2)
-                  WRITE(my_label_b,'(i6.6)') ib 
+                  WRITE(my_label_b,'(i6.6)') ib
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.re',&
                   &DBLE(sigma_spectralf(1:n_spectralf,ib,iks))*rytoev)
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.im',&
@@ -151,8 +150,8 @@ MODULE wfreq_db
             ENDIF
             !
             IF( l_optics) THEN
-               CALL json%add('output.O',"optics.json") 
-            ENDIF 
+               CALL json%add('output.O',"optics.json")
+            ENDIF
             !
          ENDDO
          !
@@ -174,8 +173,8 @@ MODULE wfreq_db
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1)) 
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )  
+      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )
       CALL io_push_bar()
       !
     END SUBROUTINE

@@ -74,7 +74,6 @@ MODULE types_bz_grid
      !
      ! ... phase(r) = exp(-iG_0*r)  (allocated externally) 
      !
-     USE gvecs,            ONLY : nls
      USE fft_base,         ONLY : dffts
      USE fft_interfaces,   ONLY : invfft
      USE mp,               ONLY : mp_max
@@ -109,7 +108,7 @@ MODULE types_bz_grid
      phase = (0._DP, 0._DP)
      !
      IF ( ig0 /= 0 ) THEN
-        phase( nls(ig0) ) = (1._DP, 0._DP)
+        phase( dffts%nl(ig0) ) = (1._DP, 0._DP)
      ENDIF
      CALL invfft( 'Wave', phase, dffts )
      phase(1:dffts%nnr) = DCONJG( phase(1:dffts%nnr) )

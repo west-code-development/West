@@ -23,9 +23,9 @@ SUBROUTINE solve_wfreq(l_read_restart,l_generate_plot)
   LOGICAL,INTENT(IN) :: l_read_restart,l_generate_plot
   !
   IF( gamma_only ) THEN
-    CALL solve_wfreq_gamma( l_read_restart,l_generate_plot )
+     CALL solve_wfreq_gamma( l_read_restart,l_generate_plot )
   ELSE
-    CALL solve_wfreq_k( l_read_restart,l_generate_plot )
+     CALL solve_wfreq_k( l_read_restart,l_generate_plot )
   ENDIF
   !
 END SUBROUTINE
@@ -35,30 +35,26 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir
-  USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
-  USE mp_world,             ONLY : mpime,root
-  USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
-  USE io_global,            ONLY : stdout,ionode
-  USE gvect,                ONLY : g,ngm,gstart
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
+  USE mp,                   ONLY : mp_bcast,mp_sum
+  USE io_global,            ONLY : stdout
+  USE gvect,                ONLY : g,ngm
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,bg,omega
   USE fft_base,             ONLY : dffts
-  USE constants,            ONLY : tpi,fpi,e2
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk
-  USE wavefunctions_module, ONLY : evc,psic,psic_nc
-  USE io_files,             ONLY : tmp_dir,nwordwfc,iunwfc
+  USE constants,            ONLY : fpi,e2
+  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,ngk
+  USE wavefunctions,        ONLY : evc,psic
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
-!  USE fft_at_k,             ONLY : SINGLEBAND_INVFFT_k,SINGLEBAND_FWFFT_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
-!  USE control_flags,        ONLY : gamma_only
-  USE noncollin_module,     ONLY : noncolin,npol
+  USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband
@@ -77,11 +73,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,ivloc,iks,ipol,m
+  INTEGER :: i1,i2,ip,ig,glob_ip,ir,iv,ivloc,iks,ipol
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
-  CHARACTER(LEN=6)      :: my_label_b
-  COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:), braket(:, :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
@@ -103,7 +97,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: zmatilda(:,:), zlambda(:,:)
   REAL(DP),ALLOCATABLE :: dmati(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr(:,:,:)
-  LOGICAL :: l_iks_skip, l_iv_skip
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
@@ -205,12 +198,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps>1) THEN
-        !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol
-        !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        !CALL mp_bcast(evc,0,inter_image_comm)
-        !CALL davcio(evc,lrwfc,iuwfc,iks,-1)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
 !     !
@@ -256,9 +244,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            iv = occband%l2g(ivloc)
            !
-           CALL commutator_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
-           CALL commutator_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
-           CALL commutator_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
            phi = 0._DP
            DO i1 = 1, 3
               DO i2 = 1, 3
@@ -306,7 +294,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ! LOOP over band states
      !
      DO iv = 1, nbndval
-        IF(iks==bks%lastdone_ks .AND. iv <= bks%lastdone_band ) CYCLE
+        IF(iks == bks%lastdone_ks .AND. iv <= bks%lastdone_band) CYCLE
         !
         ! MACROPOL CASE
         !
@@ -363,7 +351,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               ipol = glob_ip-n_pdep_eigen_to_use
               !
               dvpsi(:,ip) = phi(:,ipol) * DSQRT(fpi * e2)
-              !
               !
            ENDIF
            !
@@ -457,21 +444,21 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
         IF( l_enable_lanczos ) THEN
            !
-           ALLOCATE( bnorm    (                             mypara%nloc ) )
-           ALLOCATE( diago    (               n_lanczos   , mypara%nloc ) )
-           ALLOCATE( subdiago (               n_lanczos-1 , mypara%nloc ) )
-           ALLOCATE( q_s      ( npwx*npol   , mypara%nloc , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
+           ALLOCATE( bnorm    (                         mypara%nloc ) )
+           ALLOCATE( diago    (            n_lanczos  , mypara%nloc ) )
+           ALLOCATE( subdiago (            n_lanczos-1, mypara%nloc ) )
+           ALLOCATE( q_s      ( npwx*npol, mypara%nloc, n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
            !
-           CALL solve_deflated_lanczos_w_full_ortho ( nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
+           CALL solve_deflated_lanczos_w_full_ortho(nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
            !
-           ALLOCATE( braket   ( mypara%nglob, n_lanczos   , mypara%nloc ) )
+           ALLOCATE( braket( mypara%nglob, n_lanczos, mypara%nloc ) )
            CALL get_brak_hyper_parallel(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
-           DEALLOCATE( q_s )
            !
            DO ip = 1, mypara%nloc
               CALL diago_lanczos( bnorm(ip), diago( :, ip), subdiago( :, ip), braket(:,:,ip), mypara%nglob )
            ENDDO
            !
+           DEALLOCATE( q_s )
            DEALLOCATE( bnorm )
            DEALLOCATE( subdiago )
            !
@@ -567,6 +554,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   CALL stop_bar_type( barra, 'wlanczos' )
   !
+  CALL start_clock('chi0_diag')
+  !
   ! EPS-1 imfreq
   !
   ALLOCATE( dmatilda( mypara%nglob, mypara%nglob ) )
@@ -574,8 +563,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ALLOCATE( d_epsm1_ifr( pert%nglob, pert%nloc, ifr%nloc) )
   d_epsm1_ifr = 0._DP
   IF(l_macropol) ALLOCATE( d_head_ifr( ifr%nloc) )
-  !
-  CALL start_clock('chi0_diag')
   !
   DO ifreq = 1, ifr%nloc
      !
@@ -645,30 +632,26 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,z_epsm1_ifr_q,&
-                                 &  z_epsm1_rfr_q,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,z_epsm1_ifr_q,&
+                                 & z_epsm1_rfr_q,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir,&
                                  & ngq, igq_q
-  USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
-  USE mp_world,             ONLY : mpime,root
-  USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
-  USE io_global,            ONLY : stdout,ionode
-  USE gvect,                ONLY : g,ngm,gstart
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
+  USE mp,                   ONLY : mp_bcast,mp_sum
+  USE io_global,            ONLY : stdout
+  USE gvect,                ONLY : g,ngm
   USE gvecw,                ONLY : gcutw
   USE cell_base,            ONLY : tpiba2,bg,omega
   USE fft_base,             ONLY : dffts
-  USE constants,            ONLY : tpi,fpi,e2
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk
-  USE wavefunctions_module, ONLY : evc,psic,psic_nc
-  USE io_files,             ONLY : tmp_dir,nwordwfc,iunwfc
-!  USE fft_at_gamma,         ONLY : DOUBLEBAND_INVFFT,SINGLEBAND_INVFFT,DOUBLEBAND_FWFFT,SINGLEBAND_FWFFT
+  USE constants,            ONLY : fpi,e2
+  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,ngk
+  USE wavefunctions,        ONLY : evc,psic
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
-!  USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -688,12 +671,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: i1,i2,i3,im,ip,ig,glob_ip,ir,iv,ivloc,iks,ik,is,iq,ikqs,ikq,ipol,m
+  INTEGER :: i1,i2,ip,ig,glob_ip,ir,iv,ivloc,iks,ik,is,iq,ikqs,ikq,ipol
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE    :: fname
-  CHARACTER(LEN=6)      :: my_label_b
-  CHARACTER(LEN=5)      :: my_label_q
-  COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:)
   COMPLEX(DP),ALLOCATABLE :: braket(:, :, :)
@@ -719,7 +699,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: zmatilda(:,:), zlambda(:,:)
   COMPLEX(DP),ALLOCATABLE :: zmati_q(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr_q(:,:,:,:)
-  LOGICAL :: l_iks_skip, l_iv_skip
   LOGICAL :: l_gammaq
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
@@ -848,12 +827,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ! ... read in wavefunctions from the previous iteration
         !
         IF(k_grid%nps>1) THEN
-           !iuwfc = 20
-           !lrwfc = nbnd * npwx * npol
-           !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
            IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-           !CALL mp_bcast(evc,0,inter_image_comm)
-           !CALL davcio(evc,lrwfc,iuwfc,iks,-1)
            CALL mp_bcast(evc,0,inter_image_comm)
         ENDIF
 !       !
@@ -917,9 +891,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               iv = occband%l2g(ivloc)
               !
-              CALL commutator_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
-              CALL commutator_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
-              CALL commutator_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
+              CALL commut_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
+              CALL commut_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
+              CALL commut_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
               phi = 0._DP
               DO i1 = 1, 3
                  DO i2 = 1, 3
@@ -1138,21 +1112,21 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            IF( l_enable_lanczos ) THEN
               !
-              ALLOCATE( bnorm    (                             mypara%nloc ) )
-              ALLOCATE( diago    (               n_lanczos   , mypara%nloc ) )
-              ALLOCATE( subdiago (               n_lanczos-1 , mypara%nloc ) )
-              ALLOCATE( q_s      ( npwx*npol   , mypara%nloc , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
+              ALLOCATE( bnorm    (                         mypara%nloc ) )
+              ALLOCATE( diago    (            n_lanczos  , mypara%nloc ) )
+              ALLOCATE( subdiago (            n_lanczos-1, mypara%nloc ) )
+              ALLOCATE( q_s      ( npwx*npol, mypara%nloc, n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
               !
-              CALL solve_deflated_lanczos_w_full_ortho ( nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
+              CALL solve_deflated_lanczos_w_full_ortho(nbnd, mypara%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
               !
-              ALLOCATE( braket   ( mypara%nglob, n_lanczos   , mypara%nloc ) )
+              ALLOCATE( braket( mypara%nglob, n_lanczos  , mypara%nloc ) )
               CALL get_brak_hyper_parallel_complex(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
-              DEALLOCATE( q_s )
               !
               DO ip = 1, mypara%nloc
                  CALL diago_lanczos_complex( bnorm(ip), diago( :, ip), subdiago( :, ip), braket(:,:,ip), mypara%nglob )
               ENDDO
               !
+              DEALLOCATE( q_s )
               DEALLOCATE( bnorm )
               DEALLOCATE( subdiago )
               !
@@ -1260,6 +1234,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ENDIF
   DEALLOCATE( phase )
   !
+  CALL start_clock('chi0_diag')
+  !
   ! EPS-1 imfreq
   !
   ALLOCATE( zmatilda( mypara%nglob, mypara%nglob ) )
@@ -1267,8 +1243,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ALLOCATE( z_epsm1_ifr_q( pert%nglob, pert%nloc, ifr%nloc, q_grid%np) )
   z_epsm1_ifr_q = 0._DP
   IF(l_macropol) ALLOCATE( z_head_ifr( ifr%nloc) )
-  !
-  CALL start_clock('chi0_diag')
   !
   DO iq = 1, q_grid%np
      !
@@ -1345,15 +1319,15 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
 END SUBROUTINE
 !
-!
+!-----------------------------------------------------------------------
 SUBROUTINE output_eps_head( )
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : d_head_ifr,z_head_ifr,z_head_rfr,refreq_list,l_macropol,imfreq_list,wfreq_save_dir
+  USE westcom,              ONLY : z_head_rfr,refreq_list,l_macropol,wfreq_save_dir
   USE constants,            ONLY : rytoev,fpi
-  !USE west_io,              ONLY : serial_table_output
   USE mp_world,             ONLY : mpime,root
-  USE distribution_center,  ONLY : ifr,rfr
+  USE distribution_center,  ONLY : rfr
   USE mp,                   ONLY : mp_sum
   USE mp_global,            ONLY : intra_bgrp_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -1366,7 +1340,6 @@ SUBROUTINE output_eps_head( )
   !
   ! Workspace
   !
-  CHARACTER(LEN=9) :: prefisso
   REAL(DP),ALLOCATABLE :: out_tabella(:,:)
   INTEGER :: ifreq,glob_ifreq
   REAL(DP) :: lf, rf, ep1, ep2, nn, kk, rr

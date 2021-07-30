@@ -16,13 +16,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : npw,npwx
-  USE wvfct,                ONLY : nbnd
-  USE becmod,               ONLY : bec_type, becp, calbec
-  USE uspp,                 ONLY : nkb, vkb
-  USE mp_global,            ONLY : intra_pool_comm,intra_bgrp_comm
-  USE mp,                   ONLY : mp_sum
-  USE wavefunctions_module, ONLY : evc
-  USE noncollin_module,     ONLY : npol, noncolin
+  USE noncollin_module,     ONLY : npol,noncolin
   USE westcom,              ONLY : l_kinetic_only
   !
   IMPLICIT NONE
@@ -35,7 +29,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   REAL(DP), INTENT(IN) :: e (m)
   COMPLEX(DP), INTENT(IN) :: alpha
   ! input: the eigenvalue
-  COMPLEX(DP), INTENT(IN)  :: psi (npwx*npol,m)
+  COMPLEX(DP), INTENT(IN) :: psi (npwx*npol,m)
   COMPLEX(DP), INTENT(OUT) :: hpsi (npwx*npol,m)
   ! input: the vector
   ! output: the operator applied to the vector
@@ -47,7 +41,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !
   CALL start_clock ('stern')
   !
-  !   compute the product of the hamiltonian with the h vector
+  ! compute the product of the hamiltonian with the h vector
   !
   hpsi=(0.0_DP,0.0_DP)
   !
@@ -61,7 +55,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
      CALL h_psi_( npwx, npw, m, psi, hpsi )
   ENDIF
   !
-  !   then we compute the operator H-epsilon S
+  ! then we compute the operator H-epsilon S
   !
   DO ibnd=1,m
      za = CMPLX( -e(ibnd), 0._DP, KIND=DP )

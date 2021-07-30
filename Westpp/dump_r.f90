@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -69,9 +69,9 @@ SUBROUTINE dump_r ( auxr, fname )
      ALLOCATE(auxr_(dffts%nnr))
      auxr_ = CMPLX( auxr, 0.d0, KIND = DP)
      IF( gamma_only ) THEN 
-        CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Dense')
+        CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Rho')
      ELSE
-        CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Dense')
+        CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Rho')
      ENDIF
      CALL write_wfc_spav ( 2005, TRIM(fname)//".spavr", auxg, westpp_r0, westpp_nr, westpp_rmax )
      DEALLOCATE(auxg)

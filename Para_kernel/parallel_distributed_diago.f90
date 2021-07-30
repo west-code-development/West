@@ -27,13 +27,16 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   !   v_distr        : unitary trans.
   !   e              : eigenval
   !
-  USE kinds,                 ONLY : DP
-  USE mp,                    ONLY : mp_bcast
+  USE kinds,                 ONLY : DP,i8b
+  USE mp,                    ONLY : mp_bcast,mp_comm_split,mp_comm_free
   USE mp_global,             ONLY : intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id,me_bgrp,nbgrp,nproc_bgrp
   USE mp_world,              ONLY : world_comm,mpime,nproc
   USE class_idistribute,     ONLY : idistribute
-  USE sort_tools,            ONLY : heapsort,i8b
-  USE parallel_include
+  USE sort_tools,            ONLY : heapsort
+  USE west_mp,               ONLY : mp_alltoallv
+#if defined(__ELPA)
+  USE elpa
+#endif
   !
   IMPLICIT NONE
   !
@@ -79,6 +82,13 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   INTEGER,EXTERNAL :: INDXL2G
   INTEGER,EXTERNAL :: INDXG2P
   INTEGER,EXTERNAL :: NUMROC
+  !
+  ! Workspace for ELPA
+  !
+#if defined(__ELPA)
+  INTEGER :: elpa_comm
+  CLASS(elpa_t),POINTER :: elpa_h => NULL()
+#endif
   !
   ! ========================
   ! 1) Define processor grid
@@ -208,11 +218,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
      recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
   ENDDO
   !
-  CALL MPI_ALLTOALLV(idx_send,send_count,send_displ,MPI_INTEGER8,idx_recv,recv_count,&
-  & recv_displ,MPI_INTEGER8,world_comm,ierr)
-  !
-  CALL MPI_ALLTOALLV(val_send,send_count,send_displ,MPI_DOUBLE_PRECISION,val_recv,recv_count,&
-  & recv_displ,MPI_DOUBLE_PRECISION,world_comm,ierr)
+  CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+  CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
   !
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
      ALLOCATE(swap(LDROW*LDCOL))
@@ -241,6 +248,83 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   ge = 0.0_DP
   !
+#if defined(__ELPA)
+  IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
+     color = 1
+  ELSE
+     color = 0
+  ENDIF
+  !
+  CALL mp_comm_split(world_comm,color,mpime,elpa_comm)
+  !
+  IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
+     !
+     ! Set up
+     !
+     ierr = elpa_init(20200417)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa_init',ierr)
+     elpa_h => elpa_allocate(ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa_allocate',ierr)
+     !
+     CALL elpa_h%set('na',glob_ndim,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set na',ierr)
+     CALL elpa_h%set('nev',glob_ndim,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set nev',ierr)
+     CALL elpa_h%set('nblk',NB,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set nblk',ierr)
+     CALL elpa_h%set('local_nrows',LDROW,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set local_nrows',ierr)
+     CALL elpa_h%set('local_ncols',LDCOL,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set local_ncols',ierr)
+     CALL elpa_h%set('mpi_comm_parent',elpa_comm,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set mpi_comm_parent',ierr)
+     CALL elpa_h%set('process_row',MYROW,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set process_row',ierr)
+     CALL elpa_h%set('process_col',MYCOL,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set process_col',ierr)
+     !
+     ierr = elpa_h%setup()
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa setup',ierr)
+     !
+     CALL elpa_h%set('solver',ELPA_SOLVER_2STAGE,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set solver',ierr)
+     !
+     ! Fill in lower from upper
+     !
+     DO j_loc = 1,LDCOL
+        j_glob = INDXL2G(j_loc,NB,MYCOL,0,NPCOL)
+        DO i_loc = 1,LDROW
+           i_glob = INDXL2G(i_loc,NB,MYROW,0,NPROW)
+           IF(i_glob == j_glob) THEN
+              la(i_loc,j_loc) = 0.5_DP*la(i_loc,j_loc)
+           ELSEIF(i_glob > j_glob) THEN
+              la(i_loc,j_loc) = 0.0_DP
+           ENDIF
+        ENDDO
+     ENDDO
+     !
+     CALL PDTRAN(glob_ndim,glob_ndim,1.0_DP,la,1,1,DESC,0.0_DP,lv,1,1,DESC)
+     !
+     la = la+lv
+     !
+     ! Solve
+     !
+     CALL elpa_h%eigenvectors(la,ge,lv,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa eigenvectors',ierr)
+     !
+     ! Clean up
+     !
+     CALL elpa_deallocate(elpa_h,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa_deallocate',ierr)
+     !
+     NULLIFY(elpa_h)
+     DEALLOCATE(la)
+     !
+  ENDIF
+  !
+  CALL mp_comm_free(elpa_comm)
+  !
+#else
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
      !
      LWORK = -1
@@ -257,6 +341,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
      DEALLOCATE(la)
      !
   ENDIF
+#endif
   !
   ! =======================
   ! 4) Redistribute results
@@ -318,11 +403,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   ! Compared to the forward redistribution, receive and send buffers are simply
   ! swapped, so no need to recalculate any of them
   !
-  CALL MPI_ALLTOALLV(idx_recv,recv_count,recv_displ,MPI_INTEGER8,idx_send,send_count,&
-  & send_displ,MPI_INTEGER8,world_comm,ierr)
-  !
-  CALL MPI_ALLTOALLV(val_recv,recv_count,recv_displ,MPI_DOUBLE_PRECISION,val_send,send_count,&
-  & send_displ,MPI_DOUBLE_PRECISION,world_comm,ierr)
+  CALL mp_alltoallv(idx_recv,recv_count,recv_displ,idx_send,send_count,send_displ,world_comm)
+  CALL mp_alltoallv(val_recv,recv_count,recv_displ,val_send,send_count,send_displ,world_comm)
   !
   DEALLOCATE(send_count)
   DEALLOCATE(recv_count)
@@ -379,12 +461,15 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   !   e              : eigenval
   !
   USE kinds,                 ONLY : DP,i8b
-  USE mp,                    ONLY : mp_bcast
+  USE mp,                    ONLY : mp_bcast,mp_comm_split,mp_comm_free
   USE mp_global,             ONLY : intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id,me_bgrp,nbgrp,nproc_bgrp
   USE mp_world,              ONLY : world_comm,mpime,nproc
   USE class_idistribute,     ONLY : idistribute
   USE sort_tools,            ONLY : heapsort
-  USE parallel_include
+  USE west_mp,               ONLY : mp_alltoallv
+#if defined(__ELPA)
+  USE elpa
+#endif
   !
   IMPLICIT NONE
   !
@@ -431,6 +516,13 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   INTEGER,EXTERNAL :: INDXL2G
   INTEGER,EXTERNAL :: INDXG2P
   INTEGER,EXTERNAL :: NUMROC
+  !
+  ! Workspace for ELPA
+  !
+#if defined(__ELPA)
+  INTEGER :: elpa_comm
+  CLASS(elpa_t),POINTER :: elpa_h => NULL()
+#endif
   !
   ! ========================
   ! 1) Define processor grid
@@ -560,11 +652,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
      recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
   ENDDO
   !
-  CALL MPI_ALLTOALLV(idx_send,send_count,send_displ,MPI_INTEGER8,idx_recv,recv_count,&
-  & recv_displ,MPI_INTEGER8,world_comm,ierr)
-  !
-  CALL MPI_ALLTOALLV(val_send,send_count,send_displ,MPI_DOUBLE_COMPLEX,val_recv,recv_count,&
-  & recv_displ,MPI_DOUBLE_COMPLEX,world_comm,ierr)
+  CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+  CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
   !
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
      ALLOCATE(swap(LDROW*LDCOL))
@@ -593,6 +682,93 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   ge = 0.0_DP
   !
+#if defined(__ELPA)
+  IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
+     color = 1
+  ELSE
+     color = 0
+  ENDIF
+  !
+  CALL mp_comm_split(world_comm,color,mpime,elpa_comm)
+  !
+  IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
+     !
+     ! Set up
+     !
+     ierr = elpa_init(20200417)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa_init',ierr)
+     elpa_h => elpa_allocate(ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa_allocate',ierr)
+     !
+     CALL elpa_h%set('na',glob_ndim,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set na',ierr)
+     CALL elpa_h%set('nev',glob_ndim,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set nev',ierr)
+     CALL elpa_h%set('nblk',NB,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set nblk',ierr)
+     CALL elpa_h%set('local_nrows',LDROW,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set local_nrows',ierr)
+     CALL elpa_h%set('local_ncols',LDCOL,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set local_ncols',ierr)
+     CALL elpa_h%set('mpi_comm_parent',elpa_comm,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set mpi_comm_parent',ierr)
+     CALL elpa_h%set('process_row',MYROW,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set process_row',ierr)
+     CALL elpa_h%set('process_col',MYCOL,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set process_col',ierr)
+     !
+     ierr = elpa_h%setup()
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa setup',ierr)
+     !
+     CALL elpa_h%set('solver',ELPA_SOLVER_2STAGE,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set solver',ierr)
+     !
+     ! Fill in lower from upper
+     !
+     DO j_loc = 1,LDCOL
+        j_glob = INDXL2G(j_loc,NB,MYCOL,0,NPCOL)
+        DO i_loc = 1,LDROW
+           i_glob = INDXL2G(i_loc,NB,MYROW,0,NPROW)
+           IF(i_glob == j_glob) THEN
+              la(i_loc,j_loc) = HALF*la(i_loc,j_loc)
+           ELSEIF(i_glob > j_glob) THEN
+              la(i_loc,j_loc) = ZERO
+           ENDIF
+        ENDDO
+     ENDDO
+     !
+     CALL PZTRANC(glob_ndim,glob_ndim,ONE,la,1,1,DESC,ZERO,lv,1,1,DESC)
+     !
+     la = la+lv
+     !
+     DO j_loc = 1,LDCOL
+        j_glob = INDXL2G(j_loc,NB,MYCOL,0,NPCOL)
+        DO i_loc = 1,LDROW
+           i_glob = INDXL2G(i_loc,NB,MYROW,0,NPROW)
+           IF(i_glob == j_glob) THEN
+              la(i_loc,j_loc) = REAL(la(i_loc,j_loc),KIND=DP)
+           ENDIF
+        ENDDO
+     ENDDO
+     !
+     ! Solve
+     !
+     CALL elpa_h%eigenvectors(la,ge,lv,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa eigenvectors',ierr)
+     !
+     ! Clean up
+     !
+     CALL elpa_deallocate(elpa_h,ierr)
+     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa_deallocate',ierr)
+     !
+     NULLIFY(elpa_h)
+     DEALLOCATE(la)
+     !
+  ENDIF
+  !
+  CALL mp_comm_free(elpa_comm)
+  !
+#else
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
      !
      LWORK = -1
@@ -615,6 +791,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
      DEALLOCATE(la)
      !
   ENDIF
+#endif
   !
   ! =======================
   ! 4) Redistribute results
@@ -676,11 +853,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   ! Compared to the forward redistribution, receive and send buffers are simply
   ! swapped, so no need to recalculate any of them
   !
-  CALL MPI_ALLTOALLV(idx_recv,recv_count,recv_displ,MPI_INTEGER8,idx_send,send_count,&
-  & send_displ,MPI_INTEGER8,world_comm,ierr)
-  !
-  CALL MPI_ALLTOALLV(val_recv,recv_count,recv_displ,MPI_DOUBLE_COMPLEX,val_send,send_count,&
-  & send_displ,MPI_DOUBLE_COMPLEX,world_comm,ierr)
+  CALL mp_alltoallv(idx_recv,recv_count,recv_displ,idx_send,send_count,send_displ,world_comm)
+  CALL mp_alltoallv(val_recv,recv_count,recv_displ,val_send,send_count,send_displ,world_comm)
   !
   DEALLOCATE(send_count)
   DEALLOCATE(recv_count)

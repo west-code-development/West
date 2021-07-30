@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -15,23 +15,21 @@ SUBROUTINE west_print_clocks( )
   !----------------------------------------------------------------------------
   !
   USE json_module,   ONLY : json_file
-  USE io_global,     ONLY : stdout
   USE kinds,         ONLY : DP
-  USE mytime,        ONLY : nclock, clock_label, cputime, walltime, &
-                        notrunning, called, t0cpu, t0wall
+  USE mytime,        ONLY : nclock, clock_label, cputime, walltime, notrunning, &
+                            called, t0cpu, t0wall, f_tcpu, f_wall
   USE westcom,       ONLY : logfile
   USE mp_world,      ONLY : mpime, root
   !
   IMPLICIT NONE
   !
-  INTEGER          :: n
+  INTEGER :: n
   REAL(DP) :: elapsed_cpu_time, elapsed_wall_time
   TYPE(json_file) :: json
   INTEGER :: iunit, nmax
-  REAL(DP), EXTERNAL :: scnds, cclock
-  CHARACTER(20),EXTERNAL :: human_readable_time
+  CHARACTER(20), EXTERNAL :: human_readable_time
   !
-  IF( mpime == root ) THEN 
+  IF( mpime == root ) THEN
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
   ENDIF
@@ -51,8 +49,8 @@ SUBROUTINE west_print_clocks( )
         !
         ! ... clock not stopped, print the current value of the cpu time
         !
-        elapsed_cpu_time   = cputime(n) + scnds() - t0cpu(n)
-        elapsed_wall_time  = walltime(n) + cclock() - t0wall(n)
+        elapsed_cpu_time   = cputime(n) + f_tcpu() - t0cpu(n)
+        elapsed_wall_time  = walltime(n) + f_wall() - t0wall(n)
         called(n)  = called(n) + 1
         !
      ENDIF
@@ -92,11 +90,11 @@ SUBROUTINE get_clock_called( label, ncalls )
   !
   INTEGER :: n
   !
-  ncalls = 0 
+  ncalls = 0
   !
   DO n = 1, nclock
      !
-     IF( label /= clock_label(n) ) CYCLE 
+     IF( label /= clock_label(n) ) CYCLE
      !
      ncalls = called(n)
      EXIT

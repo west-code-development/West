@@ -1,6 +1,6 @@
 variables:
   GIT_STRATEGY: none
-  QE_VERSION: qe-6.1.0
+  QE_VERSION: qe-6.8
 
 stages:
   - build
@@ -67,19 +67,19 @@ stages:
 
 # Builds
 
-gcc840:
+gcc930:
   extends:
     - .template_bot_start
     - .template_build
 
-gcc930:
+gcc1020:
   extends:
     - .template_bot_start
     - .template_build
 
 # Tests
 
-gcc840_t:
+gcc930_t:
   variables:
     CI_NP: 8
     CI_NI: 1
@@ -88,9 +88,9 @@ gcc840_t:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc840
+  image: miccomcenter/bot:gcc930
 
-gcc930_t:
+gcc1020_t:
   variables:
     CI_NP: 8
     CI_NI: 2
@@ -100,26 +100,26 @@ gcc930_t:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc930
+  image: miccomcenter/bot:gcc1020
 
 # Nightly tests
-
-gcc840_t2:
-  variables:
-    CI_NP: 8
-    CI_NI: 2
-    CI_NB: 1
-    CI_NT: 2
-  only:
-    - schedules
-  extends:
-    - .template_bot_start
-    - .template_test
-  image: miccomcenter/bot:gcc840
 
 gcc930_t2:
   variables:
     CI_NP: 8
+    CI_NI: 2
+    CI_NB: 1
+    CI_NT: 2
+  only:
+    - schedules
+  extends:
+    - .template_bot_start
+    - .template_test
+  image: miccomcenter/bot:gcc930
+
+gcc1020_t2:
+  variables:
+    CI_NP: 8
     CI_NI: 1
     CI_NB: 2
     CI_NT: 2
@@ -129,7 +129,7 @@ gcc930_t2:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc930
+  image: miccomcenter/bot:gcc1020
 
 # Doc
 

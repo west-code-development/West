@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -31,24 +31,21 @@ CONTAINS
   !
   SUBROUTINE west_environment_start( code )
     !
-    USE kinds,           ONLY : DP
-    USE io_files,        ONLY : crash_file, nd_nmbr
-    USE mp_images,       ONLY : me_image, my_image_id, root_image, nimage
-    USE westcom,         ONLY : savedir, logfile, outdir, west_prefix 
-    USE base64_module,   ONLY : base64_init 
+    USE io_files,              ONLY : crash_file, nd_nmbr
+    USE mp_images,             ONLY : me_image, my_image_id
+    USE westcom,               ONLY : savedir, logfile, outdir, west_prefix
+    USE base64_module,         ONLY : base64_init
     USE json_string_utilities, ONLY : lowercase_string
-    USE west_version,    ONLY : start_forpy
-    !USE logfile_mod,     ONLY : clear_log
+    USE west_version,          ONLY : start_forpy
     !
     IMPLICIT NONE
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
-    LOGICAL           :: exst, debug = .false.
+    LOGICAL :: exst, debug = .false.
     CHARACTER(LEN=80) :: uname
     CHARACTER(LEN=6), EXTERNAL :: int_to_char
     INTEGER :: ios, crashunit
-    INTEGER, EXTERNAL :: find_free_unit
     !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash
@@ -56,7 +53,7 @@ CONTAINS
 #if defined(__INTEL_COMPILER)
     CALL remove_stack_limit ( )
 #endif
-    CALL start_forpy() 
+    CALL start_forpy()
     !
     ! Input from (-i), output from (-o)
     !
@@ -65,7 +62,7 @@ CONTAINS
     !
     savedir = TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) // "." // TRIM(lowercase_string(code)) // ".save/"
     logfile = TRIM(ADJUSTL(savedir)) // TRIM(lowercase_string(code))//".json"
-    CALL my_mkdir( TRIM(ADJUSTL(savedir)) ) 
+    CALL my_mkdir( TRIM(ADJUSTL(savedir)) )
     !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
     ! ... use ".TRUE."  to enable clocks
@@ -83,12 +80,11 @@ CONTAINS
     !
     IF( meta_ionode ) THEN
        !
-       ! ...  search for file CRASH and delete it
+       ! ... search for file CRASH and delete it
        !
        INQUIRE( FILE=TRIM(crash_file), EXIST=exst )
        IF( exst ) THEN
-          crashunit = find_free_unit()
-          OPEN( UNIT=crashunit, FILE=TRIM(crash_file), STATUS='OLD',IOSTAT=ios )
+          OPEN( NEWUNIT=crashunit, FILE=TRIM(crash_file), STATUS='OLD',IOSTAT=ios )
           IF (ios==0) THEN
              CLOSE( UNIT=crashunit, STATUS='DELETE', IOSTAT=ios )
           ELSE
@@ -100,7 +96,7 @@ CONTAINS
        ! ... one processor per image (other than meta_ionode)
        ! ... or, for debugging purposes, all processors,
        ! ... open their own standard output file
-#if defined(DEBUG)
+#if defined(DEBUG) || defined(__DEBUG)
        debug = .true.
 #endif
        IF (debug ) THEN
@@ -117,15 +113,14 @@ CONTAINS
        !
     END IF
     !
-    ! Initialize base64 tables  
+    ! Initialize base64 tables
     CALL base64_init()
     !
-    !CALL clear_log()
     CALL west_opening_message( code )
 #if defined(__MPI)
-    CALL report_parallel_status ( )
+    CALL report_parallel_status( )
 #else
-    CALL errore(TRIM(code), 'West need MPI to run', 1 ) 
+    CALL errore(TRIM(code), 'West need MPI to run', 1 )
 #endif
     !
   END SUBROUTINE
@@ -136,15 +131,15 @@ CONTAINS
     USE json_module,     ONLY : json_file
     USE mp_world,        ONLY : mpime,root,world_comm
     USE mp,              ONLY : mp_barrier
-    USE westcom,         ONLY : logfile 
+    USE westcom,         ONLY : logfile
     USE west_version,    ONLY : end_forpy
     !
-    IMPLICIT NONE 
+    IMPLICIT NONE
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     INTEGER :: iunit
-    TYPE(json_file) :: json 
-    CHARACTER(LEN=9)  :: cdate, ctime
+    TYPE(json_file) :: json
+    CHARACTER(LEN=9) :: cdate, ctime
     CHARACTER(LEN=80) :: time_str
     LOGICAL :: found
     !
@@ -190,7 +185,7 @@ CONTAINS
     !
     CALL end_forpy()
     !
-    CALL mp_barrier(world_comm) 
+    CALL mp_barrier(world_comm)
     !
   END SUBROUTINE
   !
@@ -200,13 +195,11 @@ CONTAINS
     !
     USE json_module,     ONLY : json_file
     USE io_global,       ONLY : stdout
-    USE global_version,  ONLY : version_number, svn_revision
+    USE global_version,  ONLY : version_number
     USE west_version,    ONLY : west_version_number, west_git_revision
-    USE mp_world,        ONLY : mpime,root 
+    USE mp_world,        ONLY : mpime,root
     USE westcom,         ONLY : logfile
-    USE base64_module,   ONLY : islittleendian  
-    USE forpy_mod,        ONLY : dict, dict_create 
-    !USE logfile_mod,      ONLY : append_log, itoa, ltoa, dtoa
+    USE base64_module,   ONLY : islittleendian
     !
     IMPLICIT NONE
     !
@@ -218,11 +211,7 @@ CONTAINS
     !
     TYPE(json_file) :: json
     INTEGER :: iunit
-    CHARACTER(LEN=9)  :: cdate, ctime
-    !
-    INTEGER :: IERR
-    CHARACTER(LEN=:),ALLOCATABLE :: s
-    TYPE(dict) :: attr
+    CHARACTER(LEN=9) :: cdate, ctime
     !
     CALL date_and_tim( cdate, ctime )
     !
@@ -238,22 +227,18 @@ CONTAINS
     &/5X,"for massively parallel calculations of excited states in materials; please cite", &
     &/9X,"""M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015);",&
     &/9X," URL http://www.west-code.org"", ", &
-    &/5X,"in publications or presentations arising from this work.")' ) 
+    &/5X,"in publications or presentations arising from this work.")' )
     !
-    IF ( TRIM (svn_revision) /= "unknown" ) THEN 
-       WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A," svn rev. ",A)') TRIM (version_number), TRIM (svn_revision)
-    ELSE
-       WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM (version_number)
-    ENDIF
+    WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM (version_number)
     !
-    IF( islittleendian() ) THEN 
-       WRITE( stdout, '(/5X,"I/O is Little Endian",A)') "" 
+    IF( islittleendian() ) THEN
+       WRITE( stdout, '(/5X,"I/O is Little Endian",A)') ""
     ELSE
        WRITE( stdout, '(/5X,"I/O is Big Endian",A)') ""
-    ENDIF 
+    ENDIF
     !
-    IF( mpime == root ) THEN 
-      ! 
+    IF( mpime == root ) THEN
+      !
       CALL json%initialize()
       !
       CALL json%add('runjob.startdate', TRIM(cdate) )
@@ -266,7 +251,6 @@ CONTAINS
       CALL json%add('software.website',"http://www.west-code.org")
       CALL json%add('software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
       CALL json%add('software.qeversion', TRIM(version_number) )
-      IF( TRIM (svn_revision) /= "unknown" ) CALL json%add('software.qesvn', TRIM(svn_revision) )
       CALL json%add('config.io.islittleendian', islittleendian() )
       !
       OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
@@ -275,32 +259,9 @@ CONTAINS
       !
       CALL json%destroy()
       !
-      !s = '{ '
-      !s = s // '"startdate" : '   //'"'//TRIM(cdate) //'" , '
-      !s = s // '"startime" : '    //'"'//TRIM(ctime)     //'" , '
-      !s = s // '"package" : '     //'"WEST"'          //' , '
-      !s = s // '"program" : '     //'"'//TRIM(code)      //'" , '
-      !s = s // '"version" : '     //'"'//TRIM(west_version_number) //'" , '
-      !IF( TRIM (west_git_revision) /= "unknown" ) THEN
-      !   s = s // '"git_version" : ' //'"'//TRIM(west_git_revision) //'" , '
-      !ENDIF
-      !s = s // '"website" : '     //'"http://www.west-code.org"' //' , '
-      !s = s // '"citation" : '    //'"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015)."' //' , '
-      !s = s // '"website" : '     //'"http://www.west-code.org"' //' , '
-      !s = s // '"qeversion" : '     //'"'//TRIM(version_number) //'" , '
-      !s = s // '"islittleendian" : ' //ltoa(islittleendian()) //'   '
-      !s = s // '}'
-      !!
-      !IERR = dict_create(attr)
-      !IERR = attr%setitem("type", "intro" )
-      !!
-      !CALL append_log( s, attr )
-      !!
-      !CALL attr%destroy
-      !
-    ENDIF 
+    ENDIF
     !
-  END SUBROUTINE 
+  END SUBROUTINE
   !
   !
   !
@@ -311,28 +272,22 @@ CONTAINS
      !
      USE json_module,      ONLY : json_file
      USE io_global,        ONLY : stdout
-     USE mp_global,        ONLY : nimage,npool,nbgrp,nproc_image,nproc_pool,nproc_bgrp 
-     USE mp_world,         ONLY : nproc,mpime,root 
+     USE mp_global,        ONLY : nimage,npool,nbgrp,nproc_bgrp
+     USE mp_world,         ONLY : nproc,mpime,root
      USE io_push,          ONLY : io_push_title,io_push_bar
-     USE forpy_mod,        ONLY : dict, dict_create 
      USE westcom,          ONLY : logfile
-     !USE logfile_mod,      ONLY : append_log, itoa
      !
      IMPLICIT NONE
      !
-#if defined(__OPENMP)
+#if defined(_OPENMP)
      INTEGER, EXTERNAL :: omp_get_max_threads
 #endif
      !
-     INTEGER :: nth, ncores 
+     INTEGER :: nth, ncores
      TYPE(json_file) :: json
      INTEGER :: iunit
      !
-     INTEGER :: IERR
-     CHARACTER(LEN=:),ALLOCATABLE :: s
-     TYPE(dict) :: attr
-     !
-#if defined(__OPENMP)
+#if defined(_OPENMP)
      nth = omp_get_max_threads()
 #else
      nth = 1
@@ -342,17 +297,17 @@ CONTAINS
      CALL io_push_title('**MPI** Parallelization Status')
      WRITE(stdout, "(5x, '   ',i14,'      ',4i14)") nproc, nimage, npool, nbgrp, nproc_bgrp
      CALL io_push_bar()
-     WRITE(stdout, "(5x, '                N         =         I      X      P      X      B      X      Z')") 
-     WRITE(stdout, "(5x, '                ^                   ^             ^             ^             ^')") 
-     WRITE(stdout, "(5x, '                |                   |             |             |             |')") 
-     WRITE(stdout, "(5x, '              #rnk                  |             |             |             |')") 
-     WRITE(stdout, "(5x, '                                 #image           |             |             |')") 
-     WRITE(stdout, "(5x, '                                                #pool           |             |')") 
-     WRITE(stdout, "(5x, '                                                              #bgrp           |')") 
-     WRITE(stdout, "(5x, '                                                                            #R&G')") 
+     WRITE(stdout, "(5x, '                N         =         I      X      P      X      B      X      Z')")
+     WRITE(stdout, "(5x, '                ^                   ^             ^             ^             ^')")
+     WRITE(stdout, "(5x, '                |                   |             |             |             |')")
+     WRITE(stdout, "(5x, '              #rnk                  |             |             |             |')")
+     WRITE(stdout, "(5x, '                                 #image           |             |             |')")
+     WRITE(stdout, "(5x, '                                                #pool           |             |')")
+     WRITE(stdout, "(5x, '                                                              #bgrp           |')")
+     WRITE(stdout, "(5x, '                                                                            #R&G')")
      CALL io_push_bar()
      !
-#if defined(__OPENMP)
+#if defined(_OPENMP)
      WRITE(stdout, "(5x, '**OPENMP** Parallelization Status')")
      WRITE(stdout, "(5x, '#thr/rnk               = ',i12)") nth
      CALL io_push_bar()
@@ -375,7 +330,7 @@ CONTAINS
        CALL json%add('parallel.nbgrp', nbgrp )
        CALL json%add('parallel.nrg', nproc_bgrp )
        CALL json%add('parallel.nproc', ncores )
-#if defined(__OPENMP)
+#if defined(_OPENMP)
        CALL json%add('parallel.nthreads', nth )
 #endif
        !
@@ -385,29 +340,8 @@ CONTAINS
        !
        CALL json%destroy()
        !
-!       !
-!       s = '{ '
-!       s = s // '"nranks" : '   //ITOA(nproc)      //' , '
-!       s = s // '"nimage" : '   //ITOA(nimage)     //' , '
-!       s = s // '"nimage" : '   //ITOA(nimage)     //' , '
-!       s = s // '"npool" : '    //ITOA(npool)      //' , '
-!       s = s // '"nbgrp" : '    //ITOA(nbgrp)      //' , '
-!       s = s // '"nrg" : '      //ITOA(nproc_bgrp) //' , '
-!#if defined(__OPENMP)
-!       s = s // '"nthreads" : ' //ITOA(nth)        //' , '
-!#endif
-!       s = s // '"nproc" : '    //ITOA(ncores)     //'   '
-!       s = s // '}'
-!       !
-!       IERR = dict_create(attr)
-!       IERR = attr%setitem("type", "parallel" )
-!       !
-!       CALL append_log( s, attr )
-!       !
-!       CALL attr%destroy
-!       !
-    ENDIF 
-     !
+    ENDIF
+    !
   END SUBROUTINE
   !
-END MODULE 
+END MODULE

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,8 +7,8 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
-! Marco Govoni, Nicholas Brawand 
+! Contributors to this file:
+! Marco Govoni, Nicholas Brawand
 !
 !----------------------------------------------------------------------------
 SUBROUTINE do_sxx ( )
@@ -26,15 +26,15 @@ SUBROUTINE do_sxx ( )
   USE fft_base,              ONLY : dfftp,dffts
   USE wvfct,                 ONLY : nbnd
   USE buffers,               ONLY : get_buffer
-  USE wavefunctions_module,  ONLY : evc,psic,psic_nc
+  USE wavefunctions,         ONLY : evc,psic,psic_nc
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k,single_fwfft_k
   USE distribution_center,   ONLY : pert
-  USE control_flags,         ONLY : gamma_only 
-  USE gvect,                 ONLY : g,nl,gstart,ngm_g,ngm
+  USE control_flags,         ONLY : gamma_only
+  USE gvect,                 ONLY : g,gstart,ngm_g,ngm
   USE cell_base,             ONLY : omega,at,alat
-  USE noncollin_module,      ONLY : noncolin,npol 
+  USE noncollin_module,      ONLY : noncolin,npol
   USE mp_world,              ONLY : mpime,root
   USE constants,             ONLY : rytoev
   USE json_module,           ONLY : json_file
@@ -52,8 +52,8 @@ SUBROUTINE do_sxx ( )
   LOGICAL :: l_gammaq
   REAL(DP) :: g0(3)
   TYPE(bar_type) :: barra
-  REAL(DP),ALLOCATABLE :: sigma_exx( :, : ) 
-  REAL(DP),ALLOCATABLE :: sigma_sxx( :, : ) 
+  REAL(DP),ALLOCATABLE :: sigma_exx( :, : )
+  REAL(DP),ALLOCATABLE :: sigma_sxx( :, : )
   REAL(DP) :: peso
   REAL(DP), EXTERNAL :: DDOT
   CHARACTER(LEN=6) :: myglobk
@@ -74,14 +74,14 @@ SUBROUTINE do_sxx ( )
   !
   !ALLOCATE( pertg(npwqx) )
   ALLOCATE( pertg(ngm) )
-  IF(noncolin) THEN 
+  IF(noncolin) THEN
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
   ELSE
      ALLOCATE( pertr( dffts%nnr ) )
   ENDIF
   !
-  IF( gamma_only ) THEN 
-     peso = 2._DP  
+  IF( gamma_only ) THEN
+     peso = 2._DP
      ALLOCATE( dproj( 1, pert%nloc ) )
   ELSE
      peso = 1._DP
@@ -90,7 +90,7 @@ SUBROUTINE do_sxx ( )
      ALLOCATE( evckmq(npwx*npol,nbnd) )
   ENDIF
   !
-  CALL start_bar_type( barra, 'westpp', k_grid%nps * (westpp_range(2)-westpp_range(1)+1)  ) 
+  CALL start_bar_type( barra, 'westpp', k_grid%nps * (westpp_range(2)-westpp_range(1)+1)  )
   !
   DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
      !
@@ -112,7 +112,7 @@ SUBROUTINE do_sxx ( )
      !
      IF(k_grid%nps>1) THEN
         !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol 
+        !lrwfc = nbnd * npwx * npol
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         !CALL mp_bcast(evc,0,inter_image_comm)
@@ -124,10 +124,10 @@ SUBROUTINE do_sxx ( )
      !
      DO ib = 1, nbnd
         !
-        IF( ib < westpp_range(1) .OR. ib > westpp_range(2) ) CYCLE 
+        IF( ib < westpp_range(1) .OR. ib > westpp_range(2) ) CYCLE
         !
         IF(gamma_only) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave') 
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')
         ELSEIF(noncolin) THEN
            CALL single_invfft_k(dffts,npw,npwx,evc(1     ,ib),psic_nc(1,1),'Wave',igk_k(1,current_k))
            CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,ib),psic_nc(1,2),'Wave',igk_k(1,current_k))
@@ -141,27 +141,27 @@ SUBROUTINE do_sxx ( )
               !
               l_gammaq = .TRUE.
               nbndval = nbnd_occ(iks)
-              CALL pot3D%init('Dense',.FALSE.,'gb')
+              CALL pot3D%init('Rho',.FALSE.,'gb')
               !
            ELSE
               !
               l_gammaq = q_grid%l_pIsGamma(iq)
               !
               !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !M
-              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        
-              ikqs = k_grid%ipis2ips(ikq,is)                                                        
+              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )
+              ikqs = k_grid%ipis2ips(ikq,is)
               CALL compute_phase( g0, 'cart', phase )
               !
               nbndval = nbnd_occ(ikqs)
               npwq = ngq(iq)
               npwkq = ngk(ikqs)
               !
-              CALL pot3D%init('Dense',.FALSE.,'gb',iq)
+              CALL pot3D%init('Rho',.FALSE.,'gb',iq)
               !
               IF ( my_image_id == 0 ) CALL get_buffer( evckmq, lrwfc, iuwfc, ikqs )
               CALL mp_bcast( evckmq, 0, inter_image_comm )
               !
-              IF (iks==1 .AND. ib==1 .AND. iq==1) THEN 
+              IF (iks==1 .AND. ib==1 .AND. iq==1) THEN
                  l_print_pdep_read = .TRUE.
               ELSE
                  l_print_pdep_read = .FALSE.
@@ -174,30 +174,30 @@ SUBROUTINE do_sxx ( )
               ! Bring it to R-space
               IF(gamma_only) THEN
                  CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),pertr,'Wave')
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr(ir)=psic(ir)*pertr(ir)
                  ENDDO
                  CALL single_fwfft_gamma(dffts,npwq,npwqx,pertr,pertg,TRIM(fftdriver))
               ELSEIF(noncolin) THEN
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
                  !CALL single_fwfft_k(dffts,npwq,npwqx,pertr_nc(1,1),pertg,'Dense') ! no igk
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
+                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Rho') ! no igk
               ELSE
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv),pertr,'Wave',igk_k(1,ikqs))
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO
                  !CALL single_fwfft_k(dffts,npwq,npwqx,pertr,pertg,'Dense') ! no igk
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Dense') ! no igk
-              ENDIF 
+                 CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
+              ENDIF
               !
               !DO ig = 1,npwq
               DO ig = 1,ngm
-                 pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
+                 pertg(ig) = pertg(ig) * pot3D%sqvc(ig)
               ENDDO
               !sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*npwq, pertg(1), 1, pertg(1), 1) / omega
               sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso*DDOT(2*ngm, pertg(1), 1, pertg(1), 1)/omega * q_grid%weight(iq)
@@ -212,7 +212,7 @@ SUBROUTINE do_sxx ( )
                  CALL pdep_db_read(westpp_n_pdep_eigen_to_use,iq,l_print_pdep_read)
               ENDIF
               !
-              IF( gamma_only ) THEN  
+              IF( gamma_only ) THEN
                  CALL glbrak_gamma( pertg, dvg, dproj, npwq, npwqx, 1, pert%nloc, 1, npol)
                  CALL mp_sum( dproj, intra_bgrp_comm )
                  DO ip = 1, pert%nloc
@@ -230,8 +230,8 @@ SUBROUTINE do_sxx ( )
                  ENDDO
                  !
                  IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * pot3D%div
-              ENDIF 
-              ! -- </ SXX > 
+              ENDIF
+              ! -- </ SXX >
               !
            ENDDO ! iv
            !
@@ -248,13 +248,13 @@ SUBROUTINE do_sxx ( )
   CALL mp_sum( sigma_exx, intra_bgrp_comm )
   CALL mp_sum( sigma_sxx, inter_image_comm )
   !
-  sigma_sxx = sigma_exx + sigma_sxx 
+  sigma_sxx = sigma_exx + sigma_sxx
   !
-  DEALLOCATE( pertg ) 
-  IF( noncolin ) THEN 
-    DEALLOCATE( pertr_nc ) 
+  DEALLOCATE( pertg )
+  IF( noncolin ) THEN
+    DEALLOCATE( pertr_nc )
   ELSE
-    DEALLOCATE( pertr ) 
+    DEALLOCATE( pertr )
   ENDIF
   IF( gamma_only ) THEN
      DEALLOCATE( dproj )
@@ -262,7 +262,7 @@ SUBROUTINE do_sxx ( )
      DEALLOCATE( zproj )
      DEALLOCATE( evckmq )
      DEALLOCATE( phase )
-  ENDIF  
+  ENDIF
   !
   ! Output it per k-point
   !
@@ -273,7 +273,7 @@ SUBROUTINE do_sxx ( )
   !
   ! STDOUT
   !
-  WRITE(stdout,"(5X)")  
+  WRITE(stdout,"(5X)")
   CALL io_push_bar()
   WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a,1X,a,1X,a)") &
   & 'K     ', 'B     ', '      Eks [eV]', '       Sx [eV]', '      Sxx [eV]', '        Sxx/Sx'
@@ -283,7 +283,7 @@ SUBROUTINE do_sxx ( )
   !
   DO iks=1,k_grid%nps
      DO ib = westpp_range(1), westpp_range(2)
-        out_tab( ib - westpp_range(1) + 1, 1) = REAL( ib, KIND=DP) 
+        out_tab( ib - westpp_range(1) + 1, 1) = REAL( ib, KIND=DP)
         out_tab( ib - westpp_range(1) + 1, 2) = et(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) * rytoev
@@ -298,7 +298,7 @@ SUBROUTINE do_sxx ( )
      !& westpp_range(2)-westpp_range(1)+1,5,&
      !& (/'      band','    E0[eV]','    Sx[eV]','   Sxx[eV]','    Sxx/Sx'/))
      !
-     IF(mpime==root) THEN 
+     IF(mpime==root) THEN
         !
         CALL json%add('output.S.K'//TRIM(myglobk)//'.bandmap',out_tab(:,1))
         CALL json%add('output.S.K'//TRIM(myglobk)//'.eks',out_tab(:,2))
@@ -311,7 +311,7 @@ SUBROUTINE do_sxx ( )
   DEALLOCATE(out_tab)
   CALL io_push_bar()
   !
-  IF( mpime == root ) THEN 
+  IF( mpime == root ) THEN
      !
      OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
      CALL json%print( iunit )
@@ -322,6 +322,6 @@ SUBROUTINE do_sxx ( )
   ENDIF
   !
   DEALLOCATE( sigma_exx )
-  DEALLOCATE( sigma_sxx ) 
+  DEALLOCATE( sigma_sxx )
   !
 END SUBROUTINE

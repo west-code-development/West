@@ -52,9 +52,10 @@ for dir in $dirs; do
     # default
     DEPENDS="$LEVEL1/include"
     # for convenience, used later
-    DEPEND1="$LEVEL1/include $LEVEL1/iotk/src $LEVEL1/FFTXlib $LEVEL1/LAXlib"
-    DEPEND2="$LEVEL2/include $LEVEL2/iotk/src $LEVEL2/FFTXlib $LEVEL2/LAXlib \
-             $LEVEL2/Modules"
+    DEPEND1="$LEVEL1/include $LEVEL1/FFTXlib $LEVEL1/XClib $LEVEL1/LAXlib $LEVEL1/UtilXlib \
+             $LEVEL1/upflib"
+    DEPEND3="$LEVEL2/include $LEVEL2/FFTXlib $LEVEL2/LAXlib $LEVEL2/UtilXlib"
+    DEPEND2="$DEPEND3 $LEVEL2/upflib $LEVEL2/XClib $LEVEL2/Modules"
     case $DIR in
         West/Coulomb_kernel )
              DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Libraries/Json_test $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;

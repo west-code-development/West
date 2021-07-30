@@ -10,9 +10,9 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0.D0, 0.D0 )
-#define ONE  ( 1.D0, 0.D0 )
-#define MONE (-1.D0, 0.D0 )
+#define ZERO ( 0._DP, 0._DP )
+#define ONE  ( 1._DP, 0._DP )
+#define MONE (-1._DP, 0._DP )
 !
 !----------------------------------------------------------------------------
 SUBROUTINE davidson_diago ( )
@@ -41,10 +41,11 @@ SUBROUTINE davidson_diago_gamma ( )
   USE io_global,            ONLY : stdout
   USE distribution_center,  ONLY : pert
   USE class_idistribute,    ONLY : idistribute
-  USE io_push,              ONLY : io_push_title,io_push_bar
-  USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
-                                   & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwqx,npwq,&
-                                   & npwqx,npwq,trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver
+  USE io_push,              ONLY : io_push_title
+  USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
+                                   & wstat_calculation,ev,conv,n_pdep_read_from_file,&
+                                   & n_steps_write_restart,npwq,npwqx,trev_pdep_rel,tr2_dfpt,&
+                                   & l_is_wstat_converged,fftdriver
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
@@ -68,7 +69,7 @@ SUBROUTINE davidson_diago_gamma ( )
     ! do-loop counters
     ! counter on the bands
   INTEGER :: ierr,mloc,mstart,mend
-  INTEGER,ALLOCATABLE :: ishift(:)
+  INTEGER, ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
   !
@@ -95,7 +96,6 @@ SUBROUTINE davidson_diago_gamma ( )
   !
   pert = idistribute()
   CALL pert%init(nvecx,'i','nvecx',.TRUE.)
-  !CALL index_distr_init(pert,nvecx,'i','nvecx',.TRUE.)
   CALL wstat_memory_report() ! Before allocating I report the memory required.
   !
   ! ... MEMORY ALLOCATION
@@ -130,15 +130,15 @@ SUBROUTINE davidson_diago_gamma ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate conv ', ABS(ierr) )
   !
-  nbase  = nvec
-  conv   = .FALSE.
-  ev     = 0._DP
-  ew     = 0._DP
-  dng  = 0._DP
-  dvg  = 0._DP
-  hr_distr(:,:) = 0._DP
-  vr_distr(:,:) = 0._DP
-  notcnv  = nvec
+  nbase = nvec
+  conv = .FALSE.
+  ev = 0._DP
+  ew = 0._DP
+  dng = 0._DP
+  dvg = 0._DP
+  hr_distr = 0._DP
+  vr_distr = 0._DP
+  notcnv = nvec
   dav_iter = -2
   !
   CALL pot3D%init(fftdriver,.FALSE.,'default')
@@ -163,11 +163,11 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! ... Eventually randomize
      !
-     IF(n_pdep_read_from_file<nvec) CALL do_randomize ( dvg, n_pdep_read_from_file+1, nvec )
+     IF(n_pdep_read_from_file<nvec) CALL do_randomize( dvg, n_pdep_read_from_file+1, nvec )
      !
      ! ... MGS
      !
-     CALL do_mgs( dvg, 1, nvec)
+     CALL do_mgs( dvg, 1, nvec )
      !
      dfpt_dim = nbase
      diago_dim = nbase
@@ -202,7 +202,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ! < EXTRA STEP >
      !
      dvg = dng
-     CALL do_mgs( dvg, 1, nvec)
+     CALL do_mgs( dvg, 1, nvec )
      !
      dfpt_dim = nbase
      diago_dim = nbase
@@ -289,9 +289,9 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            ew(nbase+np) = ev(n)
            !
-        END IF
+        ENDIF
         !
-     END DO
+     ENDDO
      !
      ! ... expand the basis set with new basis vectors ( H - e*S )|psi> ...
      !
@@ -301,7 +301,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! ... MGS
      !
-     CALL do_mgs(dvg,nbase+1,nbase+notcnv)
+     CALL do_mgs( dvg, nbase+1, nbase+notcnv )
      !
      ! apply the response function to new vectors
      !
@@ -319,7 +319,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ! Apply operator with DFPT
      !
      pccg_res_tr2 = tr2_dfpt
-     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, 1)
+     CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, 1 )
      !
      ! ... update the reduced hamiltonian
      !
@@ -343,7 +343,6 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      conv(1:nvec) = ( ( ABS( (ew(1:nvec) - ev(1:nvec))/ev(1:nvec) ) < trev_pdep_rel ) &
                  .AND. ( ABS( ew(1:nvec) - ev(1:nvec) ) < trev_pdep ) )
-     !conv(1:nvec) = ( ( ABS( ew(1:nvec) - ev(1:nvec) ) < trev_pdep ) )
      !
      notcnv = COUNT( .NOT. conv(:) )
      !
@@ -373,7 +372,6 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            CALL pdep_db_write( )
            CALL wstat_restart_clear()
-           !CALL output_a_report(-1)
            !
            WRITE(iter_label,'(i8)') kter
            CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
@@ -392,7 +390,7 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            EXIT iterate
            !
-        END IF
+        ENDIF
         !
         ! ... refresh psi, H*psi and S*psi
         !
@@ -417,13 +415,12 @@ SUBROUTINE davidson_diago_gamma ( )
         !
         CALL stop_clock( 'chidiago:last' )
         !
-     END IF
+     ENDIF
      !
      IF(n_steps_write_restart > 0 .AND. MOD(dav_iter,n_steps_write_restart) == 0) &
         CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
-     !CALL output_a_report(dav_iter)
      !
-  END DO iterate
+  ENDDO iterate
   !
   !
   DEALLOCATE( conv )
@@ -453,12 +450,14 @@ SUBROUTINE davidson_diago_k ( )
   USE io_global,            ONLY : stdout
   USE distribution_center,  ONLY : pert
   USE class_idistribute,    ONLY : idistribute
-  USE io_push,              ONLY : io_push_title,io_push_bar
+  USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
-                                   & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
+                                   & n_pdep_read_from_file,n_steps_write_restart,&
                                    & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,ngq,npwq,igq_q,npwqx
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
+  USE gvect,                ONLY : g,ngm
+  USE gvecw,                ONLY : gcutw
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,refresh_with_vr_distr
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
@@ -510,7 +509,6 @@ SUBROUTINE davidson_diago_k ( )
   !
   pert=idistribute()
   CALL pert%init(nvecx,'i','nvecx',.TRUE.)
-  !CALL index_distr_init(pert,nvecx,'i','nvecx',.TRUE.)
   CALL wstat_memory_report() ! Before allocating I report the memory required.
   !
   ! ... MEMORY ALLOCATION
@@ -552,15 +550,15 @@ SUBROUTINE davidson_diago_k ( )
      time_spent(1)=get_clock( 'chidiago' )
      CALL get_clock_called( 'stern' , sternop_ncalls(1) )
      !
-     nbase  = nvec
-     conv   = .FALSE.
-     ev     = 0._DP
-     ew     = 0._DP
-     dng  = 0._DP
-     dvg  = 0._DP
+     nbase = nvec
+     conv = .FALSE.
+     ev = 0._DP
+     ew = 0._DP
+     dng = 0._DP
+     dvg = 0._DP
      hr_distr(:,:) = 0._DP
      vr_distr(:,:) = 0._DP
-     notcnv  = nvec
+     notcnv = nvec
      dav_iter = -2
      !
      ! set local number of G vectors for perturbation at q
@@ -631,7 +629,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! ... MGS
         !
-        CALL do_mgs( dvg, 1, nvec)
+        CALL do_mgs( dvg, 1, nvec )
         !
         dfpt_dim = nbase
         diago_dim = nbase
@@ -667,7 +665,7 @@ SUBROUTINE davidson_diago_k ( )
         ! < EXTRA STEP >
         !
         dvg = dng
-        CALL do_mgs( dvg, 1, nvec)
+        CALL do_mgs( dvg, 1, nvec )
         !
         dfpt_dim = nbase
         diago_dim = nbase
@@ -755,9 +753,9 @@ SUBROUTINE davidson_diago_k ( )
               !
               ew(nbase+np) = ev(n)
               !
-           END IF
+           ENDIF
            !
-        END DO
+        ENDDO
         !
         ! ... expand the basis set with new basis vectors ( H - e*S )|psi> ...
         !
@@ -767,7 +765,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! ... MGS
         !
-        CALL do_mgs(dvg,nbase+1,nbase+notcnv)
+        CALL do_mgs( dvg, nbase+1, nbase+notcnv )
         !
         ! apply the response function to new vectors
         !
@@ -810,7 +808,6 @@ SUBROUTINE davidson_diago_k ( )
         !
         conv(1:nvec) = ( ( ABS( (ew(1:nvec) - ev(1:nvec))/ev(1:nvec) ) < trev_pdep_rel ) &
                     .AND. ( ABS( ew(1:nvec) - ev(1:nvec) ) < trev_pdep ) )
-        !conv(1:nvec) = ( ( ABS( ew(1:nvec) - ev(1:nvec) ) < trev_pdep ) )
         !
         notcnv = COUNT( .NOT. conv(:) )
         !
@@ -840,7 +837,6 @@ SUBROUTINE davidson_diago_k ( )
               !
               CALL pdep_db_write( iq )
               CALL wstat_restart_clear()
-              !CALL output_a_report(-1)
               !
               WRITE(iter_label,'(i8)') kter
               CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
@@ -859,7 +855,7 @@ SUBROUTINE davidson_diago_k ( )
               !
               EXIT iterate
               !
-           END IF
+           ENDIF
            !
            ! ... refresh psi, H*psi and S*psi
            !
@@ -884,13 +880,12 @@ SUBROUTINE davidson_diago_k ( )
            !
            CALL stop_clock( 'chidiago:last' )
            !
-        END IF
+        ENDIF
         !
         IF(n_steps_write_restart > 0 .AND. MOD(dav_iter,n_steps_write_restart) == 0) &
            CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq )
-        !CALL output_a_report(dav_iter)
         !
-     END DO iterate
+     ENDDO iterate
      !
      CALL stop_clock( 'chidiago' )
      !
@@ -910,9 +905,6 @@ SUBROUTINE davidson_diago_k ( )
   !
 END SUBROUTINE
 !
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
 SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
@@ -925,7 +917,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   USE mp,                     ONLY : mp_sum,mp_bcast
   USE westcom,                ONLY : npwq,npwqx
   USE control_flags,          ONLY : gamma_only
-  USE io_push,                ONLY : io_push_title
   USE distribution_center,    ONLY : pert
   !
   IMPLICIT NONE
@@ -937,11 +928,10 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! Workspace
   !
-  INTEGER :: ig, ip, j, ncol
+  INTEGER :: ig, ip, ncol
   INTEGER :: k_global, k_local, j_local, k_id
   REAL(DP) :: anorm
   REAL(DP),ALLOCATABLE :: braket(:)
-  REAL(DP) :: time_spent(2)
   COMPLEX(DP),ALLOCATABLE :: vec(:),zbraket(:)
   LOGICAL :: unfinished
   COMPLEX(DP) :: za
@@ -1063,9 +1053,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
 END SUBROUTINE
 !
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
 SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   !
@@ -1074,7 +1061,7 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   USE kinds,                ONLY : DP
   USE random_numbers,       ONLY : randy
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
-  USE westcom,              ONLY : npwq,dvg,npwqx
+  USE westcom,              ONLY : npwq,npwqx
   USE constants,            ONLY : tpi
   USE distribution_center,  ONLY : pert
   !
@@ -1120,7 +1107,7 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
         amat(ig,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / &
                       ( g(1,ig)*g(1,ig) + &
                         g(2,ig)*g(2,ig) + &
-                        g(3,ig)*g(3,ig) + 1.0_DP )
+                        g(3,ig)*g(3,ig) + 1._DP )
      ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL
@@ -1133,9 +1120,6 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   !
 END SUBROUTINE
 !
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
 SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   !
@@ -1144,7 +1128,7 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   USE kinds,                ONLY : DP
   USE random_numbers,       ONLY : randy
   USE gvect,                ONLY : g,ngm_g,ig_l2g
-  USE westcom,              ONLY : dvg,npwqx,ngq,igq_q
+  USE westcom,              ONLY : npwqx,ngq,igq_q
   USE constants,            ONLY : tpi,eps8
   USE cell_base,            ONLY : tpiba2
   USE distribution_center,  ONLY : pert
@@ -1193,7 +1177,7 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
         IF ( qgnorm2 < eps8 ) CYCLE
         rr = random_num_debug(1,ig_l2g(igq_q(ig,iq)))
         arg = tpi * random_num_debug(2,ig_l2g(igq_q(ig,iq)))
-        amat(ig,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / ( qgnorm2 + 1.0_DP )
+        amat(ig,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / ( qgnorm2 + 1._DP )
      ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL
@@ -1206,83 +1190,14 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   !
 END SUBROUTINE
 !
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!
-!SUBROUTINE output_a_report(iteration)
-!   !
-!   USE json_module,  ONLY : json_file
-!   USE kinds,        ONLY : DP
-!   USE westcom,      ONLY : n_pdep_eigen,ev,conv,wstat_output_dir,logfile
-!   USE west_io ,     ONLY : serial_table_output
-!   USE mp_world,     ONLY : mpime,root
-!   !
-!   IMPLICIT NONE
-!   !
-!   TYPE(json_file) :: json
-!   INTEGER,INTENT(IN) :: iteration
-!   CHARACTER(LEN=9) :: pref
-!   INTEGER :: ip, ierr, iunit
-!   !REAL(DP) :: out_tab(n_pdep_eigen,3)
-!   !
-!   INTEGER,ALLOCATABLE :: converged(:)
-!   !
-!   ALLOCATE( converged(n_pdep_eigen) )
-!   !
-!   converged = 0
-!   DO ip=1,n_pdep_eigen
-!      !out_tab(ip,1) = REAL(ip,DP)
-!      !ipert(ip) = ip
-!      !out_tab(ip,2) = ev(ip)
-!      !out_tab(ip,3) = 0._DP
-!      !IF(conv(ip)) out_tab(ip,3) = 1._DP
-!      IF(conv(ip)) converged(ip) = 1
-!   ENDDO
-!   IF(iteration>=0) THEN
-!      WRITE(pref,"('itr_',i5.5)") iteration
-!   ELSE
-!      pref='converged'
-!   ENDIF
-!   !CALL serial_table_output(mpime==root,4000,'wstat.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
-!   !
-!   IF( mpime == root ) THEN
-!      !
-!      CALL json%initialize()
-!      !
-!      CALL json%load(filename=TRIM(logfile))
-!      !
-!      CALL json%add('output.davitr'//TRIM(pref)//.'egvl',  ev        ( 1:n_pdep_eigen ) )
-!      CALL json%add('output.davitr'//TRIM(pref)//.'conv',  converged ( 1:n_pdep_eigen ) )
-!      !
-!      !OPEN(UNIT=4000,FILE=TRIM(ADJUSTL(wstat_output_dir))//"/o-wstat."//TRIM(ADJUSTL(pref))//".json",IOSTAT=ierr)
-!      !CALL json%print( 4000 )
-!      !CLOSE( 4000, IOSTAT=ierr )
-!      !
-!      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-!      CALL json%print( iunit )
-!      CLOSE( iunit )
-!      !
-!      CALL json%destroy()
-!      !
-!   ENDIF
-!   !
-!   !DEALLOCATE( iprt )
-!   DEALLOCATE( converged )
-!   !
-!END SUBROUTINE
-!
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
 SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
    !
    USE json_module,          ONLY : json_file
    USE kinds,                ONLY : DP
    USE io_global,            ONLY : stdout
-   USE io_push,              ONLY : io_push_title,io_push_bar
-   USE mp_world,             ONLY : mpime, root
+   USE io_push,              ONLY : io_push_bar
+   USE mp_world,             ONLY : mpime,root
    USE westcom,              ONLY : logfile
    !
    IMPLICIT NONE
@@ -1352,18 +1267,15 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
    ENDIF
    !
 END SUBROUTINE
-
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!
 !
 SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim,dav_iter,notcnv,iq)
    !
    USE json_module,          ONLY : json_file
    USE kinds,                ONLY : DP
    USE io_global,            ONLY : stdout
-   USE io_push,              ONLY : io_push_title,io_push_bar
-   USE mp_world,             ONLY : mpime, root
+   USE io_push,              ONLY : io_push_bar
+   USE mp_world,             ONLY : mpime,root
    USE westcom,              ONLY : logfile
    USE types_bz_grid,        ONLY : q_grid
    !

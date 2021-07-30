@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -189,7 +189,7 @@ MODULE fourier_interpolation
              !
              IF (hidx>dfft%nr1 .OR. kidx>dfft%nr2 .OR. lidx>dfft%nr3) CALL errore('setnl','Mesh too small?',ig)
              !
-#if defined (__MPI) && !defined (__USE_3D_FFT)
+#if defined(__MPI) && ! defined(__USE_3D_FFT)
              nl(i_dim,ig) = lidx + ( dfft%isind (hidx + (kidx - 1) * dfft%nr1x) - 1) * dfft%nr3x
 #else
              nl(i_dim,ig) = hidx + (kidx - 1) * dfft%nr1x + (lidx - 1) * dfft%nr1x * dfft%nr2x

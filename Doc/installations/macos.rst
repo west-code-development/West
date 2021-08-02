@@ -4,13 +4,14 @@
 macOS
 =====
 
-The following instructions have been tested on macOS 11.3.
+The following instructions have been tested on macOS 11.5.
 
 Requirements:
 
-- gcc/gfortran (e.g. GCC 9)
-- MPICH
-- BLAS/LAPACK/ScaLAPACK
+- C and Fortran compilers (e.g. gcc/gfortran in GCC 10)
+- MPI (e.g. MPICH)
+- BLAS/LAPACK
+- ScaLAPACK (optional)
 - FFTW3
 - Python3
 
@@ -47,7 +48,7 @@ WEST executables can be compiled using the following script:
    cd West
 
    make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-   make all
+   make -j 4 all
 
 To use the script do:
 

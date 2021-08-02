@@ -20,9 +20,6 @@ export PARA_PREFIX=mpirun -np ${NP}
 # How to run QE parallel executables with MPI
 export PARA_PREFIX_QE=mpirun -np 2
 
-# Whether to test GPU version
-export USEGPU=no
-
 # How to download files
 export WGET=wget -N -q
 

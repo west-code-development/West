@@ -95,6 +95,7 @@ gradcorr_x.o : ../../Modules/noncol.o
 gradcorr_x.o : ../../Modules/recvec.o
 gradcorr_x.o : ../../Modules/wavefunctions.o
 gradcorr_x.o : ../../PW/src/pwcom.o
+heapsort.o : ../../Modules/kind.o
 human_readable_time.o : ../../Modules/kind.o
 init_pw_arrays.o : ../../Modules/becmod.o
 init_pw_arrays.o : ../../Modules/constants.o

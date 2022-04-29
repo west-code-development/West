@@ -41,7 +41,8 @@ west_environment.o \
 set_npwq.o \
 set_eprec.o \
 read_pwout.o \
-bar.o  
+bar.o \
+heapsort.o
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a

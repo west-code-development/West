@@ -12,6 +12,7 @@
 !
 #define ZERO ( 0.D0, 0.D0 )
 #define ONE  ( 1.D0, 0.D0 )
+#define MONE (-1.D0, 0.D0 )
 !
 !----------------------------------------------------------------------------
 SUBROUTINE davidson_diago ( )
@@ -45,13 +46,9 @@ SUBROUTINE davidson_diago_gamma ( )
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,npwqx,npwq,&
                                    & npwqx,npwq,trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
-  USE mp_world,             ONLY : mpime
-  USE mp_global,            ONLY : inter_image_comm
-  USE mp,                   ONLY : mp_sum
-  USE gvect,                ONLY : gstart
-  USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
-                                   & update_with_vr_distr,refresh_with_vr_distr
+  USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
+  USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
+                                   & refresh_with_vr_distr
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -333,7 +330,8 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      nbase = nbase + notcnv
      !
-     CALL symm_hr_distr(hr_distr,nbase,nvecx)
+     ! ... note that hr_distr is no longer symmetrized here, as the eigensolver
+     ! ... only uses half of the matrix anyway
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -458,17 +456,10 @@ SUBROUTINE davidson_diago_k ( )
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
                                    & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged, &
-                                   & ngq,npwq,igq_q,npwqx
+                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,ngq,npwq,igq_q,npwqx
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE wstat_restart,        ONLY : wstat_restart_write, wstat_restart_clear, wstat_restart_read
-  USE mp_world,             ONLY : mpime
-  USE mp_global,            ONLY : inter_image_comm
-  USE mp,                   ONLY : mp_sum
-  USE gvect,                ONLY : gstart, g, ngm
-  USE gvecw,                ONLY : gcutw
-  USE wstat_tools,          ONLY : diagox,serial_diagox,build_hr,symm_hr_distr,redistribute_vr_distr,&
-                                   & update_with_vr_distr,refresh_with_vr_distr
+  USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
+  USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,refresh_with_vr_distr
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
   !
@@ -806,7 +797,8 @@ SUBROUTINE davidson_diago_k ( )
         !
         nbase = nbase + notcnv
         !
-        CALL symm_hr_distr(hr_distr,nbase,nvecx)
+        ! ... note that hr_distr is no longer symmetrized here, as the eigensolver
+        ! ... only uses half of the matrix anyway
         !
         ! ... diagonalize the reduced hamiltonian
         !
@@ -928,10 +920,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                  ONLY : DP
-  USE io_global,              ONLY : stdout
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,nimage,world_comm
+  USE mp_global,              ONLY : intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id,inter_image_comm,my_image_id
   USE gvect,                  ONLY : gstart
-  USE mp,                     ONLY : mp_sum,mp_barrier,mp_bcast
+  USE mp,                     ONLY : mp_sum,mp_bcast
   USE westcom,                ONLY : npwq,npwqx
   USE control_flags,          ONLY : gamma_only
   USE io_push,                ONLY : io_push_title
@@ -941,8 +932,8 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: m_global_start,m_global_end
-  COMPLEX(DP) :: amat(npwqx,pert%nlocx)
+  INTEGER,INTENT(IN) :: m_global_start,m_global_end
+  COMPLEX(DP),INTENT(INOUT) :: amat(npwqx,pert%nlocx)
   !
   ! Workspace
   !
@@ -959,120 +950,114 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   REAL(DP),EXTERNAL :: DDOT
   COMPLEX(DP),EXTERNAL :: ZDOTC
   !
-  CALL mp_barrier(world_comm)
-  !
   CALL start_clock ('paramgs')
-  !
-  ALLOCATE( vec(npwqx), zbraket(pert%nloc), braket(pert%nloc) )
   !
   ! 1) Run some checks
   !
   IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
      & CALL errore( 'mgs', 'do_mgs problem', 1 )
   !
-  ! 2) Localize m_global_start
-  !
-  m_local_start = 1
-  DO ip = 1, pert%nloc
-     ig = pert%l2g(ip)
-     IF( ig < m_global_start ) CYCLE
-     m_local_start = ip
-     EXIT
-  ENDDO
-  !
-  ! 3) Localize m_global_end
-  !
-  m_local_end = pert%nloc
-  DO ip = pert%nloc, 1, -1
-     ig = pert%l2g(ip)
-     IF( ig > m_global_end ) CYCLE
-     m_local_end = ip
-     EXIT
-  ENDDO
-  !
-  j_local=1
-  unfinished=.true.
-  !
-  !DO k_global=m_global_start,m_global_end
-  DO k_global=1,m_global_end
+  IF(my_bgrp_id == 0) THEN
      !
-     CALL pert%g2l(k_global,k_local,k_id)
-     !CALL distr_g2l(k_global,k_local,k_id,nimage)
+     ALLOCATE( vec(npwqx), zbraket(pert%nloc), braket(pert%nloc) )
      !
-     IF(my_image_id==k_id) THEN
+     ! 2) Localize m_global_start
+     !
+     m_local_start = 1
+     DO ip = 1, pert%nloc
+        ig = pert%l2g(ip)
+        IF( ig < m_global_start ) CYCLE
+        m_local_start = ip
+        EXIT
+     ENDDO
+     !
+     ! 3) Localize m_global_end
+     !
+     m_local_end = pert%nloc
+     DO ip = pert%nloc, 1, -1
+        ig = pert%l2g(ip)
+        IF( ig > m_global_end ) CYCLE
+        m_local_end = ip
+        EXIT
+     ENDDO
+     !
+     j_local=1
+     unfinished=.true.
+     !
+     DO k_global=1,m_global_end
         !
-        ! 4) Eventually, normalize the current vector
+        CALL pert%g2l(k_global,k_local,k_id)
         !
-        IF( k_global >= m_global_start ) THEN
+        IF(my_image_id==k_id) THEN
            !
-           ! anorm = < k_l | k_l >
+           ! 4) Eventually, normalize the current vector
            !
-           IF(gamma_only) THEN
-              anorm = 2.0_DP * DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
-              IF(gstart==2) anorm = anorm - REAL(amat(1,k_local),KIND=DP) * REAL(amat(1,k_local),KIND=DP)
-           ELSE
-              anorm = DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
+           IF( k_global >= m_global_start ) THEN
+              !
+              ! anorm = < k_l | k_l >
+              !
+              IF(gamma_only) THEN
+                 anorm = 2._DP * DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
+                 IF(gstart==2) anorm = anorm - REAL(amat(1,k_local),KIND=DP) * REAL(amat(1,k_local),KIND=DP)
+              ELSE
+                 anorm = DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
+              ENDIF
+              !
+              CALL mp_sum(anorm,intra_bgrp_comm)
+              !
+              ! normalize | k_l >
+              !
+              za = CMPLX( 1._DP/SQRT(anorm), 0._DP,KIND=DP)
+              CALL ZSCAL(npwq,za,amat(1,k_local),1)
+              !
            ENDIF
            !
-           CALL mp_sum(anorm,intra_bgrp_comm)
+           ! 5) Copy the current vector into V
            !
-           ! normalize | k_l >
+           CALL ZCOPY(npwqx,amat(1,k_local),1,vec(1),1)
            !
-           za = CMPLX( 1._DP/SQRT(anorm), 0._DP,KIND=DP)
-           CALL ZSCAL(npwq,za,amat(1,k_local),1)
+           j_local=MAX(k_local+1,m_local_start)
+           !
+           IF(j_local>m_local_end) unfinished=.false.
            !
         ENDIF
         !
-        ! 5) Copy the current vector into V
+        ! BCAST | vec >
         !
-        CALL ZCOPY(npwqx,amat(1,k_local),1,vec(1),1)
+        CALL mp_bcast(vec,k_id,inter_image_comm)
         !
-        j_local=MAX(k_local+1,m_local_start)
+        ! Update when needed
         !
-        !IF(j_local>pert%nloc) unfinished=.false.
-        IF(j_local>m_local_end) unfinished=.false.
-        !
-     ENDIF
-     !
-     ! BCAST | vec >
-     !
-     CALL mp_bcast(vec,k_id,inter_image_comm)
-     !
-     ! Update when needed
-     !
-     IF(unfinished) THEN
-        !
-        ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
-        !
-        IF(gamma_only) THEN
-           DO ip = j_local,m_local_end !pert%nloc
-              braket(ip) = 2._DP * DDOT(2*npwq,vec(1),1,amat(1,ip),1)
-           ENDDO
-           !IF (gstart==2) FORALL( ip=j_local:pert%nloc ) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
-           IF (gstart==2) FORALL( ip=j_local:m_local_end ) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
-           !CALL mp_sum(braket(j_local:pert%nloc),intra_bgrp_comm)
-           CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
-           !FORALL(ip=j_local:pert%nloc) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
-           FORALL(ip=j_local:m_local_end) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
-        ELSE
-           DO ip = j_local,m_local_end !pert%nloc
-              zbraket(ip) = ZDOTC(npwq,vec(1),1,amat(1,ip),1)
-           ENDDO
-           !CALL mp_sum(zbraket(j_local:pert%nloc),intra_bgrp_comm)
-           CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
+        IF(unfinished) THEN
+           !
+           ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
+           !
+           IF(gamma_only) THEN
+              DO ip = j_local,m_local_end !pert%nloc
+                 braket(ip) = 2._DP * DDOT(2*npwq,vec(1),1,amat(1,ip),1)
+              ENDDO
+              IF(gstart==2) FORALL(ip=j_local:m_local_end) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
+              CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
+              FORALL(ip=j_local:m_local_end) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
+           ELSE
+              DO ip = j_local,m_local_end !pert%nloc
+                 zbraket(ip) = ZDOTC(npwq,vec(1),1,amat(1,ip),1)
+              ENDDO
+              CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
+           ENDIF
+           !
+           ncol=m_local_end-j_local+1
+           CALL ZGERU(npwqx,ncol,MONE,vec(1),1,zbraket(j_local),1,amat(1,j_local),npwqx)
+           !
         ENDIF
         !
-        ncol=m_local_end-j_local+1
-        !ncol=m_global_end-j_local+1
-        CALL ZGERU(npwqx,ncol,(-1._DP,0._DP),vec(1),1,zbraket(j_local),1,amat(1,j_local),npwqx)
-        !
-     ENDIF
+     ENDDO
      !
-  ENDDO
+     DEALLOCATE( vec,zbraket,braket )
+     !
+  ENDIF
   !
-  DEALLOCATE( vec,zbraket,braket )
-  !
-  CALL mp_barrier(world_comm)
+  CALL mp_bcast(amat,0,inter_bgrp_comm)
   !
   CALL stop_clock ('paramgs')
   !
@@ -1091,8 +1076,6 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
   USE westcom,              ONLY : npwq,dvg,npwqx
   USE constants,            ONLY : tpi
-  USE mp,                   ONLY : mp_barrier
-  USE mp_global,            ONLY : world_comm
   USE distribution_center,  ONLY : pert
   !
   IMPLICIT NONE
@@ -1108,8 +1091,6 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   INTEGER :: il1,ig1,ig
   REAL(DP) :: aux_real
   REAL(DP) :: rr, arg
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL start_clock ('randomize')
   !
@@ -1162,12 +1143,10 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   !
   USE kinds,                ONLY : DP
   USE random_numbers,       ONLY : randy
-  USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
+  USE gvect,                ONLY : g,ngm_g,ig_l2g
   USE westcom,              ONLY : dvg,npwqx,ngq,igq_q
   USE constants,            ONLY : tpi,eps8
   USE cell_base,            ONLY : tpiba2
-  USE mp,                   ONLY : mp_barrier
-  USE mp_global,            ONLY : world_comm
   USE distribution_center,  ONLY : pert
   USE types_bz_grid,        ONLY : q_grid
   !
@@ -1185,8 +1164,6 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   INTEGER :: il1,ig1,ig
   REAL(DP) :: aux_real
   REAL(DP) :: rr, arg, qg(3), qgnorm2
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL start_clock ('randomize')
   !

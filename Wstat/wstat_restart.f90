@@ -37,7 +37,7 @@ MODULE wstat_restart
     SUBROUTINE wstat_restart_write_real( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
+      USE mp_global,            ONLY : my_image_id,my_bgrp_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout 
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,dvg,dng,wstat_restart_dir
@@ -112,10 +112,10 @@ MODULE wstat_restart
       !
       DO im = 0, nimage-1
          !
-         IF(me_bgrp==0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
          IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
-         IF(me_bgrp==0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
          IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
       ENDDO
@@ -158,7 +158,7 @@ MODULE wstat_restart
     SUBROUTINE wstat_restart_write_complex( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
+      USE mp_global,            ONLY : my_image_id,my_bgrp_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout 
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,dvg,dng,wstat_restart_dir
@@ -237,10 +237,10 @@ MODULE wstat_restart
       !
       DO im = 0, nimage-1
          !
-         IF(me_bgrp==0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
          IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
-         IF(me_bgrp==0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
          IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
          !
       ENDDO
@@ -597,7 +597,7 @@ MODULE wstat_restart
       USE mp_world,             ONLY : world_comm,mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
       USE distribution_center,  ONLY : pert
-      USE mp_global,            ONLY : nimage,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
+      USE mp_global,            ONLY : nimage,my_bgrp_id,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
       !
       IMPLICIT NONE
       !
@@ -619,10 +619,10 @@ MODULE wstat_restart
       DO im = 0, nimage-1
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF(me_bgrp==0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
       !
@@ -714,7 +714,7 @@ MODULE wstat_restart
       USE mp_world,            ONLY : world_comm,mpime,root
       USE mp,                  ONLY : mp_bcast,mp_get
       USE distribution_center, ONLY : pert
-      USE mp_global,           ONLY : nimage,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
+      USE mp_global,           ONLY : nimage,my_bgrp_id,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
       !
       IMPLICIT NONE
       !
@@ -737,10 +737,10 @@ MODULE wstat_restart
       DO im = 0, nimage-1
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF(me_bgrp==0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF(me_bgrp==0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
       !

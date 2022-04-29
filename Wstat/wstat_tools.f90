@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -26,39 +26,35 @@ MODULE wstat_tools
   !
   INTERFACE serial_diagox
      MODULE PROCEDURE serial_diagox_dsy, serial_diagox_zhe
-  END INTERFACE 
+  END INTERFACE
   !
   INTERFACE build_hr
      MODULE PROCEDURE build_hr_real, build_hr_complex
   END INTERFACE
   !
-  INTERFACE symm_hr_distr
-     MODULE PROCEDURE symm_hr_distr_real, symm_hr_distr_complex
-  END INTERFACE 
-  !
   INTERFACE redistribute_vr_distr
      MODULE PROCEDURE redistribute_vr_distr_real, redistribute_vr_distr_complex
-  END INTERFACE 
+  END INTERFACE
   !
   INTERFACE update_with_vr_distr
      MODULE PROCEDURE update_with_vr_distr_real, update_with_vr_distr_complex
-  END INTERFACE 
+  END INTERFACE
   !
   INTERFACE refresh_with_vr_distr
      MODULE PROCEDURE refresh_with_vr_distr_real, refresh_with_vr_distr_complex
-  END INTERFACE 
+  END INTERFACE
   !
   CONTAINS
     !
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE diagox_dsy( nbase, nvec, hr_distr, nvecx, ew, vr_distr  ) 
+    SUBROUTINE diagox_dsy( nbase, nvec, hr_distr, nvecx, ew, vr_distr  )
       !------------------------------------------------------------------------
       !
       USE io_global,             ONLY : stdout
       USE io_push,               ONLY : io_push_title,io_push_bar
-      USE mp_global,             ONLY : nproc_bgrp,inter_image_comm,nimage 
+      USE mp_global,             ONLY : nproc_bgrp,inter_image_comm,nimage
       USE mp_world,              ONLY : nproc
       USE westcom,               ONLY : n_pdep_eigen
       USE io_push,               ONLY : io_push_title,io_push_bar
@@ -75,21 +71,21 @@ MODULE wstat_tools
       REAL(DP) :: time_spent(2)
       REAL(DP), EXTERNAL :: GET_CLOCK
       CHARACTER(20),EXTERNAL :: human_readable_time
-      LOGICAL :: l_parallel 
+      LOGICAL :: l_parallel
       INTEGER :: npur, npuc
       CHARACTER(LEN=8) :: aux_label_npur
       CHARACTER(LEN=8) :: aux_label_npuc
       !
       !
 #if defined __SCALAPACK
-      l_parallel = nproc > 3 
+      l_parallel = nproc > 3
 #else
       l_parallel = .FALSE.
 #endif
       !
       CALL start_clock( 'diagox' )
       !
-      IF( l_parallel ) THEN 
+      IF( l_parallel ) THEN
          !
          time_spent(1)=get_clock( 'diagox' )
 #if defined __SCALAPACK
@@ -126,12 +122,12 @@ MODULE wstat_tools
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE diagox_zhe( nbase, nvec, hr_distr, nvecx, ew, vr_distr  ) 
+    SUBROUTINE diagox_zhe( nbase, nvec, hr_distr, nvecx, ew, vr_distr  )
       !------------------------------------------------------------------------
       !
       USE io_global,             ONLY : stdout
       USE io_push,               ONLY : io_push_title,io_push_bar
-      USE mp_global,             ONLY : nproc_bgrp,inter_image_comm,nimage 
+      USE mp_global,             ONLY : nproc_bgrp,inter_image_comm,nimage
       USE mp_world,              ONLY : nproc
       USE westcom,               ONLY : n_pdep_eigen
       USE io_push,               ONLY : io_push_title,io_push_bar
@@ -148,21 +144,21 @@ MODULE wstat_tools
       REAL(DP) :: time_spent(2)
       REAL(DP), EXTERNAL :: GET_CLOCK
       CHARACTER(20),EXTERNAL :: human_readable_time
-      LOGICAL :: l_parallel 
+      LOGICAL :: l_parallel
       INTEGER :: npur, npuc
       CHARACTER(LEN=8) :: aux_label_npur
       CHARACTER(LEN=8) :: aux_label_npuc
       !
       !
 #if defined __SCALAPACK
-      l_parallel = nproc > 3 
+      l_parallel = nproc > 3
 #else
       l_parallel = .FALSE.
 #endif
       !
       CALL start_clock( 'diagox' )
       !
-      IF( l_parallel ) THEN 
+      IF( l_parallel ) THEN
          !
          time_spent(1)=get_clock( 'diagox' )
 #if defined __SCALAPACK
@@ -199,7 +195,7 @@ MODULE wstat_tools
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE serial_diagox_dsy ( nselect, n, lda, hr_distr, e, vr_distr ) 
+    SUBROUTINE serial_diagox_dsy ( nselect, n, lda, hr_distr, e, vr_distr )
       !------------------------------------------------------------------------
       !
       ! Diagox -- serial
@@ -208,11 +204,11 @@ MODULE wstat_tools
       !   lda     : leading dimension of a
       !   a       : matrix to be diagox
       !   e       : eigenval(1:nselsect), even though it is defined 1:lda
-      !   z       : unitary trans. 
+      !   z       : unitary trans.
       !
-      USE mp,                    ONLY : mp_bcast,mp_sum
+      USE mp,                    ONLY : mp_bcast, mp_sum
       USE mp_global,             ONLY : me_bgrp, root_bgrp, intra_bgrp_comm, inter_image_comm
-      USE linear_algebra_kernel, ONLY : matdiago_dsy 
+      USE linear_algebra_kernel, ONLY : matdiago_dsy
       USE distribution_center,   ONLY : pert
       !
       IMPLICIT NONE
@@ -246,10 +242,8 @@ MODULE wstat_tools
       CALL mp_sum(zz,inter_image_comm)
       ee = 0._DP
       !
-      IF(me_bgrp == root_bgrp ) THEN 
-         !
+      IF(me_bgrp == root_bgrp) THEN
          CALL matdiago_dsy(n,zz,ee,.FALSE.)
-         !
       ENDIF
       !
       CALL mp_bcast( ee, root_bgrp, intra_bgrp_comm )
@@ -275,7 +269,7 @@ MODULE wstat_tools
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE serial_diagox_zhe ( nselect, n, lda, hr_distr, e, vr_distr ) 
+    SUBROUTINE serial_diagox_zhe ( nselect, n, lda, hr_distr, e, vr_distr )
       !------------------------------------------------------------------------
       !
       ! Diagox -- serial
@@ -284,11 +278,11 @@ MODULE wstat_tools
       !   lda     : leading dimension of a
       !   a       : matrix to be diagox
       !   e       : eigenval(1:nselsect), even though it is defined 1:lda
-      !   z       : unitary trans. 
+      !   z       : unitary trans.
       !
-      USE mp,                    ONLY : mp_bcast,mp_sum
+      USE mp,                    ONLY : mp_bcast, mp_sum
       USE mp_global,             ONLY : me_bgrp, root_bgrp, intra_bgrp_comm, inter_image_comm
-      USE linear_algebra_kernel, ONLY : matdiago_zhe 
+      USE linear_algebra_kernel, ONLY : matdiago_zhe
       USE distribution_center,   ONLY : pert
       !
       IMPLICIT NONE
@@ -323,10 +317,8 @@ MODULE wstat_tools
       CALL mp_sum(zz,inter_image_comm)
       ee = 0._DP
       !
-      IF(me_bgrp == root_bgrp ) THEN 
-         !
+      IF(me_bgrp == root_bgrp) THEN
          CALL matdiago_zhe(n,zz,ee,.FALSE.)
-         !
       ENDIF
       !
       CALL mp_bcast( ee, root_bgrp, intra_bgrp_comm )
@@ -357,8 +349,8 @@ MODULE wstat_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage,intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id
+      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       USE gvect,                ONLY : gstart
@@ -379,56 +371,57 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier(world_comm)
-      !
       CALL start_clock ('build_hr')
       !
-      ! Initialize to zero
-      !
-      c_distr(:,l2_s:l2_e)=0.0_DP
-      !
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0) THEN
          !
-         DO il1=1,pert%nlocx
-            !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > g_e ) CYCLE
-            !
-            DO il2=l2_s,l2_e
-               !
-               !ig2 = pert%l2g(il2)
-               !IF( ig2 < n1 .OR. ig2 > n2 ) CYCLE
-               !
-               IF(gstart==1) THEN
-                  c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
-               ELSE
-                  c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq-2,ag(2,il1),1,bg(2,il2),1)
-               ENDIF
-               !
-            ENDDO
+         ! Initialize to zero
+         !
+         c_distr(:,l2_s:l2_e)=0.0_DP
+         !
+         ALLOCATE( tmp_l2g(1:pert%nlocx) )
+         !
+         tmp_l2g = 0
+         DO il1 = 1, pert%nloc
+            tmp_l2g(il1) = pert%l2g(il1)
          ENDDO
          !
-         ! Cycle the ag array 
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+         DO icycl=0,nimage-1
+            !
+            DO il1=1,pert%nlocx
+               !
+               ig1 = tmp_l2g(il1)
+               IF( ig1 == 0 .OR. ig1 > g_e ) CYCLE
+               !
+               DO il2=l2_s,l2_e
+                  !
+                  IF(gstart==1) THEN
+                     c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
+                  ELSE
+                     c_distr(ig1,il2) = 2.0_DP * DDOT(2*npwq-2,ag(2,il1),1,bg(2,il2),1)
+                  ENDIF
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag, tmp_l2g
+            !
+            CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
+            CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+            !
+         ENDDO
          !
-      ENDDO
+         ! Syncronize c_distr
+         !
+         CALL mp_sum(c_distr(:,l2_s:l2_e), intra_bgrp_comm)
+         !
+         DEALLOCATE( tmp_l2g )
+         !
+      ENDIF
       !
-      ! Syncronize c_distr
+      CALL mp_bcast(c_distr,0,inter_bgrp_comm)
       !
-      CALL mp_sum(c_distr(:,l2_s:l2_e), intra_bgrp_comm)
-      !
-      DEALLOCATE( tmp_l2g )
-      !
-      CALL stop_clock( "build_hr" )
+      CALL stop_clock( 'build_hr' )
       !
     END SUBROUTINE
     !
@@ -440,8 +433,8 @@ MODULE wstat_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage,intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id
+      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -461,196 +454,69 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier(world_comm)
-      !
       CALL start_clock ('build_hr')
       !
-      ! Initialize to zero
-      !
-      c_distr(:,l2_s:l2_e)=0.0_DP
-      !
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0) THEN
          !
-         DO il1=1,pert%nlocx
-            !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > g_e ) CYCLE
-            !
-            DO il2=l2_s,l2_e
-               !
-               !ig2 = pert%l2g(il2)
-               !IF( ig2 < n1 .OR. ig2 > n2 ) CYCLE
-               !
-               c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
-               !
-            ENDDO
+         ! Initialize to zero
+         !
+         c_distr(:,l2_s:l2_e)=0.0_DP
+         !
+         ALLOCATE( tmp_l2g(1:pert%nlocx) )
+         !
+         tmp_l2g = 0
+         DO il1 = 1, pert%nloc
+            tmp_l2g(il1) = pert%l2g(il1)
          ENDDO
          !
-         ! Cycle the ag array 
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+         DO icycl=0,nimage-1
+            !
+            DO il1=1,pert%nlocx
+               !
+               ig1 = tmp_l2g(il1)
+               IF( ig1 == 0 .OR. ig1 > g_e ) CYCLE
+               !
+               DO il2=l2_s,l2_e
+                  !
+                  c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag, tmp_l2g
+            !
+            CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
+            CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+            !
+         ENDDO
          !
-      ENDDO
+         ! Syncronize c_distr
+         !
+         CALL mp_sum(c_distr(:,l2_s:l2_e), intra_bgrp_comm)
+         !
+         DEALLOCATE( tmp_l2g )
+         !
+      ENDIF
       !
-      ! Syncronize c_distr
+      CALL mp_bcast(c_distr,0,inter_bgrp_comm)
       !
-      CALL mp_sum(c_distr(:,l2_s:l2_e), intra_bgrp_comm)
-      !
-      DEALLOCATE( tmp_l2g )
-      !
-      CALL stop_clock( "build_hr" )
+      CALL stop_clock( 'build_hr' )
       !
     END SUBROUTINE
     !
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE symm_hr_distr_real( hr_distr, n, lda )
+    SUBROUTINE redistribute_vr_distr_real( nselect, n, lda, vr_distr, ishift )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : me_bgrp, my_bgrp_id, nbgrp, nproc_bgrp, &
+                                     & intra_bgrp_comm, my_image_id
+      USE mp_world,             ONLY : world_comm, nproc
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      INTEGER,INTENT(IN) :: n, lda
-      REAL(DP),INTENT(INOUT) :: hr_distr(lda,pert%nlocx)
-      !
-      ! Workspace
-      !
-      REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl
-      !
-      CALL mp_barrier( world_comm )
-      !  
-      CALL start_clock( 'symm_hr' )
-      !
-      ALLOCATE( tmp_distr(lda,pert%nlocx) )
-      tmp_distr = hr_distr
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
-         !
-         DO il1=1,pert%nloc
-            ig1 = pert%l2g(il1)
-            IF( ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nlocx
-               ig2 = tmp_l2g(il2)
-               IF( .NOT.ig2 > ig1 ) CYCLE
-               !
-               hr_distr(ig2,il1) = tmp_distr(ig1,il2)
-               !
-            ENDDO
-         ENDDO
-         !
-         ! Cycle the tmp_distr array 
-         ! 
-         CALL mp_circular_shift_left( tmp_distr ,        icycl, inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g   , icycl+nimage, inter_image_comm)
-         !
-      ENDDO
-      !
-      DEALLOCATE( tmp_distr )
-      DEALLOCATE( tmp_l2g )
-      !
-      CALL stop_clock( "symm_hr" )
-      !
-    END SUBROUTINE
-    !
-    !
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE symm_hr_distr_complex( hr_distr, n, lda )
-      !------------------------------------------------------------------------
-      !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
-      USE distribution_center,  ONLY : pert
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      INTEGER,INTENT(IN) :: n, lda
-      COMPLEX(DP),INTENT(INOUT) :: hr_distr(lda,pert%nlocx)
-      !
-      ! Workspace
-      !
-      COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl
-      !
-      CALL mp_barrier( world_comm )
-      !  
-      CALL start_clock( 'symm_hr' )
-      !
-      ALLOCATE( tmp_distr(lda,pert%nlocx) )
-      tmp_distr = hr_distr
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
-         !
-         DO il1=1,pert%nloc
-            ig1 = pert%l2g(il1)
-            IF( ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nlocx
-               ig2 = tmp_l2g(il2)
-               IF( .NOT.ig2 > ig1 ) CYCLE
-               !
-               hr_distr(ig2,il1) = tmp_distr(ig1,il2)
-               !
-            ENDDO
-         ENDDO
-         !
-         ! Cycle the tmp_distr array 
-         ! 
-         CALL mp_circular_shift_left( tmp_distr ,        icycl, inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g   , icycl+nimage, inter_image_comm)
-         !
-      ENDDO
-      !
-      DEALLOCATE( tmp_distr )
-      DEALLOCATE( tmp_l2g )
-      !
-      CALL stop_clock( "symm_hr" )
-      !
-    END SUBROUTINE
-    !
-    !
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE redistribute_vr_distr_real( nselect, n, lda, vr_distr, ishift)
-      !------------------------------------------------------------------------
-      !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
-      USE distribution_center,  ONLY : pert
+      USE sort_tools,           ONLY : heapsort
+      USE parallel_include
       !
       IMPLICIT NONE
       !
@@ -662,64 +528,176 @@ MODULE wstat_tools
       !
       ! Workspace
       !
-      REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl
+      INTEGER :: i_col, n_col, j_loc, j_loc2, j_glob, i_proc
+      INTEGER :: ierr, this_dest, this_sour
+      INTEGER,ALLOCATABLE :: idx_send(:)
+      INTEGER,ALLOCATABLE :: idx_recv(:)
+      INTEGER,ALLOCATABLE :: send_count(:)
+      INTEGER,ALLOCATABLE :: recv_count(:)
+      INTEGER,ALLOCATABLE :: send_displ(:)
+      INTEGER,ALLOCATABLE :: recv_displ(:)
+      INTEGER,ALLOCATABLE :: dest(:)
+      INTEGER,ALLOCATABLE :: swap(:)
+      INTEGER,ALLOCATABLE :: tmp_i(:)
+      REAL(DP),ALLOCATABLE :: tmp_r(:,:)
+      REAL(DP),ALLOCATABLE :: val_send(:,:)
+      REAL(DP),ALLOCATABLE :: val_recv(:,:)
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'redistr_vr' )
       !
-      ALLOCATE( tmp_distr(lda,pert%nlocx) )
-      tmp_distr = vr_distr
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
+      ! vr_distr only needed by band group 0 in the next step
       !
-      tmp_l2g = 0
+      ALLOCATE(send_count(nproc))
+      ALLOCATE(recv_count(nproc))
       !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
+      send_count = 0
+      recv_count = 0
       !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+         n_col = 0
          !
-         DO il2=1,pert%nloc
-            ig2 = pert%l2g(il2)
-            IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+         DO j_glob = n+1,n+nselect
             !
-            DO il1=1,pert%nlocx
-               ig1 = tmp_l2g(il1)
-               !IF( ig1 .NE. ig2-n ) CYCLE
-               IF( ig1 == 0 ) CYCLE
-               IF( ig1 .NE. ishift(ig2) ) CYCLE
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
                !
-               vr_distr(:,il2) = tmp_distr(:,il1)
-               !
-            ENDDO
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+               ENDIF
+            ENDIF
+            !
          ENDDO
          !
-         ! Cycle the tmp_distr array 
-         ! 
-         CALL mp_circular_shift_left( tmp_distr ,        icycl, inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g   , icycl+nimage, inter_image_comm)
+         ALLOCATE(val_send(lda,n_col))
+         ALLOCATE(idx_send(n_col))
+         ALLOCATE(dest(n_col))
+         ALLOCATE(swap(n_col))
          !
+         n_col = 0
+         !
+         DO j_glob = n+1,n+nselect
+            !
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
+               !
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+                  !
+                  CALL pert%g2l(j_glob,j_loc2,this_dest)
+                  !
+                  val_send(:,n_col) = vr_distr(:,j_loc)
+                  idx_send(n_col) = j_loc2
+                  dest(n_col) = this_dest*nbgrp*nproc_bgrp
+                  send_count(dest(n_col)+1) = send_count(dest(n_col)+1)+1
+               ENDIF
+            ENDIF
+            !
+         ENDDO
+         !
+         CALL heapsort(n_col,dest,swap)
+         !
+         DEALLOCATE(dest)
+         ALLOCATE(tmp_r(lda,n_col))
+         ALLOCATE(tmp_i(n_col))
+         !
+         DO i_col = 1,n_col
+            tmp_r(:,i_col) = val_send(:,swap(i_col))
+            tmp_i(i_col) = idx_send(swap(i_col))
+         ENDDO
+         !
+         val_send = tmp_r
+         idx_send = tmp_i
+         !
+         DEALLOCATE(swap)
+         DEALLOCATE(tmp_r)
+         DEALLOCATE(tmp_i)
+         !
+         n_col = 0
+         !
+         DO j_loc = 1,pert%nloc
+            !
+            j_glob = pert%l2g(j_loc)
+            !
+            IF(j_glob > n .AND. j_glob <= n+nselect .AND. ishift(j_glob) /= 0) THEN
+               n_col = n_col+1
+               !
+               CALL pert%g2l(ishift(j_glob),j_loc2,this_sour)
+               !
+               this_sour = this_sour*nbgrp*nproc_bgrp
+               recv_count(this_sour+1) = recv_count(this_sour+1)+1
+            ENDIF
+            !
+         ENDDO
+         !
+         ALLOCATE(val_recv(lda,n_col))
+         ALLOCATE(idx_recv(n_col))
+         !
+      ELSE
+         ALLOCATE(val_send(1,1))
+         ALLOCATE(idx_send(1))
+         ALLOCATE(val_recv(1,1))
+         ALLOCATE(idx_recv(1))
+      ENDIF
+      !
+      ALLOCATE(send_displ(nproc))
+      ALLOCATE(recv_displ(nproc))
+      !
+      send_displ = 0
+      recv_displ = 0
+      !
+      DO i_proc = 2,nproc
+         send_displ(i_proc) = SUM(send_count(1:i_proc-1))
+         recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
       ENDDO
       !
-      DEALLOCATE( tmp_distr )
-      DEALLOCATE( tmp_l2g )
+      CALL MPI_ALLTOALLV(idx_send,send_count,send_displ,MPI_INTEGER,idx_recv,&
+      & recv_count,recv_displ,MPI_INTEGER,world_comm,ierr)
       !
-      CALL stop_clock( "redistr_vr" )
+      send_count = send_count*lda
+      recv_count = recv_count*lda
+      send_displ = send_displ*lda
+      recv_displ = recv_displ*lda
+      !
+      CALL MPI_ALLTOALLV(val_send,send_count,send_displ,MPI_DOUBLE_PRECISION,val_recv,&
+      & recv_count,recv_displ,MPI_DOUBLE_PRECISION,world_comm,ierr)
+      !
+      DEALLOCATE(val_send)
+      DEALLOCATE(idx_send)
+      DEALLOCATE(send_count)
+      DEALLOCATE(recv_count)
+      DEALLOCATE(send_displ)
+      DEALLOCATE(recv_displ)
+      !
+      IF(my_bgrp_id == 0) THEN
+         IF(me_bgrp == 0) THEN
+            DO i_col = 1,n_col
+               vr_distr(:,idx_recv(i_col)) = val_recv(:,i_col)
+            ENDDO
+         ENDIF
+         !
+         CALL mp_bcast(vr_distr,0,intra_bgrp_comm)
+      ENDIF
+      !
+      DEALLOCATE(val_recv)
+      DEALLOCATE(idx_recv)
+      !
+      CALL stop_clock( 'redistr_vr' )
       !
     END SUBROUTINE
     !
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE redistribute_vr_distr_complex( nselect, n, lda, vr_distr, ishift)
+    SUBROUTINE redistribute_vr_distr_complex( nselect, n, lda, vr_distr, ishift )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : me_bgrp, my_bgrp_id, nbgrp, nproc_bgrp, &
+                                     & intra_bgrp_comm, my_image_id
+      USE mp_world,             ONLY : world_comm, nproc
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
+      USE sort_tools,           ONLY : heapsort
+      USE parallel_include
       !
       IMPLICIT NONE
       !
@@ -731,52 +709,160 @@ MODULE wstat_tools
       !
       ! Workspace
       !
-      COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl
+      INTEGER :: i_col, n_col, j_loc, j_loc2, j_glob, i_proc
+      INTEGER :: ierr, this_dest, this_sour
+      INTEGER,ALLOCATABLE :: idx_send(:)
+      INTEGER,ALLOCATABLE :: idx_recv(:)
+      INTEGER,ALLOCATABLE :: send_count(:)
+      INTEGER,ALLOCATABLE :: recv_count(:)
+      INTEGER,ALLOCATABLE :: send_displ(:)
+      INTEGER,ALLOCATABLE :: recv_displ(:)
+      INTEGER,ALLOCATABLE :: dest(:)
+      INTEGER,ALLOCATABLE :: swap(:)
+      INTEGER,ALLOCATABLE :: tmp_i(:)
+      COMPLEX(DP),ALLOCATABLE :: tmp_c(:,:)
+      COMPLEX(DP),ALLOCATABLE :: val_send(:,:)
+      COMPLEX(DP),ALLOCATABLE :: val_recv(:,:)
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'redistr_vr' )
       !
-      ALLOCATE( tmp_distr(lda,pert%nlocx) )
-      tmp_distr = vr_distr
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
+      ! vr_distr only needed by band group 0 in the next step
       !
-      tmp_l2g = 0
+      ALLOCATE(send_count(nproc))
+      ALLOCATE(recv_count(nproc))
       !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
+      send_count = 0
+      recv_count = 0
       !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+         n_col = 0
          !
-         DO il2=1,pert%nloc
-            ig2 = pert%l2g(il2)
-            IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+         DO j_glob = n+1,n+nselect
             !
-            DO il1=1,pert%nlocx
-               ig1 = tmp_l2g(il1)
-               !IF( ig1 .NE. ig2-n ) CYCLE
-               IF( ig1 == 0 ) CYCLE
-               IF( ig1 .NE. ishift(ig2) ) CYCLE
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
                !
-               vr_distr(:,il2) = tmp_distr(:,il1)
-               !
-            ENDDO
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+               ENDIF
+            ENDIF
+            !
          ENDDO
          !
-         ! Cycle the tmp_distr array 
-         ! 
-         CALL mp_circular_shift_left( tmp_distr ,        icycl, inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g   , icycl+nimage, inter_image_comm)
+         ALLOCATE(val_send(lda,n_col))
+         ALLOCATE(idx_send(n_col))
+         ALLOCATE(dest(n_col))
+         ALLOCATE(swap(n_col))
          !
+         n_col = 0
+         !
+         DO j_glob = n+1,n+nselect
+            !
+            IF(ishift(j_glob) /= 0) THEN
+               CALL pert%g2l(ishift(j_glob),j_loc,this_sour)
+               !
+               IF(this_sour == my_image_id) THEN
+                  n_col = n_col+1
+                  !
+                  CALL pert%g2l(j_glob,j_loc2,this_dest)
+                  !
+                  val_send(:,n_col) = vr_distr(:,j_loc)
+                  idx_send(n_col) = j_loc2
+                  dest(n_col) = this_dest*nbgrp*nproc_bgrp
+                  send_count(dest(n_col)+1) = send_count(dest(n_col)+1)+1
+               ENDIF
+            ENDIF
+            !
+         ENDDO
+         !
+         CALL heapsort(n_col,dest,swap)
+         !
+         DEALLOCATE(dest)
+         ALLOCATE(tmp_c(lda,n_col))
+         ALLOCATE(tmp_i(n_col))
+         !
+         DO i_col = 1,n_col
+            tmp_c(:,i_col) = val_send(:,swap(i_col))
+            tmp_i(i_col) = idx_send(swap(i_col))
+         ENDDO
+         !
+         val_send = tmp_c
+         idx_send = tmp_i
+         !
+         DEALLOCATE(swap)
+         DEALLOCATE(tmp_c)
+         DEALLOCATE(tmp_i)
+         !
+         n_col = 0
+         !
+         DO j_loc = 1,pert%nloc
+            !
+            j_glob = pert%l2g(j_loc)
+            !
+            IF(j_glob > n .AND. j_glob <= n+nselect .AND. ishift(j_glob) /= 0) THEN
+               n_col = n_col+1
+               !
+               CALL pert%g2l(ishift(j_glob),j_loc2,this_sour)
+               !
+               this_sour = this_sour*nbgrp*nproc_bgrp
+               recv_count(this_sour+1) = recv_count(this_sour+1)+1
+            ENDIF
+            !
+         ENDDO
+         !
+         ALLOCATE(val_recv(lda,n_col))
+         ALLOCATE(idx_recv(n_col))
+         !
+      ELSE
+         ALLOCATE(val_send(1,1))
+         ALLOCATE(idx_send(1))
+         ALLOCATE(val_recv(1,1))
+         ALLOCATE(idx_recv(1))
+      ENDIF
+      !
+      ALLOCATE(send_displ(nproc))
+      ALLOCATE(recv_displ(nproc))
+      !
+      send_displ = 0
+      recv_displ = 0
+      !
+      DO i_proc = 2,nproc
+         send_displ(i_proc) = SUM(send_count(1:i_proc-1))
+         recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
       ENDDO
       !
-      DEALLOCATE( tmp_distr )
-      DEALLOCATE( tmp_l2g )
+      CALL MPI_ALLTOALLV(idx_send,send_count,send_displ,MPI_INTEGER,idx_recv,&
+      & recv_count,recv_displ,MPI_INTEGER,world_comm,ierr)
       !
-      CALL stop_clock( "redistr_vr" )
+      send_count = send_count*lda
+      recv_count = recv_count*lda
+      send_displ = send_displ*lda
+      recv_displ = recv_displ*lda
+      !
+      CALL MPI_ALLTOALLV(val_send,send_count,send_displ,MPI_DOUBLE_COMPLEX,val_recv,&
+      & recv_count,recv_displ,MPI_DOUBLE_COMPLEX,world_comm,ierr)
+      !
+      DEALLOCATE(val_send)
+      DEALLOCATE(idx_send)
+      DEALLOCATE(send_count)
+      DEALLOCATE(recv_count)
+      DEALLOCATE(send_displ)
+      DEALLOCATE(recv_displ)
+      !
+      IF(my_bgrp_id == 0) THEN
+         IF(me_bgrp == 0) THEN
+            DO i_col = 1,n_col
+               vr_distr(:,idx_recv(i_col)) = val_recv(:,i_col)
+            ENDDO
+         ENDIF
+         !
+         CALL mp_bcast(vr_distr,0,intra_bgrp_comm)
+      ENDIF
+      !
+      DEALLOCATE(val_recv)
+      DEALLOCATE(idx_recv)
+      !
+      CALL stop_clock( 'redistr_vr' )
       !
     END SUBROUTINE
     !
@@ -786,8 +872,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_real( ag, bg, nselect, n, lda, vr_distr, ew )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage,inter_bgrp_comm,my_bgrp_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -795,8 +881,8 @@ MODULE wstat_tools
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
-      COMPLEX(DP) :: bg(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       REAL(DP),INTENT(IN) :: ew(lda)
@@ -804,95 +890,70 @@ MODULE wstat_tools
       ! Workspace
       !
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
+      COMPLEX(DP),ALLOCATABLE :: hg2(:,:)
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       COMPLEX(DP) :: zconst
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'update_vr' )
       !
-      ALLOCATE( hg(npwqx,pert%nlocx) )
-      hg = 0._DP 
-      !
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0) THEN
          !
-         DO il1=1,pert%nlocx
-            !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nloc
-               !
-               ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
-               !
-               zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
-               CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
-               !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2-n) 
-               !
-            ENDDO
+         ALLOCATE( hg(npwqx,pert%nlocx) )
+         ALLOCATE( hg2(npwqx,pert%nlocx) )
+         hg = 0._DP
+         hg2 = 0._DP
+         !
+         ALLOCATE( tmp_l2g(1:pert%nlocx) )
+         !
+         tmp_l2g = 0
+         !
+         DO il1 = 1, pert%nloc
+            tmp_l2g(il1) = pert%l2g(il1)
          ENDDO
          !
-         ! Cycle the amat array
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
-         !
-      ENDDO
-      !
-      DO il2=1,pert%nloc
-         ig2 = pert%l2g(il2)
-         IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
-         ag(:,il2) = - ew(ig2) * hg(:,il2)
-      ENDDO
-      !
-      hg = 0._DP
-      !
-      DO icycl=0,nimage-1
-         !
-         DO il1=1,pert%nlocx
+         DO icycl=0,nimage-1
             !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nloc
+            DO il1=1,pert%nlocx
                !
-               ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               ig1 = tmp_l2g(il1)
+               IF( ig1 == 0 .OR. ig1 > n ) CYCLE
                !
-               zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
-               CALL ZAXPY(npwq,zconst,bg(1,il1),1,hg(1,il2),1)
-               !dhg(:,il2) = dhg(:,il2) + bmat(:,il1) * z(ig1,ig2-n) 
-               !
+               DO il2=1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+                  !
+                  zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
+                  CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
+                  CALL ZAXPY(npwq,zconst,bg(1,il1),1,hg2(1,il2),1)
+                  !
+               ENDDO
             ENDDO
+            !
+            ! Cycle ag, bg, tmp_l2g
+            !
+            CALL mp_circular_shift_left( ag,      icycl,          inter_image_comm)
+            CALL mp_circular_shift_left( bg,      icycl+nimage,   inter_image_comm)
+            CALL mp_circular_shift_left( tmp_l2g, icycl+nimage*2, inter_image_comm)
+            !
          ENDDO
          !
-         ! Cycle the bmat array 
-         ! 
-         CALL mp_circular_shift_left( bg,      icycl,        inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+         DO il2=1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+            ag(:,il2) = - ew(ig2) * hg(:,il2) + hg2(:,il2)
+         ENDDO
          !
-      ENDDO
+         DEALLOCATE( tmp_l2g )
+         DEALLOCATE( hg )
+         DEALLOCATE( hg2 )
+         !
+      ENDIF
       !
-      DO il2=1,pert%nloc
-         ig2 = pert%l2g(il2)
-         IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
-         ag(:,il2) = ag(:,il2) + hg(:,il2)
-      ENDDO
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
       !
-      DEALLOCATE( tmp_l2g )
-      DEALLOCATE( hg )
-      !
-      CALL stop_clock( "update_vr" )
+      CALL stop_clock( 'update_vr' )
       !
     END SUBROUTINE
     !
@@ -902,8 +963,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_complex( ag, bg, nselect, n, lda, vr_distr, ew )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage,inter_bgrp_comm,my_bgrp_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -911,8 +972,8 @@ MODULE wstat_tools
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
-      COMPLEX(DP) :: bg(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       REAL(DP),INTENT(IN) :: ew(lda)
@@ -920,92 +981,68 @@ MODULE wstat_tools
       ! Workspace
       !
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
+      COMPLEX(DP),ALLOCATABLE :: hg2(:,:)
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'update_vr' )
       !
-      ALLOCATE( hg(npwqx,pert%nlocx) )
-      hg = 0._DP 
-      !
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0) THEN
          !
-         DO il1=1,pert%nlocx
-            !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nloc
-               !
-               ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
-               !
-               CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
-               !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2-n) 
-               !
-            ENDDO
+         ALLOCATE( hg(npwqx,pert%nlocx) )
+         ALLOCATE( hg2(npwqx,pert%nlocx) )
+         hg = 0._DP
+         hg2 = 0._DP
+         !
+         ALLOCATE( tmp_l2g(1:pert%nlocx) )
+         !
+         tmp_l2g = 0
+         !
+         DO il1 = 1, pert%nloc
+            tmp_l2g(il1) = pert%l2g(il1)
          ENDDO
          !
-         ! Cycle the amat array
-         ! 
-         CALL mp_circular_shift_left( ag,      icycl,        inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
-         !
-      ENDDO
-      !
-      DO il2=1,pert%nloc
-         ig2 = pert%l2g(il2)
-         IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
-         ag(:,il2) = - ew(ig2) * hg(:,il2)
-      ENDDO
-      !
-      hg = 0._DP
-      !
-      DO icycl=0,nimage-1
-         !
-         DO il1=1,pert%nlocx
+         DO icycl=0,nimage-1
             !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nloc
+            DO il1=1,pert%nlocx
                !
-               ig2 = pert%l2g(il2)
-               IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE 
+               ig1 = tmp_l2g(il1)
+               IF( ig1 == 0 .OR. ig1 > n ) CYCLE
                !
-               CALL ZAXPY(npwq,vr_distr(ig1,il2),bg(1,il1),1,hg(1,il2),1)
-               !dhg(:,il2) = dhg(:,il2) + bmat(:,il1) * z(ig1,ig2-n) 
-               !
+               DO il2=1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+                  !
+                  CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
+                  CALL ZAXPY(npwq,vr_distr(ig1,il2),bg(1,il1),1,hg2(1,il2),1)
+                  !
+               ENDDO
             ENDDO
+            !
+            ! Cycle ag, bg, tmp_l2g
+            !
+            CALL mp_circular_shift_left( ag,      icycl,          inter_image_comm)
+            CALL mp_circular_shift_left( bg,      icycl+nimage,   inter_image_comm)
+            CALL mp_circular_shift_left( tmp_l2g, icycl+nimage*2, inter_image_comm)
+            !
          ENDDO
          !
-         ! Cycle the bmat array 
-         ! 
-         CALL mp_circular_shift_left( bg,      icycl,        inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+         DO il2=1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
+            ag(:,il2) = - ew(ig2) * hg(:,il2) + hg2(:,il2)
+         ENDDO
          !
-      ENDDO
+         DEALLOCATE( tmp_l2g )
+         DEALLOCATE( hg )
+         DEALLOCATE( hg2 )
+         !
+      ENDIF
       !
-      DO il2=1,pert%nloc
-         ig2 = pert%l2g(il2)
-         IF( ig2 <= n .OR. ig2 > n+nselect ) CYCLE
-         ag(:,il2) = ag(:,il2) + hg(:,il2)
-      ENDDO
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
       !
-      DEALLOCATE( tmp_l2g )
-      DEALLOCATE( hg )
-      !
-      CALL stop_clock( "update_vr" )
+      CALL stop_clock( 'update_vr' )
       !
     END SUBROUTINE
     !
@@ -1015,8 +1052,8 @@ MODULE wstat_tools
     SUBROUTINE refresh_with_vr_distr_real( ag, nselect, n, lda, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage,inter_bgrp_comm,my_bgrp_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -1024,7 +1061,7 @@ MODULE wstat_tools
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       !
@@ -1035,59 +1072,62 @@ MODULE wstat_tools
       INTEGER :: il1, il2, ig1, ig2, icycl
       COMPLEX(DP) :: zconst
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'refresh_vr' )
       !
-      ALLOCATE( hg(npwqx,pert%nlocx) )
-      hg = 0._DP 
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0) THEN
          !
-         DO il1=1,pert%nlocx
-            !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nloc
-               !
-               ig2 = pert%l2g(il2)
-               IF( ig2 > nselect ) CYCLE 
-               !
-               zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
-               CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
-               !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2) 
-               !
-            ENDDO
+         ALLOCATE( hg(npwqx,pert%nlocx) )
+         hg = 0._DP
+         ALLOCATE( tmp_l2g(1:pert%nlocx) )
+         !
+         tmp_l2g = 0
+         !
+         DO il1 = 1, pert%nloc
+            tmp_l2g(il1) = pert%l2g(il1)
          ENDDO
          !
-         ! Cycle the amat array 
-         ! 
-         CALL mp_circular_shift_left( ag  ,           icycl, inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+         DO icycl=0,nimage-1
+            !
+            DO il1=1,pert%nlocx
+               !
+               ig1 = tmp_l2g(il1)
+               IF( ig1 == 0 .OR. ig1 > n ) CYCLE
+               !
+               DO il2=1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF( ig2 > nselect ) CYCLE
+                  !
+                  zconst = CMPLX( vr_distr(ig1,il2), 0_DP, KIND=DP )
+                  CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag, tmp_l2g
+            !
+            CALL mp_circular_shift_left( ag  ,           icycl, inter_image_comm)
+            CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+            !
+         ENDDO
          !
-      ENDDO
+         DO il2=1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF( ig2 > nselect ) THEN
+               ag(:,il2) = 0._DP
+            ELSE
+               ag(:,il2) = hg(:,il2)
+            ENDIF
+         ENDDO
+         !
+         DEALLOCATE( hg )
+         DEALLOCATE( tmp_l2g )
+         !
+      ENDIF
       !
-      DO il2=1,pert%nloc
-         ig2 = pert%l2g(il2)
-         IF( ig2 > nselect ) THEN
-            ag(:,il2) = 0._DP
-         ELSE
-            ag(:,il2) = hg(:,il2)
-         ENDIF
-      ENDDO
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
       !
-      DEALLOCATE( hg )
-      DEALLOCATE( tmp_l2g )
-      !
-      CALL stop_clock( "refresh_vr" )
+      CALL stop_clock( 'refresh_vr' )
       !
     END SUBROUTINE
     !
@@ -1097,8 +1137,8 @@ MODULE wstat_tools
     SUBROUTINE refresh_with_vr_distr_complex( ag, nselect, n, lda, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
+      USE mp_global,            ONLY : inter_image_comm,nimage,inter_bgrp_comm,my_bgrp_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -1106,7 +1146,7 @@ MODULE wstat_tools
       !
       ! I/O
       !
-      COMPLEX(DP) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect, n, lda
       COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       !
@@ -1116,58 +1156,61 @@ MODULE wstat_tools
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
       INTEGER :: il1, il2, ig1, ig2, icycl
       !
-      CALL mp_barrier( world_comm )
-      !  
       CALL start_clock( 'refresh_vr' )
       !
-      ALLOCATE( hg(npwqx,pert%nlocx) )
-      hg = 0._DP 
-      ALLOCATE( tmp_l2g(1:pert%nlocx) )
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1, pert%nloc 
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
-      DO icycl=0,nimage-1
+      IF(my_bgrp_id == 0) THEN
          !
-         DO il1=1,pert%nlocx
-            !
-            ig1 = tmp_l2g(il1)
-            IF( ig1 == 0 .OR. ig1 > n ) CYCLE
-            !
-            DO il2=1,pert%nloc
-               !
-               ig2 = pert%l2g(il2)
-               IF( ig2 > nselect ) CYCLE 
-               !
-               CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
-               !dhg(:,il2) = dhg(:,il2) + amat(:,il1) * z(ig1,ig2) 
-               !
-            ENDDO
+         ALLOCATE( hg(npwqx,pert%nlocx) )
+         hg = 0._DP
+         ALLOCATE( tmp_l2g(1:pert%nlocx) )
+         !
+         tmp_l2g = 0
+         !
+         DO il1 = 1, pert%nloc
+            tmp_l2g(il1) = pert%l2g(il1)
          ENDDO
          !
-         ! Cycle the amat array 
-         ! 
-         CALL mp_circular_shift_left( ag  ,           icycl, inter_image_comm)
-         CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+         DO icycl=0,nimage-1
+            !
+            DO il1=1,pert%nlocx
+               !
+               ig1 = tmp_l2g(il1)
+               IF( ig1 == 0 .OR. ig1 > n ) CYCLE
+               !
+               DO il2=1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF( ig2 > nselect ) CYCLE
+                  !
+                  CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag, tmp_l2g
+            !
+            CALL mp_circular_shift_left( ag  ,           icycl, inter_image_comm)
+            CALL mp_circular_shift_left( tmp_l2g, icycl+nimage, inter_image_comm)
+            !
+         ENDDO
          !
-      ENDDO
+         DO il2=1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF( ig2 > nselect ) THEN
+               ag(:,il2) = 0._DP
+            ELSE
+               ag(:,il2) = hg(:,il2)
+            ENDIF
+         ENDDO
+         !
+         DEALLOCATE( hg )
+         DEALLOCATE( tmp_l2g )
+         !
+      ENDIF
       !
-      DO il2=1,pert%nloc
-         ig2 = pert%l2g(il2)
-         IF( ig2 > nselect ) THEN
-            ag(:,il2) = 0._DP
-         ELSE
-            ag(:,il2) = hg(:,il2)
-         ENDIF
-      ENDDO
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
       !
-      DEALLOCATE( hg )
-      DEALLOCATE( tmp_l2g )
-      !
-      CALL stop_clock( "refresh_vr" )
+      CALL stop_clock( 'refresh_vr' )
       !
     END SUBROUTINE
     !

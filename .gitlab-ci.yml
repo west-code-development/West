@@ -67,19 +67,19 @@ stages:
 
 # Builds
 
-gcc930:
+gcc1130_0001:
   extends:
     - .template_bot_start
     - .template_build
 
-gcc1020:
+gcc1030_0001:
   extends:
     - .template_bot_start
     - .template_build
 
 # Tests
 
-gcc930_t:
+gcc1130_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 1
@@ -88,23 +88,22 @@ gcc930_t:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc930
+  image: miccomcenter/bot:gcc1130_0001
 
-gcc1020_t:
+gcc1030_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 2
     CI_NB: 2
     CI_NT: 1
-    SCALAPACK_LIBS: "-lscalapack-openmpi"
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc1020
+  image: miccomcenter/bot:gcc1030_0001
 
 # Nightly tests
 
-gcc930_t2:
+gcc1130_0002_t2:
   variables:
     CI_NP: 8
     CI_NI: 2
@@ -115,21 +114,20 @@ gcc930_t2:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc930
+  image: miccomcenter/bot:gcc1130_0002
 
-gcc1020_t2:
+gcc1130_0002_t3:
   variables:
     CI_NP: 8
     CI_NI: 1
     CI_NB: 2
     CI_NT: 2
-    SCALAPACK_LIBS: "-lscalapack-openmpi"
   only:
     - schedules
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc1020
+  image: miccomcenter/bot:gcc1130_0002
 
 # Doc
 

@@ -24,13 +24,13 @@ clean:
 	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1
 
 title:
-	@echo "               "
+	@echo
 	@echo "###############"
 	@echo "### test004 ###"
 	@echo "###############"
-	@echo "               "
+	@echo
 
 description:
-	@echo " "
+	@echo
 	@echo "Si bulk kmesh 1x1x2"
-	@echo " "
+	@echo

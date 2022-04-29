@@ -24,13 +24,13 @@ clean:
 	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1
 
 title:
-	@echo "               "
+	@echo
 	@echo "###############"
 	@echo "### test003 ###"
 	@echo "###############"
-	@echo "               "
+	@echo
 
 description:
-	@echo " "
+	@echo
 	@echo "CH4 molecule gamma_only spin-polarized"
-	@echo " "
+	@echo

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,34 +7,34 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 SUBROUTINE solve_gfreq(l_read_restart)
   !-----------------------------------------------------------------------
   !
-  USE control_flags,        ONLY : gamma_only 
+  USE control_flags,        ONLY : gamma_only
   !
   IMPLICIT NONE
   !
-  ! I/O 
+  ! I/O
   !
   LOGICAL,INTENT(IN) :: l_read_restart
   !
-  IF( gamma_only ) THEN 
+  IF( gamma_only ) THEN
     CALL solve_gfreq_gamma( l_read_restart )
   ELSE
     CALL solve_gfreq_k( l_read_restart )
   ENDIF
   !
-END SUBROUTINE 
+END SUBROUTINE
 !
 !-----------------------------------------------------------------------
 SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : DP 
+  USE kinds,                ONLY : DP
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver, &
                                  & wstat_save_dir
@@ -50,14 +50,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
   USE io_files,             ONLY : tmp_dir,nwordwfc,iunwfc
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
-!  USE fft_at_k,             ONLY : SINGLEBAND_INVFFT_k,SINGLEBAND_FWFFT_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
   USE pdep_db,              ONLY : generate_pdep_fname
-  USE pdep_io,              ONLY : pdep_read_G_and_distribute 
+  USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
-!  USE control_flags,        ONLY : gamma_only
-  USE noncollin_module,     ONLY : noncolin,npol 
+  USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert
@@ -84,6 +82,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
+  COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   REAL(DP),ALLOCATABLE :: ps_r(:,:)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
@@ -97,7 +96,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! This is to reduce memory
   !
-  CALL deallocate_bec_type( becp ) 
+  CALL deallocate_bec_type( becp )
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
@@ -105,12 +104,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
   ELSE
-     bks%lastdone_ks   = 0 
-     bks%lastdone_band = 0 
-     bks%old_ks        = 0 
-     bks%old_band      = 0 
+     bks%lastdone_ks   = 0
+     bks%lastdone_band = 0
+     bks%old_ks        = 0
+     bks%old_band      = 0
      bks%max_ks        = k_grid%nps
-     bks%min_ks        = 1 
+     bks%min_ks        = 1
   ENDIF
   !
   barra_load = 0
@@ -121,15 +120,27 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         barra_load = barra_load + 1
      ENDDO
   ENDDO
-  ! 
-  IF( barra_load == 0 ) THEN 
+  !
+  IF( barra_load == 0 ) THEN
      CALL start_bar_type( barra, 'glanczos', 1 )
-     CALL update_bar_type( barra, 'glanczos', 1 ) 
+     CALL update_bar_type( barra, 'glanczos', 1 )
   ELSE
      CALL start_bar_type( barra, 'glanczos', barra_load )
   ENDIF
   !
-  ! LOOP 
+  ! Read PDEP
+  !
+  ALLOCATE(pertg_all(npwqx,pert%nloc))
+  pertg_all = 0._DP
+  !
+  DO ip = 1,pert%nloc
+     glob_ip = pert%l2g(ip)
+     CALL generate_pdep_fname(filepot,glob_ip)
+     fname = TRIM(wstat_save_dir)//"/"//filepot
+     CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip))
+  ENDDO
+  !
+  ! LOOP
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      IF(iks<bks%lastdone_ks) CYCLE
@@ -149,7 +160,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      IF(k_grid%nps>1) THEN
         !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol 
+        !lrwfc = nbnd * npwx * npol
         !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         !CALL mp_bcast(evc,0,inter_image_comm)
@@ -178,37 +189,30 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      bks%max_band=nbndval
      bks%min_band=1
      !
-     ALLOCATE(dvpsi(npwx*npol,pert%nlocx))   
+     ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
      CALL preallocate_solvegfreq( iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert )
      !
-     time_spent(1) = get_clock( 'glanczos' ) 
+     time_spent(1) = get_clock( 'glanczos' )
      !
-     ! LOOP over band states 
+     ! LOOP over band states
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(iks==bks%lastdone_ks .AND. ib <= bks%lastdone_band ) CYCLE
         !
         ! PSIC
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave') 
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')
         !
         ! ZEROS
         !
-        dvpsi = 0._DP   
+        dvpsi = 0._DP
         !
-        ! Read PDEP
-        !
-        ALLOCATE( pertg(npwqx) )
+        ALLOCATE( pertg( npwqx ) )
         ALLOCATE( pertr( dffts%nnr ) )
         !
         DO ip=1,pert%nloc
            glob_ip = pert%l2g(ip)
-           !
-           ! Exhume dbs eigenvalue
-           !
-           CALL generate_pdep_fname( filepot, glob_ip ) 
-           fname = TRIM( wstat_save_dir ) // "/"// filepot
-           CALL pdep_read_G_and_distribute(fname,pertg)
+           pertg = pertg_all(:,ip)
            !
            ! Multiply by sqvc
            !pertg(:) = sqvc(:) * pertg(:) ! / SQRT(fpi*e2)     ! CONTROLLARE QUESTO
@@ -218,31 +222,31 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            ! Bring it to R-space
            CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
-           DO ir=1,dffts%nnr 
+           DO ir=1,dffts%nnr
               pertr(ir)=psic(ir)*pertr(ir)
            ENDDO
            CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave')
            !
            !
         ENDDO ! pert
-        ! 
+        !
         DEALLOCATE(pertr)
         DEALLOCATE(pertg)
         !
         ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
         !
-        IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r) 
-        ALLOCATE(ps_r(nbnd,pert%nloc)) 
-        CALL glbrak_gamma(evc,dvpsi,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol) 
-        CALL mp_sum(ps_r,intra_bgrp_comm)  
-        ! 
-        IF(ALLOCATED(overlap)) DEALLOCATE(overlap) 
-        ALLOCATE(overlap(pert%nglob, nbnd ) ) 
-        overlap = 0._DP 
-        DO im = 1, nbnd 
-           DO ip = 1, pert%nloc 
-              glob_ip = pert%l2g(ip) 
-              overlap(glob_ip,im) = ps_r(im,ip) 
+        IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
+        ALLOCATE(ps_r(nbnd,pert%nloc))
+        CALL glbrak_gamma(evc,dvpsi,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol)
+        CALL mp_sum(ps_r,intra_bgrp_comm)
+        !
+        IF(ALLOCATED(overlap)) DEALLOCATE(overlap)
+        ALLOCATE(overlap(pert%nglob, nbnd ) )
+        overlap = 0._DP
+        DO im = 1, nbnd
+           DO ip = 1, pert%nloc
+              glob_ip = pert%l2g(ip)
+              overlap(glob_ip,im) = ps_r(im,ip)
            ENDDO
         ENDDO
         !
@@ -256,17 +260,17 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
         ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
         !
-        IF( l_enable_lanczos ) THEN  
+        IF( l_enable_lanczos ) THEN
            !
            ALLOCATE( bnorm    (                             pert%nloc ) )
            ALLOCATE( diago    (               n_lanczos   , pert%nloc ) )
            ALLOCATE( subdiago (               n_lanczos-1 , pert%nloc ) )
-           ALLOCATE( q_s      ( npwx*npol   , pert%nloc   , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM 
+           ALLOCATE( q_s      ( npwx*npol   , pert%nloc   , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
            !
            CALL solve_deflated_lanczos_w_full_ortho ( nbnd, pert%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
            !
            ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
-           CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert%nloc,pert%nlocx,pert%nglob)
+           CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
            DEALLOCATE( q_s )
            !
            DO ip = 1, pert%nloc
@@ -276,21 +280,21 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            DEALLOCATE( bnorm )
            DEALLOCATE( subdiago )
            !
-           ! MPI-IO 
+           ! MPI-IO
            !
            CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
            !
-           DEALLOCATE( diago ) 
+           DEALLOCATE( diago )
            DEALLOCATE( braket )
            !
         ENDIF ! l_enable_lanczos
         !
-        time_spent(2) = get_clock( 'glanczos' ) 
+        time_spent(2) = get_clock( 'glanczos' )
         !
-        IF( o_restart_time >= 0._DP ) THEN 
-           IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN 
+        IF( o_restart_time >= 0._DP ) THEN
+           IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN
               bks%lastdone_ks=iks
-              bks%lastdone_band=ib 
+              bks%lastdone_band=ib
               CALL solvegfreq_restart_write( bks )
               bks%old_ks=iks
               bks%old_band=ib
@@ -304,18 +308,19 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      DEALLOCATE(dvpsi)
      !
-  ENDDO ! KPOINT-SPIN 
-  ! 
+  ENDDO ! KPOINT-SPIN
+  !
+  DEALLOCATE(pertg_all)
   !
   CALL stop_bar_type( barra, 'glanczos' )
   !
-END SUBROUTINE 
+END SUBROUTINE
 !
 !-----------------------------------------------------------------------
 SUBROUTINE solve_gfreq_k(l_read_restart)
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : DP 
+  USE kinds,                ONLY : DP
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver, &
                                  & wstat_save_dir,ngq,igq_q
@@ -334,9 +339,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
   USE pdep_db,              ONLY : generate_pdep_fname
-  USE pdep_io,              ONLY : pdep_read_G_and_distribute 
+  USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
-  USE noncollin_module,     ONLY : noncolin,npol 
+  USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert
@@ -383,22 +388,22 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   ! This is to reduce memory
   !
-  CALL deallocate_bec_type( becp ) 
+  CALL deallocate_bec_type( becp )
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read_q( bksks )
   ELSE
-     bksks%lastdone_ks     = 0 
-     bksks%lastdone_kks    = 0 
-     bksks%lastdone_band   = 0 
-     bksks%old_ks          = 0 
-     bksks%old_kks         = 0 
-     bksks%old_band        = 0 
+     bksks%lastdone_ks     = 0
+     bksks%lastdone_kks    = 0
+     bksks%lastdone_band   = 0
+     bksks%old_ks          = 0
+     bksks%old_kks         = 0
+     bksks%old_band        = 0
      bksks%max_ks          = k_grid%nps
-     bksks%min_ks          = 1 
+     bksks%min_ks          = 1
      bksks%max_kks         = k_grid%nps
-     bksks%min_kks         = 1 
+     bksks%min_kks         = 1
   ENDIF
   !
   ALLOCATE( evck(npwx*npol,nbnd) )
@@ -415,20 +420,20 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(ikks==bksks%lastdone_ks .AND. ib < bksks%lastdone_band ) CYCLE
         DO iks = 1, k_grid%nps
-           IF (ikks==bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE 
+           IF (ikks==bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE
            barra_load = barra_load + 1
         ENDDO
      ENDDO
   ENDDO
   !
-  IF( barra_load == 0 ) THEN 
+  IF( barra_load == 0 ) THEN
      CALL start_bar_type( barra, 'glanczos', 1 )
-     CALL update_bar_type( barra, 'glanczos', 1 ) 
+     CALL update_bar_type( barra, 'glanczos', 1 )
   ELSE
      CALL start_bar_type( barra, 'glanczos', barra_load )
   ENDIF
   !
-  ! LOOP 
+  ! LOOP
   !
   ! ... Outer k-point loop (wfc matrix element): ikks, npwk, evck, psick
   ! ... Inner k-point loop (wfc summed over k'): iks, npw, evc (passed to h_psi: current_k = iks)
@@ -450,9 +455,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      bksks%max_band=nbndval
      bksks%min_band=1
      !
-     ALLOCATE(dvpsi(npwx*npol,pert%nlocx))   
+     ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
      !
-     ! LOOP over band states 
+     ! LOOP over band states
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(ikks==bksks%lastdone_ks .AND. ib < bksks%lastdone_band ) CYCLE
@@ -471,10 +476,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ik = k_grid%ip(iks)
            !
-           time_spent(1) = get_clock( 'glanczos' ) 
+           time_spent(1) = get_clock( 'glanczos' )
            !
            !CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 1, 'cart', iq, g0 )  !M
-           CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 'cart', iq, g0 )      
+           CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 'cart', iq, g0 )
            !
            CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !
@@ -522,11 +527,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ! ZEROS
            !
-           dvpsi = 0._DP 
+           dvpsi = 0._DP
            !
            ! Read PDEP
            !
-           ALLOCATE( pertg(npwqx) )
+           ALLOCATE( pertg( npwqx ) )
            ALLOCATE( pertr( dffts%nnr ) )
            !
            DO ip=1,pert%nloc
@@ -534,7 +539,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               ! Exhume dbs eigenvalue
               !
-              CALL generate_pdep_fname( filepot, glob_ip, iq ) 
+              CALL generate_pdep_fname( filepot, glob_ip, iq )
               fname = TRIM( wstat_save_dir ) // "/"// filepot
               CALL pdep_read_G_and_distribute(fname,pertg,iq)
               !
@@ -547,18 +552,18 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               ! Bring it to R-space
               IF(noncolin) THEN
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr(ir)=DCONJG(phase(ir))*psick_nc(ir,1)*DCONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr(ir)=DCONJG(phase(ir))*psick_nc(ir,2)*DCONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1+npwx,ip),'Wave',igk_k(1,current_k))
               ELSE
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr(ir)=DCONJG(phase(ir))*psick(ir)*DCONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
@@ -566,24 +571,24 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               !
            ENDDO ! pert
-           ! 
+           !
            DEALLOCATE(pertr)
            DEALLOCATE(pertg)
            !
            ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
            !
-           IF(ALLOCATED(ps_c)) DEALLOCATE(ps_c) 
-           ALLOCATE(ps_c(nbnd,pert%nloc)) 
+           IF(ALLOCATED(ps_c)) DEALLOCATE(ps_c)
+           ALLOCATE(ps_c(nbnd,pert%nloc))
            CALL glbrak_k(evc,dvpsi,ps_c,npw,npwx,nbnd,pert%nloc,nbnd,npol)
-           CALL mp_sum(ps_c,intra_bgrp_comm) 
-           ! 
+           CALL mp_sum(ps_c,intra_bgrp_comm)
+           !
            IF(ALLOCATED(overlap)) DEALLOCATE(overlap)
-           ALLOCATE(overlap(pert%nglob, nbnd ) ) 
-           overlap = 0._DP 
-           DO im = 1, nbnd 
-              DO ip = 1, pert%nloc 
-                 glob_ip = pert%l2g(ip) 
-                 overlap(glob_ip,im) = ps_c(im,ip) 
+           ALLOCATE(overlap(pert%nglob, nbnd ) )
+           overlap = 0._DP
+           DO im = 1, nbnd
+              DO ip = 1, pert%nloc
+                 glob_ip = pert%l2g(ip)
+                 overlap(glob_ip,im) = ps_c(im,ip)
               ENDDO
            ENDDO
            !
@@ -597,17 +602,17 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
            ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
            !
-           IF( l_enable_lanczos ) THEN 
+           IF( l_enable_lanczos ) THEN
               !
               ALLOCATE( bnorm    (                             pert%nloc ) )
               ALLOCATE( diago    (               n_lanczos   , pert%nloc ) )
               ALLOCATE( subdiago (               n_lanczos-1 , pert%nloc ) )
-              ALLOCATE( q_s      ( npwx*npol   , pert%nloc   , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM 
+              ALLOCATE( q_s      ( npwx*npol   , pert%nloc   , n_lanczos   ) )  ! WARNING ORDER INVERTED TO SMOOTHEN LANCZOS ALGORITHM
               !
               CALL solve_deflated_lanczos_w_full_ortho ( nbnd, pert%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
               !
               ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
-              CALL get_brak_hyper_parallel_complex(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert%nloc,pert%nlocx,pert%nglob)
+              CALL get_brak_hyper_parallel_complex(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
               DEALLOCATE( q_s )
               !
               DO ip = 1, pert%nloc
@@ -617,22 +622,22 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               DEALLOCATE( bnorm )
               DEALLOCATE( subdiago )
               !
-              ! MPI-IO 
+              ! MPI-IO
               !
               CALL writeout_solvegfreq( iks_l2g(ikks), iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               !
-              DEALLOCATE( diago ) 
+              DEALLOCATE( diago )
               DEALLOCATE( braket )
               !
            ENDIF ! l_enable_lanczos
            !
-           time_spent(2) = get_clock( 'glanczos' ) 
+           time_spent(2) = get_clock( 'glanczos' )
            !
-           IF( o_restart_time >= 0._DP ) THEN 
-              IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN 
+           IF( o_restart_time >= 0._DP ) THEN
+              IF( (time_spent(2)-time_spent(1)) > o_restart_time*60._DP .OR. ib == qp_bandrange(2) ) THEN
                  bksks%lastdone_ks=ikks
                  bksks%lastdone_kks=iks
-                 bksks%lastdone_band=ib 
+                 bksks%lastdone_band=ib
                  CALL solvegfreq_restart_write_q( bksks )
                  bksks%old_ks=ikks
                  bksks%old_kks=iks
@@ -646,7 +651,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         ENDDO ! KPOINT-SPIN (INTEGRAL OVER K')
         !
      ENDDO ! BANDS
-     ! 
+     !
      DEALLOCATE(dvpsi)
      !
   ENDDO ! KPOINT-SPIN (MATRIX ELEMENT)
@@ -661,4 +666,4 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   CALL stop_bar_type( barra, 'glanczos' )
   !
-END SUBROUTINE 
+END SUBROUTINE

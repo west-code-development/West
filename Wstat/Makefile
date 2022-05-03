@@ -49,7 +49,7 @@ all : title tldeps wstat.x
 
 wstat.x : $(PWOBJS) $(WSTAT_OBJS) $(QEMODS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o wstat.x \
-		$(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS)
+		$(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wstat/wstat.x . )
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :

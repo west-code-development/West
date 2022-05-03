@@ -1,5 +1,6 @@
 # Makefile for Modules
 
+include ../west_make.inc
 include ../../make.inc
 
 # location of needed modules
@@ -12,18 +13,20 @@ IFLAGS=
 
 MODULES_OBJS = \
 west_version.o \
-westcom.o
+westcom.o \
 
 PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a
 
 TLDEPS= bindir mods libs pw
 
-all : title tldeps libmodules.a
+all: title tldeps update libmodules.a
 
 tldeps:
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
-	./update_west_version ${TOPDIR}
+
+update:	
+	./update_west_version ${WESTDIR} `${PYT} ../Pytools/read_json.py ../VERSION.json version`
 
 libmodules.a : $(MODULES_OBJS)
 	$(AR) $(ARFLAGS) $@ $?

@@ -15,10 +15,11 @@ Project Leads
 Developers
 ----------
 
-- Sijia Dong (Argonne National Laboratory)
 - Marco Govoni (Argonne National Laboratory and University of Chicago)
-- He Ma (University of Chicago)
+- Yu Jin (University of Chicago)
+- Nan Sheng (University of Chicago)
 - Han Yang (University of Chicago)
+- Wenzhe Yu (Argonne National Laboratory)
 
 Contributors
 ------------
@@ -35,7 +36,10 @@ Former Developers
 -----------------
 
 - Nicholas Brawand (2016-2018)
+- Sijia Dong (2019-2020)
 - Matteo Gerosa (2017-2018)
+- Lan Huang (2019-2020)
+- He Ma (2017-2020)
 - Ryan McAvoy (2017-2018)
 - Ngoc Linh Nguyen (2017-2018)
 - Peter Scherpelz (2016-2018)

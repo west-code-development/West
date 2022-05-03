@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -22,6 +22,8 @@ MODULE pdep_db
   CONTAINS
     !
     SUBROUTINE generate_pdep_fname( fname, j, iq)
+       !
+       IMPLICIT NONE
        !
        ! I/O 
        ! 
@@ -158,7 +160,7 @@ MODULE pdep_db
           CALL json%add("dielectric_matrix.pdep",jval)
           !
           OPEN(NEWUNIT= iunit, FILE= summary_file )
-          CALL json%print_file( iunit )
+          CALL json%print( iunit )
           CLOSE( iunit )
           !
           CALL json%destroy()
@@ -171,7 +173,7 @@ MODULE pdep_db
       IF ( mpime == root ) THEN
          !
          CALL json%initialize()
-         CALL json%load_file( filename = summary_file )
+         CALL json%load( filename = summary_file )
          !
          CALL json%info('dielectric_matrix.pdep',n_children=n_elements)
          write_element = n_elements + 1
@@ -191,7 +193,7 @@ MODULE pdep_db
          CALL json%add('dielectric_matrix.pdep('//TRIM(ADJUSTL(label_i))//').eigenvec' , eigenpot_filename(1:n_pdep_eigen))
          !
          OPEN( NEWUNIT=iunit, FILE=summary_file )
-         CALL json%print_file( iunit )
+         CALL json%print( iunit )
          CLOSE( iunit )
          CALL json%destroy()
          !
@@ -319,7 +321,7 @@ MODULE pdep_db
       IF ( mpime == root ) THEN
          !
          CALL json%initialize()
-         CALL json%load_file( filename = TRIM(ADJUSTL(wstat_save_dir)) // "/summary.json" )
+         CALL json%load( filename = TRIM(ADJUSTL(wstat_save_dir)) // "/summary.json" )
          IF( json%failed() ) THEN 
             CALL errore("", "Cannot open: " // TRIM(ADJUSTL(wstat_save_dir)) // "/summary.json", 1 )
          ENDIF 

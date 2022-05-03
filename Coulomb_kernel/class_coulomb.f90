@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -169,6 +169,8 @@ MODULE class_coulomb
       USE gvect,                ONLY : g, ngm
       USE types_bz_grid,        ONLY : q_grid
       !
+      IMPLICIT NONE
+      !
       ! I/O
       !
       CLASS(coulomb) :: this 
@@ -303,6 +305,8 @@ MODULE class_coulomb
       !
       USE io_global,      ONLY : stdout
       USE types_bz_grid,   ONLY : q_grid
+      !
+      IMPLICIT NONE
       !
       ! I/O
       !

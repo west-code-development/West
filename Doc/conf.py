@@ -1,21 +1,25 @@
 import sys
 import os
-import shlex
+#import shlex
+import json
 
 import sphinx_rtd_theme
-from unittest.mock import MagicMock
+#from unittest.mock import MagicMock
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        if name == '_mock_methods':
-            return []
-        if name == 'version_tuple':
-            return (3,0)
-        return Mock()
+#class Mock(MagicMock):
+#    @classmethod
+#    def __getattr__(cls, name):
+#        if name == '_mock_methods':
+#            return []
+#        if name == 'version_tuple':
+#            return (3,0)
+#        return Mock()
 
-MOCK_MODULES = ['pymongo', 'gridfs', 'mpi4py']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+#MOCK_MODULES = ['pymongo', 'gridfs', 'mpi4py']
+#sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+with open('../VERSION.json',"r") as file:
+    data = json.load(file)
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -55,8 +59,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'west'
-copyright = u'2019, Marco Govoni'
+project = data["name"]
+copyright = u'2021, Marco Govoni'
 author = u'Marco Govoni'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -64,7 +68,7 @@ author = u'Marco Govoni'
 # built documents.
 #
 # The short X.Y version.
-version = '4.1.0'
+version = data["version"]
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -153,11 +157,7 @@ html_logo = "images/logo.jpg"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-html_context = {
-    'css_files': [
-        '_static/theme_overrides.css',  # override wide tables in RTD theme
-        ],
-     }
+html_ccs_files = ['theme_overrides.css']  # override wide tables in RTD theme
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -311,6 +311,5 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3.6', None),
-    'pymongo': ('https://api.mongodb.com/python/current/', None)
+    'python': ('https://docs.python.org/3.6', None)
 }

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -311,9 +311,13 @@ END SUBROUTINE
     USE fft_types,            ONLY : fft_type_descriptor, fft_type_init
     USE gvecw,                ONLY : gcutw
     USE mp,                   ONLY : mp_max
+    USE mp_bands,             ONLY : ntask_groups
     USE mp_global,            ONLY : intra_bgrp_comm,inter_pool_comm
     USE stick_base,           ONLY : sticks_map
     USE gvecs,                ONLY : gcutms 
+    !
+    IMPLICIT NONE
+    !
     !
     ! I/O
     !

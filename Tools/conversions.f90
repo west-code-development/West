@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni 
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -18,6 +18,7 @@ MODULE conversions
    CONTAINS
     !
     FUNCTION ltoa(l) RESULT(res)
+       IMPLICIT NONE
        CHARACTER(:),ALLOCATABLE :: res
        LOGICAL,INTENT(IN) :: l
        CHARACTER(4) :: t="true"
@@ -30,6 +31,7 @@ MODULE conversions
     END FUNCTION
     !
     FUNCTION itoa(i) RESULT(res)
+       IMPLICIT NONE
        CHARACTER(:),ALLOCATABLE :: res
        INTEGER,INTENT(IN) :: i
        CHARACTER(RANGE(i)+2) :: tmp
@@ -38,6 +40,7 @@ MODULE conversions
     END FUNCTION
     !
     FUNCTION dtoa(d) RESULT(res)
+       IMPLICIT NONE
        CHARACTER(:),ALLOCATABLE :: res
        REAL(DP),INTENT(IN) :: d
        CHARACTER(14) :: tmp

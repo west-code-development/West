@@ -24,6 +24,14 @@ MODULE pdep_io
   !
   IMPLICIT NONE
   !
+  ! Base64 was changed to binary in order to improve I/O performance.
+  !
+  ! A simple format is used here:
+  ! a header consisting of 32 (HD_LENGTH) integers, followed by raw data.
+  ! Currently only 3 integers are used in the header, storing the version
+  ! of the binary format, which could change in the future, the endianness,
+  ! and the length of the raw data which is useful when reading the file.
+  !
   INTEGER, PARAMETER :: HD_LENGTH = 32
   INTEGER, PARAMETER :: HD_VERSION = 210405
   INTEGER, PARAMETER :: HD_ID_VERSION = 1

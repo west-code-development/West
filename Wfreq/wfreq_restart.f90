@@ -423,7 +423,7 @@ MODULE wfreq_restart
       !
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp,                   ONLY : mp_barrier
-      USE io_files,             ONLY : delete_if_present
+      USE west_io,              ONLY : remove_if_present
       !
       IMPLICIT NONE
       !
@@ -433,7 +433,7 @@ MODULE wfreq_restart
       !
       IF(mpime == root) THEN
          !
-         CALL delete_if_present(TRIM(dirname)//'/'//TRIM(fname))
+         CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
          !
       ENDIF
       !
@@ -451,9 +451,8 @@ MODULE wfreq_restart
       USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : west_prefix
       USE mp,                   ONLY : mp_barrier,mp_sum
-      USE io_files,             ONLY : delete_if_present
       USE distribution_center,  ONLY : ifr,rfr
-      USE west_io,              ONLY : serial_data_write
+      USE west_io,              ONLY : serial_data_write,remove_if_present
       !
       IMPLICIT NONE
       !
@@ -524,14 +523,14 @@ MODULE wfreq_restart
       !
       IF(bks%old_ks/=0.AND.bks%old_band/=0) THEN
          IF( me_bgrp == 0 ) THEN
-            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
-            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
          ENDIF
       ENDIF
       !
@@ -552,9 +551,8 @@ MODULE wfreq_restart
       USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : west_prefix
       USE mp,                   ONLY : mp_barrier,mp_sum
-      USE io_files,             ONLY : delete_if_present
       USE distribution_center,  ONLY : ifr,rfr
-      USE west_io,              ONLY : serial_data_write
+      USE west_io,              ONLY : serial_data_write,remove_if_present
       !
       IMPLICIT NONE
       !
@@ -625,14 +623,14 @@ MODULE wfreq_restart
       !
       IF(bks%old_ks/=0.AND.bks%old_band/=0) THEN
          IF( me_bgrp == 0 ) THEN
-            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
-            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
          ENDIF
       ENDIF
       !
@@ -653,9 +651,8 @@ MODULE wfreq_restart
       USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : west_prefix
       USE mp,                   ONLY : mp_barrier,mp_sum
-      USE io_files,             ONLY : delete_if_present
       USE distribution_center,  ONLY : ifr,rfr
-      USE west_io,              ONLY : serial_data_write
+      USE west_io,              ONLY : serial_data_write,remove_if_present
       USE types_bz_grid,        ONLY : q_grid
       !
       IMPLICIT NONE
@@ -733,14 +730,14 @@ MODULE wfreq_restart
       !
       IF(bksq%old_q/=0.AND.bksq%old_ks/=0.AND.bksq%old_band/=0) THEN
          IF( me_bgrp == 0 ) THEN
-            WRITE(my_label2,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bksq%old_q, bksq%old_ks, bksq%old_band, my_image_id
             fname=TRIM(my_label2)
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
-            WRITE(my_label2,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            WRITE(my_label2,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bksq%old_q, bksq%old_ks, bksq%old_band, my_image_id
             fname=TRIM(my_label2)
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
          ENDIF
       ENDIF
       !

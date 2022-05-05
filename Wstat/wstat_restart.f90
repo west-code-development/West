@@ -293,7 +293,7 @@ MODULE wstat_restart
       USE mp,                   ONLY : mp_barrier,mp_bcast
       USE westcom,              ONLY : n_pdep_basis,wstat_restart_dir
       USE clib_wrappers,        ONLY : f_rmdir
-      USE io_files,             ONLY : delete_if_present
+      USE west_io,              ONLY : remove_if_present
       !
       IMPLICIT NONE
       !
@@ -310,14 +310,14 @@ MODULE wstat_restart
       ! ... clear the main restart directory
       !
       IF(mpime==root) THEN
-         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.json' ) )
-         CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ) )
+         CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.json' ) )
+         CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ) )
          DO ip=1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
             fname="V"//TRIM(ADJUSTL(my_label))//".dat"
-            CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
+            CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
             fname="N"//TRIM(ADJUSTL(my_label))//".dat"
-            CALL delete_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
+            CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
          ENDDO
          ierr =  f_rmdir( TRIM( wstat_restart_dir ) )
       ENDIF

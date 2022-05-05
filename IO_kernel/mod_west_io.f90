@@ -54,6 +54,23 @@ MODULE west_io
   !
   CONTAINS
     !
+    ! REMOVE FILE IF IT EXISTS
+    !
+    SUBROUTINE remove_if_present(fname)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(in) :: fname
+      LOGICAL :: l_aux
+      INTEGER :: iunit
+      !
+      INQUIRE(FILE=TRIM(ADJUSTL(fname)),EXIST=l_aux)
+      !
+      IF(l_aux) THEN
+        OPEN(NEWUNIT=iunit,FILE=fname,STATUS='OLD')
+        CLOSE(UNIT=iunit,STATUS='DELETE')
+      ENDIF
+      !
+    END SUBROUTINE
+    !
     ! CHECK IF FILE IS PRESENT
     !
     LOGICAL FUNCTION file_is_present(lproc,fname,suffix)

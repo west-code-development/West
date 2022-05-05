@@ -42,7 +42,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
      IF( wstat_calculation(i:i) == 'E' ) l_outsource = .TRUE.
   ENDDO
   !
-  dng=0._DP
+  dng=(0.0_DP,0.0_DP)
   !
   ALLOCATE( aux_g(npwqx,m) ); aux_g=0._DP
   !
@@ -54,7 +54,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !
   IF( l_outsource ) THEN
      CALL calc_outsourced(m,aux_g,dng,iq)
-  ELSE 
+  ELSE
      CALL dfpt(m,aux_g,dng,tr2,iq)
   ENDIF
   !

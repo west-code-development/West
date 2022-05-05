@@ -4,17 +4,16 @@ include ../west_make.inc
 
 all: \
 title \
-install 
-  
+install
+
 install:
 	- ${PYT} setup.py install --user --prefix= --record files.txt
 
 clean:
 	- rm -rf west.egg-info
-	- rm -rf build 
+	- rm -rf build
 	- rm -rf dist
-	- rm files.txt
-	- rm -rf __pycache__
+	- rm -f files.txt
 
 title :
 	@echo "              "
@@ -22,5 +21,4 @@ title :
 	@echo "### Pytools ##"
 	@echo "##############"
 	@echo "              "
-
 

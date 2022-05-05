@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -21,7 +21,7 @@ MODULE west_io
 #if defined(__SX6)
 #  define DIRECT_IO_FACTOR 1
 #else
-#  define DIRECT_IO_FACTOR 8 
+#  define DIRECT_IO_FACTOR 8
 #endif
   !
   INTERFACE serial_data_write
@@ -54,6 +54,23 @@ MODULE west_io
   !
   CONTAINS
     !
+    ! REMOVE FILE IF IT EXISTS
+    !
+    SUBROUTINE remove_if_present(fname)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(in) :: fname
+      LOGICAL :: l_aux
+      INTEGER :: iunit
+      !
+      INQUIRE(FILE=TRIM(ADJUSTL(fname)),EXIST=l_aux)
+      !
+      IF(l_aux) THEN
+        OPEN(NEWUNIT=iunit,FILE=fname,STATUS='OLD')
+        CLOSE(UNIT=iunit,STATUS='DELETE')
+      ENDIF
+      !
+    END SUBROUTINE
+    !
     ! CHECK IF FILE IS PRESENT
     !
     LOGICAL FUNCTION file_is_present(lproc,fname,suffix)
@@ -78,20 +95,20 @@ MODULE west_io
     !
     ! WRITE I0
     !
-    SUBROUTINE serial_i0_data_write(lproc,iunit,fname,i0dummy)
+    SUBROUTINE serial_i0_data_write(lproc,fname,i0dummy)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: i0dummy
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       !
       IF(.NOT.lproc) RETURN
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
       WRITE(iunit,'("Shape: (",a14,")")') 'scalar'
       WRITE(iunit,'(i14)',IOSTAT=ierr) i0dummy
       CLOSE(iunit,IOSTAT=ierr)
@@ -102,14 +119,14 @@ MODULE west_io
     !
     ! WRITE I1
     !
-    SUBROUTINE serial_i1_data_write(lproc,iunit,fname,i1dummy,n)
+    SUBROUTINE serial_i1_data_write(lproc,fname,i1dummy,n)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n
       INTEGER,INTENT(IN) :: i1dummy(n)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i
       !
@@ -117,7 +134,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
       WRITE(iunit,'("Shape: (",i14,")")') n
       DO i=1,n
          WRITE(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i1dummy(i)
@@ -130,14 +147,14 @@ MODULE west_io
     !
     ! WRITE I2
     !
-    SUBROUTINE serial_i2_data_write(lproc,iunit,fname,i2dummy,n,m)
+    SUBROUTINE serial_i2_data_write(lproc,fname,i2dummy,n,m)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m
       INTEGER,INTENT(IN) :: i2dummy(n,m)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i,j
       !
@@ -145,7 +162,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
       WRITE(iunit,'("Shape: (",i14,",",i14,")")') n,m
       DO j=1,m
          DO i=1,n
@@ -161,14 +178,14 @@ MODULE west_io
     !
     ! WRITE I3
     !
-    SUBROUTINE serial_i3_data_write(lproc,iunit,fname,i3dummy,n,m,l)
+    SUBROUTINE serial_i3_data_write(lproc,fname,i3dummy,n,m,l)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l
       INTEGER,INTENT(IN) :: i3dummy(n,m,l)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i,j,k
       !
@@ -176,7 +193,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
       WRITE(iunit,'("Shape: (",i14,",",i14,",",i14,")")') n,m,l
       DO k=1,l
          DO j=1,m
@@ -188,21 +205,21 @@ MODULE west_io
          WRITE(iunit,*) ''
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
+      !
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE I4
     !
-    SUBROUTINE serial_i4_data_write(lproc,iunit,fname,i4dummy,n,m,l,q)
+    SUBROUTINE serial_i4_data_write(lproc,fname,i4dummy,n,m,l,q)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l,q
       INTEGER,INTENT(IN) :: i4dummy(n,m,l,q)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i,j,k,p
       !
@@ -210,7 +227,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
       WRITE(iunit,'("Shape: (",i14,",",i14,",",i14,",",i14,")")') n,m,l,q
       DO p=1,q
          DO k=1,l
@@ -225,20 +242,20 @@ MODULE west_io
          WRITE(iunit,*) ''
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
+      !
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE D0
     !
-    SUBROUTINE serial_d0_data_write(lproc,iunit,fname,d0dummy)
+    SUBROUTINE serial_d0_data_write(lproc,fname,d0dummy)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       REAL(DP),INTENT(IN) :: d0dummy
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -247,25 +264,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(1, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d0dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE D1
     !
-    SUBROUTINE serial_d1_data_write(lproc,iunit,fname,d1dummy,n)
+    SUBROUTINE serial_d1_data_write(lproc,fname,d1dummy,n)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n
       REAL(DP),INTENT(IN) :: d1dummy(n)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -274,25 +291,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d1dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE D2
     !
-    SUBROUTINE serial_d2_data_write(lproc,iunit,fname,d2dummy,n,m)
+    SUBROUTINE serial_d2_data_write(lproc,fname,d2dummy,n,m)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m
       REAL(DP),INTENT(IN) :: d2dummy(n,m)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -301,25 +318,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d2dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE D3
     !
-    SUBROUTINE serial_d3_data_write(lproc,iunit,fname,d3dummy,n,m,l)
+    SUBROUTINE serial_d3_data_write(lproc,fname,d3dummy,n,m,l)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l
       REAL(DP),INTENT(IN) :: d3dummy(n,m,l)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -328,25 +345,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d3dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE D4
     !
-    SUBROUTINE serial_d4_data_write(lproc,iunit,fname,d4dummy,n,m,l,q)
+    SUBROUTINE serial_d4_data_write(lproc,fname,d4dummy,n,m,l,q)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l,q
       REAL(DP),INTENT(IN) :: d4dummy(n,m,l,q)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -355,24 +372,24 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d4dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
-    ! WRITE Z0 
+    ! WRITE Z0
     !
-    SUBROUTINE serial_z0_data_write(lproc,iunit,fname,z0dummy)
+    SUBROUTINE serial_z0_data_write(lproc,fname,z0dummy)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       COMPLEX(DP),INTENT(IN),TARGET :: z0dummy
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -381,25 +398,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z0dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE Z1
     !
-    SUBROUTINE serial_z1_data_write(lproc,iunit,fname,z1dummy,n)
+    SUBROUTINE serial_z1_data_write(lproc,fname,z1dummy,n)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n
       COMPLEX(DP),INTENT(IN),TARGET :: z1dummy(n)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -408,25 +425,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z1dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
-    ! WRITE Z2 
+    ! WRITE Z2
     !
-    SUBROUTINE serial_z2_data_write(lproc,iunit,fname,z2dummy,n,m)
+    SUBROUTINE serial_z2_data_write(lproc,fname,z2dummy,n,m)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m
       COMPLEX(DP),INTENT(IN),TARGET :: z2dummy(n,m)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -435,25 +452,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z2dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
-    ! WRITE Z3 
+    ! WRITE Z3
     !
-    SUBROUTINE serial_z3_data_write(lproc,iunit,fname,z3dummy,n,m,l)
+    SUBROUTINE serial_z3_data_write(lproc,fname,z3dummy,n,m,l)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l
       COMPLEX(DP),INTENT(IN),TARGET :: z3dummy(n,m,l)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -462,25 +479,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z3dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! WRITE Z4
     !
-    SUBROUTINE serial_z4_data_write(lproc,iunit,fname,z4dummy,n,m,l,q)
+    SUBROUTINE serial_z4_data_write(lproc,fname,z4dummy,n,m,l,q)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l,q
       COMPLEX(DP),INTENT(IN),TARGET :: z4dummy(n,m,l,q)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -489,12 +506,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z4dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -506,38 +523,38 @@ MODULE west_io
     !
     ! READ I0
     !
-    SUBROUTINE serial_i0_data_read(lproc,iunit,fname,i0dummy)
+    SUBROUTINE serial_i0_data_read(lproc,fname,i0dummy)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(OUT) :: i0dummy
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       !
       IF(.NOT.lproc) RETURN
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
-      READ(iunit,*) 
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      READ(iunit,*)
       READ(iunit,'(i14)',IOSTAT=ierr) i0dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
+      !
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ I1
     !
-    SUBROUTINE serial_i1_data_read(lproc,iunit,fname,i1dummy,n)
+    SUBROUTINE serial_i1_data_read(lproc,fname,i1dummy,n)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n
       INTEGER,INTENT(OUT) :: i1dummy(n)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i
       !
@@ -545,27 +562,27 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
-      READ(iunit,*) 
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      READ(iunit,*)
       DO i=1,n
          READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i1dummy(i)
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
+      !
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ I2
     !
-    SUBROUTINE serial_i2_data_read(lproc,iunit,fname,i2dummy,n,m)
+    SUBROUTINE serial_i2_data_read(lproc,fname,i2dummy,n,m)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m
       INTEGER,INTENT(OUT) :: i2dummy(n,m)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i,j
       !
@@ -573,30 +590,30 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
-      READ(iunit,*) 
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      READ(iunit,*)
       DO j=1,m
          DO i=1,n
             READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i2dummy(i,j)
          ENDDO
-         READ(iunit,*) 
+         READ(iunit,*)
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
+      !
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ I3
     !
-    SUBROUTINE serial_i3_data_read(lproc,iunit,fname,i3dummy,n,m,l)
+    SUBROUTINE serial_i3_data_read(lproc,fname,i3dummy,n,m,l)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l
       INTEGER,INTENT(OUT) :: i3dummy(n,m,l)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i,j,k
       !
@@ -604,33 +621,33 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
-      READ(iunit,*) 
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      READ(iunit,*)
       DO k=1,l
          DO j=1,m
             DO i=1,n
                READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i3dummy(i,j,k)
             ENDDO
-            READ(iunit,*) 
+            READ(iunit,*)
          ENDDO
-         READ(iunit,*) 
+         READ(iunit,*)
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
+      !
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ I4
     !
-    SUBROUTINE serial_i4_data_read(lproc,iunit,fname,i4dummy,n,m,l,q)
+    SUBROUTINE serial_i4_data_read(lproc,fname,i4dummy,n,m,l,q)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l,q
       INTEGER,INTENT(OUT) :: i4dummy(n,m,l,q)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER :: i,j,k,p
       !
@@ -638,7 +655,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr)
       READ(iunit,*)
       DO p=1,q
          DO k=1,l
@@ -646,27 +663,27 @@ MODULE west_io
                DO i=1,n
                   READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i4dummy(i,j,k,p)
                ENDDO
-               READ(iunit,*) 
+               READ(iunit,*)
             ENDDO
-            READ(iunit,*) 
+            READ(iunit,*)
          ENDDO
-         READ(iunit,*) 
+         READ(iunit,*)
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
+      !
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ D0
     !
-    SUBROUTINE serial_d0_data_read(lproc,iunit,fname,d0dummy)
+    SUBROUTINE serial_d0_data_read(lproc,fname,d0dummy)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       REAL(DP),INTENT(OUT) :: d0dummy
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -675,25 +692,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(1, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d0dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ D1
     !
-    SUBROUTINE serial_d1_data_read(lproc,iunit,fname,d1dummy,n)
+    SUBROUTINE serial_d1_data_read(lproc,fname,d1dummy,n)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n
       REAL(DP),INTENT(OUT) :: d1dummy(n)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -702,25 +719,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d1dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ D2
     !
-    SUBROUTINE serial_d2_data_read(lproc,iunit,fname,d2dummy,n,m)
+    SUBROUTINE serial_d2_data_read(lproc,fname,d2dummy,n,m)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m
       REAL(DP),INTENT(OUT) :: d2dummy(n,m)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -729,25 +746,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d2dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ D3
     !
-    SUBROUTINE serial_d3_data_read(lproc,iunit,fname,d3dummy,n,m,l)
+    SUBROUTINE serial_d3_data_read(lproc,fname,d3dummy,n,m,l)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l
       REAL(DP),INTENT(OUT) :: d3dummy(n,m,l)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -756,25 +773,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d3dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ D4
     !
-    SUBROUTINE serial_d4_data_read(lproc,iunit,fname,d4dummy,n,m,l,q)
+    SUBROUTINE serial_d4_data_read(lproc,fname,d4dummy,n,m,l,q)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l,q
       REAL(DP),INTENT(OUT) :: d4dummy(n,m,l,q)
       !
+      INTEGER :: iunit
       INTEGER :: ierr
       INTEGER(8) :: unf_recl
       !
@@ -783,24 +800,24 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d4dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ Z0
     !
-    SUBROUTINE serial_z0_data_read(lproc,iunit,fname,z0dummy)
+    SUBROUTINE serial_z0_data_read(lproc,fname,z0dummy)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       COMPLEX(DP),INTENT(OUT),TARGET :: z0dummy
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -809,25 +826,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z0dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ Z1
     !
-    SUBROUTINE serial_z1_data_read(lproc,iunit,fname,z1dummy,n)
+    SUBROUTINE serial_z1_data_read(lproc,fname,z1dummy,n)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n
       COMPLEX(DP),INTENT(OUT),TARGET :: z1dummy(n)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -836,25 +853,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z1dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ Z2
     !
-    SUBROUTINE serial_z2_data_read(lproc,iunit,fname,z2dummy,n,m)
+    SUBROUTINE serial_z2_data_read(lproc,fname,z2dummy,n,m)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m
       COMPLEX(DP),INTENT(OUT),TARGET :: z2dummy(n,m)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -863,25 +880,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z2dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ Z3
     !
-    SUBROUTINE serial_z3_data_read(lproc,iunit,fname,z3dummy,n,m,l)
+    SUBROUTINE serial_z3_data_read(lproc,fname,z3dummy,n,m,l)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l
       COMPLEX(DP),INTENT(OUT),TARGET :: z3dummy(n,m,l)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -890,25 +907,25 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z3dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
     ! READ Z4
     !
-    SUBROUTINE serial_z4_data_read(lproc,iunit,fname,z4dummy,n,m,l,q)
+    SUBROUTINE serial_z4_data_read(lproc,fname,z4dummy,n,m,l,q)
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: n,m,l,q
       COMPLEX(DP),INTENT(OUT),TARGET :: z4dummy(n,m,l,q)
       !
+      INTEGER :: iunit
       INTEGER(8) :: unf_recl
       INTEGER :: ierr
       !
@@ -917,12 +934,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(UNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z4dummy
       CLOSE(iunit,IOSTAT=ierr)
-      ! 
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      !
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -941,7 +958,7 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
       INTEGER,INTENT(IN) :: i1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id
       INTEGER :: sizeofdatum
@@ -950,13 +967,13 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_INTEGER,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
-      bytes_displacement = offset * sizeofdatum 
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+      bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_INTEGER,MPI_INTEGER,'native',MPI_INFO_NULL,ierr)
       CALL MPI_FILE_WRITE(file_id,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -969,14 +986,14 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
       INTEGER,INTENT(IN) :: i1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id,filetype
       INTEGER(KIND=MPI_OFFSET_KIND) :: bytes_displacement
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_INTEGER,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -984,11 +1001,11 @@ MODULE west_io
       CALL MPI_FILE_WRITE_ALL(file_id,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
-      !       
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
     END SUBROUTINE
 !   !
-!   ! WRITE I2, PARALLEL ! 
+!   ! WRITE I2, PARALLEL !
 !   !
 !   SUBROUTINE parallel_i2_data_write(fname,i2dummy,nloc,mloc,offset1,offset2,comm)
 !     USE parallel_include
@@ -996,7 +1013,7 @@ MODULE west_io
 !     INTEGER,INTENT(IN) :: nloc,mloc
 !     INTEGER,INTENT(IN) :: offset1,offset2
 !     INTEGER,INTENT(IN) :: i2dummy(nloc,mloc)
-!     INTEGER,INTENT(IN) :: comm ! communicator 
+!     INTEGER,INTENT(IN) :: comm ! communicator
 !     !
 !     INTEGER :: ierr,file_id
 !     INTEGER :: sizeofdatum
@@ -1005,13 +1022,13 @@ MODULE west_io
 !     ierr = 0
 !     !
 !     CALL MPI_TYPE_SIZE(MPI_INTEGER,sizeofdatum,ierr)
-!     CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
-!     bytes_displacement = nloc * offset * sizeofdatum 
+!     CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+!     bytes_displacement = nloc * offset * sizeofdatum
 !     CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_INTEGER,MPI_INTEGER,'native',MPI_INFO_NULL,ierr)
 !     CALL MPI_FILE_WRITE(file_id,i2dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
 !     CALL MPI_FILE_CLOSE(file_id,ierr)
 !     !
-!     IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+!     IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
 !     !
 !   END SUBROUTINE
     !
@@ -1024,7 +1041,7 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
       REAL(DP),INTENT(IN) :: d1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id
       INTEGER :: sizeofdatum
@@ -1033,13 +1050,13 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
-      bytes_displacement = offset * sizeofdatum 
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+      bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_DOUBLE_PRECISION,MPI_DOUBLE_PRECISION,'native',MPI_INFO_NULL,ierr)
       CALL MPI_FILE_WRITE(file_id,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1052,14 +1069,14 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
       REAL(DP),INTENT(IN) :: d1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id,filetype
       INTEGER(KIND=MPI_OFFSET_KIND) :: bytes_displacement
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_PRECISION,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1067,8 +1084,8 @@ MODULE west_io
       CALL MPI_FILE_WRITE_ALL(file_id,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
-      !       
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
     END SUBROUTINE
     !
     ! WRITE Z1, PARALLEL
@@ -1080,7 +1097,7 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
       COMPLEX(DP),INTENT(IN) :: z1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id
       INTEGER :: sizeofdatum
@@ -1089,13 +1106,13 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
-      bytes_displacement = offset * sizeofdatum 
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+      bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_DOUBLE_COMPLEX,MPI_DOUBLE_COMPLEX,'native',MPI_INFO_NULL,ierr)
       CALL MPI_FILE_WRITE(file_id,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1108,7 +1125,7 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
       COMPLEX(DP),INTENT(IN) :: z1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id,filetype
       INTEGER :: sizeofdatum
@@ -1116,7 +1133,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_COMPLEX,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1124,8 +1141,8 @@ MODULE west_io
       CALL MPI_FILE_WRITE_ALL(file_id,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
-      !       
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
     END SUBROUTINE
     !
     ! READ I1, PARALLEL
@@ -1137,7 +1154,7 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
       INTEGER,INTENT(OUT) :: i1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id
       INTEGER :: sizeofdatum
@@ -1146,12 +1163,12 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_INTEGER,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
-      bytes_displacement = offset * sizeofdatum 
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_READ_AT(file_id,bytes_displacement,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1164,14 +1181,14 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
       INTEGER,INTENT(OUT) :: i1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id,filetype
       INTEGER(KIND=MPI_OFFSET_KIND) :: bytes_displacement
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_INTEGER,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1179,8 +1196,8 @@ MODULE west_io
       CALL MPI_FILE_READ_ALL(file_id,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
-      !       
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
     END SUBROUTINE
     !
     ! READ D1, PARALLEL
@@ -1192,7 +1209,7 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
       REAL(DP),INTENT(OUT) :: d1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id
       INTEGER :: sizeofdatum
@@ -1201,12 +1218,12 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
-      bytes_displacement = offset * sizeofdatum 
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_READ_AT(file_id,bytes_displacement,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1219,14 +1236,14 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
       REAL(DP),INTENT(OUT) :: d1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id,filetype
       INTEGER(KIND=MPI_OFFSET_KIND) :: bytes_displacement
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_PRECISION,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1234,8 +1251,8 @@ MODULE west_io
       CALL MPI_FILE_READ_ALL(file_id,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
-      !       
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
     END SUBROUTINE
     !
     ! READ Z1, PARALLEL
@@ -1247,7 +1264,7 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: offset
       COMPLEX(DP),INTENT(OUT) :: z1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id
       INTEGER :: sizeofdatum
@@ -1256,12 +1273,12 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
-      bytes_displacement = offset * sizeofdatum 
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_READ_AT(file_id,bytes_displacement,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1274,14 +1291,14 @@ MODULE west_io
       INTEGER,INTENT(IN) :: nloc
       INTEGER,INTENT(IN) :: map(nloc)
       COMPLEX(DP),INTENT(OUT) :: z1dummy(nloc)
-      INTEGER,INTENT(IN) :: comm ! communicator 
+      INTEGER,INTENT(IN) :: comm ! communicator
       !
       INTEGER :: ierr,file_id,filetype
       INTEGER(KIND=MPI_OFFSET_KIND) :: bytes_displacement
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_COMPLEX,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1289,8 +1306,8 @@ MODULE west_io
       CALL MPI_FILE_READ_ALL(file_id,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
-      !       
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
+      !
     END SUBROUTINE
     !
     ! ###############
@@ -1301,14 +1318,14 @@ MODULE west_io
     !
     ! OUTPUT
     !
-    SUBROUTINE serial_table_output(lproc,iunit,fname,d2dummy,nrow,ncol,header)
+    SUBROUTINE serial_table_output(lproc,fname,d2dummy,nrow,ncol,header)
       LOGICAL,INTENT(IN) :: lproc
-      INTEGER,INTENT(IN) :: iunit 
       CHARACTER(LEN=*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nrow,ncol
       CHARACTER(LEN=*),INTENT(IN) :: header(ncol)
       REAL(DP),INTENT(IN) :: d2dummy(nrow,ncol)
       !
+      INTEGER :: iunit
       INTEGER :: ierr,i,j
       CHARACTER(LEN=512) :: format_string
       REAL(DP) :: help(ncol)
@@ -1317,7 +1334,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      OPEN(UNIT=iunit,FILE="o-"//TRIM(ADJUSTL(fname))//".tab",IOSTAT=ierr)
+      OPEN(NEWUNIT=iunit,FILE="o-"//TRIM(ADJUSTL(fname))//".tab",IOSTAT=ierr)
       WRITE(format_string,*) '("#",',ncol,'(a16))'
       WRITE(iunit,TRIM(format_string)) header
       WRITE(format_string,*) '(" ",',ncol,'(f16.6))'
@@ -1332,6 +1349,5 @@ MODULE west_io
       IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//"o-"//TRIM(ADJUSTL(fname))//'.tab',ierr)
       !
     END SUBROUTINE
-    !
     !
 END MODULE

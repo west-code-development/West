@@ -3,86 +3,47 @@
 include ../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
-          $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
-          $(MOD_FLAG)../Libraries/Forpy \
-          $(MOD_FLAG)../Libraries/Json \
-          $(MOD_FLAG)../Libraries/Base64 \
-          $(MOD_FLAG)../Modules \
-          $(MOD_FLAG)../Tools \
-          $(MOD_FLAG)../FFT_kernel \
-          $(MOD_FLAG)../Coulomb_kernel \
-          $(MOD_FLAG)../Para_kernel \
-          $(MOD_FLAG)../Hamiltonian_kernel \
-          $(MOD_FLAG)../DFPT_kernel \
-          $(MOD_FLAG)../IO_kernel \
-          $(MOD_FLAG).
-IFLAGS=
+MODFLAGS = $(BASEMOD_FLAGS) \
+           $(MOD_FLAG)../../PW/src \
+           $(MOD_FLAG)../Coulomb_kernel \
+           $(MOD_FLAG)../FFT_kernel \
+           $(MOD_FLAG)../IO_kernel \
+           $(MOD_FLAG)../Libraries/Base64 \
+           $(MOD_FLAG)../Libraries/Json \
+           $(MOD_FLAG)../Modules \
+           $(MOD_FLAG)../Para_kernel \
+           $(MOD_FLAG)../Tools \
+           $(MOD_FLAG).
 
 WFREQ_OBJS = \
-wfreq_readin.o \
-wfreq_setup.o \
-diago_lanczos.o \
-solve_deflated_lanczos_w_full_ortho.o \
-get_brak_hyper_parallel.o \
-chi_invert.o \
-solve_wfreq.o \
-set_freqlists.o \
-solve_gfreq.o \
-calc_vxc.o \
-calc_exx2.o \
-solve_hf.o \
 calc_corr.o \
+calc_exx2.o \
+calc_vxc.o \
+chi_invert.o \
+diago_lanczos.o \
+get_brak_hyper_parallel.o \
+set_freqlists.o \
+solve_deflated_lanczos_w_full_ortho.o \
+solve_gfreq.o \
+solve_hf.o \
 solve_qp.o \
-wfreq.o
-#io_eigenfreq.o
-
-### XWG ###
-#WFREQ_OBJS = \
-#wfreq_readin.o \
-#wfreq_setup.o \
-#diago_lanczos.o \
-#solve_deflated_lanczos_w_full_ortho.o \
-#get_brak_hyper_parallel.o \
-#solve_wfreq.o \
-#set_freqlists.o \
-#chi_invert.o \
-#solve_gfreq.o \
-#calc_vxc.o \
-#calc_exx2.o \
-#solve_hf.o \
-#wfreq.o
-##io_eigenfreq.o
-
-### XW ###
-#WFREQ_OBJS = \
-#wfreq_readin.o \
-#wfreq_setup.o \
-#diago_lanczos.o \
-#solve_deflated_lanczos_w_full_ortho.o \
-#get_brak_hyper_parallel.o \
-#solve_wfreq.o \
-#set_freqlists.o \
-#chi_invert.o \
-#calc_vxc.o \
-#calc_exx2.o \
-#solve_hf.o \
-#wfreq.o
-##io_eigenfreq.o
-
-### X ###
-#WFREQ_OBJS = \
-#wfreq_readin.o \
-#wfreq_setup.o \
-#set_freqlists.o \
-#calc_vxc.o \
-#calc_exx2.o \
-#solve_hf.o \
-#wfreq.o
-##io_eigenfreq.o
+solve_wfreq.o \
+wfreq.o \
+wfreq_readin.o \
+wfreq_restart.o \
+wfreq_setup.o
 
 PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a
+
+QEMODS = \
+../../Modules/libqemod.a \
+../../KS_Solvers/libks_solvers.a \
+../../FFTXlib/libqefft.a \
+../../upflib/libupf.a \
+../../LAXlib/libqela.a \
+../../UtilXlib/libutil.a \
+../../XClib/xc_lib.a
+
 WESTLIBS = \
 ../IO_kernel/lib_io_kernel.a \
 ../DFPT_kernel/lib_dfpt_kernel.a \
@@ -91,18 +52,21 @@ WESTLIBS = \
 ../Coulomb_kernel/lib_coulomb_kernel.a \
 ../FFT_kernel/lib_fft_kernel.a \
 ../Tools/libtools.a \
-../Modules/libmodules.a
+../Modules/libmodules.a \
+../Libraries/Forpy/libforpy.a \
+../Libraries/Json/libjson.a \
+../Libraries/Base64/libbase64.a
 
-
-TLDEPS= bindir mods libs pw
+TLDEPS = bindir mods libs pw
 
 all : title tldeps wfreq.x
 
-wfreq.x : $(PWOBJS) $(WFREQ_OBJS) $(QEMODS) $(LIBOBJS)
+wfreq.x : $(PWOBJS) $(WFREQ_OBJS) $(QEMODS) $(WESTLIBS) $(LIBOBJS)
 	$(LD) $(LDFLAGS) -o wfreq.x \
-		$(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS) ${PYT_LDFLAGS}
+		$(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(QELIBS) $(LIBS) ${PYT_LDFLAGS}
 	- ( cd ../../bin ; ln -fs ../West/Wfreq/wfreq.x . )
-tldeps:
+
+tldeps :
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 clean :

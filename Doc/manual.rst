@@ -34,7 +34,7 @@ input_west
    * - **Default**
      - "pwscf"
    * - **Description**
-     - Prefix prepended to the QuantumEspresso save folder.
+     - Prefix prepended to the Quantum ESPRESSO save folder.
 
 
 .. data:: west_prefix

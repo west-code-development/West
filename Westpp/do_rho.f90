@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -26,7 +26,7 @@ SUBROUTINE do_rho ( )
   USE fft_base,              ONLY : dfftp,dffts
   USE wvfct,                 ONLY : nbnd
   USE buffers,               ONLY : get_buffer
-  USE wavefunctions_module,  ONLY : evc,psic
+  USE wavefunctions,         ONLY : evc,psic
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k

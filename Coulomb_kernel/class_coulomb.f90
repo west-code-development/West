@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -24,7 +24,7 @@ MODULE class_coulomb
       !
       REAL(DP) :: div                              ! divergence 
       CHARACTER(LEN=7) :: singularity_removal_mode ! singularity_removal_mode
-      CHARACTER(LEN=5) :: cdriver                  ! FFT driver = "Wave", "Dense"
+      CHARACTER(LEN=5) :: cdriver                  ! FFT driver = "Wave", "Rho"
       LOGICAL :: l_use_igq                         ! use igq map
       INTEGER :: iq                                ! q-point
       REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW 
@@ -88,7 +88,7 @@ MODULE class_coulomb
       SELECT CASE ( this%singularity_removal_mode )
       CASE ( 'default' )
       CASE ( 'gb' )
-         IF ( this%cdriver == 'Wave' ) CALL errore("sqvc_init", "gb singularity removal mode requires Dense grid",1)
+         IF ( this%cdriver == 'Wave' ) CALL errore("sqvc_init", "gb singularity removal mode requires Rho grid",1)
       CASE DEFAULT
          CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
       END SELECT
@@ -104,12 +104,12 @@ MODULE class_coulomb
          ENDIF
          numg = npwq
          numgx = npwqx
-      CASE ( 'Dense' )
-         IF (this%l_use_igq) CALL errore("sqvc_init", "igq map not used with Dense grid",1)
+      CASE ( 'Rho' )
+         IF (this%l_use_igq) CALL errore("sqvc_init", "igq map not used with Rho grid",1)
          numg = ngm
          numgx = ngm
       CASE DEFAULT 
-         CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Dense",1)
+         CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Rho",1)
       END SELECT
       !
       IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc ) 

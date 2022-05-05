@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,23 +7,24 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 SUBROUTINE set_npwq()
   !-----------------------------------------------------------------------
   !
-  USE kinds,           ONLY : DP
-  USE westcom,         ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,l_use_ecutrho,fftdriver,dfft_io
-  USE mp,              ONLY : mp_max, mp_sum
-  USE mp_global,       ONLY : intra_bgrp_comm, inter_bgrp_comm, nbgrp, inter_pool_comm, intra_pool_comm
-  USE gvect,           ONLY : ig_l2g,ngm,ngmx,g
-  USE gvecw,           ONLY : gcutw
-  USE pwcom,           ONLY : npw,npwx
-  USE control_flags,   ONLY : gamma_only
-  USE types_bz_grid,   ONLY : q_grid
-  USE fft_base,        ONLY : dffts
+  USE kinds,                  ONLY : DP
+  USE westcom,                ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,l_use_ecutrho,fftdriver,dfft_io
+  USE mp,                     ONLY : mp_max, mp_sum
+  USE mp_global,              ONLY : intra_bgrp_comm
+  USE gvect,                  ONLY : ig_l2g,ngm,ngmx,g
+  USE gvecw,                  ONLY : gcutw
+  USE pwcom,                  ONLY : npwx
+  USE control_flags,          ONLY : gamma_only
+  USE types_bz_grid,          ONLY : q_grid
+  USE fft_base,               ONLY : dffts
+  USE klist,                  ONLY : ngk
   !
   IMPLICIT NONE
   !
@@ -32,31 +33,26 @@ SUBROUTINE set_npwq()
   INTEGER, EXTERNAL :: n_plane_waves
   REAL(DP), ALLOCATABLE :: gq2kin(:)
   INTEGER :: iq, ig
-!  INTEGER :: npwqx_g
-!  INTEGER, ALLOCATABLE :: igq_l2g(:)
   !
   IF ( gamma_only ) THEN
      !
      IF( l_use_ecutrho ) THEN
         npwq      = ngm
         npwqx     = ngmx
-        fftdriver = 'Dense'
+        fftdriver = 'Rho'
         dfft_io   = dffts
      ELSE
-        npwq      = npw
+        npwq      = ngk(1)
         npwqx     = npwx
         fftdriver = 'Wave'
         CALL set_dfft_ecutwf( dfft_io )
      ENDIF
-     !ALLOCATE(q0ig_l2g(npwq0))
-     !q0ig_l2g(1:npwq0) = ig_l2g(1:npwq0)
-     !npwq0_g=MAXVAL(q0ig_l2g(1:npwq0))
      npwq_g=MAXVAL(ig_l2g(1:npwq))
      CALL mp_max(npwq_g,intra_bgrp_comm)
      !
   ELSE
      !
-     IF( l_use_ecutrho ) CALL errore("set_npwq", "Dense grid not implemented with q-points",1)
+     IF( l_use_ecutrho ) CALL errore("set_npwq", "Rho grid not implemented with q-points",1)
      fftdriver = 'Wave'
      !
      CALL set_dfft_ecutwf( dfft_io )
@@ -66,12 +62,9 @@ SUBROUTINE set_npwq()
      ALLOCATE( gq2kin(npwqx) )
      ALLOCATE( ngq(q_grid%np) )
      ALLOCATE( igq_q(npwqx,q_grid%np) )
-     !ALLOCATE( igq_l2g(npwqx,q_grid%nps) )
      igq_q(:,:) = 0
-     !igq_l2g(:,:) = 0
      DO iq = 1, q_grid%np
         CALL gq_sort( q_grid%p_cart(:,iq), ngm, g, gcutw, ngq(iq), igq_q(:,iq), gq2kin )
-        !CALL gq_l2gmap( ngm, ig_l2g(1), ngq(iq), igq_q(1,iq), igq_l2g(1,iq) )
      ENDDO
      !
      DEALLOCATE(gq2kin)
@@ -82,41 +75,18 @@ SUBROUTINE set_npwq()
      !
      ngq_g = 0
      ngq_g(:) = ngq(:)
-     !CALL mp_sum( ngq_g, inter_pool_comm )
-     !CALL mp_sum( ngq_g, intra_pool_comm )
      CALL mp_sum( ngq_g, intra_bgrp_comm )
-     !ngq_g = ngq_g / nbgrp
      !
      ! ... compute the maximum G vector index among all q+G in processors
      !
-     npwq_g = 0 
+     npwq_g = 0
      DO iq = 1, q_grid%np
         DO ig = 1, ngq(iq)
            npwq_g = MAX( npwq_g, ig_l2g(igq_q(ig,iq)) )
         ENDDO
      ENDDO
-     !npwq_g = MAXVAL( igq_l2g(:,:) )
      !
-     !CALL mp_max( npwq_g, intra_pool_comm )
      CALL mp_max( npwq_g, intra_bgrp_comm )
-     !
-     ! ... compute the maximum number of G vectors among all q-points
-     !
-!     npwqx_g = MAXVAL( ngq_g(1:q_grid%nps) )
-     !
-     ! ... define a further l2g map
-     !
-!     ALLOCATE( igq_l2g_kdip(npwqx_g, q_grid%nps) )
-!     igq_l2g_kdip(:,:) = 0
-!     !
-!     DO iq = 1, q_grid%nps
-!        ALLOCATE( igq_l2g(ngq(iq)) )
-!        DO ig = 1, ngq(iq)
-!           igq_l2g(ig) = ig_l2g( igq_q(ig,iq) ) 
-!        ENDDO 
-!        CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq), ngq(iq), igq_l2g, igq_l2g_kdip(1,iq) )
-!        DEALLOCATE( igq_l2g ) 
-!     ENDDO
      !
   ENDIF
   !
@@ -131,9 +101,9 @@ SUBROUTINE gq_sort( q, ngm, g, ecut, ngq, igq, gq )
    ! ... NB: this version should yield the same ordering for different ecut
    ! ...     and the same ordering in all machines
    !
-   USE kinds,     ONLY : DP
-   USE constants, ONLY : eps8
-   USE westcom,   ONLY : npwqx
+   USE kinds,                 ONLY : DP
+   USE constants,             ONLY : eps8
+   USE westcom,               ONLY : npwqx
    !
    IMPLICIT NONE
    !
@@ -194,33 +164,6 @@ SUBROUTINE gq_sort( q, ngm, g, ecut, ngq, igq, gq )
    !
 END SUBROUTINE
 !
-!----------------------------------------------------------------------------
-!SUBROUTINE gq_l2gmap( ngm, ig_l2g, ngk, igk, igk_l2g )
-!  !----------------------------------------------------------------------------
-!  !
-!  ! ... This subroutine maps local G+k index to the global G vector index
-!  ! ... the mapping is used to collect wavefunctions subsets distributed
-!  ! ... across processors.
-!  ! ... Written by Carlo Cavazzoni
-!  !
-!  IMPLICIT NONE
-!  !
-!  ! ... Here the dummy variables
-!  !
-!  INTEGER, INTENT(IN)  :: ngm, ngk, igk(ngk), ig_l2g(ngm)
-!  INTEGER, INTENT(OUT) :: igk_l2g(ngk)
-!  INTEGER              :: ig
-!  !
-!  ! ... input: mapping between local and global G vector index
-!  !
-!  DO ig = 1, ngk
-!     !
-!     igk_l2g(ig) = ig_l2g(igk(ig))
-!     !
-!  END DO
-!  !
-!END SUBROUTINE
-!
 !-----------------------------------------------------------------------
 SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
   !-----------------------------------------------------------------------
@@ -230,8 +173,8 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
   ! ... across processors.
   ! ... This map is used to obtained the G+k grids related to each kpt
   !
-  USE mp_bands, ONLY : intra_bgrp_comm
-  USE mp,       ONLY : mp_sum
+  USE mp_bands,               ONLY : intra_bgrp_comm
+  USE mp,                     ONLY : mp_sum
   !
   IMPLICIT NONE
   !
@@ -301,7 +244,7 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
 END SUBROUTINE
  !
  SUBROUTINE set_dfft_ecutwf (dfft)
-    ! 
+    !
     ! OUTPUT  : dfft = FFT descriptor with real space set accorfing to ecutwfc
     !
     USE kinds,                ONLY : DP
@@ -314,7 +257,11 @@ END SUBROUTINE
     USE mp_bands,             ONLY : ntask_groups
     USE mp_global,            ONLY : intra_bgrp_comm,inter_pool_comm
     USE stick_base,           ONLY : sticks_map
-    USE gvecs,                ONLY : gcutms 
+    USE gvecs,                ONLY : gcutms
+    USE realus,               ONLY : real_space
+    USE symm_base,            ONLY : fft_fact
+    USE mp_bands,             ONLY : nyfft,nproc_bgrp
+    USE command_line_options, ONLY : nmany_
     !
     IMPLICIT NONE
     !
@@ -323,17 +270,14 @@ END SUBROUTINE
     !
     TYPE ( fft_type_descriptor ), INTENT(OUT) :: dfft ! customized fft descriptor
     !
-    ! Workspace 
+    ! Workspace
     !
     REAL(DP) :: gkcut
     TYPE( sticks_map ) :: smap
     INTEGER :: ik
     !
-#if defined (__MPI)
-  LOGICAL :: lpara = .true.
-#else
-  LOGICAL :: lpara = .false.
-#endif
+    LOGICAL :: lpara
+    lpara =  ( nproc_bgrp > 1 )
     !
     ! ... calculate gkcut = max |k+G|^2, in (2pi/a)^2 units
     !
@@ -359,6 +303,8 @@ END SUBROUTINE
     !
     CALL mp_max (gkcut, inter_pool_comm )
     !
-    CALL fft_type_init( dfft, smap, "wave", gamma_only, lpara, intra_bgrp_comm, at, bg, gkcut, MAX(gcutms/gkcut/4.0_DP,1.0_DP) )
+    dfft%has_task_groups = (ntask_groups >1) .and. .not. real_space
+    CALL fft_type_init( dfft, smap, "wave", gamma_only, lpara, intra_bgrp_comm, at, bg, gkcut, &
+    & MAX(gcutms/gkcut/4.0_DP,1.0_DP), fft_fact=fft_fact,nyfft=nyfft,nmany=nmany_)
     !
-END SUBROUTINE 
+END SUBROUTINE

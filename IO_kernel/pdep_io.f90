@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -14,16 +14,31 @@
 MODULE pdep_io
   !----------------------------------------------------------------------------
   !
-  USE kinds,         ONLY : DP
+  USE kinds,         ONLY : DP,i8b
   USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,&
-                          & my_bgrp_id,inter_bgrp_comm,inter_pool_comm,intra_pool_comm
+                          & my_bgrp_id,inter_bgrp_comm,inter_pool_comm
   USE westcom,       ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q
   USE gvect,         ONLY : ig_l2g
-  USE json_module,   ONLY : json_file
   USE control_flags, ONLY : gamma_only
-  USE base64_module
+  USE base64_module, ONLY : islittleendian
   !
   IMPLICIT NONE
+  !
+  ! Base64 was changed to binary in order to improve I/O performance.
+  !
+  ! A simple format is used here:
+  ! a header consisting of HD_LENGTH=32 integers, followed by raw data.
+  ! Currently only 3 integers are used in the header, storing: 
+  ! (1) the version identifier of the format
+  ! (2) the endianness (0 for GE, 1 for LE)
+  ! (3) the length of the raw data (number of COMPLEX DP entries)
+  ! (4-32) not used (yet).  
+  !
+  INTEGER, PARAMETER :: HD_LENGTH = 32
+  INTEGER, PARAMETER :: HD_VERSION = 210405
+  INTEGER, PARAMETER :: HD_ID_VERSION = 1
+  INTEGER, PARAMETER :: HD_ID_LITTLE_ENDIAN = 2
+  INTEGER, PARAMETER :: HD_ID_DIMENSION = 3
   !
   CONTAINS
     !
@@ -36,7 +51,6 @@ MODULE pdep_io
     SUBROUTINE pdep_merge_and_write_G(fname,pdepg,iq)
       !
       USE mp_wave,      ONLY : mergewf
-      USE mp,           ONLY : mp_bcast,mp_max
       !
       IMPLICIT NONE
       !
@@ -50,29 +64,27 @@ MODULE pdep_io
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: ig
-      CHARACTER(LEN=:),ALLOCATABLE :: charbase64
-      INTEGER :: nbytes, ndim, iunit, nlen
-      CHARACTER(LEN=30) :: endian
+      INTEGER :: ndim, iunit
       INTEGER :: npwqx_g
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:)
       INTEGER, PARAMETER :: default_iq = 1
       INTEGER :: iq_
+      INTEGER :: header(HD_LENGTH)
+      INTEGER(i8b) :: offset
       !
-      CALL start_clock('pdep_write')
+      CALL start_clock( 'pdep_write' )
       !
-      IF( PRESENT(iq) ) THEN
+      IF(PRESENT(iq)) THEN
          iq_ = iq
       ELSE
          iq_ = default_iq
       ENDIF
       !
-      IF ( .NOT. gamma_only) THEN
+      IF(.NOT. gamma_only) THEN
          !
          ! Resume all components
          !
          ndim = ngq_g(iq_)
-         !
-         ! <NEW>
          !
          npwqx_g = MAXVAL( ngq_g(:) )
          ALLOCATE( igq_l2g_kdip(npwqx_g) )
@@ -85,43 +97,29 @@ MODULE pdep_io
          CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
          DEALLOCATE( igq_l2g )
          !
-         ! </NEW>
-         !
-         ! npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
-         ! CALL mp_max(npwq_g,intra_pool_comm)
-         ! CALL mp_max(npwq_g,intra_bgrp_comm)
-         !
          ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
+         tmp_vec = 0._DP
          !
-         CALL mergewf( pdepg(:), tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+         CALL mergewf( pdepg(:), tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
          DEALLOCATE( igq_l2g_kdip )
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
-         IF(me_bgrp==root_bgrp) THEN
+         IF(me_bgrp == root_bgrp) THEN
             !
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
-            ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
-            CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64)
-            !
-            IF( islittleendian() ) THEN
-               endian = '"islittleendian" : true'
-            ELSE
-               endian = '"islittleendian" : false'
+            header = 0
+            header(HD_ID_VERSION) = HD_VERSION
+            header(HD_ID_DIMENSION) = ndim
+            IF(islittleendian()) THEN
+               header(HD_ID_LITTLE_ENDIAN) = 1
             ENDIF
             !
-            OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-            WRITE( iunit, '(a)' ) '{'
-            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "name" : "eigenpotential", "type" : "complex double", "space" : "G",&
-                         "ndim" : ', ndim, ', "encoding" : "base64", '//TRIM(endian)//' }'
-            WRITE( iunit, '(a)') ', "data" : '
-            WRITE( iunit, '(a)' ) '"'//charbase64//'"'
-            WRITE( iunit, '(a)' ) '}'
+            OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED' )
+            offset = 1
+            WRITE( iunit, POS=offset ) header
+            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            WRITE( iunit, POS=offset ) tmp_vec(1:ndim)
             CLOSE( iunit )
-            !
-            DEALLOCATE( charbase64 )
             !
          END IF
          !
@@ -132,36 +130,28 @@ MODULE pdep_io
          ! Resume all components
          !
          ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
+         tmp_vec = 0._DP
          !
-         CALL mergewf( pdepg(:), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+         CALL mergewf( pdepg(:), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
-         IF(me_bgrp==root_bgrp) THEN
+         IF(me_bgrp == root_bgrp) THEN
             !
             ndim = npwq_g
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
-            ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
-            CALL base64_encode_complex(tmp_vec(1:ndim), ndim, charbase64)
-            !
-            IF( islittleendian() ) THEN
-               endian = '"islittleendian" : true'
-            ELSE
-               endian = '"islittleendian" : false'
+            header = 0
+            header(HD_ID_VERSION) = HD_VERSION
+            header(HD_ID_DIMENSION) = ndim
+            IF(islittleendian()) THEN
+               header(HD_ID_LITTLE_ENDIAN) = 1
             ENDIF
             !
-            OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-            WRITE( iunit, '(a)' ) '{'
-            WRITE( iunit, '(a,i0,a)' ) '"meta" : { "name" : "eigenpotential", "type" : "complex double", "space" : "G",&
-                         "ndim" : ', ndim, ', "encoding" : "base64", '//TRIM(endian)//' }'
-            WRITE( iunit, '(a)') ', "data" : '
-            WRITE( iunit, '(a)' ) '"'//charbase64//'"'
-            WRITE( iunit, '(a)' ) '}'
+            OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED' )
+            offset = 1
+            WRITE( iunit, POS=offset ) header
+            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            WRITE( iunit, POS=offset ) tmp_vec(1:ndim)
             CLOSE( iunit )
-            !
-            DEALLOCATE( charbase64 )
             !
          ENDIF
          !
@@ -169,7 +159,7 @@ MODULE pdep_io
          !
       ENDIF
       !
-      CALL stop_clock('pdep_write')
+      CALL stop_clock( 'pdep_write' )
       !
     END SUBROUTINE
     !
@@ -182,9 +172,7 @@ MODULE pdep_io
     SUBROUTINE pdep_read_G_and_distribute(fname,pdepg,iq)
       !
       USE mp_wave,      ONLY : splitwf
-      USE mp,           ONLY : mp_bcast, mp_max
-      USE mp_global,    ONLY : intra_bgrp_comm
-      USE base64_module
+      USE mp,           ONLY : mp_bcast
       !
       IMPLICIT NONE
       !
@@ -196,70 +184,64 @@ MODULE pdep_io
       !
       ! Workspace
       !
-      TYPE(json_file) :: json
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: ig
-      CHARACTER(LEN=1000) :: line
-      CHARACTER(LEN=:),ALLOCATABLE :: charbase64
-      CHARACTER(LEN=:),ALLOCATABLE :: endian
-      INTEGER :: nbytes, ndim, iunit, nlen
-      LOGICAL :: found, isle
+      INTEGER :: ndim, iunit
       INTEGER :: npwqx_g
       INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:)
       INTEGER, PARAMETER :: default_iq = 1
       INTEGER :: iq_
+      INTEGER :: ierr
+      INTEGER :: header(HD_LENGTH)
+      INTEGER(i8b) :: offset
       !
-      CALL start_clock('pdep_read')
+      CALL start_clock( 'pdep_read' )
       !
-      IF( PRESENT(iq) ) THEN
+      IF(PRESENT(iq)) THEN
          iq_ = iq
       ELSE
          iq_ = default_iq
       ENDIF
       !
-      IF ( .NOT. gamma_only ) THEN
+      IF(.NOT. gamma_only) THEN
          !
          ! Resume all components
          !
          ndim = ngq_g(iq_)
-         ! npwq_g = MAXVAL(igq_l2g_kdip(1:ndim,iq))
-         ! CALL mp_max(npwq_g,intra_pool_comm)
-         ! CALL mp_max(npwq_g,intra_bgrp_comm)
          !
          ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
-         pdepg=0._DP
+         tmp_vec = 0._DP
+         pdepg = 0._DP
          !
-         IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             !
             ! ONLY ROOT W/IN BGRP READS
             !
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
-            !
-            IF(me_bgrp==root_bgrp) THEN
+            IF(me_bgrp == root_bgrp) THEN
                !
-               ALLOCATE(CHARACTER(LEN=(nlen+2)) :: charbase64)
+               OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED', STATUS='OLD', IOSTAT=ierr )
+               IF(ierr /= 0) THEN
+                  CALL errore('pdep_read', 'Cannot RD F:'//TRIM(ADJUSTL(fname)),1)
+               ENDIF
                !
-               OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-               READ( iunit, * )
-               READ( iunit, '(a)' ) line
-               READ( iunit, * )
-               READ( iunit, '(a)' ) charbase64
+               offset = 1
+               READ( iunit, POS=offset ) header
+               IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
+                  CALL errore('pdep_read', 'Unknown file format:'//TRIM(ADJUSTL(fname)),1)
+               ENDIF
+               IF(ndim /= header(HD_ID_DIMENSION)) THEN
+                  CALL errore('pdep_read', 'Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
+               ENDIF
+               IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
+                  .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
+                  CALL errore('pdep_read', 'Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
+               ENDIF
+               !
+               offset = 1+HD_LENGTH*SIZEOF(header(1))
+               READ( iunit, POS=offset ) tmp_vec(1:ndim)
                CLOSE( iunit )
-               CALL base64_decode_complex(charbase64(2:(nlen+1)), ndim, tmp_vec(1:ndim))
-               DEALLOCATE( charbase64 )
-               !
-               CALL json%load_from_string("{"//TRIM(line)//"}")
-               CALL json%get('meta.islittleendian', isle, found)
-               CALL json%destroy()
-               !
-               IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
                !
             END IF
-            !
-            !
-            ! <NEW>
             !
             npwqx_g = MAXVAL( ngq_g(:) )
             ALLOCATE( igq_l2g_kdip(npwqx_g) )
@@ -272,67 +254,68 @@ MODULE pdep_io
             CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
             DEALLOCATE( igq_l2g )
             !
-            ! </NEW>
-            !
-            CALL splitwf( pdepg, tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+            CALL splitwf( pdepg, tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
             DEALLOCATE( igq_l2g_kdip )
             !
          ENDIF
          !
          DEALLOCATE( tmp_vec )
          !
-         CALL mp_bcast(pdepg,0,inter_bgrp_comm)
-         CALL mp_bcast(pdepg,0,inter_pool_comm)
-      !
+         CALL mp_bcast( pdepg, 0, inter_bgrp_comm )
+         CALL mp_bcast( pdepg, 0, inter_pool_comm )
+         !
       ELSE
          !
          ! Resume all components
          !
          ALLOCATE( tmp_vec(npwq_g) )
-         tmp_vec=0._DP
-         pdepg=0._DP
+         tmp_vec = 0._DP
+         pdepg = 0._DP
          !
-         IF(my_pool_id==0.AND.my_bgrp_id==0) THEN
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             !
             ! ONLY ROOT W/IN BGRP READS
             !
             ndim = npwq_g
-            nbytes = SIZEOF(tmp_vec(1)) * ndim
-            nlen = lenbase64(nbytes)
             !
-            IF(me_bgrp==root_bgrp) THEN
+            IF(me_bgrp == root_bgrp) THEN
                !
-               ALLOCATE(CHARACTER(LEN=(nlen+2)) :: charbase64)
+               OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED', STATUS='OLD', IOSTAT=ierr )
+               IF(ierr /= 0) THEN
+                  CALL errore('pdep_read', 'Cannot RD F:'//TRIM(ADJUSTL(fname)), 1)
+               ENDIF
                !
-               OPEN( NEWUNIT=iunit, FILE = TRIM(fname) )
-               READ( iunit, * )
-               READ( iunit, '(a)' ) line
-               READ( iunit, * )
-               READ( iunit, '(a)' ) charbase64
+               offset = 1
+               READ( iunit, POS=offset ) header
+               IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
+                  CALL errore('pdep_read', 'Unknown file format:'//TRIM(ADJUSTL(fname)),1)
+               ENDIF
+               IF(ndim /= header(HD_ID_DIMENSION)) THEN
+                  CALL errore('pdep_read', 'Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
+               ENDIF
+               IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
+                  .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
+                  CALL errore('pdep_read', 'Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
+               ENDIF
+               !
+               offset = 1+HD_LENGTH*SIZEOF(header(1))
+               READ( iunit, POS=offset ) tmp_vec(1:ndim)
                CLOSE( iunit )
-               CALL base64_decode_complex(charbase64(2:(nlen+1)), ndim, tmp_vec(1:ndim))
-               DEALLOCATE( charbase64 )
-               !
-               CALL json%load_from_string("{"//TRIM(line)//"}")
-               CALL json%get('meta.islittleendian', isle, found)
-               CALL json%destroy()
-               !
-               IF (islittleendian() .NEQV. isle) CALL base64_byteswap_complex(nbytes,tmp_vec(1:ndim))
                !
             END IF
             !
-            CALL splitwf( pdepg, tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+            CALL splitwf( pdepg, tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
             !
          ENDIF
          !
          DEALLOCATE( tmp_vec )
          !
-         CALL mp_bcast(pdepg,0,inter_bgrp_comm)
-         CALL mp_bcast(pdepg,0,inter_pool_comm)
-      !
+         CALL mp_bcast( pdepg, 0, inter_bgrp_comm )
+         CALL mp_bcast( pdepg, 0, inter_pool_comm )
+         !
       ENDIF
       !
-      CALL stop_clock('pdep_read')
+      CALL stop_clock( 'pdep_read' )
       !
     END SUBROUTINE
     !

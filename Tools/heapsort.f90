@@ -14,25 +14,20 @@
 MODULE sort_tools
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : DP
+  USE kinds,                ONLY : DP,i8b
   !
   IMPLICIT NONE
   !
-  INTEGER, PARAMETER :: i8b = selected_int_kind(18)
-  !
   INTERFACE swap
-     MODULE PROCEDURE swap_i4
-     MODULE PROCEDURE swap_i8
+     MODULE PROCEDURE swap_i4, swap_i8
   END INTERFACE
 
   INTERFACE downheap
-     MODULE PROCEDURE downheap_i4
-     MODULE PROCEDURE downheap_i8
+     MODULE PROCEDURE downheap_i4, downheap_i8
   END INTERFACE
 
   INTERFACE heapsort
-     MODULE PROCEDURE heapsort_i4
-     MODULE PROCEDURE heapsort_i8
+     MODULE PROCEDURE heapsort_i4, heapsort_i8
   END INTERFACE
   !
   CONTAINS

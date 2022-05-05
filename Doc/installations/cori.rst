@@ -13,7 +13,7 @@ Cori is a Cray XC40 located at National Energy Research Scientific Computing Cen
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on May 12, 2021):
+WEST executables can be compiled using the following script (tested on Aug 1, 2021):
 
 .. code-block:: bash
 
@@ -39,7 +39,7 @@ WEST executables can be compiled using the following script (tested on May 12, 2
    cd West
 
    make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-   make all
+   make -j 8 all
 
 To use the script do:
 

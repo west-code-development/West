@@ -1,5 +1,5 @@
-!
-! Copyright (C) 2015-2021 M. Govoni 
+
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -16,36 +16,26 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   !
   ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = nb1, nb2
   !
-  USE kinds,                ONLY : DP 
+  USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,my_image_id
   USE mp,                   ONLY : mp_sum,mp_bcast
-  USE io_global,            ONLY : stdout, ionode
-  USE io_files,             ONLY : nwordwfc, iunwfc
-  USE scf,                  ONLY : rho, rho_core, rhog_core
-  USE gvect,                ONLY : g,nl,gstart,ngm_g,ngm
-  USE gvecw,                ONLY : gcutw
-  USE cell_base,            ONLY : tpiba2,omega,tpiba,at,alat
-  USE fft_base,             ONLY : dfftp,dffts
-  USE fft_interfaces,       ONLY : fwfft, invfft
-  USE constants,            ONLY : tpi,fpi,rytoev,e2
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,nspin,current_k,ngk
+  USE io_global,            ONLY : stdout
+  USE io_files,             ONLY : nwordwfc
+  USE gvect,                ONLY : g,gstart,ngm
+  USE cell_base,            ONLY : omega
+  USE fft_base,             ONLY : dffts
+  USE pwcom,                ONLY : npw,npwx,nbnd,igk_k,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
-  USE wavefunctions_module, ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ
+  USE wavefunctions,        ONLY : evc,psic,psic_nc
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ
   USE control_flags,        ONLY : gamma_only
-  USE noncollin_module,     ONLY : noncolin,npol 
+  USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
-  USE funct,                ONLY : dft_is_hybrid,init_dft_exxrpa,stop_exx
-  USE exx,                  ONLY : x_gamma_extrapolation,exxdiv_treatment,exx_grid_init,exx_div_check,&
-                                   &deallocate_exx,exxinit,vexx,exx_grid_initialized
-  USE uspp,                 ONLY : vkb,nkb
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar
   USE class_idistribute,    ONLY : idistribute
-  USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
-                                   vcut_get,  vcut_spheric_get, vcut_destroy
-  USE types_bz_grid,        ONLY : k_grid, q_grid, compute_phase
+  USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -53,22 +43,21 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   ! I/O
   !
   INTEGER, INTENT(IN) :: nb1, nb2
-  REAL(DP),INTENT(OUT) :: sigma_exx( nb1:nb2, k_grid%nps) 
+  REAL(DP), INTENT(OUT) :: sigma_exx( nb1:nb2, k_grid%nps)
   !
   ! Workspace
   !
-  COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
-  COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
+  COMPLEX(DP), ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
+  COMPLEX(DP), ALLOCATABLE :: evckmq(:,:),phase(:)
   REAL(DP), EXTERNAL :: DDOT
-  COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs,ikq
+  INTEGER :: ib,iv,ir,iks,ik,is,ig,iv_glob,iq,ikqs,ikq
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   LOGICAL :: l_gammaq
-  REAL(DP) :: g0(3), peso
+  REAL(DP) :: g0(3),peso
   !
   WRITE(stdout,'(5x,a)') ' '
   CALL io_push_bar()
@@ -83,7 +72,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
      ALLOCATE( phase(dffts%nnr) )
      ALLOCATE( evckmq(npwx*npol,nbnd) )
   ENDIF
-  IF(noncolin) THEN 
+  IF(noncolin) THEN
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
   ELSE
      ALLOCATE( pertr( dffts%nnr ) )
@@ -97,52 +86,21 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   barra_load = k_grid%nps * ( nb2-nb1 + 1 )
   CALL start_bar_type( barra, 'sigmax', barra_load )
   !
-  ! LOOP 
+  ! LOOP
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
-     ik = k_grid%ip(iks) 
+     ik = k_grid%ip(iks)
      is = k_grid%is(iks)
-     !
-     ! ... Set k-point, spin, kinetic energy, needed by Hpsi
-     !
      current_k = iks
-     IF ( lsda ) current_spin = isk(iks)
-     call g2_kin( iks )
-     !
-     ! ... More stuff needed by the hamiltonian: nonlocal projectors
-     !
-     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
      npw = ngk(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps>1) THEN
-        !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol 
-        !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        !CALL mp_bcast(evc,0,inter_image_comm)
-        !CALL davcio(evc,lrwfc,iuwfc,iks,-1)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
-!     !
-!     ! ... Needed for LDA+U
-!     !
-!     IF ( nks > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
-!          CALL get_buffer ( wfcU, nwordwfcU, iunhub, iks )
-!     !
-!     current_k = iks
-!     current_spin = isk(iks)
-!     !
-!     CALL gk_sort(xk(1,iks),ngm,g,gcutw,npw,igk,g2kin)
-!     g2kin=g2kin*tpiba2
-!     !
-!     ! reads unperturbed wavefuctions psi_k in G_space, for all bands
-!     !
-!     !
-!     CALL init_us_2 (npw, igk, xk (1, iks), vkb)
-     !
      !
      DO ib = nb1, nb2
         !
@@ -161,15 +119,14 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
            !
            IF (gamma_only) THEN
               l_gammaq = .TRUE.
-              CALL pot3D%init('Dense',.FALSE.,'gb')
+              CALL pot3D%init('Rho',.FALSE.,'gb')
               nbndval = nbnd_occ(iks)
            ELSE
               l_gammaq = q_grid%l_pIsGamma(iq)
-              CALL pot3D%init('Dense',.FALSE.,'gb',iq)
+              CALL pot3D%init('Rho',.FALSE.,'gb',iq)
               !
-              !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !M
-              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        
-              ikqs = k_grid%ipis2ips(ikq,is)                                                        
+              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )
+              ikqs = k_grid%ipis2ips(ikq,is)
               CALL compute_phase( g0, 'cart', phase )
               !
               nbndval = nbnd_occ(ikqs)
@@ -191,27 +148,26 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
                  DO ir=1,dffts%nnr
                     pertr(ir)=psic(ir)*pertr(ir)
                  ENDDO
-                 CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Dense')
+                 CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Rho')
               ELSEIF(noncolin) THEN
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
+                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Rho') ! no igk
               ELSE
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv_glob),pertr,'Wave',igk_k(1,ikqs))
-                 DO ir=1,dffts%nnr 
+                 DO ir=1,dffts%nnr
                     pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Dense') ! no igk
-              ENDIF 
+                 CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
+              ENDIF
               !
               DO ig = 1,ngm
-                 pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
+                 pertg(ig) = pertg(ig) * pot3D%sqvc(ig)
               ENDDO
               sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
-              !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
               IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
               !
            ENDDO ! iv
@@ -227,17 +183,17 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   CALL stop_bar_type( barra, 'sigmax' )
   !
   CALL mp_sum( sigma_exx, intra_bgrp_comm )
-  CALL mp_sum( sigma_exx, inter_image_comm ) 
+  CALL mp_sum( sigma_exx, inter_image_comm )
   !
-  DEALLOCATE( pertg ) 
-  IF( noncolin ) THEN 
-    DEALLOCATE( pertr_nc ) 
+  DEALLOCATE( pertg )
+  IF( noncolin ) THEN
+    DEALLOCATE( pertr_nc )
   ELSE
-    DEALLOCATE( pertr ) 
+    DEALLOCATE( pertr )
   ENDIF
   IF (.NOT.gamma_only) THEN
      DEALLOCATE( phase )
      DEALLOCATE( evckmq )
   ENDIF
   !
-END SUBROUTINE 
+END SUBROUTINE

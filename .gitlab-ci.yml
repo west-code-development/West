@@ -30,13 +30,13 @@ stages:
     - cd QEDIR
     - git describe --tags --always
     - ./configure --enable-openmp=yes
-    - make -j4 pw
+    - make -j8 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe --tags --always
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-    - make -j4 all
+    - make -j8 all
     - ls ../bin
 
 .template_test:
@@ -46,13 +46,13 @@ stages:
     - cd QEDIR
     - git describe --tags --always
     - ./configure --enable-openmp=yes
-    - make -j4 pw
+    - make -j8 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe --tags --always
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-    - make -j4 all
+    - make -j8 all
     - cd test-suite
     - make NP=$CI_NP NI=$CI_NI NB=$CI_NB NT=$CI_NT
   artifacts:
@@ -88,6 +88,7 @@ gcc1130_0001_t:
   extends:
     - .template_bot_start
     - .template_test
+  needs: ["gcc1130_0001"]
   image: miccomcenter/bot:gcc1130_0001
 
 gcc1030_0001_t:
@@ -99,6 +100,7 @@ gcc1030_0001_t:
   extends:
     - .template_bot_start
     - .template_test
+  needs: ["gcc1030_0001"]
   image: miccomcenter/bot:gcc1030_0001
 
 # Nightly tests
@@ -153,3 +155,4 @@ west_doc_build:
     - cd Doc
     - make html
     - ls _build/html
+  needs: []

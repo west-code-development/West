@@ -27,10 +27,12 @@ MODULE pdep_io
   ! Base64 was changed to binary in order to improve I/O performance.
   !
   ! A simple format is used here:
-  ! a header consisting of 32 (HD_LENGTH) integers, followed by raw data.
-  ! Currently only 3 integers are used in the header, storing the version
-  ! of the binary format, which could change in the future, the endianness,
-  ! and the length of the raw data which is useful when reading the file.
+  ! a header consisting of HD_LENGTH=32 integers, followed by raw data.
+  ! Currently only 3 integers are used in the header, storing: 
+  ! (1) the version identifier of the format
+  ! (2) the endianness (0 for GE, 1 for LE)
+  ! (3) the length of the raw data (number of COMPLEX DP entries)
+  ! (4-32) not used (yet).  
   !
   INTEGER, PARAMETER :: HD_LENGTH = 32
   INTEGER, PARAMETER :: HD_VERSION = 210405
@@ -115,7 +117,7 @@ MODULE pdep_io
             OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED' )
             offset = 1
             WRITE( iunit, POS=offset ) header
-            offset = 1+HD_LENGTH*4
+            offset = 1+HD_LENGTH*SIZEOF(header(1))
             WRITE( iunit, POS=offset ) tmp_vec(1:ndim)
             CLOSE( iunit )
             !
@@ -147,7 +149,7 @@ MODULE pdep_io
             OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED' )
             offset = 1
             WRITE( iunit, POS=offset ) header
-            offset = 1+HD_LENGTH*4
+            offset = 1+HD_LENGTH*SIZEOF(header(1))
             WRITE( iunit, POS=offset ) tmp_vec(1:ndim)
             CLOSE( iunit )
             !
@@ -235,7 +237,7 @@ MODULE pdep_io
                   CALL errore('pdep_read', 'Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
                ENDIF
                !
-               offset = 1+HD_LENGTH*4
+               offset = 1+HD_LENGTH*SIZEOF(header(1))
                READ( iunit, POS=offset ) tmp_vec(1:ndim)
                CLOSE( iunit )
                !
@@ -296,7 +298,7 @@ MODULE pdep_io
                   CALL errore('pdep_read', 'Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
                ENDIF
                !
-               offset = 1+HD_LENGTH*4
+               offset = 1+HD_LENGTH*SIZEOF(header(1))
                READ( iunit, POS=offset ) tmp_vec(1:ndim)
                CLOSE( iunit )
                !

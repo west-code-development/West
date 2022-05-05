@@ -4,7 +4,7 @@ import shutil
 import sys
 from xml.etree import ElementTree as ET
 
-activeTests = [1,2,3,4,5]
+activeTests = [1,2,3,4,5,6,7]
 tolerance = 0.0001
 
 def check_pw(prefix):

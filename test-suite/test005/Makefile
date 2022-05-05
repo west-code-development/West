@@ -27,13 +27,13 @@ clean:
 	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1
 
 title:
-	@echo "               "
+	@echo
 	@echo "###############"
 	@echo "### test005 ###"
 	@echo "###############"
-	@echo "               "
+	@echo
 
 description:
-	@echo " "
+	@echo
 	@echo "SiH4 molecule gamma_only + westpp"
-	@echo " "
+	@echo

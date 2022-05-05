@@ -523,11 +523,11 @@ MODULE wfreq_restart
       !
       IF(bks%old_ks/=0.AND.bks%old_band/=0) THEN
          IF( me_bgrp == 0 ) THEN
-            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
-            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
@@ -623,11 +623,11 @@ MODULE wfreq_restart
       !
       IF(bks%old_ks/=0.AND.bks%old_band/=0) THEN
          IF( me_bgrp == 0 ) THEN
-            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
-            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks, bks%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
@@ -730,11 +730,11 @@ MODULE wfreq_restart
       !
       IF(bksq%old_q/=0.AND.bksq%old_ks/=0.AND.bksq%old_band/=0) THEN
          IF( me_bgrp == 0 ) THEN
-            WRITE(my_label2,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bksq%old_q, bksq%old_ks, bksq%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
-            WRITE(my_label2,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".raw")') &
+            WRITE(my_label2,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bksq%old_q, bksq%old_ks, bksq%old_band, my_image_id
             fname=TRIM(my_label2)
             CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )

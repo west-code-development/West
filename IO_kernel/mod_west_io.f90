@@ -264,12 +264,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(1, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d0dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -291,12 +291,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d1dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -318,12 +318,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d2dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -345,12 +345,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d3dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -372,12 +372,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) d4dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -398,12 +398,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z0dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -425,12 +425,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z1dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -452,12 +452,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z2dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -479,12 +479,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z3dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -506,12 +506,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr,FORM='unformatted',&
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr,FORM='unformatted',&
            & STATUS='unknown',ACCESS='direct',RECL=unf_recl)
       WRITE(iunit,REC=1,IOSTAT=ierr) z4dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -692,12 +692,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(1, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d0dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -719,12 +719,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d1dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -746,12 +746,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d2dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -773,12 +773,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d3dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -800,12 +800,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) d4dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -826,12 +826,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z0dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -853,12 +853,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z1dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -880,12 +880,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z2dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -907,12 +907,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z3dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -934,12 +934,12 @@ MODULE west_io
       ierr = 0
       !
       unf_recl = DIRECT_IO_FACTOR * INT(2*n*m*l*q, KIND=KIND(unf_recl))
-      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".raw",IOSTAT=ierr, &
+      OPEN(NEWUNIT=iunit,FILE=TRIM(ADJUSTL(fname))//".dat",IOSTAT=ierr, &
          & FORM='unformatted', STATUS='unknown', ACCESS='direct', RECL=unf_recl)
       READ(iunit,REC=1,IOSTAT=ierr) z4dummy
       CLOSE(iunit,IOSTAT=ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -967,13 +967,13 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_INTEGER,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
       bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_INTEGER,MPI_INTEGER,'native',MPI_INFO_NULL,ierr)
       CALL MPI_FILE_WRITE(file_id,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -993,7 +993,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_INTEGER,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1001,7 +1001,7 @@ MODULE west_io
       CALL MPI_FILE_WRITE_ALL(file_id,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
 !   !
@@ -1022,13 +1022,13 @@ MODULE west_io
 !     ierr = 0
 !     !
 !     CALL MPI_TYPE_SIZE(MPI_INTEGER,sizeofdatum,ierr)
-!     CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+!     CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
 !     bytes_displacement = nloc * offset * sizeofdatum
 !     CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_INTEGER,MPI_INTEGER,'native',MPI_INFO_NULL,ierr)
 !     CALL MPI_FILE_WRITE(file_id,i2dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
 !     CALL MPI_FILE_CLOSE(file_id,ierr)
 !     !
-!     IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+!     IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
 !     !
 !   END SUBROUTINE
     !
@@ -1050,13 +1050,13 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
       bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_DOUBLE_PRECISION,MPI_DOUBLE_PRECISION,'native',MPI_INFO_NULL,ierr)
       CALL MPI_FILE_WRITE(file_id,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1076,7 +1076,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_PRECISION,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1084,7 +1084,7 @@ MODULE west_io
       CALL MPI_FILE_WRITE_ALL(file_id,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1106,13 +1106,13 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_WRONLY + MPI_MODE_CREATE,MPI_INFO_NULL,file_id,ierr)
       bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_SET_VIEW(file_id,bytes_displacement,MPI_DOUBLE_COMPLEX,MPI_DOUBLE_COMPLEX,'native',MPI_INFO_NULL,ierr)
       CALL MPI_FILE_WRITE(file_id,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1133,7 +1133,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_CREATE + MPI_MODE_RDWR,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_COMPLEX,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1141,7 +1141,7 @@ MODULE west_io
       CALL MPI_FILE_WRITE_ALL(file_id,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot WR F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1163,12 +1163,12 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_INTEGER,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_READ_AT(file_id,bytes_displacement,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1188,7 +1188,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_INTEGER,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1196,7 +1196,7 @@ MODULE west_io
       CALL MPI_FILE_READ_ALL(file_id,i1dummy,nloc,MPI_INTEGER,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1218,12 +1218,12 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_PRECISION,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_READ_AT(file_id,bytes_displacement,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1243,7 +1243,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_PRECISION,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1251,7 +1251,7 @@ MODULE west_io
       CALL MPI_FILE_READ_ALL(file_id,d1dummy,nloc,MPI_DOUBLE_PRECISION,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1273,12 +1273,12 @@ MODULE west_io
       ierr = 0
       !
       CALL MPI_TYPE_SIZE(MPI_DOUBLE_COMPLEX,sizeofdatum,ierr)
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       bytes_displacement = offset * sizeofdatum
       CALL MPI_FILE_READ_AT(file_id,bytes_displacement,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !
@@ -1298,7 +1298,7 @@ MODULE west_io
       !
       ierr = 0
       !
-      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".raw",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
+      CALL MPI_FILE_OPEN(comm,TRIM(ADJUSTL(fname))//".dat",MPI_MODE_RDONLY,MPI_INFO_NULL,file_id,ierr)
       CALL MPI_TYPE_CREATE_INDEXED_BLOCK(nloc,1,map,MPI_DOUBLE_COMPLEX,filetype,ierr)
       CALL MPI_TYPE_COMMIT(filetype, ierr)
       bytes_displacement = 0
@@ -1306,7 +1306,7 @@ MODULE west_io
       CALL MPI_FILE_READ_ALL(file_id,z1dummy,nloc,MPI_DOUBLE_COMPLEX,MPI_STATUS_IGNORE,ierr)
       CALL MPI_FILE_CLOSE(file_id,ierr)
       !
-      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.raw',ierr)
+      IF(ierr/=0) CALL errore('WEST/IO', 'Cannot RD F:'//TRIM(ADJUSTL(fname))//'.dat',ierr)
       !
     END SUBROUTINE
     !

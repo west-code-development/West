@@ -13,7 +13,7 @@ Theta is a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on Aug 1, 2021):
+WEST executables can be compiled using the following script (tested on May 6, 2022):
 
 .. code-block:: bash
 
@@ -28,11 +28,11 @@ WEST executables can be compiled using the following script (tested on Aug 1, 20
    export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2020.0.166/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
    export LD_LIBRARY_PATH=/opt/python/3.8.2.1/lib:$LD_LIBRARY_PATH
    export MPIF90=ftn
-   export F77=ftn
+   export F90=ftn
    export CC=cc
    export SCALAPACK_LIBS="$MKLROOT/lib/intel64/libmkl_scalapack_lp64.so -Wl,--start-group $MKLROOT/lib/intel64/libmkl_intel_lp64.so $MKLROOT/lib/intel64/libmkl_intel_thread.so $MKLROOT/lib/intel64/libmkl_core.so $MKLROOT/lib/intel64/libmkl_blacs_intelmpi_lp64.so -Wl,--end-group"
 
-   ./configure --enable-openmp=yes --enable-parallel=yes --enable-shared=yes --with-scalapack=intel --with-hdf5=no
+   ./configure --enable-openmp --with-scalapack=intel
 
    make -j 8 pw
 

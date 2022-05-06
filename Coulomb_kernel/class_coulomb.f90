@@ -161,7 +161,8 @@ MODULE class_coulomb
       USE constants,            ONLY : pi, tpi, fpi, e2, eps8
       USE cell_base,            ONLY : omega, at, bg, tpiba2
       USE mp,                   ONLY : mp_sum
-      USE mp_global,            ONLY : intra_bgrp_comm, me_bgrp, nproc_bgrp
+      USE mp_global,            ONLY : nimage, my_image_id, nproc_image, inter_image_comm, &
+                                     & intra_bgrp_comm, me_bgrp, nproc_bgrp
       USE control_flags,        ONLY : gamma_only
       USE gvecw,                ONLY : ecutwfc
       USE random_numbers,       ONLY : randy
@@ -233,7 +234,7 @@ MODULE class_coulomb
                vbz = tpi**3 / ( omega * DBLE(q_grid%np) )
                vhelp = fpi / 3._DP * qhelp**3
                !
-               rand = randy(me_bgrp)
+               rand = randy(my_image_id*nproc_image+me_bgrp)
                div = 0._DP
                intcounter = 0
                !
@@ -253,8 +254,13 @@ MODULE class_coulomb
                div = div + fpi * qhelp
                div = div * fpi * e2 / ( tpi * tpi * tpi )
                !
-               div = div / REAL(nproc_bgrp,KIND=DP)
+               div = div / REAL(nimage*nproc_bgrp,KIND=DP)
+               !
+               ! Cannot sum over world_comm, inter_pool_comm, or inter_bgrp_comm,
+               ! because not all pools or band groups may enter this routine
+               !
                CALL mp_sum(div,intra_bgrp_comm)
+               CALL mp_sum(div,inter_image_comm)
                !
             ENDIF
             !

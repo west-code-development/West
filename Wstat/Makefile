@@ -29,14 +29,7 @@ wstat_tools.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = \
-../../Modules/libqemod.a \
-../../KS_Solvers/libks_solvers.a \
-../../FFTXlib/libqefft.a \
-../../upflib/libupf.a \
-../../LAXlib/libqela.a \
-../../UtilXlib/libutil.a \
-../../XClib/xc_lib.a
+QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
 
 WESTLIBS = \
 ../IO_kernel/lib_io_kernel.a \
@@ -51,13 +44,13 @@ WESTLIBS = \
 ../Libraries/Json/libjson.a \
 ../Libraries/Base64/libbase64.a
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps wstat.x
 
-wstat.x : $(PWOBJS) $(WSTAT_OBJS) $(QEMODS) $(WESTLIBS) $(LIBOBJS)
+wstat.x : $(PWOBJS) $(WSTAT_OBJS) $(QEMODS) $(WESTLIBS)
 	$(LD) $(LDFLAGS) -o wstat.x \
-                $(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(QELIBS) $(LIBS) $(PYT_LDFLAGS)
+                $(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wstat/wstat.x . )
 
 tldeps :

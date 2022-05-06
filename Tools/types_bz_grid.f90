@@ -109,7 +109,7 @@ MODULE types_bz_grid
         phase( dffts%nl(ig0) ) = (1._DP, 0._DP)
      ENDIF
      CALL invfft( 'Wave', phase, dffts )
-     phase(1:dffts%nnr) = DCONJG( phase(1:dffts%nnr) )
+     phase(1:dffts%nnr) = CONJG( phase(1:dffts%nnr) )
      !
   END SUBROUTINE
   !

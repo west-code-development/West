@@ -32,6 +32,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE uspp,                 ONLY : vkb,nkb
+  USE uspp_init,            ONLY : init_us_2
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar
   USE xc_lib,               ONLY : xclib_dft_is
@@ -118,7 +119,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
               braket = 0._DP
               DO ir = 1, dfftp%nnr
-                 braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
+                 braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
               sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL(braket,KIND=DP) / nnr
            ENDDO
@@ -129,7 +130,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               CALL single_invfft_k(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
               braket = 0._DP
               DO ir = 1, dfftp%nnr
-                 braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
+                 braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
               sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL(braket,KIND=DP) / nnr
            ENDDO
@@ -140,7 +141,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
                  braket = 0._DP
                  DO ir = 1, dfftp%nnr
-                    braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
+                    braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
                  ENDDO
                  sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = &
                  & sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) + REAL(braket,KIND=DP) / nnr

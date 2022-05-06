@@ -34,10 +34,9 @@ SUBROUTINE solve_hf_gamma( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bandrange,nbnd_occ,exx_etot,sigma_exx,&
-                                 & sigma_vxcl,sigma_vxcnl,sigma_hf
+  USE westcom,              ONLY : qp_bandrange,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf
   USE mp_world,             ONLY : mpime,root
-  USE pwcom,                ONLY : et,nbnd
+  USE pwcom,                ONLY : et
   USE io_push,              ONLY : io_push_title
   USE constants,            ONLY : rytoev
   USE west_io,              ONLY : serial_table_output
@@ -109,10 +108,9 @@ SUBROUTINE solve_hf_k( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bandrange,nbnd_occ,exx_etot,sigma_exx,&
-                                 & sigma_vxcl,sigma_vxcnl,sigma_hf
+  USE westcom,              ONLY : qp_bandrange,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf
   USE mp_world,             ONLY : mpime,root
-  USE pwcom,                ONLY : et,nbnd
+  USE pwcom,                ONLY : et
   USE io_push,              ONLY : io_push_title
   USE constants,            ONLY : rytoev
   USE west_io,              ONLY : serial_table_output

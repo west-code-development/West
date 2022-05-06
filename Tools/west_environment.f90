@@ -14,8 +14,6 @@
 MODULE west_environment
   !-----------------------------------------------------------------------
   !
-  USE io_global,       ONLY: stdout, meta_ionode
-  !
   IMPLICIT NONE
   !
   PRIVATE
@@ -29,21 +27,27 @@ CONTAINS
   !
   SUBROUTINE west_environment_start( code )
     !
+    USE io_global,             ONLY : stdout, meta_ionode
     USE io_files,              ONLY : crash_file, nd_nmbr
     USE mp_images,             ONLY : me_image, my_image_id
     USE westcom,               ONLY : savedir, logfile, outdir, west_prefix
     USE base64_module,         ONLY : base64_init
     USE json_string_utilities, ONLY : lowercase_string
     USE west_version,          ONLY : start_forpy
+#if defined(__HDF5)
+    USE hdf5_qe,               ONLY : phdf5_start => initialize_hdf5
+    USE qeh5_base_module,      ONLY : hdf5_start => initialize_hdf5
+#endif
     !
     IMPLICIT NONE
     !
     CHARACTER(LEN=*), INTENT(IN) :: code
     !
-    LOGICAL :: exst, debug = .false.
+    LOGICAL :: exst, debug = .FALSE.
     CHARACTER(LEN=80) :: uname
     CHARACTER(LEN=6), EXTERNAL :: int_to_char
-    INTEGER :: ios, crashunit
+    INTEGER :: ios, crashunit, n_json
+    INTEGER, PARAMETER :: n_json_max = 100
     !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash
@@ -59,7 +63,21 @@ CONTAINS
     CALL fetch_input_yml(1,(/1/),.FALSE.,.FALSE.)
     !
     savedir = TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) // "." // TRIM(lowercase_string(code)) // ".save/"
-    logfile = TRIM(ADJUSTL(savedir)) // TRIM(lowercase_string(code))//".json"
+    logfile = TRIM(ADJUSTL(savedir)) // TRIM(lowercase_string(code)) // ".json"
+    !
+    ! Do not overwrite existing JSON file
+    !
+    n_json = 1
+    !
+    INQUIRE(FILE=TRIM(logfile),EXIST=exst)
+    !
+    DO WHILE(exst)
+       logfile = TRIM(ADJUSTL(savedir))//TRIM(lowercase_string(code))//'_'//TRIM(int_to_char(n_json))//'.json'
+       INQUIRE(FILE=TRIM(logfile),EXIST=exst)
+       n_json = n_json+1
+       IF(n_json > n_json_max) CALL errore(TRIM(code),'Too many JSON files',1)
+    ENDDO
+    !
     CALL my_mkdir( TRIM(ADJUSTL(savedir)) )
     !
     ! ... use ".FALSE." to disable all clocks except the total cpu time clock
@@ -95,7 +113,7 @@ CONTAINS
        ! ... or, for debugging purposes, all processors,
        ! ... open their own standard output file
 #if defined(DEBUG) || defined(__DEBUG)
-       debug = .true.
+       debug = .TRUE.
 #endif
        IF (debug ) THEN
           uname = 'out.' // trim(int_to_char( my_image_id )) // '_' // &
@@ -121,16 +139,25 @@ CONTAINS
     CALL errore(TRIM(code), 'West need MPI to run', 1 )
 #endif
     !
+#if defined(__HDF5)
+    CALL hdf5_start( )
+    CALL phdf5_start( )
+#endif
+    !
   END SUBROUTINE
-  !
   !
   SUBROUTINE west_environment_end( code )
     !
-    USE json_module,     ONLY : json_file
-    USE mp_world,        ONLY : mpime,root,world_comm
-    USE mp,              ONLY : mp_barrier
-    USE westcom,         ONLY : logfile
-    USE west_version,    ONLY : end_forpy
+    USE io_global,        ONLY : stdout, meta_ionode
+    USE json_module,      ONLY : json_file
+    USE mp_world,         ONLY : mpime,root,world_comm
+    USE mp,               ONLY : mp_barrier
+    USE westcom,          ONLY : logfile
+    USE west_version,     ONLY : end_forpy
+#if defined(__HDF5)
+    USE hdf5_qe,          ONLY : phdf5_end => finalize_hdf5
+    USE qeh5_base_module, ONLY : hdf5_end => finalize_hdf5
+#endif
     !
     IMPLICIT NONE
     !
@@ -140,6 +167,11 @@ CONTAINS
     CHARACTER(LEN=9) :: cdate, ctime
     CHARACTER(LEN=80) :: time_str
     LOGICAL :: found
+    !
+#if defined(_HDF5)
+    CALL phdf5_end( )
+    CALL hdf5_end( )
+#endif
     !
     IF ( meta_ionode ) WRITE( stdout, * )
     !
@@ -186,8 +218,6 @@ CONTAINS
     CALL mp_barrier(world_comm)
     !
   END SUBROUTINE
-  !
-  !
   !
   SUBROUTINE west_opening_message( code )
     !
@@ -260,8 +290,6 @@ CONTAINS
     ENDIF
     !
   END SUBROUTINE
-  !
-  !
   !
   SUBROUTINE report_parallel_status()
      !-----------------------------------------------------------------------

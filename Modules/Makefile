@@ -16,7 +16,7 @@ MODULES_OBJS = \
 west_version.o \
 westcom.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps update libmodules.a
 

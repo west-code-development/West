@@ -442,8 +442,6 @@ SUBROUTINE davidson_diago_gamma ( )
   !
   CALL stop_clock( 'chidiago' )
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !----------------------------------------------------------------------------
@@ -913,8 +911,6 @@ SUBROUTINE davidson_diago_k ( )
   DEALLOCATE( dng )
   DEALLOCATE( dvg )
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
@@ -985,7 +981,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
      ENDDO
      !
      j_local=1
-     unfinished=.true.
+     unfinished=.TRUE.
      !
      DO k_global=1,m_global_end
         !
@@ -1021,7 +1017,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !
            j_local=MAX(k_local+1,m_local_start)
            !
-           IF(j_local>m_local_end) unfinished=.false.
+           IF(j_local>m_local_end) unfinished=.FALSE.
            !
         ENDIF
         !

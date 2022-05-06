@@ -1,6 +1,6 @@
 This file lists the authors of the WEST code as well as the known contributors.
 
-# Project Leads 
+# Project Leads
 
 - Marco Govoni (Argonne National Laboratory and University of Chicago)
 - Giulia Galli (University of Chicago and Argonne National Laboratory)
@@ -13,7 +13,7 @@ The current list of developers, in alphabetical order:
 - Yu Jin (University of Chicago)
 - Nan Sheng (University of Chicago)
 - Han Yang (University of Chicago)
-- Wenzhe Yu (Argonne National Laboratory)
+- Victor Yu (Argonne National Laboratory)
 
 # Former Developers
 

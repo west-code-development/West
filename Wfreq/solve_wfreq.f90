@@ -52,6 +52,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
@@ -347,7 +348,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               !
               ipol = glob_ip-n_pdep_eigen_to_use
               !
-              dvpsi(:,ip) = phi(:,ipol) * DSQRT(fpi * e2)
+              dvpsi(:,ip) = phi(:,ipol) * SQRT(fpi * e2)
               !
            ENDIF
            !
@@ -679,6 +680,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
@@ -1017,18 +1019,18 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  IF(noncolin) THEN
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                     DO ir=1,dffts%nnr
-                       pertr(ir)=phase(ir)*psick_nc(ir,1)*DCONJG(pertr(ir))
+                       pertr(ir)=phase(ir)*psick_nc(ir,1)*CONJG(pertr(ir))
                     ENDDO
                     CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                     DO ir=1,dffts%nnr
-                       pertr(ir)=phase(ir)*psick_nc(ir,2)*DCONJG(pertr(ir))
+                       pertr(ir)=phase(ir)*psick_nc(ir,2)*CONJG(pertr(ir))
                     ENDDO
                     CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(npwx+1,ip),'Wave',igk_k(1,current_k))
                  ELSE
                     CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                     DO ir=1,dffts%nnr
-                       pertr(ir)=phase(ir)*psick(ir)*DCONJG(pertr(ir))
+                       pertr(ir)=phase(ir)*psick(ir)*CONJG(pertr(ir))
                     ENDDO
                     CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
                  ENDIF
@@ -1037,7 +1039,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
                  IF (l_gammaq) THEN
                     ipol = glob_ip-n_pdep_eigen_to_use
-                    dvpsi(:,ip) = phi(:,ipol) * DSQRT(fpi * e2)
+                    dvpsi(:,ip) = phi(:,ipol) * SQRT(fpi * e2)
                  ENDIF
                  !
               ENDIF
@@ -1088,7 +1090,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                     glob_ip = mypara%l2g(ip)
                     DO glob_jp = 1, mypara%nglob
                        !
-                       zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) + DCONJG(overlap( glob_ip, ic)) * &
+                       zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) + CONJG(overlap( glob_ip, ic)) * &
                        & overlap( glob_jp, ic) * zfactor
                        !
                     ENDDO
@@ -1114,7 +1116,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                     glob_ip = mypara%l2g(ip)
                     DO glob_jp = 1, mypara%nglob
                        !
-                       zmatr_q(glob_jp,ip,ifreq,iq) = zmatr_q(glob_jp,ip,ifreq,iq) + DCONJG( overlap( glob_ip, ic) ) * &
+                       zmatr_q(glob_jp,ip,ifreq,iq) = zmatr_q(glob_jp,ip,ifreq,iq) + CONJG( overlap( glob_ip, ic) ) * &
                        & overlap( glob_jp, ic) * zfactor
                        !
                     ENDDO
@@ -1167,7 +1169,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                        zfactor = CMPLX( dfactor, 0._DP, KIND=DP )
                        DO glob_jp = 1, mypara%nglob
                           !
-                          zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) + DCONJG(braket( glob_jp, il, ip)) * zfactor
+                          zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) + CONJG(braket( glob_jp, il, ip)) * zfactor
                           !
                        ENDDO
                     ENDDO
@@ -1191,7 +1193,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                        zfactor = zmwo / zp + zmwo / zm
                        DO glob_jp = 1, mypara%nglob
                           !
-                          zmatr_q(glob_jp,ip,ifreq,iq) = zmatr_q(glob_jp,ip,ifreq,iq) + DCONJG(braket( glob_jp, il, ip)) * zfactor
+                          zmatr_q(glob_jp,ip,ifreq,iq) = zmatr_q(glob_jp,ip,ifreq,iq) + CONJG(braket( glob_jp, il, ip)) * zfactor
                           !
                        ENDDO
                     ENDDO
@@ -1423,8 +1425,8 @@ SUBROUTINE output_eps_head( )
         lf = -AIMAG( z_head_rfr( ifreq ) )
         ep1 = rf / (rf**2+lf**2)
         ep2 = lf / (rf**2+lf**2)
-        nn = DSQRT( 0.5_DP * ( ep1 + DSQRT( ep1**2 + ep2**2 ) ) )
-        kk = DSQRT( 0.5_DP * (-ep1 + DSQRT( ep1**2 + ep2**2 ) ) )
+        nn = SQRT( 0.5_DP * ( ep1 + SQRT( ep1**2 + ep2**2 ) ) )
+        kk = SQRT( 0.5_DP * (-ep1 + SQRT( ep1**2 + ep2**2 ) ) )
         rr = ((1._DP-nn)**2+kk**2)/((1._DP+nn)**2+kk**2)
         !
         out_tabella( glob_ifreq, 1 ) = refreq_list( ifreq )*rytoev

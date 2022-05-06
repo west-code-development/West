@@ -99,15 +99,15 @@ MODULE wfreq_db
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.re', &
-            & DBLE(sigma_sc_eks(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
+            & REAL(sigma_sc_eks(qp_bandrange(1):qp_bandrange(2),iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.im', &
             & AIMAG(sigma_sc_eks(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.re', &
-            & DBLE(sigma_sc_eqplin(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
+            & REAL(sigma_sc_eqplin(qp_bandrange(1):qp_bandrange(2),iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.im', &
             & AIMAG(sigma_sc_eqplin(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.re', &
-            & DBLE(sigma_sc_eqpsec(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
+            & REAL(sigma_sc_eqpsec(qp_bandrange(1):qp_bandrange(2),iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
             & AIMAG(sigma_sc_eqpsec(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
@@ -116,7 +116,7 @@ MODULE wfreq_db
                DO ib = qp_bandrange(1), qp_bandrange(2)
                   WRITE(my_label_b,'(i6.6)') ib
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.re',&
-                  &DBLE(sigma_spectralf(1:n_spectralf,ib,iks))*rytoev)
+                  &REAL(sigma_spectralf(1:n_spectralf,ib,iks),KIND=DP)*rytoev)
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.im',&
                   &AIMAG(sigma_spectralf(1:n_spectralf,ib,iks))*rytoev)
                ENDDO

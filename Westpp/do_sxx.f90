@@ -166,13 +166,13 @@ SUBROUTINE do_sxx ( )
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
                  DO ir=1,dffts%nnr
-                    pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
+                    pertr_nc(ir,1)=CONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+CONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Rho') ! no igk
               ELSE
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv),pertr,'Wave',igk_k(1,ikqs))
                  DO ir=1,dffts%nnr
-                    pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
+                    pertr(ir)=CONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
               ENDIF

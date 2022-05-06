@@ -43,7 +43,7 @@ SUBROUTINE write_wfc_spav ( iu, fname, wfc, r0, nr, rmax )
   COMPLEX(DP) :: f_times_exp_igdotr0
   !
   DO ir = 1, nr+1
-     rmod(ir) = DBLE(ir-1) * rmax / DBLE(nr)
+     rmod(ir) = REAL(ir-1,KIND=DP) * rmax / REAL(nr,KIND=DP)
   ENDDO
   !
   spav = 0._DP

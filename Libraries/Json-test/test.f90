@@ -11,11 +11,11 @@ INTEGER :: numsp
 LOGICAL :: found
 CHARACTER(LEN=512) :: input_file
 CHARACTER(LEN=:),ALLOCATABLE :: cval
-REAL(DP) :: rval 
-INTEGER :: ival 
+REAL(DP) :: rval
+INTEGER :: ival
 INTEGER,ALLOCATABLE :: ivec(:)
 REAL(DP),ALLOCATABLE :: rvec(:)
-LOGICAL :: lval 
+LOGICAL :: lval
 !
 INTEGER :: iunit
 INTEGER :: i0, i0_
@@ -26,13 +26,13 @@ CHARACTER(LEN=512),PARAMETER :: ofile="output_file.json"
 ! INIT INPUT FILE
 !
 OPEN( NEWUNIT=iunit, FILE=TRIM(ifile) )
-WRITE( iunit, * ) '{ "test" : { "i0" : 100} }' 
+WRITE( iunit, * ) '{ "test" : { "i0" : 100} }'
 CLOSE( iunit )
 !
 ! INIT OUTPUT FILE
 !
 OPEN( NEWUNIT=iunit, FILE=TRIM(ofile) )
-WRITE( iunit, * ) '{}' 
+WRITE( iunit, * ) '{}'
 CLOSE( iunit )
 !
 ! READ

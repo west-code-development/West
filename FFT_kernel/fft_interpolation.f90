@@ -236,8 +236,8 @@ MODULE fourier_interpolation
 !$OMP ENDDO
 !$OMP DO
    DO ig=1,n
-      b(nl(1,ig))=        a1(ig)
-      b(nl(2,ig))= DCONJG(a1(ig))
+      b(nl(1,ig))=       a1(ig)
+      b(nl(2,ig))= CONJG(a1(ig))
    ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL

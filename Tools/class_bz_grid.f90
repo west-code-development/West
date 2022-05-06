@@ -117,9 +117,9 @@ MODULE class_bz_grid
                   ip = ip + 1
                   IF ( ANY(qlist(:) == ip) ) THEN
                      iqlist = iqlist + 1
-                     this%p_cryst(1,iqlist) = DBLE( iq1 - 1 ) / DBLE( this%ngrid(1) )
-                     this%p_cryst(2,iqlist) = DBLE( iq2 - 1 ) / DBLE( this%ngrid(2) )
-                     this%p_cryst(3,iqlist) = DBLE( iq3 - 1 ) / DBLE( this%ngrid(3) )
+                     this%p_cryst(1,iqlist) = REAL( iq1 - 1, KIND=DP ) / REAL( this%ngrid(1), KIND=DP )
+                     this%p_cryst(2,iqlist) = REAL( iq2 - 1, KIND=DP ) / REAL( this%ngrid(2), KIND=DP )
+                     this%p_cryst(3,iqlist) = REAL( iq3 - 1, KIND=DP ) / REAL( this%ngrid(3), KIND=DP )
                   ENDIF
                ENDDO
             ENDDO
@@ -135,7 +135,7 @@ MODULE class_bz_grid
          !
          ALLOCATE ( this%weight (this%np)   )
          !
-         this%weight = 1._DP / DBLE(this%np)
+         this%weight = 1._DP / REAL(this%np,KIND=DP)
          !
       END SELECT
       !

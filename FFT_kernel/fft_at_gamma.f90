@@ -64,8 +64,8 @@ MODULE fft_at_gamma
 !$OMP ENDDO
 !$OMP DO
     DO ig=1,n
-       b(dfft%nl (ig))=        a1(ig) + (0.0_DP,1.0_DP) * a2(ig)
-       b(dfft%nlm(ig))= DCONJG(a1(ig) - (0.0_DP,1.0_DP) * a2(ig))
+       b(dfft%nl (ig))=       a1(ig) + (0.0_DP,1.0_DP) * a2(ig)
+       b(dfft%nlm(ig))= CONJG(a1(ig) - (0.0_DP,1.0_DP) * a2(ig))
     ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL
@@ -111,8 +111,8 @@ MODULE fft_at_gamma
     DO ig = 1, n
        fp = ( a(dfft%nl (ig)) + a(dfft%nlm(ig)) )*0.5_DP
        fm = ( a(dfft%nl (ig)) - a(dfft%nlm(ig)) )*0.5_DP
-       b1(ig) = CMPLX( DBLE(fp), DIMAG(fm), KIND=DP)
-       b2(ig) = CMPLX(DIMAG(fp), -DBLE(fm), KIND=DP)
+       b1(ig) = CMPLX(REAL(fp,KIND=DP), AIMAG(fm), KIND=DP)
+       b2(ig) = CMPLX(AIMAG(fp), -REAL(fm,KIND=DP), KIND=DP)
     ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL
@@ -158,8 +158,8 @@ MODULE fft_at_gamma
 !$OMP ENDDO
 !$OMP DO
     DO ig=1,n
-       b(dfft%nl (ig))=        a1(ig)
-       b(dfft%nlm(ig))= DCONJG(a1(ig))
+       b(dfft%nl (ig))=       a1(ig)
+       b(dfft%nlm(ig))= CONJG(a1(ig))
     ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL

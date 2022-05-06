@@ -37,6 +37,7 @@ MODULE dfpt_module
       USE cell_base,             ONLY : omega
       USE control_flags,         ONLY : gamma_only
       USE uspp,                  ONLY : nkb,vkb
+      USE uspp_init,             ONLY : init_us_2
       USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
       USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
       USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
@@ -305,7 +306,7 @@ MODULE dfpt_module
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dpsi(1,lbnd),psic,'Wave')
                   DO CONCURRENT (ir=1:dffts%nnr)
-                     aux_r(ir) = aux_r(ir) + CMPLX( REAL( psic(ir),KIND=DP) * DIMAG( psic(ir)) , 0.0_DP, KIND=DP)
+                     aux_r(ir) = aux_r(ir) + CMPLX( REAL( psic(ir),KIND=DP) * AIMAG( psic(ir)) , 0.0_DP, KIND=DP)
                   ENDDO
                   !
                ENDDO

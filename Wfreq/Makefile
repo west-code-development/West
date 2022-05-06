@@ -35,14 +35,7 @@ wfreq_setup.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = \
-../../Modules/libqemod.a \
-../../KS_Solvers/libks_solvers.a \
-../../FFTXlib/libqefft.a \
-../../upflib/libupf.a \
-../../LAXlib/libqela.a \
-../../UtilXlib/libutil.a \
-../../XClib/xc_lib.a
+QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
 
 WESTLIBS = \
 ../IO_kernel/lib_io_kernel.a \
@@ -57,13 +50,13 @@ WESTLIBS = \
 ../Libraries/Json/libjson.a \
 ../Libraries/Base64/libbase64.a
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps wfreq.x
 
-wfreq.x : $(PWOBJS) $(WFREQ_OBJS) $(QEMODS) $(WESTLIBS) $(LIBOBJS)
+wfreq.x : $(PWOBJS) $(WFREQ_OBJS) $(QEMODS) $(WESTLIBS)
 	$(LD) $(LDFLAGS) -o wfreq.x \
-		$(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(QELIBS) $(LIBS) ${PYT_LDFLAGS}
+		$(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) ${PYT_LDFLAGS}
 	- ( cd ../../bin ; ln -fs ../West/Wfreq/wfreq.x . )
 
 tldeps :

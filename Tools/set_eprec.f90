@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -33,7 +33,7 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   !
   ! Workspace
   !
-  INTEGER :: ibnd, ig 
+  INTEGER :: ibnd, ig
   !
   eprec = 0._DP
   !
@@ -43,11 +43,11 @@ SUBROUTINE set_eprec(m,wfc,eprec)
         eprec(ibnd) = eprec(ibnd) + CONJG( wfc(ig,ibnd) ) * wfc(ig,ibnd) * g2kin(ig)
      ENDDO
      !
-     IF (noncolin) THEN 
+     IF (noncolin) THEN
         DO ig = 1, npw
            eprec(ibnd) = eprec(ibnd) + CONJG( wfc(ig+npwx,ibnd) ) * wfc(ig+npwx,ibnd) * g2kin(ig)
         ENDDO
-     ENDIF 
+     ENDIF
      !
   ENDDO
   !

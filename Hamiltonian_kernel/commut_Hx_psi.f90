@@ -58,6 +58,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   INTEGER :: ig, na, ibnd, ikb, jkb, nt, ih, jh, ijkb0, is, js, ijs
   COMPLEX(DP),ALLOCATABLE :: ps2(:,:,:), dvkb (:,:), dvkb1 (:,:), work (:,:), psc(:,:,:,:), deff_nc(:,:,:,:)
   REAL(DP),ALLOCATABLE :: deff(:,:,:)
+  REAL(DP),PARAMETER :: tol = 1.E-10_DP
   !
   CALL start_clock ('commut_Hx_psi')
   !
@@ -122,14 +123,14 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
 !$OMP PARALLEL DEFAULT(none) SHARED(npw,g2kin,gk) PRIVATE(ig)
 !$OMP DO
      DO ig = 1, npw
-        IF (g2kin (ig) < 1.0d-10) THEN
+        IF (g2kin (ig) < tol) THEN
            gk (1, ig) = 0._DP
            gk (2, ig) = 0._DP
            gk (3, ig) = 0._DP
         ELSE
-           gk (1, ig) = gk (1, ig) / DSQRT (g2kin (ig) )
-           gk (2, ig) = gk (2, ig) / DSQRT (g2kin (ig) )
-           gk (3, ig) = gk (3, ig) / DSQRT (g2kin (ig) )
+           gk (1, ig) = gk (1, ig) / SQRT (g2kin (ig) )
+           gk (2, ig) = gk (2, ig) / SQRT (g2kin (ig) )
+           gk (3, ig) = gk (3, ig) / SQRT (g2kin (ig) )
         ENDIF
      ENDDO
 !$OMP END DO

@@ -12,7 +12,7 @@ COULOMB_KERNEL_OBJS = \
 class_coulomb.o \
 types_coulomb.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : tldeps lib_coulomb_kernel.a
 

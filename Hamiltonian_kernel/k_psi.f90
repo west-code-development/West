@@ -85,6 +85,4 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
   !
   CALL stop_clock('k_psi')
   !
-  RETURN
-  !
 END SUBROUTINE

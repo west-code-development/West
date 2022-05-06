@@ -21,7 +21,7 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
   USE lsda_mod,             ONLY : nspin
   USE cell_base,            ONLY : omega
   USE xc_lib,               ONLY : xclib_dft_is, xc_gcx
-  USE spin_orb,             ONLY : domag
+  USE noncollin_module,     ONLY : domag
   USE wavefunctions,        ONLY : psic
   USE fft_base,             ONLY : dfftp
   USE fft_interfaces,       ONLY : fwfft
@@ -48,7 +48,7 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
   !
   REAL(DP) :: grup, grdw
   !
-  REAL(DP), PARAMETER :: epsr = 1.D-6, epsg = 1.D-10
+  REAL(DP), PARAMETER :: epsr = 1.E-6_DP, epsg = 1.E-10_DP
   !
   !
   IF ( .NOT. xclib_dft_is('gradient') ) RETURN
@@ -59,7 +59,7 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
   nspin0 = nspin
   IF ( nspin==4 ) nspin0 = 1
   IF ( nspin==4 .AND. domag ) nspin0 = 2
-  fac = 1.0_DP / DBLE( nspin0 )
+  fac = 1.0_DP / REAL( nspin0, KIND=DP )
   sgn(1) = 1._DP ;  sgn(2) = -1._DP
   !
   ALLOCATE( h(3,dfftp%nnr,nspin0)    )
@@ -212,12 +212,12 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
      !
      v = vsave
      DO k = 1, dfftp%nnr
-        v(k,1) = v(k,1) + 0.5d0*(vgg(k,1)+vgg(k,2))
+        v(k,1) = v(k,1) + 0.5_DP*(vgg(k,1)+vgg(k,2))
         amag = SQRT(rho(k,2)**2+rho(k,3)**2+rho(k,4)**2)
-        IF (amag > 1.d-12) THEN
-           v(k,2) = v(k,2) + segni(k)*0.5d0*(vgg(k,1)-vgg(k,2))*rho(k,2)/amag
-           v(k,3) = v(k,3) + segni(k)*0.5d0*(vgg(k,1)-vgg(k,2))*rho(k,3)/amag
-           v(k,4) = v(k,4) + segni(k)*0.5d0*(vgg(k,1)-vgg(k,2))*rho(k,4)/amag
+        IF (amag > 1.E-12_DP) THEN
+           v(k,2) = v(k,2) + segni(k)*0.5_DP*(vgg(k,1)-vgg(k,2))*rho(k,2)/amag
+           v(k,3) = v(k,3) + segni(k)*0.5_DP*(vgg(k,1)-vgg(k,2))*rho(k,3)/amag
+           v(k,4) = v(k,4) + segni(k)*0.5_DP*(vgg(k,1)-vgg(k,2))*rho(k,4)/amag
         ENDIF
      ENDDO
   ENDIF
@@ -231,7 +231,5 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
      DEALLOCATE( vsave )
      DEALLOCATE( segni )
   ENDIF
-  !
-  RETURN
   !
 END SUBROUTINE

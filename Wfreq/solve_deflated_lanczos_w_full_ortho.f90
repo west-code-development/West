@@ -71,7 +71,7 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho(nbnd_to_deflate, NRHS, NLSTEPS, b
      ENDIF
   ENDIF
   CALL mp_sum(beta,intra_bgrp_comm)
-  beta(:) = DSQRT( beta(:) )
+  beta(:) = SQRT( beta(:) )
   bnorm = beta
   !
   !
@@ -193,7 +193,7 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho(nbnd_to_deflate, NRHS, NLSTEPS, b
         ENDIF
      ENDIF
      CALL mp_sum(beta,intra_bgrp_comm)
-     beta(:) = DSQRT( beta(:) )
+     beta(:) = SQRT( beta(:) )
      IF(il<NLSTEPS) THEN
         DO ip = 1, NRHS
            beta_s(il,ip) = beta(ip)

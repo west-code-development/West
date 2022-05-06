@@ -126,11 +126,11 @@ SUBROUTINE gq_sort( q, ngm, g, ecut, ngq, igq, gq )
    !
    ngq = 0
    igq(:) = 0
-   gq (:) = 0.0_dp
+   gq (:) = 0._DP
    !
    DO ng = 1, ngm
       qq = SUM( ( q(:) + g(:,ng) )**2 )
-      IF ( qq <= eps8 ) qq = 0.d0
+      IF ( qq <= eps8 ) qq = 0._DP
       !
       ! ... here if |q+G|^2 <= Ecut
       !
@@ -238,8 +238,6 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
   DEALLOCATE( igwk_lup )
   !
   DEALLOCATE( itmp, igwk_ )
-  !
-  RETURN
   !
 END SUBROUTINE
  !

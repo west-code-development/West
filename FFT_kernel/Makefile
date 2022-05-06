@@ -12,7 +12,7 @@ fft_at_gamma.o \
 fft_at_k.o \
 fft_interpolation.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps lib_fft_kernel.a
 

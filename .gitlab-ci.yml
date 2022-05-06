@@ -1,6 +1,6 @@
 variables:
   GIT_STRATEGY: none
-  QE_VERSION: qe-6.8
+  QE_VERSION: qe-7.0
 
 stages:
   - build

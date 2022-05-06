@@ -15,7 +15,7 @@ SUBROUTINE do_setup
   !-----------------------------------------------------------------------
   !
   USE json_module,            ONLY : json_file
-  USE pwcom,                  ONLY : npw,nbnd,nkstot,nspin,nelec,nelup,neldw,lspinorb,isk
+  USE pwcom,                  ONLY : npw,nbnd,nkstot,nspin,nelec,nelup,neldw,isk
   USE fixed_occ,              ONLY : f_inp
   USE kinds,                  ONLY : DP
   USE mp,                     ONLY : mp_sum
@@ -23,7 +23,7 @@ SUBROUTINE do_setup
   USE io_global,              ONLY : stdout
   USE lsda_mod,               ONLY : lsda
   USE control_flags,          ONLY : gamma_only
-  USE noncollin_module,       ONLY : noncolin,npol
+  USE noncollin_module,       ONLY : noncolin,npol,lspinorb
   USE cell_base,              ONLY : omega,celldm,at,bg,tpiba
   USE fft_base,               ONLY : dfftp,dffts
   USE gvect,                  ONLY : ngm,ecutrho

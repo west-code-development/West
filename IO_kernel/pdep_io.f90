@@ -15,8 +15,7 @@ MODULE pdep_io
   !----------------------------------------------------------------------------
   !
   USE kinds,         ONLY : DP,i8b
-  USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,&
-                          & my_bgrp_id,inter_bgrp_comm,inter_pool_comm
+  USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
   USE westcom,       ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q
   USE gvect,         ONLY : ig_l2g
   USE control_flags, ONLY : gamma_only
@@ -64,15 +63,17 @@ MODULE pdep_io
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: ig
-      INTEGER :: ndim, iunit
+      INTEGER :: ndim
+      INTEGER :: iunit
       INTEGER :: npwqx_g
-      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:)
+      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:)
+      INTEGER, ALLOCATABLE :: igq_l2g(:)
       INTEGER, PARAMETER :: default_iq = 1
       INTEGER :: iq_
       INTEGER :: header(HD_LENGTH)
       INTEGER(i8b) :: offset
       !
-      CALL start_clock( 'pdep_write' )
+      CALL start_clock('pdep_write')
       !
       IF(PRESENT(iq)) THEN
          iq_ = iq
@@ -86,22 +87,22 @@ MODULE pdep_io
          !
          ndim = ngq_g(iq_)
          !
-         npwqx_g = MAXVAL( ngq_g(:) )
-         ALLOCATE( igq_l2g_kdip(npwqx_g) )
-         igq_l2g_kdip(:) = 0
+         npwqx_g = MAXVAL(ngq_g)
+         ALLOCATE(igq_l2g_kdip(npwqx_g))
+         igq_l2g_kdip = 0
          !
-         ALLOCATE( igq_l2g(ngq(iq_)) )
-         DO ig = 1, ngq(iq_)
-            igq_l2g(ig) = ig_l2g( igq_q(ig,iq_) )
+         ALLOCATE(igq_l2g(ngq(iq_)))
+         DO ig = 1,ngq(iq_)
+            igq_l2g(ig) = ig_l2g(igq_q(ig,iq_))
          ENDDO
-         CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
-         DEALLOCATE( igq_l2g )
+         CALL gq_l2gmap_kdip(npwq_g,ngq_g(iq_),ngq(iq_),igq_l2g,igq_l2g_kdip)
+         DEALLOCATE(igq_l2g)
          !
-         ALLOCATE( tmp_vec(npwq_g) )
+         ALLOCATE(tmp_vec(npwq_g))
          tmp_vec = 0._DP
          !
-         CALL mergewf( pdepg(:), tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
-         DEALLOCATE( igq_l2g_kdip )
+         CALL mergewf(pdepg,tmp_vec,npwq,igq_l2g_kdip,me_bgrp,nproc_bgrp,root_bgrp,intra_bgrp_comm)
+         DEALLOCATE(igq_l2g_kdip)
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
@@ -114,25 +115,25 @@ MODULE pdep_io
                header(HD_ID_LITTLE_ENDIAN) = 1
             ENDIF
             !
-            OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED' )
+            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
             offset = 1
-            WRITE( iunit, POS=offset ) header
+            WRITE(iunit,POS=offset) header
             offset = 1+HD_LENGTH*SIZEOF(header(1))
-            WRITE( iunit, POS=offset ) tmp_vec(1:ndim)
-            CLOSE( iunit )
+            WRITE(iunit,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iunit)
             !
-         END IF
+         ENDIF
          !
-         DEALLOCATE( tmp_vec )
+         DEALLOCATE(tmp_vec)
       !
       ELSE
          !
          ! Resume all components
          !
-         ALLOCATE( tmp_vec(npwq_g) )
+         ALLOCATE(tmp_vec(npwq_g))
          tmp_vec = 0._DP
          !
-         CALL mergewf( pdepg(:), tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
+         CALL mergewf(pdepg,tmp_vec,npwq,ig_l2g(1:npwq),me_bgrp,nproc_bgrp,root_bgrp,intra_bgrp_comm)
          !
          ! ONLY ROOT W/IN BGRP WRITES
          !
@@ -146,20 +147,20 @@ MODULE pdep_io
                header(HD_ID_LITTLE_ENDIAN) = 1
             ENDIF
             !
-            OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED' )
+            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
             offset = 1
-            WRITE( iunit, POS=offset ) header
+            WRITE(iunit,POS=offset) header
             offset = 1+HD_LENGTH*SIZEOF(header(1))
-            WRITE( iunit, POS=offset ) tmp_vec(1:ndim)
-            CLOSE( iunit )
+            WRITE(iunit,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iunit)
             !
          ENDIF
          !
-         DEALLOCATE( tmp_vec )
+         DEALLOCATE(tmp_vec)
          !
       ENDIF
       !
-      CALL stop_clock( 'pdep_write' )
+      CALL stop_clock('pdep_write')
       !
     END SUBROUTINE
     !
@@ -172,7 +173,6 @@ MODULE pdep_io
     SUBROUTINE pdep_read_G_and_distribute(fname,pdepg,iq)
       !
       USE mp_wave,      ONLY : splitwf
-      USE mp,           ONLY : mp_bcast
       !
       IMPLICIT NONE
       !
@@ -186,16 +186,18 @@ MODULE pdep_io
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: ig
-      INTEGER :: ndim, iunit
+      INTEGER :: ndim
+      INTEGER :: iunit
       INTEGER :: npwqx_g
-      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:), igq_l2g(:)
+      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:)
+      INTEGER, ALLOCATABLE :: igq_l2g(:)
       INTEGER, PARAMETER :: default_iq = 1
       INTEGER :: iq_
       INTEGER :: ierr
       INTEGER :: header(HD_LENGTH)
       INTEGER(i8b) :: offset
       !
-      CALL start_clock( 'pdep_read' )
+      CALL start_clock('pdep_read')
       !
       IF(PRESENT(iq)) THEN
          iq_ = iq
@@ -209,113 +211,99 @@ MODULE pdep_io
          !
          ndim = ngq_g(iq_)
          !
-         ALLOCATE( tmp_vec(npwq_g) )
+         ALLOCATE(tmp_vec(npwq_g))
          tmp_vec = 0._DP
          pdepg = 0._DP
          !
-         IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         ! ONLY ROOT W/IN BGRP READS
+         !
+         IF(me_bgrp == root_bgrp) THEN
             !
-            ! ONLY ROOT W/IN BGRP READS
+            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
+            IF(ierr /= 0) THEN
+               CALL errore('pdep_read','Cannot read file:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
             !
-            IF(me_bgrp == root_bgrp) THEN
-               !
-               OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED', STATUS='OLD', IOSTAT=ierr )
-               IF(ierr /= 0) THEN
-                  CALL errore('pdep_read', 'Cannot RD F:'//TRIM(ADJUSTL(fname)),1)
-               ENDIF
-               !
-               offset = 1
-               READ( iunit, POS=offset ) header
-               IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-                  CALL errore('pdep_read', 'Unknown file format:'//TRIM(ADJUSTL(fname)),1)
-               ENDIF
-               IF(ndim /= header(HD_ID_DIMENSION)) THEN
-                  CALL errore('pdep_read', 'Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
-               ENDIF
-               IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
-                  .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-                  CALL errore('pdep_read', 'Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
-               ENDIF
-               !
-               offset = 1+HD_LENGTH*SIZEOF(header(1))
-               READ( iunit, POS=offset ) tmp_vec(1:ndim)
-               CLOSE( iunit )
-               !
-            END IF
+            offset = 1
+            READ(iunit,POS=offset) header
+            IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
+               CALL errore('pdep_read','Unknown file format:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
+            IF(ndim /= header(HD_ID_DIMENSION)) THEN
+               CALL errore('pdep_read','Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
+            IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
+               .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
+               CALL errore('pdep_read','Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
             !
-            npwqx_g = MAXVAL( ngq_g(:) )
-            ALLOCATE( igq_l2g_kdip(npwqx_g) )
-            igq_l2g_kdip(:) = 0
-            !
-            ALLOCATE( igq_l2g(ngq(iq_)) )
-            DO ig = 1, ngq(iq_)
-               igq_l2g(ig) = ig_l2g( igq_q(ig,iq_) )
-            ENDDO
-            CALL gq_l2gmap_kdip( npwq_g, ngq_g(iq_), ngq(iq_), igq_l2g, igq_l2g_kdip )
-            DEALLOCATE( igq_l2g )
-            !
-            CALL splitwf( pdepg, tmp_vec, npwq, igq_l2g_kdip, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
-            DEALLOCATE( igq_l2g_kdip )
+            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            READ(iunit,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iunit)
             !
          ENDIF
          !
-         DEALLOCATE( tmp_vec )
+         npwqx_g = MAXVAL(ngq_g)
+         ALLOCATE(igq_l2g_kdip(npwqx_g))
+         igq_l2g_kdip = 0
          !
-         CALL mp_bcast( pdepg, 0, inter_bgrp_comm )
-         CALL mp_bcast( pdepg, 0, inter_pool_comm )
+         ALLOCATE(igq_l2g(ngq(iq_)))
+         DO ig = 1,ngq(iq_)
+            igq_l2g(ig) = ig_l2g(igq_q(ig,iq_))
+         ENDDO
+         CALL gq_l2gmap_kdip(npwq_g,ngq_g(iq_),ngq(iq_),igq_l2g,igq_l2g_kdip)
+         DEALLOCATE(igq_l2g)
+         !
+         CALL splitwf(pdepg,tmp_vec,npwq,igq_l2g_kdip,me_bgrp,nproc_bgrp,root_bgrp,intra_bgrp_comm)
+         DEALLOCATE(igq_l2g_kdip)
+         !
+         DEALLOCATE(tmp_vec)
          !
       ELSE
          !
          ! Resume all components
          !
-         ALLOCATE( tmp_vec(npwq_g) )
+         ALLOCATE(tmp_vec(npwq_g))
          tmp_vec = 0._DP
          pdepg = 0._DP
          !
-         IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         ! ONLY ROOT W/IN BGRP READS
+         !
+         ndim = npwq_g
+         !
+         IF(me_bgrp == root_bgrp) THEN
             !
-            ! ONLY ROOT W/IN BGRP READS
+            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
+            IF(ierr /= 0) THEN
+               CALL errore('pdep_read','Cannot read file:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
             !
-            ndim = npwq_g
+            offset = 1
+            READ(iunit,POS=offset) header
+            IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
+               CALL errore('pdep_read','Unknown file format:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
+            IF(ndim /= header(HD_ID_DIMENSION)) THEN
+               CALL errore('pdep_read','Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
+            IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
+               .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
+               CALL errore('pdep_read','Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
+            ENDIF
             !
-            IF(me_bgrp == root_bgrp) THEN
-               !
-               OPEN( NEWUNIT=iunit, FILE=TRIM(fname), ACCESS='STREAM', FORM='UNFORMATTED', STATUS='OLD', IOSTAT=ierr )
-               IF(ierr /= 0) THEN
-                  CALL errore('pdep_read', 'Cannot RD F:'//TRIM(ADJUSTL(fname)), 1)
-               ENDIF
-               !
-               offset = 1
-               READ( iunit, POS=offset ) header
-               IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-                  CALL errore('pdep_read', 'Unknown file format:'//TRIM(ADJUSTL(fname)),1)
-               ENDIF
-               IF(ndim /= header(HD_ID_DIMENSION)) THEN
-                  CALL errore('pdep_read', 'Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
-               ENDIF
-               IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
-                  .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-                  CALL errore('pdep_read', 'Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
-               ENDIF
-               !
-               offset = 1+HD_LENGTH*SIZEOF(header(1))
-               READ( iunit, POS=offset ) tmp_vec(1:ndim)
-               CLOSE( iunit )
-               !
-            END IF
-            !
-            CALL splitwf( pdepg, tmp_vec, npwq, ig_l2g(1:npwq), me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm )
+            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            READ(iunit,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iunit)
             !
          ENDIF
          !
-         DEALLOCATE( tmp_vec )
+         CALL splitwf(pdepg,tmp_vec,npwq,ig_l2g(1:npwq),me_bgrp,nproc_bgrp,root_bgrp,intra_bgrp_comm)
          !
-         CALL mp_bcast( pdepg, 0, inter_bgrp_comm )
-         CALL mp_bcast( pdepg, 0, inter_pool_comm )
+         DEALLOCATE(tmp_vec)
          !
       ENDIF
       !
-      CALL stop_clock( 'pdep_read' )
+      CALL stop_clock('pdep_read')
       !
     END SUBROUTINE
     !

@@ -29,10 +29,10 @@ clean :
 	- /bin/rm -f lib_para_kernel.a
 
 title :
-	@echo "                    "
+	@echo
 	@echo "####################"
 	@echo "### Para_kernel ####"
 	@echo "####################"
-	@echo "                    "
+	@echo
 
 include make.depend

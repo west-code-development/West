@@ -14,15 +14,18 @@
 SUBROUTINE wfreq_readin()
   !-----------------------------------------------------------------------
   !
-  USE uspp,             ONLY : okvan
   USE gvecs,            ONLY : doublegrid
-  USE mp_bands,         ONLY : nbgrp
+  USE uspp,             ONLY : okvan
+  USE mp_global,        ONLY : nbgrp,npool
+  USE xc_lib,           ONLY : xclib_dft_is
+  USE pwcom,            ONLY : nkstot,lsda
   !
   IMPLICIT NONE
   !
   ! Workspace
   !
   LOGICAL :: needwf
+  INTEGER :: nkpt
   !
   CALL start_clock('wfreq_readin')
   !
@@ -38,9 +41,16 @@ SUBROUTINE wfreq_readin()
   !
   ! PW checks
   !
-  IF (okvan) CALL errore('wfreq_readin','ultrasoft pseudopotential not implemented',1)
-  IF (doublegrid) CALL errore('wfreq_readin','double grid not implemented',1)
-  IF (nbgrp > 1) CALL errore('wfreq_readin','band groups not implemented',1)
+  IF(lsda) THEN
+     nkpt = nkstot/2
+  ELSE
+     nkpt = nkstot
+  END IF
+  !
+  IF(okvan) CALL errore('wfreq_readin','ultrasoft pseudopotential not implemented',1)
+  IF(doublegrid) CALL errore('wfreq_readin','double grid not implemented',1)
+  IF(nbgrp > 1 .AND. xclib_dft_is('hybrid')) CALL errore('wfreq_readin','band groups not implemented for EXX',1)
+  IF(npool > 1 .AND. nkpt > 1) CALL errore('wfreq_readin','pools only implemented for spin, not k-points',1)
   !
   ! READ other sections of the input file
   !

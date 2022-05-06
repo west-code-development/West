@@ -18,14 +18,15 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   ! ... ib = qp_bandrange(1):qp_bandrange(2)
   !
   USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,world_comm
+  USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_barrier
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
-  USE pwcom,                ONLY : et
+  USE pwcom,                ONLY : et,nks
   USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
-                                 & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr
+                                 & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,&
+                                 & z_body_rfr,iks_l2g
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
@@ -42,7 +43,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !
   ! Workspace
   !
-  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip
+  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -59,10 +60,6 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !
   IF(l_verbose) CALL io_push_title('Sigma-C')
   !
-  ! BARRIER : ALL
-  !
-  CALL mp_barrier( world_comm )
-  !
   ! ZERO
   !
   sigma_corr = 0._DP
@@ -76,13 +73,14 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Integrating along the IM axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_i', barra_load )
   !
   ! LOOP
   !
-  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
+  DO iks = 1, nks ! KPOINT-SPIN
      !
+     iks_g = iks_l2g(iks)
      nbndval = nbnd_occ(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
@@ -94,7 +92,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         IF(l_macropol) THEN
            !
            DO ifreq = 1,ifr%nloc
-              enrg = et(ib,iks) - energy(ib,iks)
+              enrg = et(ib,iks) - energy(ib,iks_g)
               partial_h = partial_h + d_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
            ENDDO
            !
@@ -107,8 +105,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         DO ifreq = 1,ifr%nloc
            DO im = 1, aband%nloc
               glob_im = aband%l2g(im)
-              enrg = et(glob_im,iks) - energy(ib,iks)
-              partial_b = partial_b + d_body1_ifr(im,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
+              enrg = et(glob_im,iks) - energy(ib,iks_g)
+              partial_b = partial_b + d_body1_ifr(im,ifreq,ib,iks_g)*integrate_imfreq(ifreq,enrg)
            ENDDO
         ENDDO
         !
@@ -119,8 +117,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            DO ifreq = 1,ifr%nloc
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos
-                    enrg = d_diago(il,ip,ib,iks) - energy(ib,iks)
-                    partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
+                    enrg = d_diago(il,ip,ib,iks_g) - energy(ib,iks_g)
+                    partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ib,iks_g)*integrate_imfreq(ifreq,enrg)
                  ENDDO
               ENDDO
            ENDDO
@@ -131,7 +129,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         CALL mp_sum( partial_b, intra_bgrp_comm)
         CALL mp_sum( partial_b, inter_image_comm)
         !
-        sigma_corr(ib,iks) = sigma_corr(ib,iks) + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP )
+        sigma_corr(ib,iks_g) = sigma_corr(ib,iks_g) + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP )
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
         !
@@ -148,18 +146,19 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP
   !
-  DO iks = 1, k_grid%nps
+  DO iks = 1, nks
      !
+     iks_g = iks_l2g(iks)
      nbndval = nbnd_occ(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
-        enrg = energy(ib,iks)
+        enrg = energy(ib,iks_g)
         !
         residues_b = 0._DP
         residues_h = 0._DP
@@ -187,7 +186,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
                  !
                  IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + segno * z_head_rfr(ifreq)
                  !
-                 residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
+                 residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks_g )
                  !
               ENDDO
               !
@@ -200,7 +199,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         CALL mp_sum( residues_b, intra_bgrp_comm )
         CALL mp_sum( residues_b, inter_image_comm )
         !
-        sigma_corr(ib,iks) = sigma_corr(ib,iks) + residues_b/omega + residues_h*pot3D%div
+        sigma_corr(ib,iks_g) = sigma_corr(ib,iks_g) + residues_b/omega + residues_h*pot3D%div
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
         !
@@ -210,8 +209,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !
   IF(l_verbose) CALL stop_bar_type( barra, 'sigmac_r' )
   !
+  CALL mp_sum( sigma_corr, inter_pool_comm )
+  !
 END SUBROUTINE
-!
 !
 !-----------------------------------------------------------------------
 SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
@@ -221,14 +221,15 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   ! ... ib = qp_bandrange(1):qp_bandrange(2)
   !
   USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,world_comm
+  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_barrier
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
   USE pwcom,                ONLY : et
   USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
-                                 & z_head_ifr,z_head_rfr,z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q
+                                 & z_head_ifr,z_head_rfr,z_body1_ifr_q,z_body2_ifr_q,d_diago_q,&
+                                 & z_body_rfr_q
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband
@@ -264,10 +265,6 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   ! PRINT TITLE of CALC
   !
   IF(l_verbose) CALL io_push_title('Sigma_C')
-  !
-  ! BARRIER : ALL
-  !
-  CALL mp_barrier( world_comm )
   !
   ! ZERO
   !
@@ -449,17 +446,11 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
 END SUBROUTINE
 !
-!
-!
-!
-!
-!
 FUNCTION integrate_imfreq( ifreq, c )
   !
   ! = int_{a}^{b}  dz  \frac{ c }{ c^2 + z^2 }
   !
   USE kinds,     ONLY : DP
-  USE pwcom,     ONLY : et
   USE westcom,   ONLY : imfreq_list_integrate
   !
   IMPLICIT NONE
@@ -480,8 +471,6 @@ FUNCTION integrate_imfreq( ifreq, c )
   integrate_imfreq = ATAN( c * (b-a) / (c*c+a*b) )
   !
 END FUNCTION
-!
-!
 !
 SUBROUTINE retrieve_glob_freq( freq, glob_ifreq )
   !

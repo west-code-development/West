@@ -58,7 +58,7 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
     ! local correlation energy
     ! local exchange potential
     ! local correlation potential
-  INTEGER :: ir, ipol
+  INTEGER :: ir
     ! counter on mesh points
     ! counter on nspin
   !
@@ -174,4 +174,4 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
   !
   RETURN
   !
-END SUBROUTINE v_x
+END SUBROUTINE

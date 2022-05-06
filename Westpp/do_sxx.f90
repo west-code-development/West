@@ -15,15 +15,14 @@ SUBROUTINE do_sxx ( )
   !----------------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE uspp,                  ONLY : vkb,nkb
   USE io_global,             ONLY : stdout
-  USE pwcom,                 ONLY : current_spin,wk,nks,nelup,neldw,isk,igk_k,xk,npw,npwx,lsda,nkstot,current_k,ngk,et
+  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk,et
   USE io_push,               ONLY : io_push_title,io_push_bar
-  USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,westpp_save_dir,nbnd_occ,iks_l2g,westpp_epsinfty,dvg,ev,&
+  USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,nbnd_occ,westpp_epsinfty,dvg,ev,&
                                   & npwq,npwqx,fftdriver,logfile,ngq,westpp_n_pdep_eigen_to_use
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE mp,                    ONLY : mp_bcast,mp_sum
-  USE fft_base,              ONLY : dfftp,dffts
+  USE fft_base,              ONLY : dffts
   USE wvfct,                 ONLY : nbnd
   USE buffers,               ONLY : get_buffer
   USE wavefunctions,         ONLY : evc,psic,psic_nc
@@ -32,8 +31,8 @@ SUBROUTINE do_sxx ( )
   USE fft_at_k,              ONLY : single_invfft_k,single_fwfft_k
   USE distribution_center,   ONLY : pert
   USE control_flags,         ONLY : gamma_only
-  USE gvect,                 ONLY : g,gstart,ngm_g,ngm
-  USE cell_base,             ONLY : omega,at,alat
+  USE gvect,                 ONLY : gstart,ngm
+  USE cell_base,             ONLY : omega
   USE noncollin_module,      ONLY : noncolin,npol
   USE mp_world,              ONLY : mpime,root
   USE constants,             ONLY : rytoev
@@ -64,7 +63,7 @@ SUBROUTINE do_sxx ( )
   INTEGER :: iunit
   LOGICAL :: l_print_pdep_read
   !
-  CALL io_push_title("(S)creened eXact eXchange")
+  CALL io_push_title('(S)creened eXact eXchange')
   !
   ALLOCATE( sigma_exx( westpp_range(1):westpp_range(2), k_grid%nps) )
   ALLOCATE( sigma_sxx( westpp_range(1):westpp_range(2), k_grid%nps) )
@@ -72,7 +71,6 @@ SUBROUTINE do_sxx ( )
   sigma_exx = 0._DP
   sigma_sxx = 0._DP
   !
-  !ALLOCATE( pertg(npwqx) )
   ALLOCATE( pertg(ngm) )
   IF(noncolin) THEN
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
@@ -100,27 +98,14 @@ SUBROUTINE do_sxx ( )
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
      current_k = iks
-     IF ( lsda ) current_spin = isk(iks)
-     call g2_kin( iks )
-     !
-     ! ... More stuff needed by the hamiltonian: nonlocal projectors
-     !
-     !IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
      npw = ngk(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps>1) THEN
-        !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol
-        !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        !CALL mp_bcast(evc,0,inter_image_comm)
-        !CALL davcio(evc,lrwfc,iuwfc,iks,-1)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
-     !
-     !nbndval = nbnd_occ(iks)
      !
      DO ib = 1, nbnd
         !
@@ -147,7 +132,6 @@ SUBROUTINE do_sxx ( )
               !
               l_gammaq = q_grid%l_pIsGamma(iq)
               !
-              !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !M
               CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )
               ikqs = k_grid%ipis2ips(ikq,is)
               CALL compute_phase( g0, 'cart', phase )
@@ -184,24 +168,19 @@ SUBROUTINE do_sxx ( )
                  DO ir=1,dffts%nnr
                     pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
-                 !CALL single_fwfft_k(dffts,npwq,npwqx,pertr_nc(1,1),pertg,'Dense') ! no igk
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Rho') ! no igk
               ELSE
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv),pertr,'Wave',igk_k(1,ikqs))
                  DO ir=1,dffts%nnr
                     pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO
-                 !CALL single_fwfft_k(dffts,npwq,npwqx,pertr,pertg,'Dense') ! no igk
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
               ENDIF
               !
-              !DO ig = 1,npwq
               DO ig = 1,ngm
                  pertg(ig) = pertg(ig) * pot3D%sqvc(ig)
               ENDDO
-              !sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso * DDOT( 2*npwq, pertg(1), 1, pertg(1), 1) / omega
               sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso*DDOT(2*ngm, pertg(1), 1, pertg(1), 1)/omega * q_grid%weight(iq)
-              !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
               IF( ib == iv .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
               !
               ! -- < SXX >
@@ -273,9 +252,9 @@ SUBROUTINE do_sxx ( )
   !
   ! STDOUT
   !
-  WRITE(stdout,"(5X)")
+  WRITE(stdout,'(5X)')
   CALL io_push_bar()
-  WRITE(stdout,"(5X,a,1X,a,1X,a,1X,a,1X,a,1X,a)") &
+  WRITE(stdout,'(5X,a,1X,a,1X,a,1X,a,1X,a,1X,a)') &
   & 'K     ', 'B     ', '      Eks [eV]', '       Sx [eV]', '      Sxx [eV]', '        Sxx/Sx'
   CALL io_push_bar()
   !
@@ -288,11 +267,11 @@ SUBROUTINE do_sxx ( )
         out_tab( ib - westpp_range(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
-        WRITE(stdout,"(5X,i5.5,1X,i6.6,1X,1f14.6,1X,1f14.6,1X,1f14.6,1X,1f14.6)") &
+        WRITE(stdout,'(5X,i5.5,1X,i6.6,1X,1f14.6,1X,1f14.6,1X,1f14.6,1X,1f14.6)') &
         & iks, ib, et(ib,iks)*rytoev, sigma_exx(ib,iks)*rytoev, sigma_sxx(ib,iks)*rytoev, sigma_sxx(ib,iks)/sigma_exx(ib,iks)
      ENDDO
      IF (k_grid%nps>1.AND.iks<k_grid%nps) CALL io_push_bar()
-     WRITE(myglobk,'(i5.5)') iks_l2g(iks)
+     WRITE(myglobk,'(i5.5)') iks
      !
      !CALL serial_table_output(mpime==root,4000,'sxx_K'//myglobk,out_tab,&
      !& westpp_range(2)-westpp_range(1)+1,5,&

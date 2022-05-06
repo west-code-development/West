@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -18,13 +18,12 @@ MODULE distribution_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   TYPE(idistribute) :: pert
   TYPE(idistribute) :: macropert
   TYPE(idistribute) :: ifr
   TYPE(idistribute) :: rfr
   TYPE(idistribute) :: aband
   TYPE(idistribute) :: occband
+  TYPE(idistribute) :: band_group
   !
 END MODULE

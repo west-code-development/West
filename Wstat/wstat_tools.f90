@@ -18,8 +18,6 @@ MODULE wstat_tools
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   INTERFACE diagox
      MODULE PROCEDURE diagox_dsy, diagox_zhe
   END INTERFACE
@@ -57,10 +55,10 @@ MODULE wstat_tools
       !
       IMPLICIT NONE
       !
-      INTEGER :: nbase,nvec,nvecx
-      REAL(DP) :: hr_distr(nvecx,pert%nlocx)
-      REAL(DP) :: ew(nvecx)
-      REAL(DP) :: vr_distr(nvecx,pert%nlocx)
+      INTEGER,INTENT(IN) :: nbase,nvec,nvecx
+      REAL(DP),INTENT(IN) :: hr_distr(nvecx,pert%nlocx)
+      REAL(DP),INTENT(OUT) :: ew(nvecx)
+      REAL(DP),INTENT(OUT) :: vr_distr(nvecx,pert%nlocx)
       !
       REAL(DP) :: time_spent(2)
       REAL(DP),EXTERNAL :: GET_CLOCK
@@ -132,10 +130,10 @@ MODULE wstat_tools
       !
       IMPLICIT NONE
       !
-      INTEGER :: nbase,nvec,nvecx
-      COMPLEX(DP) :: hr_distr(nvecx,pert%nlocx)
-      REAL(DP) :: ew(nvecx)
-      COMPLEX(DP) :: vr_distr(nvecx,pert%nlocx)
+      INTEGER,INTENT(IN) :: nbase,nvec,nvecx
+      COMPLEX(DP),INTENT(IN) :: hr_distr(nvecx,pert%nlocx)
+      REAL(DP),INTENT(OUT) :: ew(nvecx)
+      COMPLEX(DP),INTENT(OUT) :: vr_distr(nvecx,pert%nlocx)
       !
       REAL(DP) :: time_spent(2)
       REAL(DP),EXTERNAL :: GET_CLOCK
@@ -346,13 +344,13 @@ MODULE wstat_tools
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE build_hr_real(ag,bg,l2_s,l2_e,c_distr,g_s,g_e)
+    SUBROUTINE build_hr_real(ag,bg,l2_s,l2_e,c_distr,g_e)
       !------------------------------------------------------------------------
       !
       !  c_distr = < ag | bg >
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,&
-                                     & inter_bgrp_comm,my_bgrp_id
+                                     & inter_bgrp_comm,my_bgrp_id,inter_pool_comm,my_pool_id
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
@@ -365,8 +363,8 @@ MODULE wstat_tools
       COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
       COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: l2_s,l2_e
-      REAL(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
-      INTEGER,INTENT(IN) :: g_s,g_e
+      REAL(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
+      INTEGER,INTENT(IN) :: g_e
       !
       ! Workspace
       !
@@ -377,7 +375,7 @@ MODULE wstat_tools
       !
       CALL start_clock('build_hr')
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
          ! Initialize to zero
          !
@@ -418,19 +416,20 @@ MODULE wstat_tools
       ENDIF
       !
       CALL mp_bcast(c_distr,0,inter_bgrp_comm)
+      CALL mp_bcast(c_distr,0,inter_pool_comm)
       !
       CALL stop_clock('build_hr')
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE build_hr_complex(ag,bg,l2_s,l2_e,c_distr,g_s,g_e)
+    SUBROUTINE build_hr_complex(ag,bg,l2_s,l2_e,c_distr,g_e)
       !------------------------------------------------------------------------
       !
       !  c_distr = < ag | bg >
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,&
-                                     & inter_bgrp_comm,my_bgrp_id
+                                     & inter_bgrp_comm,my_bgrp_id,inter_pool_comm,my_pool_id
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
@@ -442,8 +441,8 @@ MODULE wstat_tools
       COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
       COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: l2_s,l2_e
-      COMPLEX(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
-      INTEGER,INTENT(IN) :: g_s,g_e
+      COMPLEX(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
+      INTEGER,INTENT(IN) :: g_e
       !
       ! Workspace
       !
@@ -454,7 +453,7 @@ MODULE wstat_tools
       !
       CALL start_clock('build_hr')
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
          ! Initialize to zero
          !
@@ -491,6 +490,7 @@ MODULE wstat_tools
       ENDIF
       !
       CALL mp_bcast(c_distr,0,inter_bgrp_comm)
+      CALL mp_bcast(c_distr,0,inter_pool_comm)
       !
       CALL stop_clock('build_hr')
       !
@@ -500,7 +500,8 @@ MODULE wstat_tools
     SUBROUTINE redistribute_vr_distr_real(nselect,n,lda,vr_distr,ishift)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : me_bgrp,my_bgrp_id,nbgrp,nproc_bgrp,intra_bgrp_comm,my_image_id
+      USE mp_global,            ONLY : me_bgrp,my_bgrp_id,nbgrp,nproc_bgrp,intra_bgrp_comm,&
+                                     & my_image_id,my_pool_id,npool
       USE mp_world,             ONLY : world_comm,nproc
       USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
@@ -534,7 +535,7 @@ MODULE wstat_tools
       !
       CALL start_clock('redistr_vr')
       !
-      ! vr_distr only needed by band group 0 in the next step
+      ! vr_distr only needed by pool 0 and band group 0 in the next step
       !
       ALLOCATE(send_count(nproc))
       ALLOCATE(recv_count(nproc))
@@ -542,7 +543,7 @@ MODULE wstat_tools
       send_count = 0
       recv_count = 0
       !
-      IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
          n_col = 0
          !
          DO j_glob = n+1,n+nselect
@@ -576,7 +577,7 @@ MODULE wstat_tools
                   !
                   val_send(:,n_col) = vr_distr(:,j_loc)
                   idx_send(n_col) = j_loc2
-                  dest(n_col) = this_dest*nbgrp*nproc_bgrp
+                  dest(n_col) = this_dest*npool*nbgrp*nproc_bgrp
                   send_count(dest(n_col)+1) = send_count(dest(n_col)+1)+1
                ENDIF
             ENDIF
@@ -612,7 +613,7 @@ MODULE wstat_tools
                !
                CALL pert%g2l(ishift(j_glob),j_loc2,this_sour)
                !
-               this_sour = this_sour*nbgrp*nproc_bgrp
+               this_sour = this_sour*npool*nbgrp*nproc_bgrp
                recv_count(this_sour+1) = recv_count(this_sour+1)+1
             ENDIF
             !
@@ -655,7 +656,7 @@ MODULE wstat_tools
       DEALLOCATE(send_displ)
       DEALLOCATE(recv_displ)
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          IF(me_bgrp == 0) THEN
             DO i_col = 1,n_col
                vr_distr(:,idx_recv(i_col)) = val_recv(:,i_col)
@@ -676,7 +677,8 @@ MODULE wstat_tools
     SUBROUTINE redistribute_vr_distr_complex(nselect,n,lda,vr_distr,ishift)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : me_bgrp,my_bgrp_id,nbgrp,nproc_bgrp,intra_bgrp_comm,my_image_id
+      USE mp_global,            ONLY : me_bgrp,my_bgrp_id,nbgrp,nproc_bgrp,intra_bgrp_comm,&
+                                     & my_image_id,my_pool_id,npool
       USE mp_world,             ONLY : world_comm,nproc
       USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
@@ -710,7 +712,7 @@ MODULE wstat_tools
       !
       CALL start_clock('redistr_vr')
       !
-      ! vr_distr only needed by band group 0 in the next step
+      ! vr_distr only needed by pool 0 and band group 0 in the next step
       !
       ALLOCATE(send_count(nproc))
       ALLOCATE(recv_count(nproc))
@@ -718,7 +720,7 @@ MODULE wstat_tools
       send_count = 0
       recv_count = 0
       !
-      IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
          n_col = 0
          !
          DO j_glob = n+1,n+nselect
@@ -752,7 +754,7 @@ MODULE wstat_tools
                   !
                   val_send(:,n_col) = vr_distr(:,j_loc)
                   idx_send(n_col) = j_loc2
-                  dest(n_col) = this_dest*nbgrp*nproc_bgrp
+                  dest(n_col) = this_dest*npool*nbgrp*nproc_bgrp
                   send_count(dest(n_col)+1) = send_count(dest(n_col)+1)+1
                ENDIF
             ENDIF
@@ -788,7 +790,7 @@ MODULE wstat_tools
                !
                CALL pert%g2l(ishift(j_glob),j_loc2,this_sour)
                !
-               this_sour = this_sour*nbgrp*nproc_bgrp
+               this_sour = this_sour*npool*nbgrp*nproc_bgrp
                recv_count(this_sour+1) = recv_count(this_sour+1)+1
             ENDIF
             !
@@ -831,7 +833,7 @@ MODULE wstat_tools
       DEALLOCATE(send_displ)
       DEALLOCATE(recv_displ)
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          IF(me_bgrp == 0) THEN
             DO i_col = 1,n_col
                vr_distr(:,idx_recv(i_col)) = val_recv(:,i_col)
@@ -852,7 +854,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_real(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,my_bgrp_id
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
       USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
@@ -877,7 +880,7 @@ MODULE wstat_tools
       !
       CALL start_clock('update_vr')
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
          ALLOCATE(hg2(npwqx,pert%nlocx))
@@ -926,6 +929,7 @@ MODULE wstat_tools
       ENDIF
       !
       CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
       !
       CALL stop_clock('update_vr')
       !
@@ -935,7 +939,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_complex(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,my_bgrp_id
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
       USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
@@ -959,7 +964,7 @@ MODULE wstat_tools
       !
       CALL start_clock('update_vr')
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
          ALLOCATE(hg2(npwqx,pert%nlocx))
@@ -1007,6 +1012,7 @@ MODULE wstat_tools
       ENDIF
       !
       CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
       !
       CALL stop_clock('update_vr')
       !
@@ -1016,7 +1022,8 @@ MODULE wstat_tools
     SUBROUTINE refresh_with_vr_distr_real(ag,nselect,n,lda,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,my_bgrp_id
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
       USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
@@ -1038,7 +1045,7 @@ MODULE wstat_tools
       !
       CALL start_clock('refresh_vr')
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
          hg = 0._DP
@@ -1085,6 +1092,7 @@ MODULE wstat_tools
       ENDIF
       !
       CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
       !
       CALL stop_clock('refresh_vr')
       !
@@ -1094,7 +1102,8 @@ MODULE wstat_tools
     SUBROUTINE refresh_with_vr_distr_complex(ag,nselect,n,lda,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,my_bgrp_id
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
       USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
@@ -1115,7 +1124,7 @@ MODULE wstat_tools
       !
       CALL start_clock('refresh_vr')
       !
-      IF(my_bgrp_id == 0) THEN
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
          hg = 0._DP
@@ -1161,9 +1170,9 @@ MODULE wstat_tools
       ENDIF
       !
       CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
       !
       CALL stop_clock('refresh_vr')
       !
     END SUBROUTINE
-    !
 END MODULE

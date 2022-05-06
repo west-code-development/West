@@ -37,14 +37,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,iks_l2g,l_enable_lanczos,nbnd_occ,&
                                  & iuwfc,lrwfc,o_restart_time,npwqx,fftdriver,wstat_save_dir
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
-  USE mp,                   ONLY : mp_bcast,mp_sum
-  USE gvect,                ONLY : g,ngm
-  USE gvecw,                ONLY : gcutw
-  USE cell_base,            ONLY : tpiba2
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,npool,intra_bgrp_comm,nbgrp
+  USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
+  USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nks
   USE wavefunctions,        ONLY : evc,psic
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
@@ -52,12 +50,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
-  USE noncollin_module,     ONLY : noncolin,npol
+  USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert
+  USE distribution_center,  ONLY : pert,band_group
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
-  USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq
+  USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
   !
@@ -70,7 +68,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: i1,i2,ip,ig,glob_ip,ir,ib,iks,im
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
@@ -95,6 +93,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
+  CALL band_group%init(qp_bandrange(2)-qp_bandrange(1)+1,'b','band_group',.FALSE.)
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
@@ -108,11 +107,15 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ENDIF
   !
   barra_load = 0
-  DO iks = 1, k_grid%nps
-     IF(iks<bks%lastdone_ks) CYCLE
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        IF(iks==bks%lastdone_ks .AND. ib <= bks%lastdone_band ) CYCLE
-        barra_load = barra_load + 1
+  DO iks = 1,nks
+     IF(iks < bks%lastdone_ks) CYCLE
+     !
+     DO ibloc = 1,band_group%nloc
+        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+        !
+        IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
+        !
+        barra_load = barra_load+1
      ENDDO
   ENDDO
   !
@@ -137,13 +140,15 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! LOOP
   !
-  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
+  DO iks = 1,nks ! KPOINT-SPIN
      !
      ! Exit loop if no work to do
      !
      IF(barra_load == 0) EXIT
      !
      IF(iks < bks%lastdone_ks) CYCLE
+     !
+     iks_g = iks_l2g(iks)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -158,41 +163,26 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(k_grid%nps>1) THEN
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+     IF(nks > 1) THEN
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
-!     !
-!     ! ... Needed for LDA+U
-!     !
-!     IF ( nks > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
-!          CALL get_buffer ( wfcU, nwordwfcU, iunhub, iks )
-!     !
-!     current_k = iks
-!     current_spin = isk(iks)
-!     !
-!     CALL gk_sort(xk(1,iks),ngm,g,gcutw,npw,igk,g2kin)
-!     g2kin=g2kin*tpiba2
-!     !
-!     ! reads unperturbed wavefuctions psi_k in G_space, for all bands
-!     !
-!     !
-!     CALL init_us_2 (npw, igk, xk (1, iks), vkb)
      !
      nbndval = nbnd_occ(iks)
      !
-     bks%max_band=nbndval
-     bks%min_band=1
+     bks%max_band = nbndval
+     bks%min_band = 1
      !
      ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
-     CALL preallocate_solvegfreq( iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert )
      !
      time_spent(1) = get_clock( 'glanczos' )
      !
      ! LOOP over band states
      !
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        IF(iks==bks%lastdone_ks .AND. ib <= bks%lastdone_band ) CYCLE
+     DO ibloc = 1,band_group%nloc
+        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+        !
+        IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
         ! PSIC
         !
@@ -288,12 +278,15 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         IF( o_restart_time >= 0._DP ) THEN
            IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
            IF( ib == qp_bandrange(2) ) l_write_restart = .TRUE.
-        ELSE
-           !
-           ! Write final restart file when everything is done
-           !
-           IF( iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
         ENDIF
+        !
+        ! Write final restart file
+        !
+        IF( iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+        !
+        ! But do not write here when using pool or band group
+        !
+        IF( npool*nbgrp > 1 ) l_write_restart = .FALSE.
         !
         IF( l_write_restart ) THEN
            bks%lastdone_ks = iks
@@ -314,7 +307,17 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   DEALLOCATE(pertg_all)
   !
+  ! Write final restart file when using pool or band group
+  !
+  IF( npool*nbgrp > 1 ) THEN
+     bks%lastdone_ks = k_grid%nps
+     bks%lastdone_band = qp_bandrange(2)
+     CALL solvegfreq_restart_write( bks )
+  ENDIF
+  !
   CALL stop_bar_type( barra, 'glanczos' )
+  !
+  CALL mp_barrier( world_comm )
   !
 END SUBROUTINE
 !
@@ -325,14 +328,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,iks_l2g,l_enable_lanczos,nbnd_occ,&
                                  & iuwfc,lrwfc,o_restart_time,npwqx,wstat_save_dir,ngq,igq_q
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
-  USE mp,                   ONLY : mp_bcast,mp_sum
-  USE gvect,                ONLY : g,ngm
-  USE gvecw,                ONLY : gcutw
-  USE cell_base,            ONLY : tpiba2
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nbgrp
+  USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
+  USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE wavefunctions,        ONLY : evc
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
@@ -343,9 +344,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert
+  USE distribution_center,  ONLY : pert,band_group
   USE wfreq_restart,        ONLY : solvegfreq_restart_write_q,solvegfreq_restart_read_q,bksks_type
-  USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq,preallocate_solvegfreq_q
+  USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
   !
@@ -358,16 +359,15 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: i1,i2,ip,ig,glob_ip,ir,ib,iv,iv_glob,iks,ik,im,ikks,ikk,iq,il
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,im,ikks,ikk,iq
   INTEGER :: npwk
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25)     :: filepot
   INTEGER :: nbndval
-  REAL(DP) :: q(3), g0(3)
+  REAL(DP) :: g0(3)
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:)
   COMPLEX(DP),ALLOCATABLE :: braket(:, :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
-  COMPLEX(DP),ALLOCATABLE :: q_sr(:)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:), pertr(:)
   COMPLEX(DP), ALLOCATABLE :: evck(:,:), phase(:)
@@ -386,6 +386,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   CALL deallocate_bec_type( becp )
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
+  !
+  CALL band_group%init(qp_bandrange(2)-qp_bandrange(1)+1,'b','band_group',.FALSE.)
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read_q( bksks )
@@ -411,13 +413,17 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ALLOCATE( phase(dffts%nnr) )
   !
   barra_load = 0
-  DO ikks = 1, k_grid%nps
-     IF(ikks<bksks%lastdone_ks) CYCLE
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        IF(ikks==bksks%lastdone_ks .AND. ib < bksks%lastdone_band ) CYCLE
-        DO iks = 1, k_grid%nps
-           IF (ikks==bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE
-           barra_load = barra_load + 1
+  DO ikks = 1,k_grid%nps
+     IF(ikks < bksks%lastdone_ks) CYCLE
+     !
+     DO ibloc = 1,band_group%nloc
+        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+        !
+        IF(ikks == bksks%lastdone_ks .AND. ib < bksks%lastdone_band) CYCLE
+        !
+        DO iks = 1,k_grid%nps
+           IF(ikks == bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE
+           barra_load = barra_load+1
         ENDDO
      ENDDO
   ENDDO
@@ -446,10 +452,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      npwk = ngk(ikks)
      !
-!     IF (k_grid%nps>1) THEN
-        IF(my_image_id==0) CALL get_buffer( evck, lrwfc, iuwfc, ikks )
-        CALL mp_bcast(evck,0,inter_image_comm)
-!     ENDIF
+     IF(my_image_id==0) CALL get_buffer( evck, lrwfc, iuwfc, ikks )
+     CALL mp_bcast(evck,0,inter_image_comm)
      !
      nbndval = nbnd_occ(ikks)
      !
@@ -460,8 +464,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      ! LOOP over band states
      !
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        IF(ikks==bksks%lastdone_ks .AND. ib < bksks%lastdone_band ) CYCLE
+     DO ibloc = 1,band_group%nloc
+        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+        !
+        IF(ikks == bksks%lastdone_ks .AND. ib < bksks%lastdone_band) CYCLE
         !
         ! PSIC
         !
@@ -479,10 +485,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            time_spent(1) = get_clock( 'glanczos' )
            !
-           !CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 1, 'cart', iq, g0 )  !M
            CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 'cart', iq, g0 )
-           !
-           CALL preallocate_solvegfreq_q( iks_l2g(ikks), iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert)
            !
            npwq = ngq(iq)
            !
@@ -636,12 +639,15 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            IF( o_restart_time >= 0._DP ) THEN
               IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
               IF( ib == qp_bandrange(2) ) l_write_restart = .TRUE.
-           ELSE
-              !
-              ! Write final restart file when everything is done
-              !
-              IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
            ENDIF
+           !
+           ! Write final restart file
+           !
+           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+           !
+           ! But do not write here when using band group
+           !
+           IF( nbgrp > 1 ) l_write_restart = .FALSE.
            !
            IF( l_write_restart ) THEN
               bksks%lastdone_ks = ikks
@@ -672,6 +678,17 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ENDIF
   DEALLOCATE( evck )
   !
+  ! Write final restart file when using band group
+  !
+  IF( nbgrp > 1 ) THEN
+     bksks%lastdone_ks = k_grid%nps
+     bksks%lastdone_kks = k_grid%nps
+     bksks%lastdone_band = qp_bandrange(2)
+     CALL solvegfreq_restart_write_q( bksks )
+  ENDIF
+  !
   CALL stop_bar_type( barra, 'glanczos' )
+  !
+  CALL mp_barrier( world_comm )
   !
 END SUBROUTINE

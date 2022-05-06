@@ -21,7 +21,6 @@ SUBROUTINE wstat_setup
   IMPLICIT NONE
   !
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
-  INTEGER :: ig
   !
   CALL do_setup()
   !

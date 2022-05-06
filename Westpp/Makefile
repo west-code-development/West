@@ -67,10 +67,10 @@ clean :
 	- /bin/rm -f ../../bin/westpp.x
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Westpp ###"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

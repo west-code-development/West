@@ -33,7 +33,7 @@ MODULE dfpt_module
       USE mp_world,              ONLY : world_comm
       USE buffers,               ONLY : get_buffer
       USE noncollin_module,      ONLY : noncolin,npol
-      USE pwcom,                 ONLY : current_spin,isk,npw,npwx,lsda,current_k,ngk,igk_k
+      USE pwcom,                 ONLY : current_spin,isk,npw,npwx,lsda,current_k,ngk,igk_k,nks
       USE cell_base,             ONLY : omega
       USE control_flags,         ONLY : gamma_only
       USE uspp,                  ONLY : nkb,vkb
@@ -42,9 +42,8 @@ MODULE dfpt_module
       USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
       USE io_push,               ONLY : io_push_title
       USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
-      USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver
-      USE class_idistribute,     ONLY : idistribute
-      USE distribution_center,   ONLY : occband
+      USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,iks_l2g
+      USE distribution_center,   ONLY : band_group
       !
       IMPLICIT NONE
       !
@@ -58,7 +57,7 @@ MODULE dfpt_module
       !
       ! Workspace
       !
-      INTEGER :: ipert, ig, ir, ibnd, ibnd2, lbnd, iks, ikqs, ikq, ik, is
+      INTEGER :: ipert, ig, ir, ibnd, ibnd2, lbnd, iks, ikqs, ikq, ik, is, iks_g
       INTEGER :: nbndval, ierr
       INTEGER :: npwkq
       !
@@ -93,21 +92,20 @@ MODULE dfpt_module
       ENDIF
       CALL io_push_title(TRIM(ADJUSTL(title)))
       !
-      occband = idistribute()
-      !
       dng=0.0_DP
       !
-      CALL start_bar_type( barra, 'dfpt', MAX(m,1) * k_grid%nps )
+      CALL start_bar_type( barra, 'dfpt', MAX(m,1) * nks )
       !
       IF (.NOT.gamma_only) THEN
          ALLOCATE( evckmq(npwx*npol,nbnd) )
          ALLOCATE( phase(dffts%nnr) )
       ENDIF
       !
-      DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
+      DO iks = 1, nks ! KPOINT-SPIN LOOP
          !
-         ik = k_grid%ip(iks)
-         is = k_grid%is(iks)
+         iks_g = iks_l2g(iks)
+         ik = k_grid%ip(iks_g)
+         is = k_grid%is(iks_g)
          !
          ! ... Set k-point, spin, kinetic energy, needed by Hpsi
          !
@@ -121,7 +119,7 @@ MODULE dfpt_module
          !
          nbndval = nbnd_occ(iks)
          !
-         CALL occband%init( nbndval, 'b', 'occband', .FALSE. )
+         CALL band_group%init( nbndval, 'b', 'band_group', .FALSE. )
          !
          ! ... Number of G vectors for PW expansion of wfs at k
          !
@@ -129,7 +127,7 @@ MODULE dfpt_module
          !
          ! ... Read wavefuctions at k in G space, for all bands, and store them in evc
          !
-         IF(k_grid%nps>1) THEN
+         IF(nks > 1) THEN
             IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
             CALL mp_bcast( evc, 0, inter_image_comm )
          ENDIF
@@ -162,18 +160,18 @@ MODULE dfpt_module
          !
          !
          ALLOCATE(eprec(nbndval))
-         ALLOCATE(eprec_loc(occband%nloc))
-         ALLOCATE(et_loc(occband%nloc))
+         ALLOCATE(eprec_loc(band_group%nloc))
+         ALLOCATE(et_loc(band_group%nloc))
          CALL set_eprec(nbndval,evc(1,1),eprec)
          !
-         DO lbnd = 1,occband%nloc
-            ibnd = occband%l2g(lbnd)
+         DO lbnd = 1,band_group%nloc
+            ibnd = band_group%l2g(lbnd)
             eprec_loc(lbnd) = eprec(ibnd)
             et_loc(lbnd) = et(ibnd,ikqs)
          ENDDO
          !
-         ALLOCATE(dvpsi(npwx*npol,occband%nloc))
-         ALLOCATE(dpsi(npwx*npol,occband%nloc))
+         ALLOCATE(dvpsi(npwx*npol,band_group%nloc))
+         ALLOCATE(dpsi(npwx*npol,band_group%nloc))
          !
          DO ipert = 1, m
             !
@@ -194,16 +192,16 @@ MODULE dfpt_module
             !
             ! The perturbation is in aux_r
             !
-            dvpsi=0._DP
-            dpsi =0._DP
+            dvpsi = 0._DP
+            dpsi  = 0._DP
             !
             IF(gamma_only) THEN
                !
                ! double bands @ gamma
-               DO lbnd = 1,occband%nloc-MOD(occband%nloc,2),2
+               DO lbnd = 1,band_group%nloc-MOD(band_group%nloc,2),2
                   !
-                  ibnd = occband%l2g(lbnd)
-                  ibnd2 = occband%l2g(lbnd+1)
+                  ibnd = band_group%l2g(lbnd)
+                  ibnd2 = band_group%l2g(lbnd+1)
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd2),psic,'Wave')
                   DO CONCURRENT (ir=1:dffts%nnr)
@@ -214,10 +212,10 @@ MODULE dfpt_module
                ENDDO
                !
                ! single band @ gamma
-               IF( MOD(occband%nloc,2) == 1 ) THEN
+               IF( MOD(band_group%nloc,2) == 1 ) THEN
                   !
-                  lbnd = occband%nloc
-                  ibnd = occband%l2g(lbnd)
+                  lbnd = band_group%nloc
+                  ibnd = band_group%l2g(lbnd)
                   !
                   CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),psic,'Wave')
                   DO CONCURRENT (ir=1:dffts%nnr)
@@ -229,9 +227,9 @@ MODULE dfpt_module
                !
             ELSE
                !
-               DO lbnd = 1,occband%nloc
+               DO lbnd = 1,band_group%nloc
                   !
-                  ibnd = occband%l2g(lbnd)
+                  ibnd = band_group%l2g(lbnd)
                   !
                   ! ... inverse Fourier transform of wfs at [k-q]: (k-q+)G ---> R
                   !
@@ -254,9 +252,9 @@ MODULE dfpt_module
                ENDDO
                !
                IF (noncolin) THEN
-                  DO lbnd = 1,occband%nloc
+                  DO lbnd = 1,band_group%nloc
                      !
-                     ibnd = occband%l2g(lbnd)
+                     ibnd = band_group%l2g(lbnd)
                      !
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
                      !
@@ -276,9 +274,9 @@ MODULE dfpt_module
             !
             ! - P_c | dvpsi >
             !
-            CALL apply_alpha_pc_to_m_wfcs( nbndval, occband%nloc, dvpsi, (-1._DP,0._DP) )
+            CALL apply_alpha_pc_to_m_wfcs( nbndval, band_group%nloc, dvpsi, (-1._DP,0._DP) )
             !
-            CALL precondition_m_wfcts( occband%nloc, dvpsi, dpsi, eprec_loc )
+            CALL precondition_m_wfcts( band_group%nloc, dvpsi, dpsi, eprec_loc )
             !
             IF( l_dost) THEN
                !
@@ -286,7 +284,7 @@ MODULE dfpt_module
                ! The Hamiltonian is evaluated at the k-point current_k in h_psi
                ! (see also PHonon/PH/cch_psi_all.f90, where H_(k+q) is evaluated)
                !
-               CALL linsolve_sternheimer_m_wfcts (nbndval, occband%nloc, dvpsi, dpsi, et_loc, eprec_loc, tr2, ierr )
+               CALL linsolve_sternheimer_m_wfcts (nbndval, band_group%nloc, dvpsi, dpsi, et_loc, eprec_loc, tr2, ierr )
                !
                IF(ierr/=0) THEN
                   WRITE(stdout, '(7X,"** WARNING : PERT ",i8," iks ",I8," not converged, ierr = ",i8)') ipert,iks,ierr
@@ -301,9 +299,9 @@ MODULE dfpt_module
             IF(gamma_only) THEN
                !
                ! double band @ gamma
-               DO lbnd = 1,occband%nloc
+               DO lbnd = 1,band_group%nloc
                   !
-                  ibnd = occband%l2g(lbnd)
+                  ibnd = band_group%l2g(lbnd)
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dpsi(1,lbnd),psic,'Wave')
                   DO CONCURRENT (ir=1:dffts%nnr)
@@ -316,9 +314,9 @@ MODULE dfpt_module
                !
                ALLOCATE( dpsic(dffts%nnr) )
                !
-               DO lbnd = 1,occband%nloc
+               DO lbnd = 1,band_group%nloc
                   !
-                  ibnd = occband%l2g(lbnd)
+                  ibnd = band_group%l2g(lbnd)
                   !
                   ! inverse Fourier transform of wavefunction at [k-q]: (k-q+)G ---> R
                   !
@@ -335,9 +333,9 @@ MODULE dfpt_module
                ENDDO
                !
                IF (noncolin) THEN
-                  DO lbnd = 1,occband%nloc
+                  DO lbnd = 1,band_group%nloc
                      !
-                     ibnd = occband%l2g(lbnd)
+                     ibnd = band_group%l2g(lbnd)
                      !
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
                      !
@@ -369,7 +367,7 @@ MODULE dfpt_module
             ENDIF
             !
             DO CONCURRENT( ig = 1: npwq) ! pert acts only on body
-               dng(ig,ipert) = dng(ig,ipert) + 2._DP * k_grid%weight(iks) * aux_g(ig) / omega
+               dng(ig,ipert) = dng(ig,ipert) + 2._DP * k_grid%weight(iks_g) * aux_g(ig) / omega
             ENDDO
             !
             DEALLOCATE( aux_g )

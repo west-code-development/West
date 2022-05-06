@@ -18,8 +18,6 @@ MODULE west_version
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   CHARACTER(LEN=*), PARAMETER :: west_version_number = 'checkit'
   CHARACTER(LEN=*), PARAMETER :: west_git_revision = 'unknown'
   CHARACTER(LEN=*), PARAMETER :: west_topdir = 'unset'

@@ -57,10 +57,10 @@ clean :
 	- /bin/rm -f libtools.a
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Tools ####"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

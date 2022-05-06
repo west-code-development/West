@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !----------------------------------------------------------------------------
@@ -15,13 +15,13 @@ SUBROUTINE dump_r ( auxr, fname )
   !----------------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE westcom,               ONLY : westpp_format,westpp_r0, westpp_nr, westpp_rmax,fftdriver, westpp_calculation
+  USE westcom,               ONLY : westpp_format,westpp_r0, westpp_nr, westpp_rmax
   USE fft_base,              ONLY : dffts
-  USE cubefile,              ONLY : write_wfc_cube_r 
+  USE cubefile,              ONLY : write_wfc_cube_r
   USE fft_at_gamma,          ONLY : single_fwfft_gamma
   USE fft_at_k,              ONLY : single_fwfft_k
-  USE control_flags,         ONLY : gamma_only 
-  USE gvect,                 ONLY : ngm 
+  USE control_flags,         ONLY : gamma_only
+  USE gvect,                 ONLY : ngm
   !
   IMPLICIT NONE
   !
@@ -47,36 +47,36 @@ SUBROUTINE dump_r ( auxr, fname )
   ENDDO
   !
   !
-  IF( lgate(1) ) THEN 
-     CALL write_wfc_cube_r ( dffts, 2001, TRIM(fname)//".cube", auxr )    
+  IF( lgate(1) ) THEN
+     CALL write_wfc_cube_r ( dffts, 2001, TRIM(fname)//'.cube', auxr )
   ENDIF
   !
-  IF( lgate(2) ) THEN 
-     CALL write_wfc_1D_r ( dffts, 2002, TRIM(fname)//".plavx", auxr, 1 )    
+  IF( lgate(2) ) THEN
+     CALL write_wfc_1D_r ( dffts, 2002, TRIM(fname)//'.plavx', auxr, 1 )
   ENDIF
   !
-  IF( lgate(3) ) THEN 
-     CALL write_wfc_1D_r ( dffts, 2003, TRIM(fname)//".plavy", auxr, 2 )    
+  IF( lgate(3) ) THEN
+     CALL write_wfc_1D_r ( dffts, 2003, TRIM(fname)//'.plavy', auxr, 2 )
   ENDIF
   !
-  IF( lgate(4) ) THEN 
-     CALL write_wfc_1D_r ( dffts, 2004, TRIM(fname)//".plavz", auxr, 3 )    
+  IF( lgate(4) ) THEN
+     CALL write_wfc_1D_r ( dffts, 2004, TRIM(fname)//'.plavz', auxr, 3 )
   ENDIF
   !
-  IF( lgate(5) ) THEN 
+  IF( lgate(5) ) THEN
      !
      ALLOCATE(auxg(ngm))
      ALLOCATE(auxr_(dffts%nnr))
      auxr_ = CMPLX( auxr, 0.d0, KIND = DP)
-     IF( gamma_only ) THEN 
+     IF( gamma_only ) THEN
         CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Rho')
      ELSE
         CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Rho')
      ENDIF
-     CALL write_wfc_spav ( 2005, TRIM(fname)//".spavr", auxg, westpp_r0, westpp_nr, westpp_rmax )
+     CALL write_wfc_spav ( 2005, TRIM(fname)//'.spavr', auxg, westpp_r0, westpp_nr, westpp_rmax )
      DEALLOCATE(auxg)
      DEALLOCATE(auxr_)
      !
-  ENDIF 
+  ENDIF
   !
 END SUBROUTINE

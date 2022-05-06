@@ -20,11 +20,11 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
                              & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
                              & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
-                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,&
-                             & n_secant_maxiter,trev_secant,l_enable_lanczos,l_enable_gwetot,&
-                             & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
-                             & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
-                             & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,document
+                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
+                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,document
   USE mp_world,         ONLY : mpime, root
   !
   IMPLICIT NONE
@@ -79,7 +79,6 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wfreq_control.n_secant_maxiter',n_secant_maxiter)
         CALL json%add('input.wfreq_control.trev_secant',trev_secant)
         CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
-        CALL json%add('input.wfreq_control.l_enable_gwetot',l_enable_gwetot)
         CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
         CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
         CALL json%add('input.wfreq_control.n_spectralf',n_spectralf)
@@ -124,12 +123,11 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
                              & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
                              & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
-                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,&
-                             & n_secant_maxiter,trev_secant,l_enable_lanczos,l_enable_gwetot,&
-                             & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
-                             & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
-                             & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,document,&
-                             & main_input_file,logfile
+                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
+                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,document,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir, prefix
   USE mp,               ONLY : mp_bcast, mp_barrier
@@ -283,7 +281,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%get(n_secant_maxiter, "n_secant_maxiter", DUMMY_DEFAULT)
         IERR = return_dict%getitem(trev_secant, "trev_secant")
         IERR = return_dict%getitem(l_enable_lanczos, "l_enable_lanczos")
-        IERR = return_dict%getitem(l_enable_gwetot, "l_enable_gwetot")
         IERR = return_dict%getitem(o_restart_time, "o_restart_time")
         IERR = return_dict%getitem(tmp_obj, "ecut_spectralf")
         IERR = cast(tmp_list,tmp_obj)
@@ -437,7 +434,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(n_secant_maxiter,root,world_comm)
      CALL mp_bcast(trev_secant,root,world_comm)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
-     CALL mp_bcast(l_enable_gwetot,root,world_comm)
      CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
@@ -578,7 +574,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_secant_maxiter',n_secant_maxiter,numsp)
         CALL io_push_value('trev_secant [Ry]',trev_secant,numsp)
         CALL io_push_value('l_enable_lanczos',l_enable_lanczos,numsp)
-        CALL io_push_value('l_enable_gwetot',l_enable_gwetot,numsp)
         CALL io_push_value('o_restart_time [min]',o_restart_time,numsp)
         CALL io_push_value('ecut_spectralf(1) [Ry]',ecut_spectralf(1),numsp)
         CALL io_push_value('ecut_spectralf(2) [Ry]',ecut_spectralf(2),numsp)

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -17,8 +17,9 @@ SUBROUTINE set_freqlists()
   ! ... This subroutine sets both the real and im freq lists 
   !
   USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : ecut_imfreq,imfreq_list,n_imfreq,frequency_list_power,ecut_refreq,refreq_list,n_refreq
-  USE distribution_center,  ONLY : ifr,rfr,aband
+  USE westcom,              ONLY : ecut_imfreq,imfreq_list,n_imfreq,frequency_list_power,&
+                                 & ecut_refreq,refreq_list,n_refreq
+  USE distribution_center,  ONLY : ifr,rfr
   !
   IMPLICIT NONE
   !

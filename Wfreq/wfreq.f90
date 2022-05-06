@@ -29,7 +29,7 @@ PROGRAM wfreq
   !
   ! *** START ***
   !
-  CALL check_stop_init ()
+  CALL check_stop_init( )
   !
   ! Initialize MPI, clocks, print initial messages
   !
@@ -37,13 +37,13 @@ PROGRAM wfreq
   CALL mp_startup ( start_images = .TRUE. )
 #endif
   !
-  CALL west_environment_start ( code )
+  CALL west_environment_start( code )
   !
   CALL wfreq_readin( )
   !
   CALL wfreq_setup( )
   !
-  lgate=.FALSE.
+  lgate = .FALSE.
   DO i = 1, 8
      IF( wfreq_calculation(i:i) == 'X' ) lgate(1) = .TRUE.
      IF( wfreq_calculation(i:i) == 'W' ) lgate(2) = .TRUE.
@@ -55,29 +55,31 @@ PROGRAM wfreq
      IF( wfreq_calculation(i:i) == 'P' ) lgate(8) = .TRUE.
   ENDDO
   !
-  IF(lgate(1)) THEN
+  IF( lgate(1) ) THEN
      CALL solve_hf( )
   ENDIF
   !
-  IF(lgate(2)) THEN
-     CALL solve_wfreq(.FALSE.,lgate(7))
+  IF( lgate(2) ) THEN
+     CALL solve_wfreq( .FALSE., lgate(7) )
   ENDIF
   !
-  IF(lgate(3)) THEN
-     CALL solve_wfreq(.TRUE.,lgate(7))
+  IF( lgate(3) ) THEN
+     CALL solve_wfreq( .TRUE., lgate(7) )
   ENDIF
   !
-  IF(lgate(4)) THEN
-     CALL solve_gfreq(.FALSE.)
+  IF( lgate(4) ) THEN
+     CALL solve_gfreq( .FALSE. )
   ENDIF
   !
-  IF(lgate(5)) THEN
-     CALL solve_gfreq(.TRUE.)
+  IF( lgate(5) ) THEN
+     CALL solve_gfreq( .TRUE. )
   ENDIF
   !
-  IF(lgate(6).OR.lgate(8)) THEN
-     CALL solve_qp( lgate(6),lgate(8) )
+  IF( lgate(6) .OR. lgate(8) ) THEN
+     CALL solve_qp( lgate(6), lgate(8) )
   ENDIF
+  !
+  CALL exx_ungo( )
   !
   CALL clean_scratchfiles( )
   !
@@ -85,6 +87,6 @@ PROGRAM wfreq
   !
   CALL west_environment_end( code )
   !
-  CALL mp_global_end()
+  CALL mp_global_end( )
   !
 END PROGRAM

@@ -36,7 +36,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !
   ! Workspace
   !
-  INTEGER :: ibnd, ig
+  INTEGER :: ibnd
   COMPLEX(DP) :: za
   !
   CALL start_clock ('stern')

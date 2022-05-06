@@ -90,8 +90,7 @@ MODULE pdep_db
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       ! scratch
-      INTEGER :: iunout,global_j,local_j
-      INTEGER :: ierr
+      INTEGER :: global_j,local_j
       ! json
       TYPE(json_core) :: jcor
       TYPE(json_file) :: json
@@ -269,15 +268,13 @@ MODULE pdep_db
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       ! scratch
-      INTEGER :: ierr, n_eigen_to_get
+      INTEGER :: n_eigen_to_get
       INTEGER :: tmp_n_pdep_eigen
-      INTEGER :: dime, iun, global_j, local_j
+      INTEGER :: global_j, local_j
       REAL(DP),ALLOCATABLE :: tmp_ev(:)
       ! json managers
-      TYPE(json_core) :: jcor
       TYPE(json_file) :: json
-      TYPE(json_value),POINTER :: jval
-      INTEGER :: iunit, n_elements, ielement, myiq
+      INTEGER :: n_elements, ielement, myiq
       LOGICAL :: found
       INTEGER,ALLOCATABLE :: ilen(:)
       ! files

@@ -28,10 +28,10 @@ clean :
 	- /bin/rm -f lib_fft_kernel.a
 
 title :
-	@echo "                   "
+	@echo
 	@echo "###################"
 	@echo "### FFT_kernel ####"
 	@echo "###################"
-	@echo "                   "
+	@echo
 
 include make.depend

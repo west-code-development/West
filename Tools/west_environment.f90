@@ -18,8 +18,6 @@ MODULE west_environment
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   PRIVATE
   !
   PUBLIC :: west_environment_start

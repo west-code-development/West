@@ -18,11 +18,15 @@ MODULE class_idistribute
   !
   PRIVATE
   !
-  TYPE, PUBLIC :: idistribute
+  INTEGER,PUBLIC,PARAMETER :: IDIST_CYC = 1
+  INTEGER,PUBLIC,PARAMETER :: IDIST_BLK = 2
+  !
+  TYPE,PUBLIC :: idistribute
      !
      INTEGER :: nloc = 0
      INTEGER :: nlocx = 0
      INTEGER :: nglob = 0
+     INTEGER :: scheme = IDIST_CYC
      INTEGER :: myoffset = 0
      INTEGER :: nlevel = 0
      INTEGER :: mylevelid = 0
@@ -40,7 +44,7 @@ MODULE class_idistribute
   !
   CONTAINS
   !
-  SUBROUTINE idistribute_init(this,n,level,label,lverbose)
+  SUBROUTINE idistribute_init(this,n,level,label,lverbose,scheme)
     !
     USE mp_global,   ONLY : my_image_id,nimage,inter_image_comm,&
                           & my_pool_id,npool,inter_pool_comm,&
@@ -58,6 +62,7 @@ MODULE class_idistribute
     CHARACTER(1),INTENT(IN) :: level
     CHARACTER(*),INTENT(IN) :: label
     LOGICAL,INTENT(IN) :: lverbose
+    INTEGER,INTENT(IN),OPTIONAL :: scheme
     !
     ! Workspace
     !
@@ -102,10 +107,12 @@ MODULE class_idistribute
        info       = 'z'
        !
     CASE DEFAULT
+       !
        CALL errore('idistribute','Invalid level',1)
+       !
     END SELECT
     !
-    ! Generate nloc, nlocx, nglob
+    ! Generate nglob, nloc, nloc_min, nlocx
     !
     nglob    = n
     nloc     = n/nlevel
@@ -117,7 +124,7 @@ MODULE class_idistribute
     ENDIF
     IF(mylevelid < MOD(n,nlevel)) THEN
        nloc = nloc+1
-    END IF
+    ENDIF
     !
     ! Report the distribution across groups
     !
@@ -148,6 +155,15 @@ MODULE class_idistribute
     this%mpicomm   = level_comm
     this%info      = info
     !
+    IF(PRESENT(scheme)) THEN
+       IF(scheme /= IDIST_CYC .AND. scheme /= IDIST_BLK) THEN
+          CALL errore('idistribute','Invalid distribution scheme',1)
+       ENDIF
+       this%scheme = scheme
+    ELSE
+       this%scheme = IDIST_CYC
+    ENDIF
+    !
   END SUBROUTINE
   !
   SUBROUTINE idistribute_g2l(this,iglob,iloc,who)
@@ -160,8 +176,34 @@ MODULE class_idistribute
     INTEGER,INTENT(IN) :: iglob
     INTEGER,INTENT(OUT) :: iloc,who
     !
-    iloc = ((iglob-1)/(this%nlevel))+1
-    who = MOD(iglob-1,this%nlevel)
+    ! Workspace
+    !
+    INTEGER :: p,q
+    !
+    SELECT CASE(this%scheme)
+    CASE(IDIST_CYC)
+       !
+       iloc = ((iglob-1)/this%nlevel)+1
+       who  = MOD(iglob-1,this%nlevel)
+       !
+    CASE(IDIST_BLK)
+       !
+       p = this%nglob/this%nlevel
+       q = MOD(this%nglob,this%nlevel)
+       !
+       IF(iglob <= (p+1)*q) THEN
+          iloc = MOD(iglob-1,p+1)+1
+          who  = (iglob-1)/(p+1)
+       ELSE
+          iloc = MOD(iglob-(p+1)*q-1,p)+1
+          who  = ((iglob-(p+1)*q-1)/p)+q
+       ENDIF
+       !
+    CASE DEFAULT
+       !
+       CALL errore('idistribute','Invalid distribution scheme',1)
+       !
+    END SELECT
     !
   END SUBROUTINE
   !
@@ -176,11 +218,37 @@ MODULE class_idistribute
     INTEGER,INTENT(IN),OPTIONAL :: myid
     INTEGER :: iglob
     !
+    ! Workspace
+    !
+    INTEGER :: pid,p,q
+    !
     IF(PRESENT(myid)) THEN
-       iglob = this%nlevel*(iloc-1)+myid+1
+       pid = myid
     ELSE
-       iglob = this%nlevel*(iloc-1)+this%mylevelid+1
+       pid = this%mylevelid
     ENDIF
+    !
+    SELECT CASE(this%scheme)
+    CASE(IDIST_CYC)
+       !
+       iglob = this%nlevel*(iloc-1)+pid+1
+       !
+    CASE(IDIST_BLK)
+       !
+       p = this%nglob/this%nlevel
+       q = MOD(this%nglob,this%nlevel)
+       !
+       IF(pid < q) THEN
+          iglob = (p+1)*pid+iloc
+       ELSE
+          iglob = p*pid+q+iloc
+       ENDIF
+       !
+    CASE DEFAULT
+       !
+       CALL errore('idistribute','Invalid distribution scheme',1)
+       !
+    END SELECT
     !
   END FUNCTION
   !
@@ -194,6 +262,7 @@ MODULE class_idistribute
     dato_out%nloc      = this%nloc
     dato_out%nlocx     = this%nlocx
     dato_out%nglob     = this%nglob
+    dato_out%scheme    = this%scheme
     dato_out%myoffset  = this%myoffset
     dato_out%nlevel    = this%nlevel
     dato_out%mylevelid = this%mylevelid

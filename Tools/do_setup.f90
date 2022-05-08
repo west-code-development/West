@@ -56,10 +56,8 @@ SUBROUTINE do_setup
   !
   CALL q_grid%init('Q')
   !
-  CALL set_iks_l2g()
-  !
   IF ( ANY ( (q_grid%ngrid(:) - k_grid%ngrid(:)) /= 0   ) ) THEN
-     CALL errore( 'do_setup','q-point grid must be the same as k-point grid ',1)
+     CALL errore('do_setup','q-point grid must be the same as k-point grid',1)
   ENDIF
   !
   IF( mpime == root ) THEN

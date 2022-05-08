@@ -35,14 +35,14 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,iks_l2g,l_enable_lanczos,nbnd_occ,&
-                                 & iuwfc,lrwfc,o_restart_time,npwqx,fftdriver,wstat_save_dir
+  USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
+                                 & o_restart_time,npwqx,fftdriver,wstat_save_dir
   USE mp_global,            ONLY : my_image_id,inter_image_comm,npool,intra_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nks
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE wavefunctions,        ONLY : evc,psic
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
@@ -53,7 +53,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,band_group
+  USE distribution_center,  ONLY : pert,band_group,kpt_pool
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_coulomb,        ONLY : pot3D
@@ -107,7 +107,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ENDIF
   !
   barra_load = 0
-  DO iks = 1,nks
+  DO iks = 1,kpt_pool%nloc
      IF(iks < bks%lastdone_ks) CYCLE
      !
      DO ibloc = 1,band_group%nloc
@@ -140,7 +140,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! LOOP
   !
-  DO iks = 1,nks ! KPOINT-SPIN
+  DO iks = 1,kpt_pool%nloc ! KPOINT-SPIN
      !
      ! Exit loop if no work to do
      !
@@ -148,7 +148,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      IF(iks < bks%lastdone_ks) CYCLE
      !
-     iks_g = iks_l2g(iks)
+     iks_g = kpt_pool%l2g(iks)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -163,7 +163,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
@@ -236,7 +236,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         DEALLOCATE(ps_r)
         CALL mp_sum(overlap,inter_image_comm)
-        CALL writeout_overlap( 'g', iks_l2g(iks), ib, overlap, pert%nglob, nbnd )
+        CALL writeout_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
         DEALLOCATE(overlap)
         !
         CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi,(1._DP,0._DP))
@@ -265,7 +265,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            ! MPI-IO
            !
-           CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+           CALL writeout_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
            !
            DEALLOCATE( diago )
            DEALLOCATE( braket )
@@ -326,8 +326,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,iks_l2g,l_enable_lanczos,nbnd_occ,&
-                                 & iuwfc,lrwfc,o_restart_time,npwqx,wstat_save_dir,ngq,igq_q
+  USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
+                                 & o_restart_time,npwqx,wstat_save_dir,ngq,igq_q
   USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
@@ -344,7 +344,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,band_group
+  USE distribution_center,  ONLY : pert,band_group,kpt_pool
   USE wfreq_restart,        ONLY : solvegfreq_restart_write_q,solvegfreq_restart_read_q,bksks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
@@ -510,7 +510,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 !          !
 !          ! ... Needed for LDA+U
 !          !
-!          IF ( nks > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
+!          IF ( kpt_pool%nloc > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
 !               CALL get_buffer ( wfcU, nwordwfcU, iunhub, iks )
 !          !
 !          current_k = iks
@@ -597,7 +597,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            DEALLOCATE(ps_c)
            CALL mp_sum(overlap,inter_image_comm)
-           CALL writeout_overlap( 'g', iks_l2g(ikks), iks_l2g(iks), ib, overlap, pert%nglob, nbnd )
+           CALL writeout_overlap( 'g', kpt_pool%l2g(ikks), kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
            DEALLOCATE(overlap)
            !
            CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi,(1._DP,0._DP))
@@ -626,7 +626,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               ! MPI-IO
               !
-              CALL writeout_solvegfreq( iks_l2g(ikks), iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+              CALL writeout_solvegfreq( kpt_pool%l2g(ikks), kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, &
+              & pert%nglob, pert%myoffset )
               !
               DEALLOCATE( diago )
               DEALLOCATE( braket )

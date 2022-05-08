@@ -23,11 +23,11 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE scf,                  ONLY : rho,rho_core,rhog_core
   USE gvect,                ONLY : gstart
   USE fft_base,             ONLY : dfftp,dffts
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,nspin,current_k,ngk,nks
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,nspin,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k
   USE wavefunctions,        ONLY : evc,psic
-  USE westcom,              ONLY : qp_bandrange,iuwfc,lrwfc,iks_l2g
+  USE westcom,              ONLY : qp_bandrange,iuwfc,lrwfc
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -36,6 +36,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE io_push,              ONLY : io_push_bar
   USE xc_lib,               ONLY : xclib_dft_is
   USE class_idistribute,    ONLY : idistribute
+  USE distribution_center,  ONLY : kpt_pool
   USE exx,                  ONLY : vexx
   USE types_bz_grid,        ONLY : k_grid
   !
@@ -80,14 +81,14 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   nnr = REAL( dfftp%nr1*dfftp%nr2*dfftp%nr3, KIND=DP )
   !
-  barra_load = nks
+  barra_load = kpt_pool%nloc
   CALL start_bar_type( barra, 'sigmavxc', barra_load )
   !
   ! LOOP
   !
-  DO iks = 1, nks ! KPOINT-SPIN
+  DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
      !
-     iks_g = iks_l2g(iks)
+     iks_g = kpt_pool%l2g(iks)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -102,7 +103,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF

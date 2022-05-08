@@ -40,8 +40,9 @@ SUBROUTINE davidson_diago_gamma ( )
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : nbgrp
   USE io_global,            ONLY : stdout
-  USE distribution_center,  ONLY : pert,band_group
-  USE class_idistribute,    ONLY : idistribute
+  USE pwcom,                ONLY : nkstot,nks
+  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
                                    & wstat_calculation,ev,conv,n_pdep_read_from_file,&
@@ -100,6 +101,9 @@ SUBROUTINE davidson_diago_gamma ( )
   CALL wstat_memory_report() ! Before allocating I report the memory required.
   band_group = idistribute()
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('chidiago','nbgrp>nbnd_occ',1)
+  kpt_pool = idistribute()
+  CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
+  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool initialization error',1)
   !
   ! ... MEMORY ALLOCATION
   !
@@ -452,8 +456,9 @@ SUBROUTINE davidson_diago_k ( )
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : nbgrp
   USE io_global,            ONLY : stdout
-  USE distribution_center,  ONLY : pert,band_group
-  USE class_idistribute,    ONLY : idistribute
+  USE pwcom,                ONLY : nkstot,nks
+  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
                                    & wstat_calculation,ev,conv,n_pdep_read_from_file,&
@@ -514,6 +519,9 @@ SUBROUTINE davidson_diago_k ( )
   CALL wstat_memory_report() ! Before allocating I report the memory required.
   band_group = idistribute()
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('chidiago','nbgrp>nbnd_occ',1)
+  kpt_pool = idistribute()
+  CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
+  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool initialization error',1)
   !
   ! ... MEMORY ALLOCATION
   !

@@ -23,17 +23,17 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE gvect,                ONLY : gstart,ngm
   USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,nbnd,igk_k,current_k,ngk,nks
+  USE pwcom,                ONLY : npw,npwx,nbnd,igk_k,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,iks_l2g
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar
-  USE distribution_center,  ONLY : band_group
+  USE distribution_center,  ONLY : band_group,kpt_pool
   USE class_idistribute,    ONLY : idistribute
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
@@ -85,14 +85,14 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !
   CALL band_group%init(nb2-nb1+1,'b','band_group',.FALSE.)
   !
-  barra_load = nks*band_group%nloc
+  barra_load = kpt_pool%nloc*band_group%nloc
   CALL start_bar_type(barra,'sigmax',barra_load)
   !
   ! LOOP
   !
-  DO iks = 1,nks ! KPOINT-SPIN
+  DO iks = 1,kpt_pool%nloc ! KPOINT-SPIN
      !
-     iks_g = iks_l2g(iks)
+     iks_g = kpt_pool%l2g(iks)
      ik = k_grid%ip(iks_g)
      is = k_grid%is(iks_g)
      current_k = iks
@@ -100,7 +100,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF

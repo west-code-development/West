@@ -33,7 +33,7 @@ MODULE dfpt_module
       USE mp_world,              ONLY : world_comm
       USE buffers,               ONLY : get_buffer
       USE noncollin_module,      ONLY : noncolin,npol
-      USE pwcom,                 ONLY : current_spin,isk,npw,npwx,lsda,current_k,ngk,igk_k,nks
+      USE pwcom,                 ONLY : current_spin,isk,npw,npwx,lsda,current_k,ngk,igk_k
       USE cell_base,             ONLY : omega
       USE control_flags,         ONLY : gamma_only
       USE uspp,                  ONLY : nkb,vkb
@@ -42,8 +42,8 @@ MODULE dfpt_module
       USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
       USE io_push,               ONLY : io_push_title
       USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
-      USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,iks_l2g
-      USE distribution_center,   ONLY : band_group
+      USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver
+      USE distribution_center,   ONLY : band_group,kpt_pool
       !
       IMPLICIT NONE
       !
@@ -94,16 +94,16 @@ MODULE dfpt_module
       !
       dng=0.0_DP
       !
-      CALL start_bar_type( barra, 'dfpt', MAX(m,1) * nks )
+      CALL start_bar_type( barra, 'dfpt', MAX(m,1) * kpt_pool%nloc )
       !
       IF (.NOT.gamma_only) THEN
          ALLOCATE( evckmq(npwx*npol,nbnd) )
          ALLOCATE( phase(dffts%nnr) )
       ENDIF
       !
-      DO iks = 1, nks ! KPOINT-SPIN LOOP
+      DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN LOOP
          !
-         iks_g = iks_l2g(iks)
+         iks_g = kpt_pool%l2g(iks)
          ik = k_grid%ip(iks_g)
          is = k_grid%is(iks_g)
          !
@@ -127,7 +127,7 @@ MODULE dfpt_module
          !
          ! ... Read wavefuctions at k in G space, for all bands, and store them in evc
          !
-         IF(nks > 1) THEN
+         IF(kpt_pool%nloc > 1) THEN
             IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
             CALL mp_bcast( evc, 0, inter_image_comm )
          ENDIF

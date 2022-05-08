@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni, Matteo Gerosa
 !
 !-----------------------------------------------------------------------
@@ -19,12 +19,10 @@ MODULE types_bz_grid
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   TYPE(bz_grid) :: k_grid
   TYPE(bz_grid) :: q_grid
   !
-  CONTAINS 
+  CONTAINS
   !
   !
   FUNCTION findG(g0, unit_type) RESULT(ig0)
@@ -41,23 +39,23 @@ MODULE types_bz_grid
      ! I/O
      !
      REAL(DP), INTENT(IN) :: g0(3)
-     CHARACTER(LEN=*), INTENT(IN) :: unit_type 
+     CHARACTER(LEN=*), INTENT(IN) :: unit_type
      !
      ! Workspace
      !
-     REAL(DP) :: gtemp(3) 
-     INTEGER :: ipol, ig, ig0
+     REAL(DP) :: gtemp(3)
+     INTEGER :: ig, ig0
      !
-     SELECT CASE(unit_type) 
+     SELECT CASE(unit_type)
      CASE("cryst","cart")
      CASE DEFAULT
-        CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
-     END SELECT 
+        CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )
+     END SELECT
      !
      gtemp = g0
-     IF( unit_type == "cryst" ) CALL cryst_to_cart( 1, gtemp, bg, 1) 
+     IF( unit_type == "cryst" ) CALL cryst_to_cart( 1, gtemp, bg, 1)
      !
-     ! gtemp is in cart 
+     ! gtemp is in cart
      !
      ig0 = 0
      DO ig = 1, ngm
@@ -67,12 +65,12 @@ MODULE types_bz_grid
         ENDIF
      ENDDO
      !
-  END FUNCTION 
+  END FUNCTION
   !
   !
-  SUBROUTINE compute_phase( g0, unit_type, phase ) 
+  SUBROUTINE compute_phase( g0, unit_type, phase )
      !
-     ! ... phase(r) = exp(-iG_0*r)  (allocated externally) 
+     ! ... phase(r) = exp(-iG_0*r)  (allocated externally)
      !
      USE fft_base,         ONLY : dffts
      USE fft_interfaces,   ONLY : invfft
@@ -83,19 +81,19 @@ MODULE types_bz_grid
      !
      ! I/O
      !
-     REAL(DP), INTENT(IN) :: g0(3) 
+     REAL(DP), INTENT(IN) :: g0(3)
      CHARACTER(LEN=*), INTENT(IN) :: unit_type
-     COMPLEX(DP), INTENT(OUT) :: phase(:) 
+     COMPLEX(DP), INTENT(OUT) :: phase(:)
      !
      ! Workspace
      !
-     INTEGER :: ipol, ig, ig0, glob_ig0
+     INTEGER :: ig0, glob_ig0
      !
-     SELECT CASE(unit_type) 
+     SELECT CASE(unit_type)
      CASE("cryst","cart")
      CASE DEFAULT
-        CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )  
-     END SELECT 
+        CALL errore( "types_bz_grid", "unit_type not supported, supported only cryst or cart", 1 )
+     END SELECT
      !
      ig0 = findG(g0,unit_type)
      glob_ig0 = ig0
@@ -113,6 +111,6 @@ MODULE types_bz_grid
      CALL invfft( 'Wave', phase, dffts )
      phase(1:dffts%nnr) = DCONJG( phase(1:dffts%nnr) )
      !
-  END SUBROUTINE   
+  END SUBROUTINE
   !
 END MODULE

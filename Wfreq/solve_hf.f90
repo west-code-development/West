@@ -34,8 +34,8 @@ SUBROUTINE solve_hf_gamma( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bandrange,iks_l2g,nbnd_occ,l_enable_gwetot,&
-                                 & exx_etot,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf
+  USE westcom,              ONLY : qp_bandrange,nbnd_occ,exx_etot,sigma_exx,&
+                                 & sigma_vxcl,sigma_vxcnl,sigma_hf
   USE mp_world,             ONLY : mpime,root
   USE pwcom,                ONLY : et,nbnd
   USE io_push,              ONLY : io_push_title
@@ -84,33 +84,13 @@ SUBROUTINE solve_hf_gamma( )
         out_tab( ib - qp_bandrange(1) + 1, 5) = sigma_vxcnl(ib,iks) * rytoev
         out_tab( ib - qp_bandrange(1) + 1, 6) = ( et(ib,iks) + sigma_hf(ib,iks) ) * rytoev
      ENDDO
-     WRITE(myglobk,'(i5.5)') iks_l2g(iks)
+     WRITE(myglobk,'(i5.5)') iks
      !
      CALL serial_table_output(mpime==root,'ehf_K'//myglobk,out_tab,&
      & qp_bandrange(2)-qp_bandrange(1)+1,6,&
      & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))
   ENDDO
   DEALLOCATE(out_tab)
-  !
-  ! Compute the exact exchange energy (used to calculate total GW energy)
-  !
-  IF( l_enable_gwetot) THEN
-     !
-     nbndval = MIN( MAXVAL( nbnd_occ(:) ), nbnd )
-     ALLOCATE(sigma_exx_all_occupied(nbndval,k_grid%nps))
-     !
-     CALL calc_exx2(sigma_exx_all_occupied, 1, nbndval)
-     !
-     exx_etot = 0._DP
-     DO iks = 1, k_grid%nps
-        DO ib = 1, nbnd_occ(iks)
-           exx_etot = exx_etot + sigma_exx_all_occupied( ib, iks) * k_grid%weight(iks) / 2._DP
-        ENDDO
-     ENDDO
-     !
-     DEALLOCATE( sigma_exx_all_occupied )
-     !
-  ENDIF
   !
   !DEALLOCATE( sigma_exx  )
   !DEALLOCATE( sigma_vxcl )
@@ -129,8 +109,8 @@ SUBROUTINE solve_hf_k( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bandrange,iks_l2g,nbnd_occ,l_enable_gwetot,&
-                                 & exx_etot,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf
+  USE westcom,              ONLY : qp_bandrange,nbnd_occ,exx_etot,sigma_exx,&
+                                 & sigma_vxcl,sigma_vxcnl,sigma_hf
   USE mp_world,             ONLY : mpime,root
   USE pwcom,                ONLY : et,nbnd
   USE io_push,              ONLY : io_push_title
@@ -179,33 +159,13 @@ SUBROUTINE solve_hf_k( )
         out_tab( ib - qp_bandrange(1) + 1, 5) = sigma_vxcnl(ib,iks) * rytoev
         out_tab( ib - qp_bandrange(1) + 1, 6) = ( et(ib,iks) + sigma_hf(ib,iks) ) * rytoev
      ENDDO
-     WRITE(myglobk,'(i5.5)') iks_l2g(iks)
+     WRITE(myglobk,'(i5.5)') iks
      !
      CALL serial_table_output(mpime==root,'ehf_K'//myglobk,out_tab,&
      & qp_bandrange(2)-qp_bandrange(1)+1,6,&
      & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))
   ENDDO
   DEALLOCATE(out_tab)
-  !
-  ! Compute the exact exchange energy (used to calculate total GW energy)
-  !
-  IF( l_enable_gwetot) THEN
-     !
-     nbndval = MIN( MAXVAL( nbnd_occ(:) ), nbnd )
-     ALLOCATE(sigma_exx_all_occupied(nbndval,k_grid%nps))
-     !
-     CALL calc_exx2(sigma_exx_all_occupied, 1, nbndval)
-     !
-     exx_etot = 0._DP
-     DO iks = 1, k_grid%nps
-        DO ib = 1, nbnd_occ(iks)
-           exx_etot = exx_etot + sigma_exx_all_occupied( ib, iks) * k_grid%weight(iks) / 2._DP
-        ENDDO
-     ENDDO
-     !
-     DEALLOCATE( sigma_exx_all_occupied )
-     !
-  ENDIF
   !
   !DEALLOCATE( sigma_exx  )
   !DEALLOCATE( sigma_vxcl )

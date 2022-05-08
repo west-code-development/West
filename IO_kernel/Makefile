@@ -39,10 +39,10 @@ clean :
 	- /bin/rm -f lib_io_kernel.a
 
 title :
-	@echo "                  "
+	@echo
 	@echo "##################"
 	@echo "### IO_kernel ####"
 	@echo "##################"
-	@echo "                  "
+	@echo
 
 include make.depend

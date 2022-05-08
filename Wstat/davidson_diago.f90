@@ -38,14 +38,16 @@ SUBROUTINE davidson_diago_gamma ( )
   ! ... ( chi - ev ) * dvg = 0
   !
   USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : nbgrp
   USE io_global,            ONLY : stdout
-  USE distribution_center,  ONLY : pert
-  USE class_idistribute,    ONLY : idistribute
+  USE pwcom,                ONLY : nkstot,nks
+  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
                                    & wstat_calculation,ev,conv,n_pdep_read_from_file,&
-                                   & n_steps_write_restart,npwq,npwqx,trev_pdep_rel,tr2_dfpt,&
-                                   & l_is_wstat_converged,fftdriver
+                                   & n_steps_write_restart,npwqx,trev_pdep_rel,tr2_dfpt,&
+                                   & l_is_wstat_converged,fftdriver,nbnd_occ
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
@@ -62,18 +64,18 @@ SUBROUTINE davidson_diago_gamma ( )
   INTEGER :: dav_iter, notcnv
     ! integer  number of iterations performed
     ! number of unconverged roots
-  INTEGER :: kter, nbase, np, n, m
+  INTEGER :: kter, nbase, np, n
     ! counter on iterations
     ! dimension of the reduced basis
     ! counter on the reduced basis vectors
     ! do-loop counters
     ! counter on the bands
-  INTEGER :: ierr,mloc,mstart,mend
+  INTEGER :: ierr,mloc,mstart
   INTEGER, ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
   !
-  INTEGER :: il1,il2,ig1,ig2,i
+  INTEGER :: il1,ig1
   REAL(DP) :: time_spent(2)
   INTEGER :: sternop_ncalls(2)
   CHARACTER(LEN=8) :: iter_label
@@ -97,6 +99,11 @@ SUBROUTINE davidson_diago_gamma ( )
   pert = idistribute()
   CALL pert%init(nvecx,'i','nvecx',.TRUE.)
   CALL wstat_memory_report() ! Before allocating I report the memory required.
+  band_group = idistribute()
+  IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('chidiago','nbgrp>nbnd_occ',1)
+  kpt_pool = idistribute()
+  CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
+  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool initialization error',1)
   !
   ! ... MEMORY ALLOCATION
   !
@@ -230,7 +237,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, 1, nvec )
+     CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nvec )
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -326,7 +333,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+1, nbase+notcnv )
+     CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
      !
      nbase = nbase + notcnv
      !
@@ -447,17 +454,18 @@ SUBROUTINE davidson_diago_k ( )
   ! ... ( chi - ev ) * dvg = 0
   !
   USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : nbgrp
   USE io_global,            ONLY : stdout
-  USE distribution_center,  ONLY : pert
-  USE class_idistribute,    ONLY : idistribute
+  USE pwcom,                ONLY : nkstot,nks
+  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
-  USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
-                                   & n_pdep_read_from_file,n_steps_write_restart,&
-                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,ngq,npwq,igq_q,npwqx
+  USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
+                                   & wstat_calculation,ev,conv,n_pdep_read_from_file,&
+                                   & n_steps_write_restart,trev_pdep_rel,tr2_dfpt,&
+                                   & l_is_wstat_converged,ngq,npwq,npwqx,nbnd_occ
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
-  USE gvect,                ONLY : g,ngm
-  USE gvecw,                ONLY : gcutw
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,refresh_with_vr_distr
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
@@ -472,18 +480,18 @@ SUBROUTINE davidson_diago_k ( )
   INTEGER :: dav_iter, notcnv
     ! integer  number of iterations performed
     ! number of unconverged roots
-  INTEGER :: kter, nbase, np, n, m
+  INTEGER :: kter, nbase, np, n
     ! counter on iterations
     ! dimension of the reduced basis
     ! counter on the reduced basis vectors
     ! do-loop counters
     ! counter on the bands
-  INTEGER :: ierr,mloc,mstart,mend
+  INTEGER :: ierr,mloc,mstart
   INTEGER,ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   COMPLEX(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
   !
-  INTEGER :: il1,il2,ig1,ig2,i
+  INTEGER :: il1,ig1,i
   REAL(DP) :: time_spent(2)
   INTEGER :: sternop_ncalls(2)
   CHARACTER(LEN=8) :: iter_label
@@ -493,7 +501,6 @@ SUBROUTINE davidson_diago_k ( )
   INTEGER :: iq, lastdone_iq
   LOGICAL :: l_restart_q_done
   LOGICAL :: l_print_pdep_read
-  REAL(DP) :: q(3)
   !
   REAL(DP), EXTERNAL :: GET_CLOCK
   !
@@ -507,9 +514,14 @@ SUBROUTINE davidson_diago_k ( )
   !
   ! ... DISTRIBUTE nvecx
   !
-  pert=idistribute()
+  pert = idistribute()
   CALL pert%init(nvecx,'i','nvecx',.TRUE.)
   CALL wstat_memory_report() ! Before allocating I report the memory required.
+  band_group = idistribute()
+  IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('chidiago','nbgrp>nbnd_occ',1)
+  kpt_pool = idistribute()
+  CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
+  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool initialization error',1)
   !
   ! ... MEMORY ALLOCATION
   !
@@ -694,7 +706,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! hr = <dvg|dng>
         !
-        CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, 1, nvec )
+        CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nvec )
         !
         ! ... diagonalize the reduced hamiltonian
         !
@@ -791,7 +803,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! hr = <dvg|dng>
         !
-        CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+1, nbase+notcnv )
+        CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
         !
         nbase = nbase + notcnv
         !
@@ -912,7 +924,8 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                  ONLY : DP
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id,inter_image_comm,my_image_id
+  USE mp_global,              ONLY : inter_pool_comm,my_pool_id,intra_bgrp_comm,inter_bgrp_comm,&
+                                   & my_bgrp_id,inter_image_comm,my_image_id
   USE gvect,                  ONLY : gstart
   USE mp,                     ONLY : mp_sum,mp_bcast
   USE westcom,                ONLY : npwq,npwqx
@@ -945,9 +958,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   ! 1) Run some checks
   !
   IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
-     & CALL errore( 'mgs', 'do_mgs problem', 1 )
+  & CALL errore( 'mgs', 'do_mgs problem', 1 )
   !
-  IF(my_bgrp_id == 0) THEN
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
      !
      ALLOCATE( vec(npwqx), zbraket(pert%nloc), braket(pert%nloc) )
      !
@@ -1020,7 +1033,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
         !
         IF(unfinished) THEN
            !
-           ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
+           ! In the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
            !
            IF(gamma_only) THEN
               DO ip = j_local,m_local_end !pert%nloc
@@ -1048,6 +1061,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   ENDIF
   !
   CALL mp_bcast(amat,0,inter_bgrp_comm)
+  CALL mp_bcast(amat,0,inter_pool_comm)
   !
   CALL stop_clock ('paramgs')
   !
@@ -1211,7 +1225,7 @@ SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim
    REAL(DP),INTENT(IN) :: tr2
    INTEGER,INTENT(IN) :: dav_iter, notcnv, dfpt_dim, diago_dim
    !
-   INTEGER :: i,j, ip
+   INTEGER :: i,j
    CHARACTER(20),EXTERNAL :: human_readable_time
    CHARACTER(LEN=6) :: cdav
    INTEGER :: ndav,iunit
@@ -1291,7 +1305,7 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
    INTEGER,INTENT(IN) :: dav_iter, notcnv, dfpt_dim, diago_dim
    INTEGER,INTENT(IN) :: iq
    !
-   INTEGER :: i,j, ip
+   INTEGER :: i,j
    CHARACTER(20),EXTERNAL :: human_readable_time
    CHARACTER(LEN=6) :: cdav
    CHARACTER(LEN=5) :: cq

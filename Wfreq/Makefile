@@ -74,10 +74,10 @@ clean :
 	- /bin/rm -f ../../bin/wfreq.x
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Wfreq ####"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

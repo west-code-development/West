@@ -29,7 +29,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   USE kinds,                 ONLY : DP,i8b
   USE mp,                    ONLY : mp_bcast,mp_comm_split,mp_comm_free
-  USE mp_global,             ONLY : intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id,me_bgrp,nbgrp,nproc_bgrp
+  USE mp_global,             ONLY : my_pool_id,npool,intra_bgrp_comm,my_bgrp_id,me_bgrp,nbgrp,nproc_bgrp
   USE mp_world,              ONLY : world_comm,mpime,nproc
   USE class_idistribute,     ONLY : idistribute
   USE sort_tools,            ONLY : heapsort
@@ -134,7 +134,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
      IF(j_glob > 0 .AND. j_glob <= glob_ndim) n_j_loc = n_j_loc+1
   ENDDO
   !
-  IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(val_send(n_j_loc*glob_ndim))
      ALLOCATE(idx_send(n_j_loc*glob_ndim))
   ELSE
@@ -148,7 +148,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   send_count = 0
   recv_count = 0
   !
-  IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(dest(n_j_loc*glob_ndim))
      ALLOCATE(swap(n_j_loc*glob_ndim))
      !
@@ -196,7 +196,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
         !
         CALL idistr%g2l(j_glob,dummy,this_sour)
         !
-        this_sour = this_sour*nbgrp*nproc_bgrp
+        this_sour = this_sour*npool*nbgrp*nproc_bgrp
         recv_count(this_sour+1) = recv_count(this_sour+1)+LDROW
      ENDDO
      !
@@ -369,7 +369,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
         !
         CALL idistr%g2l(j_glob,dummy,this_dest)
         !
-        this_dest = this_dest*nbgrp*nproc_bgrp
+        this_dest = this_dest*npool*nbgrp*nproc_bgrp
         !
         DO i_loc = 1,LDROW
            i_val = i_val+1
@@ -415,7 +415,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   v_distr = 0.0_DP
   !
-  IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(swap(n_j_loc*glob_ndim))
      !
      CALL heapsort(n_j_loc*glob_ndim,idx_send,swap)
@@ -442,9 +442,9 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
      CALL BLACS_GRIDEXIT(BLACS_CONTEXT)
   ENDIF
   !
-  ! v_distr only needed by band group 0 in the next step
+  ! v_distr only needed by pool 0 and band group 0 in the next step
   !
-  IF(my_bgrp_id == 0) CALL mp_bcast(v_distr,0,intra_bgrp_comm)
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) CALL mp_bcast(v_distr,0,intra_bgrp_comm)
   !
 END SUBROUTINE
 !
@@ -462,7 +462,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   USE kinds,                 ONLY : DP,i8b
   USE mp,                    ONLY : mp_bcast,mp_comm_split,mp_comm_free
-  USE mp_global,             ONLY : intra_bgrp_comm,inter_bgrp_comm,my_bgrp_id,me_bgrp,nbgrp,nproc_bgrp
+  USE mp_global,             ONLY : my_pool_id,npool,intra_bgrp_comm,my_bgrp_id,me_bgrp,nbgrp,nproc_bgrp
   USE mp_world,              ONLY : world_comm,mpime,nproc
   USE class_idistribute,     ONLY : idistribute
   USE sort_tools,            ONLY : heapsort
@@ -568,7 +568,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
      IF(j_glob > 0 .AND. j_glob <= glob_ndim) n_j_loc = n_j_loc+1
   ENDDO
   !
-  IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(val_send(n_j_loc*glob_ndim))
      ALLOCATE(idx_send(n_j_loc*glob_ndim))
   ELSE
@@ -582,7 +582,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   send_count = 0
   recv_count = 0
   !
-  IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(dest(n_j_loc*glob_ndim))
      ALLOCATE(swap(n_j_loc*glob_ndim))
      !
@@ -630,7 +630,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
         !
         CALL idistr%g2l(j_glob,dummy,this_sour)
         !
-        this_sour = this_sour*nbgrp*nproc_bgrp
+        this_sour = this_sour*npool*nbgrp*nproc_bgrp
         recv_count(this_sour+1) = recv_count(this_sour+1)+LDROW
      ENDDO
      !
@@ -819,7 +819,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
         !
         CALL idistr%g2l(j_glob,dummy,this_dest)
         !
-        this_dest = this_dest*nbgrp*nproc_bgrp
+        this_dest = this_dest*npool*nbgrp*nproc_bgrp
         !
         DO i_loc = 1,LDROW
            i_val = i_val+1
@@ -865,7 +865,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   v_distr = 0.0_DP
   !
-  IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(swap(n_j_loc*glob_ndim))
      !
      CALL heapsort(n_j_loc*glob_ndim,idx_send,swap)
@@ -892,9 +892,9 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
      CALL BLACS_GRIDEXIT(BLACS_CONTEXT)
   ENDIF
   !
-  ! v_distr only needed by band group 0 in the next step
+  ! v_distr only needed by pool 0 and band group 0 in the next step
   !
-  IF(my_bgrp_id == 0) CALL mp_bcast(v_distr,0,intra_bgrp_comm)
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) CALL mp_bcast(v_distr,0,intra_bgrp_comm)
   !
 END SUBROUTINE
 #endif

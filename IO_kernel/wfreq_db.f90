@@ -33,9 +33,10 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,iks_l2g,qp_bandrange,wfreq_calculation,n_spectralf,logfile, &
-                                     & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
-                                     & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_freq,sigma_spectralf
+      USE westcom,              ONLY : wfreq_save_dir,qp_bandrange,wfreq_calculation,n_spectralf,logfile, &
+                                     & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,&
+                                     & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
+                                     & sigma_freq,sigma_spectralf
       USE pwcom,                ONLY : et
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -44,19 +45,16 @@ MODULE wfreq_db
       !
       IMPLICIT NONE
       !
-      CHARACTER(LEN=512)    :: fname
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iunout,global_j,local_j
-      INTEGER :: ierr, iks, ik, is, ib
+      INTEGER :: iks, ib
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       !
       TYPE(json_file) :: json
-      INTEGER :: iunit, i, counter
+      INTEGER :: iunit, i
       INTEGER,ALLOCATABLE :: ilist(:)
       LOGICAL :: l_generate_plot, l_optics
-      CHARACTER(LEN=10) :: ccounter
       !
       ! MPI BARRIER
       !
@@ -88,34 +86,9 @@ MODULE wfreq_db
          DEALLOCATE(ilist)
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
-         !counter = 0
-         !DO iks = 1, k_grid%nps
-         !   ik = k_grid%ip(iks)
-         !   is = k_grid%is(iks)
-         !   DO ib = qp_bandrange(1), qp_bandrange(2)
-         !      counter = counter + 1
-         !      WRITE( ccounter, '(i10)') counter
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').ksb',(/ik,is,ib/))
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmax',sigma_exx(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').vxcl'  ,sigma_vxcl(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').vxcnl' ,sigma_vxcnl(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').hf'    ,sigma_hf(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').z'     ,sigma_z(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').eks'   ,et(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').eqpLin',sigma_eqplin(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').eqpSec',sigma_eqpsec(ib,iks)*rytoev)
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eks',&
-         !        (/DBLE(sigma_sc_eks(ib,iks)*rytoev),AIMAG(sigma_sc_eks(ib,iks)*rytoev)/) )
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eqpLin',&
-         !        (/DBLE(sigma_sc_eqplin(ib,iks)*rytoev),AIMAG(sigma_sc_eqplin(ib,iks)*rytoev)/) )
-         !      CALL json%add('output.Q('//TRIM(ADJUSTL(ccounter))//').sigmac_eqpSec',&
-         !        (/DBLE(sigma_sc_eqpsec(ib,iks)*rytoev),AIMAG(sigma_sc_eqpsec(ib,iks)*rytoev)/) )
-         !   ENDDO
-         !ENDDO
-         !
          DO iks = 1, k_grid%nps
             !
-            WRITE(my_label_k,'(i6.6)') iks_l2g(iks)
+            WRITE(my_label_k,'(i6.6)') iks
             !
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)

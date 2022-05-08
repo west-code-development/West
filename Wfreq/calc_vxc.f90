@@ -17,16 +17,13 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   ! store in sigma_vxc(n,iks) = < n,iks | V_xc  | n,iks >     n = qp_bandrange(1):qp_bandrange(2)
   !
   USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,my_image_id
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE io_global,            ONLY : stdout
-  USE io_files,             ONLY : nwordwfc,iunwfc
   USE scf,                  ONLY : rho,rho_core,rhog_core
-  USE gvect,                ONLY : g,gstart,ngm
-  USE gvecw,                ONLY : gcutw
-  USE cell_base,            ONLY : tpiba2
+  USE gvect,                ONLY : gstart
   USE fft_base,             ONLY : dfftp,dffts
-  USE pwcom,                ONLY : npw,npwx,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,nspin,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,nspin,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k
   USE wavefunctions,        ONLY : evc,psic
@@ -39,6 +36,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE io_push,              ONLY : io_push_bar
   USE xc_lib,               ONLY : xclib_dft_is
   USE class_idistribute,    ONLY : idistribute
+  USE distribution_center,  ONLY : kpt_pool
   USE exx,                  ONLY : vexx
   USE types_bz_grid,        ONLY : k_grid
   !
@@ -54,7 +52,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   REAL(DP) :: etxc_
   REAL(DP) :: vtxc_
   REAL(DP), ALLOCATABLE :: vxc(:,:)
-  INTEGER :: ib,iv,i1,ir,iks
+  INTEGER :: ib,ir,iks,iks_g
   COMPLEX(DP) :: braket
   REAL(DP) :: nnr
   TYPE(bar_type) :: barra
@@ -83,12 +81,14 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   nnr = REAL( dfftp%nr1*dfftp%nr2*dfftp%nr3, KIND=DP )
   !
-  barra_load = k_grid%nps
+  barra_load = kpt_pool%nloc
   CALL start_bar_type( barra, 'sigmavxc', barra_load )
   !
   ! LOOP
   !
-  DO iks = 1, k_grid%nps   ! KPOINT-SPIN
+  DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
+     !
+     iks_g = kpt_pool%l2g(iks)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -103,33 +103,10 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(k_grid%nps>1) THEN
-        !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol
-        !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        !CALL mp_bcast(evc,0,inter_image_comm)
-        !CALL davcio(evc,lrwfc,iuwfc,iks,-1)
+     IF(kpt_pool%nloc > 1) THEN
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
-!     !
-!     ! ... Needed for LDA+U
-!     !
-!     IF ( nks > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
-!          CALL get_buffer ( wfcU, nwordwfcU, iunhub, iks )
-!     !
-!     current_k = iks
-!     current_spin = isk(iks)
-!     !
-!     CALL gk_sort(xk(1,iks),ngm,g,gcutw,npw,igk,g2kin)
-!     g2kin=g2kin*tpiba2
-!     !
-!     ! reads unperturbed wavefuctions psi_k in G_space, for all bands
-!     !
-!     !
-!     CALL init_us_2 (npw, igk, xk (1, iks), vkb)
-     !
-     !nbndval = nbnd_occ(iks)
      !
      ! NON-HYBRID CONTRIBUTION TO VXC
      !
@@ -143,7 +120,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               DO ir = 1, dfftp%nnr
                  braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
-              sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL(braket,KIND=DP) / nnr
+              sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL(braket,KIND=DP) / nnr
            ENDDO
            !
         ELSE
@@ -154,7 +131,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               DO ir = 1, dfftp%nnr
                  braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
-              sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL(braket,KIND=DP) / nnr
+              sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL(braket,KIND=DP) / nnr
            ENDDO
            !
            IF(noncolin) THEN
@@ -165,8 +142,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  DO ir = 1, dfftp%nnr
                     braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin)
                  ENDDO
-                 sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = &
-                &sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) + REAL(braket,KIND=DP) / nnr
+                 sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = &
+                 & sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) + REAL(braket,KIND=DP) / nnr
               ENDDO
               !
            ENDIF
@@ -196,22 +173,22 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               DO ib = 1,gwbnd%nloc
                  braket = 2._DP * DDOT( 2*npw, xpsi(1,ib), 1, vxpsi(1,ib), 1)
                  IF(gstart==2) braket = braket - REAL( xpsi(1,ib), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
-                 sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL( braket, KIND=DP )
+                 sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL( braket, KIND=DP )
               ENDDO
               !
            ELSE
               !
               DO ib = 1,gwbnd%nloc
                  braket = ZDOTC( npw, xpsi(1,ib),1,vxpsi(1,ib),1)
-                 sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL( braket, KIND=DP )
+                 sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL( braket, KIND=DP )
               ENDDO
               !
               IF(noncolin) THEN
                  !
                  DO ib = 1, gwbnd%nloc
                     braket = ZDOTC( npw, xpsi(1+npwx,ib),1,vxpsi(1+npwx,ib),1)
-                    sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = &
-                   &sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) + REAL( braket, KIND=DP )
+                    sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = &
+                    & sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) + REAL( braket, KIND=DP )
                  ENDDO
               ENDIF
               !
@@ -232,6 +209,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   CALL mp_sum( sigma_vxcl, intra_bgrp_comm )
   CALL mp_sum( sigma_vxcnl, intra_bgrp_comm )
+  CALL mp_sum( sigma_vxcl, inter_pool_comm )
+  CALL mp_sum( sigma_vxcnl, inter_pool_comm )
   CALL mp_sum( sigma_vxcl, inter_image_comm )
   CALL mp_sum( sigma_vxcnl, inter_image_comm )
   !

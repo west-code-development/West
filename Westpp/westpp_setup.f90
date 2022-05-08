@@ -18,7 +18,6 @@ SUBROUTINE westpp_setup
   USE pwcom,                  ONLY : nbnd
   USE distribution_center,    ONLY : pert,aband
   USE class_idistribute,      ONLY : idistribute
-  USE mod_mpiio,              ONLY : set_io_comm
   !
   IMPLICIT NONE
   !
@@ -50,7 +49,5 @@ SUBROUTINE westpp_setup
         CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
      ENDIF
   ENDDO
-  !
-  CALL set_io_comm() ! this defines communicator between heads of each image (me_bgrp==0)
   !
 END SUBROUTINE

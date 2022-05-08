@@ -7,6 +7,7 @@ include ../../make.inc
 MODFLAGS = $(MOD_FLAG)../../Modules \
            $(MOD_FLAG)../../FFTXlib \
            $(MOD_FLAG)../../PW/src \
+           $(MOD_FLAG)../../UtilXlib \
            $(MOD_FLAG)../../upflib \
            $(MOD_FLAG)../Libraries/Forpy \
            $(MOD_FLAG).
@@ -35,10 +36,10 @@ clean :
 	- /bin/rm -f west_version.f90
 
 title :
-	@echo "                "
+	@echo
 	@echo "################"
 	@echo "### Modules ####"
 	@echo "################"
-	@echo "                "
+	@echo
 
 include make.depend

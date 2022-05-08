@@ -19,8 +19,6 @@ MODULE wstat_restart
   !
   IMPLICIT NONE
   !
-  INTEGER, PRIVATE :: iunout
-  !
   INTERFACE wstat_restart_write
      MODULE PROCEDURE wstat_restart_write_real, wstat_restart_write_complex
   END INTERFACE
@@ -35,7 +33,7 @@ MODULE wstat_restart
     SUBROUTINE wstat_restart_write_real( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,my_bgrp_id,me_bgrp,inter_image_comm,nimage
+      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg,dng,wstat_restart_dir
@@ -54,7 +52,6 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr
       CHARACTER(LEN=512) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -76,7 +73,7 @@ MODULE wstat_restart
       CALL my_mkdir( wstat_restart_dir )
       !
       CALL start_clock('wstat_restart')
-      time_spent(1)=get_clock('wstat_restart')
+      time_spent(1) = get_clock('wstat_restart')
       !
       ! CREATE THE SUMMARY FILE
       !
@@ -110,11 +107,13 @@ MODULE wstat_restart
       !
       DO im = 0, nimage-1
          !
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
-         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr
          !
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
-         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr
          !
       ENDDO
       !
@@ -124,7 +123,7 @@ MODULE wstat_restart
       !
       ! CREATE THE EIGENVECTOR FILES
       !
-      DO local_j=1,pert%nloc
+      DO local_j = 1,pert%nloc
          !
          ! local -> global
          !
@@ -132,9 +131,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          !
-         fname = TRIM( wstat_restart_dir ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_restart_dir ) // '/V'//TRIM(ADJUSTL(my_label))//'.dat'
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
-         fname = TRIM( wstat_restart_dir ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_restart_dir ) // '/N'//TRIM(ADJUSTL(my_label))//'.dat'
          CALL pdep_merge_and_write_G(fname,dng(:,local_j))
          !
       ENDDO
@@ -142,12 +141,12 @@ MODULE wstat_restart
       ! BARRIER
       !
       CALL mp_barrier(world_comm)
-      time_spent(2)=get_clock('wstat_restart')
+      time_spent(2) = get_clock('wstat_restart')
       CALL stop_clock('wstat_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( wstat_restart_dir )
+      WRITE(stdout, '(5x, "[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, '(5x, "[I/O] In location   : ",a)') TRIM( wstat_restart_dir )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -156,7 +155,7 @@ MODULE wstat_restart
     SUBROUTINE wstat_restart_write_complex( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,my_bgrp_id,me_bgrp,inter_image_comm,nimage
+      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg,dng,wstat_restart_dir
@@ -176,7 +175,6 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr
       CHARACTER(LEN=512) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -198,7 +196,7 @@ MODULE wstat_restart
       CALL my_mkdir( wstat_restart_dir )
       !
       CALL start_clock('wstat_restart')
-      time_spent(1)=get_clock('wstat_restart')
+      time_spent(1) = get_clock('wstat_restart')
       !
       ! CREATE THE SUMMARY FILE
       !
@@ -235,11 +233,13 @@ MODULE wstat_restart
       !
       DO im = 0, nimage-1
          !
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
-         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr
          !
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
-         IF ( mpime == root ) WRITE( iunit ) tmp_distr(:,:)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
+         IF ( mpime == root ) WRITE( iunit ) tmp_distr
          !
       ENDDO
       !
@@ -249,7 +249,7 @@ MODULE wstat_restart
       !
       ! CREATE THE EIGENVECTOR FILES
       !
-      DO local_j=1,pert%nloc
+      DO local_j = 1,pert%nloc
          !
          ! local -> global
          !
@@ -257,13 +257,13 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          !
-         fname = TRIM( wstat_restart_dir ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_restart_dir ) // '/V'//TRIM(ADJUSTL(my_label))//'.dat'
          IF (PRESENT (lastdone_iq)) THEN
             CALL pdep_merge_and_write_G(fname,dvg(:,local_j),lastdone_iq)
          ELSE
             CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
          ENDIF
-         fname = TRIM( wstat_restart_dir ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_restart_dir ) // '/N'//TRIM(ADJUSTL(my_label))//'.dat'
          IF (PRESENT (lastdone_iq)) THEN
             CALL pdep_merge_and_write_G(fname,dng(:,local_j),lastdone_iq)
          ELSE
@@ -275,12 +275,12 @@ MODULE wstat_restart
       ! BARRIER
       !
       CALL mp_barrier(world_comm)
-      time_spent(2)=get_clock('wstat_restart')
+      time_spent(2) = get_clock('wstat_restart')
       CALL stop_clock('wstat_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location   : ',a)") TRIM( wstat_restart_dir )
+      WRITE(stdout, '(5x, "[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, '(5x, "[I/O] In location   : ",a)') TRIM( wstat_restart_dir )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -309,17 +309,17 @@ MODULE wstat_restart
       !
       ! ... clear the main restart directory
       !
-      IF(mpime==root) THEN
+      IF(mpime == root) THEN
          CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.json' ) )
          CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ) )
-         DO ip=1,n_pdep_basis
+         DO ip = 1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
-            fname="V"//TRIM(ADJUSTL(my_label))//".dat"
+            fname = 'V'//TRIM(ADJUSTL(my_label))//'.dat'
             CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
-            fname="N"//TRIM(ADJUSTL(my_label))//".dat"
+            fname = 'N'//TRIM(ADJUSTL(my_label))//'.dat'
             CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
          ENDDO
-         ierr =  f_rmdir( TRIM( wstat_restart_dir ) )
+         ierr = f_rmdir( TRIM( wstat_restart_dir ) )
       ENDIF
       !
       CALL mp_bcast( ierr, root, world_comm)
@@ -353,17 +353,16 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      REAL(DP), EXTERNAL    :: GET_CLOCK
+      REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: ierr
       !
       ! BARRIER
       !
       CALL mp_barrier( world_comm )
       !
       CALL start_clock('wstat_restart')
-      time_spent(1)=get_clock('wstat_restart')
+      time_spent(1) = get_clock('wstat_restart')
       !
       CALL read_restart12_( dav_iter, notcnv, nbase, ew )
       !
@@ -375,12 +374,12 @@ MODULE wstat_restart
       !
       CALL mp_barrier( world_comm )
       !
-      time_spent(2)=get_clock('wstat_restart')
+      time_spent(2) = get_clock('wstat_restart')
       CALL stop_clock('wstat_restart')
       !
       WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( wstat_restart_dir )
+      WRITE(stdout, '(5x, "[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, '(5x, "[I/O] In location : ",a)') TRIM( wstat_restart_dir )
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -409,10 +408,9 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      REAL(DP), EXTERNAL    :: GET_CLOCK
+      REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: ierr
       INTEGER :: ipol
       !
       ! BARRIER
@@ -420,7 +418,7 @@ MODULE wstat_restart
       CALL mp_barrier( world_comm )
       !
       CALL start_clock('wstat_restart')
-      time_spent(1)=get_clock('wstat_restart')
+      time_spent(1) = get_clock('wstat_restart')
       !
       CALL read_restart12_( dav_iter, notcnv, nbase, ew, lastdone_iq )
       !
@@ -432,15 +430,15 @@ MODULE wstat_restart
       !
       CALL mp_barrier( world_comm )
       !
-      time_spent(2)=get_clock('wstat_restart')
+      time_spent(2) = get_clock('wstat_restart')
       CALL stop_clock('wstat_restart')
       !
       IF ( iq == lastdone_iq ) THEN
          WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------------------")')
          WRITE( stdout, '(5x,"[I/O] Restarting from q(",i5,") = (",3f12.7,")")') &
               lastdone_iq, (q_grid%p_cryst(ipol,lastdone_iq) , ipol = 1, 3)
-         WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-         WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( wstat_restart_dir )
+         WRITE(stdout, '(5x, "[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout, '(5x, "[I/O] In location : ",a)') TRIM( wstat_restart_dir )
          WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------------------")')
       ENDIF
       !
@@ -464,7 +462,7 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr,iun
+      INTEGER :: ierr
       LOGICAL :: found
       TYPE(json_file) :: json
       REAL(DP),ALLOCATABLE :: rvals(:)
@@ -473,7 +471,7 @@ MODULE wstat_restart
       !
       ierr = 0
       !
-      IF ( mpime==root ) THEN
+      IF ( mpime == root ) THEN
          !
          CALL json%initialize()
          CALL json%load( filename = TRIM( wstat_restart_dir ) // '/' // TRIM('summary.json') )
@@ -520,7 +518,7 @@ MODULE wstat_restart
       USE mp_world,             ONLY : mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
       USE distribution_center,  ONLY : pert
-      USE mp_global,            ONLY : nimage,my_bgrp_id,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
+      USE mp_global,            ONLY : nimage,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
       !
       IMPLICIT NONE
       !
@@ -531,7 +529,7 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr,iun
+      INTEGER :: iun
       INTEGER :: im
       REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
       !
@@ -542,10 +540,12 @@ MODULE wstat_restart
       DO im = 0, nimage-1
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
       !
@@ -566,7 +566,7 @@ MODULE wstat_restart
       USE mp_world,            ONLY : mpime,root
       USE mp,                  ONLY : mp_bcast,mp_get
       USE distribution_center, ONLY : pert
-      USE mp_global,           ONLY : nimage,my_bgrp_id,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
+      USE mp_global,           ONLY : nimage,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
       !
       IMPLICIT NONE
       !
@@ -577,7 +577,7 @@ MODULE wstat_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr,iun
+      INTEGER :: iun
       INTEGER :: im
       COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
       !CHARACTER(6) :: my_label
@@ -589,10 +589,12 @@ MODULE wstat_restart
       DO im = 0, nimage-1
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
          IF ( mpime == root ) READ( iun ) tmp_distr(:,:)
-         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 ) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
+         IF ( me_bgrp == 0 .AND. my_bgrp_id == 0 .AND. my_pool_id == 0 ) &
+         & CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
       !
@@ -618,18 +620,16 @@ MODULE wstat_restart
       INTEGER, INTENT(IN) :: nbase
       INTEGER, INTENT(IN), OPTIONAL :: iq
       !
-      INTEGER :: global_j, local_j, group_j
-      INTEGER :: npw_g,ierr
+      INTEGER :: global_j, local_j
       CHARACTER(6) :: my_label
       CHARACTER(LEN=512) :: fname
-      INTEGER :: iun
       !
       IF(.NOT.ALLOCATED(dvg)) ALLOCATE(dvg(npwqx,pert%nlocx))
       IF(.NOT.ALLOCATED(dng)) ALLOCATE(dng(npwqx,pert%nlocx))
       dvg = 0._DP
       dng = 0._DP
       !
-      DO local_j=1,pert%nloc
+      DO local_j = 1,pert%nloc
          !
          ! local -> global
          !
@@ -637,13 +637,13 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          !
-         fname = TRIM( wstat_restart_dir ) // "/V"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_restart_dir ) // '/V'//TRIM(ADJUSTL(my_label))//'.dat'
          IF ( PRESENT(iq) ) THEN
             CALL pdep_read_G_and_distribute(fname,dvg(:,local_j),iq)
          ELSE
             CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
          ENDIF
-         fname = TRIM( wstat_restart_dir ) // "/N"//TRIM(ADJUSTL(my_label))//".dat"
+         fname = TRIM( wstat_restart_dir ) // '/N'//TRIM(ADJUSTL(my_label))//'.dat'
          IF ( PRESENT(iq) ) THEN
             CALL pdep_read_G_and_distribute(fname,dng(:,local_j),iq)
          ELSE

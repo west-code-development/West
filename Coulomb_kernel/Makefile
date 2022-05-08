@@ -28,10 +28,10 @@ clean :
 	- /bin/rm -f lib_coulomb_kernel.a
 
 title :
-	@echo "                       "
+	@echo
 	@echo "#######################"
 	@echo "### Coulomb_kernel ####"
 	@echo "#######################"
-	@echo "                       "
+	@echo
 
 include make.depend

@@ -33,24 +33,20 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
   REAL(DP),    INTENT(INOUT) :: v(dfftp%nnr,nspin)
   REAL(DP),    INTENT(INOUT) :: vtx, etx
   !
-  INTEGER :: k, ipol, is, nspin0, ir, jpol
+  INTEGER :: k, ipol, is, nspin0
   !
   REAL(DP), ALLOCATABLE :: grho(:,:,:), h(:,:,:), dh(:)
   REAL(DP), ALLOCATABLE :: rhoaux(:,:), segni(:), vgg(:,:), vsave(:,:)
-  REAL(DP), ALLOCATABLE :: gmag(:,:,:)
-
   COMPLEX(DP), ALLOCATABLE :: rhogaux(:,:)
   !
-  REAL(DP), ALLOCATABLE :: grho2(:,:), grho_ud(:)
-  REAL(DP), ALLOCATABLE :: rh(:), zeta(:)
+  REAL(DP), ALLOCATABLE :: grho2(:,:)
   REAL(DP), ALLOCATABLE :: v1x(:,:), v2x(:,:)
   REAL(DP), ALLOCATABLE :: v1c(:,:), v2c(:,:), v2c_ud(:)
-  REAL(DP) :: vnull
   REAL(DP) :: sx(dfftp%nnr), sc(dfftp%nnr)
   !
-  REAL(DP) :: sgn(2), etxgc, vtxgc, segno, fac, amag
+  REAL(DP) :: sgn(2), etxgc, vtxgc, fac, amag
   !
-  REAL(DP) :: grup, grdw, seg, gr
+  REAL(DP) :: grup, grdw
   !
   REAL(DP), PARAMETER :: epsr = 1.D-6, epsg = 1.D-10
   !

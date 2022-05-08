@@ -19,15 +19,12 @@ MODULE scratch_area
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! COULOMB
   !
   INTEGER :: npwq
   INTEGER :: npwqx
   INTEGER :: npwq_g
   CHARACTER(LEN=6) :: fftdriver
-  INTEGER, ALLOCATABLE :: iks_l2g(:)
   !
   ! DBS
   !
@@ -88,8 +85,6 @@ MODULE westin
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   CHARACTER(LEN=512) :: outdir          ! main directory
   CHARACTER(LEN=512) :: west_prefix
   CHARACTER(LEN=512) :: qe_prefix
@@ -105,8 +100,6 @@ MODULE wstat_center
   USE kinds, ONLY : DP
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   ! INPUT FOR wstat_control
   !
@@ -142,8 +135,6 @@ MODULE server_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! INPUT for server_control
   !
   CHARACTER(LEN=:), ALLOCATABLE :: document
@@ -156,8 +147,6 @@ MODULE wfreq_center
   USE kinds, ONLY : DP
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   ! INPUT FOR wfreq_control
   !
@@ -173,7 +162,6 @@ MODULE wfreq_center
   INTEGER :: n_secant_maxiter
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
-  LOGICAL :: l_enable_gwetot
   CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
   REAL(DP) :: o_restart_time
@@ -230,8 +218,6 @@ MODULE westpp_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! INPUT FOR wfreq_control
   !
   CHARACTER(LEN=8) :: westpp_calculation
@@ -257,8 +243,6 @@ MODULE wan_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   REAL(DP), ALLOCATABLE :: wanc(:,:)
   REAL(DP), ALLOCATABLE :: wanu(:,:)
   INTEGER :: wantot
@@ -269,8 +253,6 @@ END MODULE
 MODULE io_unit_numbers
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   INTEGER, PARAMETER :: iuwfc = 20
   INTEGER :: lrwfc

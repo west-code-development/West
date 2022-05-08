@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -22,18 +22,18 @@ MODULE class_coulomb
    !
    TYPE, PUBLIC :: coulomb
       !
-      REAL(DP) :: div                              ! divergence 
+      REAL(DP) :: div                              ! divergence
       CHARACTER(LEN=7) :: singularity_removal_mode ! singularity_removal_mode
       CHARACTER(LEN=5) :: cdriver                  ! FFT driver = "Wave", "Rho"
       LOGICAL :: l_use_igq                         ! use igq map
       INTEGER :: iq                                ! q-point
-      REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW 
+      REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW
       !
       CONTAINS
       !
       PROCEDURE :: init => sqvc_init
       PROCEDURE :: compute_divergence => compute_divergence
-      PROCEDURE :: print_divergence => print_divergence 
+      PROCEDURE :: print_divergence => print_divergence
       !
    END TYPE coulomb
    !
@@ -58,7 +58,7 @@ MODULE class_coulomb
       !
       ! I/O
       !
-      CLASS(coulomb) :: this 
+      CLASS(coulomb) :: this
       CHARACTER(LEN=*), INTENT(IN) :: cdriver
       LOGICAL, INTENT(IN) :: l_use_igq
       CHARACTER(LEN=*), INTENT(IN) :: singularity_removal_mode
@@ -70,7 +70,7 @@ MODULE class_coulomb
       INTEGER :: numg, numgx
       INTEGER :: ig, ipol
       LOGICAL :: on_double_grid
-      REAL(DP) :: grid_factor 
+      REAL(DP) :: grid_factor
       !
       CALL start_clock('sqvc_init')
       !
@@ -78,8 +78,8 @@ MODULE class_coulomb
       this%l_use_igq = l_use_igq
       this%singularity_removal_mode = singularity_removal_mode
       IF ( PRESENT(iq) ) THEN
-         this%iq = iq 
-      ELSE 
+         this%iq = iq
+      ELSE
          this%iq = 1   ! gamma-only
       ENDIF
       !
@@ -108,17 +108,17 @@ MODULE class_coulomb
          IF (this%l_use_igq) CALL errore("sqvc_init", "igq map not used with Rho grid",1)
          numg = ngm
          numgx = ngm
-      CASE DEFAULT 
+      CASE DEFAULT
          CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Rho",1)
       END SELECT
       !
-      IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc ) 
-      ALLOCATE( this%sqvc( numgx ) ) 
+      IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc )
+      ALLOCATE( this%sqvc( numgx ) )
       !
       this%sqvc = 0._DP
       DO ig = 1,numg
          !
-         IF ( this%l_use_igq ) THEN 
+         IF ( this%l_use_igq ) THEN
             qg(:) = g(:,igq_q(ig,this%iq)) + q_grid%p_cart(:,this%iq)
          ELSE
             qg(:) = g(:,ig) + q_grid%p_cart(:,this%iq)
@@ -129,9 +129,9 @@ MODULE class_coulomb
          IF( qgnorm2 < eps8 ) CYCLE ! don't touch sqvc_tmp of |q+G|=0
          !
          grid_factor = 1._DP
-         on_double_grid = .FALSE. 
+         on_double_grid = .FALSE.
          !
-         IF( this%singularity_removal_mode == "gb" ) THEN 
+         IF( this%singularity_removal_mode == "gb" ) THEN
             !
             ! In this case we use Gygi-Baldereschi method
             !
@@ -142,10 +142,10 @@ MODULE class_coulomb
                on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
             ENDDO
             !
-         ENDIF 
+         ENDIF
          !
          IF( on_double_grid ) CYCLE
-         this%sqvc(ig) = SQRT(e2*fpi*grid_factor/qgnorm2) 
+         this%sqvc(ig) = SQRT(e2*fpi*grid_factor/qgnorm2)
          !
       ENDDO
       !
@@ -156,13 +156,13 @@ MODULE class_coulomb
    END SUBROUTINE
    !
    !
-   FUNCTION compute_divergence( this ) RESULT( div ) 
-      !    
+   FUNCTION compute_divergence( this ) RESULT( div )
+      !
       USE constants,            ONLY : pi, tpi, fpi, e2, eps8
-      USE cell_base,            ONLY : omega, at, bg,  tpiba2
+      USE cell_base,            ONLY : omega, at, bg, tpiba2
       USE mp,                   ONLY : mp_sum
-      USE mp_global,            ONLY : intra_bgrp_comm
-      USE mp_world,             ONLY : mpime, world_comm, nproc
+      USE mp_global,            ONLY : nimage, my_image_id, nproc_image, inter_image_comm, &
+                                     & intra_bgrp_comm, me_bgrp, nproc_bgrp
       USE control_flags,        ONLY : gamma_only
       USE gvecw,                ONLY : ecutwfc
       USE random_numbers,       ONLY : randy
@@ -173,7 +173,7 @@ MODULE class_coulomb
       !
       ! I/O
       !
-      CLASS(coulomb) :: this 
+      CLASS(coulomb) :: this
       !
       ! Workspace
       !
@@ -190,15 +190,15 @@ MODULE class_coulomb
       !
       CASE("default")
          !
-         ! In this case we use the spherical region 
+         ! In this case we use the spherical region
          !
          div = ( (6._DP * pi * pi / ( omega*DBLE(q_grid%np) ) )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
          !
-         ! If the angles are all 90 deg then overwrite div as follows: 
+         ! If the angles are all 90 deg then overwrite div as follows:
          !
          IF( try_ort_div ) THEN
-            !  
-            ! prod( i, j ) = (b_i)^t * b_j    (if off-diagonal prods are all zero --> the angles are all 90 deg --> cell is orthorombic)   
+            !
+            ! prod( i, j ) = (b_i)^t * b_j    (if off-diagonal prods are all zero --> the angles are all 90 deg --> cell is orthorombic)
             !
             prod = 0._DP
             DO i1 = 1, 3
@@ -215,28 +215,28 @@ MODULE class_coulomb
             DO i1 = 1, 3
                DO i2 = 1, 3
                   IF( i1 == i2 ) CYCLE
-                  IF( ABS( prod(i1,i2)) > eps8 ) THEN 
+                  IF( ABS( prod(i1,i2)) > eps8 ) THEN
                      i_am_ort = .FALSE.
                   ENDIF
                ENDDO
-            ENDDO 
+            ENDDO
             !
-            ! if the system is not ort, spherical div will remain 
+            ! if the system is not ort, spherical div will remain
             !
             IF ( i_am_ort ) THEN
                !
-               edge(1) = SQRT(prod(1,1)) / 2._DP 
-               edge(2) = SQRT(prod(2,2)) / 2._DP 
-               edge(3) = SQRT(prod(3,3)) / 2._DP 
+               edge(1) = SQRT(prod(1,1)) / 2._DP
+               edge(2) = SQRT(prod(2,2)) / 2._DP
+               edge(3) = SQRT(prod(3,3)) / 2._DP
                edge(:) = edge(:) / DBLE(q_grid%ngrid(:))
                !
-               qhelp = MIN( edge(1),edge(2),edge(3)  )  
+               qhelp = MIN( edge(1),edge(2),edge(3)  )
                vbz = tpi**3 / ( omega * DBLE(q_grid%np) )
                vhelp = fpi / 3._DP * qhelp**3
                !
-               rand=randy(mpime)
+               rand = randy(my_image_id*nproc_image+me_bgrp)
                div = 0._DP
-               intcounter = 0 
+               intcounter = 0
                !
                DO i1 = 1, 100000
                   qmo=0._DP
@@ -244,18 +244,23 @@ MODULE class_coulomb
                      qbz(i2) = randy() * edge(i2)
                      qmo = qmo + qbz(i2)**2
                   ENDDO
-                  qmo = SQRT( qmo ) 
+                  qmo = SQRT( qmo )
                   IF( qmo < qhelp ) CYCLE
                   div = div + 1._DP/qmo/qmo
                   intcounter = intcounter + 1._DP
                ENDDO
                !
-               div = div * ( vbz - vhelp  ) / intcounter  
+               div = div * ( vbz - vhelp  ) / intcounter
                div = div + fpi * qhelp
-               div = div * fpi * e2 / ( tpi * tpi * tpi ) 
+               div = div * fpi * e2 / ( tpi * tpi * tpi )
                !
-               div = div / REAL(nproc,KIND=DP)
-               CALL mp_sum(div,world_comm)
+               div = div / REAL(nimage*nproc_bgrp,KIND=DP)
+               !
+               ! Cannot sum over world_comm, inter_pool_comm, or inter_bgrp_comm,
+               ! because not all pools or band groups may enter this routine
+               !
+               CALL mp_sum(div,intra_bgrp_comm)
+               CALL mp_sum(div,inter_image_comm)
                !
             ENDIF
             !
@@ -265,12 +270,12 @@ MODULE class_coulomb
          !
          ! In this case we use Gygi-Baldereschi method
          !
-         alpha = 10._DP / ecutwfc  ! DEFINITION OF ALPHA  
+         alpha = 10._DP / ecutwfc  ! DEFINITION OF ALPHA
          !
          div = 0._DP
          !
          DO iq = 1, q_grid%np
-            ! 
+            !
             DO ig = 1,ngm
                qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
                qgnorm2 = SUM( qg(:)**2 ) * tpiba2
@@ -279,7 +284,7 @@ MODULE class_coulomb
                   x = 0.5_DP*( qg(1)*at(1,ipol)+qg(2)*at(2,ipol)+qg(3)*at(3,ipol) )*DBLE(q_grid%ngrid(ipol))
                   on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
                ENDDO
-               IF( .NOT.on_double_grid .AND. qgnorm2 > eps8 ) THEN 
+               IF( .NOT.on_double_grid .AND. qgnorm2 > eps8 ) THEN
                   div = div - EXP( -alpha * qgnorm2 ) / qgnorm2
                ENDIF
             ENDDO
@@ -313,9 +318,9 @@ MODULE class_coulomb
       CLASS(coulomb) :: this
       !
       IF ( .NOT. q_grid%l_pIsGamma(this%iq) ) RETURN
-      WRITE(stdout,"(5X,'Divergence = ',es14.6)") this%div 
-      ! 
-   END SUBROUTINE 
+      WRITE(stdout,"(5X,'Divergence = ',es14.6)") this%div
+      !
+   END SUBROUTINE
    !
    !
    !
@@ -414,8 +419,8 @@ MODULE class_coulomb
    !  REAL(DP) :: grid_factor = 8.d0/7.d0
    !! REAL(DP) :: grid_factor = 1.0_DP
    !  TYPE(vcut_type)   :: vcut
-   !  LOGICAL :: try_ort_div=.TRUE.,i_am_ort 
-   !  REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp 
+   !  LOGICAL :: try_ort_div=.TRUE.,i_am_ort
+   !  REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp
    !  REAL(DP) :: intcounter
    !  !
    !  CALL start_clock( 'storesqvcq' )
@@ -434,7 +439,7 @@ MODULE class_coulomb
    !     !
    !  CASE(1)
    !     !
-   !     ! In this case we use the spherical region 
+   !     ! In this case we use the spherical region
    !     !
    !     DO ig = 1,numg
    !        IF (l_use_igq) THEN
@@ -476,7 +481,7 @@ MODULE class_coulomb
    !  CASE(3)
    !     !
    !     ! In this case we use CUT_WS
-   !     ! 
+   !     !
    !     !
    !     ecutvcut = 0.7_DP
    !     !

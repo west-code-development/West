@@ -68,10 +68,10 @@ clean :
 	- /bin/rm -f ../../bin/wstat.x
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Wstat ####"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

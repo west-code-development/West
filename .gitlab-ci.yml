@@ -54,7 +54,7 @@ stages:
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
     - make -j8 all
     - cd test-suite
-    - make NP=$CI_NP NI=$CI_NI NB=$CI_NB NT=$CI_NT
+    - make NP=$CI_NP NI=$CI_NI NK=$CI_NK NB=$CI_NB NT=$CI_NT
   artifacts:
     when: on_failure
     paths:
@@ -83,6 +83,7 @@ gcc1130_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 1
+    CI_NK: 1
     CI_NB: 1
     CI_NT: 1
   extends:
@@ -95,6 +96,7 @@ gcc1030_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 2
+    CI_NK: 1
     CI_NB: 2
     CI_NT: 1
   extends:
@@ -109,6 +111,7 @@ gcc1130_0002_t2:
   variables:
     CI_NP: 8
     CI_NI: 2
+    CI_NK: 1
     CI_NB: 1
     CI_NT: 2
   only:
@@ -122,7 +125,22 @@ gcc1130_0002_t3:
   variables:
     CI_NP: 8
     CI_NI: 1
+    CI_NK: 1
     CI_NB: 2
+    CI_NT: 2
+  only:
+    - schedules
+  extends:
+    - .template_bot_start
+    - .template_test
+  image: miccomcenter/bot:gcc1130_0002
+
+gcc1130_0002_t4:
+  variables:
+    CI_NP: 8
+    CI_NI: 1
+    CI_NK: 2
+    CI_NB: 1
     CI_NT: 2
   only:
     - schedules

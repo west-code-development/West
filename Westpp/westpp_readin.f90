@@ -16,6 +16,7 @@ SUBROUTINE westpp_readin()
   !
   USE uspp,             ONLY : okvan
   USE gvecs,            ONLY : doublegrid
+  USE mp_global,        ONLY : nbgrp,npool
   !
   IMPLICIT NONE
   !
@@ -37,8 +38,10 @@ SUBROUTINE westpp_readin()
   !
   ! PW checks
   !
-  IF (okvan) CALL errore('westpp_readin','ultrasoft pseudopotential not implemented',1)
-  IF (doublegrid) CALL errore('westpp_readin', 'double grid not implemented',1)
+  IF(okvan) CALL errore('westpp_readin','ultrasoft pseudopotential not implemented',1)
+  IF(doublegrid) CALL errore('westpp_readin', 'double grid not implemented',1)
+  IF(nbgrp > 1) CALL errore('westpp_readin','band groups not implemented',1)
+  IF(npool > 1) CALL errore('westpp_readin','pools not implemented',1)
   !
   ! READ other sections of the input file
   !

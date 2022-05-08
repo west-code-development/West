@@ -31,10 +31,10 @@ clean :
 	- /bin/rm -f lib_hamiltonian_kernel.a
 
 title :
-	@echo "                           "
+	@echo
 	@echo "###########################"
 	@echo "### Hamiltonian_kernel ####"
 	@echo "###########################"
-	@echo "                           "
+	@echo
 
 include make.depend

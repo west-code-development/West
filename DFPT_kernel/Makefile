@@ -33,10 +33,10 @@ clean :
 	- /bin/rm -f lib_dfpt_kernel.a
 
 title :
-	@echo "                    "
+	@echo
 	@echo "####################"
 	@echo "### DFPT_kernel ####"
 	@echo "####################"
-	@echo "                    "
+	@echo
 
 include make.depend

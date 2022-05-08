@@ -16,9 +16,8 @@ clean:
 	- rm -f files.txt
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Pytools ##"
 	@echo "##############"
-	@echo "              "
-
+	@echo

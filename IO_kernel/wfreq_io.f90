@@ -16,8 +16,6 @@ MODULE wfreq_io
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   INTERFACE writeout_overlap
      MODULE PROCEDURE writeout_overlap_real, writeout_overlap_complex, writeout_overlap_complex_q
   END INTERFACE
@@ -36,135 +34,13 @@ MODULE wfreq_io
   !
   CONTAINS
   !
-  !-----------------------------------------------------------------------
-  SUBROUTINE preallocate_solvewfreq( ik, nb_1, nb_2, idistr )
-    !-----------------------------------------------------------------------
-    !
-    USE class_idistribute,   ONLY : idistribute
-    USE control_flags,       ONLY : gamma_only
-    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,           ONLY : mp_master_creates_and_preallocates
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    INTEGER,INTENT(IN) :: ik, nb_1, nb_2
-    TYPE(idistribute), INTENT(IN) :: idistr
-    !
-    ! Workspace
-    !
-    INTEGER :: ib, ii
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=512) :: fname
-    INTEGER :: nmode
-    !
-    IF( gamma_only ) THEN
-       nmode = 1
-    ELSE
-       nmode = 2
-    ENDIF
-    !
-    WRITE(c_glob_iks,'(i5.5)') ik
-    DO ib = nb_1, nb_2
-       !
-       WRITE(c_glob_ib, '(i5.5)') ib
-       !
-       fname = TRIM( wfreq_save_dir )//'/w_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-       CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob * 1 )
-       fname = TRIM( wfreq_save_dir )//'/w_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-       CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob*idistr%nglob*nmode )
-       !
-    ENDDO
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE preallocate_solvegfreq( ik, nb_1, nb_2, idistr )
-    !
-    USE class_idistribute,   ONLY : idistribute
-    USE control_flags,       ONLY : gamma_only
-    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,           ONLY : mp_master_creates_and_preallocates
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    INTEGER,INTENT(IN) :: ik, nb_1, nb_2
-    TYPE(idistribute), INTENT(IN) :: idistr
-    !
-    ! Workspace
-    !
-    INTEGER :: ib, ii
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=512) :: fname
-    INTEGER :: nmode
-    !
-    IF( gamma_only ) THEN
-       nmode = 1
-    ELSE
-       nmode = 2
-    ENDIF
-    !
-    WRITE(c_glob_iks,'(i5.5)') ik
-    DO ib = nb_1, nb_2
-       !
-       WRITE(c_glob_ib, '(i5.5)') ib
-       !
-       fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-       CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob * 1 )   ! check nmode
-       fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-       CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob*idistr%nglob*nmode )
-       !
-    ENDDO
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE preallocate_solvegfreq_q( ik, ikk, nb_1, nb_2, idistr )
-    !
-    USE class_idistribute,   ONLY : idistribute
-    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,           ONLY : mp_master_creates_and_preallocates
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    INTEGER,INTENT(IN) :: ik, ikk, nb_1, nb_2
-    TYPE(idistribute), INTENT(IN) :: idistr
-    !
-    ! Workspace
-    !
-    INTEGER :: ib, ii
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ikks
-    CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=512) :: fname
-    !
-    WRITE(c_glob_iks,'(i5.5)') ik
-    WRITE(c_glob_ikks,'(i5.5)') ikk
-    DO ib = nb_1, nb_2
-       !
-       WRITE(c_glob_ib, '(i5.5)') ib
-       !
-       fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-       CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob * 1 )   ! check nmode
-       fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-       CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob*idistr%nglob*2 )
-       !
-    ENDDO
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE writeout_solvewfreq( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset )
+  SUBROUTINE writeout_solvegfreq_real(glob_iks,glob_ib,diago,braket,nloc,nglob,myoffset)
     !
     ! WHO WRITES? ... root_bgrp
     ! WHAT?       ... diago(        n_lanczos )
     ! WHAT?       ... braket( ndim, n_lanczos )
     !
-    USE kinds,               ONLY : DP
+    USE kinds,               ONLY : DP,i8b
     USE westcom,             ONLY : n_lanczos,wfreq_save_dir
     USE mod_mpiio,           ONLY : mp_write_dmsg_at
     !
@@ -176,36 +52,89 @@ MODULE wfreq_io
     INTEGER,INTENT(IN) :: glob_ib
     REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
     REAL(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc, nglob, myoffset
+    INTEGER,INTENT(IN) :: nloc,nglob,myoffset
     !
     ! Workspace
     !
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
+    INTEGER(i8b) :: myoffset_i8b
+    !
+    CALL start_clock('write_gfreq')
     !
     ! Generate the filename
     !
     WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
+    WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_save_dir )//'/w_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
     !
-    fname = TRIM( wfreq_save_dir )//'/w_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_write_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
+    !
+    CALL stop_clock('write_gfreq')
     !
   END SUBROUTINE
   !
-  SUBROUTINE writeout_solvewfreq_q( glob_iks, glob_ikks, glob_ib, diago, braket, nloc, nglob, myoffset )
+  SUBROUTINE writeout_solvegfreq_complex(glob_iks,glob_ib,diago,braket,nloc,nglob,myoffset)
     !
     ! WHO WRITES? ... root_bgrp
     ! WHAT?       ... diago(        n_lanczos )
     ! WHAT?       ... braket( ndim, n_lanczos )
     !
-    USE kinds,               ONLY : DP
+    USE kinds,               ONLY : DP,i8b
     USE westcom,             ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,           ONLY : mp_write_dmsg_at
+    USE mod_mpiio,           ONLY : mp_write_dmsg_at,mp_write_zmsg_at
+    !
+    IMPLICIT NONE
+    !
+    ! I/O
+    !
+    INTEGER,INTENT(IN) :: glob_iks
+    INTEGER,INTENT(IN) :: glob_ib
+    REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
+    COMPLEX(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
+    INTEGER,INTENT(IN) :: nloc,nglob,myoffset
+    !
+    ! Workspace
+    !
+    CHARACTER(LEN=5) :: c_glob_iks
+    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=512) :: fname
+    INTEGER(i8b) :: myoffset_i8b
+    !
+    CALL start_clock('write_gfreq')
+    !
+    ! Generate the filename
+    !
+    WRITE(c_glob_iks,'(i5.5)') glob_iks
+    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    !
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
+    !
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_write_zmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
+    !
+    CALL stop_clock('write_gfreq')
+    !
+  END SUBROUTINE
+  !
+  SUBROUTINE writeout_solvegfreq_complex_q(glob_iks,glob_ikks,glob_ib,diago,braket,nloc,nglob,myoffset)
+    !
+    ! WHO WRITES? ... root_bgrp
+    ! WHAT?       ... diago(        n_lanczos )
+    ! WHAT?       ... braket( ndim, n_lanczos )
+    !
+    USE kinds,               ONLY : DP,i8b
+    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
+    USE mod_mpiio,           ONLY : mp_write_dmsg_at,mp_write_zmsg_at
     !
     IMPLICIT NONE
     !
@@ -215,8 +144,8 @@ MODULE wfreq_io
     INTEGER,INTENT(IN) :: glob_ikks
     INTEGER,INTENT(IN) :: glob_ib
     REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
-    REAL(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc, nglob, myoffset
+    COMPLEX(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
+    INTEGER,INTENT(IN) :: nloc,nglob,myoffset
     !
     ! Workspace
     !
@@ -224,28 +153,35 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_ikks
     CHARACTER(LEN=5) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
+    INTEGER(i8b) :: myoffset_i8b
+    !
+    CALL start_clock('write_gfreq')
     !
     ! Generate the filename
     !
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ikks,'(i5.5)') glob_ikks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
+    WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_save_dir )//'/w_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
+    CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
     !
-    fname = TRIM( wfreq_save_dir )//'/w_brak_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
+    CALL mp_write_zmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
+    !
+    CALL stop_clock('write_gfreq')
     !
   END SUBROUTINE
   !
-  SUBROUTINE readin_solvewfreq( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset )
+  SUBROUTINE readin_solvegfreq_real(glob_iks,glob_ib,diago,braket,nloc,nglob,myoffset)
     !
     ! WHO READS?  ... root_bgrp
     ! WHAT?       ... diago(        n_lanczos )
     ! WHAT?       ... braket( ndim, n_lanczos )
     !
-    USE kinds,          ONLY : DP
+    USE kinds,          ONLY : DP,i8b
     USE westcom,        ONLY : n_lanczos,wfreq_save_dir
     USE mod_mpiio,      ONLY : mp_read_dmsg_at
     !
@@ -264,202 +200,34 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
-    !
-    ! Generate the filename
-    !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
-    !
-    fname = TRIM( wfreq_save_dir )//'/w_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
-    !
-    fname = TRIM( wfreq_save_dir )//'/w_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE writeout_solvegfreq_real( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset )
-    !
-    ! WHO WRITES? ... root_bgrp
-    ! WHAT?       ... diago(        n_lanczos )
-    ! WHAT?       ... braket( ndim, n_lanczos )
-    !
-    USE kinds,               ONLY : DP
-    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,           ONLY : mp_write_dmsg_at
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    INTEGER,INTENT(IN) :: glob_iks
-    INTEGER,INTENT(IN) :: glob_ib
-    REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
-    REAL(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc, nglob, myoffset
-    !
-    ! Workspace
-    !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=512) :: fname
-    !
-    CALL start_clock('write_gfreq')
-    !
-    ! Generate the filename
-    !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
-    !
-    fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
-    !
-    fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
-    !
-    CALL stop_clock('write_gfreq')
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE writeout_solvegfreq_complex( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset )
-    !
-    ! WHO WRITES? ... root_bgrp
-    ! WHAT?       ... diago(        n_lanczos )
-    ! WHAT?       ... braket( ndim, n_lanczos )
-    !
-    USE kinds,               ONLY : DP
-    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,           ONLY : mp_write_dmsg_at,mp_write_zmsg_at
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    INTEGER,INTENT(IN) :: glob_iks
-    INTEGER,INTENT(IN) :: glob_ib
-    REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
-    COMPLEX(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc, nglob, myoffset
-    !
-    ! Workspace
-    !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=512) :: fname
-    !
-    CALL start_clock('write_gfreq')
-    !
-    ! Generate the filename
-    !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
-    !
-    fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
-    !
-    fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_zmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
-    !
-    CALL stop_clock('write_gfreq')
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE writeout_solvegfreq_complex_q( glob_iks, glob_ikks, glob_ib, diago, braket, nloc, nglob, myoffset )
-    !
-    ! WHO WRITES? ... root_bgrp
-    ! WHAT?       ... diago(        n_lanczos )
-    ! WHAT?       ... braket( ndim, n_lanczos )
-    !
-    USE kinds,               ONLY : DP
-    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,           ONLY : mp_write_dmsg_at,mp_write_zmsg_at
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    INTEGER,INTENT(IN) :: glob_iks
-    INTEGER,INTENT(IN) :: glob_ikks
-    INTEGER,INTENT(IN) :: glob_ib
-    REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
-    COMPLEX(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc, nglob, myoffset
-    !
-    ! Workspace
-    !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ikks
-    CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=512) :: fname
-    !
-    CALL start_clock('write_gfreq')
-    !
-    ! Generate the filename
-    !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ikks,'(i5.5)') glob_ikks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
-    !
-    fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
-    !
-    fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-    CALL mp_write_zmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
-    !
-    CALL stop_clock('write_gfreq')
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE readin_solvegfreq_real( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset )
-    !
-    ! WHO READS?  ... root_bgrp
-    ! WHAT?       ... diago(        n_lanczos )
-    ! WHAT?       ... braket( ndim, n_lanczos )
-    !
-    USE kinds,          ONLY : DP
-    USE westcom,        ONLY : n_lanczos,wfreq_save_dir
-    USE mod_mpiio,      ONLY : mp_read_dmsg_at
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    INTEGER,INTENT(IN) :: glob_iks
-    INTEGER,INTENT(IN) :: glob_ib
-    REAL(DP),INTENT(OUT) :: diago(n_lanczos,nloc)
-    REAL(DP),INTENT(OUT) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc,nglob,myoffset
-    !
-    ! Workspace
-    !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
-    CHARACTER(LEN=512) :: fname
+    INTEGER(i8b) :: myoffset_i8b
     !
     CALL start_clock('read_gfreq')
     !
     ! Generate the filename
     !
     WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
+    WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_read_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
     !
-    fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_read_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     !
     CALL stop_clock('read_gfreq')
     !
   END SUBROUTINE
   !
-  SUBROUTINE readin_solvegfreq_complex( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset )
+  SUBROUTINE readin_solvegfreq_complex(glob_iks,glob_ib,diago,braket,nloc,nglob,myoffset)
     !
     ! WHO READS?  ... root_bgrp
     ! WHAT?       ... diago(        n_lanczos )
     ! WHAT?       ... braket( ndim, n_lanczos )
     !
-    USE kinds,          ONLY : DP
+    USE kinds,          ONLY : DP,i8b
     USE westcom,        ONLY : n_lanczos,wfreq_save_dir
     USE mod_mpiio,      ONLY : mp_read_dmsg_at,mp_read_zmsg_at
     !
@@ -478,31 +246,34 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
+    INTEGER(i8b) :: myoffset_i8b
     !
     CALL start_clock('read_gfreq')
     !
     ! Generate the filename
     !
     WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
+    WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_read_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
     !
-    fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_zmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    CALL mp_read_zmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     !
     CALL stop_clock('read_gfreq')
     !
   END SUBROUTINE
   !
-  SUBROUTINE readin_solvegfreq_complex_q( glob_iks, glob_ikks, glob_ib, diago, braket, nloc, nglob, myoffset )
+  SUBROUTINE readin_solvegfreq_complex_q(glob_iks,glob_ikks,glob_ib,diago,braket,nloc,nglob,myoffset)
     !
     ! WHO READS?  ... root_bgrp
     ! WHAT?       ... diago(        n_lanczos )
     ! WHAT?       ... braket( ndim, n_lanczos )
     !
-    USE kinds,          ONLY : DP
+    USE kinds,          ONLY : DP,i8b
     USE westcom,        ONLY : n_lanczos,wfreq_save_dir
     USE mod_mpiio,      ONLY : mp_read_dmsg_at,mp_read_zmsg_at
     !
@@ -523,6 +294,7 @@ MODULE wfreq_io
     CHARACTER(LEN=5) :: c_glob_ikks
     CHARACTER(LEN=5) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
+    INTEGER(i8b) :: myoffset_i8b
     !
     CALL start_clock('read_gfreq')
     !
@@ -530,13 +302,15 @@ MODULE wfreq_io
     !
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ikks,'(i5.5)') glob_ikks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
+    WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_save_dir )//'/g_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
+    CALL mp_read_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
     !
-    fname = TRIM( wfreq_save_dir )//'/g_brak_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
-    CALL mp_read_zmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
+    CALL mp_read_zmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     !
     CALL stop_clock('read_gfreq')
     !
@@ -549,8 +323,7 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : wfreq_save_dir
-    USE mp_world,       ONLY : mpime,root,world_comm
-    USE mp,             ONLY : mp_bcast
+    USE mp_global,      ONLY : my_image_id,root_image,me_bgrp,root_bgrp
     USE west_io,        ONLY : serial_data_write
     !
     IMPLICIT NONE
@@ -578,7 +351,7 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
-    lproc = (mpime == root)
+    lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
     !
     CALL serial_data_write(lproc,fname,overlap,no1,no2)
     !
@@ -593,8 +366,7 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : wfreq_save_dir
-    USE mp_world,       ONLY : mpime,root,world_comm
-    USE mp,             ONLY : mp_bcast
+    USE mp_global,      ONLY : my_image_id,root_image,me_bgrp,root_bgrp
     USE west_io,        ONLY : serial_data_write
     !
     IMPLICIT NONE
@@ -622,7 +394,7 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
-    lproc = (mpime == root)
+    lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
     !
     CALL serial_data_write(lproc,fname,overlap,no1,no2)
     !
@@ -637,8 +409,7 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : wfreq_save_dir
-    USE mp_world,       ONLY : mpime,root,world_comm
-    USE mp,             ONLY : mp_bcast
+    USE mp_global,      ONLY : my_image_id,root_image,me_bgrp,root_bgrp
     USE west_io,        ONLY : serial_data_write
     !
     IMPLICIT NONE
@@ -669,7 +440,7 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib
-    lproc = (mpime == root)
+    lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
     !
     CALL serial_data_write(lproc,fname,overlap,no1,no2)
     !
@@ -684,7 +455,8 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : wfreq_save_dir
-    USE mp_world,       ONLY : mpime,root,world_comm
+    USE mp_global,      ONLY : my_image_id,root_image,inter_image_comm,me_bgrp,&
+                             & root_bgrp,intra_bgrp_comm
     USE mp,             ONLY : mp_bcast
     USE west_io,        ONLY : serial_data_read
     !
@@ -713,11 +485,12 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
-    lproc = (mpime == root)
+    lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
     !
     CALL serial_data_read(lproc,fname,overlap,no1,no2)
     !
-    CALL mp_bcast(overlap,root,world_comm)
+    CALL mp_bcast(overlap,root_bgrp,intra_bgrp_comm)
+    CALL mp_bcast(overlap,root_image,inter_image_comm)
     !
     CALL stop_clock('read_over')
     !
@@ -730,7 +503,8 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : wfreq_save_dir
-    USE mp_world,       ONLY : mpime,root,world_comm
+    USE mp_global,      ONLY : my_image_id,root_image,inter_image_comm,me_bgrp,&
+                             & root_bgrp,intra_bgrp_comm
     USE mp,             ONLY : mp_bcast
     USE west_io,        ONLY : serial_data_read
     !
@@ -759,11 +533,12 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
-    lproc = (mpime == root)
+    lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
     !
     CALL serial_data_read(lproc,fname,overlap,no1,no2)
     !
-    CALL mp_bcast(overlap,root,world_comm)
+    CALL mp_bcast(overlap,root_bgrp,intra_bgrp_comm)
+    CALL mp_bcast(overlap,root_image,inter_image_comm)
     !
     CALL stop_clock('read_over')
     !
@@ -776,7 +551,8 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : wfreq_save_dir
-    USE mp_world,       ONLY : mpime,root,world_comm
+    USE mp_global,      ONLY : my_image_id,root_image,inter_image_comm,me_bgrp,&
+                             & root_bgrp,intra_bgrp_comm
     USE mp,             ONLY : mp_bcast
     USE west_io,        ONLY : serial_data_read
     !
@@ -808,11 +584,12 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib
-    lproc = (mpime == root)
+    lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
     !
     CALL serial_data_read(lproc,fname,overlap,no1,no2)
     !
-    CALL mp_bcast(overlap,root,world_comm)
+    CALL mp_bcast(overlap,root_bgrp,intra_bgrp_comm)
+    CALL mp_bcast(overlap,root_image,inter_image_comm)
     !
     CALL stop_clock('read_over')
     !
@@ -825,8 +602,7 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : wfreq_save_dir
-    USE mp_world,       ONLY : mpime,root,world_comm
-    USE mp,             ONLY : mp_bcast
+    USE mp_world,       ONLY : mpime,root
     USE west_io,        ONLY : serial_data_write
     !
     IMPLICIT NONE

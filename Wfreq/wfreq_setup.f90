@@ -20,11 +20,11 @@ SUBROUTINE wfreq_setup
                                    & wfreq_calculation,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,&
                                    & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf
-  USE pwcom,                  ONLY : nbnd
+  USE pwcom,                  ONLY : nbnd,nkstot,nks
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
-  USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group
-  USE class_idistribute,      ONLY : idistribute
+  USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
+  USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
   !
   IMPLICIT NONE
@@ -61,6 +61,10 @@ SUBROUTINE wfreq_setup
   occband = idistribute()
   band_group = idistribute()
   !
+  kpt_pool = idistribute()
+  CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
+  !
+  IF(kpt_pool%nloc /= nks) CALL errore('wfreq_setup','unexpected kpt_pool initialization error',1)
   IF(nbgrp > qp_bandrange(2)-qp_bandrange(1)+1) CALL errore('wfreq_setup','nbgrp>nbnd_qp',1)
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('wfreq_setup','nbgrp>nbnd_occ',1)
   !

@@ -38,7 +38,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,&
                                  & tr2_dfpt,z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,&
-                                 & npwqx,fftdriver,wstat_save_dir,iks_l2g
+                                 & npwqx,fftdriver,wstat_save_dir
   USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_pool_comm,npool,intra_bgrp_comm,&
                                  & inter_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
@@ -47,7 +47,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE cell_base,            ONLY : bg,omega
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
-  USE pwcom,                ONLY : npw,npwx,et,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nks
+  USE pwcom,                ONLY : npw,npwx,et,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE wavefunctions,        ONLY : evc,psic
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
@@ -58,7 +58,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband,band_group
+  USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband,band_group,kpt_pool
   USE class_idistribute,    ONLY : idistribute
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE types_bz_grid,        ONLY : k_grid
@@ -144,7 +144,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   ENDIF
   !
   barra_load = 0
-  DO iks = 1,nks
+  DO iks = 1,kpt_pool%nloc
      IF(iks < bks%lastdone_ks) CYCLE
      !
      CALL band_group%init(nbnd_occ(iks),'b','band_group',.FALSE.)
@@ -183,7 +183,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   ! LOOP
   !
-  DO iks = 1,nks ! KPOINT-SPIN
+  DO iks = 1,kpt_pool%nloc ! KPOINT-SPIN
      !
      ! Exit loop if no work to do
      !
@@ -191,7 +191,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      IF(iks < bks%lastdone_ks) CYCLE
      !
-     iks_g = iks_l2g(iks)
+     iks_g = kpt_pool%l2g(iks)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -205,7 +205,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
@@ -783,7 +783,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      bksq%old_q         = 0
      bksq%old_band      = 0
      bksq%max_q         = q_grid%np
-     bksq%max_ks        = k_grid%np
+     bksq%max_ks        = k_grid%nps
      bksq%min_q         = 1
      bksq%min_ks        = 1
   ENDIF

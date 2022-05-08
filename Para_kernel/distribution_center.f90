@@ -25,5 +25,6 @@ MODULE distribution_center
   TYPE(idistribute) :: aband
   TYPE(idistribute) :: occband
   TYPE(idistribute) :: band_group
+  TYPE(idistribute) :: kpt_pool
   !
 END MODULE

@@ -23,13 +23,13 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
-  USE pwcom,                ONLY : et,nks
+  USE pwcom,                ONLY : et
   USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,&
-                                 & z_body_rfr,iks_l2g
+                                 & z_body_rfr
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband
+  USE distribution_center,  ONLY : pert,ifr,rfr,aband,kpt_pool
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
   !
@@ -73,14 +73,14 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Integrating along the IM axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = kpt_pool%nloc * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_i', barra_load )
   !
   ! LOOP
   !
-  DO iks = 1, nks ! KPOINT-SPIN
+  DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
      !
-     iks_g = iks_l2g(iks)
+     iks_g = kpt_pool%l2g(iks)
      nbndval = nbnd_occ(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
@@ -146,14 +146,14 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = nks * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = kpt_pool%nloc * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP
   !
-  DO iks = 1, nks
+  DO iks = 1, kpt_pool%nloc
      !
-     iks_g = iks_l2g(iks)
+     iks_g = kpt_pool%l2g(iks)
      nbndval = nbnd_occ(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)

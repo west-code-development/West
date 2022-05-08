@@ -25,7 +25,6 @@ MODULE scratch_area
   INTEGER :: npwqx
   INTEGER :: npwq_g
   CHARACTER(LEN=6) :: fftdriver
-  INTEGER, ALLOCATABLE :: iks_l2g(:)
   !
   ! DBS
   !

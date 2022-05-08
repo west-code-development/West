@@ -33,7 +33,6 @@ parse_command_arguments.o \
 report_dynamical_memory.o \
 set_dirs.o \
 set_eprec.o \
-set_iks_l2g.o \
 set_nbndocc.o \
 set_npwq.o \
 types_bz_grid.o \

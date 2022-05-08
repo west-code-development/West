@@ -38,23 +38,21 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bandrange,iks_l2g,&
-                                 & imfreq_list_integrate,n_secant_maxiter,trev_secant,&
-                                 & l_enable_lanczos,imfreq_list,n_imfreq,d_epsm1_ifr,z_epsm1_rfr,&
-                                 & n_spectralf,ecut_spectralf,d_body1_ifr,d_body2_ifr,d_diago,&
-                                 & z_body_rfr,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
-                                 & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,&
-                                 & sigma_freq
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bandrange,imfreq_list_integrate,&
+                                 & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,&
+                                 & n_imfreq,d_epsm1_ifr,z_epsm1_rfr,n_spectralf,ecut_spectralf,&
+                                 & d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr,sigma_z,sigma_eqplin,&
+                                 & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,&
+                                 & sigma_diff,sigma_spectralf,sigma_freq
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,my_pool_id,intra_bgrp_comm,&
                                  & inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum,mp_bcast
-  USE pwcom,                ONLY : et,nbnd,nks
+  USE pwcom,                ONLY : et,nbnd
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group
-  USE class_idistribute,    ONLY : idistribute
+  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
@@ -146,19 +144,19 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   CALL band_group%init(qp_bandrange(2)-qp_bandrange(1)+1,'b','band_group',.FALSE.)
   !
-  barra_load = nks * band_group%nloc
+  barra_load = kpt_pool%nloc * band_group%nloc
   CALL start_bar_type( barra, 'coll_gw', barra_load )
   !
   ! LOOP
   !
-  DO iks = 1,nks ! KPOINT-SPIN
+  DO iks = 1,kpt_pool%nloc ! KPOINT-SPIN
      !
-     iks_g = iks_l2g(iks)
+     iks_g = kpt_pool%l2g(iks)
      !
      DO ibloc = 1, band_group%nloc
         ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
         !
-        CALL readin_overlap( 'g', iks_l2g(iks), ib, overlap, pert%nglob, nbnd )
+        CALL readin_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
         !
         ! ------
         ! d_body1_ifr
@@ -226,7 +224,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         !
         IF( l_enable_lanczos ) THEN
            !
-           CALL readin_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+           CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
            !
            DO ip = 1, pert%nloc
               DO il = 1, n_lanczos
@@ -301,9 +299,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ! 1st step of secant solver : E_KS - 0.5 * eshift
      ! 1st step of secant solver : E_KS + 0.5 * eshift
      !
-     DO iks = 1, nks
+     DO iks = 1, kpt_pool%nloc
         !
-        iks_g = iks_l2g(iks)
+        iks_g = kpt_pool%l2g(iks)
         !
         DO ib = qp_bandrange(1), qp_bandrange(2)
            en(ib,iks_g,1) = et(ib,iks) - eshift*0.5_DP
@@ -500,22 +498,20 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bandrange,iks_l2g,&
-                                 & imfreq_list_integrate,n_secant_maxiter,trev_secant,&
-                                 & l_enable_lanczos,imfreq_list,n_imfreq,z_epsm1_ifr_q,&
-                                 & z_epsm1_rfr_q,n_spectralf,ecut_spectralf,z_body1_ifr_q,&
-                                 & z_body2_ifr_q,d_diago_q,z_body_rfr_q,sigma_z,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bandrange,imfreq_list_integrate,&
+                                 & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,n_imfreq,&
+                                 & z_epsm1_ifr_q,z_epsm1_rfr_q,n_spectralf,ecut_spectralf,&
+                                 & z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q,sigma_z,&
                                  & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                  & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum
-  USE pwcom,                ONLY : et,nks,nbnd
+  USE pwcom,                ONLY : et,nbnd
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group
-  USE class_idistribute,    ONLY : idistribute
+  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
@@ -633,7 +629,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            !
            CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )
            !
-           CALL readin_overlap( 'g', iks_l2g(iks), iks_l2g(ikks), ib, overlap, pert%nglob, nbnd )
+           CALL readin_overlap( 'g', kpt_pool%l2g(iks), kpt_pool%l2g(ikks), ib, overlap, pert%nglob, nbnd )
            !
            ! ------
            ! z_body1_ifr_q
@@ -703,7 +699,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            !
            IF( l_enable_lanczos ) THEN
               !
-              CALL readin_solvegfreq( iks_l2g(iks), iks_l2g(ikks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+              CALL readin_solvegfreq( kpt_pool%l2g(iks), kpt_pool%l2g(ikks), ib, diago, braket, &
+                 & pert%nloc, pert%nglob, pert%myoffset )
               !
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos
@@ -892,7 +889,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      !
      ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
      !
-     DO iks=1,nks
+     DO iks=1,k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP)
            out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev

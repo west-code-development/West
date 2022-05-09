@@ -3,10 +3,10 @@
 Credits
 =======
 
-The development of **WEST** is funded by `MICCoM <http://miccom-center.org/>`_, as part of the CMS Program funded by the U.S. DOE-BES. 
+The development of **WEST** is funded by `MICCoM <http://miccom-center.org/>`_, as part of the CMS Program funded by the U.S. DOE-BES.
 
 
-Project Leads 
+Project Leads
 -------------
 
 - Marco Govoni (Argonne National Laboratory and University of Chicago)
@@ -19,7 +19,7 @@ Developers
 - Yu Jin (University of Chicago)
 - Nan Sheng (University of Chicago)
 - Han Yang (University of Chicago)
-- Wenzhe Yu (Argonne National Laboratory)
+- Victor Yu (Argonne National Laboratory)
 
 Contributors
 ------------

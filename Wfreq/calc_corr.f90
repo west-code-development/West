@@ -167,7 +167,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            !
            glob_im = aband%l2g(im)
            !
-           this_is_a_pole=.false.
+           this_is_a_pole=.FALSE.
            IF( glob_im <= nbndval ) THEN
               segno = -1._DP
               IF( et(glob_im,iks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
@@ -400,7 +400,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               !
               glob_im = aband%l2g(im)
               !
-              this_is_a_pole=.false.
+              this_is_a_pole=.FALSE.
               IF( glob_im <= nbndval ) THEN ! poles inside G+
                  segno = -1._DP
                  IF( et(glob_im,ikks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.

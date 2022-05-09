@@ -23,7 +23,7 @@ pdep_io.o \
 wfreq_db.o \
 wfreq_io.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps lib_io_kernel.a
 

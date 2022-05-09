@@ -17,7 +17,7 @@ dfpt_module.o \
 linsolve_sternheimer_m_wfcts.o \
 precondition_m_wfcts.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps lib_dfpt_kernel.a
 

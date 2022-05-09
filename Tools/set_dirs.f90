@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -24,6 +24,6 @@ SUBROUTINE set_dirs( )
   wstat_restart_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wstat.restart'
   wfreq_save_dir    = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wfreq.save'
   wfreq_restart_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wfreq.restart'
-  westpp_save_dir   = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.westpp.save' 
+  westpp_save_dir   = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.westpp.save'
   !
 END SUBROUTINE

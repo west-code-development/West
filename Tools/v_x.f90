@@ -21,7 +21,7 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
   USE gvect,            ONLY : ngm
   USE lsda_mod,         ONLY : nspin
   USE cell_base,        ONLY : omega
-  USE spin_orb,         ONLY : domag
+  USE noncollin_module, ONLY : domag
   USE funct,            ONLY : nlc, dft_is_nonlocc
   USE scf,              ONLY : scf_type
   USE mp_bands,         ONLY : intra_bgrp_comm
@@ -62,8 +62,8 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
     ! counter on mesh points
     ! counter on nspin
   !
-  REAL(DP), PARAMETER :: vanishing_charge = 1.D-10, &
-                         vanishing_mag    = 1.D-20
+  REAL(DP), PARAMETER :: vanishing_charge = 1.E-10_DP, &
+                         vanishing_mag    = 1.E-20_DP
   !
   !
   CALL start_clock( 'v_x' )
@@ -73,10 +73,10 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
   ALLOCATE( vx(dfftp%nnr,nspin) )
   ALLOCATE( vc(dfftp%nnr,nspin) )
   !
-  etx   = 0.D0
-  vtx   = 0.D0
-  v(:,:) = 0.D0
-  rhoneg = 0.D0
+  etx   = 0._DP
+  vtx   = 0._DP
+  v(:,:) = 0._DP
+  rhoneg = 0._DP
   !
   !
   rho%of_r(:,1) = rho%of_r(:,1) + rho_core(:)
@@ -91,7 +91,7 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
         etx = etx + e2*( ex(ir) )*rho%of_r(ir,1)
         rho%of_r(ir,1) = rho%of_r(ir,1) - rho_core(ir)
         vtx = vtx + v(ir,1)*rho%of_r(ir,1)
-        IF (rho%of_r(ir,1) < 0.D0) rhoneg(1) = rhoneg(1)-rho%of_r(ir,1)
+        IF (rho%of_r(ir,1) < 0._DP) rhoneg(1) = rhoneg(1)-rho%of_r(ir,1)
      ENDDO
      !
      !
@@ -109,12 +109,12 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
         !
         rhoup2 = rho%of_r(ir,1)+rho%of_r(ir,2)
         rhodw2 = rho%of_r(ir,1)-rho%of_r(ir,2)
-        IF (rhoup2 < 0.d0) rhoneg(1) = rhoneg(1) + rhoup2
-        IF (rhodw2 < 0.d0) rhoneg(2) = rhoneg(2) + rhodw2
+        IF (rhoup2 < 0._DP) rhoneg(1) = rhoneg(1) + rhoup2
+        IF (rhodw2 < 0._DP) rhoneg(2) = rhoneg(2) + rhodw2
      ENDDO
      !
-     vtx   = 0.5d0 * vtx
-     rhoneg = 0.5d0 * rhoneg
+     vtx   = 0.5_DP * vtx
+     rhoneg = 0.5_DP * rhoneg
      !
      !
   ELSE IF ( nspin == 4 ) THEN
@@ -125,8 +125,8 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
      DO ir = 1, dfftp%nnr  !OMP ?
         arho = ABS( rho%of_r(ir,1) )
         IF ( arho < vanishing_charge ) CYCLE
-        vs = 0.5D0*( vx(ir,1) - vx(ir,2)  )
-        v(ir,1) = e2*( 0.5D0*( vx(ir,1) + vx(ir,2) ) )
+        vs = 0.5_DP*( vx(ir,1) - vx(ir,2)  )
+        v(ir,1) = e2*( 0.5_DP*( vx(ir,1) + vx(ir,2) ) )
         !
         amag = SQRT( SUM( rho%of_r(ir,2:4)**2 ) )
         IF ( amag > vanishing_mag ) THEN
@@ -136,8 +136,8 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
         etx = etx + e2*( ex(ir) ) * arho
         !
         rho%of_r(ir,1) = rho%of_r(ir,1) - rho_core(ir)
-        IF ( rho%of_r(ir,1) < 0.D0 )  rhoneg(1) = rhoneg(1) - rho%of_r(ir,1)
-        IF ( amag / arho > 1.D0 )  rhoneg(2) = rhoneg(2) + 1.D0/omega
+        IF ( rho%of_r(ir,1) < 0._DP )  rhoneg(1) = rhoneg(1) - rho%of_r(ir,1)
+        IF ( amag / arho > 1._DP )  rhoneg(2) = rhoneg(2) + 1._DP/omega
         vtx = vtx + v(ir,1) * rho%of_r(ir,1)
      ENDDO
      !
@@ -171,7 +171,5 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
   CALL mp_sum(  etx , intra_bgrp_comm )
   !
   CALL stop_clock( 'v_x' )
-  !
-  RETURN
   !
 END SUBROUTINE

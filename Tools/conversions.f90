@@ -7,14 +7,14 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-MODULE conversions 
+MODULE conversions
    !-----------------------------------------------------------------------
    USE kinds, ONLY : DP
-   IMPLICIT NONE 
+   IMPLICIT NONE
    CONTAINS
     !
     FUNCTION ltoa(l) RESULT(res)
@@ -23,10 +23,10 @@ MODULE conversions
        LOGICAL,INTENT(IN) :: l
        CHARACTER(4) :: t="true"
        CHARACTER(5) :: f="false"
-       IF( l ) THEN 
+       IF( l ) THEN
           res = t
-       ELSE 
-          res =f 
+       ELSE
+          res =f
        ENDIF
     END FUNCTION
     !

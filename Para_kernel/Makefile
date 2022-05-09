@@ -13,7 +13,7 @@ distribution_center.o \
 parallel_distributed_diago.o \
 west_mp.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps lib_para_kernel.a
 

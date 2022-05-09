@@ -101,7 +101,7 @@ MODULE wstat_restart
       !
       IF ( mpime == root ) THEN
          !
-         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('hr_vr.bin'), FORM='unformatted' )
+         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('hr_vr.dat'), FORM='unformatted' )
          !
       ENDIF
       !
@@ -227,7 +227,7 @@ MODULE wstat_restart
       !
       IF ( mpime == root ) THEN
          !
-         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('hr_vr.bin'), FORM='unformatted' )
+         OPEN( NEWUNIT=iunit, FILE=TRIM( wstat_restart_dir ) // '/' // TRIM('hr_vr.dat'), FORM='unformatted' )
          !
       ENDIF
       !
@@ -311,7 +311,7 @@ MODULE wstat_restart
       !
       IF(mpime == root) THEN
          CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'summary.json' ) )
-         CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ) )
+         CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.dat' ) )
          DO ip = 1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
             fname = 'V'//TRIM(ADJUSTL(my_label))//'.dat'
@@ -535,7 +535,7 @@ MODULE wstat_restart
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
       !
-      IF( mpime == root ) OPEN( NEWUNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
+      IF( mpime == root ) OPEN( NEWUNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.dat' ), FORM='unformatted' )
       !
       DO im = 0, nimage-1
          !
@@ -584,7 +584,7 @@ MODULE wstat_restart
       !
       ALLOCATE( tmp_distr(n_pdep_basis,pert%nlocx) )
       !
-      IF( mpime == root ) OPEN( NEWUNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.bin' ), FORM='unformatted' )
+      IF( mpime == root ) OPEN( NEWUNIT=iun, FILE = TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.dat' ), FORM='unformatted' )
       !
       DO im = 0, nimage-1
          !

@@ -15,7 +15,7 @@ commut_Hx_psi.o \
 glbrak.o \
 k_psi.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps lib_hamiltonian_kernel.a
 

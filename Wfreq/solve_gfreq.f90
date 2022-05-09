@@ -47,6 +47,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
@@ -338,6 +339,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
+  USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
   USE io_push,              ONLY : io_push_title
@@ -557,18 +559,18 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               IF(noncolin) THEN
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                  DO ir=1,dffts%nnr
-                    pertr(ir)=DCONJG(phase(ir))*psick_nc(ir,1)*DCONJG(pertr(ir))
+                    pertr(ir)=CONJG(phase(ir))*psick_nc(ir,1)*CONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                  DO ir=1,dffts%nnr
-                    pertr(ir)=DCONJG(phase(ir))*psick_nc(ir,2)*DCONJG(pertr(ir))
+                    pertr(ir)=CONJG(phase(ir))*psick_nc(ir,2)*CONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1+npwx,ip),'Wave',igk_k(1,current_k))
               ELSE
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg(1),pertr,'Wave',igq_q(1,iq))
                  DO ir=1,dffts%nnr
-                    pertr(ir)=DCONJG(phase(ir))*psick(ir)*DCONJG(pertr(ir))
+                    pertr(ir)=CONJG(phase(ir))*psick(ir)*CONJG(pertr(ir))
                  ENDDO
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1,ip),'Wave',igk_k(1,current_k))
               ENDIF

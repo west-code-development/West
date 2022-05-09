@@ -124,7 +124,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
         ENDIF
         !
         filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml"
-        aux_r_double(:) = DBLE(aux_r(:)) / 2._DP ! The output must be in Ha Atomic units
+        aux_r_double(:) = REAL(aux_r(:),KIND=DP) / 2._DP ! The output must be in Ha Atomic units
         CALL write_function3d(filename,aux_r_double,dffts)
         !
      ENDDO
@@ -154,7 +154,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
         !
         filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml.response"
         CALL read_function3d(filename,aux_r_double,dffts)
-        aux_r(:) = CMPLX(aux_r_double(:),0._DP)
+        aux_r(:) = CMPLX(aux_r_double(:),0._DP,KIND=DP)
         !
         IF(gamma_only) THEN
            CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,dng(:,ipert),TRIM(fftdriver))

@@ -4,11 +4,20 @@ Change Log
 To be released
 --------------
 
-- Updated WEST to QE 6.8.
-- Activated and optimized parallelization over bands (was disabled in QE 6.1.0).
+- Updated WEST to be compatible with QE 7.0.
+- Updated build system. Automatically refresh the `make.depend` files when running `make conf`.
+- Activated and optimized band group parallelization in `wstat` and `wfreq` (was disabled in QE 6.1.0).
 - Added interface to the ELPA eigensolver.
+- Added support for pwscf data stored in the HDF5 format.
+- Removed large direct access I/O, resolving issues with the NVIDIA nvfortran compiler.
+- Removed obsolete or non-standard Fortran code, reducing the number of warnings during compilation.
+- Updated library dependency to Json-Fortran 8.3.0.
+- Bug fix. Print an error message when the code fails to read the restart files.
 - Bug fix. Fixed the `XwgQ` restart mode of `wfreq`, i.e., computing Q from previously completed W and G.
+- Bug fix. Avoid overflow in `IO_kernel/wfreqio.f90` in large-scale runs.
+- Bug fix. Check both `nosym` and `noinv` are set. They are mandatory in calculations with k-points.
 - Updated CI/CD. Adapted nightly tests to cover OpenMP and ScaLAPACK.
+- Updated CI/CD. Added tests of hybrid functionals.
 
 v4.3.0 (2021/05/26)
 -------------------

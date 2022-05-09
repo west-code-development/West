@@ -28,14 +28,7 @@ write_wfc_spav.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = \
-../../Modules/libqemod.a \
-../../KS_Solvers/libks_solvers.a \
-../../FFTXlib/libqefft.a \
-../../upflib/libupf.a \
-../../LAXlib/libqela.a \
-../../UtilXlib/libutil.a \
-../../XClib/xc_lib.a
+QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
 
 WESTLIBS = \
 ../DFPT_kernel/lib_dfpt_kernel.a \
@@ -50,13 +43,13 @@ WESTLIBS = \
 ../Libraries/Json/libjson.a \
 ../Libraries/Base64/libbase64.a
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps westpp.x
 
-westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(WESTLIBS) $(LIBOBJS)
+westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(WESTLIBS)
 	$(LD) $(LDFLAGS) -o westpp.x \
-		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(QELIBS) $(LIBS) ${PYT_LDFLAGS}
+		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) ${PYT_LDFLAGS}
 	- ( cd ../../bin ; ln -fs ../West/Westpp/westpp.x . )
 
 tldeps :

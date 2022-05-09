@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Huihuo Zheng, Marco Govoni
 !
 !-------------------------------------------------------------------
@@ -22,26 +22,26 @@ module base64_module
   !
   INTERFACE
      !
-     SUBROUTINE base64_init() BIND(C, NAME="b64init") 
+     SUBROUTINE base64_init() BIND(C, NAME="b64init")
        IMPORT
      END SUBROUTINE
      !
      SUBROUTINE base64_encode_double(from, n, to) BIND(C, NAME="encode_double")
-       IMPORT 
+       IMPORT
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        REAL(C_DOUBLE), INTENT(IN) :: from(*)
        CHARACTER(C_CHAR), INTENT(OUT) :: to(*)
      END SUBROUTINE
      !
      SUBROUTINE base64_decode_double(from, n, to) BIND(C, NAME="decode_double")
-       IMPORT 
+       IMPORT
        INTEGER(C_int), VALUE, INTENT(IN) :: n
        REAL(C_DOUBLE), INTENT(IN) :: to(*)
        CHARACTER(C_CHAR), INTENT(OUT) :: from(*)
      END SUBROUTINE
      !
      SUBROUTINE base64_encode_complex(from, n, to) BIND(C, NAME="encode_complex")
-       IMPORT 
+       IMPORT
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        COMPLEX(C_DOUBLE_COMPLEX), INTENT(IN) :: from(*)
        CHARACTER(C_CHAR), INTENT(OUT) :: to(*)
@@ -54,30 +54,30 @@ module base64_module
        CHARACTER(C_CHAR), INTENT(OUT) :: from(*)
      END SUBROUTINE
      !
-     SUBROUTINE base64_byteswap_complex(n, to) BIND(C, NAME="byteswap_complex") 
+     SUBROUTINE base64_byteswap_complex(n, to) BIND(C, NAME="byteswap_complex")
        IMPORT
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        COMPLEX(C_DOUBLE_COMPLEX), INTENT(INOUT) :: to(*)
-     END SUBROUTINE  
-     !   
-     SUBROUTINE base64_byteswap_double(n, to) BIND(C, NAME="byteswap_double") 
-       IMPORT 
+     END SUBROUTINE
+     !
+     SUBROUTINE base64_byteswap_double(n, to) BIND(C, NAME="byteswap_double")
+       IMPORT
        INTEGER(C_INT), VALUE, INTENT(IN) :: n
        REAL(C_DOUBLE), INTENT(INOUT) :: to(*)
      END SUBROUTINE
      !
   END INTERFACE
   !
-  CONTAINS 
+  CONTAINS
      !
      INTEGER FUNCTION lenbase64( nbytes )
-        IMPLICIT NONE 
+        IMPLICIT NONE
         INTEGER,INTENT(IN) :: nbytes
         lenbase64 = ( ( nbytes + 2 ) / 3 ) * 4
      END FUNCTION
      !
      LOGICAL FUNCTION islittleendian( )
-        IMPLICIT NONE 
+        IMPLICIT NONE
         INTEGER :: ICHAR
         islittleendian = (.NOT.( ICHAR( TRANSFER(1,'a') ) == 0 ))
      END FUNCTION

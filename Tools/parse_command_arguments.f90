@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -42,8 +42,8 @@ SUBROUTINE parse_command_arguments( )
      !   ofound =.TRUE.
      !ENDIF
      !
-     !IF( ifound .AND. ofound ) EXIT 
-     IF( ifound ) EXIT 
+     !IF( ifound .AND. ofound ) EXIT
+     IF( ifound ) EXIT
      !
   ENDDO
   !

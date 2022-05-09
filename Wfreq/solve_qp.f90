@@ -1048,7 +1048,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ein('//TRIM(ADJUSTL(csecitr))//')',en1(ib,iks)*rytoev)
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').eout('//TRIM(ADJUSTL(csecitr))//')',en2(ib,iks)*rytoev)
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').sc_ein('//TRIM(ADJUSTL(csecitr))//')',&
-              &(/DBLE(sc1(ib,iks)*rytoev),AIMAG(sc1(ib,iks)*rytoev)/))
+              &(/REAL(sc1(ib,iks)*rytoev,KIND=DP),AIMAG(sc1(ib,iks)*rytoev)/))
         ENDDO
      ENDDO
      !

@@ -67,7 +67,7 @@ SUBROUTINE dump_r ( auxr, fname )
      !
      ALLOCATE(auxg(ngm))
      ALLOCATE(auxr_(dffts%nnr))
-     auxr_ = CMPLX( auxr, 0.d0, KIND = DP)
+     auxr_ = CMPLX( auxr, 0._DP, KIND = DP)
      IF( gamma_only ) THEN
         CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Rho')
      ELSE

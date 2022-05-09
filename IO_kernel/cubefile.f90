@@ -74,16 +74,16 @@ MODULE cubefile
       WRITE(iu,*) 'Comment'
       !                        origin is forced to (0.0,0.0,0.0)
       WRITE(iu,'(I5,3F12.6)') nat, 0.0_DP, 0.0_DP, 0.0_DP
-      WRITE(iu,'(I5,3F12.6)') dfft%nr1, (alat*at(i,1)/DBLE(dfft%nr1),i=1,3)
-      WRITE(iu,'(I5,3F12.6)') dfft%nr2, (alat*at(i,2)/DBLE(dfft%nr2),i=1,3)
-      WRITE(iu,'(I5,3F12.6)') dfft%nr3, (alat*at(i,3)/DBLE(dfft%nr3),i=1,3)
+      WRITE(iu,'(I5,3F12.6)') dfft%nr1, (alat*at(i,1)/REAL(dfft%nr1,KIND=DP),i=1,3)
+      WRITE(iu,'(I5,3F12.6)') dfft%nr2, (alat*at(i,2)/REAL(dfft%nr2,KIND=DP),i=1,3)
+      WRITE(iu,'(I5,3F12.6)') dfft%nr3, (alat*at(i,3)/REAL(dfft%nr3,KIND=DP),i=1,3)
       !
       DO i=1,nat
          !
          nt = ityp(i)
          ! find atomic number for this atom.
          at_num = atomic_number(TRIM(atm(nt)))
-         at_chrg= DBLE(at_num)
+         at_chrg= REAL(at_num,KIND=DP)
          ! at_chrg could be alternatively set to valence charge
          ! positions are in cartesian coordinates and a.u.
          !

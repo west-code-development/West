@@ -138,7 +138,7 @@ MODULE class_coulomb
             grid_factor = 8._DP/7._DP
             on_double_grid = .TRUE.
             DO ipol = 1,3
-               x = 0.5_DP*( qg(1)*at(1,ipol)+qg(2)*at(2,ipol)+qg(3)*at(3,ipol) )*DBLE(q_grid%ngrid(ipol))
+               x = 0.5_DP*( qg(1)*at(1,ipol)+qg(2)*at(2,ipol)+qg(3)*at(3,ipol) )*REAL(q_grid%ngrid(ipol),KIND=DP)
                on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
             ENDDO
             !
@@ -192,7 +192,7 @@ MODULE class_coulomb
          !
          ! In this case we use the spherical region
          !
-         div = ( (6._DP * pi * pi / ( omega*DBLE(q_grid%np) ) )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
+         div = ( (6._DP * pi * pi / ( omega*REAL(q_grid%np,KIND=DP) ) )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
          !
          ! If the angles are all 90 deg then overwrite div as follows:
          !
@@ -228,10 +228,10 @@ MODULE class_coulomb
                edge(1) = SQRT(prod(1,1)) / 2._DP
                edge(2) = SQRT(prod(2,2)) / 2._DP
                edge(3) = SQRT(prod(3,3)) / 2._DP
-               edge(:) = edge(:) / DBLE(q_grid%ngrid(:))
+               edge(:) = edge(:) / REAL(q_grid%ngrid(:),KIND=DP)
                !
                qhelp = MIN( edge(1),edge(2),edge(3)  )
-               vbz = tpi**3 / ( omega * DBLE(q_grid%np) )
+               vbz = tpi**3 / ( omega * REAL(q_grid%np,KIND=DP) )
                vhelp = fpi / 3._DP * qhelp**3
                !
                rand = randy(my_image_id*nproc_image+me_bgrp)
@@ -281,7 +281,7 @@ MODULE class_coulomb
                qgnorm2 = SUM( qg(:)**2 ) * tpiba2
                on_double_grid = .TRUE.
                DO ipol = 1,3
-                  x = 0.5_DP*( qg(1)*at(1,ipol)+qg(2)*at(2,ipol)+qg(3)*at(3,ipol) )*DBLE(q_grid%ngrid(ipol))
+                  x = 0.5_DP*( qg(1)*at(1,ipol)+qg(2)*at(2,ipol)+qg(3)*at(3,ipol) )*REAL(q_grid%ngrid(ipol),KIND=DP)
                   on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
                ENDDO
                IF( .NOT.on_double_grid .AND. qgnorm2 > eps8 ) THEN
@@ -299,7 +299,7 @@ MODULE class_coulomb
             peso = 1._DP
          ENDIF
          !
-         div = div * grid_factor * e2 * fpi / (omega * DBLE(q_grid%np)) * peso + e2 / SQRT( alpha * pi )
+         div = div * grid_factor * e2 * fpi / (omega * REAL(q_grid%np,KIND=DP)) * peso + e2 / SQRT( alpha * pi )
          !
       END SELECT
       !
@@ -416,8 +416,8 @@ MODULE class_coulomb
    !  REAL(DP) :: gnorm2,nq(3),q(3),qq(3),ecutvcut,atws(3,3),alpha,x
    !  INTEGER :: ig, ipol, i1, i2, i3
    !  LOGICAL :: on_double_grid
-   !  REAL(DP) :: grid_factor = 8.d0/7.d0
-   !! REAL(DP) :: grid_factor = 1.0_DP
+   !  REAL(DP) :: grid_factor = 8._DP/7._DP
+   !! REAL(DP) :: grid_factor = 1._DP
    !  TYPE(vcut_type)   :: vcut
    !  LOGICAL :: try_ort_div=.TRUE.,i_am_ort
    !  REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp
@@ -503,7 +503,7 @@ MODULE class_coulomb
    !           qq(:) = (q(:) + g(:,ig)) * tpiba
    !        ENDIF
    !        !
-   !        sqvc_tmp( ig ) = DSQRT( vcut_get(vcut,qq) )
+   !        sqvc_tmp( ig ) = SQRT( vcut_get(vcut,qq) )
    !        !
    !     ENDDO
    !     !

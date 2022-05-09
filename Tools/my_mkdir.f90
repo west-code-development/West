@@ -50,8 +50,6 @@ SUBROUTINE my_mkdir(dirname)
   !
   CALL mp_barrier(world_comm)
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
@@ -85,7 +83,5 @@ SUBROUTINE my_rmdir( dirname )
   CALL mp_bcast(ierr, root, world_comm)
   !
   CALL errore('rm_directory', 'cannot rm dir', ierr)
-  !
-  RETURN
   !
 END SUBROUTINE

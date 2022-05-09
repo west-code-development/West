@@ -40,7 +40,7 @@ v_x.o \
 west_environment.o \
 west_print_clocks.o
 
-TLDEPS = bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps libtools.a
 

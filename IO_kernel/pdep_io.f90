@@ -27,11 +27,11 @@ MODULE pdep_io
   !
   ! A simple format is used here:
   ! a header consisting of HD_LENGTH=32 integers, followed by raw data.
-  ! Currently only 3 integers are used in the header, storing: 
+  ! Currently only 3 integers are used in the header, storing:
   ! (1) the version identifier of the format
   ! (2) the endianness (0 for GE, 1 for LE)
   ! (3) the length of the raw data (number of COMPLEX DP entries)
-  ! (4-32) not used (yet).  
+  ! (4-32) not used (yet).
   !
   INTEGER, PARAMETER :: HD_LENGTH = 32
   INTEGER, PARAMETER :: HD_VERSION = 210405

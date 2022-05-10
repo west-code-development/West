@@ -107,11 +107,11 @@ SUBROUTINE do_dip()
         & l_skip_nl_part_of_hcomr)
         !
         IF(gamma_only) THEN
-           CALL DGEMM('T','N',nstate,nstate,2*npwx*npol,1._DP,evc(:,westpp_range(1):westpp_range(2)),&
-           & 2*npwx*npol,Hx_psi,2*npwx*npol,0._DP,dip_r(:,:,ipol),nstate)
+           CALL glbrak_gamma(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_r(:,:,ipol),npw,npwx,&
+           & nstate,nstate,nstate,npol)
         ELSE
-           CALL ZGEMM('C','N',nstate,nstate,npwx*npol,(1._DP,0._DP),evc(:,westpp_range(1):westpp_range(2)),&
-           & npwx*npol,Hx_psi,npwx*npol,(0._DP,0._DP),dip_c(:,:,ipol),nstate)
+           CALL glbrak_k(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_c(:,:,ipol),npw,npwx,&
+           & nstate,nstate,nstate,npol)
         ENDIF
         !
         CALL update_bar_type(barra,'westpp',1)

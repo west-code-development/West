@@ -226,7 +226,7 @@ MODULE westpp_center
   !
   SAVE
   !
-  ! INPUT FOR wfreq_control
+  ! INPUT FOR westpp_control
   !
   CHARACTER(LEN=8) :: westpp_calculation
   CHARACTER(LEN=7) :: westpp_format
@@ -237,6 +237,7 @@ MODULE westpp_center
   INTEGER :: westpp_nr
   REAL(DP) :: westpp_rmax
   REAL(DP) :: westpp_epsinfty
+  REAL(DP) :: westpp_box(6)
   !
   ! Common workspace
   !

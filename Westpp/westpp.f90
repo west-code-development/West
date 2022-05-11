@@ -26,7 +26,7 @@ PROGRAM westpp
   !
   CHARACTER(LEN=9) :: code = 'WESTPP'
   INTEGER :: i
-  LOGICAL :: lgate(4)
+  LOGICAL :: lgate(5)
   !
   ! *** START *** 
   !
@@ -50,12 +50,14 @@ PROGRAM westpp
      IF( westpp_calculation(i:i) == 'w' .OR. westpp_calculation(i:i) == 'W' ) lgate(2) = .TRUE. ! Wavefunction 
      IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Eigenpotentials  
      IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) lgate(4) = .TRUE. ! SXX  
+     IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(5) = .TRUE. ! SXX  
   ENDDO
   !
   IF( lgate(1) ) CALL do_rho( )
   IF( lgate(2) ) CALL do_wfc2( )
   IF( lgate(3) ) CALL do_eigenpot2( )
   IF( lgate(4) ) CALL do_sxx( )
+  IF( lgate(5) ) CALL do_loc( )
   !
   CALL clean_scratchfiles( )
   !

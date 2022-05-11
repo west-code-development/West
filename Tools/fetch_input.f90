@@ -321,6 +321,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%get(westpp_nr, "westpp_nr", DUMMY_DEFAULT)
         IERR = return_dict%getitem(westpp_rmax, "westpp_rmax")
         IERR = return_dict%getitem(westpp_epsinfty, "westpp_epsinfty")
+        IERR = return_dict%getitem(tmp_obj, "westpp_box")
+        IERR = cast(tmp_list,tmp_obj)
+        IERR = tmp_list%getitem(westpp_box(1), 0)
+        IERR = tmp_list%getitem(westpp_box(2), 1)
+        IERR = tmp_list%getitem(westpp_box(3), 2)
+        IERR = tmp_list%getitem(westpp_box(4), 3)
+        IERR = tmp_list%getitem(westpp_box(5), 4)
+        IERR = tmp_list%getitem(westpp_box(6), 5)
+        CALL tmp_list%destroy 
+        CALL tmp_obj%destroy 
         !
         CALL return_dict%destroy
         !

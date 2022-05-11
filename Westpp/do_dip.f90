@@ -20,7 +20,7 @@ SUBROUTINE do_dip()
   USE mp_world,             ONLY : mpime,root
   USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_bcast,mp_sum
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,current_k,ngk,nspin
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,current_k,ngk,nspin,et
   USE wavefunctions,        ONLY : evc
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE uspp,                 ONLY : vkb,nkb
@@ -128,8 +128,11 @@ SUBROUTINE do_dip()
         !
         WRITE(label_k,'(I5.5)') iks
         !
-        CALL jcor%create_array(jval,'')
-        CALL json%add('output.D.K'//label_k,jval)
+        CALL json%add('output.D.K'//label_k//'.weight',k_grid%weight(iks))
+        CALL json%add('output.D.K'//label_k//'.energies',et(:,iks))
+        !
+        CALL jcor%create_array(jval,'dipole')
+        CALL json%add('output.D.K'//label_k//'.dipole',jval)
         !
         iaux = 0
         trans = 0
@@ -140,17 +143,17 @@ SUBROUTINE do_dip()
               iaux = iaux+1
               WRITE(label_d,'(I9)') iaux
               !
-              CALL json%add('output.D.K'//label_k//'('//TRIM(ADJUSTL(label_d))//').trans',trans)
+              CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').trans',trans)
               IF(gamma_only) THEN
                  aux_r = dip_r(istate,jstate,:)
-                 CALL json%add('output.D.K'//label_k//'('//TRIM(ADJUSTL(label_d))//').dipole_re',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').re',aux_r)
                  aux_r = 0._DP
-                 CALL json%add('output.D.K'//label_k//'('//TRIM(ADJUSTL(label_d))//').dipole_im',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').im',aux_r)
               ELSE
                  aux_r = REAL(dip_c(istate,jstate,:),KIND=DP)
-                 CALL json%add('output.D.K'//label_k//'('//TRIM(ADJUSTL(label_d))//').dipole_re',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').re',aux_r)
                  aux_r = AIMAG(dip_c(istate,jstate,:))
-                 CALL json%add('output.D.K'//label_k//'('//TRIM(ADJUSTL(label_d))//').dipole_im',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').im',aux_r)
               ENDIF
            ENDDO
         ENDDO

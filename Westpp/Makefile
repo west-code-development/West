@@ -28,6 +28,7 @@ write_wfc_spav.o \
 dump_r.o \
 do_rho.o \
 do_wfc2.o \
+do_loc.o \
 do_eigenpot2.o \
 do_sxx.o \
 westpp.o

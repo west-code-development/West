@@ -15,6 +15,7 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 WESTPP_OBJS = \
+do_dip.o \
 do_eigenpot2.o \
 do_rho.o \
 do_sxx.o \

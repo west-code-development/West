@@ -63,7 +63,7 @@ stages:
       - QEDIR/West/test-suite/test*/*.tab
       - QEDIR/West/test-suite/test*/test*/*.xml
       - QEDIR/West/test-suite/test*/test*/*.json
-    expire_in: 3 days
+    expire_in: 2 days
 
 # Builds
 

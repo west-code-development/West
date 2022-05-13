@@ -10,13 +10,13 @@ To compute absorption spectra (BSE), you also need to download and install `Qbox
 
 `Quantum ESPRESSO <http://www.quantum-espresso.org/>`_ (QE) is an integrated suite of Open-Source computer codes for electronic-structure calculations and materials modeling at the nanoscale, based on density-functional theory (DFT), plane waves (PW), and pseudopotentials (PP).
 
-Quantum ESPRESSO can be installed using GNU autotools or CMake. Currently only the former is compatible with WEST. Configure QE by running the ``configure`` script that comes with the QE distribution. WEST requires `MPI <https://en.wikipedia.org/?title=Message_Passing_Interface>`_ support. `OpenMP <https://www.openmp.org/>`_ and `HDF5 <https://www.hdfgroup.org/solutions/hdf5/>`_ are recommended, but optional. For large-scale calculations, `ScaLAPACK <http://www.netlib.org/scalapack/>`_ and `ELPA <https://elpa.mpcdf.mpg.de/>`_ are also recommended. If all the environment variables (compilers, libraries etc.) have been set according to the QE configure guide, this would simply be:
+QE can be installed with HDF5 support. Currently the installation of QE with CMake is not supported by WEST. Configure QE by running the ``configure`` script that comes with the QE distribution. WEST requires `MPI <https://en.wikipedia.org/?title=Message_Passing_Interface>`_ support. `OpenMP <https://www.openmp.org/>`_ and `HDF5 <https://www.hdfgroup.org/solutions/hdf5/>`_ are recommended, but optional. For large-scale calculations, `ScaLAPACK <http://www.netlib.org/scalapack/>`_ and `ELPA <https://elpa.mpcdf.mpg.de/>`_ are also recommended. If all the environment variables (compilers, libraries etc.) have been set according to the QE configure guide, this would simply be:
 
 .. code-block:: bash
 
    $ git clone -b 'qe-7.0' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
    $ cd QEdir
-   $ git clone -b 'v4.3.0' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
+   $ git clone -b 'v5.0.0' --single-branch --depth 1 http://greatfire.uchicago.edu/west-public/West.git West
    $ ./configure
 
 .. note::

@@ -4,13 +4,13 @@ Change Log
 v5.0.0 (2022/05/13)
 -------------------
 
-- Updated WEST to be compatible with QE 7.0 (before it was compatible with QE 6.1.0). QE must be compiled without CMAKE. 
+- Updated WEST to be compatible with QE 7.0 (before it was compatible with QE 6.1.0). QE must be compiled without CMake. 
 - Activated pool parallelization in `wstat` and `wfreq` to distribute spin polarization (for systems with nspin=2).
 - Activated and optimized band group parallelization in `wstat` and `wfreq` (was disabled in QE 6.1.0).
 - Enabled the calculation of dipole matrix elements in `westpp`.
 - Updated build system. Automatically refresh the `make.depend` files when running `make conf`.
 - Added interface to the ELPA eigensolver.
-- Added support to read the the HDF5 output of pwscf.
+- Added support to read the HDF5 output of pwscf.
 - Removed large direct access I/O, resolving issues with the NVIDIA nvfortran compiler.
 - Removed obsolete or non-standard Fortran code, reducing the number of warnings during compilation.
 - Updated library dependency to Json-Fortran 8.3.0.

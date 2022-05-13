@@ -51,8 +51,8 @@ json_test_undo:
 distclean: clean
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "## Libraries #"
 	@echo "##############"
-	@echo "              "
+	@echo

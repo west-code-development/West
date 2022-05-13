@@ -20,8 +20,8 @@ clean :
 	- /bin/rm -f libbase64.a
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Base64 ###"
 	@echo "##############"
-	@echo "              "
+	@echo

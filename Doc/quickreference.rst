@@ -3,19 +3,19 @@
 Quick Reference
 ===============
 
-These are quick references for **WEST** input file examples. 
+These are quick references for **WEST** input file examples.
 
-.. seealso:: 
-   All input keywords are referenced and explained in the :ref:`manual`. 
+.. seealso::
+   All input keywords are referenced and explained in the :ref:`manual`.
 
 wstat.x
 ~~~~~~~
 
-This is a typical input for ``wstat.x``. 
+This is a typical input for ``wstat.x``.
 
-.. code-block:: yaml 
+.. code-block:: yaml
 
-   input_west: 
+   input_west:
       qe_prefix: silane
       west_prefix: silane
       outdir: ./
@@ -27,11 +27,11 @@ This is a typical input for ``wstat.x``.
 wfreq.x
 ~~~~~~~
 
-This is a typical input for ``wfreq.x``. 
+This is a typical input for ``wfreq.x``.
 
 .. code-block:: yaml
 
-   input_west: 
+   input_west:
       qe_prefix: silane
       west_prefix: silane
       outdir: ./
@@ -50,11 +50,11 @@ This is a typical input for ``wfreq.x``.
 westpp.x
 ~~~~~~~~
 
-This is a typical input for ``westpp.x``. 
+This is a typical input for ``westpp.x``.
 
-.. code-block:: yaml 
+.. code-block:: yaml
 
-   input_west: 
+   input_west:
       qe_prefix: silane
       west_prefix: silane
       outdir: ./
@@ -63,8 +63,8 @@ This is a typical input for ``westpp.x``.
       wstat_calculation: S
       n_pdep_eigen: 50
 
-   westpp_control: 
+   westpp_control:
       westpp_calculation: E
-      westpp_range: [1,2] 
-      westpp_format: C 
+      westpp_range: [1,2]
+      westpp_format: C
       westpp_sign: True

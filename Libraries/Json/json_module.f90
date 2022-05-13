@@ -2,7 +2,7 @@
 !> author: Jacob Williams
 !  license: BSD
 !
-!  A Fortran 2008 JSON (JavaScript Object Notation) API.
+!  A Modern Fortran JSON (JavaScript Object Notation) API.
 !
 !  This module provides access to [[json_value_module]] and
 !  [[json_file_module]]. For normal JSON-Fortran use, using this module
@@ -37,11 +37,11 @@
 !    one module (json_module.f90).
 !    Various Fortran 2003/2008 features are now used
 !    (e.g., allocatable strings, newunit, generic, class, and abstract interface).
-!  * Development continues at: [Github](http://github.com/jacobwilliams/json-fortran)
+!  * Development continues at: [Github](https://github.com/jacobwilliams/json-fortran)
 !
 !### See also
-!  * [json-fortran development site](http://github.com/jacobwilliams/json-fortran)
-!  * [json-fortran online documentation](http://jacobwilliams.github.io/json-fortran)
+!  * [json-fortran development site](https://github.com/jacobwilliams/json-fortran)
+!  * [json-fortran online documentation](https://jacobwilliams.github.io/json-fortran)
 !  * [JSON website](http://www.json.org/)
 !  * [JSON validator](http://jsonlint.com/)
 !
@@ -73,7 +73,32 @@
 
     implicit none
 
+    character(kind=json_CK,len=*),parameter,private :: version = '8.3.0'
+        !! JSON-Fortran version.
+        !!
+        !!@note This string should match the one in the `.VERSION` file (which is used
+        !!      for the documentation generation.)
+
     public
 
+    contains
+!*****************************************************************************************
+
+!*****************************************************************************************
+!>
+!  Returns the JSON-Fortran version string.
+
+    function json_fortran_version() result(ver)
+
+    implicit none
+
+    character(len=:),allocatable :: ver  !! JSON-Fortran version string
+
+    ver = version
+
+    end function json_fortran_version
+!*****************************************************************************************
+
+!*****************************************************************************************
     end module json_module
 !*****************************************************************************************

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,11 +7,11 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE diago_lanczos( bnorm, diago, subdiago, braket, ndim ) 
+SUBROUTINE diago_lanczos( bnorm, diago, subdiago, braket, ndim )
   !-----------------------------------------------------------------------
   !
   USE kinds,               ONLY : DP
@@ -41,23 +41,23 @@ SUBROUTINE diago_lanczos( bnorm, diago, subdiago, braket, ndim )
   CALL DSTEQR ('I', n_lanczos, diago, subdiago, z, n_lanczos, work, info)
   !
   ! braket_tilde(ip,il) = brak(ip,:) * z(:,il)
-  !  
+  !
   CALL DGEMM('N','N',ndim,n_lanczos,n_lanczos,bnorm,braket,ndim,z,n_lanczos,0._DP,braket_tilde,ndim)
-  ! 
+  !
   ! braket_tilde(ip,il) = braket_tilde(ip,il) * z(1,il)
   !
   DO il=1,n_lanczos
      DO ip = 1, ndim
         braket(ip,il) = braket_tilde(ip,il) * z(1,il)
      ENDDO
-  ENDDO 
+  ENDDO
   !
   DEALLOCATE( z, work, braket_tilde )
   !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE diago_lanczos_complex( bnorm, diago, subdiago, braket, ndim ) 
+SUBROUTINE diago_lanczos_complex( bnorm, diago, subdiago, braket, ndim )
   !-----------------------------------------------------------------------
   !
   USE kinds,               ONLY : DP
@@ -82,7 +82,7 @@ SUBROUTINE diago_lanczos_complex( bnorm, diago, subdiago, braket, ndim )
   COMPLEX(DP),ALLOCATABLE :: braket_tilde(:,:)
   !
   znorm = CMPLX( bnorm, 0._DP, KIND=DP )
-  zzero = ( 0._DP, 0._DP ) 
+  zzero = ( 0._DP, 0._DP )
   !
   ALLOCATE( z(n_lanczos,n_lanczos), work(MAX(1,2*n_lanczos-2)), braket_tilde(ndim,n_lanczos) )
   !
@@ -91,16 +91,16 @@ SUBROUTINE diago_lanczos_complex( bnorm, diago, subdiago, braket, ndim )
   CALL ZSTEQR ('I', n_lanczos, diago, subdiago, z, n_lanczos, work, info)
   !
   ! braket_tilde(ip,il) = brak(ip,:) * z(:,il)
-  !  
+  !
   CALL ZGEMM('N','N',ndim,n_lanczos,n_lanczos,znorm,braket,ndim,z,n_lanczos,zzero,braket_tilde,ndim)
-  ! 
+  !
   ! braket_tilde(ip,il) = braket_tilde(ip,il) * z(1,il)
   !
   DO il=1,n_lanczos
      DO ip = 1, ndim
         braket(ip,il) = braket_tilde(ip,il) * z(1,il)
      ENDDO
-  ENDDO 
+  ENDDO
   !
   DEALLOCATE( z, work, braket_tilde )
   !

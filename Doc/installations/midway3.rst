@@ -13,7 +13,7 @@ Midway3 is the HPC cluster of the University of Chicago, maintained by UChicago'
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script:
+WEST executables can be compiled using the following script (tested on May 4, 2022):
 
 .. code-block:: bash
 
@@ -27,17 +27,16 @@ WEST executables can be compiled using the following script:
 
    export MPIF90=mpiifort
    export F90=ifort
-   export F77=ifort
    export CC=icc
    export SCALAPACK_LIBS="-lmkl_scalapack_lp64 -Wl,--start-group -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_blacs_intelmpi_lp64 -Wl,--end-group"
 
-   ./configure --enable-parallel --with-scalapack --enable-openmp
+   ./configure --with-scalapack=intel --enable-openmp
    make -j 8 pw
 
    cd West
    make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
    sed -i 's/-L.*config-3.8-x86_64-linux-gnu //' west_make.inc
-   make all
+   make -j 8 all
 
 To use the script do:
 

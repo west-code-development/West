@@ -14,14 +14,18 @@
 SUBROUTINE wstat_readin()
   !-----------------------------------------------------------------------
   !
-  USE uspp,             ONLY : okvan
   USE gvecs,            ONLY : doublegrid
-  USE spin_orb,         ONLY : domag
-  USE mp_bands,         ONLY : nbgrp
-  USE funct,            ONLY : dft_is_hybrid
-  USE westcom,          ONLY : l_kinetic_only
+  USE uspp,             ONLY : okvan
+  USE mp_global,        ONLY : nbgrp,npool
+  USE xc_lib,           ONLY : xclib_dft_is
+  USE pwcom,            ONLY : nkstot,lsda
   !
   IMPLICIT NONE
+  !
+  ! Workspace
+  !
+  LOGICAL :: needwf
+  INTEGER :: nkpt
   !
   CALL start_clock('wstat_readin')
   !
@@ -32,17 +36,21 @@ SUBROUTINE wstat_readin()
   ! read the input file produced by the pwscf program
   ! allocate memory and recalculate what is needed
   !
-  CALL read_pwout( )
+  needwf = .TRUE.
+  CALL read_file_new(needwf)
   !
   ! PW checks
   !
-  IF (domag) CALL errore('wstat_readin','domag version not available',1)
-  IF (okvan) CALL errore('wstat_readin','ultrasoft pseudopotential not implemented',1)
-  IF (doublegrid) CALL errore('wstat_readin','double grid not implemented',1)
-  IF (nbgrp > 1) THEN
-     IF (dft_is_hybrid()) CALL errore('wstat_readin','band groups not implemented for hybrids',1)
-     IF (l_kinetic_only) CALL errore('wstat_readin','band groups not implemented for kinetic only',1)
-  ENDIF
+  IF(lsda) THEN
+     nkpt = nkstot/2
+  ELSE
+     nkpt = nkstot
+  END IF
+  !
+  IF(okvan) CALL errore('wstat_readin','ultrasoft pseudopotential not implemented',1)
+  IF(doublegrid) CALL errore('wstat_readin','double grid not implemented',1)
+  IF(nbgrp > 1 .AND. xclib_dft_is('hybrid')) CALL errore('wstat_readin','band groups not implemented for EXX',1)
+  IF(npool > 1 .AND. nkpt > 1) CALL errore('wstat_readin','pools only implemented for spin, not k-points',1)
   !
   ! READ other sections of the input file
   !

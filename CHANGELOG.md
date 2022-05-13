@@ -1,23 +1,27 @@
 Change Log
 ==========
 
-To be released
---------------
+v5.0.0 (2022/05/13)
+-------------------
 
-- Updated WEST to be compatible with QE 7.0.
-- Updated build system. Automatically refresh the `make.depend` files when running `make conf`.
+- Updated WEST to be compatible with QE 7.0 (before it was compatible with QE 6.1.0). QE must be compiled without CMAKE. 
+- Activated pool parallelization in `wstat` and `wfreq` to distribute spin polarization (for systems with nspin=2).
 - Activated and optimized band group parallelization in `wstat` and `wfreq` (was disabled in QE 6.1.0).
+- Enabled the calculation of dipole matrix elements in `westpp`.
+- Updated build system. Automatically refresh the `make.depend` files when running `make conf`.
 - Added interface to the ELPA eigensolver.
-- Added support for pwscf data stored in the HDF5 format.
+- Added support to read the the HDF5 output of pwscf.
 - Removed large direct access I/O, resolving issues with the NVIDIA nvfortran compiler.
 - Removed obsolete or non-standard Fortran code, reducing the number of warnings during compilation.
 - Updated library dependency to Json-Fortran 8.3.0.
 - Bug fix. Print an error message when the code fails to read the restart files.
 - Bug fix. Fixed the `XwgQ` restart mode of `wfreq`, i.e., computing Q from previously completed W and G.
 - Bug fix. Avoid overflow in `IO_kernel/wfreqio.f90` in large-scale runs.
-- Bug fix. Check both `nosym` and `noinv` are set. They are mandatory in calculations with k-points.
+- Bug fix. Check that the mandatory logicals `nosym` and `noinv` are set to true for systems with k-points.
+- To avoid overwriting json files when files with the same name already exist, a suffix is appended to the name of the new file.
 - Updated CI/CD. Adapted nightly tests to cover OpenMP and ScaLAPACK.
 - Updated CI/CD. Added tests of hybrid functionals.
+- Updated documentation.
 
 v4.3.0 (2021/05/26)
 -------------------

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -20,9 +20,9 @@ SUBROUTINE apply_alpha_pv_to_m_wfcs(nbndval,m,f,g,alpha)
   USE pwcom,                ONLY : npw,npwx
   USE mp_global,            ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
-  USE wavefunctions_module, ONLY : evc
+  USE wavefunctions,        ONLY : evc
   USE control_flags,        ONLY : gamma_only
-  USE noncollin_module,     ONLY : noncolin,npol
+  USE noncollin_module,     ONLY : npol
   !
   IMPLICIT NONE
   !
@@ -35,41 +35,40 @@ SUBROUTINE apply_alpha_pv_to_m_wfcs(nbndval,m,f,g,alpha)
   !
   ! Workspace
   !
-  COMPLEX(DP),ALLOCATABLE :: ps_c(:,:)
-  REAL(DP),ALLOCATABLE :: ps_r(:,:)
+  REAL(DP) :: alpha_r
+  REAL(DP), ALLOCATABLE :: ps_r(:,:)
+  COMPLEX(DP), ALLOCATABLE :: ps_c(:,:)
   !
   CALL start_clock ('alphapv')
-  !
-  IF( gamma_only ) THEN
-     ALLOCATE( ps_r(nbndval,m) )
-     ps_r = 0.0_DP
-  ENDIF
-  !
-  ALLOCATE( ps_c(nbndval,m) )
-  ps_c = 0.0_DP
   !
   ! ps = < evc | f >
   !
   IF( gamma_only ) THEN
      !
-     CALL glbrak_gamma ( evc, f, ps_r, npw, npwx, nbndval, m, nbndval, npol)
+     ALLOCATE( ps_r(nbndval,m) )
+     ps_r = 0.0_DP
+     alpha_r = REAL(alpha,KIND=DP)
+     !
+     CALL glbrak_gamma( evc, f, ps_r, npw, npwx, nbndval, m, nbndval, npol)
      CALL mp_sum(ps_r,intra_bgrp_comm)
-     ps_c(:,:) = CMPLX (ps_r(:,:),0.0_DP, KIND=DP)
+     !
+     CALL DGEMM('N','N',2*npwx*npol,m,nbndval,alpha_r,evc,2*npwx*npol,ps_r,nbndval,1.0_DP,g,2*npwx*npol)
+     !
+     DEALLOCATE( ps_r )
      !
   ELSE
      !
-     CALL glbrak_k ( evc, f, ps_c, npw, npwx, nbndval, m, nbndval, npol)
+     ALLOCATE( ps_c(nbndval,m) )
+     ps_c = (0.0_DP,0.0_DP)
+     !
+     CALL glbrak_k( evc, f, ps_c, npw, npwx, nbndval, m, nbndval, npol)
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !
+     CALL ZGEMM('N','N',npwx*npol,m,nbndval,alpha,evc,npwx*npol,ps_c,nbndval,(1.0_DP,0.0_DP),g,npwx*npol)
+     !
+     DEALLOCATE( ps_c )
+     !
   ENDIF
-  !
-  CALL ZGEMM('N','N',npwx*npol,m,nbndval,alpha,evc,npwx*npol,ps_c,nbndval,(1._DP,0._DP),g,npwx*npol)
-  !
-  IF( gamma_only ) THEN
-     DEALLOCATE( ps_r )
-  ENDIF
-  !
-  DEALLOCATE( ps_c )
   !
   CALL stop_clock ('alphapv')
   !

@@ -34,7 +34,7 @@ input_west
    * - **Default**
      - "pwscf"
    * - **Description**
-     - Prefix prepended to the QuantumEspresso save folder.
+     - Prefix prepended to the Quantum ESPRESSO save folder.
 
 
 .. data:: west_prefix
@@ -557,6 +557,7 @@ westpp_control
        - "W" : Output the electronic wavefunctions.
        - "E" : Output the eigenpotentials.
        - "S" : Output the screened exchange constant.
+       - "D" : Output the dipole matrix elements.
 
 
 .. data:: westpp_range
@@ -570,7 +571,7 @@ westpp_control
    * - **Default**
      - [1,2]
    * - **Description**
-     - Range for W, E, and S run.
+     - Range for W, E, S, and D run.
 
 
 .. data:: westpp_format

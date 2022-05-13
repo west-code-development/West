@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2021 M. Govoni 
+# Copyright (C) 2015-2021 M. Govoni
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -14,11 +14,11 @@ import json
 from xml.etree import ElementTree as ET
 
 def jsonString2data(jsonString):
-    try : 
-       data = json.loads(jsonString) 
-    except : 
+    try :
+       data = json.loads(jsonString)
+    except :
        print("Cannot convert jsonString to data: ",jsonString)
-    return data    
+    return data
 
 def function3D_to_base64(*args, **kwargs):
     #
@@ -48,22 +48,22 @@ def base64_to_function3D(*args, **kwargs):
     attrib["xmlns:xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
     attrib["xsi:schemaLocation"] = "http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0 function3d.xsd"
     root = ET.Element('{http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0}function3d',attrib=attrib)
-    # domain 
+    # domain
     data=jsonString2data(kwargs["domain"])
     attrib={}
     for l in ["a","b","c"] :
        attrib[l] = f"{data[l][0]} {data[l][1]} {data[l][2]}"
     ET.SubElement(root, "domain", attrib=attrib)
-    # grid 
+    # grid
     data=jsonString2data(kwargs["grid"])
     attrib={}
     attrib["nx"] = f"{data[0]}"
     attrib["ny"] = f"{data[1]}"
     attrib["nz"] = f"{data[2]}"
     ET.SubElement(root, "grid", attrib=attrib)
-    # grid_function 
+    # grid_function
     attrib={}
-    assert( kwargs["dtype"] in ['double','complex'] ) 
+    assert( kwargs["dtype"] in ['double','complex'] )
     attrib["type"] = kwargs["dtype"]
     attrib["nx"] = f"{data[0]}"
     attrib["ny"] = f"{data[1]}"
@@ -73,7 +73,7 @@ def base64_to_function3D(*args, **kwargs):
     # write
     ET.ElementTree(root).write(fileName,encoding='UTF-8',xml_declaration=True)
     #
-    return 0 
+    return 0
 
 def test() :
     #

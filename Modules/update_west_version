@@ -4,7 +4,7 @@ westdir_=$1
 echo "WESTDIR = " $westdir_
 
 west_version_number_=$2
-echo "WEST_VERSION_NUMBER = " $west_version_number_ 
+echo "WEST_VERSION_NUMBER = " $west_version_number_
 
 # check if svn info available (do not write anything)
 git remote -v 2> /dev/null > /dev/null
@@ -32,7 +32,7 @@ if test -f west_version.f90 ; then
       mv west_version.f90.tmp west_version.f90
    else
 # do not update if files are the same (prevents useless recompilation)
-      rm west_version.f90.tmp 
+      rm west_version.f90.tmp
    fi
 else
 

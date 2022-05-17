@@ -22,6 +22,7 @@ SUBROUTINE do_loc ( )
   USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_calculation, &
     &                               westpp_range,westpp_save_dir, westpp_box
   USE mp_global,             ONLY : inter_image_comm,my_image_id
+  USE mp_world,              ONLY : mpime, root, world_comm
   USE mp,                    ONLY : mp_bcast
   USE fft_base,              ONLY : dfftp,dffts
   USE scatter_mod,           ONLY : gather_grid
@@ -35,13 +36,14 @@ SUBROUTINE do_loc ( )
   USE control_flags,         ONLY : gamma_only 
   USE types_bz_grid,         ONLY : k_grid
   USE cell_base,             ONLY : alat, at, omega
+  USE json_module,          ONLY : json_file
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
   INTEGER :: i1,i2, ipol, ir, local_j, global_j, i, ig, iks, ibnd, local_ib, &
-   & global_ib, ir1, ir2, ir3, index1, index2, n_points
+   & global_ib, ir1, ir2, ir3, index1, index2, n_points, nbnd_, iunit
   REAL(DP),ALLOCATABLE :: aux_loc(:, :), density_loc(:), density_gat(:)
   REAL(DP) :: r_vec(3), norm, volume
   CHARACTER(LEN=512)    :: fname
@@ -53,32 +55,19 @@ SUBROUTINE do_loc ( )
   
   !
   CALL io_push_title("(L)ocalization Factor")
+  ! determine integration volume
+  volume = (westpp_box(2) - westpp_box(1))*(westpp_box(4) - westpp_box(3))*(westpp_box(6) - westpp_box(5))
+  nbnd_ = westpp_range(2) - westpp_range(1) + 1
   !
   ALLOCATE(density_loc(dffts%nnr))
-  ALLOCATE(aux_loc(k_grid%nps, aband%nloc))
+  ALLOCATE(aux_loc(k_grid%nps, nbnd_))
   ALLOCATE(density_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   !
   psic = 0._DP
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) ) 
   !
-  ! determine integration volume
-  volume = (westpp_box(2) - westpp_box(1))*(westpp_box(4) - westpp_box(3))*(westpp_box(6) - westpp_box(5))
-  !alat = celldm(1)
 
-  WRITE(stdout, *) alat*at(:,1)
-  WRITE(stdout, *) alat*at(:,2)
-  WRITE(stdout, *) alat*at(:,3)
-  WRITE(stdout, *) '--------------------'
-  WRITE(stdout, *) westpp_box(1)
-  WRITE(stdout, *) westpp_box(2)
-  WRITE(stdout, *) westpp_box(3)
-  WRITE(stdout, *) westpp_box(4)
-  WRITE(stdout, *) westpp_box(5)
-  WRITE(stdout, *) westpp_box(6)
-  WRITE(stdout, *) '--------------------'
-  WRITE(stdout, *) dffts%nr1, dffts%nr2, dffts%nr3
-  WRITE(stdout, *) dffts%nr1x, dffts%nr2x, dffts%nr3x
   !
   DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
      !
@@ -177,9 +166,9 @@ SUBROUTINE do_loc ( )
           ! print to file
           !print *, iks, global_ib, aux_loc(iks, index1)
           !write(stdout, *) iks, global_ib, norm/(dffts%nr1x*dffts%nr2x*dffts%nr3x)
-          CALL io_push_value("index", global_ib, 20)
-          CALL io_push_value("localization", aux_loc(iks,index1),20)
-          CALL io_push_value("Npoints", n_points, 20)
+          !CALL io_push_value("index", global_ib, 20)
+          !CALL io_push_value("localization", aux_loc(iks,index1),20)
+          !CALL io_push_value("Npoints", n_points, 20)
         
         ENDIF
         !
@@ -188,6 +177,20 @@ SUBROUTINE do_loc ( )
      ENDDO
      !
   ENDDO
+  ! gather localization functions for all bands
+  CALL mp_sum(aux_loc,inter_image_comm)
+  ! root writes JSON file
+  IF (mpime == root) THEN
+    CALL json%initialize
+
+    CALL json%add("localization", aux_loc(:,:))
+    
+    OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//"/localization.json" )
+    CALL json%print( iunit )
+    CLOSE( iunit )
+      !
+    CALL json%destroy()
+  END DO
   !
   CALL stop_bar_type( barra, 'westpp' )
   !

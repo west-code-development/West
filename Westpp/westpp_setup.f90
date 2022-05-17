@@ -53,6 +53,10 @@ SUBROUTINE westpp_setup
         aband = idistribute()
         CALL aband%init(nbnd,'i','nbnd',.TRUE.)
      ENDIF  
+     IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) THEN 
+        aband = idistribute()
+        CALL aband%init(nbnd,'i','nbnd',.TRUE.)
+     ENDIF  
      IF( westpp_calculation(i:i) == 'w' .OR. westpp_calculation(i:i) == 'W' ) THEN 
         aband = idistribute()
         CALL aband%init(nbnd,'i','nbnd',.TRUE.)

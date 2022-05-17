@@ -483,6 +483,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(westpp_nr,root,world_comm)
      CALL mp_bcast(westpp_rmax,root,world_comm)
      CALL mp_bcast(westpp_epsinfty,root,world_comm)
+     CALL mp_bcast(westpp_box,root,world_comm)
      !
      ! CHECKS 
      !

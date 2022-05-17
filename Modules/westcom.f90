@@ -36,6 +36,14 @@ MODULE scratch_area
   ! BANDS
   INTEGER,ALLOCATABLE :: nbnd_occ(:) 
   !
+  ! FRACTIONAL OCCUPATIONS
+  LOGICAL              :: l_frac_occ
+  REAL(DP)             :: docc_thr = 0.001  ! When chi0 is evaluated with summation over state formula, skip orbital pairs whose occupations differ by less than this threshold  
+  REAL(DP)             :: de_thr = 0.001    ! When two orbitals' energies differ by this threshold, they are considered degenerate and lead in 1PT calculation of dpsi
+  INTEGER,ALLOCATABLE  :: nbnd_occ_one(:)
+  INTEGER,ALLOCATABLE  :: nbnd_occ_nonzero(:)
+  REAL(DP),ALLOCATABLE :: occ_numbers(:,:)
+  !
   ! Q-POINTS
   INTEGER, ALLOCATABLE :: ngq(:)            ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for (q+G) (global in iq)
   INTEGER, ALLOCATABLE :: igq_q(:,:)        ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq ) 

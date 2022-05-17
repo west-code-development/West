@@ -32,7 +32,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ
+  USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ,l_frac_occ,nbnd_occ_nonzero,occ_numbers
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
@@ -68,7 +68,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   LOGICAL :: l_gammaq
-  REAL(DP) :: g0(3), peso
+  REAL(DP) :: g0(3), peso, fi
   !
   WRITE(stdout,'(5x,a)') ' '
   CALL io_push_bar()
@@ -162,7 +162,11 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
            IF (gamma_only) THEN
               l_gammaq = .TRUE.
               CALL pot3D%init('Dense',.FALSE.,'gb')
-              nbndval = nbnd_occ(iks)
+              IF (l_frac_occ) then
+                 nbndval = nbnd_occ_nonzero(iks)
+              ELSE
+                  nbndval = nbnd_occ(iks)
+              ENDIF            
            ELSE
               l_gammaq = q_grid%l_pIsGamma(iq)
               CALL pot3D%init('Dense',.FALSE.,'gb',iq)
@@ -185,6 +189,11 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
               !
               iv_glob = vband%l2g(iv)
               !
+              IF (l_frac_occ) then
+                 fi = occ_numbers(iv_glob,iks)
+              ELSE
+                 fi = 1._DP
+              ENDIF
               ! Bring it to R-space
               IF (gamma_only) THEN
                  CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave')
@@ -210,9 +219,9 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
               DO ig = 1,ngm
                  pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
               ENDDO
-              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - fi * peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
               !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
-              IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
+              IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - fi * pot3D%div
               !
            ENDDO ! iv
            !

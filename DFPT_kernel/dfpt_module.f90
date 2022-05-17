@@ -40,7 +40,8 @@ MODULE dfpt_module
       USE cell_base,             ONLY : omega
       USE control_flags,         ONLY : gamma_only
       USE uspp,                  ONLY : nkb, vkb
-      USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver
+      USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,&
+                                      & l_frac_occ,nbnd_occ_nonzero,nbnd_occ_one,occ_numbers,docc_thr
       USE io_push,               ONLY : io_push_title
       USE mp_world,              ONLY : world_comm
       USE types_bz_grid,         ONLY : k_grid, q_grid, compute_phase
@@ -59,18 +60,18 @@ MODULE dfpt_module
       !
       ! Workspace
       !
-      INTEGER :: ipert, ig, ir, ibnd, ibnd2, lbnd, iks, ikqs, ikq, ik, is
-      INTEGER :: nbndval, ierr
+      INTEGER :: ipert, ig, ir, ibnd, jbnd, ibnd2, lbnd, iks, ikqs, ikq, ik, is
+      INTEGER :: nbndval, nbndval1, ierr
       INTEGER :: npwkq
       !
       REAL(DP) :: g0(3)
-      REAL(DP) :: anorm
+      REAL(DP) :: anorm, prod, docc, fi
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
       !
       COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:),dpsi(:,:)
-      COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:)
+      COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:),dpsi_frac(:),dvr(:)
       COMPLEX(DP), ALLOCATABLE :: dpsic(:)
       !
       COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
@@ -106,6 +107,10 @@ MODULE dfpt_module
          ALLOCATE( phase(dffts%nnr) )
       ENDIF
       !
+      IF (l_frac_occ .and. .not. gamma_only) THEN
+         CALL errore("dfpt", "fraction occupation only implemented for gamma-only case", 1)
+      ENDIF
+      !
       DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
          !
          ik = k_grid%ip(iks)
@@ -121,7 +126,12 @@ MODULE dfpt_module
          !
          IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
          !
-         nbndval = nbnd_occ(iks)
+         IF (l_frac_occ) THEN
+            nbndval = nbnd_occ_nonzero(iks)
+            nbndval1 = nbnd_occ_one(iks)
+         ELSE
+            nbndval = nbnd_occ(iks)
+         ENDIF
          !
          CALL occband%init( nbndval, 'b', 'occband', .FALSE. )
          !
@@ -273,6 +283,12 @@ MODULE dfpt_module
                !
             ENDIF
             !
+            ! keep dV in R space for the calculation of an extra term in frac occ case
+            IF ( l_frac_occ ) THEN
+               ALLOCATE( dvr(dffts%nnr) )
+               dvr = aux_r
+            ENDIF
+            !
             DEALLOCATE( aux_g )
             DEALLOCATE( aux_r )
             !
@@ -308,8 +324,39 @@ MODULE dfpt_module
                   ibnd = occband%l2g(lbnd)
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dpsi(1,lbnd),psic,'Wave')
+                  !
+                  IF (l_frac_occ) THEN
+                     !
+                     fi = occ_numbers(ibnd, iks)
+                     !
+                     ! Extra term in fractional occupation case
+                     ! dpsi_i = sum_{j>i} (1 / fi) * (fi - fj) / (ei - ej) * <psi_j| dV | psi_i> psi_j
+                     !
+                     ALLOCATE( dpsi_frac(dffts%nnr) )
+                     !
+                     DO jbnd = MAX(ibnd, nbndval1), nbndval
+                        !
+                        docc = occ_numbers(ibnd, iks) - occ_numbers(jbnd, iks)
+                        IF ( ABS(docc) < docc_thr ) CYCLE
+                        !
+                        CALL compute_pt1_dpsi(ibnd, jbnd, iks, dvr, dpsi_frac)
+                        !
+                        DO ir=1,dffts%nnr
+                           psic(ir) = psic(ir) + (docc / fi) * CMPLX(0._DP, REAL(dpsi_frac(ir),KIND=DP), KIND=DP)
+                        ENDDO
+                        !
+                     ENDDO
+                     !
+                     DEALLOCATE( dpsi_frac )
+                     !
+                  ELSE
+                     !
+                     fi = 1._DP
+                     !
+                  ENDIF
+                  !
                   DO CONCURRENT (ir=1:dffts%nnr)
-                     aux_r(ir) = aux_r(ir) + CMPLX( REAL( psic(ir),KIND=DP) * DIMAG( psic(ir)) , 0.0_DP, KIND=DP)
+                     aux_r(ir) = aux_r(ir) + CMPLX( fi * REAL( psic(ir),KIND=DP) * DIMAG( psic(ir)) , 0.0_DP, KIND=DP)
                   ENDDO
                   !
                ENDDO
@@ -377,6 +424,8 @@ MODULE dfpt_module
             DEALLOCATE( aux_g )
             DEALLOCATE( aux_r )
             !
+            IF ( l_frac_occ ) DEALLOCATE( dvr )
+            !
             CALL update_bar_type( barra, 'dfpt', 1 )
             !
          ENDDO ! ipert
@@ -404,6 +453,73 @@ MODULE dfpt_module
       CALL mp_barrier( world_comm )
       !
       CALL stop_bar_type( barra, 'dfpt' )
+      !
+    END SUBROUTINE
+    !
+    !
+    SUBROUTINE compute_pt1_dpsi(ibnd, jbnd, iks, dvr, dpsi)
+      !
+      ! Given perturbation potential dvr (in R space), compute 1st order
+      ! perturbation to ith KS orbital projected into jth orbital
+      ! |dpsi_i> = <psi_j| dV | psi_i> / (ei - ej) |dpsi_j>
+      !
+      ! If ibnd and jbnd are degenerate, raise an error
+      !
+      ! The total perturbed KS orbital should contain a summation over j 
+      ! with appropriate prefactors
+      !
+      USE kinds,                 ONLY : DP
+      USE io_global,             ONLY : stdout
+      USE wvfct,                 ONLY : et
+      USE fft_base,              ONLY : dffts
+      USE wavefunctions_module,  ONLY : evc,psic
+      USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
+      USE mp_global,             ONLY : inter_image_comm,inter_pool_comm,my_image_id,intra_bgrp_comm
+      USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
+      USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
+      USE fft_interfaces,        ONLY : fwfft, invfft
+      USE control_flags,         ONLY : gamma_only
+      USE westcom,               ONLY : l_frac_occ,nbnd_occ_nonzero,nbnd_occ_one,occ_numbers,de_thr
+      USE pwcom,                 ONLY : npw,npwx
+      !
+      IMPLICIT NONE
+      !
+      INTEGER,INTENT(IN)  :: ibnd, jbnd, iks
+      COMPLEX(DP),INTENT(IN)   :: dvr(dffts%nnr)
+      COMPLEX(DP),INTENT(OUT)  :: dpsi(dffts%nnr)
+      !
+      INTEGER  :: ir
+      REAL(DP) :: vji, de
+      COMPLEX(DP), ALLOCATABLE :: aux_r(:)
+      !
+      IF ( .not. gamma_only .or. .not. l_frac_occ ) THEN
+         CALL errore("compute_pt1_dpsi", "this routine should only be called in gamma_only and frac occ case", 1)
+      ENDIF
+      !
+      dpsi = 0._DP
+      !
+      de = et(ibnd,iks) - et(jbnd,iks)
+      !
+      IF ( ABS(de) < de_thr ) CALL errore("compute_pt1_dpsi", "degenerate orbitals", 1)
+      !
+      ALLOCATE( aux_r(dffts%nnr) )
+      aux_r = 0._DP
+      CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,jbnd),aux_r,'Wave')
+      !
+      vji = 0._DP
+      DO ir=1,dffts%nnr
+         vji = vji + DIMAG(aux_r(ir)) * REAL(dvr(ir),KIND=DP) * REAL(aux_r(ir),KIND=DP)
+      ENDDO
+      vji = vji / (dffts%nr1 * dffts%nr2 * dffts%nr3)
+      CALL mp_sum( vji, intra_bgrp_comm )
+      !
+      !PRINT*, ibnd, jbnd, de, vji
+      !
+      DO ir=1,dffts%nnr
+         dpsi(ir) = (vji / de) * CMPLX(DIMAG(aux_r(ir)), 0._DP, KIND=DP)
+      ENDDO
+      !
+      DEALLOCATE( aux_r )
       !
     END SUBROUTINE
     !

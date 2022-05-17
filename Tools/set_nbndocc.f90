@@ -17,16 +17,19 @@ SUBROUTINE set_nbndocc( )
   ! current_spin is needed
   !
   USE kinds,                  ONLY : DP
-  USE pwcom,                  ONLY : nbnd,nelup,neldw,isk,nelec,nspin,lsda,nks
+  USE pwcom,                  ONLY : nbnd,nelup,neldw,isk,nelec,nspin,lsda,nks,&
+                                   & lgauss,ltetra,wg,wk,tfixed_occ
   USE constants,              ONLY : degspin
   USE noncollin_module,       ONLY : noncolin,npol
   USE io_global,              ONLY : stdout
-  USE westcom,                ONLY : nbnd_occ
+  USE westcom,                ONLY : nbnd_occ,l_frac_occ,occ_numbers,&
+                                   & nbnd_occ_one,nbnd_occ_nonzero
   USE types_bz_grid,          ONLY : k_grid
   !
   IMPLICIT NONE
   !
-  INTEGER :: spin,iks
+  INTEGER :: spin,iks,ibnd
+  REAL(DP) :: occ
   !
   ! Calculate NBNDVAL
   !
@@ -54,6 +57,41 @@ SUBROUTINE set_nbndocc( )
   ELSE
      !
      nbnd_occ(:) = NINT( nelec ) / degspin
+     !
+  ENDIF
+  !
+  IF (ltetra) CALL errore("set_nbndocc", "tetrahedral occupation not implemented", 1)
+  !
+  IF (tfixed_occ .or. lgauss) THEN
+     !
+     l_frac_occ = .true.
+     !
+     IF(ALLOCATED(occ_numbers)) DEALLOCATE(occ_numbers)
+     IF(ALLOCATED(nbnd_occ_one)) DEALLOCATE(nbnd_occ_one)
+     IF(ALLOCATED(nbnd_occ_nonzero)) DEALLOCATE(nbnd_occ_nonzero)
+     ALLOCATE( occ_numbers(nbnd, k_grid%nps) )
+     ALLOCATE( nbnd_occ_one(k_grid%nps) )
+     ALLOCATE( nbnd_occ_nonzero(k_grid%nps) )
+     !
+     occ_numbers = 0._DP
+     nbnd_occ_one = 0
+     nbnd_occ_nonzero = 0
+     !
+     DO iks = 1, k_grid%nps
+        DO ibnd = 1, nbnd
+           !
+           occ = wg(ibnd,iks) / wk(iks)
+           occ_numbers(ibnd,iks) = occ
+           !
+           IF (occ > 0.999) nbnd_occ_one(iks) = ibnd
+           IF (occ > 0.001) nbnd_occ_nonzero(iks) = ibnd
+           !
+        ENDDO
+     ENDDO
+     !
+  ELSE
+     !
+     l_frac_occ = .false.
      !
   ENDIF
   !

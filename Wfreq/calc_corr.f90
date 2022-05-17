@@ -24,7 +24,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : tpi,fpi,rytoev,e2,pi
   USE pwcom,                ONLY : et,nks,current_spin,isk,xk,nbnd,lsda,g2kin,nspin,current_k,wk
-  USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,iks_l2g,l_macropol,&
+  USE westcom,              ONLY : qp_bandrange,l_frac_occ,occ_numbers,nbnd_occ,nbnd_occ_one,&
+                                 & nbnd_occ_nonzero,l_enable_lanczos,n_lanczos,iks_l2g,l_macropol,&
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_value,io_push_title
@@ -43,7 +44,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   ! Workspace
   !
   INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip
-  INTEGER :: nbndval
+  INTEGER :: nbndval, nbndval1
+  REAL(DP) :: peso
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
   !
@@ -81,7 +83,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !
   DO iks = 1, k_grid%nps   ! KPOINT-SPIN
      !
-     nbndval = nbnd_occ(iks)
+     IF (l_frac_occ) THEN
+        nbndval = nbnd_occ_nonzero(iks)
+     ELSE
+        nbndval = nbnd_occ(iks)
+     ENDIF
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -153,7 +159,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !
   DO iks = 1, k_grid%nps
      !
-     nbndval = nbnd_occ(iks)
+     IF (l_frac_occ) THEN
+        nbndval = nbnd_occ_nonzero(iks)
+        nbndval1 = nbnd_occ_one(iks)
+     ELSE
+        nbndval = nbnd_occ(iks)
+     ENDIF     
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -166,6 +177,16 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            !
            glob_im = aband%l2g(im)
            !
+           IF (l_frac_occ) then
+              IF( glob_im > nbndval1 .and. glob_im <= nbndval ) then
+                 peso = occ_numbers(glob_im,iks)
+              ELSE
+                 peso = 1._DP
+              ENDIF
+           ELSE
+              peso = 1._DP
+           ENDIF
+            !
            this_is_a_pole=.false.
            IF( glob_im <= nbndval ) THEN
               segno = -1._DP
@@ -183,11 +204,37 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
                  !
                  IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
                  !
-                 IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + segno * z_head_rfr(ifreq)
+                 IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + peso * segno * z_head_rfr(ifreq)
                  !
-                 residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
+                 residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ib, iks )
                  ! 
               ENDDO
+              !
+           ENDIF 
+           !
+           IF (l_frac_occ) then
+              !
+              this_is_a_pole=.false.
+              IF( glob_im > nbndval1 .and. glob_im <= nbndval ) THEN
+                 segno = 1._DP
+                 IF( et(glob_im,iks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
+              ENDIF  
+              !
+              IF( this_is_a_pole ) THEN
+                 !
+                 CALL retrieve_glob_freq( et(glob_im,iks) - enrg, glob_ifreq )
+                 !
+                 DO ifreq = 1, rfr%nloc 
+                    !
+                    IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
+                    !
+                    IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + (1.0 - peso) * segno * z_head_rfr(ifreq)
+                    !
+                    residues_b = residues_b + (1.0 - peso) * segno * z_body_rfr( im, ifreq, ib, iks )
+                    ! 
+                 ENDDO
+                 !
+              ENDIF
               !
            ENDIF 
            !

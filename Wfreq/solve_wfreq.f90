@@ -37,7 +37,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,iks_l2g,d_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
-                                 & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir
+                                 & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,fftdriver, wstat_save_dir,&
+                                 & l_frac_occ,occ_numbers,nbnd_occ_one,nbnd_occ_nonzero
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
@@ -81,7 +82,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
-  INTEGER :: nbndval
+  INTEGER :: nbndval, nbndval1
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:), braket(:, :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
@@ -108,7 +109,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   TYPE(bks_type) :: bks
   REAL(DP),ALLOCATABLE :: eprec(:)
   INTEGER :: ierr
-  REAL(DP),ALLOCATABLE :: e(:)
+  REAL(DP),ALLOCATABLE :: e(:)  
+   REAL(DP) :: norm2, docc
   !
   CALL io_push_title("(W)-Lanczos")
   !
@@ -224,7 +226,18 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
 !     !
 !     CALL init_us_2 (npw, igk, xk (1, iks), vkb)
      !
-     nbndval = nbnd_occ(iks)
+     IF (l_frac_occ) THEN
+        !
+        nbndval1 = nbnd_occ_one(iks)
+        nbndval = nbnd_occ_nonzero(iks)
+        !
+     ELSE
+        !
+        nbndval1 = nbnd_occ(iks)
+        nbndval = nbnd_occ(iks)
+        !
+     ENDIF
+
      !
      mwo = - k_grid%weight(iks) / omega
      zmwo = CMPLX( - k_grid%weight(iks) / omega, 0._DP, KIND=DP)
@@ -397,10 +410,19 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            frequency = imfreq_list( ifreq )
            !
-           DO ic = nbndval+1, nbnd
+           DO ic = nbndval1+1, nbnd
               !
               ecv = et(ic,iks)-et(iv,iks)
               dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
+              !
+              IF (ic <= iv) CYCLE  ! avoid double counting in frac occ case
+              !
+              IF (l_frac_occ) THEN
+                 !
+                 docc = occ_numbers(iv,iks) - occ_numbers(ic,iks)
+                 dfactor = dfactor * docc
+                 !
+              ENDIF
               !
               DO ip = 1, mypara%nloc
                  glob_ip = mypara%l2g(ip)
@@ -420,12 +442,20 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            frequency = refreq_list( ifreq )
            !
-           DO ic = nbndval+1, nbnd
+           DO ic = nbndval1+1, nbnd
               !
               ecv = et(ic,iks)-et(iv,iks)
               zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )
               zm = CMPLX( ecv - frequency, - wfreq_eta, KIND=DP )
               zfactor = zmwo / zp + zmwo / zm
+              !
+              IF (ic <= iv) CYCLE  ! avoid double counting in frac occ case
+              !
+              IF (l_frac_occ) THEN
+                 docc = occ_numbers(iv,iks) - occ_numbers(ic,iks)
+                 zfactor = zfactor * docc
+                 !
+              ENDIF
               !
               DO ip = 1, mypara%nloc
                  glob_ip = mypara%l2g(ip)
@@ -481,6 +511,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                     glob_ip = mypara%l2g(ip)
                     ecv = diago( il, ip ) - et(iv,iks)
                     dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
+                    IF (l_frac_occ) dfactor = dfactor * occ_numbers(iv,iks)
+                    !
                     DO glob_jp = 1, mypara%nglob
                        !
                        dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq) + braket( glob_jp, il, ip) * dfactor
@@ -505,6 +537,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                     zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )
                     zm = CMPLX( ecv - frequency, - wfreq_eta, KIND=DP )
                     zfactor = zmwo / zp + zmwo / zm
+                    IF (l_frac_occ) zfactor = zfactor * occ_numbers(iv,iks)
+                    !
                     DO glob_jp = 1, mypara%nglob
                        !
                        zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) + &

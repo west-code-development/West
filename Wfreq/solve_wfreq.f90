@@ -275,7 +275,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            ENDDO
            !
            phi_tmp = phi
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,3,phi_tmp,(1._DP,0._DP))
+           CALL apply_alpha_pc_to_m_wfcs(nbndval1,3,phi_tmp,(1._DP,0._DP))
            !
            ALLOCATE( eprec(3) )
            ALLOCATE( e(3) )
@@ -289,7 +289,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec )
            !
-           CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
+           CALL linsolve_sternheimer_m_wfcts (nbndval1, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
            !
            IF(ierr/=0) THEN
               WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
@@ -382,22 +382,22 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            DEALLOCATE(phi)
         ENDIF
         !
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,mypara%nloc,dvpsi,(1._DP,0._DP))
+        CALL apply_alpha_pc_to_m_wfcs(nbndval1,mypara%nloc,dvpsi,(1._DP,0._DP))
         !
         ! OVERLAP( glob_ip, im=1:nbnd ) = < psi_im iks | dvpsi_glob_ip >
         !
         IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
-        ALLOCATE(ps_r(nbnd-nbndval,mypara%nloc))
-        CALL glbrak_gamma(evc(1,nbndval+1),dvpsi(1,1),ps_r,npw,npwx,nbnd-nbndval,mypara%nloc,nbnd-nbndval,npol)
+        ALLOCATE(ps_r(nbnd-nbndval1,mypara%nloc))
+        CALL glbrak_gamma(evc(1,nbndval1+1),dvpsi(1,1),ps_r,npw,npwx,nbnd-nbndval1,mypara%nloc,nbnd-nbndval1,npol)
         CALL mp_sum(ps_r,intra_bgrp_comm)
         !
         IF(ALLOCATED(overlap)) DEALLOCATE(overlap)
-        ALLOCATE(overlap(mypara%nglob, nbndval+1:nbnd ) )
+        ALLOCATE(overlap(mypara%nglob, nbndval1+1:nbnd ) )
         overlap = 0._DP
-        DO ic = nbndval+1, nbnd
+        DO ic = nbndval1+1, nbnd
            DO ip = 1, mypara%nloc
               glob_ip = mypara%l2g(ip)
-              overlap(glob_ip,ic) = ps_r(ic-nbndval,ip)
+              overlap(glob_ip,ic) = ps_r(ic-nbndval1,ip)
            ENDDO
         ENDDO
         !

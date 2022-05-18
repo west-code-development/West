@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,49 +7,41 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 SUBROUTINE init_pw_arrays(ncalbec)
   !-----------------------------------------------------------------------
   !
-  USE pwcom
-  USE kinds,                  ONLY : DP
-  USE scf,                    ONLY : rho, rho_core, v, vltot, vrs, kedtau
-  USE uspp,                   ONLY : vkb
-  USE uspp_param,             ONLY : upf
-  USE io_files,               ONLY : prefix, iunres, diropn, tmp_dir, iunwfc, nwordwfc
-  USE io_global,              ONLY : ionode_id,ionode
-  USE funct,                  ONLY : dft_is_gradient, dmxc
+  USE control_flags,          ONLY : gamma_only
+  USE scf,                    ONLY : v,vltot,vrs,kedtau
+  USE io_files,               ONLY : iunres,tmp_dir,restart_dir
+  USE xc_lib,                 ONLY : xclib_dft_is
   USE dfunct,                 ONLY : newd
   USE fft_base,               ONLY : dfftp
-  USE mp,                     ONLY : mp_barrier,mp_sum,mp_bcast,mp_min,mp_max
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,nproc_bgrp,my_image_id
-  USE wavefunctions_module,   ONLY : evc
-  USE klist,                  ONLY : nelec, nks, xk, ngk, igk_k
-  USE constants,              ONLY : degspin
-  USE io_global,              ONLY : stdout
-  USE io_files,               ONLY : prefix, iunpun
+  USE mp,                     ONLY : mp_bcast,mp_barrier
+  USE mp_global,              ONLY : inter_image_comm,my_image_id
+  USE mp_world,               ONLY : world_comm
+  USE wavefunctions,          ONLY : evc
+  USE klist,                  ONLY : nks
   USE becmod,                 ONLY : becp,allocate_bec_type
-  USE uspp,                   ONLY : vkb, nkb
-  USE control_flags,          ONLY : io_level
-  USE noncollin_module,       ONLY : noncolin,npol
-  USE buffers,                ONLY : open_buffer,get_buffer,close_buffer
-  USE funct,                  ONLY : dft_is_hybrid,init_dft_exxrpa,stop_exx
-  USE exx,                    ONLY : x_gamma_extrapolation,exxdiv_treatment,exx_grid_init,exx_div_check,&
-                                     &deallocate_exx,exxinit,vexx
+  USE uspp,                   ONLY : nkb
+  USE noncollin_module,       ONLY : npol
+  USE buffers,                ONLY : open_buffer,close_buffer,save_buffer
   USE westcom,                ONLY : iuwfc,lrwfc
-  USE gvecw,                  ONLY : gcutw
   USE gvecs,                  ONLY : doublegrid
+  USE pw_restart_new,         ONLY : read_collected_wfc
+  USE lsda_mod,               ONLY : nspin
+  USE wvfct,                  ONLY : nbnd,npwx
   !
   IMPLICIT NONE
   !
   INTEGER,INTENT(IN) :: ncalbec
   !
-  INTEGER :: i, l, nt, kpoint, ik
-!  REAL(DP) :: rhotot
-  LOGICAL :: exst,exst_mem
+  INTEGER :: ik
+  LOGICAL :: exst
+  LOGICAL :: exst_mem
   !
   CALL start_clock('init_pw_ar')
   !
@@ -57,75 +49,42 @@ SUBROUTINE init_pw_arrays(ncalbec)
   !
   CALL hinit0()
   !
-  CALL set_vrs(vrs,vltot,v%of_r,kedtau, v%kin_r, dfftp%nnr,nspin,doublegrid)
+  CALL set_vrs(vrs,vltot,v%of_r,kedtau,v%kin_r,dfftp%nnr,nspin,doublegrid)
   !
-  !  allocate memory for gradient corrections (if needed)
-  !
-!  IF ( dft_is_gradient() ) THEN
-!     ALLOCATE  ( dvxc_rr(dfftp%nnr,nspin,nspin))
-!     ALLOCATE  ( dvxc_sr(dfftp%nnr,nspin,nspin))
-!     ALLOCATE  ( dvxc_ss(dfftp%nnr,nspin,nspin))
-!     ALLOCATE  ( dvxc_s (dfftp%nnr,nspin,nspin))
-!     ALLOCATE  ( grho   (3, dfftp%nnr, nspin))
-!  ENDIF
-  !
-  CALL allocate_bec_type ( nkb, ncalbec, becp )
-  !
-  !  local potential
-  !
-!M  CALL init_vloc
-  !
-!M  CALL init_us_1
+  CALL allocate_bec_type(nkb,ncalbec,becp)
   !
   CALL newd
   !
-  !  derivative of the xc potential
+  iunres = 88
+  lrwfc = nbnd*npwx*npol
   !
-!  dmuxc(:) = 0.d0
-!  DO i = 1,dfftp%nnr
-!     rhotot = rho%of_r(i,current_spin)+rho_core(i)
-!     IF ( rhotot> 1.d-30 ) dmuxc(i)= dmxc( rhotot)
-!     IF ( rhotot<-1.d-30 ) dmuxc(i)=-dmxc(-rhotot)
-!  ENDDO
+  IF(my_image_id == 0) THEN
+     IF(gamma_only .AND. nks == 1 .AND. .NOT. xclib_dft_is('hybrid')) THEN
+        CALL read_collected_wfc(restart_dir(),1,evc)
+     ELSE
+        CALL open_buffer(iuwfc,'wfc',lrwfc,1,exst_mem,exst,tmp_dir)
+        DO ik = 1,nks
+           CALL read_collected_wfc(restart_dir(),ik,evc)
+           CALL save_buffer(evc,lrwfc,iuwfc,ik)
+        ENDDO
+        CALL close_buffer(iuwfc,'KEEP')
+     ENDIF
+  ENDIF
   !
-  !  initialize data needed for gradient corrections
+  CALL mp_bcast(evc,0,inter_image_comm)
   !
-!  CALL cg_setupdgc
+  ! Must make sure wfc files have been written before exx_go
   !
-  !  read wave functions and calculate indices
-  !
-!M  CALL seqopn( iunigk, 'igk', 'UNFORMATTED', exst )
-!M  REWIND( iunigk )
-!M  DO ik = 1, nks
-!M     CALL gk_sort( xk(1,ik), ngm, g, gcutw, npw, igk, g2kin )
-!M     ngk(ik) = npw
-!M     igk_k(1:npw,ik)= igk(1:npw)
-!M     IF ( nks > 1 ) WRITE( iunigk ) igk
-!M  ENDDO
-  !
-!  kpoint=1
-!  CALL gk_sort (xk(1,kpoint),ngm,g,ecutwfc/tpiba2,npw,igk,g2kin)
-!  g2kin=g2kin*tpiba2
-  !
-  !  Kleinman-Bylander PPs
-  !
-!  CALL init_us_2 (npw, igk, xk(1,kpoint), vkb)
+  CALL mp_barrier(world_comm)
   !
   CALL exx_go()
   !
-  iunres=88
-  !
-  !iuwfc = 20
-  lrwfc = nbnd * npwx * npol
-  IF(my_image_id==0) THEN
-     ! CALL open_buffer ( iuwfc, 'wfc', lrwfc, io_level, exst )
-     CALL open_buffer ( iuwfc, 'wfc', lrwfc, io_level, exst_mem, exst, tmp_dir )
-     CALL get_buffer( evc, lrwfc, iuwfc, 1 )
+  IF(my_image_id == 0) THEN
+     IF(.NOT. (gamma_only .AND. nks == 1 .AND. .NOT. xclib_dft_is('hybrid'))) THEN
+        CALL open_buffer(iuwfc,'wfc',lrwfc,1,exst_mem,exst,tmp_dir)
+     ENDIF
   ENDIF
-  CALL mp_bcast(evc,0,inter_image_comm)
-  !
-  !   open the wavefunction file (already existing)
   !
   CALL stop_clock('init_pw_ar')
   !
-END SUBROUTINE 
+END SUBROUTINE

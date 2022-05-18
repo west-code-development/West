@@ -23,10 +23,10 @@ clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L *.json
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "# JSON test ##"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

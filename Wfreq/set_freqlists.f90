@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,18 +7,19 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 SUBROUTINE set_freqlists()
   !-----------------------------------------------------------------------
   !
-  ! ... This subroutine sets both the real and im freq lists 
+  ! ... This subroutine sets both the real and im freq lists
   !
-  USE kinds,                ONLY : DP 
-  USE westcom,              ONLY : ecut_imfreq,imfreq_list,n_imfreq,frequency_list_power,ecut_refreq,refreq_list,n_refreq
-  USE distribution_center,  ONLY : ifr,rfr,aband
+  USE kinds,                ONLY : DP
+  USE westcom,              ONLY : ecut_imfreq,imfreq_list,n_imfreq,frequency_list_power,&
+                                 & ecut_refreq,refreq_list,n_refreq
+  USE distribution_center,  ONLY : ifr,rfr
   !
   IMPLICIT NONE
   !
@@ -37,7 +38,7 @@ SUBROUTINE set_freqlists()
   !    y_n = 1 - (i-1)/N
   !      p = Ec / ( N**(1/alpha)-1 )
   !
-  p = ecut_imfreq / ( REAL( n_imfreq, KIND=DP)**(1._DP/frequency_list_power) - 1._DP ) 
+  p = ecut_imfreq / ( REAL( n_imfreq, KIND=DP)**(1._DP/frequency_list_power) - 1._DP )
   !
   DO ifreq = 1, ifr%nloc
      glob_ifreq = ifr%l2g(ifreq)
@@ -55,7 +56,7 @@ SUBROUTINE set_freqlists()
   DO ifreq = 1, rfr%nloc
      glob_ifreq = rfr%l2g(ifreq)
      !
-     refreq_list(ifreq) = ecut_refreq / REAL(n_refreq-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) 
+     refreq_list(ifreq) = ecut_refreq / REAL(n_refreq-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP)
      !
   ENDDO
   !

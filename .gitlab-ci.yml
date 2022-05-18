@@ -1,6 +1,6 @@
 variables:
   GIT_STRATEGY: none
-  QE_VERSION: qe-6.1.0
+  QE_VERSION: qe-7.0
 
 stages:
   - build
@@ -29,14 +29,14 @@ stages:
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
-    - ./configure
-    - make -j4 pw
+    - ./configure --enable-openmp=yes
+    - make -j8 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe --tags --always
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-    - make -j4 all
+    - make -j8 all
     - ls ../bin
 
 .template_test:
@@ -45,16 +45,16 @@ stages:
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
-    - ./configure
-    - make -j4 pw
+    - ./configure --enable-openmp=yes
+    - make -j8 pw
     - ls bin
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe --tags --always
     - make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-    - make -j4 all
+    - make -j8 all
     - cd test-suite
-    - make NP=$CI_NP NI=$CI_NI NB=$CI_NB NT=$CI_NT
+    - make NP=$CI_NP NI=$CI_NI NK=$CI_NK NB=$CI_NB NT=$CI_NT
   artifacts:
     when: on_failure
     paths:
@@ -63,50 +63,55 @@ stages:
       - QEDIR/West/test-suite/test*/*.tab
       - QEDIR/West/test-suite/test*/test*/*.xml
       - QEDIR/West/test-suite/test*/test*/*.json
-    expire_in: 3 days
+    expire_in: 2 days
 
 # Builds
 
-gcc840:
+gcc1130_0001:
   extends:
     - .template_bot_start
     - .template_build
 
-gcc930:
+gcc1030_0001:
   extends:
     - .template_bot_start
     - .template_build
 
 # Tests
 
-gcc840_t:
+gcc1130_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 1
+    CI_NK: 1
     CI_NB: 1
     CI_NT: 1
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc840
+  needs: ["gcc1130_0001"]
+  image: miccomcenter/bot:gcc1130_0001
 
-gcc930_t:
+gcc1030_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 2
+    CI_NK: 1
     CI_NB: 2
     CI_NT: 1
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc930
+  needs: ["gcc1030_0001"]
+  image: miccomcenter/bot:gcc1030_0001
 
 # Nightly tests
 
-gcc840_t2:
+gcc1130_0002_t2:
   variables:
     CI_NP: 8
     CI_NI: 2
+    CI_NK: 1
     CI_NB: 1
     CI_NT: 2
   only:
@@ -114,12 +119,13 @@ gcc840_t2:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc840
+  image: miccomcenter/bot:gcc1130_0002
 
-gcc930_t2:
+gcc1130_0002_t3:
   variables:
     CI_NP: 8
     CI_NI: 1
+    CI_NK: 1
     CI_NB: 2
     CI_NT: 2
   only:
@@ -127,7 +133,21 @@ gcc930_t2:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc930
+  image: miccomcenter/bot:gcc1130_0002
+
+gcc1130_0002_t4:
+  variables:
+    CI_NP: 8
+    CI_NI: 1
+    CI_NK: 2
+    CI_NB: 1
+    CI_NT: 2
+  only:
+    - schedules
+  extends:
+    - .template_bot_start
+    - .template_test
+  image: miccomcenter/bot:gcc1130_0002
 
 # Doc
 
@@ -153,3 +173,4 @@ west_doc_build:
     - cd Doc
     - make html
     - ls _build/html
+  needs: []

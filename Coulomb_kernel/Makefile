@@ -3,27 +3,20 @@
 include ../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
-          $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
-          $(MOD_FLAG)../Modules \
-          $(MOD_FLAG)../Tools \
-          $(MOD_FLAG).
-IFLAGS=
-
+MODFLAGS = $(BASEMOD_FLAGS) \
+           $(MOD_FLAG)../Modules \
+           $(MOD_FLAG)../Tools \
+           $(MOD_FLAG).
 
 COULOMB_KERNEL_OBJS = \
 class_coulomb.o \
-types_coulomb.o 
+types_coulomb.o
 
-PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a
-WESTLIBS = ../Tools/libtools.a
-
-TLDEPS= bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : tldeps lib_coulomb_kernel.a
 
-tldeps:
+tldeps :
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 lib_coulomb_kernel.a : $(COULOMB_KERNEL_OBJS)
@@ -35,10 +28,10 @@ clean :
 	- /bin/rm -f lib_coulomb_kernel.a
 
 title :
-	@echo "                       "
+	@echo
 	@echo "#######################"
 	@echo "### Coulomb_kernel ####"
 	@echo "#######################"
-	@echo "                       "
+	@echo
 
 include make.depend

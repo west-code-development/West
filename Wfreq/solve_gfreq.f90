@@ -38,6 +38,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver, &
                                  & wstat_save_dir
+  USE westcom,              ONLY : l_enable_off_diagonal
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm,inter_pool_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout, ionode
@@ -117,7 +118,11 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      IF(iks<bks%lastdone_ks) CYCLE
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(iks==bks%lastdone_ks .AND. ib <= bks%lastdone_band ) CYCLE
-        barra_load = barra_load + 1
+        IF (l_enable_off_diagonal) THEN
+            barra_load = barra_load + qp_bandrange(2) - qp_bandrange(1) + 2
+        ELSE
+            barra_load = barra_load + 1
+        ENDIF
      ENDDO
   ENDDO
   !

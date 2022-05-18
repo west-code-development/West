@@ -127,9 +127,9 @@ SUBROUTINE solve_hf_gamma( )
   !DEALLOCATE( sigma_vxcl )
   !DEALLOCATE( sigma_vxcnl)
   !DEALLOCATE( sigma_hf   )
-  DO ib = 1, qp_bandrange(2)-qp_bandrange(1)+1
-     WRITE(stdout,*) sigma_exx_full(ib,ib,1) - sigma_vxcl_full(ib,ib,1) - sigma_vxcnl_full(ib,ib,1)
-  ENDDO
+!   DO ib = 1, qp_bandrange(2)-qp_bandrange(1)+1
+!      WRITE(stdout,*) sigma_exx_full(ib,ib,1) - sigma_vxcl_full(ib,ib,1) - sigma_vxcnl_full(ib,ib,1)
+!   ENDDO
   !
   CALL stop_clock( "solve_hf" )
   !

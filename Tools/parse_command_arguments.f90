@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -42,8 +42,8 @@ SUBROUTINE parse_command_arguments( )
      !   ofound =.TRUE.
      !ENDIF
      !
-     !IF( ifound .AND. ofound ) EXIT 
-     IF( ifound ) EXIT 
+     !IF( ifound .AND. ofound ) EXIT
+     IF( ifound ) EXIT
      !
   ENDDO
   !

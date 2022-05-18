@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2021 M. Govoni 
+# Copyright (C) 2015-2021 M. Govoni
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -11,7 +11,7 @@
 #
 
 from __future__ import print_function
-from os import mkdir 
+from os import mkdir
 import sys
 
 #############

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,30 +7,29 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 PROGRAM wfreq
   !-----------------------------------------------------------------------
-  ! 
+  !
   ! This is the main program that calculates the GW.
   !
   USE check_stop,           ONLY : check_stop_init
   USE mp_global,            ONLY : mp_startup, mp_global_end
-  USE west_environment,     ONLY : west_environment_start, west_environment_end 
-  USE mp,                   ONLY : mp_sum,mp_barrier
+  USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE westcom,              ONLY : wfreq_calculation
-  ! 
+  !
   IMPLICIT NONE
   !
   CHARACTER(LEN=9) :: code = 'WFREQ'
   LOGICAL :: lgate(8)
   INTEGER :: i
   !
-  ! *** START *** 
+  ! *** START ***
   !
-  CALL check_stop_init ()
+  CALL check_stop_init( )
   !
   ! Initialize MPI, clocks, print initial messages
   !
@@ -38,14 +37,14 @@ PROGRAM wfreq
   CALL mp_startup ( start_images = .TRUE. )
 #endif
   !
-  CALL west_environment_start ( code )
+  CALL west_environment_start( code )
   !
   CALL wfreq_readin( )
   !
   CALL wfreq_setup( )
   !
-  lgate=.FALSE.
-  DO i = 1, 8 
+  lgate = .FALSE.
+  DO i = 1, 8
      IF( wfreq_calculation(i:i) == 'X' ) lgate(1) = .TRUE.
      IF( wfreq_calculation(i:i) == 'W' ) lgate(2) = .TRUE.
      IF( wfreq_calculation(i:i) == 'w' ) lgate(3) = .TRUE.
@@ -56,29 +55,31 @@ PROGRAM wfreq
      IF( wfreq_calculation(i:i) == 'P' ) lgate(8) = .TRUE.
   ENDDO
   !
-  IF(lgate(1)) THEN
+  IF( lgate(1) ) THEN
      CALL solve_hf( )
   ENDIF
   !
-  IF(lgate(2)) THEN
-     CALL solve_wfreq(.FALSE.,lgate(7))
+  IF( lgate(2) ) THEN
+     CALL solve_wfreq( .FALSE., lgate(7) )
   ENDIF
   !
-  IF(lgate(3)) THEN
-     CALL solve_wfreq(.TRUE.,lgate(7))
+  IF( lgate(3) ) THEN
+     CALL solve_wfreq( .TRUE., lgate(7) )
   ENDIF
   !
-  IF(lgate(4)) THEN
-     CALL solve_gfreq(.FALSE.)
+  IF( lgate(4) ) THEN
+     CALL solve_gfreq( .FALSE. )
   ENDIF
   !
-  IF(lgate(5)) THEN
-     CALL solve_gfreq(.TRUE.)
+  IF( lgate(5) ) THEN
+     CALL solve_gfreq( .TRUE. )
   ENDIF
   !
-  IF(lgate(6).OR.lgate(8)) THEN
-     CALL solve_qp( lgate(6),lgate(8) )
+  IF( lgate(6) .OR. lgate(8) ) THEN
+     CALL solve_qp( lgate(6), lgate(8) )
   ENDIF
+  !
+  CALL exx_ungo( )
   !
   CALL clean_scratchfiles( )
   !
@@ -86,6 +87,6 @@ PROGRAM wfreq
   !
   CALL west_environment_end( code )
   !
-  CALL mp_global_end()
+  CALL mp_global_end( )
   !
 END PROGRAM

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -7,14 +7,14 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-MODULE conversions 
+MODULE conversions
    !-----------------------------------------------------------------------
    USE kinds, ONLY : DP
-   IMPLICIT NONE 
+   IMPLICIT NONE
    CONTAINS
     !
     FUNCTION ltoa(l) RESULT(res)
@@ -23,10 +23,10 @@ MODULE conversions
        LOGICAL,INTENT(IN) :: l
        CHARACTER(4) :: t="true"
        CHARACTER(5) :: f="false"
-       IF( l ) THEN 
+       IF( l ) THEN
           res = t
-       ELSE 
-          res =f 
+       ELSE
+          res =f
        ENDIF
     END FUNCTION
     !

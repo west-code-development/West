@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2021 M. Govoni 
+# Copyright (C) 2015-2021 M. Govoni
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -31,7 +31,7 @@ default["input_west"]["outdir"] = "./"
 # wstat_control
 default["wstat_control"] = {}
 default["wstat_control"]["wstat_calculation"] = "S"
-default["wstat_control"]["n_pdep_eigen"] = 1 # dynamically set to the number of electrons 
+default["wstat_control"]["n_pdep_eigen"] = 1 # dynamically set to the number of electrons
 default["wstat_control"]["n_pdep_times"] = 4
 default["wstat_control"]["n_pdep_maxiter"] = 100
 default["wstat_control"]["n_dfpt_maxiter"] = 250
@@ -43,7 +43,7 @@ default["wstat_control"]["tr2_dfpt"] = 1.e-12
 default["wstat_control"]["l_kinetic_only"] = False
 default["wstat_control"]["l_minimize_exx_if_active"] = False
 default["wstat_control"]["l_use_ecutrho"] = False
-default["wstat_control"]["qlist"] = [ 1 ] # dynamically set to the actual number of q 
+default["wstat_control"]["qlist"] = [ 1 ] # dynamically set to the actual number of q
 # wfreq_control
 default["wfreq_control"] = {}
 default["wfreq_control"]["wfreq_calculation"] = "XWGQ"
@@ -51,17 +51,16 @@ default["wfreq_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the num
 default["wfreq_control"]["qp_bandrange"] = [1, 2]
 default["wfreq_control"]["macropol_calculation"] = 'N'
 default["wfreq_control"]["n_lanczos"] = 30
-default["wfreq_control"]["n_imfreq"] = 128 
-default["wfreq_control"]["n_refreq"] = 272  
+default["wfreq_control"]["n_imfreq"] = 128
+default["wfreq_control"]["n_refreq"] = 272
 default["wfreq_control"]["ecut_imfreq"] = 25. # dynamically set to ecutrho
-default["wfreq_control"]["ecut_refreq"] = 2. 
+default["wfreq_control"]["ecut_refreq"] = 2.
 default["wfreq_control"]["wfreq_eta"] = 0.05 / rytoev
 default["wfreq_control"]["n_secant_maxiter"] = 21
 default["wfreq_control"]["trev_secant"] = 0.05 / rytoev
 default["wfreq_control"]["l_enable_lanczos"] = True
-default["wfreq_control"]["l_enable_gwetot"] = False
 default["wfreq_control"]["o_restart_time"] = 0.
-default["wfreq_control"]["ecut_spectralf"] = [-2., 1.] 
+default["wfreq_control"]["ecut_spectralf"] = [-2., 1.]
 default["wfreq_control"]["n_spectralf"] = 204
 # westpp_control
 default["westpp_control"] = {}
@@ -89,21 +88,21 @@ def update_default_values(key,kwargs) :
     if key == "wstat_control" :
        #
        assert("nq") in kwargs.keys()
-       nq = kwargs["nq"] 
+       nq = kwargs["nq"]
        default[key]["qlist"] = [ i+1 for i in range(nq) ]
        #
        assert("nelec") in kwargs.keys()
-       nelec = kwargs["nelec"] 
+       nelec = kwargs["nelec"]
        default[key]["n_pdep_eigen"] = int(nelec)
     #
     if key == "wfreq_control" :
        #
        assert("nelec") in kwargs.keys()
-       nelec = kwargs["nelec"] 
+       nelec = kwargs["nelec"]
        default[key]["n_pdep_eigen_to_use"] = int(nelec)
        #
        assert("ecutrho") in kwargs.keys()
-       ecutrho = kwargs["ecutrho"] 
+       ecutrho = kwargs["ecutrho"]
        default[key]["ecut_imfreq"] = ecutrho
 
 ################
@@ -111,7 +110,7 @@ def update_default_values(key,kwargs) :
 ################
 
 def open_and_parse_file(fileName="west.in") :
-    """Opens a file and parses it using the YAML sintax 
+    """Opens a file and parses it using the YAML sintax
 
     :param fileName: name of the file
     :type fileName: ``string``
@@ -120,17 +119,17 @@ def open_and_parse_file(fileName="west.in") :
 
     """
     data = {}
-    try : 
+    try :
        with open(fileName, 'r') as stream:
            try:
               data = yaml.load(stream,Loader=yaml.SafeLoader)
            except:
               print("Cannot parse file")
-    except : 
+    except :
        print("Cannot open file : ",fileName)
     #
-    if "server_control" in data.keys() : 
-       if "document" in data["server_control"].keys() : 
+    if "server_control" in data.keys() :
+       if "document" in data["server_control"].keys() :
           jsonText = json.dumps(data["server_control"]["document"])
           data["server_control"]["document"] = jsonText
     #
@@ -140,12 +139,12 @@ def open_and_parse_file(fileName="west.in") :
 # CHECK DICT #
 ##############
 
-def check_dict(parsed_data={}, default_data={}) : 
-    """Check data: returns a dictionary with the same keys of default_data. If keys are matching, values of default_data are replaced with those of parsed_data. 
+def check_dict(parsed_data={}, default_data={}) :
+    """Check data: returns a dictionary with the same keys of default_data. If keys are matching, values of default_data are replaced with those of parsed_data.
 
-    :param parsed_data: parsed data 
+    :param parsed_data: parsed data
     :type parsed_data: ``dict``
-    :param default_data: default data 
+    :param default_data: default data
     :type default_data: ``dict``
     :return: checked data
     :rtype: ``dict``
@@ -154,10 +153,10 @@ def check_dict(parsed_data={}, default_data={}) :
     #
     data = {}
     #
-    for key in default_data.keys() : 
-        if key in parsed_data.keys() : 
+    for key in default_data.keys() :
+        if key in parsed_data.keys() :
            data[key] = parsed_data[key]
-        else : 
+        else :
            data[key] = default_data[key]
     #
     return data
@@ -166,7 +165,7 @@ def check_dict(parsed_data={}, default_data={}) :
 # SUPPORT #
 ###########
 
-def print_bar(prefix="",nmarks=92) : 
+def print_bar(prefix="",nmarks=92) :
     """Prints bar.
 
     :param prefix: prefix
@@ -176,7 +175,7 @@ def print_bar(prefix="",nmarks=92) :
     """
     #
     s = prefix
-    for i in range(nmarks) : 
+    for i in range(nmarks) :
        s+="-"
     print(s)
 
@@ -184,8 +183,8 @@ def print_bar(prefix="",nmarks=92) :
 # PRINT #
 #########
 
-def print_dict(title="input_west", data={}) : 
-    """Prints data.  
+def print_dict(title="input_west", data={}) :
+    """Prints data.
 
     :param title: title
     :type title: ``string``
@@ -195,9 +194,9 @@ def print_dict(title="input_west", data={}) :
     """
     #
     nmarks = 92
-    nspaces = 5 
+    nspaces = 5
     s = ""
-    for i in range(nspaces) : 
+    for i in range(nspaces) :
        s+=" "
     #
     print("")
@@ -214,7 +213,7 @@ def print_dict(title="input_west", data={}) :
 #############
 
 def read_keyword_from_file(*args, **kwargs):
-    """Read keyword from file  
+    """Read keyword from file
 
     :return: read data
     :rtype: ``dict``
@@ -222,28 +221,28 @@ def read_keyword_from_file(*args, **kwargs):
     """
     #
     fileName = args[0]
-    keyword = args[1] 
+    keyword = args[1]
     verbose = args[2]
     #
-    # Assign static & dynamical defaults 
-    # 
-    default_data = default[keyword]
-    update_default_values(keyword,kwargs) 
+    # Assign static & dynamical defaults
     #
-    # Read input file  
+    default_data = default[keyword]
+    update_default_values(keyword,kwargs)
+    #
+    # Read input file
     #
     input_data = open_and_parse_file(fileName)
     parsed_data = {}
     if keyword in input_data.keys() :
        parsed_data = input_data[keyword]
     #
-    # Compare defaults and input variables 
+    # Compare defaults and input variables
     #
     data = check_dict( parsed_data, default_data )
     #
     # Print
     #
-    if (verbose) : 
+    if (verbose) :
        print_dict(keyword, data)
     #
     return data
@@ -258,15 +257,15 @@ def test() :
     #
     with open(fileName, "w") as file :
        file.write("""
-input_west : 
+input_west :
    qe_prefix : molecule
    west_prefix : molecule
    outdir : "./"
-wstat_control : 
+wstat_control :
    wstat_calculation : R # this is a comment
-   unknown_key : value # this line will be read but not passed 
-server_control : 
-   document : {} 
+   unknown_key : value # this line will be read but not passed
+server_control :
+   document : {}
 """)
     #
     read_keyword_from_file(fileName,"input_west",True)

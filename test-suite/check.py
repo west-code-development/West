@@ -2,8 +2,9 @@ import json
 import os
 import shutil
 import sys
+from xml.etree import ElementTree as ET
 
-activeTests = [1,2,3,4,5]
+activeTests = [1,2,3,4,5,6,7]
 tolerance = 0.0001
 
 def check_pw(prefix):
@@ -15,14 +16,11 @@ def check_pw(prefix):
         return 1
 
     ok = False
-    test = 0.0
     with open(fileName,'r') as f:
         for line in f:
             if 'JOB DONE' in line:
                 ok = True
-
-            if '!    total energy' in line:
-                test = float(line.split()[4])
+                break
 
     if not ok:
         print(prefix+': pwscf failed')
@@ -35,12 +33,19 @@ def check_pw(prefix):
         os.remove(fileName)
 
     # Load reference
-    fileName = prefix+'/ref/pw.ref'
+    fileName = prefix+'/ref/data-file-schema.xml'
+    xmlData = ET.parse(fileName)
+    ref = float(xmlData.find("output").find("total_energy").find("etot").text)
 
-    with open(fileName,'r') as f:
-        for line in f:
-            if '!    total energy' in line:
-                ref = float(line.split()[4])
+    # Load test
+    fileName = prefix+'/test.save/data-file-schema.xml'
+
+    if not os.path.isfile(fileName):
+        print(prefix+': pwscf output not found')
+        return 1
+
+    xmlData = ET.parse(fileName)
+    test = float(xmlData.find("output").find("total_energy").find("etot").text)
 
     # Total energy error
     absDiff = abs(ref-test)

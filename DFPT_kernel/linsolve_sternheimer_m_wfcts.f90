@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -18,23 +18,23 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   !
   !                 A * | x_i > = | b_i >       i=(1:m)
   !
-  !     with :      A = ( H - E_i + alpha * P_v ) 
+  !     with :      A = ( H - E_i + alpha * P_v )
   !
   !                 where H is a complex hermitean matrix (H_{SCF}), E_v is a real scalar (energy of band v)
   !                 x and b are complex vectors
   !
   !     on input:
   !
-  !                 nbndval  integer  number of valence bands. 
-  !                 
+  !                 nbndval  integer  number of valence bands.
+  !
   !                 m        integer  number of wfcts to process.
-  !                          
+  !
   !                 b        contains the right hand side vector
   !                          of the system.
   !
   !                 x        contains an estimate of the solution
   !                          vector.
-  !                          
+  !
   !                 e        real     unperturbed eigenvalues.
   !
   !                 eprec    real     preconditioned energies.
@@ -44,17 +44,16 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   !     on output:  x        contains the refined estimate of the
   !                          solution vector.
   !
-  !                 ierr     integer  error (if /=0 something went wrong) 
+  !                 ierr     integer  error (if /=0 something went wrong)
   !
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE gvect,                ONLY : gstart
-  USE wvfct,                ONLY : g2kin
-  USE control_flags,        ONLY : gamma_only 
+  USE control_flags,        ONLY : gamma_only
   USE westcom,              ONLY : n_dfpt_maxiter,alphapv_dfpt
-  USE pwcom,                ONLY : npw,npwx,ngk,current_k
+  USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol,noncolin
   !
   IMPLICIT NONE
@@ -63,7 +62,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   !
   INTEGER,INTENT(IN)  :: nbndval, m
   REAL(DP),INTENT(IN)  :: e(m), eprec(m)
-  COMPLEX(DP),INTENT(IN)  :: b (npwx*npol, m)  
+  COMPLEX(DP),INTENT(IN)  :: b (npwx*npol, m)
   COMPLEX(DP),INTENT(INOUT) :: x (npwx*npol, m)
   REAL(DP),INTENT(IN) :: tr2
   INTEGER, INTENT(OUT) :: ierr
@@ -71,11 +70,10 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   ! Workspace
   !
   INTEGER :: iter, ibnd, lbnd
-  INTEGER :: ig
   COMPLEX(DP),ALLOCATABLE :: g(:,:), t(:,:), h(:,:), hold(:,:)
   COMPLEX(DP) ::  dcgamma, dclambda
   REAL(DP),ALLOCATABLE :: rho(:), rhoold(:), eu(:), a(:), c(:)
-  REAL(DP) :: energy, norma, anorm
+  REAL(DP) :: anorm
   LOGICAL,ALLOCATABLE :: is_conv(:)
   REAL(KIND=DP),EXTERNAL :: DDOT
   COMPLEX(KIND=DP),EXTERNAL :: ZDOTC
@@ -151,7 +149,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
         !
         CALL DSCAL (2*npwx*npol, - 1._DP, h (1, ibnd), 1)
         IF (iter .NE. 1) THEN
-           dcgamma = CMPLX( rho (ibnd) / rhoold (ibnd), 0.0_DP, KIND=DP) 
+           dcgamma = CMPLX( rho (ibnd) / rhoold (ibnd), 0.0_DP, KIND=DP)
            CALL ZAXPY (npwx*npol, dcgamma, hold (1, ibnd), 1, h (1, ibnd), 1)
         ENDIF
         !
@@ -201,7 +199,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
         CALL ZCOPY(npwx*npol, h(1,ibnd), 1, hold(1,ibnd), 1)
         rhoold (ibnd) = rho (ibnd)
         !
-     ENDDO ! on bands  
+     ENDDO ! on bands
      !
   ENDDO ! on iterations
   !

@@ -23,7 +23,7 @@ SUBROUTINE do_loc ( )
     &                               westpp_range,westpp_save_dir, westpp_box
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE mp_world,              ONLY : mpime, root, world_comm
-  USE mp,                    ONLY : mp_bcast
+  USE mp,                    ONLY : mp_bcast, mp_sum
   USE fft_base,              ONLY : dfftp,dffts
   USE scatter_mod,           ONLY : gather_grid
   USE wvfct,                 ONLY : nbnd
@@ -51,6 +51,7 @@ SUBROUTINE do_loc ( )
   CHARACTER(LEN=6) :: labelb,labelk
   !REAL(DP) :: alat
   LOGICAL :: is_it_in
+  TYPE(json_file) :: json
 
   
   !
@@ -60,7 +61,7 @@ SUBROUTINE do_loc ( )
   nbnd_ = westpp_range(2) - westpp_range(1) + 1
   !
   ALLOCATE(density_loc(dffts%nnr))
-  ALLOCATE(aux_loc(k_grid%nps, nbnd_))
+  ALLOCATE(aux_loc(nbnd_,k_grid%nps))
   ALLOCATE(density_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   !
   psic = 0._DP
@@ -153,7 +154,7 @@ SUBROUTINE do_loc ( )
                     & (r_vec(3) .LT. westpp_box(6))) THEN
                       
                       n_points = n_points + 1
-                      aux_loc(iks, index1) = aux_loc(iks, index1) + density_gat(index2)
+                      aux_loc(index1, iks) = aux_loc(index1, iks) + density_gat(index2)
                       is_it_in = .TRUE.
                 END IF
                 !WRITE(stdout, '(5I7, 3E15.8, L5)') ir1, ir2, ir3, index2, global_ib, &
@@ -162,12 +163,11 @@ SUBROUTINE do_loc ( )
             END DO
           ENDDO
           ! Post-processing
-          aux_loc(:,:) = volume/omega * aux_loc(:,:)/dble(n_points)
           ! print to file
           !print *, iks, global_ib, aux_loc(iks, index1)
           !write(stdout, *) iks, global_ib, norm/(dffts%nr1x*dffts%nr2x*dffts%nr3x)
-          !CALL io_push_value("index", global_ib, 20)
-          !CALL io_push_value("localization", aux_loc(iks,index1),20)
+          !CALL io_push_value("index", index1, 20)
+          !CALL io_push_value("localization", aux_loc(index1, iks),20)
           !CALL io_push_value("Npoints", n_points, 20)
         
         ENDIF
@@ -177,20 +177,22 @@ SUBROUTINE do_loc ( )
      ENDDO
      !
   ENDDO
+  
+  aux_loc(:,:) = volume/omega * aux_loc(:,:)/dble(n_points)
   ! gather localization functions for all bands
   CALL mp_sum(aux_loc,inter_image_comm)
   ! root writes JSON file
   IF (mpime == root) THEN
     CALL json%initialize
 
-    CALL json%add("localization", aux_loc(:,:))
+    CALL json%add("localization", aux_loc(:,1))
     
     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//"/localization.json" )
     CALL json%print( iunit )
     CLOSE( iunit )
       !
     CALL json%destroy()
-  END DO
+  END IF
   !
   CALL stop_bar_type( barra, 'westpp' )
   !

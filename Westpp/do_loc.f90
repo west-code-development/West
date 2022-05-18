@@ -46,7 +46,7 @@ SUBROUTINE do_loc ( )
    & global_ib, ir1, ir2, ir3, index1, index2, n_points, nbnd_, iunit
   REAL(DP),ALLOCATABLE :: aux_loc(:, :), density_loc(:), density_gat(:)
   REAL(DP) :: r_vec(3), norm, volume
-  CHARACTER(LEN=512)    :: fname
+  CHARACTER(LEN=512)    :: fname, aname
   TYPE(bar_type) :: barra
   CHARACTER(LEN=6) :: labelb,labelk
   !REAL(DP) :: alat
@@ -185,7 +185,15 @@ SUBROUTINE do_loc ( )
   IF (mpime == root) THEN
     CALL json%initialize
 
-    CALL json%add("localization", aux_loc(:,1))
+    IF (k_grid%nps > 1) THEN
+      aname = TRIM(ADJUSTL('localization'))
+      CALL json%add(aname, aux_loc(:,1))
+    ELSE
+      DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
+        WRITE(aname, '(A12,I3)') aname
+        CALL json%add(aname, aux_loc(:,iks))
+      ENDDO 
+    ENDIF
     
     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//"/localization.json" )
     CALL json%print( iunit )

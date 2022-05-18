@@ -25,6 +25,7 @@ SUBROUTINE set_nbndocc( )
   USE westcom,                ONLY : nbnd_occ,l_frac_occ,occ_numbers,&
                                    & nbnd_occ_one,nbnd_occ_nonzero
   USE types_bz_grid,          ONLY : k_grid
+  USE control_flags,          ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -93,6 +94,10 @@ SUBROUTINE set_nbndocc( )
      !
      l_frac_occ = .false.
      !
+  ENDIF
+  !
+  IF (l_frac_occ .and. .not. gamma_only) THEN
+     CALL errore("set_nbndocc", "fraction occupation only implemented for gamma-only case", 1)
   ENDIF
   !
 END SUBROUTINE 

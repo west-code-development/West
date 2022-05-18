@@ -168,6 +168,7 @@ MODULE wfreq_center
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
   LOGICAL :: l_enable_gwetot
+  LOGICAL :: l_enable_off_diagonal
   CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
   REAL(DP) :: o_restart_time
@@ -214,6 +215,9 @@ MODULE wfreq_center
   REAL(DP),ALLOCATABLE     :: sigma_diff      (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_spectralf (:,:,:)
   REAL(DP),ALLOCATABLE    :: sigma_freq      (:)
+  REAL(DP),ALLOCATABLE    :: sigma_exx_full  (:,:,:) 
+  REAL(DP),ALLOCATABLE    :: sigma_vxcl_full (:,:,:) 
+  REAL(DP),ALLOCATABLE    :: sigma_vxcnl_full(:,:,:) 
   !
 END MODULE
 !

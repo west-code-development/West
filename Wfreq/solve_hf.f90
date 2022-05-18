@@ -36,7 +36,8 @@ SUBROUTINE solve_hf_gamma( )
   USE kinds,                ONLY : DP 
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,qp_bandrange,iks_l2g,&
                                  & n_secant_maxiter,n_imfreq,nbnd_occ,trev_secant,l_enable_gwetot,exx_etot, &
-                                 & sigma_exx, sigma_vxcl, sigma_vxcnl, sigma_hf
+                                 & sigma_exx, sigma_vxcl, sigma_vxcnl, sigma_hf, l_enable_off_diagonal,&
+                                 & sigma_exx_full, sigma_vxcl_full, sigma_vxcnl_full
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm, &
                                  & root_bgrp,me_bgrp,me_image,root_image
   USE mp_world,             ONLY : nproc,mpime,root,world_comm
@@ -126,6 +127,9 @@ SUBROUTINE solve_hf_gamma( )
   !DEALLOCATE( sigma_vxcl )
   !DEALLOCATE( sigma_vxcnl)
   !DEALLOCATE( sigma_hf   )
+  DO ib = 1, qp_bandrange(2)-qp_bandrange(1)+1
+     WRITE(stdout,*) sigma_exx_full(ib,ib,1) - sigma_vxcl_full(ib,ib,1) - sigma_vxcnl_full(ib,ib,1)
+  ENDDO
   !
   CALL stop_clock( "solve_hf" )
   !

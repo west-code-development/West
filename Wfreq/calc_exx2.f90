@@ -33,6 +33,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
   USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ
+  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
@@ -58,10 +59,11 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   ! Workspace
   !
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
+  COMPLEX(DP),ALLOCATABLE :: psic1(:), pertr1(:), pertg1(:)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs,ikq
+  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs,ikq,jb
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -69,6 +71,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   INTEGER :: barra_load
   LOGICAL :: l_gammaq
   REAL(DP) :: g0(3), peso
+  COMPLEX(DP) :: braket
   !
   WRITE(stdout,'(5x,a)') ' '
   CALL io_push_bar()
@@ -78,6 +81,11 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   ALLOCATE( pertg( ngm ) )
   IF (gamma_only) THEN
      peso = 2._DP
+     IF (l_enable_off_diagonal) THEN
+        ALLOCATE( psic1(dffts%nnr) )
+        ALLOCATE( pertr1(dffts%nnr) )
+        ALLOCATE( pertg1(ngm) )
+     ENDIF
   ELSE
      peso = 1._DP
      ALLOCATE( phase(dffts%nnr) )
@@ -94,7 +102,11 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   !
   sigma_exx = 0._DP
   !
-  barra_load = k_grid%nps * ( nb2-nb1 + 1 )
+  IF (l_enable_off_diagonal) THEN
+      barra_load = k_grid%nps * ( nb2-nb1 + 1 ) * ( nb2-nb1 + 2 ) / 2
+  ELSE
+      barra_load = k_grid%nps * ( nb2-nb1 + 1 )
+  ENDIF
   CALL start_bar_type( barra, 'sigmax', barra_load )
   !
   ! LOOP 
@@ -157,68 +169,100 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
         ENDIF
         !
-        DO iq = 1, q_grid%np
+        DO jb = nb1, nb2
+           !
+           if ( l_enable_off_diagonal ) then
+              if ( jb > ib ) cycle
+           else
+              if ( jb /= ib ) cycle
+           endif
            !
            IF (gamma_only) THEN
-              l_gammaq = .TRUE.
-              CALL pot3D%init('Dense',.FALSE.,'gb')
-              nbndval = nbnd_occ(iks)
-           ELSE
-              l_gammaq = q_grid%l_pIsGamma(iq)
-              CALL pot3D%init('Dense',.FALSE.,'gb',iq)
-              !
-              !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !M
-              CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        
-              ikqs = k_grid%ipis2ips(ikq,is)                                                        
-              CALL compute_phase( g0, 'cart', phase )
-              !
-              nbndval = nbnd_occ(ikqs)
-              npwkq = ngk(ikqs)
-              IF ( my_image_id == 0 ) CALL get_buffer( evckmq, lrwfc, iuwfc, ikqs )
-              CALL mp_bcast( evckmq, 0, inter_image_comm )
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave')
            ENDIF
            !
-           vband = idistribute()
-           CALL vband%init(nbndval,'i','nbndval',.FALSE.)
-           !
-           DO iv = 1, vband%nloc
+           DO iq = 1, q_grid%np
               !
-              iv_glob = vband%l2g(iv)
-              !
-              ! Bring it to R-space
               IF (gamma_only) THEN
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave')
-                 DO ir=1,dffts%nnr
-                    pertr(ir)=psic(ir)*pertr(ir)
-                 ENDDO
-                 CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Dense')
-              ELSEIF(noncolin) THEN
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
-                 DO ir=1,dffts%nnr 
-                    pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
-                 ENDDO
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
+                 l_gammaq = .TRUE.
+                 CALL pot3D%init('Dense',.FALSE.,'gb')
+                 nbndval = nbnd_occ(iks)
               ELSE
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv_glob),pertr,'Wave',igk_k(1,ikqs))
-                 DO ir=1,dffts%nnr 
-                    pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
+                 l_gammaq = q_grid%l_pIsGamma(iq)
+                 CALL pot3D%init('Dense',.FALSE.,'gb',iq)
+                 !
+                 !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !M
+                 CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        
+                 ikqs = k_grid%ipis2ips(ikq,is)                                                        
+                 CALL compute_phase( g0, 'cart', phase )
+                 !
+                 nbndval = nbnd_occ(ikqs)
+                 npwkq = ngk(ikqs)
+                 IF ( my_image_id == 0 ) CALL get_buffer( evckmq, lrwfc, iuwfc, ikqs )
+                 CALL mp_bcast( evckmq, 0, inter_image_comm )
+              ENDIF
+              !
+              vband = idistribute()
+              CALL vband%init(nbndval,'i','nbndval',.FALSE.)
+              !
+              DO iv = 1, vband%nloc
+                 !
+                 iv_glob = vband%l2g(iv)
+                 !
+                 ! Bring it to R-space
+                 IF (gamma_only) THEN
+                    CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave')
+                    DO ir=1,dffts%nnr
+                       pertr(ir)=psic(ir)*pertr(ir)
+                       IF ( l_enable_off_diagonal ) pertr1(ir)=psic1(ir)*pertr(ir)
+                    ENDDO
+                    CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Dense')
+                    CALL single_fwfft_gamma(dffts,ngm,ngm,pertr1,pertg1,'Dense')
+                 ELSEIF(noncolin) THEN
+                    CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
+                    CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
+                    DO ir=1,dffts%nnr 
+                       pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
+                    ENDDO
+                    CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Dense') ! no igk
+                 ELSE
+                    CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv_glob),pertr,'Wave',igk_k(1,ikqs))
+                    DO ir=1,dffts%nnr 
+                       pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
+                    ENDDO
+                    CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Dense') ! no igk
+                 ENDIF 
+                 !
+                 DO ig = 1,ngm
+                    pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
+                    IF ( l_enable_off_diagonal ) pertg1(ig) = pertg1(ig) * pot3D%sqvc(ig)
                  ENDDO
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Dense') ! no igk
-              ENDIF 
+                 !
+                 IF ( l_enable_off_diagonal ) THEN
+                       IF ( ib == jb ) THEN
+                          braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+                          sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - braket
+                       ELSE
+                          braket = peso*REAL( ZDOTC( ngm, pertg(1), 1, pertg1(1), 1 ) )/omega*q_grid%weight(iq)
+                       ENDIF
+                       sigma_exx_full( jb, ib, iks ) = sigma_exx_full( jb, ib, iks ) - braket
+                 ELSE
+                    braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+                    sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - braket
+                 ENDIF
+                 !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
+                 IF( ib == iv_glob .AND. ib == jb .AND. gstart == 2 .AND. l_gammaq ) THEN
+                     IF ( l_enable_off_diagonal ) sigma_exx_full( jb, ib, iks ) = sigma_exx_full( jb, ib, iks ) - pot3D%div
+                     sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
+                 ENDIF 
+                 !
+              ENDDO ! iv
               !
-              DO ig = 1,ngm
-                 pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
-              ENDDO
-              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
-              !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
-              IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
-              !
-           ENDDO ! iv
-           !
-        ENDDO ! iq
-        !
-        CALL update_bar_type( barra, 'sigmax', 1 )
+            ENDDO ! iq
+            !
+            CALL update_bar_type( barra, 'sigmax', 1 )
+            !
+        ENDDO
         !
      ENDDO ! ib
      !
@@ -228,12 +272,18 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   !
   CALL mp_sum( sigma_exx, intra_bgrp_comm )
   CALL mp_sum( sigma_exx, inter_image_comm ) 
+  IF (l_enable_off_diagonal) THEN
+     CALL mp_sum( sigma_exx_full, intra_bgrp_comm)
+     CALL mp_sum( sigma_exx_full, inter_image_comm)
+  ENDIF
   !
   DEALLOCATE( pertg ) 
+  IF (l_enable_off_diagonal) DEALLOCATE( pertg1 )
   IF( noncolin ) THEN 
     DEALLOCATE( pertr_nc ) 
   ELSE
     DEALLOCATE( pertr ) 
+    IF (l_enable_off_diagonal) DEALLOCATE( pertr1, psic1 )
   ENDIF
   IF (.NOT.gamma_only) THEN
      DEALLOCATE( phase )

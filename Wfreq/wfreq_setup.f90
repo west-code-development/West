@@ -18,7 +18,8 @@ SUBROUTINE wfreq_setup
                                    & n_pdep_eigen_to_use,n_imfreq,nbnd_occ,l_macropol,macropol_calculation,&
                                    & n_refreq,qp_bandrange,wfreq_calculation, fftdriver
   USE westcom,                ONLY : sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
-                                     & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf
+                                     & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
+                                     & l_enable_off_diagonal, sigma_exx_full, sigma_vxcl_full, sigma_vxcnl_full
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : nbnd,nks
@@ -88,6 +89,14 @@ SUBROUTINE wfreq_setup
   ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  IF (l_enable_off_diagonal) THEN
+     ALLOCATE( sigma_exx_full (qp_bandrange(1):qp_bandrange(2),\
+     qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     ALLOCATE( sigma_vxcl_full (qp_bandrange(1):qp_bandrange(2),\
+     qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     ALLOCATE( sigma_vxcnl_full (qp_bandrange(1):qp_bandrange(2),\
+     qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ENDIF
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
@@ -99,6 +108,11 @@ SUBROUTINE wfreq_setup
   sigma_sc_eqplin = 0._DP
   sigma_sc_eqpsec = 0._DP
   sigma_diff = 0._DP
+  IF (l_enable_off_diagonal) THEN
+     sigma_exx_full = 0._DP
+     sigma_vxcl_full = 0._DP
+     sigma_vxcnl_full = 0._DP
+  ENDIF
   l_generate_plot = .FALSE.
   DO i = 1, 8
      IF( wfreq_calculation(i:i) == 'P' ) l_generate_plot = .TRUE.

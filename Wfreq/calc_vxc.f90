@@ -33,7 +33,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions_module, ONLY : evc,psic
   USE westcom,              ONLY : qp_bandrange,iuwfc,lrwfc
-  USE westcom,              ONLY : l_enable_off_diagonal,sigma_vxcl_full,sigma_vxcnl_full
+  USE westcom,              ONLY : l_enable_off_diagonal,sigma_vxcl_full,sigma_vxcnl_full,ijpmap
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
@@ -57,7 +57,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   REAL(DP) :: etxc_
   REAL(DP) :: vtxc_
   REAL(DP), ALLOCATABLE :: vxc(:,:)
-  INTEGER :: ib,iv,i1,ir,iks,ib_glob,jb_glob
+  INTEGER :: ib,iv,i1,ir,iks,ib_glob,jb_glob,index
   COMPLEX(DP) :: braket
   REAL(DP) :: nnr 
   TYPE(bar_type) :: barra
@@ -150,30 +150,21 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  !
                  braket = 0._DP
                  !
-                 IF (l_enable_off_diagonal) THEN
-                    IF ( jb_glob > gwbnd%l2g(ib) ) THEN
-                       CYCLE
-                    ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
-                       DO ir = 1, dfftp%nnr
-                          braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin) 
-                       ENDDO
-                       sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks)&
-                       &= REAL(braket,KIND=DP) / nnr
-                    ELSE
-                       CALL single_invfft_gamma(dfftp,npw,npwx,evc(1,qp_bandrange(1)+jb_glob-1),psic1,'Wave')
-                       DO ir = 1, dfftp%nnr
-                          braket = braket + psic(ir)*DCONJG(psic1(ir)) * vxc(ir,current_spin) 
-                       ENDDO
-                    ENDIF
-                    sigma_vxcl_full(qp_bandrange(1)+jb_glob-1,&
-                    &qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL(braket,KIND=DP) / nnr
-                 ELSE
-                    IF ( jb_glob /= gwbnd%l2g(ib) ) CYCLE
+                 IF (l_enable_off_diagonal) index = ijpmap(qp_bandrange(1)+jb_glob-1,qp_bandrange(1)+gwbnd%l2g(ib)-1)
+                 !
+                 IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
+                    CALL single_invfft_gamma(dfftp,npw,npwx,evc(1,qp_bandrange(1)+jb_glob-1),psic1,'Wave')
+                    DO ir = 1, dfftp%nnr
+                       braket = braket + psic(ir)*DCONJG(psic1(ir)) * vxc(ir,current_spin) 
+                    ENDDO
+                    sigma_vxcl_full(index,iks) = REAL(braket,KIND=DP) / nnr
+                 ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
                     DO ir = 1, dfftp%nnr
                        braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin) 
                     ENDDO
                     sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks)&
                     &= REAL(braket,KIND=DP) / nnr
+                    IF (l_enable_off_diagonal) sigma_vxcl_full(index,iks) = REAL(braket,KIND=DP) / nnr
                  ENDIF
                  !
               ENDDO
@@ -231,23 +222,16 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  !
                  DO jb_glob = 1, numbandegw
                     !
-                    IF (l_enable_off_diagonal) THEN
-                       IF ( jb_glob > gwbnd%l2g(ib) ) THEN
-                          CYCLE
-                       ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
-                          braket = 2._DP * DDOT( 2*npw, xpsi(1,ib), 1, vxpsi(1,ib), 1)
-                          IF(gstart==2) braket = braket - REAL( xpsi(1,ib), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
-                          sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL( braket, KIND=DP )
-                       ELSE
-                          braket = REAL( ZDOTC( npw, evc(1,jb_glob),1,vxpsi(1,ib),1) )
-                       ENDIF
-                       sigma_vxcnl_full(qp_bandrange(1)+jb_glob-1,\
-                       qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL( braket, KIND=DP )
-                    ELSE
-                       IF ( jb_glob /= gwbnd%l2g(ib) ) CYCLE
+                    IF (l_enable_off_diagonal) index = ijpmap(qp_bandrange(1)+jb_glob-1,qp_bandrange(1)+gwbnd%l2g(ib)-1)
+                    !
+                    IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
+                       braket = REAL( ZDOTC( npw, evc(1,jb_glob),1,vxpsi(1,ib),1) )
+                       sigma_vxcnl_full(index,iks) = REAL( braket, KIND=DP )    
+                    ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
                        braket = 2._DP * DDOT( 2*npw, xpsi(1,ib), 1, vxpsi(1,ib), 1)
                        IF(gstart==2) braket = braket - REAL( xpsi(1,ib), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
                        sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks) = REAL( braket, KIND=DP )
+                       IF (l_enable_off_diagonal) sigma_vxcnl_full(index,iks) = REAL( braket, KIND=DP )
                     ENDIF
                     !
                  ENDDO

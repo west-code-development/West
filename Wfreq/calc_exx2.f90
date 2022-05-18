@@ -33,7 +33,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions_module, ONLY : evc,psic,psic_nc
   USE westcom,              ONLY : iuwfc,lrwfc,npwq,nbnd_occ
-  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full
+  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,npair
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol 
   USE buffers,              ONLY : get_buffer
@@ -63,7 +63,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs,ikq,jb
+  INTEGER :: ib,iv,i1,ir,iks,ik,is,ig,iv_glob,iq,ikqs,ikq,jb,index
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -103,7 +103,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   sigma_exx = 0._DP
   !
   IF (l_enable_off_diagonal) THEN
-      barra_load = k_grid%nps * ( nb2-nb1 + 1 ) * ( nb2-nb1 + 2 ) / 2
+      barra_load = k_grid%nps * npair
   ELSE
       barra_load = k_grid%nps * ( nb2-nb1 + 1 )
   ENDIF
@@ -171,11 +171,12 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
         !
         DO jb = nb1, nb2
            !
-           if ( l_enable_off_diagonal ) then
-              if ( jb > ib ) cycle
-           else
-              if ( jb /= ib ) cycle
-           endif
+           IF ( l_enable_off_diagonal ) THEN
+              IF ( jb > ib ) CYCLE
+              index = ijpmap(jb,ib)
+           ELSE
+              IF ( jb /= ib ) CYCLE
+           ENDIF
            !
            IF (gamma_only) THEN
               CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave')
@@ -238,23 +239,19 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
                     IF ( l_enable_off_diagonal ) pertg1(ig) = pertg1(ig) * pot3D%sqvc(ig)
                  ENDDO
                  !
-                 IF ( l_enable_off_diagonal ) THEN
-                       IF ( ib == jb ) THEN
-                          braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
-                          sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - braket
-                       ELSE
-                          braket = peso*REAL( ZDOTC( ngm, pertg(1), 1, pertg1(1), 1 ) )/omega*q_grid%weight(iq)
-                       ENDIF
-                       sigma_exx_full( jb, ib, iks ) = sigma_exx_full( jb, ib, iks ) - braket
-                 ELSE
+                 IF ( l_enable_off_diagonal .AND. jb < ib ) THEN
+                    braket = peso*REAL( ZDOTC( ngm, pertg(1), 1, pertg1(1), 1 ) )/omega*q_grid%weight(iq)
+                    sigma_exx_full( index, iks ) = sigma_exx_full( index, iks ) - braket
+                 ELSEIF ( jb == ib ) THEN
                     braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
                     sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - braket
+                    IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks ) = sigma_exx_full( index, iks ) - braket
+                    !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
+                    IF( ib == iv_glob .AND. gstart == 2 .AND. l_gammaq ) THEN
+                       sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
+                       IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks ) = sigma_exx_full( index, iks ) - pot3D%div
+                    ENDIF 
                  ENDIF
-                 !IF(gstart==2) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) + REAL( pertg(1), KIND = DP )**2 / omega
-                 IF( ib == iv_glob .AND. ib == jb .AND. gstart == 2 .AND. l_gammaq ) THEN
-                     IF ( l_enable_off_diagonal ) sigma_exx_full( jb, ib, iks ) = sigma_exx_full( jb, ib, iks ) - pot3D%div
-                     sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
-                 ENDIF 
                  !
               ENDDO ! iv
               !
@@ -262,7 +259,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
             !
             CALL update_bar_type( barra, 'sigmax', 1 )
             !
-        ENDDO
+        ENDDO ! jb
         !
      ENDDO ! ib
      !

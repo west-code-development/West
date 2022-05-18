@@ -19,7 +19,7 @@ SUBROUTINE wfreq_setup
                                    & n_refreq,qp_bandrange,wfreq_calculation, fftdriver
   USE westcom,                ONLY : sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
                                      & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
-                                     & l_enable_off_diagonal, sigma_exx_full, sigma_vxcl_full, sigma_vxcnl_full
+                                     & l_enable_off_diagonal,sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,ijpmap,npair
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : nbnd,nks
@@ -37,7 +37,7 @@ SUBROUTINE wfreq_setup
   REAL(DP) :: q(3)
   REAL(DP) :: qq
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: ig,i
+  INTEGER :: ig,i,ib,jb,index
   LOGICAL :: l_generate_plot 
   !
   CALL do_setup ( ) 
@@ -90,12 +90,19 @@ SUBROUTINE wfreq_setup
   ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   IF (l_enable_off_diagonal) THEN
-     ALLOCATE( sigma_exx_full (qp_bandrange(1):qp_bandrange(2),\
-     qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-     ALLOCATE( sigma_vxcl_full (qp_bandrange(1):qp_bandrange(2),\
-     qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-     ALLOCATE( sigma_vxcnl_full (qp_bandrange(1):qp_bandrange(2),\
-     qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     npair = (qp_bandrange(2)-qp_bandrange(1)+1)*(qp_bandrange(2)-qp_bandrange(1)+2)/2
+     ALLOCATE(ijpmap(qp_bandrange(1):qp_bandrange(2),qp_bandrange(1):qp_bandrange(2)))
+     index = 1
+     DO ib = qp_bandrange(1), qp_bandrange(2)
+        DO jb = qp_bandrange(1), qp_bandrange(2)
+           ijpmap(ib,jb) = index
+           ijpmap(jb,ib) = index
+           index = index + 1
+        ENDDO 
+     ENDDO
+     ALLOCATE( sigma_exx_full (npair,k_grid%nps) )
+     ALLOCATE( sigma_vxcl_full (npair,k_grid%nps) )
+     ALLOCATE( sigma_vxcnl_full (npair,k_grid%nps) )
   ENDIF
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP

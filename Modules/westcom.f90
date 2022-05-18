@@ -62,6 +62,10 @@ MODULE scratch_area
   REAL(DP),ALLOCATABLE    :: d_diago(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_head_rfr(:)
   COMPLEX(DP),ALLOCATABLE :: z_body_rfr(:,:,:,:) 
+  REAL(DP),ALLOCATABLE    :: d_body1_ifr_full(:,:,:,:)
+  REAL(DP),ALLOCATABLE    :: d_body2_ifr_full(:,:,:,:,:)
+  REAL(DP),ALLOCATABLE    :: d_diago_full(:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
   !
   ! CORRELATION with q-points
   COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
@@ -192,6 +196,11 @@ MODULE wfreq_center
   REAL(DP),ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP),PARAMETER :: frequency_list_power = 2._DP
   !
+  ! off-diagonal entries mapping
+  !
+  INTEGER,ALLOCATABLE :: ijpmap(:,:)
+  INTEGER :: npair
+  !
   ! gw_etot 
   !
   REAL(DP) :: dft_etot
@@ -218,6 +227,7 @@ MODULE wfreq_center
   REAL(DP),ALLOCATABLE    :: sigma_exx_full  (:,:,:) 
   REAL(DP),ALLOCATABLE    :: sigma_vxcl_full (:,:,:) 
   REAL(DP),ALLOCATABLE    :: sigma_vxcnl_full(:,:,:) 
+  COMPLEX(DP),ALLOCATABLE :: sigma_corr_full (:,:)
   !
 END MODULE
 !

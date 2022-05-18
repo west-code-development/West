@@ -38,7 +38,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE westcom,              ONLY : west_prefix,n_pdep_eigen_to_use,n_lanczos,npwq,qp_bandrange,iks_l2g,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver, &
                                  & wstat_save_dir
-  USE westcom,              ONLY : l_enable_off_diagonal
+  USE westcom,              ONLY : l_enable_off_diagonal, ijpmap
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm,inter_pool_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_sum
   USE io_global,            ONLY : stdout, ionode
@@ -73,15 +73,16 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iks,m,im
+  INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,ib,iks,m,im,jb,index
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=6)      :: my_label_b
   COMPLEX(DP),ALLOCATABLE :: auxr(:)
   INTEGER :: nbndval
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:), braket(:, :, :)
+  REAL(DP),ALLOCATABLE :: diago1( :, : ), subdiago1( :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
-  COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
+  COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:), psic1(:), dvpsi1(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   REAL(DP),ALLOCATABLE :: ps_r(:,:)
@@ -119,7 +120,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      DO ib = qp_bandrange(1), qp_bandrange(2)
         IF(iks==bks%lastdone_ks .AND. ib <= bks%lastdone_band ) CYCLE
         IF (l_enable_off_diagonal) THEN
-            barra_load = barra_load + qp_bandrange(2) - qp_bandrange(1) + 2
+            barra_load = barra_load + qp_bandrange(2) - ib + 1
         ELSE
             barra_load = barra_load + 1
         ENDIF
@@ -274,23 +275,96 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            CALL solve_deflated_lanczos_w_full_ortho ( nbnd, pert%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
            !
-           ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
-           CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
-           DEALLOCATE( q_s )
-           !
-           DO ip = 1, pert%nloc
-              CALL diago_lanczos( bnorm(ip), diago( :, ip), subdiago( :, ip), braket(:,:,ip), pert%nglob )
+           DO jb = qp_bandrange(1), qp_bandrange(2)
+              !
+              IF (l_enable_off_diagonal) index = ijpmap(jb,ib)
+              !
+              IF (l_enable_off_diagonal .and. jb < ib) THEN     
+                  !
+                  ! PSIC
+                  !
+                  ALLOCATE( psic1(dffts%nnr) )
+                  CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave') 
+                  !
+                  ! ZEROS
+                  !
+                  dvpsi1 = 0._DP   
+                  !
+                  ! Read PDEP
+                  !
+                  ALLOCATE( pertg( npwqx ) )
+                  ALLOCATE( pertr( dffts%nnr ) )
+                  !
+                  DO ip=1,pert%nloc
+                     glob_ip = pert%l2g(ip)
+                     pertg = pertg_all(:,ip)
+                     !
+                     ! Multiply by sqvc
+                     DO ig = 1, npwq
+                        pertg(ig) = pot3D%sqvc(ig) * pertg(ig)
+                     ENDDO
+                     !
+                     ! Bring it to R-space
+                     CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
+                     DO ir=1,dffts%nnr
+                        pertr(ir)=psic1(ir)*pertr(ir)
+                     ENDDO
+                     CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi1(1,ip),'Wave')
+                     !
+                  ENDDO ! pert
+                  ! 
+                  DEALLOCATE(pertr)
+                  DEALLOCATE(pertg)
+                  DEALLOCATE(psic1)
+                  !
+                  CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi1,(1._DP,0._DP))
+                  !
+                  ALLOCATE( diago1    (               n_lanczos   , pert%nloc ) )
+                  ALLOCATE( subdiago1 (               n_lanczos-1 , pert%nloc ) )               
+                  ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
+                  !
+                  diago1 = diago
+                  subdiago1 = subdiago
+                  !
+                  CALL get_brak_hyper_parallel(dvpsi1,pert%nloc,n_lanczos,q_s,braket,pert%nloc,pert%nlocx,pert%nglob)
+                  !
+                  DO ip = 1, pert%nloc
+                     CALL diago_lanczos( bnorm(ip), diago1( :, ip), subdiago1( :, ip), braket(:,:,ip), pert%nglob )
+                  ENDDO
+                  !
+                  DEALLOCATE( subdiago1 )
+                  !
+                  CALL writeout_solvegfreq( iks_l2g(iks), jb, ib, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
+                  ! 
+                  DEALLOCATE( diago1, braket )
+                  !
+                  CALL update_bar_type( barra, 'glanczos', 1 )
+                  !                  
+              ELSEIF ( jb == ib ) THEN
+                  !
+                  ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
+                  CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
+                  DEALLOCATE( q_s )
+                  !
+                  DO ip = 1, pert%nloc
+                     CALL diago_lanczos( bnorm(ip), diago( :, ip), subdiago( :, ip), braket(:,:,ip), pert%nglob )
+                  ENDDO
+                  !
+                  DEALLOCATE( bnorm )
+                  DEALLOCATE( subdiago )
+                  !
+                  ! MPI-IO
+                  !
+                  CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                  ! IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), jb, ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                  IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                  !
+                  DEALLOCATE( diago )
+                  DEALLOCATE( braket )
+                  !
+              ENDIF
+              !
            ENDDO
-           !
-           DEALLOCATE( bnorm )
-           DEALLOCATE( subdiago )
-           !
-           ! MPI-IO
-           !
-           CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
-           !
-           DEALLOCATE( diago )
-           DEALLOCATE( braket )
            !
         ENDIF ! l_enable_lanczos
         !
@@ -311,7 +385,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
      ENDDO ! BANDS
      !
-     DEALLOCATE(dvpsi)
+     DEALLOCATE(dvpsi, dvpsi1)
      !
   ENDDO ! KPOINT-SPIN
   !

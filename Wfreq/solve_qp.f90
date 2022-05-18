@@ -44,6 +44,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
                                  & d_head_ifr,d_body1_ifr,d_body2_ifr,d_diago,z_head_rfr,z_body_rfr, &
                                  & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff, &
                                  & sigma_spectralf,sigma_freq
+  USE westcom,              ONLY : l_enable_off_diagonal,ijpmap,npair,d_body1_ifr_full,d_body2_ifr_full,&
+                                 & d_diago_full,z_body_rfr_full
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_barrier,mp_sum
@@ -75,7 +77,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: en(:,:,:) 
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER   :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: k, ib, iks, ifixed, ip, glob_ip, ifreq, il, im, glob_im, glob_jp, glob_ifreq
+  INTEGER :: k, ib, iks, ifixed, ip, glob_ip, ifreq, il, im, glob_im, glob_jp, glob_ifreq,jb,index
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk 
   CHARACTER(LEN=6) :: cifixed
@@ -86,7 +88,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   COMPLEX(DP),ALLOCATABLE :: ztemp(:)
   REAL(DP),ALLOCATABLE :: diago(:,:)
   REAL(DP),ALLOCATABLE :: braket(:,:,:)
-  REAL(DP),ALLOCATABLE :: overlap(:,:)
+  REAL(DP),ALLOCATABLE :: overlap(:,:), overlap1(:,:)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   CHARACTER(LEN=126) :: fname
@@ -141,11 +143,31 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      d_diago = 0._DP
   ENDIF
   !
+  IF (l_enable_off_diagonal) THEN
+     ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, npair, k_grid%nps ) )
+     ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, npair, k_grid%nps ) )
+     IF ( l_enable_lanczos ) THEN
+        ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, npair, k_grid%nps ) )
+        ALLOCATE( d_diago_full( n_lanczos, pert%nloc, npair, k_grid%nps ) )
+     ENDIF
+     !
+     d_body1_ifr_partial = 0._DP
+     z_body_rfr_partial = 0._DP
+     IF ( l_enable_lanczos ) THEN
+        d_body2_ifr_full = 0._DP    
+        d_diago_full = 0._DP
+     ENDIF
+  ENDIF
+  !
   ! d_body1_ifr, d_body2_ifr, z_diago_rfr, d_diago
   !
   CALL io_push_title("Collecting results from W and G")
   !
-  barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF (l_enable_off_diagonal) THEN
+     barra_load = k_grid%nps * npair
+  ELSE
+     barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  ENDIF
   CALL start_bar_type( barra, 'coll_gw', barra_load )
   !
   ! LOOP 
@@ -161,104 +183,140 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         !
         CALL readin_overlap( 'g', iks_l2g(iks), ib, overlap, pert%nglob, nbnd )
         !
-        ! ------
-        ! d_body1_ifr
-        ! ------
-        !
-        ALLOCATE( dtemp(nbnd) )
-        !
-        DO ifreq = 1, ifr%nloc 
-           !
-           dtemp = 0._DP
-           !
-           DO im = 1, nbnd 
-              !
-              DO glob_jp = 1, n_pdep_eigen_to_use
-                 DO ip = 1, pert%nloc
-                    glob_ip = pert%l2g(ip)
-                    dtemp( im ) = dtemp( im ) + overlap(glob_jp,im)*overlap(glob_ip,im)*d_epsm1_ifr(glob_jp,ip,ifreq)
-                 ENDDO
-              ENDDO 
-              !
-           ENDDO ! im
-           !
-           CALL mp_sum( dtemp, inter_image_comm ) 
-           !
-           DO im = 1, aband%nloc
-              glob_im = aband%l2g(im)
-              d_body1_ifr(im,ifreq,ib,iks) = dtemp(glob_im)
-           ENDDO
-           !
-        ENDDO ! ifreq
-        !
-        DEALLOCATE( dtemp ) 
-        !
-        ! -----
-        ! z_body_rfr
-        ! -----
-        !
-        ALLOCATE( ztemp(nbnd) )
-        !
-        DO ifreq = 1, rfr%nloc 
-           !
-           ztemp = 0._DP
-           !
-           DO im = 1, nbnd 
-              !
-              DO glob_jp = 1, n_pdep_eigen_to_use
-                 DO ip = 1, pert%nloc
-                    glob_ip = pert%l2g(ip)
-                    ztemp( im ) = ztemp( im ) + overlap(glob_jp,im)*overlap(glob_ip,im)*z_epsm1_rfr(glob_jp,ip,ifreq) 
-                 ENDDO
-              ENDDO 
-              !
-           ENDDO ! im
-           !
-           CALL mp_sum( ztemp, inter_image_comm ) 
-           !
-           DO im = 1, aband%nloc
-              glob_im = aband%l2g(im)
-              z_body_rfr(im,ifreq,ib,iks) = ztemp(glob_im)
-           ENDDO
-           !
-        ENDDO ! ifreq
-        !
-        DEALLOCATE( ztemp ) 
-        !
-        ! -----------------------------
-        ! LANCZOS part : d_diago, d_body2_ifr
-        ! -----------------------------
-        !
-        IF( l_enable_lanczos ) THEN
-           !
-           ALLOCATE( braket(pert%nglob,n_lanczos,pert%nloc) )
-           ALLOCATE( diago(n_lanczos,pert%nloc) )
-           CALL readin_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
-           !
-           DO ip = 1, pert%nloc
-              DO il = 1, n_lanczos
-                 d_diago(il,ip,ib,iks) = diago(il,ip) 
-              ENDDO
-           ENDDO
-           !
-           DO ifreq = 1,ifr%nloc
-              DO ip = 1, pert%nloc
-                 DO il = 1, n_lanczos
-                    DO glob_jp = 1, pert%nglob
-                       d_body2_ifr(il,ip,ifreq,ib,iks) = d_body2_ifr(il,ip,ifreq,ib,iks) + &
-                       & braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
-                    ENDDO
-                 ENDDO
-              ENDDO
-           ENDDO
-           !
-           DEALLOCATE(diago)
-           DEALLOCATE(braket)
-           !
-        ENDIF
-        !
-        CALL update_bar_type( barra, 'coll_gw', 1 )
-        !
+         DO jb = qp_bandrange(1), qp_bandrange(2)
+            !
+            IF ( l_enable_off_diagonal ) THEN
+               IF ( jb > ib ) CYCLE
+               index = ijpmap(jb,ib)
+               !
+               IF(ALLOCATED(overlap1)) DEALLOCATE(overlap1) 
+               ALLOCATE(overlap1(pert%nglob, nbnd ) )
+               !
+               CALL readin_overlap( 'g', iks_l2g(iks), jb, overlap1, pert%nglob, nbnd )
+            ELSE
+               IF ( jb /= ib ) CYCLE
+            ENDIF
+            !
+            ! ------
+            ! d_body1_ifr
+            ! ------
+            !
+            ALLOCATE( dtemp(nbnd) )
+            !
+            DO ifreq = 1, ifr%nloc 
+               !
+               dtemp = 0._DP
+               !
+               DO im = 1, nbnd 
+                  !
+                  DO glob_jp = 1, n_pdep_eigen_to_use
+                     DO ip = 1, pert%nloc
+                        glob_ip = pert%l2g(ip)
+                        IF (l_enable_off_diagonal .AND. jb < ib) THEN
+                           dtemp( im ) = dtemp( im ) + overlap1(glob_jp,im)&
+                           &*overlap(glob_ip,im)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                        ELSEIF (jb == ib) THEN
+                           dtemp( im ) = dtemp( im ) + overlap(glob_jp,im)*overlap(glob_ip,im)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                        ENDIF
+                     ENDDO
+                  ENDDO 
+                  !
+               ENDDO ! im
+               !
+               CALL mp_sum( dtemp, inter_image_comm ) 
+               !
+               DO im = 1, aband%nloc
+                  glob_im = aband%l2g(im)
+                  d_body1_ifr(im,ifreq,ib,iks) = dtemp(glob_im)
+                  IF (l_enable_off_diagonal) d_body1_ifr_full(im,ifreq,index,iks) = dtemp(glob_im)
+               ENDDO
+               !
+            ENDDO ! ifreq
+            !
+            DEALLOCATE( dtemp ) 
+            !
+            ! -----
+            ! z_body_rfr
+            ! -----
+            !
+            ALLOCATE( ztemp(nbnd) )
+            !
+            DO ifreq = 1, rfr%nloc 
+               !
+               ztemp = 0._DP
+               !
+               DO im = 1, nbnd 
+                  !
+                  DO glob_jp = 1, n_pdep_eigen_to_use
+                     DO ip = 1, pert%nloc
+                        glob_ip = pert%l2g(ip)
+                        IF (l_enable_off_diagonal .AND. jb < ib) THEN
+                           ztemp( im ) = ztemp( im ) + overlap1(glob_jp,im)&
+                           &*overlap(glob_ip,im)*z_epsm1_rfr(glob_jp,ip,ifreq)
+                        ELSEIF (jb == ib) THEN
+                           ztemp( im ) = ztemp( im ) + overlap(glob_jp,im)*overlap(glob_ip,im)*z_epsm1_rfr(glob_jp,ip,ifreq) 
+                        ENDIF
+                     ENDDO
+                  ENDDO 
+                  !
+               ENDDO ! im
+               !
+               CALL mp_sum( ztemp, inter_image_comm ) 
+               !
+               DO im = 1, aband%nloc
+                  glob_im = aband%l2g(im)
+                  z_body_rfr(im,ifreq,ib,iks) = ztemp(glob_im)
+                  IF (l_enable_off_diagonal) z_body_rfr_full(im,ifreq,index,iks) = ztemp(glob_im)
+               ENDDO
+               !
+            ENDDO ! ifreq
+            !
+            DEALLOCATE( ztemp ) 
+            !
+            ! -----------------------------
+            ! LANCZOS part : d_diago, d_body2_ifr
+            ! -----------------------------
+            !
+            IF( l_enable_lanczos ) THEN
+               !
+               ALLOCATE( braket(pert%nglob,n_lanczos,pert%nloc) )
+               ALLOCATE( diago(n_lanczos,pert%nloc) )
+               IF (l_enable_off_diagonal .AND. jb < ib) THEN
+                  CALL readin_solvegfreq( iks_l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+               ELSEIF (jb == ib) THEN
+                  CALL readin_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+               ENDIF
+               !
+               DO ip = 1, pert%nloc
+                  DO il = 1, n_lanczos
+                     d_diago(il,ip,ib,iks) = diago(il,ip) 
+                     IF (l_enable_lanczos) d_diago(il,ip,index,iks) = diago(il,ip) 
+                  ENDDO
+               ENDDO
+               !
+               DO ifreq = 1,ifr%nloc
+                  DO ip = 1, pert%nloc
+                     DO il = 1, n_lanczos
+                        DO glob_jp = 1, pert%nglob
+                           d_body2_ifr(il,ip,ifreq,ib,iks) = d_body2_ifr(il,ip,ifreq,ib,iks) + &
+                           & braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                           IF (l_enable_off_diagonal) d_body2_ifr_full(il,ip,ifreq,index,iks) = &
+                           & d_body2_ifr_full(il,ip,ifreq,index,iks) + braket(glob_jp,il,ip) &
+                           & *d_epsm1_ifr(glob_jp,ip,ifreq)
+                        ENDDO
+                     ENDDO
+                  ENDDO
+               ENDDO
+               !
+               DEALLOCATE(diago)
+               DEALLOCATE(braket)
+               !
+            ENDIF
+            !
+            CALL update_bar_type( barra, 'coll_gw', 1 )
+            !
+         ENDDO
+         !
      ENDDO ! ibnd
      !
   ENDDO ! iks
@@ -434,8 +492,12 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         en(:,:,2) = qp_energy(:,:)   
         !
      ENDDO
-     !
+     !   
      sigma_cor_out(:,:) = sc(:,:,2)
+     !
+     IF (l_enable_off_diagonal) THEN
+        CALL calc_corr_gamma( sc(:,:,2), qp_energy(:,:), .TRUE., .TRUE.) 
+     !
      DEALLOCATE( en, sc, l_conv )
      !
      IF( notconv .NE. 0 ) THEN 

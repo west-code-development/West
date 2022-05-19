@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021. Govoni 
+! Copyright (C) 2015-2021. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -37,11 +37,11 @@ SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
   DO ibnd=1,m
      !
 !$OMP PARALLEL DO
-     DO ig=1,npw 
+     DO ig=1,npw
         pf(ig,ibnd) = f(ig,ibnd) / MAX(1._DP,g2kin(ig)/eprec(ibnd))
      ENDDO
 !$OMP END PARALLEL DO
-     IF( noncolin ) THEN 
+     IF( noncolin ) THEN
 !$OMP PARALLEL DO
         DO ig=1,npw
            pf(npwx+ig,ibnd) = f(npwx+ig,ibnd) / MAX(1._DP,g2kin(ig)/eprec(ibnd))

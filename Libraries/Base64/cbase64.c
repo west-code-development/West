@@ -1,5 +1,5 @@
 /*
-! Copyright (C) 2015-2017 M. Govoni 
+! Copyright (C) 2015-2017 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,14 +7,14 @@
 !
 ! This file is part of WEST. It is created based on Base64Transcoder.C in Qbox
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Huihuo Zheng
 */
 
 #include "cbase64.h"
 
 void b64init() {
-  int i; 
+  int i;
   /// this is to initialized the encode and decode tables
   for (i = 0; i < 26; i++) {
       etable[i] = 'A' + i;
@@ -25,7 +25,7 @@ void b64init() {
   }
   etable[62] = '+';
   etable[63] = '/';
-  
+
   for (i = 0; i < 255; i++) {
       dtable[i] = 0x80;
   }

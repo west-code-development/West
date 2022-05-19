@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,21 +7,20 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE set_nbndocc( )
+SUBROUTINE set_nbndocc()
   !-----------------------------------------------------------------------
   !
   ! current_spin is needed
   !
   USE kinds,                  ONLY : DP
-  USE pwcom,                  ONLY : nbnd,nelup,neldw,isk,nelec,nspin,lsda,nks,&
-                                   & lgauss,ltetra,wg,wk,tfixed_occ
+  USE pwcom,                  ONLY : nelup,neldw,isk,nelec,lsda,nks,&
+                                   & nbnd,lgauss,ltetra,wg,wk,tfixed_occnbnd
   USE constants,              ONLY : degspin
-  USE noncollin_module,       ONLY : noncolin,npol
-  USE io_global,              ONLY : stdout
+  USE noncollin_module,       ONLY : noncolin
   USE westcom,                ONLY : nbnd_occ,l_frac_occ,occ_numbers,&
                                    & nbnd_occ_one,nbnd_occ_nonzero
   USE types_bz_grid,          ONLY : k_grid
@@ -35,29 +34,30 @@ SUBROUTINE set_nbndocc( )
   ! Calculate NBNDVAL
   !
   IF(ALLOCATED(nbnd_occ)) DEALLOCATE(nbnd_occ)
-  ALLOCATE( nbnd_occ(k_grid%nps) )
+  ALLOCATE(nbnd_occ(nks))
   !
-  IF(lsda) THEN  
+  IF(lsda) THEN
      !
-     DO iks = 1, k_grid%nps
+     DO iks = 1,nks
+        !
         spin = isk(iks)
         !
         SELECT CASE(spin)
         CASE(1)
-           nbnd_occ(iks) = NINT (nelup) 
+           nbnd_occ(iks) = NINT(nelup)
         CASE(2)
-           nbnd_occ(iks) = NINT (neldw)
+           nbnd_occ(iks) = NINT(neldw)
         END SELECT
         !
      ENDDO
      !
   ELSEIF(noncolin) THEN
      !
-     nbnd_occ(:) = NINT( nelec )
+     nbnd_occ(:) = NINT(nelec)
      !
   ELSE
      !
-     nbnd_occ(:) = NINT( nelec ) / degspin
+     nbnd_occ(:) = NINT(nelec)/degspin
      !
   ENDIF
   !

@@ -15,9 +15,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE mp,                    ONLY : mp_barrier
   USE westcom,               ONLY : npwqx,npwq,wstat_calculation
-  USE mp_world,              ONLY : world_comm
   USE types_coulomb,         ONLY : pot3D
   USE dfpt_module,           ONLY : dfpt
   !
@@ -39,14 +37,12 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !
   LOGICAL :: l_outsource
   !
-  CALL mp_barrier( world_comm )
-  !
   l_outsource = .FALSE.
   DO i = 1,2
      IF( wstat_calculation(i:i) == 'E' ) l_outsource = .TRUE.
   ENDDO
   !
-  dng=0._DP
+  dng=(0.0_DP,0.0_DP)
   !
   ALLOCATE( aux_g(npwqx,m) ); aux_g=0._DP
   !
@@ -58,7 +54,7 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   !
   IF( l_outsource ) THEN
      CALL calc_outsourced(m,aux_g,dng,iq)
-  ELSE 
+  ELSE
      CALL dfpt(m,aux_g,dng,tr2,iq)
   ENDIF
   !
@@ -69,8 +65,6 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
         dng(ig,ipert) = dng(ig,ipert) * pot3D%sqvc(ig) ! perturbation acts only on body
      ENDDO
   ENDDO
-  !
-  CALL mp_barrier( world_comm )
   !
 END SUBROUTINE
 !
@@ -130,7 +124,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
         ENDIF
         !
         filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml"
-        aux_r_double(:) = DBLE(aux_r(:)) / 2._DP ! The output must be in Ha Atomic units
+        aux_r_double(:) = REAL(aux_r(:),KIND=DP) / 2._DP ! The output must be in Ha Atomic units
         CALL write_function3d(filename,aux_r_double,dffts)
         !
      ENDDO
@@ -160,7 +154,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
         !
         filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml.response"
         CALL read_function3d(filename,aux_r_double,dffts)
-        aux_r(:) = CMPLX(aux_r_double(:),0._DP)
+        aux_r(:) = CMPLX(aux_r_double(:),0._DP,KIND=DP)
         !
         IF(gamma_only) THEN
            CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,dng(:,ipert),TRIM(fftdriver))

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2019 M. Govoni
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -17,8 +17,6 @@ MODULE west_version
   USE forpy_mod, ONLY: list
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   CHARACTER(LEN=*), PARAMETER :: west_version_number = 'checkit'
   CHARACTER(LEN=*), PARAMETER :: west_git_revision = 'unknown'
@@ -38,18 +36,18 @@ MODULE west_version
      TYPE(module_py) :: pymod
      !
      IERR = forpy_initialize(forpy_use_numpy)
-     IF(IERR/=0) CALL errore('forpy','Err: cannot init forpy',1)
+     IF(IERR /= 0) CALL errore('forpy','Err: cannot init forpy',1)
      !
      IERR = get_sys_path(paths)
-     IF(IERR/=0) CALL errore('forpy','Err: cannot get_sys_path',1)
+     IF(IERR /= 0) CALL errore('forpy','Err: cannot get_sys_path',1)
      !
      IERR = paths%append(TRIM(ADJUSTL(west_topdir))//"/Pytools")
-     IF(IERR/=0) CALL errore('forpy','Err: cannot append paths',1)
+     IF(IERR /= 0) CALL errore('forpy','Err: cannot append paths',1)
      !
      ! Test: import west_fetch_input
      !
      IERR = import_py(pymod,'west_fetch_input')
-     IF(IERR/=0) THEN
+     IF(IERR /= 0) THEN
         CALL forpy_finalize()
         CALL errore('forpy','Err: cannot import module',1)
      ENDIF

@@ -196,7 +196,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      bks%min_band=1
      !
      ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
-     ALLOCATE(dvpsi1(npwx*npol,pert%nlocx))
+     IF (l_enable_off_diagonal) ALLOCATE(dvpsi1(npwx*npol,pert%nlocx))
      CALL preallocate_solvegfreq( iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert )
      !
      time_spent(1) = get_clock( 'glanczos' )
@@ -278,9 +278,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            DO jb = qp_bandrange(1), qp_bandrange(2)
               !
-              IF (l_enable_off_diagonal) index = ijpmap(jb,ib)
-              !
-              IF (l_enable_off_diagonal .and. jb < ib) THEN     
+              IF (l_enable_off_diagonal .and. jb <= ib) THEN     
+                 !
+                 index = ijpmap(jb,ib)
                  !
                  ! PSIC
                  !
@@ -335,13 +335,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  DEALLOCATE( subdiago1 )
                  !
-                 CALL writeout_solvegfreq( iks_l2g(iks), index, diago1, braket, pert%nloc, pert%nglob, pert%myoffset, .TRUE. )
+                 CALL writeout_solvegfreq( iks_l2g(iks), index, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
                  ! 
                  DEALLOCATE( diago1, braket )
                  !
                  CALL update_bar_type( barra, 'glanczos', 1 )
-                 !                  
-              ELSEIF ( jb == ib ) THEN
+                 !
+              ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
                  !
                  ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
                  CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
@@ -356,16 +356,18 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  ! MPI-IO
                  !
-                 CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset, .FALSE. )
-                 ! IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), jb, ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
-                 IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset, .TRUE. )
+                 CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
                  !
                  DEALLOCATE( diago )
                  DEALLOCATE( braket )
                  !
+                 CALL update_bar_type( barra, 'glanczos', 1 )
+                 !
               ENDIF
               !
            ENDDO
+           !
+           IF (l_enable_off_diagonal) DEALLOCATE(bnorm, diago, subdiago, q_s)
            !
         ENDIF ! l_enable_lanczos
         !
@@ -381,8 +383,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
               time_spent(1) = get_clock( 'glanczos' )
            ENDIF
         ENDIF
-        !
-        CALL update_bar_type( barra, 'glanczos', 1 )
         !
      ENDDO ! BANDS
      !

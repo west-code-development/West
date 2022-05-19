@@ -131,11 +131,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   ! 
   !
   IF (l_enable_off_diagonal) THEN
-     ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, npair, k_grid%nps ) )
-     ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, npair, k_grid%nps ) )
+     ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, 1:npair, k_grid%nps ) )
+     ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, 1:npair, k_grid%nps ) )
      IF ( l_enable_lanczos ) THEN
-        ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, npair, k_grid%nps ) )
-        ALLOCATE( d_diago_full( n_lanczos, pert%nloc, npair, k_grid%nps ) )
+        ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, 1:npair, k_grid%nps ) )
+        ALLOCATE( d_diago_full( n_lanczos, pert%nloc, 1:npair, k_grid%nps ) )
      ENDIF
      !
      d_body1_ifr_full = 0._DP
@@ -293,9 +293,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               ALLOCATE( braket(pert%nglob,n_lanczos,pert%nloc) )
               ALLOCATE( diago(n_lanczos,pert%nloc) )
               IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                 CALL readin_solvegfreq( iks_l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset, .TRUE. )
+                 CALL readin_solvegfreq( iks_l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                 CALL readin_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset, .FALSE. )
+                 CALL readin_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ENDIF
               !
               DO ip = 1, pert%nloc
@@ -512,7 +512,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !   
      sigma_cor_out(:,:) = sc(:,:,2)
      !
-     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), qp_energy(:,:), .TRUE., .TRUE.) 
+     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE.) 
      !
      DEALLOCATE( en, sc, l_conv )
      !

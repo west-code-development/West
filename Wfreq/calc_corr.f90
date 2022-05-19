@@ -171,7 +171,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
            !
-        ENDDO
+        ENDDO !jb
         !
      ENDDO ! ib
      !
@@ -307,7 +307,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
            !
-        ENDDO
+        ENDDO ! jb
         !
      ENDDO ! ib  
      !

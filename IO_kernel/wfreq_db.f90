@@ -37,6 +37,7 @@ MODULE wfreq_db
       USE westcom,              ONLY : wfreq_save_dir,iks_l2g,qp_bandrange,wfreq_calculation,n_spectralf,logfile, &
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
                                      & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_freq,sigma_spectralf
+      USE westcom,              ONLY : l_enable_off_diagonal,npair,sigma_vxcl_full,sigma_vxcnl_full,sigma_exx_full,sigma_corr_full
       USE pwcom,                ONLY : npw,nbnd,nkstot,nspin,nelec,nelup,neldw,lspinorb,domag,lsda,nks,et
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file 
@@ -139,6 +140,18 @@ MODULE wfreq_db
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
             & AIMAG(sigma_sc_eqpsec(qp_bandrange(1):qp_bandrange(2),iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(qp_bandrange(1):qp_bandrange(2),iks)*rytoev)
+            IF(l_enable_off_diagonal) THEN
+               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax_full', &
+               & sigma_exx_full(1:npair,iks)*rytoev)
+               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl_full', &
+               & sigma_vxcl_full(1:npair,iks)*rytoev)
+               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl_full', &
+               & sigma_vxcnl_full(1:npair,iks)*rytoev)
+               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_full.re', &
+               & DBLE(sigma_corr_full(1:npair,iks)*rytoev))
+               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_full.im', &
+               & AIMAG(sigma_corr_full(1:npair,iks)*rytoev))
+            ENDIF
             !
             IF( l_generate_plot ) THEN 
                DO ib = qp_bandrange(1), qp_bandrange(2)

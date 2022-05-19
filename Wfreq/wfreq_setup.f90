@@ -101,10 +101,10 @@ SUBROUTINE wfreq_setup
            index = index + 1
         ENDDO 
      ENDDO
-     ALLOCATE( sigma_exx_full (npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcl_full (npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcnl_full (npair,k_grid%nps) )
-     ALLOCATE( sigma_corr_full (npair,k_grid%nps) )
+     ALLOCATE( sigma_exx_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_vxcl_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_vxcnl_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_corr_full (1:npair,k_grid%nps) )
   ENDIF
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP

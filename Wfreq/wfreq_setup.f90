@@ -19,7 +19,8 @@ SUBROUTINE wfreq_setup
                                    & n_refreq,qp_bandrange,wfreq_calculation, fftdriver
   USE westcom,                ONLY : sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
                                      & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
-                                     & l_enable_off_diagonal,sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,ijpmap,npair
+                                     & l_enable_off_diagonal,sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,ijpmap,npair,&
+                                     & sigma_corr_full
   USE mp,                     ONLY : mp_max
   USE mp_global,              ONLY : intra_bgrp_comm
   USE pwcom,                  ONLY : nbnd,nks
@@ -94,7 +95,7 @@ SUBROUTINE wfreq_setup
      ALLOCATE(ijpmap(qp_bandrange(1):qp_bandrange(2),qp_bandrange(1):qp_bandrange(2)))
      index = 1
      DO ib = qp_bandrange(1), qp_bandrange(2)
-        DO jb = qp_bandrange(1), qp_bandrange(2)
+        DO jb = ib, qp_bandrange(2)
            ijpmap(ib,jb) = index
            ijpmap(jb,ib) = index
            index = index + 1
@@ -103,6 +104,7 @@ SUBROUTINE wfreq_setup
      ALLOCATE( sigma_exx_full (npair,k_grid%nps) )
      ALLOCATE( sigma_vxcl_full (npair,k_grid%nps) )
      ALLOCATE( sigma_vxcnl_full (npair,k_grid%nps) )
+     ALLOCATE( sigma_corr_full (npair,k_grid%nps) )
   ENDIF
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP
@@ -119,6 +121,7 @@ SUBROUTINE wfreq_setup
      sigma_exx_full = 0._DP
      sigma_vxcl_full = 0._DP
      sigma_vxcnl_full = 0._DP
+     sigma_corr_full = 0._DP
   ENDIF
   l_generate_plot = .FALSE.
   DO i = 1, 8

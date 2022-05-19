@@ -27,7 +27,7 @@ MODULE wfreq_io
   END INTERFACE 
   !
   INTERFACE writeout_solvegfreq
-     MODULE PROCEDURE writeout_solvegfreq_real, writeout_solvegfreq_complex, writeout_solvegfreq_complex_q, writeout_solvegfreq_real_full
+     MODULE PROCEDURE writeout_solvegfreq_real, writeout_solvegfreq_complex, writeout_solvegfreq_complex_q
   END INTERFACE 
   !
   INTERFACE readin_solvegfreq
@@ -94,7 +94,7 @@ MODULE wfreq_io
     USE mp,                  ONLY : mp_sum
     USE control_flags,       ONLY : gamma_only 
     USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
-    USE westcom,             ONLY : l_enable_off_diagonal
+    USE westcom,             ONLY : l_enable_off_diagonal,ijpmap
     USE mod_mpiio,           ONLY : mp_master_creates_and_preallocates
     !
     IMPLICIT NONE
@@ -106,7 +106,7 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    INTEGER :: ib, ii, jb
+    INTEGER :: ib, ii, jb, index
     CHARACTER(LEN=5) :: c_glob_iks
     CHARACTER(LEN=5) :: c_glob_ib, c_glob_jb
     CHARACTER(LEN=512) :: fname
@@ -126,13 +126,15 @@ MODULE wfreq_io
        DO jb = nb_1, nb_2
           !
           IF (l_enable_off_diagonal) THEN
-             IF (jb < ib) CYCLE
+             IF (jb > ib) CYCLE
              !
-             WRITE(c_glob_jb, '(i5.5)') jb
+             index = ijpmap(jb,ib)
              !
-             fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_jb//"_"//c_glob_ib//".dat"
+             WRITE(c_glob_jb, '(i5.5)') index
+             !
+             fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_jb//"_full.dat"
              CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob * 1 )   ! check nmode   
-             fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_jb//"_"//c_glob_ib//".dat"
+             fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_jb//"_full.dat"
              CALL mp_master_creates_and_preallocates( fname, n_lanczos*idistr%nglob*idistr%nglob*nmode ) 
           ENDIF
           !
@@ -445,7 +447,7 @@ MODULE wfreq_io
   !
   !
   !
-  SUBROUTINE writeout_solvegfreq_real( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset)
+  SUBROUTINE writeout_solvegfreq_real( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset, l_full)
     !
     ! WHO WRITES? ... root_bgrp
     ! WHAT?       ... diago(        n_lanczos ) 
@@ -466,7 +468,8 @@ MODULE wfreq_io
     INTEGER,INTENT(IN) :: glob_ib
     REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
     REAL(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc, nglob, myoffset 
+    INTEGER,INTENT(IN) :: nloc, nglob, myoffset
+    LOGICAL,INTENT(IN) :: l_full 
     !
     ! Workspace
     !
@@ -479,7 +482,7 @@ MODULE wfreq_io
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    IF (l_enable_off_diagonal) THEN
+    IF (l_enable_off_diagonal .AND. l_full) THEN
       fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//"_full.dat"
       CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset ) 
       !
@@ -586,7 +589,7 @@ MODULE wfreq_io
   !
   !
   !
-  SUBROUTINE readin_solvegfreq_real( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset )
+  SUBROUTINE readin_solvegfreq_real( glob_iks, glob_ib, diago, braket, nloc, nglob, myoffset, l_full )
     !
     ! WHO READS?  ... root_bgrp
     ! WHAT?       ... diago(        n_lanczos ) 
@@ -594,6 +597,7 @@ MODULE wfreq_io
     !
     USE kinds,          ONLY : DP
     USE westcom,        ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
+    USE westcom,        ONLY : l_enable_off_diagonal
     USE mp_global,      ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
     USE mp,             ONLY : mp_bcast
     USE mod_mpiio,      ONLY : mp_read_dmsg_at
@@ -607,6 +611,7 @@ MODULE wfreq_io
     REAL(DP),INTENT(OUT) :: diago(n_lanczos,nloc)
     REAL(DP),INTENT(OUT) :: braket(nglob,n_lanczos,nloc)
     INTEGER,INTENT(IN) :: nloc,nglob,myoffset
+    LOGICAL,INTENT(IN) :: l_full
     !
     ! Workspace
     !
@@ -619,11 +624,19 @@ MODULE wfreq_io
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib, '(i5.5)') glob_ib
     !
-    fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
-    CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
-    !
-    fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
-    CALL mp_read_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    IF (l_enable_off_diagonal .AND. l_full) THEN
+      fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//"_full.dat"
+      CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
+      !
+      fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//"_full.dat"
+      CALL mp_read_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    ELSE
+      fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+      CALL mp_read_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset )
+      !
+      fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_ib//".dat"
+      CALL mp_read_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset )
+    ENDIF
     !
   END SUBROUTINE
   !
@@ -910,47 +923,47 @@ MODULE wfreq_io
   !
   !
   !
-  SUBROUTINE writeout_solvegfreq_real_full( glob_iks, glob_jb, glob_ib, diago, braket, nloc, nglob, myoffset)
-    !
-    ! WHO WRITES? ... root_bgrp
-    ! WHAT?       ... diago(        n_lanczos ) 
-    ! WHAT?       ... braket( ndim, n_lanczos ) 
-    !
-    USE kinds,               ONLY : DP
-    USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
-    USE mp_global,           ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
-    USE mp,                  ONLY : mp_bcast
-    USE mod_mpiio,           ONLY : mp_write_dmsg_at
-    !
-    IMPLICIT NONE
-    !
-    ! I/O 
-    !
-    INTEGER,INTENT(IN) :: glob_iks
-    INTEGER,INTENT(IN) :: glob_ib, glob_jb
-    REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
-    REAL(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
-    INTEGER,INTENT(IN) :: nloc, nglob, myoffset 
-    !
-    ! Workspace
-    !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib, c_glob_jb
-    CHARACTER(LEN=512) :: fname
-    !
-    ! Generate the filename
-    ! 
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib, '(i5.5)') glob_ib
-    WRITE(c_glob_jb, '(i5.5)') glob_jb
-    !
-    fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_jb//"_"//c_glob_ib//".dat"
-    CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset ) 
-    !
-    fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_jb//"_"//c_glob_ib//".dat"
-    CALL mp_write_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset ) 
-    !
-  END SUBROUTINE
+!   SUBROUTINE writeout_solvegfreq_real_full( glob_iks, glob_jb, glob_ib, diago, braket, nloc, nglob, myoffset)
+!     !
+!     ! WHO WRITES? ... root_bgrp
+!     ! WHAT?       ... diago(        n_lanczos ) 
+!     ! WHAT?       ... braket( ndim, n_lanczos ) 
+!     !
+!     USE kinds,               ONLY : DP
+!     USE westcom,             ONLY : n_pdep_eigen_to_use,iks_l2g,n_lanczos,wfreq_save_dir
+!     USE mp_global,           ONLY : my_image_id,intra_bgrp_comm,me_bgrp,root_bgrp
+!     USE mp,                  ONLY : mp_bcast
+!     USE mod_mpiio,           ONLY : mp_write_dmsg_at
+!     !
+!     IMPLICIT NONE
+!     !
+!     ! I/O 
+!     !
+!     INTEGER,INTENT(IN) :: glob_iks
+!     INTEGER,INTENT(IN) :: glob_ib, glob_jb
+!     REAL(DP),INTENT(IN) :: diago(n_lanczos,nloc)
+!     REAL(DP),INTENT(IN) :: braket(nglob,n_lanczos,nloc)
+!     INTEGER,INTENT(IN) :: nloc, nglob, myoffset 
+!     !
+!     ! Workspace
+!     !
+!     CHARACTER(LEN=5) :: c_glob_iks
+!     CHARACTER(LEN=5) :: c_glob_ib, c_glob_jb
+!     CHARACTER(LEN=512) :: fname
+!     !
+!     ! Generate the filename
+!     ! 
+!     WRITE(c_glob_iks,'(i5.5)') glob_iks
+!     WRITE(c_glob_ib, '(i5.5)') glob_ib
+!     WRITE(c_glob_jb, '(i5.5)') glob_jb
+!     !
+!     fname = TRIM( wfreq_save_dir )//"/g_diag_K"//c_glob_iks//"B"//c_glob_jb//"_"//c_glob_ib//".dat"
+!     CALL mp_write_dmsg_at( fname, diago, n_lanczos*nloc, n_lanczos*myoffset ) 
+!     !
+!     fname = TRIM( wfreq_save_dir )//"/g_brak_K"//c_glob_iks//"B"//c_glob_jb//"_"//c_glob_ib//".dat"
+!     CALL mp_write_dmsg_at( fname, braket, nglob*n_lanczos*nloc, nglob*n_lanczos*myoffset ) 
+!     !
+!   END SUBROUTINE
   !
   !
   !

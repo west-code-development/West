@@ -41,7 +41,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   COMPLEX(DP),INTENT(OUT) :: sigma_corr( qp_bandrange(1):qp_bandrange(2), k_grid%nps )  ! The correlation self-energy, imaginary part is lifetime.  
   REAL(DP),INTENT(IN) :: energy( qp_bandrange(1):qp_bandrange(2), k_grid%nps )          ! The energy variable
   LOGICAL,INTENT(IN) :: l_verbose
-  LOGICAL,INTENT(IN), OPTIONAL :: l_full
+  LOGICAL,INTENT(IN) :: l_full
   !
   ! Workspace
   !
@@ -69,10 +69,6 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   ! ZERO
   !
   sigma_corr = 0._DP
-  IF (l_enable_off_diagonal) THEN
-     ALLOCATE( sigma_corr_full(npair,k_grid%nps) )
-     sigma_corr_full = 0._DP
-  ENDIF
   !
   ! -----------------------------------
   ! The part with imaginary integration
@@ -99,76 +95,82 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
         DO jb = qp_bandrange(1), qp_bandrange(2)
-            !
-            IF (l_enable_off_diagonal .AND. l_full) THEN
-               IF ( jb > ib ) CYCLE
-               index = ijpmap(jb,ib)
-            ELSE
-               IF ( jb /= ib ) CYCLE
-            ENDIF
-            !
-            ! HEAD PART
-            !
-            partial_h = 0._DP
-            ! 
-            IF(l_macropol .AND. jb == ib) THEN
-               !
-               DO ifreq = 1,ifr%nloc
-                  enrg = et(ib,iks) - energy(ib,iks)
-                  partial_h = partial_h + d_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
-               ENDDO
-               !
-            ENDIF
-            !
-            ! BODY 1st part : poles of H
-            !
-            partial_b = 0._DP 
-            !
-            DO ifreq = 1,ifr%nloc
-               DO im = 1, aband%nloc
-                  glob_im = aband%l2g(im)
-                  enrg = et(glob_im,iks) - energy(ib,iks)
-                  IF (l_enable_off_diagonal .AND. l_full .AND. jb < ib) THEN
-                     partial_b = partial_b + d_body1_ifr(im,ifreq,ib,iks)*0.5_DP*&
-                     &(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
-                  ELSEIF (jb == ib) THEN
-                     partial_b = partial_b + d_body1_ifr(im,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
-                  ENDIF
-               ENDDO
-            ENDDO
-            !
-            ! BODY 2nd part : Lanczos
-            !
-            IF( l_enable_lanczos ) THEN
-               !
-               DO ifreq = 1,ifr%nloc
-                  DO ip = 1, pert%nloc
-                     DO il = 1, n_lanczos
-                        IF (l_enable_off_diagonal .AND. l_full .AND. jb < ib) THEN
-                           enrg = d_diago_partial(il,ip,index,iks) - energy(ib,iks)
-                           enrg = d_diago_partial(il,ip,index,iks) - energy(jb,iks)
-                           partial_b = partial_b + d_body2_ifr_full(il,ip,ifreq,index,iks)* 0.5_DP &
-                           &* (integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
-                        ELSEIF (jb == ib) THEN
-                           enrg = d_diago(il,ip,ib,iks) - energy(ib,iks)
-                           partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
-                        ENDIF
-                     ENDDO
-                  ENDDO
-               ENDDO
-               !
-            ENDIF
-            !
-            CALL mp_sum( partial_h, intra_bgrp_comm) 
-            CALL mp_sum( partial_b, intra_bgrp_comm) 
-            CALL mp_sum( partial_b, inter_image_comm) 
-            !
-            sigma_corr(ib,iks) = sigma_corr(ib,iks) + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
-            IF (l_enable_off_diagonal) sigma_corr_full(index,iks) = sigma_corr_full(index,iks) &
-            & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
-            !
-            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
-            !
+           !
+           IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+           & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
+              index = ijpmap(jb,ib)
+           ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
+              CONTINUE
+           ELSE
+              CYCLE
+           ENDIF
+           !
+           ! HEAD PART
+           !
+           partial_h = 0._DP
+           ! 
+           IF(l_macropol .AND. jb == ib) THEN
+              !
+              DO ifreq = 1,ifr%nloc
+                 enrg = et(ib,iks) - energy(ib,iks)
+                 partial_h = partial_h + d_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
+              ENDDO
+              !
+           ENDIF
+           !
+           ! BODY 1st part : poles of H
+           !
+           partial_b = 0._DP 
+           !
+           DO ifreq = 1,ifr%nloc
+              DO im = 1, aband%nloc
+                 glob_im = aband%l2g(im)
+                 enrg = et(glob_im,iks) - energy(ib,iks)
+                 IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+                 & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
+                    enrg1 = et(glob_im,iks) - energy(jb,iks)
+                    partial_b = partial_b + d_body1_ifr_full(im,ifreq,index,iks)*0.5_DP*&
+                    &(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
+                 ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
+                    partial_b = partial_b + d_body1_ifr(im,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
+                 ENDIF
+              ENDDO
+           ENDDO
+           !
+           ! BODY 2nd part : Lanczos
+           !
+           IF( l_enable_lanczos ) THEN
+              !
+              DO ifreq = 1,ifr%nloc
+                 DO ip = 1, pert%nloc
+                    DO il = 1, n_lanczos
+                       IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+                       & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
+                          enrg = d_diago_full(il,ip,index,iks) - energy(ib,iks)
+                          enrg1 = d_diago_full(il,ip,index,iks) - energy(jb,iks)
+                          partial_b = partial_b + d_body2_ifr_full(il,ip,ifreq,index,iks)* 0.5_DP &
+                          &* (integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
+                       ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
+                          enrg = d_diago(il,ip,ib,iks) - energy(ib,iks)
+                          partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ib,iks)*integrate_imfreq(ifreq,enrg)
+                       ENDIF
+                    ENDDO
+                 ENDDO
+              ENDDO
+              !
+           ENDIF
+           !
+           CALL mp_sum( partial_h, intra_bgrp_comm) 
+           CALL mp_sum( partial_b, intra_bgrp_comm) 
+           CALL mp_sum( partial_b, inter_image_comm) 
+           !
+           IF (jb == ib) sigma_corr(ib,iks) = sigma_corr(ib,iks) &
+           & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
+           IF (l_enable_off_diagonal .AND. l_full ) sigma_corr_full(index,iks) = sigma_corr_full(index,iks) &
+           & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
+           !
+           IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
+           !
         ENDDO
         !
      ENDDO ! ib
@@ -184,7 +186,13 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")') 
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) THEN
+     IF (l_enable_off_diagonal .AND. l_full) THEN
+        barra_load = k_grid%nps * npair
+     ELSE
+        barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+     ENDIF
+  ENDIF  
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP 
@@ -197,103 +205,110 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
         !
         enrg = energy(ib,iks)
         !
-         DO jb = qp_bandrange(1), qp_bandrange(2)
-            !
-            IF (l_enable_off_diagonal .AND. l_full) THEN
-               IF ( jb > ib ) CYCLE
-               index = ijpmap(jb,ib)
-            ELSE
-               IF ( jb /= ib ) CYCLE
-            ENDIF
-            !
-            residues_b = 0._DP
-            residues_h = 0._DP
-            !
-            DO im = 1,aband%nloc
-               !
-               glob_im = aband%l2g(im)
-               !
-               this_is_a_pole=.false.
-               IF( glob_im <= nbndval ) THEN
-                  segno = -1._DP
-                  IF( et(glob_im,iks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
-               ELSE
-                  segno = 1._DP
-                  IF( et(glob_im,iks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
-               ENDIF  
-               !
-               IF( this_is_a_pole ) THEN
-                  !
-                  CALL retrieve_glob_freq( et(glob_im,iks) - enrg, glob_ifreq )
-                  !
-                  DO ifreq = 1, rfr%nloc 
-                     !
-                     IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
-                     !
-                     IF(glob_im==ib.AND.l_macropol.AND.jb==ib) residues_h = residues_h + segno * z_head_rfr(ifreq)
-                     !
-                     IF (l_enable_off_diagonal .AND. l_full .AND. jb < ib) THEN
-                        residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks )
-                     ELSEIF (jb == ib) THEN
-                        residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
-                     ENDIF
-                     ! 
-                  ENDDO
-                  !
-               ENDIF 
-               !
-            ENDDO ! im
-            !
-            IF (l_enable_off_diagonal .AND. l_full .AND. jb < ib) THEN
-               !
-               DO im = 1,aband%nloc
-                  !
-                  glob_im = aband%l2g(im)
-                  !
-                  this_is_a_pole=.false.
-                  IF( glob_im <= nbndval ) THEN
-                     segno = -1._DP
-                     IF( et(glob_im,iks) - enrg1 >  0.00001_DP ) this_is_a_pole=.TRUE.
-                  ELSE
-                     segno = 1._DP
-                     IF( et(glob_im,iks) - enrg1 < -0.00001_DP ) this_is_a_pole=.TRUE.
-                  ENDIF  
-                  !
-                  IF( this_is_a_pole ) THEN
-                     !
-                     CALL retrieve_glob_freq( et(glob_im,iks) - enrg1, glob_ifreq )
-                     !
-                     DO ifreq = 1, rfr%nloc 
-                        !
-                        IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
-                        !
-                        IF (l_enable_off_diagonal .AND. l_full .AND. jb < ib) THEN
-                           residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks )
-                        ELSEIF (jb == ib) THEN
-                           residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
-                        ENDIF
-                        ! 
-                     ENDDO
-                     !
-                  ENDIF 
-                  !
-               ENDDO ! im
-               !
-            ENDIF
-            !
-            CALL mp_sum( residues_h, intra_bgrp_comm )
-            CALL mp_sum( residues_h, inter_image_comm )
-            CALL mp_sum( residues_b, intra_bgrp_comm )
-            CALL mp_sum( residues_b, inter_image_comm )
-            !
-            sigma_corr(ib,iks) = sigma_corr(ib,iks) + residues_b/omega + residues_h*pot3D%div
-            IF (l_enable_off_diagonal) sigma_corr_full(index,iks) = sigma_corr_full(index,iks) &
-            & + residues_b/omega + residues_h*pot3D%div
-            !
-            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
-            !
-         ENDDO
-         !
+        DO jb = qp_bandrange(1), qp_bandrange(2)
+           !
+           IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+           & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
+              index = ijpmap(jb,ib)
+           ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
+              CONTINUE
+           ELSE
+              CYCLE
+           ENDIF
+           !
+           enrg1 = energy(jb,iks)
+           !
+           residues_b = 0._DP
+           residues_h = 0._DP
+           !
+           DO im = 1,aband%nloc
+              !
+              glob_im = aband%l2g(im)
+              !
+              this_is_a_pole=.false.
+              IF( glob_im <= nbndval ) THEN
+                 segno = -1._DP
+                 IF( et(glob_im,iks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
+              ELSE
+                 segno = 1._DP
+                 IF( et(glob_im,iks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
+              ENDIF  
+              !
+              IF( this_is_a_pole ) THEN
+                 !
+                 CALL retrieve_glob_freq( et(glob_im,iks) - enrg, glob_ifreq )
+                 !
+                 DO ifreq = 1, rfr%nloc 
+                    !
+                    IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
+                    !
+                    IF(glob_im==ib.AND.l_macropol.AND.jb==ib) residues_h = residues_h + segno * z_head_rfr(ifreq)
+                    !
+                    IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+                    & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
+                       residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks )
+                    ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
+                       residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
+                    ENDIF
+                    ! 
+                 ENDDO
+                 !
+              ENDIF 
+              !
+           ENDDO ! im
+           !
+           IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+           & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
+              !
+              DO im = 1,aband%nloc
+                 !
+                 glob_im = aband%l2g(im)
+                 !
+                 this_is_a_pole=.false.
+                 IF( glob_im <= nbndval ) THEN
+                    segno = -1._DP
+                    IF( et(glob_im,iks) - enrg1 >  0.00001_DP ) this_is_a_pole=.TRUE.
+                 ELSE
+                    segno = 1._DP
+                    IF( et(glob_im,iks) - enrg1 < -0.00001_DP ) this_is_a_pole=.TRUE.
+                 ENDIF  
+                 !
+                 IF( this_is_a_pole ) THEN
+                    !
+                    CALL retrieve_glob_freq( et(glob_im,iks) - enrg1, glob_ifreq )
+                    !
+                    DO ifreq = 1, rfr%nloc 
+                       !
+                       IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
+                       !
+                       IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+                       & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
+                          residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks )
+                       ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
+                          residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
+                       ENDIF
+                       ! 
+                    ENDDO
+                    !
+                 ENDIF 
+                 !
+              ENDDO ! im
+              !
+           ENDIF
+           !
+           CALL mp_sum( residues_h, intra_bgrp_comm )
+           CALL mp_sum( residues_h, inter_image_comm )
+           CALL mp_sum( residues_b, intra_bgrp_comm )
+           CALL mp_sum( residues_b, inter_image_comm )
+           !
+           IF (jb == ib) sigma_corr(ib,iks) = sigma_corr(ib,iks) + residues_b/omega + residues_h*pot3D%div
+           IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full(index,iks) = sigma_corr_full(index,iks) &
+           & + residues_b/omega + residues_h*pot3D%div
+           !
+           IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
+           !
+        ENDDO
+        !
      ENDDO ! ib  
      !
   ENDDO ! ik

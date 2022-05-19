@@ -279,16 +279,16 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      CALL mp_sum( sigma_vxcnl_full, intra_bgrp_comm )
      CALL mp_sum( sigma_vxcl_full, inter_image_comm )
      CALL mp_sum( sigma_vxcnl_full, inter_image_comm )
-     DO iks = 1, k_grid%nps
-        DO ib_glob = 1, numbandegw
-           DO jb_glob = 1, numbandegw
-              IF ( jb_glob > ib_glob ) THEN
-                 sigma_vxcl_full(jb_glob,ib_glob,iks) = sigma_vxcl_full(ib_glob,jb_glob,iks)
-                 sigma_vxcnl_full(jb_glob,ib_glob,iks) = sigma_vxcnl_full(ib_glob,jb_glob,iks)
-              ENDIF
-           ENDDO
-        ENDDO
-     ENDDO
+   !   DO iks = 1, k_grid%nps
+   !      DO ib_glob = 1, numbandegw
+   !         DO jb_glob = 1, numbandegw
+   !            IF ( jb_glob > ib_glob ) THEN
+   !               sigma_vxcl_full(jb_glob,ib_glob,iks) = sigma_vxcl_full(ib_glob,jb_glob,iks)
+   !               sigma_vxcnl_full(jb_glob,ib_glob,iks) = sigma_vxcnl_full(ib_glob,jb_glob,iks)
+   !            ENDIF
+   !         ENDDO
+   !      ENDDO
+   !   ENDDO
   ENDIF
   !
   DEALLOCATE( vxc )

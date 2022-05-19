@@ -172,14 +172,17 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
         DO jb = nb1, nb2
            !
            IF ( l_enable_off_diagonal ) THEN
-              IF ( jb > ib ) CYCLE
+              IF (jb > ib) CYCLE
               index = ijpmap(jb,ib)
-           ELSE
-              IF ( jb /= ib ) CYCLE
-           ENDIF
-           !
-           IF (gamma_only) THEN
-              CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave')
+              !
+              IF (jb < ib) THEN 
+                  IF (gamma_only) THEN
+                     CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave')
+                  ENDIF
+               ENDIF
+              !
+           ELSE 
+              IF (jb /= ib) CYCLE
            ENDIF
            !
            DO iq = 1, q_grid%np
@@ -214,11 +217,11 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
                  IF (gamma_only) THEN
                     CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv_glob),pertr,'Wave')
                     DO ir=1,dffts%nnr
+                       IF ( l_enable_off_diagonal .AND. jb < ib ) pertr1(ir)=psic1(ir)*pertr(ir)
                        pertr(ir)=psic(ir)*pertr(ir)
-                       IF ( l_enable_off_diagonal ) pertr1(ir)=psic1(ir)*pertr(ir)
                     ENDDO
                     CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Dense')
-                    CALL single_fwfft_gamma(dffts,ngm,ngm,pertr1,pertg1,'Dense')
+                    IF ( l_enable_off_diagonal .AND. jb < ib ) CALL single_fwfft_gamma(dffts,ngm,ngm,pertr1,pertg1,'Dense')
                  ELSEIF(noncolin) THEN
                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv_glob),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv_glob),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
@@ -236,7 +239,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
                  !
                  DO ig = 1,ngm
                     pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
-                    IF ( l_enable_off_diagonal ) pertg1(ig) = pertg1(ig) * pot3D%sqvc(ig)
+                    IF ( l_enable_off_diagonal .AND. jb < ib ) pertg1(ig) = pertg1(ig) * pot3D%sqvc(ig)
                  ENDDO
                  !
                  IF ( l_enable_off_diagonal .AND. jb < ib ) THEN
@@ -270,7 +273,7 @@ SUBROUTINE calc_exx2( sigma_exx, nb1, nb2 )
   CALL mp_sum( sigma_exx, intra_bgrp_comm )
   CALL mp_sum( sigma_exx, inter_image_comm ) 
   IF (l_enable_off_diagonal) THEN
-     CALL mp_sum( sigma_exx_full, intra_bgrp_comm)
+     CALL mp_sum( sigma_exx_full, intra_bgrp_comm )
      CALL mp_sum( sigma_exx_full, inter_image_comm)
   ENDIF
   !

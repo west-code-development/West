@@ -196,6 +196,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      bks%min_band=1
      !
      ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
+     ALLOCATE(dvpsi1(npwx*npol,pert%nlocx))
      CALL preallocate_solvegfreq( iks_l2g(iks), qp_bandrange(1), qp_bandrange(2), pert )
      !
      time_spent(1) = get_clock( 'glanczos' )
@@ -280,88 +281,88 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
               IF (l_enable_off_diagonal) index = ijpmap(jb,ib)
               !
               IF (l_enable_off_diagonal .and. jb < ib) THEN     
-                  !
-                  ! PSIC
-                  !
-                  ALLOCATE( psic1(dffts%nnr) )
-                  CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave') 
-                  !
-                  ! ZEROS
-                  !
-                  dvpsi1 = 0._DP   
-                  !
-                  ! Read PDEP
-                  !
-                  ALLOCATE( pertg( npwqx ) )
-                  ALLOCATE( pertr( dffts%nnr ) )
-                  !
-                  DO ip=1,pert%nloc
-                     glob_ip = pert%l2g(ip)
-                     pertg = pertg_all(:,ip)
-                     !
-                     ! Multiply by sqvc
-                     DO ig = 1, npwq
-                        pertg(ig) = pot3D%sqvc(ig) * pertg(ig)
-                     ENDDO
-                     !
-                     ! Bring it to R-space
-                     CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
-                     DO ir=1,dffts%nnr
-                        pertr(ir)=psic1(ir)*pertr(ir)
-                     ENDDO
-                     CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi1(1,ip),'Wave')
-                     !
-                  ENDDO ! pert
-                  ! 
-                  DEALLOCATE(pertr)
-                  DEALLOCATE(pertg)
-                  DEALLOCATE(psic1)
-                  !
-                  CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi1,(1._DP,0._DP))
-                  !
-                  ALLOCATE( diago1    (               n_lanczos   , pert%nloc ) )
-                  ALLOCATE( subdiago1 (               n_lanczos-1 , pert%nloc ) )               
-                  ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
-                  !
-                  diago1 = diago
-                  subdiago1 = subdiago
-                  !
-                  CALL get_brak_hyper_parallel(dvpsi1,pert%nloc,n_lanczos,q_s,braket,pert%nloc,pert%nlocx,pert%nglob)
-                  !
-                  DO ip = 1, pert%nloc
-                     CALL diago_lanczos( bnorm(ip), diago1( :, ip), subdiago1( :, ip), braket(:,:,ip), pert%nglob )
-                  ENDDO
-                  !
-                  DEALLOCATE( subdiago1 )
-                  !
-                  CALL writeout_solvegfreq( iks_l2g(iks), jb, ib, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
-                  ! 
-                  DEALLOCATE( diago1, braket )
-                  !
-                  CALL update_bar_type( barra, 'glanczos', 1 )
-                  !                  
+                 !
+                 ! PSIC
+                 !
+                 ALLOCATE( psic1(dffts%nnr) )
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave') 
+                 !
+                 ! ZEROS
+                 !
+                 dvpsi1 = 0._DP   
+                 !
+                 ! Read PDEP
+                 !
+                 ALLOCATE( pertg( npwqx ) )
+                 ALLOCATE( pertr( dffts%nnr ) )
+                 !
+                 DO ip=1,pert%nloc
+                    glob_ip = pert%l2g(ip)
+                    pertg = pertg_all(:,ip)
+                    !
+                    ! Multiply by sqvc
+                    DO ig = 1, npwq
+                       pertg(ig) = pot3D%sqvc(ig) * pertg(ig)
+                    ENDDO
+                    !
+                    ! Bring it to R-space
+                    CALL single_invfft_gamma(dffts,npwq,npwqx,pertg(1),pertr,TRIM(fftdriver))
+                    DO ir=1,dffts%nnr
+                       pertr(ir)=psic1(ir)*pertr(ir)
+                    ENDDO
+                    CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi1(1,ip),'Wave')
+                    !
+                 ENDDO ! pert
+                 ! 
+                 DEALLOCATE(pertr)
+                 DEALLOCATE(pertg)
+                 DEALLOCATE(psic1)
+                 !
+                 CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi1,(1._DP,0._DP))
+                 !
+                 ALLOCATE( diago1    (               n_lanczos   , pert%nloc ) )
+                 ALLOCATE( subdiago1 (               n_lanczos-1 , pert%nloc ) )               
+                 ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
+                 !
+                 diago1 = diago
+                 subdiago1 = subdiago
+                 !
+                 CALL get_brak_hyper_parallel(dvpsi1,pert%nloc,n_lanczos,q_s,braket,pert%nloc,pert%nlocx,pert%nglob)
+                 !
+                 DO ip = 1, pert%nloc
+                    CALL diago_lanczos( bnorm(ip), diago1( :, ip), subdiago1( :, ip), braket(:,:,ip), pert%nglob )
+                 ENDDO
+                 !
+                 DEALLOCATE( subdiago1 )
+                 !
+                 CALL writeout_solvegfreq( iks_l2g(iks), index, diago1, braket, pert%nloc, pert%nglob, pert%myoffset, .TRUE. )
+                 ! 
+                 DEALLOCATE( diago1, braket )
+                 !
+                 CALL update_bar_type( barra, 'glanczos', 1 )
+                 !                  
               ELSEIF ( jb == ib ) THEN
-                  !
-                  ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
-                  CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
-                  DEALLOCATE( q_s )
-                  !
-                  DO ip = 1, pert%nloc
-                     CALL diago_lanczos( bnorm(ip), diago( :, ip), subdiago( :, ip), braket(:,:,ip), pert%nglob )
-                  ENDDO
-                  !
-                  DEALLOCATE( bnorm )
-                  DEALLOCATE( subdiago )
-                  !
-                  ! MPI-IO
-                  !
-                  CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
-                  ! IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), jb, ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
-                  IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
-                  !
-                  DEALLOCATE( diago )
-                  DEALLOCATE( braket )
-                  !
+                 !
+                 ALLOCATE( braket   ( pert%nglob, n_lanczos   , pert%nloc ) )
+                 CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
+                 DEALLOCATE( q_s )
+                 !
+                 DO ip = 1, pert%nloc
+                    CALL diago_lanczos( bnorm(ip), diago( :, ip), subdiago( :, ip), braket(:,:,ip), pert%nglob )
+                 ENDDO
+                 !
+                 DEALLOCATE( bnorm )
+                 DEALLOCATE( subdiago )
+                 !
+                 ! MPI-IO
+                 !
+                 CALL writeout_solvegfreq( iks_l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset, .FALSE. )
+                 ! IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), jb, ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 IF (l_enable_off_diagonal) CALL writeout_solvegfreq( iks_l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset, .TRUE. )
+                 !
+                 DEALLOCATE( diago )
+                 DEALLOCATE( braket )
+                 !
               ENDIF
               !
            ENDDO
@@ -385,7 +386,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
      ENDDO ! BANDS
      !
-     DEALLOCATE(dvpsi, dvpsi1)
+     DEALLOCATE(dvpsi)
+     IF (l_enable_off_diagonal) DEALLOCATE(dvpsi1)
      !
   ENDDO ! KPOINT-SPIN
   !

@@ -28,7 +28,7 @@ SUBROUTINE do_loc ( )
   USE scatter_mod,           ONLY : gather_grid
   USE wvfct,                 ONLY : nbnd
   USE buffers,               ONLY : get_buffer
-  USE wavefunctions_module,  ONLY : evc,psic
+  USE wavefunctions,         ONLY : evc,psic
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
@@ -51,7 +51,7 @@ SUBROUTINE do_loc ( )
   CHARACTER(LEN=6) :: labelb,labelk
   !REAL(DP) :: alat
   TYPE(json_core) :: json
-  TYPE(json_value), POINTER :: json_root, localization
+  TYPE(json_value), POINTER :: json_root, localization_object, ipr_object
 
   
   !
@@ -171,17 +171,19 @@ SUBROUTINE do_loc ( )
       CALL json%add(json_root, 'ipr', ipr(:,1))
     ELSE
       ! add "localization" object to "root"
-      CALL json%create_object(localization, 'localization')
-      CALL json%create_object(ipr, 'ipr')
-      CALL json%add(json_root, localization)
+      CALL json%create_object(localization_object, 'localization')
+      CALL json%create_object(ipr_object, 'ipr')
+      CALL json%add(json_root, localization_object)
+      CALL json%add(json_root, ipr_object)
 
       DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
         WRITE(ikstring, '(I4)') iks
-        CALL json%add(localization, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
-        CALL json%add(ipr, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
+        CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
+        CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
       ENDDO 
       ! don't need pointer anymore
-      nullify(localization)
+      nullify(localization_object)
+      nullify(ipr_object)
     ENDIF
     
     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//"/localization.json" )

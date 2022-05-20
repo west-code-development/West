@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -7,50 +7,53 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 MODULE scratch_area
   !-----------------------------------------------------------------------
   !
-  USE kinds, ONLY :  DP
+  USE kinds,     ONLY : DP
   USE fft_types, ONLY : fft_type_descriptor
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! COULOMB
-  INTEGER              :: npwq,npwqx,npwq_g
-  CHARACTER(LEN=6)     :: fftdriver
-  INTEGER,ALLOCATABLE  :: iks_l2g(:)
+  !
+  INTEGER :: npwq
+  INTEGER :: npwqx
+  INTEGER :: npwq_g
+  CHARACTER(LEN=6) :: fftdriver
   !
   ! DBS
-  REAL(DP),ALLOCATABLE    :: ev(:)
-  REAL(DP),ALLOCATABLE    :: ev_distr(:)
-  COMPLEX(DP),ALLOCATABLE :: dng(:,:)
-  COMPLEX(DP),ALLOCATABLE :: dvg(:,:)
-  LOGICAL,ALLOCATABLE     :: conv(:)
+  !
+  REAL(DP),            ALLOCATABLE :: ev(:)
+  REAL(DP),            ALLOCATABLE :: ev_distr(:)
+  COMPLEX(DP),         ALLOCATABLE :: dng(:,:)
+  COMPLEX(DP),         ALLOCATABLE :: dvg(:,:)
+  LOGICAL,             ALLOCATABLE :: conv(:)
   !
   ! BANDS
-  INTEGER,ALLOCATABLE :: nbnd_occ(:) 
+  !
+  INTEGER, ALLOCATABLE :: nbnd_occ(:)
   !
   ! Q-POINTS
-  INTEGER, ALLOCATABLE :: ngq(:)            ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for (q+G) (global in iq)
-  INTEGER, ALLOCATABLE :: igq_q(:,:)        ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq ) 
-  INTEGER, ALLOCATABLE :: ngq_g(:)          ! equivalent of ngk_g(:) --> ex. ngk_g(iq) = TOTAL number of PW for (q+G) (global in iq)  
-  ! INTEGER, ALLOCATABLE :: igq_l2g(:,:)      ! equivalent of igk_l2g(:,:) --> ex. iqq_l2g(ig,iq) => correspondence between the local (q+G) index and the global G index 
-  ! INTEGER, ALLOCATABLE :: igq_l2g_kdip(:,:) ! equivalent of igk_l2g_kdip(:,:) --> ex. iqq_l2g_kdip(ig,iq) => correspondence between the global order of (q+G) and the local index for (q+G).
+  !
+  INTEGER, ALLOCATABLE :: ngq(:)     ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for (q+G) (global in iq)
+  INTEGER, ALLOCATABLE :: igq_q(:,:) ! equivalent of igk_k(:,:) --> ex. igq_q(ig,iq) = map for FFT (global in iq )
+  INTEGER, ALLOCATABLE :: ngq_g(:)   ! equivalent of ngk_g(:) --> ex. ngk_g(iq) = TOTAL number of PW for (q+G) (global in iq)
   !
   ! EPSILON
-  REAL(DP),ALLOCATABLE    :: d_epsm1_ifr(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: z_epsm1_ifr(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr(:,:,:)
+  !
+  REAL(DP),    ALLOCATABLE :: d_epsm1_ifr(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr(:,:,:)
   !
   ! EPSILON with q-points
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:) ! EPSILON + iq  (global in iq) 
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq  (global in iq) 
+  !
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:) ! EPSILON + iq (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq (global in iq)
   !
   ! CORRELATION
   REAL(DP),ALLOCATABLE    :: d_head_ifr(:)
@@ -68,48 +71,42 @@ MODULE scratch_area
   COMPLEX(DP),ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
   !
   ! CORRELATION with q-points
-  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
-  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:) ! CORRELATION + iq  (global in iq)
-  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)       ! CORRELATION + iq  (global in iq)
-  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)   ! CORRELATION + iq  (global in iq)
   !
-  ! I/O 
-  !INTEGER :: io_comm ! communicator for head of images (me_bgrp==0)
+  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr_q(:,:,:,:,:)   ! CORRELATION + iq (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q(:,:,:,:,:,:) ! CORRELATION + iq (global in iq)
+  REAL(DP),    ALLOCATABLE :: d_diago_q(:,:,:,:,:)       ! CORRELATION + iq (global in iq)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_q (:,:,:,:,:)   ! CORRELATION + iq (global in iq)
   !
-  TYPE ( fft_type_descriptor ) :: dfft_io
+  ! I/O
+  !
+  TYPE(fft_type_descriptor) :: dfft_io
   !
 END MODULE
 !
 !
 MODULE westin
   !
-  USE kinds, ONLY :  DP
-  !
   IMPLICIT NONE
   !
-  SAVE
-  !
-  CHARACTER(LEN=512) :: outdir             ! main directory 
+  CHARACTER(LEN=512) :: outdir          ! main directory
   CHARACTER(LEN=512) :: west_prefix
   CHARACTER(LEN=512) :: qe_prefix
-  CHARACTER(LEN=512) :: savedir            ! outdir/west_prefix.code.save
-  CHARACTER(LEN=512) :: main_input_file    ! input file
-  CHARACTER(LEN=512) :: logfile ! savedir/logfile.json 
+  CHARACTER(LEN=512) :: savedir         ! outdir/west_prefix.code.save
+  CHARACTER(LEN=512) :: main_input_file ! input file
+  CHARACTER(LEN=512) :: logfile         ! savedir/logfile.json
   !
-END MODULE  
+END MODULE
 !
 !
 MODULE wstat_center
   !
-  USE kinds, ONLY :  DP
+  USE kinds, ONLY : DP
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! INPUT FOR wstat_control
   !
-  CHARACTER(LEN=2) :: wstat_calculation 
+  CHARACTER(LEN=2) :: wstat_calculation
   INTEGER :: n_pdep_basis
   INTEGER :: n_pdep_times
   INTEGER :: n_pdep_eigen
@@ -125,7 +122,6 @@ MODULE wstat_center
   LOGICAL :: l_kinetic_only
   LOGICAL :: l_minimize_exx_if_active
   LOGICAL :: l_use_ecutrho
-  !INTEGER :: nq(3)  
   INTEGER, ALLOCATABLE :: qlist(:)
   !
   ! Common workspace
@@ -137,16 +133,16 @@ MODULE wstat_center
   !
 END MODULE
 !
+!
 MODULE server_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! INPUT for server_control
   !
-  CHARACTER(LEN=:),ALLOCATABLE :: document
-END MODULE 
+  CHARACTER(LEN=:), ALLOCATABLE :: document
+  !
+END MODULE
 !
 !
 MODULE wfreq_center
@@ -154,8 +150,6 @@ MODULE wfreq_center
   USE kinds, ONLY : DP
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   ! INPUT FOR wfreq_control
   !
@@ -171,7 +165,6 @@ MODULE wfreq_center
   INTEGER :: n_secant_maxiter
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
-  LOGICAL :: l_enable_gwetot
   LOGICAL :: l_enable_off_diagonal
   CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
@@ -183,18 +176,18 @@ MODULE wfreq_center
   !
   CHARACTER(LEN=512) :: wfreq_save_dir
   CHARACTER(LEN=512) :: wfreq_restart_dir
-  LOGICAL,PARAMETER :: l_skip_nl_part_of_hcomr=.FALSE.
+  LOGICAL, PARAMETER :: l_skip_nl_part_of_hcomr = .FALSE.
   LOGICAL :: l_macropol
   !
-  ! re freq 
+  ! re freq
   !
-  REAL(DP),ALLOCATABLE :: refreq_list(:)
+  REAL(DP), ALLOCATABLE :: refreq_list(:)
   !
   ! im freq
   !
-  REAL(DP),ALLOCATABLE :: imfreq_list(:)
-  REAL(DP),ALLOCATABLE :: imfreq_list_integrate(:,:)
-  REAL(DP),PARAMETER :: frequency_list_power = 2._DP
+  REAL(DP), ALLOCATABLE :: imfreq_list(:)
+  REAL(DP), ALLOCATABLE :: imfreq_list_integrate(:,:)
+  REAL(DP), PARAMETER :: frequency_list_power = 2._DP
   !
   ! off-diagonal entries mapping
   !
@@ -238,8 +231,6 @@ MODULE westpp_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! INPUT FOR wfreq_control
   !
   CHARACTER(LEN=8) :: westpp_calculation
@@ -265,10 +256,8 @@ MODULE wan_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
-  REAL(DP),ALLOCATABLE :: wanc(:,:)
-  REAL(DP),ALLOCATABLE :: wanu(:,:)
+  REAL(DP), ALLOCATABLE :: wanc(:,:)
+  REAL(DP), ALLOCATABLE :: wanu(:,:)
   INTEGER :: wantot
   !
 END MODULE
@@ -278,12 +267,10 @@ MODULE io_unit_numbers
   !
   IMPLICIT NONE
   !
-  SAVE
+  INTEGER, PARAMETER :: iuwfc = 20
+  INTEGER :: lrwfc
   !
-  INTEGER,PARAMETER :: iuwfc=20
-  INTEGER :: lrwfc 
-  !
-END MODULE 
+END MODULE
 !
 !
 MODULE westcom

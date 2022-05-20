@@ -3,54 +3,48 @@
 include ../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
-          $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
-          $(MOD_FLAG)../Libraries/Forpy \
-          $(MOD_FLAG)../Libraries/Json \
-          $(MOD_FLAG)../Libraries/Base64 \
-          $(MOD_FLAG)../Modules \
-          $(MOD_FLAG).
-IFLAGS=
-
+MODFLAGS = $(BASEMOD_FLAGS) \
+           $(MOD_FLAG)../../PW/src \
+           $(MOD_FLAG)../Libraries/Base64 \
+           $(MOD_FLAG)../Libraries/Forpy \
+           $(MOD_FLAG)../Libraries/Json \
+           $(MOD_FLAG)../Modules \
+           $(MOD_FLAG).
 
 TOOLS_OBJS = \
+bar.o \
+class_bz_grid.o \
+clean_scratchfiles.o \
 conversions.o \
-io_push.o \
-my_mkdir.o \
-set_dirs.o \
-fetch_input.o \
-west_print_clocks.o \
+destroy_pw_arrays.o \
+do_setup.o \
 exx_go.o \
 exx_ungo.o \
-report_dynamical_memory.o \
-parse_command_arguments.o \
-class_bz_grid.o \
-types_bz_grid.o \
-do_setup.o \
-linear_algebra_kernel.o \
-human_readable_time.o \
-destroy_pw_arrays.o \
-init_pw_arrays.o \
-clean_scratchfiles.o \
-set_nbndocc.o \
+fetch_input.o \
 get_alpha_pv.o \
-set_iks_l2g.o \
-v_x.o \
 gradcorr_x.o \
-west_environment.o \
-set_npwq.o \
+heapsort.o \
+human_readable_time.o \
+init_pw_arrays.o \
+io_push.o \
+linear_algebra_kernel.o \
+my_mkdir.o \
+parse_command_arguments.o \
+report_dynamical_memory.o \
+set_dirs.o \
 set_eprec.o \
-read_pwout.o \
-bar.o  
+set_nbndocc.o \
+set_npwq.o \
+types_bz_grid.o \
+v_x.o \
+west_environment.o \
+west_print_clocks.o
 
-PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a
-
-TLDEPS= bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps libtools.a
 
-tldeps:
+tldeps :
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 libtools.a : $(TOOLS_OBJS)
@@ -62,10 +56,10 @@ clean :
 	- /bin/rm -f libtools.a
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Tools ####"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

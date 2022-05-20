@@ -10,7 +10,7 @@ def main():
     if os.path.isfile(fname):
        with open(fname,"r") as file:
           data = json.load(file)
-    else : 
+    else :
        print("Cannot find FILE: ",fname)
     print(data[key])
 

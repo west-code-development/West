@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,16 +7,16 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 MODULE linear_algebra_kernel
   !-----------------------------------------------------------------------
   !
-  ! Serial Algebra toolkit
+  ! Serial linear algebra toolkit
   !
-  USE kinds,                ONLY : DP 
+  USE kinds, ONLY : DP
   !
   IMPLICIT NONE
   !
@@ -26,30 +26,30 @@ MODULE linear_algebra_kernel
     SUBROUTINE D_SU2SP(n,np,a,ap)
     !-----------------------------------------------------------------------
       !
-      ! Real symmetric matrix : from Symm up to packed storage 
+      ! Real symmetric matrix : from Symm up to packed storage
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
       INTEGER,INTENT(IN) :: n, np
       REAL(DP),INTENT(IN) :: a(n,n)
-      REAL(DP),INTENT(OUT) :: ap(np) 
+      REAL(DP),INTENT(OUT) :: ap(np)
       !
       ! Workspace
       !
-      INTEGER :: i1, i2, i3 
+      INTEGER :: i1, i2, i3
       !
       ap = 0._DP
       !
 !$OMP PARALLEL SHARED(n,a,ap) PRIVATE(i2,i1,i3)
 !$OMP DO
-      DO i2 = 1, n
-         DO i1 = 1, i2
-            i3 = ( (i2-1) * i2 ) / 2 
+      DO i2 = 1,n
+         DO i1 = 1,i2
+            i3 = ((i2-1)*i2)/2
             ap(i3+i1) = a(i1,i2)
          ENDDO
-      ENDDO 
+      ENDDO
 !$OMP END DO
 !$OMP END PARALLEL
       !
@@ -59,30 +59,30 @@ MODULE linear_algebra_kernel
     SUBROUTINE D_SP2SU(n,np,a,ap)
     !-----------------------------------------------------------------------
       !
-      ! Real symmetric matrix : to Symm up from packed storage 
+      ! Real symmetric matrix : to Symm up from packed storage
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
       INTEGER,INTENT(IN) :: n, np
       REAL(DP),INTENT(OUT) :: a(n,n)
-      REAL(DP),INTENT(IN) :: ap(np) 
+      REAL(DP),INTENT(IN) :: ap(np)
       !
       ! Workspace
       !
-      INTEGER :: i1, i2, i3 
+      INTEGER :: i1, i2, i3
       !
-      a = 0._DP 
+      a = 0._DP
       !
 !$OMP PARALLEL SHARED(n,a,ap) PRIVATE(i2,i1,i3)
 !$OMP DO
-      DO i2 = 1, n
-         DO i1 = 1, i2
-            i3 = ( (i2-1) * i2 ) / 2 
+      DO i2 = 1,n
+         DO i1 = 1,i2
+            i3 = ((i2-1)*i2)/2
             a(i1,i2) = ap(i3+i1)
          ENDDO
-      ENDDO 
+      ENDDO
 !$OMP END DO
 !$OMP END PARALLEL
       !
@@ -92,15 +92,15 @@ MODULE linear_algebra_kernel
     SUBROUTINE matdiago_dsy(n,a,e,l_just_ev)
     !-----------------------------------------------------------------------
       !
-      ! Diago of a REAL(DP) SYMMETRIC MATRIX. 
+      ! Diago of a REAL(DP) SYMMETRIC MATRIX
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
-      INTEGER,INTENT(IN) :: n 
+      INTEGER,INTENT(IN) :: n
       REAL(DP),INTENT(INOUT) :: a(n,n)
-      REAL(DP),INTENT(OUT) :: e(n) 
+      REAL(DP),INTENT(OUT) :: e(n)
       LOGICAL,INTENT(IN) :: l_just_ev
       !
       ! Workspace
@@ -112,15 +112,15 @@ MODULE linear_algebra_kernel
       IF(l_just_ev) THEN
          !
          ALLOCATE(m(n,n))
-         m=a
+         m = a
          !
          ALLOCATE(work(1))
          !
          CALL DSYEV('N','U',n,m,n,e,work,-1,info)
          !
-         lwork=INT(REAL(work(1),DP))
-         DEALLOCATE(work)
+         lwork = CEILING(work(1))
          !
+         DEALLOCATE(work)
          ALLOCATE(work(lwork))
          !
          CALL DSYEV('N','U',n,m,n,e,work,lwork,info)
@@ -134,9 +134,9 @@ MODULE linear_algebra_kernel
          !
          CALL DSYEV('V','U',n,a,n,e,work,-1,info)
          !
-         lwork=INT(REAL(work(1),DP))
-         DEALLOCATE(work)
+         lwork = CEILING(work(1))
          !
+         DEALLOCATE(work)
          ALLOCATE(work(lwork))
          !
          CALL DSYEV('V','U',n,a,n,e,work,lwork,info)
@@ -151,36 +151,36 @@ MODULE linear_algebra_kernel
     SUBROUTINE matdiago_zhe(n,a,e,l_just_ev)
     !-----------------------------------------------------------------------
       !
-      ! Diagonalization of a COMPLEX(DP) HERMITIAN MATRIX. 
+      ! Diagonalization of a COMPLEX(DP) HERMITIAN MATRIX
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
-      INTEGER, INTENT(IN) :: n 
-      COMPLEX(DP), INTENT(INOUT) :: a(n,n)
-      REAL(DP), INTENT(OUT) :: e(n) 
-      LOGICAL, INTENT(IN) :: l_just_ev
+      INTEGER,INTENT(IN) :: n
+      COMPLEX(DP),INTENT(INOUT) :: a(n,n)
+      REAL(DP),INTENT(OUT) :: e(n)
+      LOGICAL,INTENT(IN) :: l_just_ev
       !
       ! Workspace
       !
       INTEGER :: lwork, info
-      REAL(DP), ALLOCATABLE :: rwork(:), w(:)
-      COMPLEX(DP), ALLOCATABLE :: m(:,:), work(:)
+      REAL(DP),ALLOCATABLE :: rwork(:)
+      COMPLEX(DP),ALLOCATABLE :: m(:,:), work(:)
       !
       IF(l_just_ev) THEN
          !
          ALLOCATE(m(n,n))
-         m=a
+         m = a
          !
          ALLOCATE(work(1))
          ALLOCATE(rwork(3*n-2))
          !
          CALL ZHEEV('N','U',n,m,n,e,work,-1,rwork,info)
          !
-         lwork=INT(REAL(work(1),DP))
-         DEALLOCATE(work)
+         lwork = CEILING(REAL(work(1),DP))
          !
+         DEALLOCATE(work)
          ALLOCATE(work(lwork))
          !
          CALL ZHEEV('N','U',n,m,n,e,work,lwork,rwork,info)
@@ -196,9 +196,9 @@ MODULE linear_algebra_kernel
          !
          CALL ZHEEV('V','U',n,a,n,e,work,-1,rwork,info)
          !
-         lwork=INT(REAL(work(1),DP))
-         DEALLOCATE(work)
+         lwork = CEILING(REAL(work(1),DP))
          !
+         DEALLOCATE(work)
          ALLOCATE(work(lwork))
          !
          CALL ZHEEV('V','U',n,a,n,e,work,lwork,rwork,info)
@@ -211,124 +211,76 @@ MODULE linear_algebra_kernel
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE matinvrs_dsy(n,a)
-    !-----------------------------------------------------------------------
-      !
-      ! Inversion of a REAL(DP) SYMMETRIC MATRIX. 
-      !
-      IMPLICIT NONE
-      !
-      ! I/O 
-      !
-      INTEGER,INTENT(IN) :: n 
-      REAL(DP),INTENT(INOUT) :: a(n,n)
-      !
-      ! Workspace
-      !
-      INTEGER,EXTERNAL :: ilaenv
-      INTEGER :: i, j, nb, lwork, info
-      INTEGER,ALLOCATABLE :: ipiv(:)
-      REAL(DP),ALLOCATABLE :: work(:)
-      !
-      ! Calculate the optimal size of the workspace array.
-      !
-      nb = ilaenv(1, "DSYTRI", "U", n, -1, -1, -1)
-      lwork = n * nb
-      ALLOCATE( work(lwork) )
-      ALLOCATE( ipiv(n) )
-      !
-      ! Invert the matrix.
-      !
-      CALL DSYTRF("U", n, a, n, ipiv, work, lwork, info)
-      !if (info /= 0) stop "error in call to dsytrf"
-      CALL DSYTRI("U", n, a, n, ipiv, work, info)
-      !if (info /= 0) stop "error in call to dsytri"
-      DEALLOCATE (work)
-      DEALLOCATE (ipiv)
-      ! Copy the upper triangular part of A to the lower.
-      DO j = 1, n - 1
-         DO i = j + 1, n
-            a(i, j) = a(j, i)
-         ENDDO
-      ENDDO
-      !
-    END SUBROUTINE
-    !
-    !
-    !-----------------------------------------------------------------------
     SUBROUTINE matinvrs_zge(n,a)
     !-----------------------------------------------------------------------
       !
-      ! Inversion of a COMPLEX(DP) GENERIC MATRIX. 
+      ! Inversion of a COMPLEX(DP) GENERIC MATRIX
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
-      INTEGER,INTENT(IN) :: n 
+      INTEGER,INTENT(IN) :: n
       COMPLEX(DP),INTENT(INOUT) :: a(n,n)
       !
       ! Workspace
       !
       INTEGER,EXTERNAL :: ilaenv
-      INTEGER :: i, j, nb, lwork, info
+      INTEGER :: nb, lwork, info
       INTEGER,ALLOCATABLE :: ipiv(:)
       COMPLEX(DP),ALLOCATABLE :: work(:)
       !
-      ! Calculate the optimal size of the workspace array.
+      ! Calculate optimal size of workspace
       !
-      nb = ilaenv(1, "ZGETRI", "N", n, -1, -1, -1)
-      lwork = n * nb
-      ALLOCATE( work(lwork) )
-      ALLOCATE( ipiv(n) )
+      nb = ilaenv(1,'ZGETRI','N',n,-1,-1,-1)
+      lwork = n*nb
+      ALLOCATE(work(lwork))
+      ALLOCATE(ipiv(n))
       !
-      ! Invert the matrix.
+      ! Invert matrix
       !
-      CALL ZGETRF( n, n, a, n, ipiv, info)
-      !if (info /= 0) stop "error in call to dsytrf"
-      CALL ZGETRI( n, a, n, ipiv, work, lwork, info )
-      !if (info /= 0) stop "error in call to dsytri"
-      DEALLOCATE( work )
-      DEALLOCATE( ipiv )
+      CALL ZGETRF(n,n,a,n,ipiv,info)
+      CALL ZGETRI(n,a,n,ipiv,work,lwork,info)
+      !
+      DEALLOCATE(work)
+      DEALLOCATE(ipiv)
       !
     END SUBROUTINE
-    !
     !
     !-----------------------------------------------------------------------
     SUBROUTINE matinvrs_dge(n,a)
     !-----------------------------------------------------------------------
       !
-      ! Inversion of a REAL(DP) GENERIC MATRIX. 
+      ! Inversion of a REAL(DP) GENERIC MATRIX
       !
       IMPLICIT NONE
       !
-      ! I/O 
+      ! I/O
       !
-      INTEGER,INTENT(IN) :: n 
+      INTEGER,INTENT(IN) :: n
       REAL(DP),INTENT(INOUT) :: a(n,n)
       !
       ! Workspace
       !
       INTEGER,EXTERNAL :: ilaenv
-      INTEGER :: i, j, nb, lwork, info
+      INTEGER :: nb, lwork, info
       INTEGER,ALLOCATABLE :: ipiv(:)
       REAL(DP),ALLOCATABLE :: work(:)
       !
-      ! Calculate the optimal size of the workspace array.
+      ! Calculate optimal size of workspace
       !
-      nb = ilaenv(1, "DGETRI", "N", n, -1, -1, -1)
-      lwork = n * nb
-      ALLOCATE( work(lwork) )
-      ALLOCATE( ipiv(n) )
+      nb = ilaenv(1,'DGETRI','N',n,-1,-1,-1)
+      lwork = n*nb
+      ALLOCATE(work(lwork))
+      ALLOCATE(ipiv(n))
       !
-      ! Invert the matrix.
+      ! Invert matrix
       !
-      CALL DGETRF( n, n, a, n, ipiv, info)
-      !if (info /= 0) stop "error in call to dsytrf"
-      CALL DGETRI( n, a, n, ipiv, work, lwork, info )
-      !if (info /= 0) stop "error in call to dsytri"
-      DEALLOCATE( work )
-      DEALLOCATE( ipiv )
+      CALL DGETRF(n,n,a,n,ipiv,info)
+      CALL DGETRI(n,a,n,ipiv,work,lwork,info)
+      !
+      DEALLOCATE(work)
+      DEALLOCATE(ipiv)
       !
     END SUBROUTINE
     !

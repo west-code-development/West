@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file License
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -15,14 +15,17 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
-  USE pwcom
-  USE westcom
-  USE io_files,         ONLY : tmp_dir, prefix
-  USE io_global,        ONLY : stdout
-  USE mp,               ONLY : mp_bcast
-  USE mp_world,         ONLY : mpime,root,world_comm
-  USE mp_global,        ONLY : nimage
-  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
+  USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
+                             & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
+                             & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
+                             & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
+                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
+                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
+                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,document
+  USE mp_world,         ONLY : mpime, root
   !
   IMPLICIT NONE
   !
@@ -30,7 +33,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   !
   INTEGER, INTENT(IN) :: num_drivers
   INTEGER, INTENT(IN) :: driver(num_drivers)
-  TYPE(json_file), INTENT(INOUT) :: json 
+  TYPE(json_file), INTENT(INOUT) :: json
   !
   IF ( mpime == root ) THEN
      !
@@ -57,7 +60,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
         CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
-        CALL json%add('input.wstat_control.qlist', qlist) 
+        CALL json%add('input.wstat_control.qlist', qlist)
         !
      ENDIF
      !
@@ -76,7 +79,6 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wfreq_control.n_secant_maxiter',n_secant_maxiter)
         CALL json%add('input.wfreq_control.trev_secant',trev_secant)
         CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
-        CALL json%add('input.wfreq_control.l_enable_gwetot',l_enable_gwetot)
         CALL json%add('input.wfreq_control.l_enable_off_diagonal',l_enable_off_diagonal)
         CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
         CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
@@ -111,19 +113,26 @@ END SUBROUTINE
 
 SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
-  USE west_version, ONLY : start_forpy, end_forpy
-  USE io_push,      ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512 
-  USE forpy_mod,    ONLY: call_py, call_py_noret, import_py, module_py
-  USE forpy_mod,    ONLY: tuple, tuple_create 
-  USE forpy_mod,    ONLY: dict, dict_create 
-  USE forpy_mod,    ONLY: list, list_create 
-  USE forpy_mod,    ONLY: object, cast
-  USE forpy_mod,    ONLY : exception_matches, KeyError, err_clear, err_print 
-  USE westcom
+  USE io_push,          ONLY : io_push_title, io_push_value, io_push_bar, io_push_es0, io_push_c512
+  USE forpy_mod,        ONLY : call_py, import_py, module_py
+  USE forpy_mod,        ONLY : tuple, tuple_create
+  USE forpy_mod,        ONLY : dict, dict_create
+  USE forpy_mod,        ONLY : list, list_create
+  USE forpy_mod,        ONLY : object, cast
+  USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
+                             & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
+                             & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
+                             & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
+                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
+                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
+                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,document,main_input_file,logfile
+  USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir, prefix
-  USE io_global,        ONLY : stdout
   USE mp,               ONLY : mp_bcast, mp_barrier
-  USE mp_world,         ONLY : mpime,root,world_comm
+  USE mp_world,         ONLY : mpime, root, world_comm
   USE mp_global,        ONLY : nimage
   USE gvect,            ONLY : ecutrho
   USE start_k,          ONLY : nk1, nk2, nk3
@@ -131,7 +140,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   USE json_module,      ONLY : json_file
   USE pwcom,            ONLY : nelec
   !
-  IMPLICIT NONE 
+  IMPLICIT NONE
   !
   ! I/O
   !
@@ -150,7 +159,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   INTEGER :: list_len
   INTEGER :: i
   INTEGER :: nq
-  INTEGER :: numsp 
+  INTEGER :: numsp
   CHARACTER(LEN=512), EXTERNAL :: trimcheck
   CHARACTER(LEN=:),ALLOCATABLE :: cvalue
   TYPE(json_file) :: json
@@ -159,12 +168,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   CALL start_clock('fetch_input')
   !
-  IF ( mpime==root ) THEN 
-     ! 
+  IF ( mpime==root ) THEN
+     !
      IERR = import_py(pymod, "west_fetch_input")
      !
-     IF ( ANY(driver(:)==1) ) THEN 
-        !  
+     IF ( ANY(driver(:)==1) ) THEN
+        !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
         IERR = args%setitem(1, "input_west" )
@@ -189,11 +198,11 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF ( ANY(driver(:)==2) ) THEN
         !
         IF ( gamma_only ) THEN
-           nq = 1 
+           nq = 1
         ELSE
            nq = nk1*nk2*nk3
         ENDIF
-        !  
+        !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
         IERR = args%setitem(1, "wstat_control" )
@@ -228,7 +237,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
         ALLOCATE(qlist(list_len))
         DO i = 0, list_len-1 ! Python indices start at 0
-           IERR = tmp_list%getitem(qlist(i+1), i) ! Fortran indices start at 1 
+           IERR = tmp_list%getitem(qlist(i+1), i) ! Fortran indices start at 1
         ENDDO
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
@@ -238,7 +247,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ENDIF
      !
      IF ( ANY(driver(:)==3) ) THEN
-        !  
+        !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
         IERR = args%setitem(1, "wfreq_control" )
@@ -259,9 +268,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%getitem(tmp_obj, "qp_bandrange")
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
-        IERR = tmp_list%getitem(qp_bandrange(1), 0) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(qp_bandrange(2), 1) ! Fortran indices start at 1 
-        CALL tmp_list%destroy 
+        IERR = tmp_list%getitem(qp_bandrange(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(qp_bandrange(2), 1) ! Fortran indices start at 1
+        CALL tmp_list%destroy
         CALL tmp_obj%destroy
         IERR = return_dict%getitem(cvalue, "macropol_calculation"); macropol_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(n_lanczos, "n_lanczos", DUMMY_DEFAULT)
@@ -273,15 +282,14 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%get(n_secant_maxiter, "n_secant_maxiter", DUMMY_DEFAULT)
         IERR = return_dict%getitem(trev_secant, "trev_secant")
         IERR = return_dict%getitem(l_enable_lanczos, "l_enable_lanczos")
-        IERR = return_dict%getitem(l_enable_gwetot, "l_enable_gwetot")
         IERR = return_dict%getitem(l_enable_off_diagonal, "l_enable_off_diagonal")
         IERR = return_dict%getitem(o_restart_time, "o_restart_time")
         IERR = return_dict%getitem(tmp_obj, "ecut_spectralf")
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%getitem(ecut_spectralf(1), 0) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(ecut_spectralf(2), 1) ! Fortran indices start at 1 
-        CALL tmp_list%destroy 
-        CALL tmp_obj%destroy 
+        IERR = tmp_list%getitem(ecut_spectralf(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(ecut_spectralf(2), 1) ! Fortran indices start at 1
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         IERR = return_dict%get(n_spectralf, "n_spectralf", DUMMY_DEFAULT)
         !
         CALL return_dict%destroy
@@ -289,7 +297,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ENDIF
      !
      IF ( ANY(driver(:)==4) ) THEN
-        !  
+        !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
         IERR = args%setitem(1, "westpp_control" )
@@ -306,20 +314,20 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%getitem(cvalue, "westpp_calculation"); westpp_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(tmp_obj, "westpp_range")
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%getitem(westpp_range(1), 0) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(westpp_range(2), 1) ! Fortran indices start at 1 
-        CALL tmp_list%destroy 
-        CALL tmp_obj%destroy 
+        IERR = tmp_list%getitem(westpp_range(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(westpp_range(2), 1) ! Fortran indices start at 1
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         IERR = return_dict%getitem(cvalue, "westpp_format"); westpp_format = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(westpp_sign, "westpp_sign")
         IERR = return_dict%get(westpp_n_pdep_eigen_to_use, "westpp_n_pdep_eigen_to_use", DUMMY_DEFAULT)
         IERR = return_dict%getitem(tmp_obj, "westpp_r0")
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%getitem(westpp_r0(1), 0) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(westpp_r0(2), 1) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(westpp_r0(3), 2) ! Fortran indices start at 1 
-        CALL tmp_list%destroy 
-        CALL tmp_obj%destroy 
+        IERR = tmp_list%getitem(westpp_r0(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(westpp_r0(2), 1) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(westpp_r0(3), 2) ! Fortran indices start at 1
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         IERR = return_dict%get(westpp_nr, "westpp_nr", DUMMY_DEFAULT)
         IERR = return_dict%getitem(westpp_rmax, "westpp_rmax")
         IERR = return_dict%getitem(westpp_epsinfty, "westpp_epsinfty")
@@ -329,7 +337,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ENDIF
      !
      IF ( ANY(driver(:)==5) ) THEN
-        !  
+        !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
         IERR = args%setitem(1, "server_control" )
@@ -381,34 +389,34 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(l_use_ecutrho,root,world_comm)
      IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
-     IF(mpime /= root) THEN 
+     IF(mpime /= root) THEN
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
         ALLOCATE(qlist(nq))
-     ENDIF  
+     ENDIF
      CALL mp_bcast(qlist,root,world_comm)
      !
-     ! CHECKS 
+     ! CHECKS
      !
-     IF( n_pdep_times < 2 ) CALL errore('fetch_input','Err: n_pdep_times<2',1) 
+     IF( n_pdep_times < 2 ) CALL errore('fetch_input','Err: n_pdep_times<2',1)
      IF( n_pdep_eigen < 1 ) CALL errore('fetch_input','Err: n_pdep_eigen<1',1)
-     IF( n_pdep_eigen*n_pdep_times < nimage ) CALL errore('fetch_input','Err: n_pdep_eigen*n_pdep_times<nimage',1) 
-     IF( n_pdep_maxiter < 1 ) CALL errore('fetch_input','Err: n_pdep_maxiter<1',1) 
-     IF( n_dfpt_maxiter < 1 ) CALL errore('fetch_input','Err: n_dfpt_maxiter<1',1) 
-     IF( n_pdep_read_from_file < 0 ) CALL errore('fetch_input','Err: n_pdep_read_from_file<0',1) 
-     IF( n_pdep_read_from_file > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_read_from_file>n_pdep_eigen',1) 
+     IF( n_pdep_eigen*n_pdep_times < nimage ) CALL errore('fetch_input','Err: n_pdep_eigen*n_pdep_times<nimage',1)
+     IF( n_pdep_maxiter < 1 ) CALL errore('fetch_input','Err: n_pdep_maxiter<1',1)
+     IF( n_dfpt_maxiter < 1 ) CALL errore('fetch_input','Err: n_dfpt_maxiter<1',1)
+     IF( n_pdep_read_from_file < 0 ) CALL errore('fetch_input','Err: n_pdep_read_from_file<0',1)
+     IF( n_pdep_read_from_file > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_read_from_file>n_pdep_eigen',1)
      IF(tr2_dfpt<=0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
      IF(trev_pdep<=0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
      IF(trev_pdep_rel<=0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
-     IF( n_pdep_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_eigen')
-     IF( n_pdep_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_times')
-     IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_maxiter')
-     IF( n_dfpt_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_dfpt_maxiter')
-     IF( n_pdep_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_read_from_file')
-     IF( n_steps_write_restart == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_steps_write_restart')
+     IF( n_pdep_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen',1)
+     IF( n_pdep_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_times',1)
+     IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_maxiter',1)
+     IF( n_dfpt_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_dfpt_maxiter',1)
+     IF( n_pdep_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_read_from_file',1)
+     IF( n_steps_write_restart == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
      IF(gamma_only) THEN
-        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1.',1)
-     ELSE 
-        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3.',1)
+        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1',1)
+     ELSE
+        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3',1)
      ENDIF
      !
   ENDIF
@@ -428,38 +436,37 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(n_secant_maxiter,root,world_comm)
      CALL mp_bcast(trev_secant,root,world_comm)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
-     CALL mp_bcast(l_enable_gwetot,root,world_comm)
      CALL mp_bcast(l_enable_off_diagonal,root,world_comm)
      CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
      !
-     ! CHECKS 
+     ! CHECKS
      !
-     IF( n_lanczos < 2 ) CALL errore('fetch_input','Err: n_lanczos<2',1) 
-     IF( n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use<1',1) 
-     IF( n_pdep_eigen_to_use > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use>n_pdep_eigen',1) 
-     IF( n_imfreq < 1 ) CALL errore('fetch_input','Err: n_imfreq<1',1) 
-     IF( n_refreq < 1 ) CALL errore('fetch_input','Err: n_refreq<1',1) 
-     IF( n_spectralf < 2 ) CALL errore('fetch_input','Err: n_spectralf<1',1) 
-     IF( qp_bandrange(1) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1) 
-     IF( qp_bandrange(2) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1) 
-     IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1) 
+     IF( n_lanczos < 2 ) CALL errore('fetch_input','Err: n_lanczos<2',1)
+     IF( n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use<1',1)
+     IF( n_pdep_eigen_to_use > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use>n_pdep_eigen',1)
+     IF( n_imfreq < 1 ) CALL errore('fetch_input','Err: n_imfreq<1',1)
+     IF( n_refreq < 1 ) CALL errore('fetch_input','Err: n_refreq<1',1)
+     IF( n_spectralf < 2 ) CALL errore('fetch_input','Err: n_spectralf<1',1)
+     IF( qp_bandrange(1) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
+     IF( qp_bandrange(2) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
+     IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
      IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_refreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_spectralf(2)<ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
      IF( wfreq_eta<=0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
-     IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1) 
+     IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1)
      IF( trev_secant<=0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
-     IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_eigen_to_use')
-     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_lanczos')
-     IF( n_imfreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_imfreq')
-     IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_refreq')
-     IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_secant_maxiter')
-     IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_spectralf')
+     IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
+     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
+     IF( n_imfreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_imfreq',1)
+     IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_refreq',1)
+     IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_secant_maxiter',1)
+     IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_spectralf',1)
      IF (l_enable_off_diagonal .and. .not. gamma_only) CALL errore("wfreq_setup", "off-diagonal self-energy only &
      & implemented for gamma-only case", 1)
-     SELECT CASE(macropol_calculation) 
+     SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
      CASE DEFAULT
         CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
@@ -479,7 +486,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(westpp_rmax,root,world_comm)
      CALL mp_bcast(westpp_epsinfty,root,world_comm)
      !
-     ! CHECKS 
+     ! CHECKS
      !
      IF( westpp_range(1) < 1 ) CALL errore('fetch_input','Err: westpp_range(1)<1',1)
      IF( westpp_range(2) < 1 ) CALL errore('fetch_input','Err: westpp_range(2)<1',1)
@@ -488,8 +495,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( westpp_n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: westpp_n_pdep_eigen_to_use<1',1)
      IF( westpp_rmax < 0._DP ) CALL errore('fetch_input','Err: westpp_rmax<0.',1)
      IF( westpp_epsinfty < 1._DP ) CALL errore('fetch_input','Err: westpp_epsinfty<1.',1)
-     IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read westpp_n_pdep_eigen_to_use')
-     IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read westpp_nr')
+     IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_n_pdep_eigen_to_use',1)
+     IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_nr',1)
      !
   ENDIF
   !
@@ -543,7 +550,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('l_kinetic_only',l_kinetic_only,numsp)
         CALL io_push_value('l_minimize_exx_if_active',l_minimize_exx_if_active,numsp)
         CALL io_push_value('l_use_ecutrho',l_use_ecutrho,numsp)
-        DO i = 1, SIZE(qlist) 
+        DO i = 1, SIZE(qlist)
            CALL io_push_value('qlist',qlist(i),numsp)
         ENDDO
         !
@@ -572,7 +579,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_secant_maxiter',n_secant_maxiter,numsp)
         CALL io_push_value('trev_secant [Ry]',trev_secant,numsp)
         CALL io_push_value('l_enable_lanczos',l_enable_lanczos,numsp)
-        CALL io_push_value('l_enable_gwetot',l_enable_gwetot,numsp)
         CALL io_push_value('l_enable_off_diagonal',l_enable_off_diagonal,numsp)
         CALL io_push_value('o_restart_time [min]',o_restart_time,numsp)
         CALL io_push_value('ecut_spectralf(1) [Ry]',ecut_spectralf(1),numsp)
@@ -628,7 +634,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL json%load(filename=TRIM(logfile))
      !
      CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
-     ! 
+     !
      OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
      CALL json%print( iunit )
      CLOSE( iunit )

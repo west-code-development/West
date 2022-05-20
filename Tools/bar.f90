@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -7,19 +7,17 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 MODULE bar
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : DP 
+  USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   TYPE :: bar_type
      INTEGER :: tot_load
@@ -47,7 +45,7 @@ MODULE bar
       !
       CALL start_clock( label )
       time = get_clock( label )
-      ! 
+      !
       b%tot_load = load
       b%counter = 0
       b%printing_number = 1
@@ -90,7 +88,7 @@ MODULE bar
       !
       CALL start_clock( label )
       time = get_clock( label )
-      ! 
+      !
       b%counter = b%counter + add
       b%time_now = time
       !
@@ -108,7 +106,7 @@ MODULE bar
       REAL(DP) :: work_percent
       INTEGER :: ihas
       CHARACTER(LEN=20) :: hashes_perc
-      CHARACTER(LEN=20),EXTERNAL :: human_readable_time 
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       REAL(DP) :: elapsed_time, expected_time
       !
       work_percent=REAL(b%counter*100,DP)/REAL(b%tot_load,DP)
@@ -125,10 +123,13 @@ MODULE bar
          WRITE(stdout, "(5X, 'in progress... |', a20, '| ', i3.3, '% :',a20,' (E)', a20, ' (X)')") &
                 hashes_perc, INT(work_percent/5.0_DP)*5, &
                 TRIM( human_readable_time(elapsed_time)), TRIM( human_readable_time(expected_time))
+#if defined(__DEBUG) || defined(__FLUSH_STDOUT)
+         FLUSH(stdout)
+#endif
          !
          b%printing_number = INT(work_percent/5.0_DP)+1
          !
-      ENDIF 
+      ENDIF
       !
     END SUBROUTINE
     !

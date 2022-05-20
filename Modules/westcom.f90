@@ -218,7 +218,7 @@ MODULE westpp_center
   !
   IMPLICIT NONE
   !
-  ! INPUT FOR wfreq_control
+  ! INPUT FOR westpp_control
   !
   CHARACTER(LEN=8) :: westpp_calculation
   CHARACTER(LEN=7) :: westpp_format
@@ -226,6 +226,7 @@ MODULE westpp_center
   INTEGER :: westpp_range(2)
   LOGICAL :: westpp_sign
   REAL(DP) :: westpp_r0(3)
+  REAL(DP) :: westpp_box(6)
   INTEGER :: westpp_nr
   REAL(DP) :: westpp_rmax
   REAL(DP) :: westpp_epsinfty

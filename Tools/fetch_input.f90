@@ -24,7 +24,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
                              & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,document
+                             & westpp_epsinfty, westpp_box, document
   USE mp_world,         ONLY : mpime, root
   !
   IMPLICIT NONE
@@ -93,6 +93,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.westpp_control.westpp_sign',westpp_sign)
         CALL json%add('input.westpp_control.westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use)
         CALL json%add('input.westpp_control.westpp_r0',westpp_r0)
+        CALL json%add('input.westpp_control.westpp_box',westpp_box)
         CALL json%add('input.westpp_control.westpp_nr',westpp_nr)
         CALL json%add('input.westpp_control.westpp_rmax',westpp_rmax)
         CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
@@ -127,7 +128,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,document,main_input_file,logfile
+                             & westpp_epsinfty,westpp_box,document,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir, prefix
   USE mp,               ONLY : mp_bcast, mp_barrier

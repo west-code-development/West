@@ -44,13 +44,12 @@ SUBROUTINE do_loc ( )
   !
   INTEGER :: i1,i2, ipol, ir, local_j, global_j, i, ig, iks, ibnd, local_ib, &
    & global_ib, ir1, ir2, ir3, index1, index2, n_points, nbnd_, iunit
-  REAL(DP),ALLOCATABLE :: aux_loc(:, :), density_loc(:), density_gat(:)
-  REAL(DP) :: r_vec(3), norm, volume
+  REAL(DP),ALLOCATABLE :: aux_loc(:, :), ipr(:, :), density_loc(:), density_gat(:)
+  REAL(DP) :: r_vec(3), volume
   CHARACTER(LEN=512)    :: fname, aname, ikstring
   TYPE(bar_type) :: barra
   CHARACTER(LEN=6) :: labelb,labelk
   !REAL(DP) :: alat
-  LOGICAL :: is_it_in
   TYPE(json_core) :: json
   TYPE(json_value), POINTER :: json_root, localization
 
@@ -63,6 +62,7 @@ SUBROUTINE do_loc ( )
   !
   ALLOCATE(density_loc(dffts%nnr))
   ALLOCATE(aux_loc(nbnd_,k_grid%nps))
+  ALLOCATE(ipr(nbnd_,k_grid%nps))
   ALLOCATE(density_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   !
   psic = 0._DP
@@ -87,23 +87,15 @@ SUBROUTINE do_loc ( )
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps>1) THEN
-        !iuwfc = 20
-        !lrwfc = nbnd * npwx * npol 
-        !!CALL get_buffer( evc, nwordwfc, iunwfc, iks )
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        !CALL mp_bcast(evc,0,inter_image_comm)
-        !CALL davcio(evc,lrwfc,iuwfc,iks,-1)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
-     !nbndval = nbnd_occ(iks)
      !
      DO local_ib=1,aband%nloc
-       norm = 0.0
         !
         ! local -> global
         !
-        !WRITE(stdout,*) 'Made it here for ', local_ib, '/', aband%nloc
         global_ib = aband%l2g(local_ib)
         IF( global_ib < westpp_range(1) .OR. global_ib > westpp_range(2) ) CYCLE
         !
@@ -125,27 +117,19 @@ SUBROUTINE do_loc ( )
           index2 = 0
           index1 = global_ib - westpp_range(1) + 1
 
-          
           DO ir3 = 1, dffts%nr3
             Do ir2 = 1, dffts%nr2
               DO ir1 = 1, dffts%nr1
-         ! DO ir3 = 1, dffts%nr3
-         !   DO ir2 = 1, dffts%nr2
-         !     Do ir1 = 1, dffts%nr3
                 ! update current index
-                is_it_in = .FALSE.
                 index2 = index2 + 1
-                norm = norm + density_gat(index2)
+                ! add to inverse participation ratio
+                ipr(index1, iks) = ipr(index1, iks) + density_gat(index2)**2
                 ! find r-vector for this point
                 DO i = 1, 3
                   r_vec(i) = dble(ir1 - 1)/dble(dffts%nr1) * alat*at(i,1) &
                     & + dble(ir2 - 1)/dble(dffts%nr2) * alat*at(i,2) &
                     & + dble(ir3 - 1)/dble(dffts%nr3) *alat*at(i,3)
                 END DO
-                
-                !WRITE(stdout, '(5I7, E15.8)') ir1, ir2, ir3, index2, global_ib, &
-                ! & density_gat(index2)
-
                 ! check whether r-vector is in the box
                 IF ((r_vec(1) .GT. westpp_box(1)) .AND. &
                  & (r_vec(1) .LT. westpp_box(2)) .AND. &
@@ -156,21 +140,10 @@ SUBROUTINE do_loc ( )
                       
                       n_points = n_points + 1
                       aux_loc(index1, iks) = aux_loc(index1, iks) + density_gat(index2)
-                      is_it_in = .TRUE.
                 END IF
-                !WRITE(stdout, '(5I7, 3E15.8, L5)') ir1, ir2, ir3, index2, global_ib, &
-                 !& r_vec(:), is_it_in
               END DO
             END DO
           ENDDO
-          ! Post-processing
-          ! print to file
-          !print *, iks, global_ib, aux_loc(iks, index1)
-          !write(stdout, *) iks, global_ib, norm/(dffts%nr1x*dffts%nr2x*dffts%nr3x)
-          !CALL io_push_value("index", index1, 20)
-          !CALL io_push_value("localization", aux_loc(index1, iks),20)
-          !CALL io_push_value("Npoints", n_points, 20)
-        
         ENDIF
         !
         CALL update_bar_type( barra,'westpp', 1 )
@@ -178,10 +151,15 @@ SUBROUTINE do_loc ( )
      ENDDO
      !
   ENDDO
-  
+  ! Post processing 
   aux_loc(:,:) = volume/omega * aux_loc(:,:)/dble(n_points)
+  ipr(:,:) = ipr(:,:)/dble(dffts%nr1*dffts%nr2*dffts%nr3)
+  
   ! gather localization functions for all bands
   CALL mp_sum(aux_loc,inter_image_comm)
+  ! gather IPR for all bands
+  CALL mp_sum(ipr,inter_image_comm)
+  
   ! root writes JSON file
   IF (mpime == root) THEN
     CALL json%initialize
@@ -190,14 +168,17 @@ SUBROUTINE do_loc ( )
 
     IF (k_grid%nps == 1) THEN
       CALL json%add(json_root, 'localization', aux_loc(:,1))
+      CALL json%add(json_root, 'ipr', ipr(:,1))
     ELSE
       ! add "localization" object to "root"
       CALL json%create_object(localization, 'localization')
+      CALL json%create_object(ipr, 'ipr')
       CALL json%add(json_root, localization)
 
       DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
         WRITE(ikstring, '(I4)') iks
         CALL json%add(localization, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
+        CALL json%add(ipr, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
       ENDDO 
       ! don't need pointer anymore
       nullify(localization)

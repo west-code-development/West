@@ -41,6 +41,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                                  & npwqx,fftdriver,wstat_save_dir,l_frac_occ,occ_numbers,nbnd_occ_one,&
                                  & nbnd_occ_nonzero
   USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_pool_comm,npool,intra_bgrp_comm,&
+                                 & inter_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE io_global,            ONLY : stdout

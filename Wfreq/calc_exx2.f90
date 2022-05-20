@@ -150,7 +150,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
               iv = vband%l2g(ivloc)
               !
               IF (l_frac_occ) then
-                 fi = occ_numbers(iv_glob,iks)
+                 fi = occ_numbers(iv,iks)
               ELSE
                  fi = 1._DP
               ENDIF

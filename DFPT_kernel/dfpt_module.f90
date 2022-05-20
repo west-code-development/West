@@ -470,7 +470,7 @@ MODULE dfpt_module
       USE io_global,             ONLY : stdout
       USE wvfct,                 ONLY : et
       USE fft_base,              ONLY : dffts
-      USE wavefunctions_module,  ONLY : evc,psic
+      USE wavefunctions,  ONLY : evc,psic
       USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
       USE mp_global,             ONLY : inter_image_comm,inter_pool_comm,my_image_id,intra_bgrp_comm
       USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k

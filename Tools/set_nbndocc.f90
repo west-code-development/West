@@ -18,7 +18,7 @@ SUBROUTINE set_nbndocc()
   !
   USE kinds,                  ONLY : DP
   USE pwcom,                  ONLY : nelup,neldw,isk,nelec,lsda,nks,&
-                                   & nbnd,lgauss,ltetra,wg,wk,tfixed_occnbnd
+                                   & nbnd,lgauss,ltetra,wg,wk,tfixed_occ
   USE constants,              ONLY : degspin
   USE noncollin_module,       ONLY : noncolin
   USE westcom,                ONLY : nbnd_occ,l_frac_occ,occ_numbers,&

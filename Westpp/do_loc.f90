@@ -36,7 +36,7 @@ SUBROUTINE do_loc ( )
   USE control_flags,         ONLY : gamma_only 
   USE types_bz_grid,         ONLY : k_grid
   USE cell_base,             ONLY : alat, at, omega
-  USE json_module,           ONLY : json_file, json_value
+  USE json_module,           ONLY : json_core, json_value
   !
   IMPLICIT NONE
   !
@@ -51,8 +51,8 @@ SUBROUTINE do_loc ( )
   CHARACTER(LEN=6) :: labelb,labelk
   !REAL(DP) :: alat
   LOGICAL :: is_it_in
-  TYPE(json_file) :: json
-  TYPE(json_value), POINTER :: root, localization
+  TYPE(json_core) :: json
+  TYPE(json_value), POINTER :: json_root, localization
 
   
   !
@@ -186,25 +186,25 @@ SUBROUTINE do_loc ( )
   IF (mpime == root) THEN
     CALL json%initialize
     ! initialize the structure
-    CALL json%create_object(root, '')
+    CALL json%create_object(json_root, '')
 
-    IF (k_grid%nps > 1) THEN
-      CALL json%add(root, 'localization', aux_loc(:,1))
+    IF (k_grid%nps == 1) THEN
+      CALL json%add(json_root, 'localization', aux_loc(:,1))
     ELSE
       ! add "localization" object to "root"
       CALL json%create_object(localization, 'localization')
-      CALL json%add(root, localization)
+      CALL json%add(json_root, localization)
 
       DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
         WRITE(ikstring, '(I4)') iks
-        CALL json%add(localization, TRIM(ADJUSTL(ikstring))//, aux_loc(:,iks))
+        CALL json%add(localization, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
       ENDDO 
       ! don't need pointer anymore
       nullify(localization)
     ENDIF
     
     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//"/localization.json" )
-    CALL json%print(root,iunit)
+    CALL json%print(json_root,iunit)
     CLOSE( iunit )
       !
     CALL json%destroy()

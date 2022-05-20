@@ -127,7 +127,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  enrg = et(glob_im,iks) - energy(ib,iks_g)
                  IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                  & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-                    enrg1 = et(glob_im,iks) - energy(jb,iks)
+                    enrg1 = et(glob_im,iks) - energy(jb,iks_g)
                     partial_b = partial_b + d_body1_ifr_full(im,ifreq,index,iks_g)*0.5_DP*&
                     &(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
                  ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
@@ -145,12 +145,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                     DO il = 1, n_lanczos
                        IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                        & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-                          enrg = d_diago_full(il,ip,index,iks_g) - energy(ib,iks)
-                          enrg1 = d_diago_full(il,ip,index,iks_g) - energy(jb,iks)
+                          enrg = d_diago_full(il,ip,index,iks_g) - energy(ib,iks_g)
+                          enrg1 = d_diago_full(il,ip,index,iks_g) - energy(jb,iks_g)
                           partial_b = partial_b + d_body2_ifr_full(il,ip,ifreq,index,iks_g)* 0.5_DP &
                           &* (integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
                        ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                          enrg = d_diago(il,ip,ib,iks_g) - energy(ib,iks)
+                          enrg = d_diago(il,ip,ib,iks_g) - energy(ib,iks_g)
                           partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ib,iks_g)*integrate_imfreq(ifreq,enrg)
                        ENDIF
                     ENDDO
@@ -216,7 +216,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
               CYCLE
            ENDIF
            !
-           enrg1 = energy(jb,iks)
+           enrg1 = energy(jb,iks_g)
            !
            residues_b = 0._DP
            residues_h = 0._DP
@@ -246,9 +246,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                     !
                     IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                     & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-                       residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks )
+                       residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks_g )
                     ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                       residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks )
+                       residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks_g )
                     ENDIF
                     ! 
                  ENDDO

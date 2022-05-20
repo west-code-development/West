@@ -70,11 +70,11 @@ MODULE wfreq_io
     !
     IF (l_enable_off_diagonal) THEN
       myoffset_i8b = 1_i8b*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'full.dat'
+      fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
       CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
       !
       myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'full.dat'
+      fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
       CALL mp_write_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     ELSE
       myoffset_i8b = 1_i8b*n_lanczos*myoffset

@@ -35,7 +35,7 @@ SUBROUTINE solve_hf_gamma( )
   !
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : qp_bandrange,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,&
-                                 & l_enable_off_diagonal,&sigma_exx_full, sigma_vxcl_full,&
+                                 & l_enable_off_diagonal,sigma_exx_full, sigma_vxcl_full,&
                                  & sigma_vxcnl_full
   USE mp_world,             ONLY : mpime,root
   USE pwcom,                ONLY : et

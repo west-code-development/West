@@ -183,7 +183,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
                        pertr(ir)=psic(ir)*pertr(ir)
                     ENDDO
                     CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Rho')
-                    IF ( l_enable_off_diagonal .AND. jb < ib ) CALL single_fwfft_gamma(dffts,ngm,ngm,pertr1,pertg1,'Dense')
+                    IF ( l_enable_off_diagonal .AND. jb < ib ) CALL single_fwfft_gamma(dffts,ngm,ngm,pertr1,pertg1,'Rho')
                  ELSEIF(noncolin) THEN
                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
@@ -221,9 +221,9 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
               !
             ENDDO ! iq
             !
-            CALL update_bar_type( barra, 'sigmax', 1 )
-            !
         ENDDO ! jb
+        !
+        CALL update_bar_type( barra, 'sigmax', nb2-nb1+1  )
         !
      ENDDO ! ibloc
      !

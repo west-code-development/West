@@ -120,7 +120,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
         IF(gamma_only) THEN
            !
            DO ib = 1, gwbnd%nloc
-              CALL single_invfft_gamma(dfftp,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
               !
               DO jb_glob = 1, numbandegw
                  !
@@ -129,7 +129,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  IF (l_enable_off_diagonal) index = ijpmap(qp_bandrange(1)+jb_glob-1,qp_bandrange(1)+gwbnd%l2g(ib)-1)
                  !
                  IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
-                    CALL single_invfft_gamma(dfftp,npw,npwx,evc(1,qp_bandrange(1)+jb_glob-1),psic1,'Wave')
+                    CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bandrange(1)+jb_glob-1),psic1,'Wave')
                     DO ir = 1, dfftp%nnr
                        braket = braket + psic(ir)*DCONJG(psic1(ir)) * vxc(ir,current_spin) 
                     ENDDO

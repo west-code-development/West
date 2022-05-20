@@ -191,9 +191,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               !
               index = ijpmap(jb,ib)
               !
-              IF(ALLOCATED(overlap1)) DEALLOCATE(overlap1) 
-              ALLOCATE(overlap1(pert%nglob, nbnd ) )
-              !
               CALL readin_overlap( 'g', kpt_pool%l2g(iks), jb, overlap1, pert%nglob, nbnd )
            ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
               CONTINUE
@@ -316,10 +313,10 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               !
            ENDIF
            !
-           CALL update_bar_type( barra, 'coll_gw', 1 )
-           !
         ENDDO ! jbnd
-         !
+        !
+        CALL update_bar_type( barra, 'coll_gw', qp_bandrange(2)-qp_bandrange(1)+1 )
+        !
      ENDDO ! ibnd
      !
   ENDDO ! iks

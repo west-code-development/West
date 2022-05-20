@@ -3,38 +3,35 @@
 include ../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
-          $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
-          $(MOD_FLAG)../Libraries/Forpy \
-          $(MOD_FLAG)../Libraries/Json \
-          $(MOD_FLAG)../Libraries/Base64 \
-          $(MOD_FLAG)../Modules \
-          $(MOD_FLAG)../Tools \
-          $(MOD_FLAG)../FFT_kernel \
-          $(MOD_FLAG)../Coulomb_kernel \
-          $(MOD_FLAG)../Para_kernel \
-          $(MOD_FLAG)../Hamiltonian_kernel \
-          $(MOD_FLAG)../IO_kernel \
-          $(MOD_FLAG)../DFPT_kernel \
-          $(MOD_FLAG).
-IFLAGS=
-
+MODFLAGS = $(BASEMOD_FLAGS) \
+           $(MOD_FLAG)../../PW/src \
+           $(MOD_FLAG)../Coulomb_kernel \
+           $(MOD_FLAG)../FFT_kernel \
+           $(MOD_FLAG)../IO_kernel \
+           $(MOD_FLAG)../Libraries/Json \
+           $(MOD_FLAG)../Modules \
+           $(MOD_FLAG)../Para_kernel \
+           $(MOD_FLAG)../Tools \
+           $(MOD_FLAG).
 
 WESTPP_OBJS = \
+do_dip.o \
+do_eigenpot2.o \
+do_rho.o \
+do_sxx.o \
+do_wfc2.o \
+do_loc.o \
+dump_r.o \
+westpp.o \
 westpp_readin.o \
 westpp_setup.o \
 write_wfc_1d_r.o \
-write_wfc_spav.o \
-dump_r.o \
-do_rho.o \
-do_wfc2.o \
-do_loc.o \
-do_eigenpot2.o \
-do_sxx.o \
-westpp.o
+write_wfc_spav.o
 
 PWOBJS = ../../PW/src/libpw.a
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a
+
+QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
+
 WESTLIBS = \
 ../DFPT_kernel/lib_dfpt_kernel.a \
 ../IO_kernel/lib_io_kernel.a \
@@ -43,18 +40,21 @@ WESTLIBS = \
 ../Coulomb_kernel/lib_coulomb_kernel.a \
 ../FFT_kernel/lib_fft_kernel.a \
 ../Tools/libtools.a \
-../Modules/libmodules.a
+../Modules/libmodules.a \
+../Libraries/Forpy/libforpy.a \
+../Libraries/Json/libjson.a \
+../Libraries/Base64/libbase64.a
 
-
-TLDEPS= bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps westpp.x
 
-westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(LIBOBJS)
+westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(WESTLIBS)
 	$(LD) $(LDFLAGS) -o westpp.x \
-		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS) ${PYT_LDFLAGS}
+		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) ${PYT_LDFLAGS}
 	- ( cd ../../bin ; ln -fs ../West/Westpp/westpp.x . )
-tldeps:
+
+tldeps :
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 clean :
@@ -62,10 +62,10 @@ clean :
 	- /bin/rm -f ../../bin/westpp.x
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Westpp ###"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

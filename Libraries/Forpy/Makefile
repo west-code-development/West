@@ -19,8 +19,8 @@ clean :
 	- /bin/rm -f libforpy.a
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Forpy ####"
 	@echo "##############"
-	@echo "              "
+	@echo

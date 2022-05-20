@@ -1,3 +1,0 @@
-west_version.o : ../Libraries/Forpy/forpy_mod.o
-westcom.o : ../../FFTXlib/fft_types.o
-westcom.o : ../../Modules/kind.o

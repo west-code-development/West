@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,22 +7,21 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
 SUBROUTINE exx_ungo()
   !-----------------------------------------------------------------------
   !
-  USE funct,                  ONLY : dft_is_hybrid,init_dft_exxrpa,stop_exx
-  USE exx,                    ONLY : x_gamma_extrapolation,exxdiv_treatment,exx_grid_init,exx_div_check,&
-                                     &deallocate_exx,exxinit,vexx
+  USE exx,                    ONLY : deallocate_exx
+  USE xc_lib,                 ONLY : xclib_dft_is,stop_exx
   !
   IMPLICIT NONE
   !
-  IF( dft_is_hybrid() ) THEN
+  IF( xclib_dft_is('hybrid') ) THEN
      CALL stop_exx
      CALL deallocate_exx
   ENDIF
   !
-END SUBROUTINE 
+END SUBROUTINE

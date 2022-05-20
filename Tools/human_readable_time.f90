@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -19,8 +19,8 @@ FUNCTION human_readable_time(time)
   !
   USE kinds,      ONLY : DP
   !
-  IMPLICIT NONE 
-  ! 
+  IMPLICIT NONE
+  !
   ! I/O
   !
   REAL(DP), INTENT(IN) :: time
@@ -30,7 +30,7 @@ FUNCTION human_readable_time(time)
   !
   CHARACTER(20) :: ds_temp,s_temp,m_temp,h_temp,d_temp
   REAL(DP) :: seconds
-  INTEGER :: minutes,hours,days 
+  INTEGER :: minutes,hours,days
   !
   ! If < 0.1 s
   !

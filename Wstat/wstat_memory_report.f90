@@ -16,7 +16,7 @@ SUBROUTINE wstat_memory_report()
   !
   USE kinds,               ONLY : DP
   USE io_global,           ONLY : stdout
-  USE wvfct,               ONLY : npwx, nbnd
+  USE wvfct,               ONLY : npwx,nbnd
   USE fft_base,            ONLY : dfftp
   USE gvect,               ONLY : ngl
   USE gvecs,               ONLY : ngms

@@ -215,7 +215,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
                           dtemp2(im,ifreq) = dtemp2(im,ifreq) + overlap1(glob_jp,im)&
                           &*overlap(glob_ip,im)*d_epsm1_ifr(glob_jp,ip,ifreq)
                        ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                          dtemp2(im,ifreq) = dtemp2(im,ifreq) + overlap(glob_jp,im)*overlap(glob_ip,im)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                          dtemp2(im,ifreq) = dtemp2(im,ifreq) + &
+                          & overlap(glob_jp,im)*overlap(glob_ip,im)*d_epsm1_ifr(glob_jp,ip,ifreq)
                        ENDIF
                     ENDDO
                  ENDDO 
@@ -252,7 +253,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
                           ztemp2(im,ifreq) = ztemp2(im,ifreq) + overlap1(glob_jp,im)&
                           &*overlap(glob_ip,im)*z_epsm1_rfr(glob_jp,ip,ifreq)
                        ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                          ztemp2(im,ifreq) = ztemp2(im,ifreq) + overlap(glob_jp,im)*overlap(glob_ip,im)*z_epsm1_rfr(glob_jp,ip,ifreq) 
+                          ztemp2(im,ifreq) = ztemp2(im,ifreq) &
+                          & + overlap(glob_jp,im)*overlap(glob_ip,im)*z_epsm1_rfr(glob_jp,ip,ifreq) 
                        ENDIF
                     ENDDO
                  ENDDO 
@@ -539,7 +541,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      DO glob_ifreq = 1, n_spectralf
         en = (ecut_spectralf(2)-ecut_spectralf(1))/REAL(n_spectralf-1,KIND=DP)*REAL(glob_ifreq-1,KIND=DP) &
         & +ecut_spectralf(1)
-        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .FALSE., .FALSE.)
         DO iks=1,k_grid%nps
            DO ib = qp_bandrange(1), qp_bandrange(2)
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1)

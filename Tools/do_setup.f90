@@ -16,7 +16,7 @@ SUBROUTINE do_setup
   !
   USE json_module,            ONLY : json_file
   USE pwcom,                  ONLY : npw,nbnd,nkstot,nspin,nelec,nelup,neldw,isk
-  USE fixed_occ,              ONLY : f_inp
+  USE fixed_occ,              ONLY : f_inp,tfixed_occ
   USE kinds,                  ONLY : DP
   USE mp,                     ONLY : mp_sum
   USE mp_global,              ONLY : intra_bgrp_comm,nproc_bgrp,me_bgrp
@@ -124,6 +124,8 @@ SUBROUTINE do_setup
   IF( mpime == root ) CALL json%add('system.electron.nkstot',nkstot)
   CALL io_push_value('nspin',nspin,20)
   IF( mpime == root ) CALL json%add('system.electron.nspin',nspin)
+  CALL io_push_value('tfixed_occ',tfixed_occ,20)
+  IF( mpime == root ) CALL json%add('system.electron.tfixed_occ',tfixed_occ)
   CALL io_push_value('nelec',nelec,20)
   IF( mpime == root ) CALL json%add('system.electron.nelec',nelec)
   IF(nspin == 2) THEN

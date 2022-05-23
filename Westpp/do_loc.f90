@@ -153,7 +153,7 @@ SUBROUTINE do_loc ( )
   ENDDO
   ! Post processing 
   aux_loc(:,:) = volume/omega * aux_loc(:,:)/dble(n_points)
-  ipr(:,:) = ipr(:,:)/dble(dffts%nr1*dffts%nr2*dffts%nr3)
+  ipr(:,:) = ipr(:,:)/dble(dffts%nr1*dffts%nr2*dffts%nr3)/omega
   
   ! gather localization functions for all bands
   CALL mp_sum(aux_loc,inter_image_comm)

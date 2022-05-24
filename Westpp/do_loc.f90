@@ -116,7 +116,8 @@ SUBROUTINE do_loc ( )
           n_points = 0
           index2 = 0
           index1 = global_ib - westpp_range(1) + 1
-
+          
+          ! loop over all points on FFT grid
           DO ir3 = 1, dffts%nr3
             Do ir2 = 1, dffts%nr2
               DO ir1 = 1, dffts%nr1
@@ -137,7 +138,7 @@ SUBROUTINE do_loc ( )
                    & (r_vec(2) .LT. westpp_box(4)) .AND. &
                     & (r_vec(3) .GT. westpp_box(5)) .AND. &
                     & (r_vec(3) .LT. westpp_box(6))) THEN
-                      
+                      ! if condition fulfilled, add to localization function
                       n_points = n_points + 1
                       aux_loc(index1, iks) = aux_loc(index1, iks) + density_gat(index2)
                 END IF
@@ -167,6 +168,7 @@ SUBROUTINE do_loc ( )
     CALL json%create_object(json_root, '')
 
     IF (k_grid%nps == 1) THEN
+      ! write localization factor and IPR to JSON file directly
       CALL json%add(json_root, 'localization', aux_loc(:,1))
       CALL json%add(json_root, 'ipr', ipr(:,1))
     ELSE
@@ -178,6 +180,7 @@ SUBROUTINE do_loc ( )
 
       DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
         WRITE(ikstring, '(I4)') iks
+        ! write localization factor and IPR for each iks-point
         CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
         CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
       ENDDO 

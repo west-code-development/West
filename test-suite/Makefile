@@ -6,11 +6,12 @@ default: title all
 
 all:
 	for d in $(testdirs); do cd $$d; $(MAKE); cd ..; done
+	python3 -m pytest -v --capture=tee-sys --durations=0
 
 clean:
 	for d in $(testdirs); do cd $$d; $(MAKE) clean; cd ..; done
 
-title :
+title:
 	@echo
 	@echo "################"
 	@echo "## Test-suite ##"

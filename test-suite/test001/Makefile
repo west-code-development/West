@@ -4,15 +4,12 @@ include ../maketest.inc
 
 default: title description all
 
-all: prepare_inputs run check
+all: prepare_inputs run
 
 prepare_inputs:
 	bash prepare_inputs.sh
 
 run: pw wstat wfreq
-
-check:
-	python3 test.py
 
 pw:
 	${PARA_PREFIX_QE} ${BINDIR}/pw.x -i pw.in > pw.out 2> pw.err

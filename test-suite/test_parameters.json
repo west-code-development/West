@@ -1,0 +1,6 @@
+{
+  "tolerance":{
+    "total_energy": "1e-5",
+     "singleparticle_energy": "1e-4"
+              }
+}

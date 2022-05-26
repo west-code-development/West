@@ -4,9 +4,9 @@ import os
 import pytest
 from xml.etree import ElementTree as ET
 
-#
-# REUSABLE FUNCTIONS
-#
+######################
+# REUSABLE FUNCTIONS #
+######################
 
 def check_files_exist_and_job_done(list_of_files):
     """
@@ -71,12 +71,12 @@ def read_and_test_wstat_eigenvalues(fileA,fileB,tol):
     ref_pdep_eig = read_wstat_eigenvalues(fileB)
 
     maxDiff = 0.0
-    for iq in test_eig:
-        maxDiff = max(maxDiff,np.amax(np.abs(test_eig[iq]-ref_eig[iq])))
+    for iq in test_pdep_eig:
+        maxDiff = max(maxDiff,np.amax(np.abs(test_pdep_eig[iq]-ref_pdep_eig[iq])))
     print(f'Pdep eigenvalues (wstat) max diff: {maxDiff}')
 
-    for iq in test_eig:
-        assert np.allclose(test_eig[iq],ref_eig[iq],rtol=0,atol=tol),f'PDEP eigenvalues changed, iq {iq}'
+    for iq in test_pdep_eig:
+        assert np.allclose(test_pdep_eig[iq],ref_pdep_eig[iq],rtol=0,atol=tol),f'PDEP eigenvalues changed, iq {iq}'
 
 
 def read_wfreq_energies(fileName):
@@ -120,10 +120,9 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
             assert np.allclose(test_en[ik][key],ref_en[ik][key],rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
 
 
-#
-# TEST 
-#
-
+########
+# TEST #
+########
 
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
 def test_west(testdir):

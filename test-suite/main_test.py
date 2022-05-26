@@ -127,6 +127,8 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
 def test_west(testdir):
 
+    print(f"[{testdir}]")
+
     with open('test_parameters.json','r') as f:
         parameters = json.load(f)
 

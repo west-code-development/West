@@ -18,6 +18,7 @@ setup(name=data["name"],
           'scipy',
           'matplotlib',
           'pyyaml',
+          'pytest',
           'datetime',
           'setuptools',
           'sphinx_rtd_theme'

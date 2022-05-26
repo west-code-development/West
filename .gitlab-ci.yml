@@ -22,6 +22,7 @@ stages:
     - if [ -z $FFTW_VERSION ]; then echo "not set"; else echo $FFTW_VERSION; fi
     - if [ -z $PYTHON_VERSION ]; then echo "not set"; else echo $PYTHON_VERSION; fi
     - if [ -z $PYTHON_PIP_VERSION ]; then echo "not set"; else echo $PYTHON_PIP_VERSION; fi
+    - python3 -m pip install -q pytest numpy
 
 .template_build:
   stage: build
@@ -42,7 +43,6 @@ stages:
 .template_test:
   stage: test
   script:
-    - python3 -m pip install -q pytest numpy
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
@@ -64,23 +64,23 @@ stages:
       - QEDIR/West/test-suite/test*/*.tab
       - QEDIR/West/test-suite/test*/test*/*.xml
       - QEDIR/West/test-suite/test*/test*/*.json
-    expire_in: 2 days
+    expire_in: 1 days
 
 # Builds
 
-gcc1130_0001:
-  extends:
-    - .template_bot_start
-    - .template_build
+#gcc1130_0001:
+#  extends:
+#    - .template_bot_start
+#    - .template_build
 
-gcc1030_0001:
-  extends:
-    - .template_bot_start
-    - .template_build
+#gcc1030_0001:
+#  extends:
+#    - .template_bot_start
+#    - .template_build
 
 # Tests
 
-gcc1130_0001_t:
+gcc1130_0001:
   variables:
     CI_NP: 8
     CI_NI: 1
@@ -90,10 +90,9 @@ gcc1130_0001_t:
   extends:
     - .template_bot_start
     - .template_test
-  needs: ["gcc1130_0001"]
   image: miccomcenter/bot:gcc1130_0001
 
-gcc1030_0001_t:
+gcc1030_0001:
   variables:
     CI_NP: 8
     CI_NI: 2
@@ -103,7 +102,6 @@ gcc1030_0001_t:
   extends:
     - .template_bot_start
     - .template_test
-  needs: ["gcc1030_0001"]
   image: miccomcenter/bot:gcc1030_0001
 
 # Nightly tests

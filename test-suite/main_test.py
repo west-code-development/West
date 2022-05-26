@@ -39,7 +39,7 @@ def read_and_test_total_energies(fileA,fileB,tol):
     ref_energy = read_total_energy(fileB)
 
     maxDiff = np.amax(np.abs(test_energy-ref_energy))
-    print(f'\nTot energy max diff: {maxDiff}')
+    print(f'Tot energy max diff: {maxDiff}')
 
     assert np.allclose(test_energy,ref_energy,rtol=0,atol=tol),'Total energies changed'
 
@@ -127,7 +127,7 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
 def test_west(testdir):
 
-    print(f"[{testdir}]")
+    print(f"\n[{testdir}]")
 
     with open('test_parameters.json','r') as f:
         parameters = json.load(f)

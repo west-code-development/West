@@ -131,7 +131,7 @@ def test_output(testdir):
 
 
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
-def test_toten(testdir):
+def test_totalEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_total_energies(testdir+'/test.save/data-file-schema.xml',testdir+'/ref/pw.xml',float(parameters['tolerance']['total_energy']))
@@ -145,7 +145,7 @@ def test_pdepEigen(testdir):
 
 
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
-def test_singleparticleEn(testdir):
+def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))

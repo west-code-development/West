@@ -27,6 +27,7 @@ stages:
 .template_build:
   stage: build
   script:
+    - rm -rf QEDIR
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
@@ -43,6 +44,7 @@ stages:
 .template_test:
   stage: test
   script:
+    - rm -rf QEDIR
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
@@ -169,6 +171,7 @@ west_doc_build:
     - pip install -q sphinx_rtd_theme
     - pip install -q ipython
   script:
+    - rm -rf West
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West
     - cd West
     - git describe --tags --always

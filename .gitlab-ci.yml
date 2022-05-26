@@ -92,18 +92,6 @@ gcc1130_0001:
     - .template_test
   image: miccomcenter/bot:gcc1130_0001
 
-gcc1030_0001:
-  variables:
-    CI_NP: 8
-    CI_NI: 2
-    CI_NK: 1
-    CI_NB: 2
-    CI_NT: 1
-  extends:
-    - .template_bot_start
-    - .template_test
-  image: miccomcenter/bot:gcc1030_0001
-
 # Nightly tests
 
 gcc1130_0002_t2:
@@ -147,6 +135,21 @@ gcc1130_0002_t4:
     - .template_bot_start
     - .template_test
   image: miccomcenter/bot:gcc1130_0002
+
+gcc1030_0001_t:
+  variables:
+    CI_NP: 8
+    CI_NI: 2
+    CI_NK: 1
+    CI_NB: 2
+    CI_NT: 1
+  only:
+    - schedules
+  extends:
+    - .template_bot_start
+    - .template_test
+  image: miccomcenter/bot:gcc1030_0001
+
 
 # Doc
 

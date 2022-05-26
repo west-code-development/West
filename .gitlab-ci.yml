@@ -1,11 +1,15 @@
 variables:
   GIT_STRATEGY: none
   QE_VERSION: qe-7.0
+  OMPI_ALLOW_RUN_AS_ROOT: 1
+  OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
+  OMPI_MCA_btl_vader_single_copy_mechanism: none
 
 stages:
   - build
   - test
   - doc
+
 
 # Templates
 
@@ -63,10 +67,10 @@ stages:
     paths:
       - QEDIR/West/test-suite/test*/*.out
       - QEDIR/West/test-suite/test*/*.err
-      - QEDIR/West/test-suite/test*/*.tab
       - QEDIR/West/test-suite/test*/test*/*.xml
       - QEDIR/West/test-suite/test*/test*/*.json
     expire_in: 1 days
+
 
 # Builds
 
@@ -80,6 +84,7 @@ stages:
 #    - .template_bot_start
 #    - .template_build
 
+
 # Tests
 
 gcc1130_0001:
@@ -92,11 +97,11 @@ gcc1130_0001:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc1130_0001
+
 
 # Nightly tests
 
-gcc1130_0002_t2:
+gcc1130_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 2
@@ -108,28 +113,14 @@ gcc1130_0002_t2:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc1130_0002
+  image: miccomcenter/bot:gcc1130_0001
 
-gcc1130_0002_t3:
+gcc1130_0002_t:
   variables:
     CI_NP: 8
     CI_NI: 1
     CI_NK: 1
     CI_NB: 2
-    CI_NT: 2
-  only:
-    - schedules
-  extends:
-    - .template_bot_start
-    - .template_test
-  image: miccomcenter/bot:gcc1130_0002
-
-gcc1130_0002_t4:
-  variables:
-    CI_NP: 8
-    CI_NI: 1
-    CI_NK: 2
-    CI_NB: 1
     CI_NT: 2
   only:
     - schedules
@@ -141,6 +132,20 @@ gcc1130_0002_t4:
 gcc1030_0001_t:
   variables:
     CI_NP: 8
+    CI_NI: 1
+    CI_NK: 2
+    CI_NB: 1
+    CI_NT: 2
+  only:
+    - schedules
+  extends:
+    - .template_bot_start
+    - .template_test
+  image: miccomcenter/bot:gcc1030_0001
+
+gcc1030_0002_t:
+  variables:
+    CI_NP: 8
     CI_NI: 2
     CI_NK: 1
     CI_NB: 2
@@ -150,7 +155,7 @@ gcc1030_0001_t:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc1030_0001
+  image: miccomcenter/bot:gcc1030_0002
 
 
 # Doc

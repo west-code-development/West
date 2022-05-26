@@ -27,6 +27,7 @@ stages:
 .template_build:
   stage: build
   script:
+    - rm -rf QEDIR
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
@@ -43,6 +44,7 @@ stages:
 .template_test:
   stage: test
   script:
+    - rm -rf QEDIR
     - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always

@@ -136,7 +136,7 @@ gcc1130_0002_t4:
     - .template_test
   image: miccomcenter/bot:gcc1130_0002
 
-gcc1030_0001_t5:
+gcc1030_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 2

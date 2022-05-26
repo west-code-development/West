@@ -14,6 +14,6 @@ Additional tests can be added with the following procedure:
 
 We recommend that you copy and adjust an existing test script.
 
-2) Add the new subdirectory name to the list in the test-suite/Makefile.
+2) Add the new subdirectory name to the list in the *test-suite/Makefile*.
 
-3) Customize the file *main_test.py* to identify the tests that should be run in the new subdirectory.
+3) Customize the file *main_test.py*.

@@ -133,7 +133,7 @@ def test_output(testdir):
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
 def test_toten(testdir):
     print(f"\n[{testdir}]")
-    with open('test_parameters.json','r') as f:
+    with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_total_energies(testdir+'/test.save/data-file-schema.xml',testdir+'/ref/pw.xml',float(parameters['tolerance']['total_energy']))
 
@@ -141,7 +141,7 @@ def test_toten(testdir):
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
 def test_pdepEigen(testdir):
     print(f"\n[{testdir}]")
-    with open('test_parameters.json','r') as f:
+    with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wstat_eigenvalues(testdir+'/test.wstat.save/wstat.json',testdir+'/ref/wstat.json',float(parameters['tolerance']['pdep_eigenvalue']))
 
@@ -149,6 +149,6 @@ def test_pdepEigen(testdir):
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
 def test_singleparticleEn(testdir):
     print(f"\n[{testdir}]")
-    with open('test_parameters.json','r') as f:
+    with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))

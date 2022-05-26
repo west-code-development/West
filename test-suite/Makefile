@@ -11,7 +11,7 @@ default: all
 all:
 	@echo
 	@echo "#################"
-	@echo "## RUNNING... ##"
+	@echo "## RUNNING...  ##"
 	@echo "#################"
 	@echo
 	for d in $(testdirs); do cd $$d; $(MAKE); cd ..; done
@@ -24,3 +24,4 @@ all:
 
 clean:
 	for d in $(testdirs); do cd $$d; $(MAKE) clean; cd ..; done
+	- /bin/rm -rf __pycache__ .pytest_cache > /dev/null 2>&1

@@ -4,7 +4,7 @@ Change Log
 v5.0.0 (2022/05/13)
 -------------------
 
-- Updated WEST to be compatible with QE 7.0 (before it was compatible with QE 6.1.0). QE must be compiled without CMake. 
+- Updated WEST to be compatible with QE 7.0 (before it was compatible with QE 6.1.0). QE must be compiled without CMake.
 - Activated pool parallelization in `wstat` and `wfreq` to distribute spin polarization (for systems with nspin=2).
 - Activated and optimized band group parallelization in `wstat` and `wfreq` (was disabled in QE 6.1.0).
 - Enabled the calculation of dipole matrix elements in `westpp`.

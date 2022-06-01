@@ -20,7 +20,7 @@ Contents
 
    overview
    installation
-   tutorial  
+   tutorial
    quickreference
    manual
    acknowledge

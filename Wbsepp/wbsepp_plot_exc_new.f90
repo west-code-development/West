@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -59,7 +59,7 @@ SUBROUTINE wbsepp_plot_exc()
   CHARACTER(LEN=6)   :: my_label
   CHARACTER(LEN=256) :: fname
   !
-  INTEGER  :: iexc 
+  INTEGER  :: iexc
   REAL(DP) :: r0_input_aux(3)
   !
   INTEGER  :: n_point, ni
@@ -84,9 +84,9 @@ write(stdout,*) at(1,1)
   nvec = n_plep_read_from_file
   pert = idistribute()
   CALL pert%init(nvec,'i','nvec',.TRUE.)
-  CALL wbse_memory_report() 
+  CALL wbse_memory_report()
   !
-  ! READ EIGENVALUES AND VECTORS FROM OUTPUT 
+  ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !
   CALL plep_db_read( n_plep_read_from_file )
   !
@@ -95,10 +95,10 @@ write(stdout,*) at(1,1)
   ALLOCATE(segno(dfftp%nnr))
   ALLOCATE(rho_aux(dfftp%nnr,nspin))
   ALLOCATE(rho_out(dfftp%nnr,nspin))
-  ! 
+  !
   r(:,:) = 0.0d0
   !
-  ! Calculate r 
+  ! Calculate r
   !
   inv_nr1 = 1.D0 / DBLE( dfftp%nr1 )
   inv_nr2 = 1.D0 / DBLE( dfftp%nr2 )
@@ -128,7 +128,7 @@ write (stdout,*) ir_end
         r(ir,ip) = DBLE( i )*inv_nr1*at(ip,1) + &
                    DBLE( j )*inv_nr2*at(ip,2) + &
                    DBLE( k )*inv_nr3*at(ip,3)
-        ! 
+        !
      ENDDO
      !
   ENDDO
@@ -164,7 +164,7 @@ write (stdout,*) ir_end
      ! ... read in wavefunctions from the previous iteration
      !
      IF (nks>1) THEN
-        !  
+        !
         IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         !
         CALL mp_bcast(evc,0,inter_image_comm)
@@ -180,7 +180,7 @@ write (stdout,*) ir_end
         IF (gamma_only) THEN
            !
            CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dvg_exc(1,ibnd,iks,iexc),psic,'Wave')
-           ! 
+           !
            rcoeff = 0.0_DP
            !
            DO ir = 1, dffts%nnr
@@ -196,18 +196,18 @@ write (stdout,*) ir_end
            CALL mp_sum(rcoeff, intra_bgrp_comm)
            !
            segno(:) = SIGN( 1.d0, AIMAG(psic(:)) )
-           ! 
+           !
            rho_aux(:, current_spin) = rho_aux(:, current_spin) + w1 * CMPLX(rcoeff*AIMAG(psic(:)), 0.0_DP)
            !
         ELSE
            !
            ALLOCATE (psic_aux(dffts%nnr))
-           ! 
+           !
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
            CALL single_invfft_k(dffts,npw,npwx,dvg_exc(1,ibnd,iks,iexc),psic_aux,'Wave',igk_k(1,current_k))
            !
            zcoeff = 0.0_DP
-           ! 
+           !
            DO ir = 1, dffts%nnr
               !
               IF (dr(ir) == drmin_g) THEN
@@ -240,10 +240,10 @@ write (stdout,*) ir_end
   !
   summ0 = summ0*omega/(dfftp%nr1*dfftp%nr2*dfftp%nr3)
   !
-  CALL mp_sum(summ0, intra_bgrp_comm) 
+  CALL mp_sum(summ0, intra_bgrp_comm)
   !
   rho_out(:,1) = rho_out(:,1)/summ0
-  ! 
+  !
   WRITE (stdout,*) "Plot of exciton states (Ry unit): ", iexc, ev(iexc)
   WRITE (stdout,*) "Hole state is fixed at (alat unit): ", r0_input_aux(1), r0_input_aux(2), r0_input_aux(3)
   !
@@ -288,7 +288,7 @@ write (stdout,*) ir_end
         IF (dx .gt.  at(1,1) * 0.5) dx = dx - at(1,1)
         IF (dx .le. -at(1,1) * 0.5) dx = dx + at(1,1)
         !
-        dy = r(ir,2) - r0_input_aux(2)  
+        dy = r(ir,2) - r0_input_aux(2)
         IF (dy .gt.  at(2,2) * 0.5) dy = dy - at(2,2)
         IF (dy .le. -at(2,2) * 0.5) dy = dy + at(2,2)
         !
@@ -313,7 +313,7 @@ write (stdout,*) ir_end
      WRITE(stdout, "(i5, 5x, f12.6, 5x, f12.6, 5x, 2f12.6)") ni, ri1*alat, (vi0-vi1), summ0, summ
      !
   ENDDO
-  !  
+  !
   DEALLOCATE( ev )
   DEALLOCATE( dvg_exc )
   DEALLOCATE( r,dr,rho_aux,segno,rho_out)

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2001-2016 Quantum ESPRESSO group
+! Copyright (C) 2001-2021 Quantum ESPRESSO group
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -42,7 +42,7 @@ subroutine setup_dgc
   real (DP), parameter :: epsr = 1.0d-6, epsg = 1.0d-10
 
   IF ( .NOT. dft_is_gradient() ) RETURN
-  
+
   IF (noncolin.AND.domag) THEN
      allocate (segni (dfftp%nnr))
      allocate (vsgga (dfftp%nnr))

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -72,7 +72,7 @@ SUBROUTINE wbsepp_meg ( )
   delta_e = 0.05
   xq(:)   = 0.0_DP
   iks     = 1
-  !  
+  !
   pert = idistribute()
   CALL pert%init(num_triplepair,'b','num_triple_pairs',.TRUE.)
   !
@@ -81,7 +81,7 @@ SUBROUTINE wbsepp_meg ( )
   ALLOCATE( ev_exc(n_plep))
   !
   CALL plep_db_read( n_plep )
-  ev_exc(:) = ev(:)  
+  ev_exc(:) = ev(:)
   !
   DEALLOCATE(ev)
   !
@@ -99,12 +99,12 @@ SUBROUTINE wbsepp_meg ( )
   index_i = 0
   !
   DO il = 1, n_plep
-     ! 
+     !
      DO jl = 1, n_plep
         !
         DO kl = 1, n_plep
            !
-           ev_tmp = ev_exc( il ) - (ev_exc( jl ) + ev_exc( kl )) 
+           ev_tmp = ev_exc( il ) - (ev_exc( jl ) + ev_exc( kl ))
            !
            IF ( abs(ev_tmp) <= delta_e) THEN
               !
@@ -120,7 +120,7 @@ SUBROUTINE wbsepp_meg ( )
         !
      ENDDO
      !
-  ENDDO 
+  ENDDO
   !
   num_triplepair = index_i
   !
@@ -134,16 +134,16 @@ SUBROUTINE wbsepp_meg ( )
   direct_eeh(:) = 0.0_DP
   exchange_eeh(:) = 0.0_DP
   !
-  ! ... DISTRIBUTE num_triplepair 
+  ! ... DISTRIBUTE num_triplepair
   !
   bseparal = idistribute()
   CALL bseparal%init(num_triplepair,'i','num_triple_pairs',.TRUE.)
-  CALL wbse_memory_report() ! Before allocating I report the memory required. 
-  ! 
+  CALL wbse_memory_report() ! Before allocating I report the memory required.
+  !
   DO il1 = 1, bseparal%nloc
      !
      ig1 = bseparal%l2g(il1)
-     ! 
+     !
      IF( ig1 < 1 .OR. ig1 > num_triplepair ) CYCLE
      !
      exc1 = M_ijk(ig1, 1)
@@ -169,15 +169,15 @@ SUBROUTINE wbsepp_meg ( )
            psic_k (:) = (0.0d0,0.0d0)
            !
            IF (gamma_only) THEN
-              !           
+              !
               IF (hhe_path) THEN
-                 ! 
+                 !
                  CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,jbnd),psic_i,'Wave')
                  !
                  CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dvg_exc(1,jbnd,iks,exc3),psic_j,'Wave')
                  !
                  CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc(1,ibnd,iks,exc1),dvg_exc(1,jbnd,iks,exc2),psic_k,'Wave')
-                 !  
+                 !
                  alpha_ij  = SUM(DBLE(psic_k(:)) * AIMAG(psic_k(:)))
                  alpha_ij  = alpha_ij * wg(ibnd,iks)*omega/(dffts%nr1*dffts%nr2*dffts%nr3)
                  CALL mp_sum(alpha_ij,intra_bgrp_comm)
@@ -217,17 +217,17 @@ SUBROUTINE wbsepp_meg ( )
               ALLOCATE(phi_c(npwq0x),phi_x(npwq0x),psic(dffts%nnr))
               !
               psic(:) = (0.0d0,0.0d0)
-              ! 
+              !
               IF (gamma_only) THEN
                  !
                  ! 1) compute phi_c = phi_i * sqrt(v_c*)
                  !    G->0 : v_c(G) = 0.0
-                 ! 
+                 !
                  phi_c(:) = (0.d0,0.d0)
                  DO ig = 1, npwq0x
-                    ! 
+                    !
                     qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
-                    !  
+                    !
                     IF (qg2 > 1.d-8) THEN
                        !
                        phi_c(ig) = dvg(ig,alnd) * DSQRT(e2*fpi/(tpiba2*qg2))
@@ -247,7 +247,7 @@ SUBROUTINE wbsepp_meg ( )
                  alpha_ija_vx  = 0.0_DP
                  alpha_ija_vc  = 0.0_DP
                  alpha_ija_vx  = SUM(DBLE(psic_i(:)) * AIMAG(psic_i(:)) *  DBLE(psic(:)))
-                 alpha_ija_vc  = SUM(DBLE(psic_i(:)) * AIMAG(psic_i(:)) * AIMAG(psic(:))) 
+                 alpha_ija_vc  = SUM(DBLE(psic_i(:)) * AIMAG(psic_i(:)) * AIMAG(psic(:)))
                  !
                  alpha_ija_vx  = alpha_ija_vx * wg(ibnd,iks)/(dffts%nr1*dffts%nr2*dffts%nr3)
                  alpha_ija_vc  = alpha_ija_vc * wg(ibnd,iks)/(dffts%nr1*dffts%nr2*dffts%nr3)
@@ -288,11 +288,11 @@ SUBROUTINE wbsepp_meg ( )
         ENDDO
         !
      ENDDO
-     !  
+     !
      direct_hhe_tmp   = 0.0d0
      exchange_hhe_tmp = 0.0d0
      !
-     DO ibnd = 1, nbndx_occ 
+     DO ibnd = 1, nbndx_occ
         !
         DO jbnd = 1, nbndx_occ
            !
@@ -309,14 +309,14 @@ SUBROUTINE wbsepp_meg ( )
                  !
               ENDDO
               !
-           ENDDO 
-           ! 
-        ENDDO  
-        ! 
-     ENDDO 
+           ENDDO
+           !
+        ENDDO
+        !
+     ENDDO
      !
-     direct_hhe(ig1)   = direct_hhe_tmp 
-     exchange_hhe(ig1) = exchange_hhe_tmp 
+     direct_hhe(ig1)   = direct_hhe_tmp
+     exchange_hhe(ig1) = exchange_hhe_tmp
      !
      DEALLOCATE(coeff_ij)
      DEALLOCATE(coeff_ija_vx,coeff_ija_vc)

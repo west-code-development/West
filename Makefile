@@ -4,29 +4,37 @@ include ../make.inc
 
 default:
 	@echo "Welcome to WEST!"
-	@echo ' '
-	@echo 'to install WEST, type at the shell prompt:'
+	@echo
+	@echo "to install WEST, type at the shell prompt:"
 	@echo '  make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"'
-	@echo '  make [-j] target'
-	@echo ' '
-	@echo 'where target identifies one or multiple packages'
-	@echo '  wstat        calculation of static dielectric response using PDEP'
-	@echo '  wfreq        calculation of dynamical dielectric response and GW self-energy'
-	@echo '  westpp       postprocessing programs'
-	@echo '  wbse         calculation of BSE'
-	@echo '  wbsepp       postprocessing BSE'
-	@echo '  all          same as "make wstat wfreq westpp wbse wbsepp"'
-	@echo ' '
-	@echo 'where target is one of the following operations:'
-	@echo '  doc          build WEST documentation'
-	@echo ' '
-	@echo '  clean        remove executables and objects'
-	@echo '  veryclean    remove files produced by "configure" as well'
 
 conf:
+	@echo "  make [-j] target"
+	@echo
+	@echo "where target identifies one or multiple packages"
+	@echo "  wstat        calculation of static dielectric response using PDEP"
+	@echo "  wfreq        calculation of dynamical dielectric response and GW self-energy"
+	@echo "  westpp       postprocessing programs"
+	@echo "  wbse         calculation of BSE"
+	@echo "  wbsepp       postprocessing BSE"
+	@echo '  all          same as "make wstat wfreq westpp"'
+	@echo
+	@echo "where target is one of the following operations:"
+	@echo "  doc          build WEST documentation"
+	@echo
+	@echo "  clean        remove executables and objects"
+	@echo '  veryclean    remove files produced by "make conf" as well'
+
+conf: \
+update_make_inc \
+include_make_inc \
+update_version \
+depend
+
+update_make_inc:
 	@[ "${PYT}" ] || ( echo ">> PYT is not set. Ex: make conf PYT=python3"; exit 1 )
 	@echo "Welcome to WEST!"
-	@echo ' '
+	@echo
 	@echo "version : `${PYT} ./Pytools/read_json.py VERSION.json version`"
 	@echo "url : `${PYT} ./Pytools/read_json.py VERSION.json url`"
 	@echo "license : `${PYT} ./Pytools/read_json.py VERSION.json license`"
@@ -34,21 +42,31 @@ conf:
 	@echo WESTDIR=`pwd` >> west_make.inc
 	@echo PYT=${PYT} >> west_make.inc
 	@echo PYT_LDFLAGS=${PYT_LDFLAGS} >> west_make.inc
-	@echo " "
+	@echo
 	@echo "Generated file: west_make.inc"
 	@cat west_make.inc
-	@echo " "
+	@echo
 
-check_conf:
-	@[ -f "west_make.inc" ] || ( echo ">> Cannot find west_make.inc. Run: make conf PYT=python3"; exit 1 )
+include_make_inc:
+	@[ -f "west_make.inc" ] || ( echo '>> Cannot find west_make.inc. Run "make conf" first.'; exit 1 )
 	$(eval include ./west_make.inc)
 
-report_build_vars: check_conf
-	@echo "              "
+update_version:
+	if test -d Modules ; then \
+	( cd Modules ; ./update_west_version ${WESTDIR} `${PYT} ../Pytools/read_json.py ../VERSION.json version`; ) ; fi
+	@echo "Generated file: west_version.f90"
+	@echo
+
+depend:
+	if test -x west_makedeps ; then ./west_makedeps ; fi
+	@echo
+
+report_build_vars:
+	@echo
 	@echo "##############"
 	@echo "# Build vars #"
 	@echo "##############"
-	@echo "              "
+	@echo
 	@[ "${MPIF90}" ] || ( echo ">> MPIF90 is not set."; exit 1 )
 	@[ "${CC}" ] || ( echo ">> CC is not set."; exit 1 )
 	@echo "# WEST_VERSION_NUMBER : `${PYT} ./Pytools/read_json.py VERSION.json version`"
@@ -69,9 +87,7 @@ report_build_vars: check_conf
 	@echo "# LDFLAGS : ${LDFLAGS}"
 	@echo "# LD_LIBS : ${LD_LIBS}"
 	@echo "# BLAS_LIBS : ${BLAS_LIBS}"
-	@echo "# BLAS_LIBS_SWITCH : ${BLAS_LIBS_SWITCH}"
 	@echo "# LAPACK_LIBS : ${LAPACK_LIBS}"
-	@echo "# LAPACK_LIBS_SWITCH : ${LAPACK_LIBS_SWITCH}"
 	@echo "# SCALAPACK_LIBS : ${SCALAPACK_LIBS}"
 	@echo "# FFT_LIBS : ${FFT_LIBS}"
 	@echo "# MPI_LIBS : ${MPI_LIBS}"
@@ -80,16 +96,14 @@ report_build_vars: check_conf
 	@echo "# ARFLAGS : ${ARFLAGS}"
 	@echo "# RANLIB : ${RANLIB}"
 	@echo "# FLIB_TARGETS : ${FLIB_TARGETS}"
-	@echo "# LIBOBJS : ${LIBOBJS}"
-	@echo "# LIBS : ${LIBS}"
 	@echo "# WGET : ${WGET}"
 	@echo "# PYT : ${PYT}"
 	@echo "# PYT_LDFLAGS : ${PYT_LDFLAGS}"
-	@echo " "
+	@echo
 
 
 pytools: \
-check_conf \
+include_make_inc \
 report_build_vars \
 pytools_do
 
@@ -133,11 +147,11 @@ westpp \
 wbse \
 wbsepp
 
-doc: check_conf
+doc: include_make_inc
 	if test -d doc ; then \
 	( cd doc ; if test "$(MAKE)" = "" ; then make $(MFLAGS) html; \
 	else $(MAKE) $(MFLAGS) html ; fi ) ; fi
-	@echo 'Open the file: ${WESTDIR}/doc/_build/html/index.html'
+	@echo "Open the file: ${WESTDIR}/doc/_build/html/index.html"
 
 pytools_do:
 	if test -d Pytools ; then \
@@ -149,10 +163,9 @@ libraries_do:
 	( cd Libraries ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-modules_do: libraries_do
+modules_do: update_version libraries_do
 	if test -d Modules ; then \
-	( cd Modules ; sh ./update_west_version ${WESTDIR} `${PYT} ../Pytools/read_json.py ../VERSION.json version`; \
-	if  test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	( cd Modules ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
 tools_do: modules_do libraries_do
@@ -314,5 +327,9 @@ wbsepp_undo:
 unconf:
 	[ -f "west_make.inc" ] && ( rm west_make.inc )
 
+undepend:
+	find . -name make.depend -delete
+
 veryclean: clean \
-unconf
+unconf \
+undepend

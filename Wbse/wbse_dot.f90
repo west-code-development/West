@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
@@ -35,7 +35,7 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
       COMPLEX(DP) :: temp
       REAL(DP), EXTERNAL    :: DDOT
       COMPLEX(DP), EXTERNAL :: ZDOTC
-      ! 
+      !
       wbse_dot_out(:) = (0.0_DP,0.0_DP)
       !
       DO is = 1, nspin
@@ -48,7 +48,7 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
             !
             current_spin = isk(iks)
             !
-            IF (current_spin .NE. is) CYCLE   
+            IF (current_spin .NE. is) CYCLE
             !
             IF (gamma_only) THEN
                !
@@ -59,9 +59,9 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
                   IF (gstart==2) temp = temp - wg(ibnd,iks)*DBLE(x(1,ibnd,iks))*DBLE(y(1,ibnd,iks))
                   !
                ENDDO
-               ! 
+               !
             ELSE
-               ! 
+               !
                DO ibnd=1, nbndval
                   !
                   temp = temp + wg(ibnd,iks) * ZDOTC(ngk(iks),x(:,ibnd,iks),1,y(:,ibnd,iks),1)
@@ -70,15 +70,15 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
                !
             ENDIF
             !
-         ENDDO 
+         ENDDO
          !
          CALL mp_sum(temp, inter_pool_comm)
          CALL mp_sum(temp, intra_bgrp_comm)
          !
          wbse_dot_out(is) = temp*nspin/2.0
-         ! 
+         !
       ENDDO
-      !  
-      RETURN 
+      !
+      RETURN
       !
 ENDSUBROUTINE

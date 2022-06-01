@@ -1,6 +1,7 @@
-*.o 
-*.x 
+*.o
+*.x
 *.mod
+*.MOD
 *.save
 *.restart
 *.upf
@@ -12,4 +13,8 @@
 doc/_build/
 Modules/west_version.f90
 west_make.inc
-*/__pycache__
+make.depend
+__pycache__
+Pytools/WEST.egg-info/
+Pytools/dist/
+Pytools/files.txt

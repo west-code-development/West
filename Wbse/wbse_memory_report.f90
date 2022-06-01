@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -171,23 +171,23 @@ SUBROUTINE wbse_memory_report()
      mem_partial, npwqx, nbnd_occ(1), pert%nlocx
   mem_tot = mem_tot + mem_partial
   !
-  IF( gamma_only ) THEN  
+  IF( gamma_only ) THEN
      mem_partial = DBLE(real_size*n_pdep_basis*pert%nlocx)/DBLE(Mb)
   ELSE
      mem_partial = DBLE(complex_size*n_pdep_basis*pert%nlocx)/DBLE(Mb)
   ENDIF
   WRITE( stdout, '(5x,"[MEM] hr_distr                ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, n_pdep_basis, pert%nlocx
-  mem_tot = mem_tot + mem_partial 
+  mem_tot = mem_tot + mem_partial
   !
-  IF( gamma_only ) THEN  
+  IF( gamma_only ) THEN
      mem_partial = DBLE(real_size*n_pdep_basis*pert%nlocx)/DBLE(Mb)
   ELSE
      mem_partial = DBLE(complex_size*n_pdep_basis*pert%nlocx)/DBLE(Mb)
   ENDIF
   WRITE( stdout, '(5x,"[MEM] vr_distr                ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, n_pdep_basis, pert%nlocx
-  mem_tot = mem_tot + mem_partial 
+  mem_tot = mem_tot + mem_partial
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE( stdout, '(5x,"[MEM] TOT                     ",f10.2," Mb", 5x)') mem_tot
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
@@ -205,7 +205,7 @@ SUBROUTINE wbse_memory_report()
   mem_partial = DBLE(complex_size*npwx*npol*nbnd_occ(1))/DBLE(Mb)
   WRITE( stdout, '(5x,"[MEM] dvpsi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, npwx*npol, nbnd_occ(1)
-  mem_tot = mem_tot + mem_partial 
+  mem_tot = mem_tot + mem_partial
   !
   mem_partial = DBLE(complex_size*npwx*npol*nbnd_occ(1))/DBLE(Mb)
   WRITE( stdout, '(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
@@ -215,18 +215,18 @@ SUBROUTINE wbse_memory_report()
 !  mem_partial = DBLE(complex_size*dffts%nnr)/DBLE(Mb)
 !  WRITE( stdout, '(5x,"[MEM] aux_r                   ",f10.2," Mb", 5x,"(",i7,")")') &
 !     mem_partial, dffts%nnr
-!  mem_tot1 = mem_tot1 + mem_partial 
+!  mem_tot1 = mem_tot1 + mem_partial
 !  !
 !  mem_partial = DBLE(complex_size*npwx)/DBLE(Mb)
 !  WRITE( stdout, '(5x,"[MEM] aux_g                   ",f10.2," Mb", 5x,"(",i7,")")') &
 !     mem_partial, npwx
-!  mem_tot1 = mem_tot1 + mem_partial 
+!  mem_tot1 = mem_tot1 + mem_partial
 !  !
 !  IF(.NOT.gamma_only) THEN
 !     mem_partial = DBLE(complex_size*npwx)/DBLE(Mb)
 !     WRITE( stdout, '(5x,"[MEM] dpsic                   ",f10.2," Mb", 5x,"(",i7,")")') &
 !        mem_partial, dffts%nnr
-!     mem_tot1 = mem_tot1 + mem_partial 
+!     mem_tot1 = mem_tot1 + mem_partial
 !  ENDIF
 !  !
 !  mem_partial = DBLE(complex_size*npwx*pert%nlocx)/DBLE(Mb)

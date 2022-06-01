@@ -24,10 +24,10 @@ clean :
 	- /bin/rm -f libjson.a
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Json  ####"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

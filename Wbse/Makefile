@@ -53,9 +53,9 @@ wbse_init_restart.o \
 wbse_init_pdep.o \
 wbse_davidson_diago_square.o\
 wbse_init_qboxcoupling.o \
-wbse_init_fock_energy.o 
+wbse_init_fock_energy.o
 
-PWOBJS = ../../PW/src/libpw.a 
+PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../../LR_Modules/liblrmod.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a ../Libraries/Forpy/libforpy.a  #../../iotk/src/libiotk.a
 WESTLIBS = \
 ../Wstat/libwstat.a \
@@ -66,7 +66,7 @@ WESTLIBS = \
 ../Para_kernel/lib_para_kernel.a \
 ../Coulomb_kernel/lib_coulomb_kernel.a \
 ../FFT_kernel/lib_fft_kernel.a \
-../Modules/libmodules.a 
+../Modules/libmodules.a
 
 
 TLDEPS= bindir mods libs pw

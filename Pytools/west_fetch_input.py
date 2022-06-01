@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2021 M. Govoni 
+# Copyright (C) 2015-2021 M. Govoni
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -59,7 +59,6 @@ default["wfreq_control"]["wfreq_eta"] = 0.05 / rytoev
 default["wfreq_control"]["n_secant_maxiter"] = 21
 default["wfreq_control"]["trev_secant"] = 0.05 / rytoev
 default["wfreq_control"]["l_enable_lanczos"] = True
-default["wfreq_control"]["l_enable_gwetot"] = False
 default["wfreq_control"]["o_restart_time"] = 0.
 default["wfreq_control"]["ecut_spectralf"] = [-2., 1.]
 default["wfreq_control"]["n_spectralf"] = 204
@@ -306,7 +305,7 @@ def test() :
     #
 
     with open(fileName, "w") as file :
-        file.write("""
+       file.write("""
 input_west :
    qe_prefix : molecule
    west_prefix : molecule

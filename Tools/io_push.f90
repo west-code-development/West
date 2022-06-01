@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -32,6 +32,9 @@ MODULE io_push
       IMPLICIT NONE
       !
       WRITE(stdout,'(5x,"--------------------------------------------------------------------------------------------")')
+#if defined(__DEBUG) || defined(__FLUSH_STDOUT)
+      FLUSH(stdout)
+#endif
       !
     END SUBROUTINE
     !

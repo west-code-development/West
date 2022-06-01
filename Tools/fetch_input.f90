@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file License
 ! in the root directory of the present distribution,
@@ -15,14 +15,17 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
-  USE pwcom
-  USE westcom
-  USE io_files,         ONLY : tmp_dir, prefix
-  USE io_global,        ONLY : stdout
-  USE mp,               ONLY : mp_bcast
-  USE mp_world,         ONLY : mpime,root,world_comm
-  USE mp_global,        ONLY : nimage
-  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512
+  USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
+                             & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
+                             & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
+                             & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
+                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
+                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
+                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,document
+  USE mp_world,         ONLY : mpime, root
   !
   IMPLICIT NONE
   !
@@ -76,7 +79,6 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wfreq_control.n_secant_maxiter',n_secant_maxiter)
         CALL json%add('input.wfreq_control.trev_secant',trev_secant)
         CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
-        CALL json%add('input.wfreq_control.l_enable_gwetot',l_enable_gwetot)
         CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
         CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
         CALL json%add('input.wfreq_control.n_spectralf',n_spectralf)
@@ -189,19 +191,26 @@ END SUBROUTINE
 
 SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
-  USE west_version, ONLY : start_forpy, end_forpy
-  USE io_push,      ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512
-  USE forpy_mod,    ONLY: call_py, call_py_noret, import_py, module_py
-  USE forpy_mod,    ONLY: tuple, tuple_create
-  USE forpy_mod,    ONLY: dict, dict_create
-  USE forpy_mod,    ONLY: list, list_create
-  USE forpy_mod,    ONLY: object, cast
-  USE forpy_mod,    ONLY : exception_matches, KeyError, err_clear, err_print
-  USE westcom
+  USE io_push,          ONLY : io_push_title, io_push_value, io_push_bar, io_push_es0, io_push_c512
+  USE forpy_mod,        ONLY : call_py, import_py, module_py
+  USE forpy_mod,        ONLY : tuple, tuple_create
+  USE forpy_mod,        ONLY : dict, dict_create
+  USE forpy_mod,        ONLY : list, list_create
+  USE forpy_mod,        ONLY : object, cast
+  USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
+                             & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
+                             & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
+                             & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
+                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
+                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
+                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,document,main_input_file,logfile
+  USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir, prefix
-  USE io_global,        ONLY : stdout
   USE mp,               ONLY : mp_bcast, mp_barrier
-  USE mp_world,         ONLY : mpime,root,world_comm
+  USE mp_world,         ONLY : mpime, root, world_comm
   USE mp_global,        ONLY : nimage
   USE gvect,            ONLY : ecutrho
   USE start_k,          ONLY : nk1, nk2, nk3
@@ -351,14 +360,13 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%get(n_secant_maxiter, "n_secant_maxiter", DUMMY_DEFAULT)
         IERR = return_dict%getitem(trev_secant, "trev_secant")
         IERR = return_dict%getitem(l_enable_lanczos, "l_enable_lanczos")
-        IERR = return_dict%getitem(l_enable_gwetot, "l_enable_gwetot")
         IERR = return_dict%getitem(o_restart_time, "o_restart_time")
         IERR = return_dict%getitem(tmp_obj, "ecut_spectralf")
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%getitem(ecut_spectralf(1), 0) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(ecut_spectralf(2), 1) ! Fortran indices start at 1 
-        CALL tmp_list%destroy 
-        CALL tmp_obj%destroy 
+        IERR = tmp_list%getitem(ecut_spectralf(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(ecut_spectralf(2), 1) ! Fortran indices start at 1
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         IERR = return_dict%get(n_spectralf, "n_spectralf", DUMMY_DEFAULT)
         !
         CALL return_dict%destroy
@@ -392,11 +400,11 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%get(westpp_n_pdep_eigen_to_use, "westpp_n_pdep_eigen_to_use", DUMMY_DEFAULT)
         IERR = return_dict%getitem(tmp_obj, "westpp_r0")
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%getitem(westpp_r0(1), 0) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(westpp_r0(2), 1) ! Fortran indices start at 1 
-        IERR = tmp_list%getitem(westpp_r0(3), 2) ! Fortran indices start at 1 
-        CALL tmp_list%destroy 
-        CALL tmp_obj%destroy 
+        IERR = tmp_list%getitem(westpp_r0(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(westpp_r0(2), 1) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(westpp_r0(3), 2) ! Fortran indices start at 1
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         IERR = return_dict%get(westpp_nr, "westpp_nr", DUMMY_DEFAULT)
         IERR = return_dict%getitem(westpp_rmax, "westpp_rmax")
         IERR = return_dict%getitem(westpp_epsinfty, "westpp_epsinfty")
@@ -635,16 +643,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF(tr2_dfpt<=0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
      IF(trev_pdep<=0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
      IF(trev_pdep_rel<=0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
-     IF( n_pdep_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_eigen')
-     IF( n_pdep_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_times')
-     IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_maxiter')
-     IF( n_dfpt_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_dfpt_maxiter')
-     IF( n_pdep_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_read_from_file')
-     IF( n_steps_write_restart == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_steps_write_restart')
+     IF( n_pdep_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen',1)
+     IF( n_pdep_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_times',1)
+     IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_maxiter',1)
+     IF( n_dfpt_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_dfpt_maxiter',1)
+     IF( n_pdep_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_read_from_file',1)
+     IF( n_steps_write_restart == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
      IF(gamma_only) THEN
-        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1.',1)
+        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1',1)
      ELSE
-        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3.',1)
+        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3',1)
      ENDIF
      !
   ENDIF
@@ -664,7 +672,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(n_secant_maxiter,root,world_comm)
      CALL mp_bcast(trev_secant,root,world_comm)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
-     CALL mp_bcast(l_enable_gwetot,root,world_comm)
      CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
@@ -686,13 +693,13 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( wfreq_eta<=0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
      IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1)
      IF( trev_secant<=0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
-     IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_pdep_eigen_to_use')
-     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_lanczos')
-     IF( n_imfreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_imfreq')
-     IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_refreq')
-     IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_secant_maxiter')
-     IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read n_spectralf')
-     SELECT CASE(macropol_calculation) 
+     IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
+     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
+     IF( n_imfreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_imfreq',1)
+     IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_refreq',1)
+     IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_secant_maxiter',1)
+     IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_spectralf',1)
+     SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
      CASE DEFAULT
         CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
@@ -721,8 +728,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( westpp_n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: westpp_n_pdep_eigen_to_use<1',1)
      IF( westpp_rmax < 0._DP ) CALL errore('fetch_input','Err: westpp_rmax<0.',1)
      IF( westpp_epsinfty < 1._DP ) CALL errore('fetch_input','Err: westpp_epsinfty<1.',1)
-     IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read westpp_n_pdep_eigen_to_use')
-     IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot read westpp_nr')
+     IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_n_pdep_eigen_to_use',1)
+     IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_nr',1)
      !
   ENDIF
   !
@@ -1034,7 +1041,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_secant_maxiter',n_secant_maxiter,numsp)
         CALL io_push_value('trev_secant [Ry]',trev_secant,numsp)
         CALL io_push_value('l_enable_lanczos',l_enable_lanczos,numsp)
-        CALL io_push_value('l_enable_gwetot',l_enable_gwetot,numsp)
         CALL io_push_value('o_restart_time [min]',o_restart_time,numsp)
         CALL io_push_value('ecut_spectralf(1) [Ry]',ecut_spectralf(1),numsp)
         CALL io_push_value('ecut_spectralf(2) [Ry]',ecut_spectralf(2),numsp)

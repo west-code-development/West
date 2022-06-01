@@ -11,7 +11,7 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   !
   !  This routine computes the change of the self consistent potential
   !  (Hartree and XC) due to the perturbation.
-  !  Note: gamma_only is disregarded for PHonon calculations, 
+  !  Note: gamma_only is disregarded for PHonon calculations,
   !  TDDFPT purposes only.
   !
   USE kinds,             ONLY : DP
@@ -36,17 +36,17 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   COMPLEX(DP), INTENT(INOUT) :: dvscf(dfftp%nnr, nspin)
   ! input:  response charge density
   ! output: response Hartree-and-XC potential
-  ! 
+  !
   LOGICAL, INTENT(IN) :: lrpa
   ! input: if true, only hatree term is computed
-  ! 
+  !
   LOGICAL, INTENT(IN) :: add_nlcc
   ! input: if true, add core charge density
   !
   COMPLEX(DP), INTENT(IN), OPTIONAL :: drhoc(dfftp%nnr)
-  ! input: response core charge density 
+  ! input: response core charge density
   ! (needed only for PHonon when add_nlcc=.true.)
-  ! 
+  !
   INTEGER :: ir, is, is1, ig
   ! counter on r vectors
   ! counter on spin polarizations
@@ -55,19 +55,19 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   REAL(DP) :: qg2, fac, eh_corr
   ! qg2: the modulus of (q+G)^2
   ! fac: the structure factor
-  ! eh_corr: the correction to response Hartree energy due 
+  ! eh_corr: the correction to response Hartree energy due
   ! to Martyna-Tuckerman correction (calculated, but not used).
-  ! 
+  !
   COMPLEX(DP), ALLOCATABLE :: dvaux(:,:), dvhart(:,:), dvaux_mt(:)
-  ! dvaux: response XC potential 
+  ! dvaux: response XC potential
   ! dvhart: response Hartree potential
   ! dvaux_mt: auxiliary array for Martyna-Tuckerman correction
   !
   CALL start_clock ('wbse_dv_of_drho')
   !
   if (add_nlcc .and. .not.present(drhoc)) &
-     & CALL errore( 'wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1 )   
-  ! 
+     & CALL errore( 'wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1 )
+  !
   if (lrpa) then
      !
      allocate(dvaux(1,1))
@@ -90,7 +90,7 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
         rho%of_r(:, is) = rho%of_r(:, is) + fac * rho_core (:)
         !
         dvscf(:, is) = dvscf(:, is) + fac * drhoc (:)
-        ! 
+        !
      enddo
      !
   endif
@@ -103,11 +103,11 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
         dvaux(:,is) = dvaux(:,is) + dmuxc(:,is,is1) * dvscf(:,is1)
         !
      enddo
-     ! 
+     !
   enddo
   !
   ! Add gradient correction to the response XC potential.
-  ! NB: If nlcc=.true. we need to add here its contribution. 
+  ! NB: If nlcc=.true. we need to add here its contribution.
   ! grho contains already the core charge
   !
   if ( dft_is_gradient() ) then
@@ -126,7 +126,7 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   if (nlcc_any.and.add_nlcc) then
      !
      do is = 1, nspin
-        ! 
+        !
         rho%of_r(:, is) = rho%of_r(:, is) - fac * rho_core (:)
         dvscf(:, is) = dvscf(:, is) - fac * drhoc (:)
         !
@@ -151,23 +151,23 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   dvhart(:,:) = (0.d0,0.d0)
   !
   do ig = 1, ngm
-     ! 
+     !
      qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
-     ! 
+     !
      if (qg2 > 1.d-8) then
         !
         dvhart(nl(ig),:) = e2 * fpi * dvscf(nl(ig),1) / (tpiba2 * qg2)
         !
      endif
-     !        
+     !
   enddo
-  !  
+  !
   if (do_comp_mt) then
      !
      allocate(dvaux_mt(ngm))
      !
      call wg_corr_h (omega, ngm, dvscf(nl(:),1), dvaux_mt, eh_corr)
-     ! 
+     !
      do ig = 1, ngm
         !
         dvhart(nl(ig),:) = dvhart(nl(ig),1) + dvaux_mt(ig)
@@ -177,7 +177,7 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
      deallocate(dvaux_mt)
      !
   endif
-  ! 
+  !
   if (gamma_only) then
      !
      do ig = 1, ngm
@@ -201,7 +201,7 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   if (lrpa) then
      !
      dvscf(:,:) = dvhart(:,:)
-     ! 
+     !
   else
      !
      dvscf(:,:) = dvaux(:,:) + dvhart(:,:)

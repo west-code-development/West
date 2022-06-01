@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2016 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 #define ZERO ( 0.D0, 0.D0 )
@@ -71,7 +71,7 @@ SUBROUTINE wbsepp_meg ( )
   delta_e = 0.05
   xq(:)   = 0.0_DP
   iks     = 1
-  !  
+  !
   pert = idistribute()
   CALL pert%init(num_triplepair,'b','num_triple_pairs',.TRUE.)
   !
@@ -80,7 +80,7 @@ SUBROUTINE wbsepp_meg ( )
   ALLOCATE( ev_exc(n_plep))
   !
   CALL plep_db_read( n_plep )
-  ev_exc(:) = ev(:)  
+  ev_exc(:) = ev(:)
   !
   DEALLOCATE(ev)
   !
@@ -98,12 +98,12 @@ SUBROUTINE wbsepp_meg ( )
   index_i = 0
   !
   DO il = 1, n_plep
-     ! 
+     !
      DO jl = 1, n_plep
         !
         DO kl = 1, n_plep
            !
-           ev_tmp = ev_exc( il ) - (ev_exc( jl ) + ev_exc( kl )) 
+           ev_tmp = ev_exc( il ) - (ev_exc( jl ) + ev_exc( kl ))
            !
            IF ( abs(ev_tmp) <= delta_e) THEN
               !
@@ -119,7 +119,7 @@ SUBROUTINE wbsepp_meg ( )
         !
      ENDDO
      !
-  ENDDO 
+  ENDDO
   !
   num_triplepair = index_i
   !
@@ -127,16 +127,16 @@ SUBROUTINE wbsepp_meg ( )
   !
   exchange_eeh(:) = 0.0_DP
   !
-  ! ... DISTRIBUTE num_triplepair 
+  ! ... DISTRIBUTE num_triplepair
   !
   bseparal = idistribute()
   CALL bseparal%init(num_triplepair,'i','num_triple_pairs',.TRUE.)
-  CALL wbse_memory_report() ! Before allocating I report the memory required. 
-  ! 
+  CALL wbse_memory_report() ! Before allocating I report the memory required.
+  !
   DO il1 = 1, bseparal%nloc
      !
      ig1 = bseparal%l2g(il1)
-     ! 
+     !
      IF( ig1 < 1 .OR. ig1 > num_triplepair ) CYCLE
      !
      exc1 = M_ijk(ig1, 1)
@@ -160,7 +160,7 @@ SUBROUTINE wbsepp_meg ( )
            psic_j (:) = (0.0d0,0.0d0)
            !
            IF (gamma_only) THEN
-              !           
+              !
               CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc(1,ibnd,exc1,iks),dvg_exc(1,jbnd,exc3,iks), psic_i,'Wave')
               !
               CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc(1,ibnd,exc2,iks), evc(1,jbnd), psic_j,'Wave')
@@ -176,17 +176,17 @@ SUBROUTINE wbsepp_meg ( )
               ALLOCATE(phi_c(npwq0x),phi_x(npwq0x),psic(dffts%nnr))
               !
               psic(:) = (0.0d0,0.0d0)
-              ! 
+              !
               IF (gamma_only) THEN
                  !
                  ! 1) compute phi_c = phi_i * sqrt(v_c*)
                  !    G->0 : v_c(G) = 0.0
-                 ! 
+                 !
                  phi_c(:) = (0.d0,0.d0)
                  DO ig = 1, npwq0x
-                    ! 
+                    !
                     qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
-                    !  
+                    !
                     IF (qg2 > 1.d-8) THEN
                        !
                        phi_c(ig) = dvg(ig,alnd) * DSQRT(e2*fpi/(tpiba2*qg2))
@@ -246,10 +246,10 @@ SUBROUTINE wbsepp_meg ( )
         ENDDO
         !
      ENDDO
-     !  
+     !
      exchange_eeh_tmp = 0.0d0
      !
-     DO ibnd = 1, nbndx_occ 
+     DO ibnd = 1, nbndx_occ
         !
         DO jbnd = 1, nbndx_occ
            !
@@ -258,13 +258,13 @@ SUBROUTINE wbsepp_meg ( )
               exchange_eeh_tmp = exchange_eeh_tmp + coeff_ija_vc(ibnd,jbnd,alnd) * coeff_aij_vc(ibnd,jbnd,alnd) &
                                                   + coeff_ija_vx(ibnd,jbnd,alnd) * coeff_aij_vx(ibnd,jbnd,alnd)
               !
-           ENDDO 
-           ! 
-        ENDDO  
-        ! 
-     ENDDO 
+           ENDDO
+           !
+        ENDDO
+        !
+     ENDDO
      !
-     exchange_eeh(ig1) = exchange_eeh_tmp 
+     exchange_eeh(ig1) = exchange_eeh_tmp
      !
      DEALLOCATE(coeff_aij_vx,coeff_aij_vc)
      DEALLOCATE(coeff_ija_vx,coeff_ija_vc)

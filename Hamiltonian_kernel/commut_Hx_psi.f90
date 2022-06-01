@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -7,7 +7,7 @@
 !
 ! This file is part of WEST.
 !
-! Contributors to this file: 
+! Contributors to this file:
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
@@ -15,14 +15,14 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >
-  ! On output: dpsi(m-bands) = | dpsi_ik > = [H,x_ipol] | psi_ik > in crystal axis 
+  ! On output: dpsi(m-bands) = | dpsi_ik > = [H,x_ipol] | psi_ik > in crystal axis
   !            (projected on at(*,ipol) )
   !
   ! vkb, must be properly set for the appropriate k-point
-  ! NB: here the last index of becp1 is missing, hence it refers 
+  ! NB: here the last index of becp1 is missing, hence it refers
   !     to a single k-point
   !
-  !    CALL calbec (npw,  vkb, psi, becp1(:,:) ) 
+  !    CALL calbec (npw,  vkb, psi, becp1(:,:) )
   !    CALL calbec (npw, work, psi, becp2(:,:) )
   !
   USE kinds,           ONLY : DP
@@ -39,7 +39,7 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   USE uspp_param,      ONLY : nh, nhm
   USE control_flags,   ONLY : gamma_only
   USE pwcom,           ONLY : igk_k,current_k
-  ! 
+  !
   IMPLICIT NONE
   !
   ! I/O
@@ -55,14 +55,14 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !
   TYPE(bec_type) :: becp1 ! dimensions ( nkb, m )
   TYPE(bec_type) :: becp2 ! dimensions ( nkb, m )
-  REAL(DP),ALLOCATABLE :: gk(:,:)  
+  REAL(DP),ALLOCATABLE :: gk(:,:)
   INTEGER :: ig, na, ibnd, jbnd, ikb, jkb, nt, lter, ih, jh, ijkb0, is, js, ijs
   COMPLEX(DP),ALLOCATABLE :: ps2(:,:,:), dvkb (:,:), dvkb1 (:,:), work (:,:), psc(:,:,:,:), deff_nc(:,:,:,:)
   REAL(DP),ALLOCATABLE :: deff(:,:,:)
   !
   CALL start_clock ('commut_Hx_psi')
   !
-  ALLOCATE( gk(3,npwx) )    
+  ALLOCATE( gk(3,npwx) )
   !
   dpsi = 0._DP
 !$OMP PARALLEL DEFAULT(none) SHARED(npw,gk,xk,ik,g,igk_k,tpiba,g2kin,current_k) PRIVATE(ig)
@@ -76,9 +76,9 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !
   ! this is  the kinetic contribution to [H,x]:  -2i (k+G)_ipol * psi
   !
-  IF( noncolin ) THEN 
+  IF( noncolin ) THEN
 !$OMP PARALLEL DEFAULT(none) SHARED(m,npw,dpsi,at,ipol,gk,psi,npwx) PRIVATE(ibnd,ig)
-!$OMP DO 
+!$OMP DO
      DO ibnd = 1, m
         DO ig = 1, npw ! first spin-component
            dpsi(ig,ibnd) = SUM( at(1:3,ipol ) * gk(1:3,ig) ) * (0._DP,-2._DP) * psi(ig,ibnd)
@@ -93,7 +93,7 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
 !$OMP PARALLEL DEFAULT(none) SHARED(m,npw,dpsi,at,ipol,gk,psi) PRIVATE(ibnd,ig)
 !$OMP DO COLLAPSE(2)
      DO ibnd = 1, m
-        DO ig = 1, npw 
+        DO ig = 1, npw
            dpsi(ig,ibnd) = SUM(at(1:3,ipol)*gk(1:3,ig))*(0._DP,-2._DP)*psi(ig,ibnd)
         ENDDO
      ENDDO
@@ -101,7 +101,7 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
 !$OMP END PARALLEL
   ENDIF
   !
-  ! Uncomment this goto and the continue below to calculate 
+  ! Uncomment this goto and the continue below to calculate
   ! the matrix elements of p without the commutator with the
   ! nonlocal potential.
   !
@@ -122,12 +122,12 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
   dvkb   = 0._DP
   dvkb1  = 0._DP
   work   = 0._DP
-  ! 
+  !
   CALL gen_us_dj (ik, dvkb)
   CALL gen_us_dy (ik, at (1, ipol), dvkb1)
   !
 !$OMP PARALLEL DEFAULT(none) SHARED(npw,g2kin,gk) PRIVATE(ig)
-!$OMP DO 
+!$OMP DO
   DO ig = 1, npw
      IF (g2kin (ig) < 1.0d-10) THEN
         gk (1, ig) = 0._DP
@@ -140,7 +140,7 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
      ENDIF
   ENDDO
 !$OMP END DO
-!$OMP END PARALLEL 
+!$OMP END PARALLEL
   !
   jkb = 0
   DO nt = 1, ntyp
@@ -204,23 +204,23 @@ SUBROUTINE commut_Hx_psi (ik, m, ipol, psi, dpsi, l_skip_nlpp)
                              ijs=ijs+1
                              psc(ikb,is,ibnd,1)=psc(ikb,is,ibnd,1)+  &
                                        (0._DP,-1._DP)*    &
-                                  becp2%nc(jkb,js,ibnd)*deff_nc(ih,jh,na,ijs) 
+                                  becp2%nc(jkb,js,ibnd)*deff_nc(ih,jh,na,ijs)
                              psc(ikb,is,ibnd,2)=psc(ikb,is,ibnd,2)+ &
                                      (0._DP,-1._DP)* &
-                                 becp1%nc(jkb,js,ibnd)*deff_nc(ih,jh,na,ijs) 
+                                 becp1%nc(jkb,js,ibnd)*deff_nc(ih,jh,na,ijs)
                           END DO
                        END DO
                     ELSEIF( gamma_only ) THEN
-                       ! Note the different prefactors due to the factor 
+                       ! Note the different prefactors due to the factor
                        ! of i introduced to work(:,:), as becp[1,2] are
                        ! real.
                        ps2(ikb,ibnd,1) = ps2(ikb,ibnd,1) + becp2%r(jkb,ibnd) * &
-                            (1._DP, 0._DP)*deff(ih,jh,na) 
+                            (1._DP, 0._DP)*deff(ih,jh,na)
                        ps2(ikb,ibnd,2) = ps2(ikb,ibnd,2) + becp1%r(jkb,ibnd) * &
                             (-1._DP, 0._DP)*deff(ih,jh,na)
                     ELSE
                        ps2(ikb,ibnd,1) = ps2(ikb,ibnd,1) + becp2%k(jkb,ibnd) * &
-                            (0._DP,-1._DP)*deff(ih,jh,na) 
+                            (0._DP,-1._DP)*deff(ih,jh,na)
                        ps2(ikb,ibnd,2) = ps2(ikb,ibnd,2) + becp1%k(jkb,ibnd) * &
                             (0._DP,-1._DP)*deff(ih,jh,na)
                     END IF

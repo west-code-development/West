@@ -13,7 +13,7 @@ Cori is a Cray XC40 located at National Energy Research Scientific Computing Cen
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on May 12, 2021):
+WEST executables can be compiled using the following script (tested on May 6, 2022):
 
 .. code-block:: bash
 
@@ -21,25 +21,23 @@ WEST executables can be compiled using the following script (tested on May 12, 2
    #!/bin/bash
 
    module unload cray-libsci
-   module load cray-python/3.8.2.1
+   module load cray-python/3.9.7.1
 
    export CRAYPE_LINK_TYPE=dynamic
-   export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/opt/python/3.8.2.1/lib:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/python/3.9.7.1/lib
    export MPIF90=ftn
-   export F77=ftn
+   export F90=ftn
    export CC=cc
    export SCALAPACK_LIBS="$MKLROOT/lib/intel64/libmkl_scalapack_lp64.so -Wl,--start-group $MKLROOT/lib/intel64/libmkl_intel_lp64.so $MKLROOT/lib/intel64/libmkl_intel_thread.so $MKLROOT/lib/intel64/libmkl_core.so $MKLROOT/lib/intel64/libmkl_blacs_intelmpi_lp64.so -Wl,--end-group"
 
-   ./configure --enable-openmp=yes --enable-parallel=yes --enable-shared=yes --with-scalapack=intel --with-hdf5=no
+   ./configure --enable-openmp --with-scalapack=intel
 
    make -j 8 pw
 
    cd West
 
    make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
-   make all
+   make -j 8 all
 
 To use the script do:
 
@@ -67,11 +65,10 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --cpus-per-task=2
 
    module unload cray-libsci
-   module load cray-python/3.8.2.1
+   module load cray-python/3.9.7.1
 
-   export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/opt/python/3.8.2.1/lib:$LD_LIBRARY_PATH
+   export CRAYPE_LINK_TYPE=dynamic
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/python/3.9.7.1/lib
 
    export OMP_NUM_THREADS=1
    export OMP_PLACE=threads

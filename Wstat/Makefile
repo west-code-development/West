@@ -3,35 +3,34 @@
 include ../../make.inc
 
 # location of needed modules
-MODFLAGS= $(MOD_FLAG)../../iotk/src $(MOD_FLAG)../../Modules $(MOD_FLAG)../../LAXlib \
-          $(MOD_FLAG)../../FFTXlib $(MOD_FLAG)../../PW/src \
-          $(MOD_FLAG)../Libraries/Forpy \
-          $(MOD_FLAG)../Libraries/Json \
-          $(MOD_FLAG)../Libraries/Base64 \
-          $(MOD_FLAG)../Modules \
-          $(MOD_FLAG)../Tools \
-          $(MOD_FLAG)../FFT_kernel \
-          $(MOD_FLAG)../Coulomb_kernel \
-          $(MOD_FLAG)../Para_kernel \
-          $(MOD_FLAG)../Hamiltonian_kernel \
-          $(MOD_FLAG)../DFPT_kernel \
-          $(MOD_FLAG)../IO_kernel \
-          $(MOD_FLAG).
-IFLAGS=
-
+MODFLAGS = $(BASEMOD_FLAGS) \
+           $(MOD_FLAG)../../PW/src \
+           $(MOD_FLAG)../Coulomb_kernel \
+           $(MOD_FLAG)../DFPT_kernel \
+           $(MOD_FLAG)../FFT_kernel \
+           $(MOD_FLAG)../IO_kernel \
+           $(MOD_FLAG)../Libraries/Base64 \
+           $(MOD_FLAG)../Libraries/Forpy \
+           $(MOD_FLAG)../Libraries/Json \
+           $(MOD_FLAG)../Modules \
+           $(MOD_FLAG)../Para_kernel \
+           $(MOD_FLAG)../Tools \
+           $(MOD_FLAG).
 
 WSTAT_OBJS = \
-wstat_readin.o \
-wstat_setup.o \
-wstat_restart.o \
-wstat_memory_report.o \
-wstat_tools.o \
 apply_operator.o \
 davidson_diago.o \
-wstat.o
+wstat.o \
+wstat_memory_report.o \
+wstat_readin.o \
+wstat_restart.o \
+wstat_setup.o \
+wstat_tools.o
 
-PWOBJS = ../../PW/src/libpw.a 
-QEMODS = ../../Modules/libqemod.a ../../FFTXlib/libqefft.a ../../LAXlib/libqela.a ../Libraries/Forpy/libforpy.a ../Libraries/Json/libjson.a ../Libraries/Base64/libbase64.a 
+PWOBJS = ../../PW/src/libpw.a
+
+QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
+
 WESTLIBS = \
 ../IO_kernel/lib_io_kernel.a \
 ../DFPT_kernel/lib_dfpt_kernel.a \
@@ -40,18 +39,21 @@ WESTLIBS = \
 ../Coulomb_kernel/lib_coulomb_kernel.a \
 ../FFT_kernel/lib_fft_kernel.a \
 ../Tools/libtools.a \
-../Modules/libmodules.a
+../Modules/libmodules.a \
+../Libraries/Forpy/libforpy.a \
+../Libraries/Json/libjson.a \
+../Libraries/Base64/libbase64.a
 
-
-TLDEPS= bindir mods libs pw
+TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps wstat.x libwstat.a
 
-wstat.x : $(PWOBJS) $(WSTAT_OBJS) $(QEMODS) $(LIBOBJS)
+wstat.x : $(PWOBJS) $(WSTAT_OBJS) $(QEMODS) $(WESTLIBS)
 	$(LD) $(LDFLAGS) -o wstat.x \
-		$(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(LIBOBJS) $(LIBS) $(PYT_LDFLAGS)
+                $(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wstat/wstat.x . )
-tldeps:
+
+tldeps :
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
 
 libwstat.a : $(WSTAT_OBJS)
@@ -63,10 +65,10 @@ clean :
 	- /bin/rm -f ../../bin/wstat.x
 
 title :
-	@echo "              "
+	@echo
 	@echo "##############"
 	@echo "### Wstat ####"
 	@echo "##############"
-	@echo "              "
+	@echo
 
 include make.depend

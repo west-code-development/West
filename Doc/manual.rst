@@ -34,7 +34,7 @@ input_west
    * - **Default**
      - "pwscf"
    * - **Description**
-     - Prefix prepended to the QuantumEspresso save folder.
+     - Prefix prepended to the Quantum ESPRESSO save folder.
 
 
 .. data:: west_prefix
@@ -557,6 +557,7 @@ westpp_control
        - "W" : Output the electronic wavefunctions.
        - "E" : Output the eigenpotentials.
        - "S" : Output the screened exchange constant.
+       - "D" : Output the dipole matrix elements.
 
 
 .. data:: westpp_range
@@ -570,7 +571,7 @@ westpp_control
    * - **Default**
      - [1,2]
    * - **Description**
-     - Range for W, E, and S run.
+     - Range for W, E, S, and D run.
 
 
 .. data:: westpp_format
@@ -717,7 +718,7 @@ wbse_init_control
      - Available options are:
 
        - "S" : Start from scratch
-       - "R" : Restart from an interrupted run. You should restart with the same number of cores and images. 
+       - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
 
 .. data:: localization
 
@@ -731,7 +732,7 @@ wbse_init_control
      - "N"
    * - **Description**
      - Available options are:
-          
+
        - "N" : Kohn-Sham orbitals are not localized
        - "B" : Bisected orbitals are used
 
@@ -773,7 +774,7 @@ wbse_init_control
      - "CHI"
    * - **Description**
      - Available options are:
- 
+
        - "CHI" : W = vc + vc X vc
        - "CHI_RPA" : W = vc + vc X_RPA vc
        - "XC_CHI_RPA" : W = vc + (vc+fxc) X vc
@@ -799,10 +800,10 @@ wbse_control
    * - **Description**
      - Available options are:
 
-       - "D" : Diagonalize the Liouville super-operator with the Davidson iterative solver. 
-       - "d" : Restart the calculation for wbse_calculation = "D" from an interrupted run. You should restart with the same number of cores and images. 
-       - "L" : Compute the absorption spectrum with the Lanczos method. 
-       - "l" : Restart the calculation for wbse_calculation = "L" from an interrupted run. You should restart with the same number of cores and images. 
+       - "D" : Diagonalize the Liouville super-operator with the Davidson iterative solver.
+       - "d" : Restart the calculation for wbse_calculation = "D" from an interrupted run. You should restart with the same number of cores and images.
+       - "L" : Compute the absorption spectrum with the Lanczos method.
+       - "l" : Restart the calculation for wbse_calculation = "L" from an interrupted run. You should restart with the same number of cores and images.
 
 
 .. data:: qp_correction
@@ -816,8 +817,8 @@ wbse_control
    * - **Default**
      - "None"
    * - **Description**
-     - Available options are: 
-          
+     - Available options are:
+
        - "None" : Quasiparticle corrections are not added.
        - specify the name of the file from which quasiparticle corrections are read (in eV).
 
@@ -833,7 +834,7 @@ wbse_control
    * - **Default**
      - 0.0
    * - **Description**
-     - Value of the scissor operator (in eV). 
+     - Value of the scissor operator (in eV).
 
 .. data:: solver
 
@@ -846,8 +847,8 @@ wbse_control
    * - **Default**
      - "BSE"
    * - **Description**
-     - Available options are: 
-       
+     - Available options are:
+
        - "BSE" : Bethe-Salpeter equation
        - "TDDFT" : Time-dependent density functional theory
 
@@ -862,7 +863,7 @@ wbse_control
    * - **Default**
      - 1
    * - **Description**
-     - Number of Liouville eigenvectors and eigenvalues. 
+     - Number of Liouville eigenvectors and eigenvalues.
 
 
 .. data:: n_liouville_times
@@ -935,7 +936,7 @@ wbse_control
      - Relative convergence threshold for Liouville eigenvalues.
 
 
-.. data:: n_lanczos 
+.. data:: n_lanczos
 
 .. list-table::
    :widths: 10 90
@@ -961,7 +962,7 @@ wbse_control
      - "XX"
    * - **Description**
      - Determine which components of the polarizability tensor (alpha) are computed:
-       - "XX": alpha_xx 
+       - "XX": alpha_xx
        - "YY": alpha_yy
        - "ZZ": alpha_zz
         -"XYZ": three Lanczos chains are sequentially performed and the full polarizability tensor and the absorption coefficient are computed.
@@ -997,7 +998,7 @@ wbse_control
        - "N" : None. Choice valid for isolated systems.
        - "C" : Include long-wavelength limit. Choice valid for condensed systems.
 
-.. data:: spin_excitation 
+.. data:: spin_excitation
 
 .. list-table::
    :widths: 10 90
@@ -1013,7 +1014,7 @@ wbse_control
        - "S" : Singlet.
        - "T" : Triplet.
 
-.. data:: l_preconditioning  
+.. data:: l_preconditioning
 
 .. list-table::
    :widths: 10 90
@@ -1024,4 +1025,4 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - Preconditioning for the Davidson methos, for finite systems. 
+     - Preconditioning for the Davidson methos, for finite systems.

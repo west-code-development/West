@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni 
+! Copyright (C) 2015-2021 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -32,18 +32,14 @@ MODULE function3d
    !
    USE kinds,                       ONLY : DP
    USE cell_base,                   ONLY : celldm, at
-   USE control_flags,               ONLY : gamma_only
    USE mp_bands,                    ONLY : me_bgrp
    USE scatter_mod,                 ONLY : gather_grid
    USE fft_types,                   ONLY : fft_type_descriptor
-   USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
-   USE forpy_mod,  ONLY: tuple, tuple_create
-   USE forpy_mod,  ONLY: dict, dict_create
-   USE forpy_mod,  ONLY: list, list_create
-   USE forpy_mod,  ONLY: object, cast
-   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
-   USE conversions, ONLY : ltoa, itoa, dtoa
-   USE base64_module
+   USE forpy_mod,                   ONLY : call_py_noret, import_py, module_py
+   USE forpy_mod,                   ONLY : tuple, tuple_create
+   USE forpy_mod,                   ONLY : dict, dict_create
+   USE conversions,                 ONLY : itoa, dtoa
+   USE base64_module,               ONLY : lenbase64, base64_byteswap_double, base64_encode_double, islittleendian
    !
    IMPLICIT NONE
    !
@@ -61,8 +57,6 @@ MODULE function3d
    TYPE(tuple) :: args
    TYPE(dict) :: kwargs
    TYPE(module_py) :: pymod
-   TYPE(object) :: return_obj
-   INTEGER :: return_int
    INTEGER :: IERR
    !
    ! Gather the function
@@ -116,18 +110,14 @@ MODULE function3d
    ! -----------------------------------------------------------------
    !
    USE kinds,                       ONLY : DP
-   USE cell_base,                   ONLY : celldm, at
-   USE control_flags,               ONLY : gamma_only
    USE mp_bands,                    ONLY : me_bgrp
    USE scatter_mod,                 ONLY : scatter_grid
    USE fft_types,                   ONLY : fft_type_descriptor
-   USE forpy_mod,  ONLY: call_py, call_py_noret, import_py, module_py
-   USE forpy_mod,  ONLY: tuple, tuple_create
-   USE forpy_mod,  ONLY: dict, dict_create
-   USE forpy_mod,  ONLY: list, list_create
-   USE forpy_mod,  ONLY: object, cast
-   USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
-   USE base64_module
+   USE forpy_mod,                   ONLY : call_py, import_py, module_py
+   USE forpy_mod,                   ONLY : tuple, tuple_create
+   USE forpy_mod,                   ONLY : dict, dict_create
+   USE forpy_mod,                   ONLY : object, cast
+   USE base64_module,               ONLY : lenbase64, base64_byteswap_double, base64_decode_double, islittleendian
    !
    IMPLICIT NONE
    !
@@ -146,7 +136,6 @@ MODULE function3d
    TYPE(dict) :: kwargs, return_dict
    TYPE(module_py) :: pymod
    TYPE(object) :: return_obj
-   INTEGER :: return_int
    INTEGER :: IERR
    !
    ALLOCATE(f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)); f_r_gathered = 0._DP
@@ -154,7 +143,6 @@ MODULE function3d
    IF( me_bgrp == 0 ) THEN
       !
       ! Decode
-      !
       !
       IERR = import_py(pymod, "west_function3d")
       !
@@ -192,15 +180,19 @@ MODULE function3d
    !
  END SUBROUTINE
  !
- !
  SUBROUTINE add_padding_real(dfft,f_r_gathered_nopadded,f_r_gathered)
-   USE kinds, ONLY :DP
+   !
+   USE kinds,                       ONLY : DP
    USE fft_types,                   ONLY : fft_type_descriptor
+   !
    IMPLICIT NONE
+   !
    TYPE(fft_type_descriptor), INTENT(IN) :: dfft
    REAL(DP),INTENT(IN) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
    REAL(DP),INTENT(OUT) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
+   !
    INTEGER :: i,j,k,ir_notpadded,ir_padded
+   !
    IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN
       f_r_gathered = f_r_gathered_nopadded
    ELSE
@@ -215,16 +207,22 @@ MODULE function3d
          ENDDO
       ENDDO
    ENDIF
+   !
  END SUBROUTINE
  !
  SUBROUTINE remove_padding_real(dfft,f_r_gathered,f_r_gathered_nopadded)
-   USE kinds, ONLY :DP
+   !
+   USE kinds,                       ONLY : DP
    USE fft_types,                   ONLY : fft_type_descriptor
+   !
    IMPLICIT NONE
+   !
    TYPE(fft_type_descriptor), INTENT(IN) :: dfft
    REAL(DP),INTENT(IN) :: f_r_gathered(dfft%nr1x*dfft%nr2x*dfft%nr3x)
    REAL(DP),INTENT(OUT) :: f_r_gathered_nopadded(dfft%nr1*dfft%nr2*dfft%nr3)
+   !
    INTEGER :: i,j,k,ir_notpadded,ir_padded
+   !
    IF( dfft%nr1 == dfft%nr1x .AND. dfft%nr2 == dfft%nr2x .AND. dfft%nr3 == dfft%nr3x) THEN
       f_r_gathered_nopadded = f_r_gathered
    ELSE
@@ -239,6 +237,7 @@ MODULE function3d
          ENDDO
       ENDDO
    ENDIF
+   !
  END SUBROUTINE
  !
 END MODULE

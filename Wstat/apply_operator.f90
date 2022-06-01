@@ -17,7 +17,11 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   USE kinds,                 ONLY : DP
   USE westcom,               ONLY : npwqx,npwq,wstat_calculation
   USE types_coulomb,         ONLY : pot3D
+#if defined(__CUDA)
+  USE dfpt_module,           ONLY : dfpt_gpu
+#else
   USE dfpt_module,           ONLY : dfpt
+#endif
   !
   IMPLICIT NONE
   !
@@ -55,7 +59,11 @@ SUBROUTINE apply_operator (m,dvg,dng,tr2,iq)
   IF( l_outsource ) THEN
      CALL calc_outsourced(m,aux_g,dng,iq)
   ELSE
+#if defined(__CUDA)
+     CALL dfpt_gpu(m,aux_g,dng,tr2,iq)
+#else
      CALL dfpt(m,aux_g,dng,tr2,iq)
+#endif
   ENDIF
   !
   DEALLOCATE( aux_g )
@@ -183,7 +191,6 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
      CALL update_bar_type( barra, 'outsourced', 1 )
   ENDIF
   CALL stop_bar_type( barra, 'outsourced' )
-  !
   !
 END SUBROUTINE
 

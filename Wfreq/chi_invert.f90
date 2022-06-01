@@ -19,6 +19,9 @@ MODULE chi_invert
    PRIVATE
    !
    PUBLIC :: chi_invert_real, chi_invert_complex
+#if defined(__CUDA)
+   PUBLIC :: chi_invert_real_gpu, chi_invert_complex_gpu
+#endif
    !
    CONTAINS
    !
@@ -191,8 +194,8 @@ MODULE chi_invert
       COMPLEX(DP),ALLOCATABLE :: temph(:,:)
       COMPLEX(DP),ALLOCATABLE :: templ(:,:)
       !
-      COMPLEX(DP),PARAMETER :: one = CMPLX(1._DP,0._DP,KIND=DP)
-      COMPLEX(DP),PARAMETER :: zero = CMPLX(0._DP,0._DP,KIND=DP)
+      COMPLEX(DP),PARAMETER :: one = (1._DP,0._DP)
+      COMPLEX(DP),PARAMETER :: zero = (0._DP,0._DP)
       !
       IF(PRESENT(l_gammaq)) THEN
          l_dohead = l_macropol .AND. l_gammaq
@@ -282,5 +285,236 @@ MODULE chi_invert
       DEALLOCATE(body,x)
       !
    END SUBROUTINE
+   !
+#if defined(__CUDA)
+   !-----------------------------------------------------------------------
+   SUBROUTINE chi_invert_real_gpu(matilda,head,lambda,nma)
+      !-----------------------------------------------------------------------
+      !
+      ! For each frequency I calculate X, ky, head and lambda
+      !
+      ! X = (1-B)^{-1}
+      ! tmph = X * wh
+      ! tmpl = wl * X
+      ! tmpt = wl * tmph
+      !
+      ! ky = 1 - f - Tr ( tmpt ) / 3
+      !
+      ! Head = (1-ky) / ky
+      !
+      ! Lamba = X * B + tmph * tmpl / (3*ky)
+      !
+      USE kinds,                 ONLY : DP
+      USE linear_algebra_kernel, ONLY : matinvrs_dge_gpu
+      USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
+      USE west_cuda,             ONLY : body_r_d,x_r_d,wh_r_d,wl_r_d,tmph_r_d,tmpl_r_d,tmpt_r_d,lambda_r_d
+      USE cublas
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      REAL(DP),INTENT(IN) :: matilda(nma,nma)
+      REAL(DP),INTENT(OUT) :: head,lambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use)
+      INTEGER,INTENT(IN) :: nma
+      !
+      ! Workspace
+      !
+      INTEGER :: i1,i2
+      REAL(DP) :: f
+      REAL(DP) :: ky
+      REAL(DP) :: tmpt(3,3)
+      !
+      body_r_d = matilda(1:n_pdep_eigen_to_use,1:n_pdep_eigen_to_use)
+      !
+      IF(l_macropol) THEN
+         !
+         f = 0._DP
+         DO i1 = 1,3
+            f = f+matilda(n_pdep_eigen_to_use+i1,n_pdep_eigen_to_use+i1)/3._DP
+         ENDDO
+         !
+         wh_r_d = matilda(1:n_pdep_eigen_to_use,n_pdep_eigen_to_use+1:n_pdep_eigen_to_use+3)
+         wl_r_d = matilda(n_pdep_eigen_to_use+1:n_pdep_eigen_to_use+3,1:n_pdep_eigen_to_use)
+         !
+      ENDIF
+      !
+      ! X = (1-B)^{-1}
+      !
+      !$acc parallel loop collapse(2)
+      DO i2 = 1,n_pdep_eigen_to_use
+         DO i1 = 1,n_pdep_eigen_to_use
+            IF(i1 == i2) THEN
+               x_r_d(i1,i2) = 1._DP-body_r_d(i1,i2)
+            ELSE
+               x_r_d(i1,i2) = -body_r_d(i1,i2)
+            ENDIF
+         ENDDO
+      ENDDO
+      !$acc end parallel
+      !
+      CALL matinvrs_dge_gpu(n_pdep_eigen_to_use,x_r_d)
+      !
+      IF(l_macropol) THEN
+         !
+         ! tmph = X * wh
+         CALL DGEMM('N','N',n_pdep_eigen_to_use,3,n_pdep_eigen_to_use,1._DP,x_r_d,&
+         & n_pdep_eigen_to_use,wh_r_d,n_pdep_eigen_to_use,0._DP,tmph_r_d,n_pdep_eigen_to_use)
+         !
+         ! tmpl = wl * X
+         CALL DGEMM('N','N',3,n_pdep_eigen_to_use,n_pdep_eigen_to_use,1._DP,wl_r_d,3,x_r_d,&
+         & n_pdep_eigen_to_use,0._DP,tmpl_r_d,3)
+         !
+         ! tmpt = wl * tmph
+         CALL DGEMM('N','N',3,3,n_pdep_eigen_to_use,1._DP,wl_r_d,3,tmph_r_d,n_pdep_eigen_to_use,&
+         & 0._DP,tmpt_r_d,3)
+         !
+         tmpt = tmpt_r_d
+         !
+         ! ky = 1 - f - Tr ( tmpt ) / 3
+         ky = 1._DP-f
+         DO i1 = 1,3
+            ky = ky-tmpt(i1,i1)/3._DP
+         ENDDO
+         !
+         head = (1._DP-ky)/ky
+         !
+      ELSE
+         head = 0._DP
+      ENDIF
+      !
+      CALL DGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,1._DP,x_r_d,&
+      & n_pdep_eigen_to_use,body_r_d,n_pdep_eigen_to_use,0._DP,lambda_r_d,n_pdep_eigen_to_use)
+      !
+      IF(l_macropol) THEN
+         f = 1._DP/(3._DP*ky)
+         CALL DGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,3,f,tmph_r_d,&
+         & n_pdep_eigen_to_use,tmpl_r_d,3,1._DP,lambda_r_d,n_pdep_eigen_to_use)
+      ENDIF
+      !
+      lambda = lambda_r_d
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE chi_invert_complex_gpu(matilda,head,lambda,nma,l_gammaq)
+      !-----------------------------------------------------------------------
+      !
+      ! For each frequency and q-point I calculate X, ky, head and lambda
+      !
+      ! X = (1-B)^{-1}
+      ! tmph = X * wh
+      ! tmpl = wl * X
+      ! tmpt = wl * tmph
+      !
+      ! ky = 1 - f - Tr ( tmpt ) / 3
+      !
+      ! Head = (1-ky) / ky
+      !
+      ! Lamba = X * B + tmph * tmpl / (3*ky)
+      !
+      USE kinds,                 ONLY : DP
+      USE linear_algebra_kernel, ONLY : matinvrs_zge_gpu
+      USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
+      USE west_cuda,             ONLY : body_c_d,x_c_d,wh_c_d,wl_c_d,tmph_c_d,tmpl_c_d,tmpt_c_d,lambda_c_d
+      USE cublas
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP),INTENT(IN) :: matilda(nma,nma)
+      COMPLEX(DP),INTENT(OUT) :: head,lambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use)
+      INTEGER,INTENT(IN) :: nma
+      LOGICAL,INTENT(IN),OPTIONAL :: l_gammaq
+      !
+      ! Workspace
+      !
+      LOGICAL :: l_dohead
+      INTEGER :: i1,i2
+      COMPLEX(DP) :: f
+      COMPLEX(DP) :: ky
+      COMPLEX(DP) :: tmpt(3,3)
+      !
+      COMPLEX(DP),PARAMETER :: one = (1._DP,0._DP)
+      COMPLEX(DP),PARAMETER :: zero = (0._DP,0._DP)
+      !
+      IF(PRESENT(l_gammaq)) THEN
+         l_dohead = l_macropol .AND. l_gammaq
+      ELSE
+         l_dohead = l_macropol
+      ENDIF
+      !
+      body_c_d = matilda(1:n_pdep_eigen_to_use,1:n_pdep_eigen_to_use)
+      !
+      IF(l_dohead) THEN
+         !
+         f = zero
+         DO i1 = 1,3
+            f = f+matilda(n_pdep_eigen_to_use+i1,n_pdep_eigen_to_use+i1)/3._DP
+         ENDDO
+         !
+         wh_c_d = matilda(1:n_pdep_eigen_to_use,n_pdep_eigen_to_use+1:n_pdep_eigen_to_use+3)
+         wl_c_d = matilda(n_pdep_eigen_to_use+1:n_pdep_eigen_to_use+3,1:n_pdep_eigen_to_use)
+         !
+      ENDIF
+      !
+      ! X = (1-B)^{-1}
+      !
+      !$acc parallel loop collapse(2)
+      DO i2 = 1,n_pdep_eigen_to_use
+         DO i1 = 1,n_pdep_eigen_to_use
+            IF(i1 == i2) THEN
+               x_c_d(i1,i2) = one-body_c_d(i1,i2)
+            ELSE
+               x_c_d(i1,i2) = -body_c_d(i1,i2)
+            ENDIF
+         ENDDO
+      ENDDO
+      !$acc end parallel
+      !
+      CALL matinvrs_zge_gpu(n_pdep_eigen_to_use,x_c_d)
+      !
+      IF(l_dohead) THEN
+         !
+         ! tmph = X * wh
+         CALL ZGEMM('N','N',n_pdep_eigen_to_use,3,n_pdep_eigen_to_use,one,x_c_d,&
+         & n_pdep_eigen_to_use,wh_c_d,n_pdep_eigen_to_use,zero,tmph_c_d,n_pdep_eigen_to_use)
+         !
+         ! tmpl = wl * X
+         CALL ZGEMM('N','N',3,n_pdep_eigen_to_use,n_pdep_eigen_to_use,one,wl_c_d,3,x_c_d,&
+         & n_pdep_eigen_to_use,zero,tmpl_c_d,3)
+         !
+         ! tmpt = wl * tmph
+         CALL ZGEMM('N','N',3,3,n_pdep_eigen_to_use,one,wl_c_d,3,tmph_c_d,n_pdep_eigen_to_use,zero,&
+         & tmpt_c_d,3)
+         !
+         tmpt = tmpt_c_d
+         !
+         ! ky = 1 - f - Tr ( tmpt ) / 3
+         ky = one-f
+         DO i1 = 1,3
+            ky = ky-tmpt(i1,i1)/3._DP
+         ENDDO
+         !
+         head = (one-ky)/ky
+         !
+      ELSE
+         head = zero
+      ENDIF
+      !
+      CALL ZGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,one,x_c_d,&
+      & n_pdep_eigen_to_use,body_c_d,n_pdep_eigen_to_use,zero,lambda_c_d,n_pdep_eigen_to_use)
+      !
+      IF(l_dohead) THEN
+         f = one/(3._DP*ky)
+         CALL ZGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,3,f,tmph_c_d,&
+         & n_pdep_eigen_to_use,tmpl_c_d,3,one,lambda_c_d,n_pdep_eigen_to_use)
+      ENDIF
+      !
+      lambda = lambda_c_d
+      !
+   END SUBROUTINE
+#endif
    !
 END MODULE

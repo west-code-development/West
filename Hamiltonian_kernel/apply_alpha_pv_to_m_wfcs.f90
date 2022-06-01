@@ -20,9 +20,15 @@ SUBROUTINE apply_alpha_pv_to_m_wfcs(nbndval,m,f,g,alpha)
   USE pwcom,                ONLY : npw,npwx
   USE mp_global,            ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
-  USE wavefunctions,        ONLY : evc
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : npol
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : evc=>evc_d
+  USE west_cuda,            ONLY : ps_r=>ps_r_d,ps_c=>ps_c_d
+  USE cublas
+#else
+  USE wavefunctions,        ONLY : evc
+#endif
   !
   IMPLICIT NONE
   !
@@ -32,44 +38,74 @@ SUBROUTINE apply_alpha_pv_to_m_wfcs(nbndval,m,f,g,alpha)
   COMPLEX(DP), INTENT(IN) :: alpha
   COMPLEX(DP), INTENT(IN) :: f(npwx*npol,m)
   COMPLEX(DP), INTENT(INOUT) :: g(npwx*npol,m)
+#if defined(__CUDA)
+  ATTRIBUTES(DEVICE) :: f,g
+#endif
   !
   ! Workspace
   !
   REAL(DP) :: alpha_r
+#if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: ps_r(:,:)
   COMPLEX(DP), ALLOCATABLE :: ps_c(:,:)
+#endif
   !
-  CALL start_clock ('alphapv')
+#if defined(_CUDA)
+  CALL start_clock_gpu('alphapv')
+#else
+  CALL start_clock('alphapv')
+#endif
   !
   ! ps = < evc | f >
   !
-  IF( gamma_only ) THEN
+  IF(gamma_only) THEN
      !
-     ALLOCATE( ps_r(nbndval,m) )
-     ps_r = 0.0_DP
      alpha_r = REAL(alpha,KIND=DP)
      !
-     CALL glbrak_gamma( evc, f, ps_r, npw, npwx, nbndval, m, nbndval, npol)
+#if defined(__CUDA)
+     CALL glbrak_gamma_gpu(evc,f,ps_r,npw,npwx,nbndval,m,nbndval,npol)
+#else
+     ALLOCATE(ps_r(nbndval,m))
+     ps_r = 0.0_DP
+     !
+     CALL glbrak_gamma(evc,f,ps_r,npw,npwx,nbndval,m,nbndval,npol)
+#endif
+     !
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !
-     CALL DGEMM('N','N',2*npwx*npol,m,nbndval,alpha_r,evc,2*npwx*npol,ps_r,nbndval,1.0_DP,g,2*npwx*npol)
+     CALL DGEMM('N','N',2*npwx*npol,m,nbndval,alpha_r,evc,2*npwx*npol,ps_r,nbndval,&
+     & 1.0_DP,g,2*npwx*npol)
      !
-     DEALLOCATE( ps_r )
+#if !defined(__CUDA)
+     DEALLOCATE(ps_r)
+#endif
      !
   ELSE
      !
-     ALLOCATE( ps_c(nbndval,m) )
+#if defined(__CUDA)
+     CALL glbrak_k_gpu(evc,f,ps_c,npw,npwx,nbndval,m,nbndval,npol)
+#else
+     ALLOCATE(ps_c(nbndval,m))
      ps_c = (0.0_DP,0.0_DP)
      !
-     CALL glbrak_k( evc, f, ps_c, npw, npwx, nbndval, m, nbndval, npol)
+     CALL glbrak_k(evc,f,ps_c,npw,npwx,nbndval,m,nbndval,npol)
+#endif
+     !
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !
-     CALL ZGEMM('N','N',npwx*npol,m,nbndval,alpha,evc,npwx*npol,ps_c,nbndval,(1.0_DP,0.0_DP),g,npwx*npol)
+     CALL ZGEMM('N','N',npwx*npol,m,nbndval,alpha,evc,npwx*npol,ps_c,nbndval,&
+     & (1.0_DP,0.0_DP),g,npwx*npol)
      !
-     DEALLOCATE( ps_c )
+#if !defined(__CUDA)
+     DEALLOCATE(ps_c)
+#endif
      !
   ENDIF
   !
-  CALL stop_clock ('alphapv')
+#if defined(_CUDA)
+  CALL stop_clock_gpu('alphapv')
+#else
+  CALL stop_clock('alphapv')
+#endif
   !
 END SUBROUTINE

@@ -207,3 +207,319 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho(nbnd_to_deflate, NRHS, NLSTEPS, b
   CALL stop_clock( "lan_H" )
   !
 END SUBROUTINE
+!
+#if defined(__CUDA)
+!-----------------------------------------------------------------------
+SUBROUTINE solve_deflated_lanczos_w_full_ortho_gpu(nbnd_to_deflate, NRHS, NLSTEPS, b, alpha_s, beta_s, q_s_d, bnorm)
+  !-----------------------------------------------------------------------
+  !
+  USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : intra_bgrp_comm,nproc_bgrp
+  USE mp,                   ONLY : mp_sum
+  USE gvect,                ONLY : gstart
+  USE pwcom,                ONLY : npw,npwx
+  USE control_flags,        ONLY : gamma_only
+  USE noncollin_module,     ONLY : noncolin,npol
+  USE west_cuda,            ONLY : beta_d,r_d,tmp_r_d,tmp_c_d
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  INTEGER, INTENT(IN) :: nbnd_to_deflate
+  INTEGER, INTENT(IN) :: NRHS
+  INTEGER, INTENT(IN) :: NLSTEPS
+  COMPLEX(DP), INTENT(IN) :: b(npwx*npol,NRHS)
+  REAL(DP), INTENT(OUT) :: alpha_s(NLSTEPS,NRHS)
+  REAL(DP), INTENT(OUT) :: beta_s(NLSTEPS-1,NRHS)
+  COMPLEX(DP), DEVICE, INTENT(OUT) :: q_s_d(npwx*npol,NRHS,NLSTEPS)
+  REAL(DP), INTENT(OUT) :: bnorm(NRHS)
+  !
+  ! Workspace
+  !
+  INTEGER :: ia,ig,ip,il
+  REAL(DP) :: reduce_r
+  COMPLEX(DP) :: reduce_c
+  !
+  REAL(DP), ALLOCATABLE :: alpha(:)
+  REAL(DP), ALLOCATABLE :: beta(:)
+  !
+  ALLOCATE(alpha(NRHS))
+  ALLOCATE(beta(NRHS))
+  !
+  ! INIT
+  !
+  r_d = b
+  q_s_d = (0.0_DP,0.0_DP)
+  !
+  CALL start_clock_gpu("lan_H")
+  !
+  ! FROM R TO Q & BETA
+  !
+  IF(gamma_only) THEN
+     !$acc parallel vector_length(1024)
+     !$acc loop
+     DO ip = 1,NRHS
+        reduce_r = 0.0_DP
+        !$acc loop reduction(+:reduce_r)
+        DO ig = 1,npw
+           reduce_r = reduce_r+REAL(r_d(ig,ip),KIND=DP)**2+AIMAG(r_d(ig,ip))**2
+        ENDDO
+        IF(gstart == 2) THEN
+           tmp_r_d(ip) = 2.0_DP*reduce_r-REAL(r_d(1,ip),KIND=DP)**2
+        ELSE
+           tmp_r_d(ip) = 2.0_DP*reduce_r
+        ENDIF
+     ENDDO
+     !$acc end parallel
+  ELSE
+     !$acc parallel vector_length(1024)
+     !$acc loop
+     DO ip = 1,NRHS
+        reduce_r = 0.0_DP
+        !$acc loop reduction(+:reduce_r)
+        DO ig = 1,npw
+           reduce_r = reduce_r+REAL(r_d(ig,ip),KIND=DP)**2+AIMAG(r_d(ig,ip))**2
+           IF(noncolin) THEN
+              reduce_r = reduce_r+REAL(r_d(ig+npwx,ip),KIND=DP)**2+AIMAG(r_d(ig+npwx,ip))**2
+           ENDIF
+        ENDDO
+        tmp_r_d(ip) = reduce_r
+     ENDDO
+     !$acc end parallel
+  ENDIF
+  !
+  beta = tmp_r_d
+  !
+  CALL mp_sum(beta,intra_bgrp_comm)
+  !
+  DO ip = 1,NRHS
+     beta(ip) = SQRT(beta(ip))
+     bnorm(ip) = beta(ip)
+  ENDDO
+  !
+  ! --- Lanczos iterations
+  !
+  DO il = 1,NLSTEPS
+     !
+     beta_d = beta
+     !
+     !$acc parallel loop collapse(2)
+     DO ip = 1,NRHS
+        DO ig = 1,npwx*npol
+           q_s_d(ig,ip,il) = r_d(ig,ip)/beta_d(ip)
+        ENDDO
+     ENDDO
+     !$acc end parallel
+     !
+     ! NEW Q WAS FOUND !
+     !
+     ! APPLY H  q --> r
+     !
+     ! use h_psi__gpu, i.e. h_psi_gpu without band parallelization, as wfreq
+     ! handles band parallelization separately in solve_wfreq and solve_gfreq
+     !
+     CALL h_psi__gpu(npwx,npw,NRHS,q_s_d(1,1,il),r_d)
+     CALL apply_alpha_pc_to_m_wfcs(nbnd_to_deflate,NRHS,r_d,(1.0_DP,0.0_DP))
+     !
+     ! use beta
+     !
+     IF(il > 1) THEN
+        !$acc parallel loop collapse(2)
+        DO ip = 1,NRHS
+           DO ig = 1,npw
+              r_d(ig,ip) = r_d(ig,ip)-q_s_d(ig,ip,il-1)*beta_d(ip)
+              IF(noncolin) THEN
+                 r_d(ig+npwx,ip) = r_d(ig+npwx,ip)-q_s_d(ig+npwx,ip,il-1)*beta_d(ip)
+              ENDIF
+           ENDDO
+        ENDDO
+        !$acc end parallel
+     ENDIF
+     !
+     ! get alpha
+     !
+     IF(gamma_only) THEN
+        !$acc parallel vector_length(1024)
+        !$acc loop
+        DO ip = 1,NRHS
+           reduce_r = 0.0_DP
+           !$acc loop reduction(+:reduce_r)
+           DO ig = 1,npw
+              reduce_r = reduce_r+REAL(q_s_d(ig,ip,il),KIND=DP)*REAL(r_d(ig,ip),KIND=DP) &
+              & +AIMAG(q_s_d(ig,ip,il))*AIMAG(r_d(ig,ip))
+           ENDDO
+           IF(gstart == 2) THEN
+              tmp_r_d(ip) = 2.0_DP*reduce_r-REAL(q_s_d(1,ip,il),KIND=DP)*REAL(r_d(1,ip),KIND=DP)
+           ELSE
+              tmp_r_d(ip) = 2.0_DP*reduce_r
+           ENDIF
+        ENDDO
+        !$acc end parallel
+     ELSE
+        !$acc parallel vector_length(1024)
+        !$acc loop
+        DO ip = 1,NRHS
+           reduce_r = 0.0_DP
+           !$acc loop reduction(+:reduce_r)
+           DO ig = 1,npw
+              reduce_r = reduce_r+REAL(q_s_d(ig,ip,il),KIND=DP)*REAL(r_d(ig,ip),KIND=DP) &
+              & +AIMAG(q_s_d(ig,ip,il))*AIMAG(r_d(ig,ip))
+              IF(noncolin) THEN
+                 reduce_r = reduce_r+REAL(q_s_d(ig+npwx,ip,il),KIND=DP)*REAL(r_d(ig+npwx,ip),KIND=DP) &
+                 & +AIMAG(q_s_d(ig+npwx,ip,il))*AIMAG(r_d(ig+npwx,ip))
+              ENDIF
+           ENDDO
+           tmp_r_d(ip) = reduce_r
+        ENDDO
+        !$acc end parallel
+     ENDIF
+     !
+     alpha = tmp_r_d
+     !
+     CALL mp_sum(alpha,intra_bgrp_comm)
+     !
+     DO ip = 1,NRHS
+        alpha_s(il,ip) = alpha(ip)
+     ENDDO
+     !
+     ! use alpha
+     !
+     tmp_r_d = alpha
+     !$acc parallel loop collapse(2)
+     DO ip = 1,NRHS
+        DO ig = 1,npw
+           r_d(ig,ip) = r_d(ig,ip)-q_s_d(ig,ip,il)*tmp_r_d(ip)
+           IF(noncolin) THEN
+              r_d(ig+npwx,ip) = r_d(ig+npwx,ip)-q_s_d(ig+npwx,ip,il)*tmp_r_d(ip)
+           ENDIF
+        ENDDO
+     ENDDO
+     !$acc end parallel
+     !
+     ! Enforce full ortho
+     !
+     DO ia = 1,il-2
+        IF(gamma_only) THEN
+           !$acc parallel vector_length(1024)
+           !$acc loop
+           DO ip = 1,NRHS
+              reduce_r = 0.0_DP
+              !$acc loop reduction(+:reduce_r)
+              DO ig = 1,npw
+                 reduce_r = reduce_r+REAL(q_s_d(ig,ip,ia),KIND=DP)*REAL(r_d(ig,ip),KIND=DP) &
+                 & +AIMAG(q_s_d(ig,ip,ia))*AIMAG(r_d(ig,ip))
+              ENDDO
+              IF(gstart == 2) THEN
+                 tmp_r_d(ip) = 2.0_DP*reduce_r-REAL(q_s_d(1,ip,ia),KIND=DP)*REAL(r_d(1,ip),KIND=DP)
+              ELSE
+                 tmp_r_d(ip) = 2.0_DP*reduce_r
+              ENDIF
+           ENDDO
+           !$acc end parallel
+           !
+           IF(nproc_bgrp > 1) THEN
+              CALL mp_sum(tmp_r_d,intra_bgrp_comm)
+           ENDIF
+           !
+           !$acc parallel loop collapse(2)
+           DO ip = 1,NRHS
+              DO ig = 1,npw
+                 r_d(ig,ip) = r_d(ig,ip)-q_s_d(ig,ip,ia)*tmp_r_d(ip)
+                 IF(noncolin) THEN
+                    r_d(ig+npwx,ip) = r_d(ig+npwx,ip)-q_s_d(ig+npwx,ip,ia)*tmp_r_d(ip)
+                 ENDIF
+              ENDDO
+           ENDDO
+           !$acc end parallel
+        ELSE
+           !$acc parallel vector_length(1024)
+           !$acc loop
+           DO ip = 1,NRHS
+              reduce_c = 0.0_DP
+              !$acc loop reduction(+:reduce_c)
+              DO ig = 1,npw
+                 reduce_c = reduce_c+CONJG(q_s_d(ig,ip,ia))*r_d(ig,ip)
+                 IF(noncolin) THEN
+                    reduce_c = reduce_c+CONJG(q_s_d(ig+npwx,ip,ia))*r_d(ig+npwx,ip)
+                 ENDIF
+              ENDDO
+              tmp_c_d(ip) = reduce_c
+           ENDDO
+           !$acc end parallel
+           !
+           IF(nproc_bgrp > 1) THEN
+              CALL mp_sum(tmp_c_d,intra_bgrp_comm)
+           ENDIF
+           !
+           !$acc parallel loop collapse(2)
+           DO ip = 1,NRHS
+              DO ig = 1,npw
+                 r_d(ig,ip) = r_d(ig,ip)-q_s_d(ig,ip,ia)*tmp_c_d(ip)
+                 IF(noncolin) THEN
+                    r_d(ig+npwx,ip) = r_d(ig+npwx,ip)-q_s_d(ig+npwx,ip,ia)*tmp_c_d(ip)
+                 ENDIF
+              ENDDO
+           ENDDO
+           !$acc end parallel
+        ENDIF
+     ENDDO
+     !
+     ! get beta
+     !
+     IF(gamma_only) THEN
+        !$acc parallel vector_length(1024)
+        !$acc loop
+        DO ip = 1,NRHS
+           reduce_r = 0.0_DP
+           !$acc loop reduction(+:reduce_r)
+           DO ig = 1,npw
+              reduce_r = reduce_r+REAL(r_d(ig,ip),KIND=DP)**2+AIMAG(r_d(ig,ip))**2
+           ENDDO
+           IF(gstart == 2) THEN
+              tmp_r_d(ip) = 2.0_DP*reduce_r-REAL(r_d(1,ip),KIND=DP)**2
+           ELSE
+              tmp_r_d(ip) = 2.0_DP*reduce_r
+           ENDIF
+        ENDDO
+        !$acc end parallel
+     ELSE
+        !$acc parallel vector_length(1024)
+        !$acc loop
+        DO ip = 1,NRHS
+           reduce_r = 0.0_DP
+           !$acc loop reduction(+:reduce_r)
+           DO ig = 1,npw
+              reduce_r = reduce_r+REAL(r_d(ig,ip),KIND=DP)**2+AIMAG(r_d(ig,ip))**2
+              IF(noncolin) THEN
+                 reduce_r = reduce_r+REAL(r_d(ig+npwx,ip),KIND=DP)**2+AIMAG(r_d(ig+npwx,ip))**2
+              ENDIF
+           ENDDO
+           tmp_r_d(ip) = reduce_r
+        ENDDO
+        !$acc end parallel
+     ENDIF
+     !
+     beta = tmp_r_d
+     !
+     CALL mp_sum(beta,intra_bgrp_comm)
+     !
+     DO ip = 1,NRHS
+        beta(ip) = SQRT(beta(ip))
+     ENDDO
+     !
+     IF(il < NLSTEPS) THEN
+        DO ip = 1,NRHS
+           beta_s(il,ip) = beta(ip)
+        ENDDO
+     ENDIF
+     !
+  ENDDO
+  !
+  DEALLOCATE(alpha)
+  DEALLOCATE(beta)
+  !
+  CALL stop_clock_gpu("lan_H")
+  !
+END SUBROUTINE
+#endif

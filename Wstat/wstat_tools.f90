@@ -42,6 +42,20 @@ MODULE wstat_tools
      MODULE PROCEDURE refresh_with_vr_distr_real, refresh_with_vr_distr_complex
   END INTERFACE
   !
+#if defined(__CUDA)
+  INTERFACE build_hr_gpu
+     MODULE PROCEDURE build_hr_real_gpu, build_hr_complex_gpu
+  END INTERFACE
+  !
+  INTERFACE update_with_vr_distr_gpu
+     MODULE PROCEDURE update_with_vr_distr_real_gpu, update_with_vr_distr_complex_gpu
+  END INTERFACE
+  !
+  INTERFACE refresh_with_vr_distr_gpu
+     MODULE PROCEDURE refresh_with_vr_distr_real_gpu, refresh_with_vr_distr_complex_gpu
+  END INTERFACE
+#endif
+  !
   CONTAINS
     !
     !------------------------------------------------------------------------
@@ -69,7 +83,11 @@ MODULE wstat_tools
       CHARACTER(LEN=8) :: aux_label_npuc
       !
 #if defined(__SCALAPACK)
+#if defined(__CUDA)
+      IF(nproc > 3 .AND. nbase > 8000) THEN
+#else
       IF(nproc > 3 .AND. nbase > 2000) THEN
+#endif
          l_parallel = .TRUE.
       ELSE
          l_parallel = .FALSE.
@@ -84,7 +102,11 @@ MODULE wstat_tools
          !
          time_spent(1) = get_clock('diagox')
          !
+#if defined(__ELPA) && defined(__CUDA)
+         npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/64),KIND=DP))),2)
+#else
          npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/8),KIND=DP))),2)
+#endif
          npuc = npur
          !
 #if defined(__SCALAPACK)
@@ -95,12 +117,16 @@ MODULE wstat_tools
          WRITE(aux_label_npur,'(i8)') npur
          WRITE(aux_label_npuc,'(i8)') npuc
 #if defined(__ELPA)
+#if defined(__CUDA)
+         WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA (GPU), grid ',a)") &
+#else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA, grid ',a)") &
+#endif
 #else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
            & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1)))), &
-           & "("//TRIM(ADJUSTL(aux_label_npur))//"x"//TRIM(ADJUSTL(aux_label_npuc))//")"
+           & '('//TRIM(ADJUSTL(aux_label_npur))//'x'//TRIM(ADJUSTL(aux_label_npuc))//')'
          !
       ELSE
          !
@@ -109,7 +135,11 @@ MODULE wstat_tools
          CALL serial_diagox_dsy(nvec,nbase,nvecx,hr_distr,ew(1:nvec),vr_distr)
          !
          time_spent(2) = get_clock('diagox')
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+#if defined(__CUDA)
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") human_readable_time(time_spent(2)-time_spent(1))
+#else
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") human_readable_time(time_spent(2)-time_spent(1))
+#endif
          !
       ENDIF
       !
@@ -144,7 +174,11 @@ MODULE wstat_tools
       CHARACTER(LEN=8) :: aux_label_npuc
       !
 #if defined(__SCALAPACK)
+#if defined(__CUDA)
+      IF(nproc > 3 .AND. nbase > 8000) THEN
+#else
       IF(nproc > 3 .AND. nbase > 2000) THEN
+#endif
          l_parallel = .TRUE.
       ELSE
          l_parallel = .FALSE.
@@ -159,7 +193,11 @@ MODULE wstat_tools
          !
          time_spent(1) = get_clock('diagox')
          !
+#if defined(__ELPA) && defined(__CUDA)
+         npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/64),KIND=DP))),2)
+#else
          npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/8),KIND=DP))),2)
+#endif
          npuc = npur
          !
 #if defined(__SCALAPACK)
@@ -170,12 +208,16 @@ MODULE wstat_tools
          WRITE(aux_label_npur,'(i8)') npur
          WRITE(aux_label_npuc,'(i8)') npuc
 #if defined(__ELPA)
+#if defined(__CUDA)
+         WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA (GPU), grid ',a)") &
+#else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA, grid ',a)") &
+#endif
 #else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
            & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1)))), &
-           & "("//TRIM(ADJUSTL(aux_label_npur))//"x"//TRIM(ADJUSTL(aux_label_npuc))//")"
+           & '('//TRIM(ADJUSTL(aux_label_npur))//'x'//TRIM(ADJUSTL(aux_label_npuc))//')'
          !
       ELSE
          !
@@ -184,7 +226,11 @@ MODULE wstat_tools
          CALL serial_diagox_zhe(nvec,nbase,nvecx,hr_distr,ew(1:nvec),vr_distr)
          !
          time_spent(2) = get_clock('diagox')
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+#if defined(__CUDA)
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") human_readable_time(time_spent(2)-time_spent(1))
+#else
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") human_readable_time(time_spent(2)-time_spent(1))
+#endif
          !
       ENDIF
       !
@@ -210,6 +256,9 @@ MODULE wstat_tools
       USE mp_global,             ONLY : me_bgrp,root_bgrp,intra_bgrp_comm,inter_image_comm
       USE linear_algebra_kernel, ONLY : matdiago_dsy
       USE distribution_center,   ONLY : pert
+#if defined(__CUDA)
+      USE linear_algebra_kernel, ONLY : matdiago_dsy_gpu
+#endif
       !
       IMPLICIT NONE
       !
@@ -244,7 +293,11 @@ MODULE wstat_tools
       !
       IF(me_bgrp == root_bgrp) THEN
          !
+#if defined(__CUDA)
+         CALL matdiago_dsy_gpu(n,zz,ee,.FALSE.)
+#else
          CALL matdiago_dsy(n,zz,ee,.FALSE.)
+#endif
          !
       ENDIF
       !
@@ -284,6 +337,9 @@ MODULE wstat_tools
       USE mp_global,             ONLY : me_bgrp,root_bgrp,intra_bgrp_comm,inter_image_comm
       USE linear_algebra_kernel, ONLY : matdiago_zhe
       USE distribution_center,   ONLY : pert
+#if defined(__CUDA)
+      USE linear_algebra_kernel, ONLY : matdiago_zhe_gpu
+#endif
       !
       IMPLICIT NONE
       !
@@ -319,7 +375,11 @@ MODULE wstat_tools
       !
       IF(me_bgrp == root_bgrp) THEN
          !
+#if defined(__CUDA)
+         CALL matdiago_zhe_gpu(n,zz,ee,.FALSE.)
+#else
          CALL matdiago_zhe(n,zz,ee,.FALSE.)
+#endif
          !
       ENDIF
       !
@@ -1175,4 +1235,608 @@ MODULE wstat_tools
       CALL stop_clock('refresh_vr')
       !
     END SUBROUTINE
+    !
+#if defined(__CUDA)
+    !------------------------------------------------------------------------
+    SUBROUTINE build_hr_real_gpu(ag,bg,l2_s,l2_e,c_distr,g_e)
+      !------------------------------------------------------------------------
+      !
+      !  c_distr = < ag | bg >
+      !
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,&
+                                     & inter_bgrp_comm,my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
+      USE distribution_center,  ONLY : pert
+      USE westcom,              ONLY : npwq,npwqx
+      USE gvect,                ONLY : gstart
+      USE west_cuda,            ONLY : a_g_d,b_g_d,c_distr_r_d,allocate_build_hr_gpu,deallocate_build_hr_gpu
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
+      INTEGER,INTENT(IN) :: l2_s,l2_e
+      REAL(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
+      INTEGER,INTENT(IN) :: g_e
+      !
+      ! Workspace
+      !
+      INTEGER :: il1,il2,il3,l3_s,ig1
+      INTEGER :: icycl,idx,nloc
+      REAL(DP) :: reduce
+      !
+      CALL start_clock_gpu('build_hr')
+      !
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! Initialize
+         !
+         CALL allocate_build_hr_gpu(pert%nlocx,pert%nglob,MAX(1,l2_e-l2_s+1))
+         !
+         c_distr_r_d = 0._DP
+         b_g_d = bg
+         !
+         DO icycl = 0,nimage-1
+            !
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            !$acc wait
+            a_g_d = ag
+            !
+            DO il1 = 1,nloc
+               !
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
+               !
+               IF(gstart == 1) THEN
+                  l3_s = 1
+               ELSE
+                  l3_s = 2
+               ENDIF
+               !
+               !$acc parallel async
+               !$acc loop
+               DO il2 = l2_s,l2_e
+                  reduce = 0._DP
+                  !$acc loop reduction(+:reduce)
+                  DO il3 = l3_s,npwq
+                     reduce = reduce+REAL(a_g_d(il3,il1),KIND=DP)*REAL(b_g_d(il3,il2),KIND=DP) &
+                     & +AIMAG(a_g_d(il3,il1))*AIMAG(b_g_d(il3,il2))
+                  ENDDO
+                  c_distr_r_d(ig1,il2-l2_s+1) = 2._DP*reduce
+               ENDDO
+               !$acc end parallel
+            ENDDO
+            !
+            ! Cycle ag
+            !
+            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
+            !
+         ENDDO
+         !
+         IF(l2_e >= l2_s) THEN
+            !$acc wait
+            c_distr(:,l2_s:l2_e) = c_distr_r_d
+            !
+            CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+         ENDIF
+         !
+         CALL deallocate_build_hr_gpu()
+         !
+      ENDIF
+      !
+      CALL mp_bcast(c_distr,0,inter_bgrp_comm)
+      CALL mp_bcast(c_distr,0,inter_pool_comm)
+      !
+      CALL stop_clock_gpu('build_hr')
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE build_hr_complex_gpu(ag,bg,l2_s,l2_e,c_distr,g_e)
+      !------------------------------------------------------------------------
+      !
+      !  c_distr = < ag | bg >
+      !
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,&
+                                     & inter_bgrp_comm,my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
+      USE distribution_center,  ONLY : pert
+      USE westcom,              ONLY : npwq,npwqx
+      USE west_cuda,            ONLY : a_g_d,b_g_d,c_distr_c_d,allocate_build_hr_gpu,deallocate_build_hr_gpu
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
+      INTEGER,INTENT(IN) :: l2_s,l2_e
+      COMPLEX(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
+      INTEGER,INTENT(IN) :: g_e
+      !
+      ! Workspace
+      !
+      INTEGER :: il1,il2,il3,ig1
+      INTEGER :: icycl,idx,nloc
+      COMPLEX(DP) :: reduce
+      !
+      CALL start_clock_gpu('build_hr')
+      !
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! Initialize
+         !
+         CALL allocate_build_hr_gpu(pert%nlocx,pert%nglob,MAX(1,l2_e-l2_s+1))
+         !
+         c_distr_c_d = 0._DP
+         b_g_d = bg
+         !
+         DO icycl = 0,nimage-1
+            !
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            !$acc wait
+            a_g_d = ag
+            !
+            DO il1 = 1,nloc
+               !
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
+               !
+               !$acc parallel async
+               !$acc loop
+               DO il2 = l2_s,l2_e
+                  reduce = 0._DP
+                  !$acc loop reduction(+:reduce)
+                  DO il3 = 1,npwq
+                     reduce = reduce+CONJG(a_g_d(il3,il1))*b_g_d(il3,il2)
+                  ENDDO
+                  c_distr_c_d(ig1,il2-l2_s+1) = reduce
+               ENDDO
+               !$acc end parallel
+            ENDDO
+            !
+            ! Cycle ag
+            !
+            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
+            !
+         ENDDO
+         !
+         IF(l2_e >= l2_s) THEN
+            !$acc wait
+            c_distr(:,l2_s:l2_e) = c_distr_c_d
+            !
+            CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+         ENDIF
+         !
+         CALL deallocate_build_hr_gpu()
+         !
+      ENDIF
+      !
+      CALL mp_bcast(c_distr,0,inter_bgrp_comm)
+      CALL mp_bcast(c_distr,0,inter_pool_comm)
+      !
+      CALL stop_clock_gpu('build_hr')
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE update_with_vr_distr_real_gpu(ag,bg,nselect,n,lda,vr_distr,ew)
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
+      USE distribution_center,  ONLY : pert
+      USE westcom,              ONLY : npwq,npwqx
+      USE west_cuda,            ONLY : a_g_d,b_g_d,h_g_d,h2_g_d,allocate_update_vr_gpu,&
+                                     & deallocate_update_vr_gpu
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: bg(npwqx,pert%nlocx)
+      INTEGER,INTENT(IN) :: nselect,n,lda
+      REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
+      REAL(DP),INTENT(IN) :: ew(lda)
+      !
+      ! Workspace
+      !
+      INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: icycl,idx,nloc
+      REAL(DP) :: dconst
+      COMPLEX(DP),PINNED,ALLOCATABLE :: hg(:,:)
+      COMPLEX(DP),PINNED,ALLOCATABLE :: hg2(:,:)
+      !
+      CALL start_clock_gpu('update_vr')
+      !
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! Initialize
+         !
+         CALL allocate_update_vr_gpu(pert%nlocx)
+         !
+         h_g_d = 0._DP
+         h2_g_d = 0._DP
+         !
+         ALLOCATE(hg(npwqx,pert%nlocx))
+         ALLOCATE(hg2(npwqx,pert%nlocx))
+         !
+         DO icycl = 0,nimage-1
+            !
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            !$acc wait
+            a_g_d = ag
+            b_g_d = bg
+            !
+            DO il1 = 1,nloc
+               !
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               !
+               DO il2 = 1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
+                  !
+                  dconst = vr_distr(ig1,il2)
+                  !
+                  !$acc parallel loop async
+                  DO il3 = 1,npwq
+                     h_g_d(il3,il2) = dconst*a_g_d(il3,il1)+h_g_d(il3,il2)
+                     h2_g_d(il3,il2) = dconst*b_g_d(il3,il1)+h2_g_d(il3,il2)
+                  ENDDO
+                  !$acc end parallel
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag, bg
+            !
+            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
+            CALL mp_circular_shift_left(bg,icycl+nimage,inter_image_comm)
+            !
+         ENDDO
+         !
+         !$acc wait
+         hg = h_g_d
+         hg2 = h2_g_d
+         !
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
+            ag(:,il2) = -ew(ig2)*hg(:,il2)+hg2(:,il2)
+         ENDDO
+         !
+         DEALLOCATE(hg)
+         DEALLOCATE(hg2)
+         !
+         CALL deallocate_update_vr_gpu()
+         !
+      ENDIF
+      !
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
+      !
+      CALL stop_clock_gpu('update_vr')
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE update_with_vr_distr_complex_gpu(ag,bg,nselect,n,lda,vr_distr,ew)
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
+      USE distribution_center,  ONLY : pert
+      USE westcom,              ONLY : npwq,npwqx
+      USE west_cuda,            ONLY : a_g_d,b_g_d,h_g_d,h2_g_d,allocate_update_vr_gpu,&
+                                     & deallocate_update_vr_gpu
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: bg(npwqx,pert%nlocx)
+      INTEGER,INTENT(IN) :: nselect,n,lda
+      COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
+      REAL(DP),INTENT(IN) :: ew(lda)
+      !
+      ! Workspace
+      !
+      INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: icycl,idx,nloc
+      COMPLEX(DP) :: zconst
+      COMPLEX(DP),PINNED,ALLOCATABLE :: hg(:,:)
+      COMPLEX(DP),PINNED,ALLOCATABLE :: hg2(:,:)
+      !
+      CALL start_clock_gpu('update_vr')
+      !
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! Initialize
+         !
+         CALL allocate_update_vr_gpu(pert%nlocx)
+         !
+         h_g_d = 0._DP
+         h2_g_d = 0._DP
+         !
+         ALLOCATE(hg(npwqx,pert%nlocx))
+         ALLOCATE(hg2(npwqx,pert%nlocx))
+         !
+         DO icycl = 0,nimage-1
+            !
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            !$acc wait
+            a_g_d = ag
+            b_g_d = bg
+            !
+            DO il1 = 1,nloc
+               !
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               !
+               DO il2 = 1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
+                  !
+                  zconst = vr_distr(ig1,il2)
+                  !
+                  !$acc parallel loop async
+                  DO il3 = 1,npwq
+                     h_g_d(il3,il2) = zconst*a_g_d(il3,il1)+h_g_d(il3,il2)
+                     h2_g_d(il3,il2) = zconst*b_g_d(il3,il1)+h2_g_d(il3,il2)
+                  ENDDO
+                  !$acc end parallel
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag, bg
+            !
+            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
+            CALL mp_circular_shift_left(bg,icycl+nimage,inter_image_comm)
+            !
+         ENDDO
+         !
+         !$acc wait
+         hg = h_g_d
+         hg2 = h2_g_d
+         !
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
+            ag(:,il2) = -ew(ig2)*hg(:,il2)+hg2(:,il2)
+         ENDDO
+         !
+         DEALLOCATE(hg)
+         DEALLOCATE(hg2)
+         !
+         CALL deallocate_update_vr_gpu()
+         !
+      ENDIF
+      !
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
+      !
+      CALL stop_clock_gpu('update_vr')
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE refresh_with_vr_distr_real_gpu(ag,nselect,n,lda,vr_distr)
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
+      USE distribution_center,  ONLY : pert
+      USE westcom,              ONLY : npwq,npwqx
+      USE west_cuda,            ONLY : a_g_d,h_g_d,allocate_refresh_vr_gpu,deallocate_refresh_vr_gpu
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      INTEGER,INTENT(IN) :: nselect,n,lda
+      REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
+      !
+      ! Workspace
+      !
+      INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: icycl,idx,nloc
+      REAL(DP) :: dconst
+      COMPLEX(DP),PINNED,ALLOCATABLE :: hg(:,:)
+      !
+      CALL start_clock_gpu('refresh_vr')
+      !
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! Initialize
+         !
+         CALL allocate_refresh_vr_gpu(pert%nlocx)
+         !
+         h_g_d = 0._DP
+         !
+         ALLOCATE(hg(npwqx,pert%nlocx))
+         !
+         DO icycl = 0,nimage-1
+            !
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            !$acc wait
+            a_g_d = ag
+            !
+            DO il1 = 1,nloc
+               !
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               !
+               DO il2 = 1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF(ig2 > nselect) CYCLE
+                  !
+                  dconst = vr_distr(ig1,il2)
+                  !
+                  !$acc parallel loop async
+                  DO il3 = 1,npwq
+                     h_g_d(il3,il2) = dconst*a_g_d(il3,il1)+h_g_d(il3,il2)
+                  ENDDO
+                  !$acc end parallel
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag
+            !
+            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
+            !
+         ENDDO
+         !
+         !$acc wait
+         hg = h_g_d
+         !
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 > nselect) THEN
+               ag(:,il2) = 0._DP
+            ELSE
+               ag(:,il2) = hg(:,il2)
+            ENDIF
+         ENDDO
+         !
+         DEALLOCATE(hg)
+         !
+         CALL deallocate_refresh_vr_gpu()
+         !
+      ENDIF
+      !
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
+      !
+      CALL stop_clock_gpu('refresh_vr')
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE refresh_with_vr_distr_complex_gpu(ag,nselect,n,lda,vr_distr)
+      !------------------------------------------------------------------------
+      !
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
+      USE distribution_center,  ONLY : pert
+      USE westcom,              ONLY : npwq,npwqx
+      USE west_cuda,            ONLY : a_g_d,h_g_d,allocate_refresh_vr_gpu,deallocate_refresh_vr_gpu
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
+      INTEGER,INTENT(IN) :: nselect,n,lda
+      COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
+      !
+      ! Workspace
+      !
+      INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: icycl,idx,nloc
+      COMPLEX(DP) :: zconst
+      COMPLEX(DP),PINNED,ALLOCATABLE :: hg(:,:)
+      !
+      CALL start_clock_gpu('refresh_vr')
+      !
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! Initialize
+         !
+         CALL allocate_refresh_vr_gpu(pert%nlocx)
+         !
+         h_g_d = 0._DP
+         !
+         ALLOCATE(hg(npwqx,pert%nlocx))
+         !
+         DO icycl = 0,nimage-1
+            !
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            !$acc wait
+            a_g_d = ag
+            !
+            DO il1 = 1,nloc
+               !
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               !
+               DO il2 = 1,pert%nloc
+                  !
+                  ig2 = pert%l2g(il2)
+                  IF(ig2 > nselect) CYCLE
+                  !
+                  zconst = vr_distr(ig1,il2)
+                  !
+                  !$acc parallel loop async
+                  DO il3 = 1,npwq
+                     h_g_d(il3,il2) = zconst*a_g_d(il3,il1)+h_g_d(il3,il2)
+                  ENDDO
+                  !$acc end parallel
+                  !
+               ENDDO
+            ENDDO
+            !
+            ! Cycle ag
+            !
+            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
+            !
+         ENDDO
+         !
+         !$acc wait
+         hg = h_g_d
+         !
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 > nselect) THEN
+               ag(:,il2) = 0._DP
+            ELSE
+               ag(:,il2) = hg(:,il2)
+            ENDIF
+         ENDDO
+         !
+         DEALLOCATE(hg)
+         !
+         CALL deallocate_refresh_vr_gpu()
+         !
+      ENDIF
+      !
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
+      !
+      CALL stop_clock_gpu('refresh_vr')
+      !
+    END SUBROUTINE
+#endif
 END MODULE

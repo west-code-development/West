@@ -17,7 +17,7 @@ SUBROUTINE west_print_clocks( )
   USE json_module,   ONLY : json_file
   USE kinds,         ONLY : DP
   USE mytime,        ONLY : nclock, clock_label, cputime, walltime, notrunning, &
-                            called, t0cpu, t0wall, f_tcpu, f_wall
+                            called, t0cpu, t0wall, f_tcpu, f_wall, gpu_called
   USE westcom,       ONLY : logfile
   USE mp_world,      ONLY : mpime, root
   !
@@ -27,7 +27,10 @@ SUBROUTINE west_print_clocks( )
   REAL(DP) :: elapsed_cpu_time, elapsed_wall_time
   TYPE(json_file) :: json
   INTEGER :: iunit, nmax
+  LOGICAL :: print_gpu
   CHARACTER(20), EXTERNAL :: human_readable_time
+  !
+  print_gpu = ANY(gpu_called > 0)
   !
   IF( mpime == root ) THEN
      CALL json%initialize()
@@ -37,6 +40,7 @@ SUBROUTINE west_print_clocks( )
   DO n = 1, nclock
      !
      CALL print_this_clock( n )
+     IF ( print_gpu ) CALL print_this_clock_gpu( n )
      !
      IF ( t0cpu(n) == notrunning ) THEN
         !

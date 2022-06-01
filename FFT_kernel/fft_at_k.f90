@@ -19,12 +19,18 @@ MODULE fft_at_k
   USE kinds,                ONLY : DP
   USE fft_interfaces,       ONLY : fwfft,invfft
   USE fft_types,            ONLY : fft_type_descriptor
+#if defined(__CUDA)
+  USE west_cuda,            ONLY : dfft_nl_d,dfft_nlm_d
+#endif
   !
   IMPLICIT NONE
   !
   PRIVATE
   !
   PUBLIC :: single_invfft_k, single_fwfft_k
+#if defined(__CUDA)
+  PUBLIC :: single_invfft_k_gpu, single_fwfft_k_gpu
+#endif
   !
   CONTAINS
   !
@@ -95,7 +101,7 @@ MODULE fft_at_k
     !
     INTEGER :: ig
     !
-    CALL fwfft(cdriver, a, dfft)
+    CALL fwfft(cdriver,a,dfft)
     !
     b1=0.0_DP
     !
@@ -111,5 +117,100 @@ MODULE fft_at_k
     !
   END SUBROUTINE
   !
+#if defined(__CUDA)
+  SUBROUTINE single_invfft_k_gpu(dfft,n,nx,a1_d,b_d,cdriver,igk_d)
+    !
+    ! INVFFT : G ---> R
+    !
+    ! INPUT  : n     = actual number of PW
+    !          a1     = ONE COMPLEX arrays containing ONE COMPLEX functions in G space
+    !          lda   = leading dimension of a1
+    !          ldb   = leading dimension of b
+    ! OUTPUT : b     = ONE COMPLEX array containing ONE REAL functions in R space + 0
+    !
+    IMPLICIT NONE
+    !
+    ! I/O
+    !
+    TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+    INTEGER, INTENT(IN) :: n, nx
+    COMPLEX(DP), DEVICE, INTENT(IN) :: a1_d(nx)
+    COMPLEX(DP), DEVICE, INTENT(OUT) :: b_d(dfft%nnr)
+    CHARACTER(LEN=*), INTENT(IN) :: cdriver
+    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk_d(n)
+    !
+    ! Workspace
+    !
+    INTEGER :: ig
+    !
+    b_d = (0.0_DP,0.0_DP)
+    !
+    IF(PRESENT(igk_d)) THEN
+       !$acc parallel loop
+       DO ig = 1,n
+          b_d(dfft_nl_d(igk_d(ig))) = a1_d(ig)
+       ENDDO
+       !$acc end parallel
+    ELSE
+       !$acc parallel loop
+       DO ig = 1,n
+          b_d(dfft_nl_d(ig)) = a1_d(ig)
+       ENDDO
+       !$acc end parallel
+    ENDIF
+    !
+    CALL invfft(cdriver,b_d,dfft)
+    !
+  END SUBROUTINE
   !
+  !
+  SUBROUTINE single_fwfft_k_gpu(dfft,n,nx,a_d,b1_d,cdriver,igk_d)
+    !
+    ! FWFFT : R ---> G
+    !
+    ! INPUT  : n     = actual number of PW
+    !          a     = ONE COMPLEX array containing ONE REAL functions in R space + 0
+    !          lda   = leading dimension of a
+    !          ldb   = leading dimension of b1
+    ! OUTPUT : b1     = ONE COMPLEX array containing ONE COMPLEX functions in G space
+    !
+    IMPLICIT NONE
+    !
+    ! I/O
+    !
+    TYPE(fft_type_descriptor), INTENT(IN) :: dfft
+    INTEGER, INTENT(IN) :: n,nx
+    COMPLEX(DP), DEVICE, INTENT(INOUT) :: a_d(dfft%nnr)
+    COMPLEX(DP), DEVICE, INTENT(OUT) :: b1_d(nx)
+    CHARACTER(LEN=*), INTENT(IN) :: cdriver
+    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk_d(n)
+    !
+    ! Workspace
+    !
+    INTEGER :: ig
+    !
+    CALL fwfft(cdriver,a_d,dfft)
+    !
+    IF(PRESENT(igk_d)) THEN
+       !$acc parallel loop
+       DO ig = 1,n
+          b1_d(ig) = a_d(dfft_nl_d(igk_d(ig)))
+       ENDDO
+       !$acc end parallel
+    ELSE
+       !$acc parallel loop
+       DO ig = 1,n
+          b1_d(ig) = a_d(dfft_nl_d(ig))
+       ENDDO
+       !$acc end parallel
+    ENDIF
+    !
+    IF(nx > n) THEN
+       b1_d(n+1:nx) = (0.0_DP,0.0_DP)
+    ENDIF
+    !
+  END SUBROUTINE
+  !
+  !
+#endif
 END MODULE

@@ -88,7 +88,7 @@ SUBROUTINE do_dip()
      current_k = iks
      npw = ngk(iks)
      IF(lsda) current_spin = isk(iks)
-     call g2_kin(iks)
+     CALL g2_kin(iks)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !

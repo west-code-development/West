@@ -284,4 +284,222 @@ MODULE linear_algebra_kernel
       !
     END SUBROUTINE
     !
+#if defined(__CUDA)
+    !-----------------------------------------------------------------------
+    SUBROUTINE matdiago_dsy_gpu(n,a,e,l_just_ev)
+    !-----------------------------------------------------------------------
+      !
+      ! Diago of a REAL(DP) SYMMETRIC MATRIX
+      !
+      USE west_cuda, ONLY : cusolver_h
+      USE cublas
+      USE cusolverdn
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER,INTENT(IN) :: n
+      REAL(DP),INTENT(INOUT) :: a(n,n)
+      REAL(DP),INTENT(OUT) :: e(n)
+      LOGICAL,INTENT(IN) :: l_just_ev
+      !
+      ! Workspace
+      !
+      INTEGER :: lwork
+      INTEGER :: info
+      INTEGER :: info_d
+      REAL(DP),ALLOCATABLE :: work(:)
+      !$acc declare device_resident(work)
+      !
+      IF(l_just_ev) THEN
+         !$acc data copyin(a) copyout(e,info_d)
+         !$acc host_data use_device(a,e,info_d)
+         info = cusolverDnDsyevd_bufferSize(cusolver_h,&
+         & CUSOLVER_EIG_MODE_NOVECTOR,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
+         !
+         ALLOCATE(work(lwork))
+         !
+         info = cusolverDnDsyevd(cusolver_h,CUSOLVER_EIG_MODE_NOVECTOR,&
+         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
+         !$acc end host_data
+         !$acc end data
+         !
+         DEALLOCATE(work)
+      ELSE
+         !$acc data copy(a) copyout(e,info_d)
+         !$acc host_data use_device(a,e,info_d)
+         info = cusolverDnDsyevd_bufferSize(cusolver_h,&
+         & CUSOLVER_EIG_MODE_VECTOR,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
+         !
+         ALLOCATE(work(lwork))
+         !
+         info = cusolverDnDsyevd(cusolver_h,CUSOLVER_EIG_MODE_VECTOR,&
+         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
+         !$acc end host_data
+         !$acc end data
+         !
+         DEALLOCATE(work)
+      ENDIF
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE matdiago_zhe_gpu(n,a,e,l_just_ev)
+    !-----------------------------------------------------------------------
+      !
+      ! Diagonalization of a COMPLEX(DP) HERMITIAN MATRIX
+      !
+      USE west_cuda, ONLY : cusolver_h
+      USE cublas
+      USE cusolverdn
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER,INTENT(IN) :: n
+      COMPLEX(DP),INTENT(INOUT) :: a(n,n)
+      REAL(DP),INTENT(OUT) :: e(n)
+      LOGICAL,INTENT(IN) :: l_just_ev
+      !
+      ! Workspace
+      !
+      INTEGER :: lwork
+      INTEGER :: info
+      INTEGER :: info_d
+      COMPLEX(DP),ALLOCATABLE :: work(:)
+      !$acc declare device_resident(work)
+      !
+      IF(l_just_ev) THEN
+         !$acc data copyin(a) copyout(e,info_d)
+         !$acc host_data use_device(a,e,info_d)
+         info = cusolverDnZheevd_bufferSize(cusolver_h,&
+         & CUSOLVER_EIG_MODE_NOVECTOR,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
+         !
+         ALLOCATE(work(lwork))
+         !
+         info = cusolverDnZheevd(cusolver_h,CUSOLVER_EIG_MODE_NOVECTOR,&
+         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
+         !$acc end host_data
+         !$acc end data
+         !
+         DEALLOCATE(work)
+      ELSE
+         !$acc data copy(a) copyout(e,info_d)
+         !$acc host_data use_device(a,e,info_d)
+         info = cusolverDnZheevd_bufferSize(cusolver_h,&
+         & CUSOLVER_EIG_MODE_VECTOR,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
+         !
+         ALLOCATE(work(lwork))
+         !
+         info = cusolverDnZheevd(cusolver_h,CUSOLVER_EIG_MODE_VECTOR,&
+         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
+         !$acc end host_data
+         !$acc end data
+         !
+         DEALLOCATE(work)
+      ENDIF
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE matinvrs_zge_gpu(n,a_d)
+    !-----------------------------------------------------------------------
+      !
+      ! Inversion of a COMPLEX(DP) GENERIC MATRIX
+      !
+      USE west_cuda, ONLY : cusolver_h,tmp_c_d,piv_d
+      USE cublas
+      USE cusolverdn
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER,INTENT(IN) :: n
+      COMPLEX(DP),DEVICE,INTENT(INOUT) :: a_d(n,n)
+      !
+      ! Workspace
+      !
+      INTEGER :: info
+      INTEGER :: i1
+      INTEGER :: i2
+      INTEGER :: info_d
+      !
+      ! Note piv_d => NULL
+      !
+      !$acc data copyout(info_d)
+      !$acc host_data use_device(info_d)
+      info = cusolverDnZgetrf(cusolver_h,n,n,a_d,n,tmp_c_d,piv_d,info_d)
+      info = cusolverDnZtrtri(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,n,a_d,&
+      & n,tmp_c_d,SIZE(tmp_c_d),info_d)
+      !$acc end host_data
+      !$acc end data
+      !
+      !$acc parallel loop collapse(2)
+      DO i2 = 1,n-1
+         DO i1 = 2,n
+            IF(i1 > i2) THEN
+               tmp_c_d(i1+(i2-1)*n) = a_d(i1,i2)
+               a_d(i1,i2) = (0._DP,0._DP)
+            ENDIF
+         ENDDO
+      ENDDO
+      !$acc end parallel
+      !
+      CALL ZTRSM('R','L','N','U',n,n,(1._DP,0._DP),tmp_c_d,n,a_d,n)
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE matinvrs_dge_gpu(n,a_d)
+    !-----------------------------------------------------------------------
+      !
+      ! Inversion of a REAL(DP) GENERIC MATRIX
+      !
+      USE west_cuda, ONLY : cusolver_h,tmp_r_d,piv_d
+      USE cublas
+      USE cusolverdn
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER,INTENT(IN) :: n
+      REAL(DP),DEVICE,INTENT(INOUT) :: a_d(n,n)
+      !
+      ! Workspace
+      !
+      INTEGER :: info
+      INTEGER :: i1
+      INTEGER :: i2
+      INTEGER :: info_d
+      !
+      ! Note piv_d => NULL
+      !
+      !$acc data copyout(info_d)
+      !$acc host_data use_device(info_d)
+      info = cusolverDnDgetrf(cusolver_h,n,n,a_d,n,tmp_r_d,piv_d,info_d)
+      info = cusolverDnDtrtri(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,n,a_d,&
+      & n,tmp_r_d,SIZE(tmp_r_d),info_d)
+      !$acc end host_data
+      !$acc end data
+      !
+      !$acc parallel loop collapse(2)
+      DO i2 = 1,n-1
+         DO i1 = 2,n
+            IF(i1 > i2) THEN
+               tmp_r_d(i1+(i2-1)*n) = a_d(i1,i2)
+               a_d(i1,i2) = 0._DP
+            ENDIF
+         ENDDO
+      ENDDO
+      !$acc end parallel
+      !
+      CALL DTRSM('R','L','N','U',n,n,1._DP,tmp_r_d,n,a_d,n)
+      !
+    END SUBROUTINE
+#endif
+    !
 END MODULE

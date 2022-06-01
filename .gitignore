@@ -13,7 +13,7 @@ doc/_build/
 Modules/west_version.f90
 west_make.inc
 make.depend
-*/__pycache__
+__pycache__
 Pytools/WEST.egg-info/
 Pytools/dist/
 Pytools/files.txt

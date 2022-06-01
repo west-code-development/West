@@ -227,18 +227,4 @@ MODULE class_bz_grid
       !
    END FUNCTION
    !
-   FUNCTION from_ip_and_is_to_ips(this,ip,is) RESULT(ips)
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      CLASS(bz_grid), INTENT(IN) :: this
-      INTEGER, INTENT(IN) :: ip,is
-      INTEGER :: ips
-      !
-      ips = ip + (is-1) * this%np
-      !
-   END FUNCTION
-   !
 END MODULE

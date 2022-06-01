@@ -136,7 +136,8 @@ CONTAINS
 #if defined(__MPI)
     CALL report_parallel_status( )
 #else
-    CALL errore(TRIM(code), 'West need MPI to run', 1 )
+    CALL errore(TRIM(code), 'West needs MPI to run', 1 )
+#endif
     !
 #if defined(__HDF5)
     CALL hdf5_start( )

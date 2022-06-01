@@ -243,8 +243,6 @@ MODULE wbse_init_center
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   ! INPUT FOR wbse_init
   !
   CHARACTER(LEN=1)   :: wbse_init_calculation
@@ -290,8 +288,6 @@ MODULE wbse_center
   USE kinds, ONLY : DP
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   ! INPUT FOR wbse_control
   !
@@ -365,8 +361,6 @@ MODULE wbsepp_center
   USE kinds, ONLY : DP
   !
   IMPLICIT NONE
-  !
-  SAVE
   !
   ! INPUT FOR wbsepp_control
   !

@@ -303,7 +303,6 @@ def test() :
     #
     fileName = "west.in"
     #
-
     with open(fileName, "w") as file :
        file.write("""
 input_west :
@@ -316,7 +315,6 @@ wstat_control :
 server_control :
    document : {}
 """)
-
     #
     read_keyword_from_file(fileName,"input_west",True)
     read_keyword_from_file(fileName,"wstat_control",True,nq=20,nelec=10)

@@ -15,17 +15,8 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
-  USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
-                             & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
-                             & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
-                             & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
-                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
-                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
-                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
-                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
-                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,document
   USE mp_world,         ONLY : mpime, root
+  USE westcom
   !
   IMPLICIT NONE
   !
@@ -192,21 +183,8 @@ END SUBROUTINE
 SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   USE io_push,          ONLY : io_push_title, io_push_value, io_push_bar, io_push_es0, io_push_c512
-  USE forpy_mod,        ONLY : call_py, import_py, module_py
-  USE forpy_mod,        ONLY : tuple, tuple_create
-  USE forpy_mod,        ONLY : dict, dict_create
-  USE forpy_mod,        ONLY : list, list_create
-  USE forpy_mod,        ONLY : object, cast
-  USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
-                             & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
-                             & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
-                             & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
-                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
-                             & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
-                             & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
-                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
-                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,document,main_input_file,logfile
+  USE forpy_mod,        ONLY : call_py, import_py, module_py, tuple, tuple_create, dict, &
+                             & dict_create, list, object, cast
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir, prefix
   USE mp,               ONLY : mp_bcast, mp_barrier
@@ -217,6 +195,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   USE control_flags,    ONLY : gamma_only
   USE json_module,      ONLY : json_file
   USE pwcom,            ONLY : nelec
+  USE westcom
   !
   IMPLICIT NONE
   !

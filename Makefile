@@ -7,8 +7,6 @@ default:
 	@echo
 	@echo "to install WEST, type at the shell prompt:"
 	@echo '  make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"'
-
-conf:
 	@echo "  make [-j] target"
 	@echo
 	@echo "where target identifies one or multiple packages"
@@ -132,9 +130,11 @@ wfreq \
 westpp_do
 
 wbse: \
+pytools \
 wbse_do
 
 wbsepp: \
+pytools \
 westpp \
 wbse_do \
 wbsepp_do

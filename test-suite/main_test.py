@@ -131,10 +131,10 @@ def read_and_test_localization(fileA, fileB, tol):
         jsonB = json.load(f)
     
     # test localization factor
-    assert np.allclose(np.array(jsonA['localization']), np.array(jsonB['localization'], rtol=0, atol=tol)
+    assert np.allclose(np.array(jsonA['localization']), np.array(jsonB['localization']), rtol=0, atol=tol)
 
     # test IPR
-    assert np.allclose(np.array(jsonA['ipr']), np.array(jsonB['ipr'], rtol=0, atol=tol)
+    assert np.allclose(np.array(jsonA['ipr']), np.array(jsonB['ipr']), rtol=0, atol=tol)
 
 ########
 # TEST #

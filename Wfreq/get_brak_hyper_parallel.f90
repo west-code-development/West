@@ -19,7 +19,6 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_circular_shift_left
-  USE gvect,                ONLY : gstart
   USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
@@ -60,11 +59,7 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     CALL DGEMM('T','N',nblock_i,NLSTEPS*NRHS,2*npw,2.0_DP,dvpsi,2*npwx*npol,x,2*npwx*npol,&
-     & 0.0_DP,tmp,idistr%nlocx)
-     IF(gstart == 2) THEN
-        CALL DGER(nblock_i,NLSTEPS*NRHS,-1.0_DP,dvpsi,2*npwx*npol,x,2*npwx*npol,tmp,idistr%nlocx)
-     ENDIF
+     CALL glbrak_gamma(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
      !
      DO i1 = 1,nblock_i
         !
@@ -103,7 +98,7 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE mp_global,            ONLY : my_image_id,nimage,inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_circular_shift_left
   USE pwcom,                ONLY : npw,npwx
-  USE noncollin_module,     ONLY : noncolin,npol
+  USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
   !
   IMPLICIT NONE
@@ -121,8 +116,6 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   INTEGER :: i1,i2,i1_glob,il
   INTEGER :: icycl,idx,nblock_i
   COMPLEX(DP), ALLOCATABLE :: tmp(:,:,:)
-  COMPLEX(DP), PARAMETER :: one = (1.0_DP,0.0_DP)
-  COMPLEX(DP), PARAMETER :: zero = (0.0_DP,0.0_DP)
   !
   CALL start_clock("brak")
   !
@@ -144,12 +137,7 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     CALL ZGEMM('C','N',nblock_i,NLSTEPS*NRHS,npw,one,dvpsi,npwx*npol,x,npwx*npol,zero,&
-     & tmp,idistr%nlocx)
-     IF(noncolin) THEN
-        CALL ZGEMM('C','N',nblock_i,NLSTEPS*NRHS,npw,one,dvpsi(1+npwx,1),npwx*npol,&
-        & x(1+npwx,1,1),npwx*npol,one,tmp,idistr%nlocx)
-     ENDIF
+     CALL glbrak_k(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
      !
      DO i1 = 1,nblock_i
         !

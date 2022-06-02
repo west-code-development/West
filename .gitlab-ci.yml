@@ -1,6 +1,6 @@
 variables:
   GIT_STRATEGY: none
-  QE_VERSION: qe-7.0
+  QE_VERSION: qe70_fix_occ_from_input
   OMPI_ALLOW_RUN_AS_ROOT: 1
   OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
   OMPI_MCA_btl_vader_single_copy_mechanism: none
@@ -32,7 +32,7 @@ stages:
   stage: build
   script:
     - rm -rf QEDIR
-    - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+    - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/vwzyu/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
     - ./configure --enable-openmp=yes
@@ -49,7 +49,7 @@ stages:
   stage: test
   script:
     - rm -rf QEDIR
-    - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEDIR
+    - git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/vwzyu/q-e.git QEDIR
     - cd QEDIR
     - git describe --tags --always
     - ./configure --enable-openmp=yes

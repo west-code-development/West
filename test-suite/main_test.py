@@ -119,6 +119,22 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
         for key in test_en[ik]:
             assert np.allclose(test_en[ik][key],ref_en[ik][key],rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
 
+def read_and_test_localization(fileA, fileB, tol):
+    """
+    Read localization factor and inverse participation ratio (IPR) from JSON
+    file and compare to reference.
+    """
+    # read test and reference JSON files
+    with open(fileA, 'r') as f:
+        jsonA = json.load(f)
+    with open(fileB, 'r') as f:
+        jsonB = json.load(f)
+    
+    # test localization factor
+    assert np.allclose(np.array(jsonA['localization']), np.array(jsonB['localization'], rtol=0, atol=tol)
+
+    # test IPR
+    assert np.allclose(np.array(jsonA['ipr']), np.array(jsonB['ipr'], rtol=0, atol=tol)
 
 ########
 # TEST #
@@ -149,3 +165,7 @@ def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))
+
+@pytest.mark.parametrize('testdir',['test008'])
+def Test_LocalizationFactor(testdir):
+    read_and_test_localization(testdir+'/west.westpp.save/localization.json',testdir+'/ref/localization.json',float(parameters['tolerance']['localization']))

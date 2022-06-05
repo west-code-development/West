@@ -27,7 +27,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,l_frac_occ,nbnd_occ,occupation
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,l_frac_occ,occupation
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -123,11 +123,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
            IF(gamma_only) THEN
               l_gammaq = .TRUE.
               CALL pot3D%init('Rho',.FALSE.,'gb')
-              IF (l_frac_occ) then
-                 nbndval = nbnd_occ(iks)
-              ELSE
-                  nbndval = nbnd_occ(iks)
-              ENDIF            
+              nbndval = nbnd_occ(iks)
            ELSE
               l_gammaq = q_grid%l_pIsGamma(iq)
               CALL pot3D%init('Rho',.FALSE.,'gb',iq)

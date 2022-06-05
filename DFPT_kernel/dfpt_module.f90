@@ -43,7 +43,7 @@ MODULE dfpt_module
       USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
       USE io_push,               ONLY : io_push_title
       USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
-      USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,&
+      USE westcom,               ONLY : iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,&
                                       & l_frac_occ,nbnd_occ,nbnd_occ_full,occupation,docc_thr
       USE distribution_center,   ONLY : band_group,kpt_pool
       !
@@ -124,12 +124,8 @@ MODULE dfpt_module
          !
          IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
          !
-         IF (l_frac_occ) THEN
-            nbndval = nbnd_occ(iks)
-            nbndval1 = nbnd_occ_full(iks)
-         ELSE
-            nbndval = nbnd_occ(iks)
-         ENDIF
+         nbndval = nbnd_occ(iks)
+         IF (l_frac_occ) nbndval1 = nbnd_occ_full(iks)
          !
          CALL band_group%init( nbndval, 'b', 'band_group', .FALSE. )
          !

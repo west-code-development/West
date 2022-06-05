@@ -22,7 +22,7 @@ SUBROUTINE set_nbndocc()
   USE constants,              ONLY : degspin
   USE noncollin_module,       ONLY : noncolin
   USE westcom,                ONLY : nbnd_occ,l_frac_occ,occupation,&
-                                   & nbnd_occ_full,nbnd_occ
+                                   & nbnd_occ_full
   USE types_bz_grid,          ONLY : k_grid
   USE control_flags,          ONLY : gamma_only
   !

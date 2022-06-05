@@ -36,10 +36,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,z_epsm1_rfr,&
-                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,&
-                                 & tr2_dfpt,z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,&
-                                 & npwqx,fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ_full,&
-                                 & nbnd_occ
+                                 & l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
+                                 & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,&
+                                 & fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
   USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_pool_comm,npool,intra_bgrp_comm,&
                                  & inter_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
@@ -213,18 +212,12 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
+     nbndval = nbnd_occ(iks)
      IF (l_frac_occ) THEN
-        !
         nbndval1 = nbnd_occ_full(iks)
-        nbndval = nbnd_occ(iks)
-        !
      ELSE
-        !
         nbndval1 = nbnd_occ(iks)
-        nbndval = nbnd_occ(iks)
-        !
      ENDIF
-
      !
      mwo = -k_grid%weight(iks_g)/omega
      zmwo = CMPLX(-k_grid%weight(iks_g)/omega,0._DP,KIND=DP)

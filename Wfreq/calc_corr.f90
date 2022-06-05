@@ -26,8 +26,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   USE pwcom,                ONLY : et
   USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,&
-                                 & z_body_rfr,l_frac_occ,occ_numbers,nbnd_occ,nbnd_occ_one,&
-                                 & nbnd_occ_nonzero
+                                 & z_body_rfr,l_frac_occ,occupation,nbnd_occ_full,&
+                                 & nbnd_occ
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband,kpt_pool
@@ -85,7 +85,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
      iks_g = kpt_pool%l2g(iks)
      !
      IF (l_frac_occ) THEN
-        nbndval = nbnd_occ_nonzero(iks)
+        nbndval = nbnd_occ(iks)
      ELSE
         nbndval = nbnd_occ(iks)
      ENDIF
@@ -163,8 +163,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
      iks_g = kpt_pool%l2g(iks)
      !
      IF (l_frac_occ) THEN
-        nbndval = nbnd_occ_nonzero(iks)
-        nbndval1 = nbnd_occ_one(iks)
+        nbndval = nbnd_occ(iks)
+        nbndval1 = nbnd_occ_full(iks)
      ELSE
         nbndval = nbnd_occ(iks)
      ENDIF     
@@ -182,7 +182,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            !
            IF (l_frac_occ) then
               IF( glob_im > nbndval1 .and. glob_im <= nbndval ) then
-                 peso = occ_numbers(glob_im,iks)
+                 peso = occupation(glob_im,iks)
               ELSE
                  peso = 1._DP
               ENDIF

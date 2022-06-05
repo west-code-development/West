@@ -38,8 +38,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,&
                                  & tr2_dfpt,z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,&
-                                 & npwqx,fftdriver,wstat_save_dir,l_frac_occ,occ_numbers,nbnd_occ_one,&
-                                 & nbnd_occ_nonzero
+                                 & npwqx,fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ_full,&
+                                 & nbnd_occ
   USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_pool_comm,npool,intra_bgrp_comm,&
                                  & inter_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
@@ -215,8 +215,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      IF (l_frac_occ) THEN
         !
-        nbndval1 = nbnd_occ_one(iks)
-        nbndval = nbnd_occ_nonzero(iks)
+        nbndval1 = nbnd_occ_full(iks)
+        nbndval = nbnd_occ(iks)
         !
      ELSE
         !
@@ -410,7 +410,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               !
               IF (l_frac_occ) THEN
                  !
-                 docc = occ_numbers(iv,iks) - occ_numbers(ic,iks)
+                 docc = occupation(iv,iks) - occupation(ic,iks)
                  dfactor = dfactor * docc
                  !
               ENDIF
@@ -443,7 +443,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
               IF (ic <= iv) CYCLE  ! avoid double counting in frac occ case
               !
               IF (l_frac_occ) THEN
-                 docc = occ_numbers(iv,iks) - occ_numbers(ic,iks)
+                 docc = occupation(iv,iks) - occupation(ic,iks)
                  zfactor = zfactor * docc
                  !
               ENDIF
@@ -502,7 +502,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                     glob_ip = mypara%l2g(ip)
                     ecv = diago( il, ip ) - et(iv,iks)
                     dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
-                    IF (l_frac_occ) dfactor = dfactor * occ_numbers(iv,iks)
+                    IF (l_frac_occ) dfactor = dfactor * occupation(iv,iks)
                     !
                     DO glob_jp = 1, mypara%nglob
                        !
@@ -528,7 +528,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                     zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )
                     zm = CMPLX( ecv - frequency, - wfreq_eta, KIND=DP )
                     zfactor = zmwo / zp + zmwo / zm
-                    IF (l_frac_occ) zfactor = zfactor * occ_numbers(iv,iks)
+                    IF (l_frac_occ) zfactor = zfactor * occupation(iv,iks)
                     !
                     DO glob_jp = 1, mypara%nglob
                        !

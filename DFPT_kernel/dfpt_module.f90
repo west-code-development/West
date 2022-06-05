@@ -44,7 +44,7 @@ MODULE dfpt_module
       USE io_push,               ONLY : io_push_title
       USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
       USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,&
-                                      & l_frac_occ,nbnd_occ_nonzero,nbnd_occ_one,occ_numbers,docc_thr
+                                      & l_frac_occ,nbnd_occ,nbnd_occ_full,occupation,docc_thr
       USE distribution_center,   ONLY : band_group,kpt_pool
       !
       IMPLICIT NONE
@@ -125,8 +125,8 @@ MODULE dfpt_module
          IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
          !
          IF (l_frac_occ) THEN
-            nbndval = nbnd_occ_nonzero(iks)
-            nbndval1 = nbnd_occ_one(iks)
+            nbndval = nbnd_occ(iks)
+            nbndval1 = nbnd_occ_full(iks)
          ELSE
             nbndval = nbnd_occ(iks)
          ENDIF
@@ -325,7 +325,7 @@ MODULE dfpt_module
                   !
                   IF (l_frac_occ) THEN
                      !
-                     fi = occ_numbers(ibnd, iks)
+                     fi = occupation(ibnd, iks)
                      !
                      ! Extra term in fractional occupation case
                      ! dpsi_i = sum_{j>i} (1 / fi) * (fi - fj) / (ei - ej) * <psi_j| dV | psi_i> psi_j
@@ -334,7 +334,7 @@ MODULE dfpt_module
                      !
                      DO jbnd = MAX(ibnd, nbndval1), nbndval
                         !
-                        docc = occ_numbers(ibnd, iks) - occ_numbers(jbnd, iks)
+                        docc = occupation(ibnd, iks) - occupation(jbnd, iks)
                         IF ( ABS(docc) < docc_thr ) CYCLE
                         !
                         CALL compute_pt1_dpsi(ibnd, jbnd, iks, dvr, dpsi_frac)
@@ -477,7 +477,7 @@ MODULE dfpt_module
       USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
       USE fft_interfaces,        ONLY : fwfft, invfft
       USE control_flags,         ONLY : gamma_only
-      USE westcom,               ONLY : l_frac_occ,nbnd_occ_nonzero,nbnd_occ_one,occ_numbers,de_thr
+      USE westcom,               ONLY : l_frac_occ,nbnd_occ,nbnd_occ_full,occupation,de_thr
       USE pwcom,                 ONLY : npw,npwx
       !
       IMPLICIT NONE

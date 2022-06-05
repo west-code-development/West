@@ -21,8 +21,8 @@ SUBROUTINE set_nbndocc()
                                    & nbnd,lgauss,ltetra,wg,wk,tfixed_occ
   USE constants,              ONLY : degspin
   USE noncollin_module,       ONLY : noncolin
-  USE westcom,                ONLY : nbnd_occ,l_frac_occ,occ_numbers,&
-                                   & nbnd_occ_one,nbnd_occ_nonzero
+  USE westcom,                ONLY : nbnd_occ,l_frac_occ,occupation,&
+                                   & nbnd_occ_full,nbnd_occ
   USE types_bz_grid,          ONLY : k_grid
   USE control_flags,          ONLY : gamma_only
   !
@@ -67,25 +67,25 @@ SUBROUTINE set_nbndocc()
      !
      l_frac_occ = .true.
      !
-     IF(ALLOCATED(occ_numbers)) DEALLOCATE(occ_numbers)
-     IF(ALLOCATED(nbnd_occ_one)) DEALLOCATE(nbnd_occ_one)
-     IF(ALLOCATED(nbnd_occ_nonzero)) DEALLOCATE(nbnd_occ_nonzero)
-     ALLOCATE( occ_numbers(nbnd, k_grid%nps) )
-     ALLOCATE( nbnd_occ_one(k_grid%nps) )
-     ALLOCATE( nbnd_occ_nonzero(k_grid%nps) )
+     IF(ALLOCATED(occupation)) DEALLOCATE(occupation)
+     IF(ALLOCATED(nbnd_occ_full)) DEALLOCATE(nbnd_occ_full)
+     IF(ALLOCATED(nbnd_occ)) DEALLOCATE(nbnd_occ)
+     ALLOCATE( occupation(nbnd, k_grid%nps) )
+     ALLOCATE( nbnd_occ_full(k_grid%nps) )
+     ALLOCATE( nbnd_occ(k_grid%nps) )
      !
-     occ_numbers = 0._DP
-     nbnd_occ_one = 0
-     nbnd_occ_nonzero = 0
+     occupation = 0._DP
+     nbnd_occ_full = 0
+     nbnd_occ = 0
      !
      DO iks = 1, k_grid%nps
         DO ibnd = 1, nbnd
            !
            occ = wg(ibnd,iks) / wk(iks)
-           occ_numbers(ibnd,iks) = occ
+           occupation(ibnd,iks) = occ
            !
-           IF (occ > 0.999) nbnd_occ_one(iks) = ibnd
-           IF (occ > 0.001) nbnd_occ_nonzero(iks) = ibnd
+           IF (occ > 0.999) nbnd_occ_full(iks) = ibnd
+           IF (occ > 0.001) nbnd_occ(iks) = ibnd
            !
         ENDDO
      ENDDO

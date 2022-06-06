@@ -257,7 +257,7 @@ MODULE occ_center
   INTEGER,ALLOCATABLE  :: nbnd_occ_full(:) ! max index of contiguous and fully occupied bands per ks-point: occupation(band,ks-point)=1, forall band <= nbnd_occ_full(ks-point); occupation(band,ks-point) < 1, forall bands > nbnd_occ_full(ks-point)
   LOGICAL              :: l_frac_occ ! If .true. then occupations may be fractional. Note that if l_frac_occ is .false. then nbnd_occ_full = nbnd_occ. 
   REAL(DP)             :: docc_thr = 0.001  ! When chi0 is evaluated with summation over state formula, skip orbital pairs whose occupations differ by less than this threshold  
-  REAL(DP)             :: de_thr = 0.001    ! When two orbitals' energies differ by less than this threshold, they are considered degenerate [and lead in 1PT calculation of dpsi ; CLARIFY THIS PART]
+  REAL(DP)             :: de_thr = 0.001 ! When two orbitals' energies differ by less than this threshold, they are considered degenerate. [An error will be raised if two orbitals with different occupation numbers are degenerate in the fractional occupation case. See subroutine dfpt and compute_pt1_dpsi for details]
   !
 END MODULE
 !

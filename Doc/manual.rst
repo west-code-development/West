@@ -474,6 +474,20 @@ wfreq_control
      - If (False), then Lanczos solvers are turned off.
 
 
+.. data:: l_enable_off_diagonal
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then upper triangular part of self-energy is calculated and written to file.
+
+
 .. data:: l_enable_gwetot
 
 .. list-table::

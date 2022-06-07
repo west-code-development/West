@@ -331,7 +331,8 @@ MODULE dfpt_module
                         CALL compute_pt1_dpsi(ibnd, jbnd, iks, dvr, dpsi_frac)
                         !
                         DO ir=1,dffts%nnr
-                           psic(ir) = psic(ir) + (docc / occupation(ibnd,iks)) * CMPLX(0._DP, REAL(dpsi_frac(ir),KIND=DP), KIND=DP)
+                           psic(ir) = psic(ir) + (docc / occupation(ibnd,iks)) * &
+                           & CMPLX(0._DP, REAL(dpsi_frac(ir),KIND=DP), KIND=DP)
                         ENDDO
                         !
                      ENDDO
@@ -341,7 +342,8 @@ MODULE dfpt_module
                   ENDIF
                   !
                   DO CONCURRENT (ir=1:dffts%nnr)
-                     aux_r(ir) = aux_r(ir) + CMPLX( occupation(ibnd,iks) * REAL( psic(ir),KIND=DP) * AIMAG( psic(ir)) , 0.0_DP, KIND=DP)
+                     aux_r(ir) = aux_r(ir) + CMPLX( occupation(ibnd,iks) * &
+                     & REAL( psic(ir),KIND=DP) * AIMAG( psic(ir)) , 0.0_DP, KIND=DP)
                   ENDDO
                   !
                ENDDO

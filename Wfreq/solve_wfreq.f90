@@ -78,7 +78,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   INTEGER :: i1,i2,ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ipol,iks_g
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
-  INTEGER :: nbndval, nbndval1
+  INTEGER :: nbndval, nbndval_full
   REAL(DP),ALLOCATABLE :: diago( :, : ), subdiago( :, :), bnorm(:), braket(:, :, :)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
@@ -214,9 +214,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      nbndval = nbnd_occ(iks)
      IF (l_frac_occ) THEN
-        nbndval1 = nbnd_occ_full(iks)
+        nbndval_full = nbnd_occ_full(iks)
      ELSE
-        nbndval1 = nbnd_occ(iks)
+        nbndval_full = nbnd_occ(iks)
      ENDIF
      !
      mwo = -k_grid%weight(iks_g)/omega
@@ -255,7 +255,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            ENDDO
            !
            phi_tmp = phi
-           CALL apply_alpha_pc_to_m_wfcs(nbndval1,3,phi_tmp,(1._DP,0._DP))
+           CALL apply_alpha_pc_to_m_wfcs(nbndval_full,3,phi_tmp,(1._DP,0._DP))
            !
            ALLOCATE( eprec(3) )
            ALLOCATE( e(3) )
@@ -269,7 +269,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec )
            !
-           CALL linsolve_sternheimer_m_wfcts (nbndval1, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
+           CALL linsolve_sternheimer_m_wfcts (nbndval_full, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
            !
            IF(ierr/=0) THEN
               WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
@@ -366,22 +366,22 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            DEALLOCATE(phi)
         ENDIF
         !
-        CALL apply_alpha_pc_to_m_wfcs(nbndval1,mypara%nloc,dvpsi,(1._DP,0._DP))
+        CALL apply_alpha_pc_to_m_wfcs(nbndval_full,mypara%nloc,dvpsi,(1._DP,0._DP))
         !
         ! OVERLAP( glob_ip, im=1:nbnd ) = < psi_im iks | dvpsi_glob_ip >
         !
         IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
-        ALLOCATE(ps_r(nbnd-nbndval1,mypara%nloc))
-        CALL glbrak_gamma(evc(1,nbndval1+1),dvpsi(1,1),ps_r,npw,npwx,nbnd-nbndval1,mypara%nloc,nbnd-nbndval1,npol)
+        ALLOCATE(ps_r(nbnd-nbndval_full,mypara%nloc))
+        CALL glbrak_gamma(evc(1,nbndval_full+1),dvpsi(1,1),ps_r,npw,npwx,nbnd-nbndval_full,mypara%nloc,nbnd-nbndval_full,npol)
         CALL mp_sum(ps_r,intra_bgrp_comm)
         !
         IF(ALLOCATED(overlap)) DEALLOCATE(overlap)
-        ALLOCATE(overlap(mypara%nglob, nbndval1+1:nbnd ) )
+        ALLOCATE(overlap(mypara%nglob, nbndval_full+1:nbnd ) )
         overlap = 0._DP
-        DO ic = nbndval1+1, nbnd
+        DO ic = nbndval_full+1, nbnd
            DO ip = 1, mypara%nloc
               glob_ip = mypara%l2g(ip)
-              overlap(glob_ip,ic) = ps_r(ic-nbndval1,ip)
+              overlap(glob_ip,ic) = ps_r(ic-nbndval_full,ip)
            ENDDO
         ENDDO
         !
@@ -394,7 +394,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            frequency = imfreq_list( ifreq )
            !
-           DO ic = nbndval1+1, nbnd
+           DO ic = nbndval_full+1, nbnd
               !
               ecv = et(ic,iks)-et(iv,iks)
               dfactor = mwo * 2._DP * ecv / ( ecv**2 + frequency**2 )
@@ -426,7 +426,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            frequency = refreq_list( ifreq )
            !
-           DO ic = nbndval1+1, nbnd
+           DO ic = nbndval_full+1, nbnd
               !
               ecv = et(ic,iks)-et(iv,iks)
               zp = CMPLX( ecv + frequency, - wfreq_eta, KIND=DP )

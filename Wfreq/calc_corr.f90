@@ -44,7 +44,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   ! Workspace
   !
   INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g
-  INTEGER :: nbndval, nbndval1
+  INTEGER :: nbndval, nbndval_full
   REAL(DP) :: peso
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -158,7 +158,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
      iks_g = kpt_pool%l2g(iks)
      !
      nbndval = nbnd_occ(iks)
-     IF (l_frac_occ) nbndval1 = nbnd_occ_full(iks)  
+     IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)  
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -172,7 +172,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            glob_im = aband%l2g(im)
            !
            IF (l_frac_occ) then
-              IF( glob_im > nbndval1 .and. glob_im <= nbndval ) then
+              IF( glob_im > nbndval_full .and. glob_im <= nbndval ) then
                  peso = occupation(glob_im,iks)
               ELSE
                  peso = 1._DP
@@ -209,7 +209,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            IF (l_frac_occ) then
               !
               this_is_a_pole=.false.
-              IF( glob_im > nbndval1 .and. glob_im <= nbndval ) THEN
+              IF( glob_im > nbndval_full .and. glob_im <= nbndval ) THEN
                  segno = 1._DP
                  IF( et(glob_im,iks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
               ENDIF  

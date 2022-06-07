@@ -57,7 +57,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   LOGICAL :: l_gammaq
-  REAL(DP) :: g0(3), peso, fi
+  REAL(DP) :: g0(3), peso
   !
   WRITE(stdout,'(5x,a)') ''
   CALL io_push_bar()
@@ -145,11 +145,6 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
               !
               iv = vband%l2g(ivloc)
               !
-              IF (l_frac_occ) then
-                 fi = occupation(iv,iks)
-              ELSE
-                 fi = 1._DP
-              ENDIF
               ! Bring it to R-space
               IF(gamma_only) THEN
                  CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),pertr,'Wave')
@@ -175,8 +170,8 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
               DO ig = 1,ngm
                  pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
               ENDDO
-              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g)-fi*peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
-              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq ) sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - fi*pot3D%div
+              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g)-occupation(iv,iks)*peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq ) sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - occupation(iv,iks)*pot3D%div
               !
            ENDDO ! ivloc
            !

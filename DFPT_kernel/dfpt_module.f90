@@ -60,11 +60,11 @@ MODULE dfpt_module
       ! Workspace
       !
       INTEGER :: ipert, ig, ir, ibnd, jbnd, ibnd2, lbnd, iks, ikqs, ikq, ik, is, iks_g
-      INTEGER :: nbndval, nbndval1, ierr
+      INTEGER :: nbndval, nbndval_full, ierr
       INTEGER :: npwkq
       !
       REAL(DP) :: g0(3)
-      REAL(DP) :: docc, fi
+      REAL(DP) :: docc
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
@@ -125,7 +125,7 @@ MODULE dfpt_module
          IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb )
          !
          nbndval = nbnd_occ(iks)
-         IF (l_frac_occ) nbndval1 = nbnd_occ_full(iks)
+         IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)
          !
          CALL band_group%init( nbndval, 'b', 'band_group', .FALSE. )
          !
@@ -321,14 +321,9 @@ MODULE dfpt_module
                   !
                   IF (l_frac_occ) THEN
                      !
-                     fi = occupation(ibnd, iks)
-                     !
-                     ! Extra term in fractional occupation case
-                     ! dpsi_i = sum_{j>i} (1 / fi) * (fi - fj) / (ei - ej) * <psi_j| dV | psi_i> psi_j
-                     !
                      ALLOCATE( dpsi_frac(dffts%nnr) )
                      !
-                     DO jbnd = MAX(ibnd, nbndval1), nbndval
+                     DO jbnd = MAX(ibnd, nbndval_full), nbndval
                         !
                         docc = occupation(ibnd, iks) - occupation(jbnd, iks)
                         IF ( ABS(docc) < docc_thr ) CYCLE
@@ -336,21 +331,17 @@ MODULE dfpt_module
                         CALL compute_pt1_dpsi(ibnd, jbnd, iks, dvr, dpsi_frac)
                         !
                         DO ir=1,dffts%nnr
-                           psic(ir) = psic(ir) + (docc / fi) * CMPLX(0._DP, REAL(dpsi_frac(ir),KIND=DP), KIND=DP)
+                           psic(ir) = psic(ir) + (docc / occupation(ibnd,iks)) * CMPLX(0._DP, REAL(dpsi_frac(ir),KIND=DP), KIND=DP)
                         ENDDO
                         !
                      ENDDO
                      !
                      DEALLOCATE( dpsi_frac )
                      !
-                  ELSE
-                     !
-                     fi = 1._DP
-                     !
                   ENDIF
                   !
                   DO CONCURRENT (ir=1:dffts%nnr)
-                     aux_r(ir) = aux_r(ir) + CMPLX( fi * REAL( psic(ir),KIND=DP) * AIMAG( psic(ir)) , 0.0_DP, KIND=DP)
+                     aux_r(ir) = aux_r(ir) + CMPLX( occupation(ibnd,iks) * REAL( psic(ir),KIND=DP) * AIMAG( psic(ir)) , 0.0_DP, KIND=DP)
                   ENDDO
                   !
                ENDDO

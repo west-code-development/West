@@ -170,8 +170,10 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
               DO ig = 1,ngm
                  pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
               ENDDO
-              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g)-occupation(iv,iks)*peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
-              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq ) sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - occupation(iv,iks)*pot3D%div
+              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - &
+              & occupation(iv,iks)*peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq ) sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - &
+              & occupation(iv,iks)*pot3D%div
               !
            ENDDO ! ivloc
            !

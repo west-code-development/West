@@ -323,16 +323,34 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
   ENDDO ! iks
   !
-  CALL mp_sum(d_body1_ifr,inter_bgrp_comm)
-  CALL mp_sum(d_body1_ifr,inter_pool_comm)
-  CALL mp_sum(z_body_rfr,inter_bgrp_comm)
-  CALL mp_sum(z_body_rfr,inter_pool_comm)
-  !
-  IF(l_enable_lanczos) THEN
-     CALL mp_sum(d_body2_ifr,inter_bgrp_comm)
-     CALL mp_sum(d_body2_ifr,inter_pool_comm)
-     CALL mp_sum(d_diago,inter_bgrp_comm)
-     CALL mp_sum(d_diago,inter_pool_comm)
+  IF (l_enable_off_diagonal) THEN
+     !
+     CALL mp_sum(d_body1_ifr_full,inter_bgrp_comm)
+     CALL mp_sum(d_body1_ifr_full,inter_pool_comm)
+     CALL mp_sum(z_body_rfr_full,inter_bgrp_comm)
+     CALL mp_sum(z_body_rfr_full,inter_pool_comm)
+     !
+     IF(l_enable_lanczos) THEN
+        CALL mp_sum(d_body2_ifr_full,inter_bgrp_comm)
+        CALL mp_sum(d_body2_ifr_full,inter_pool_comm)
+        CALL mp_sum(d_diago_full,inter_bgrp_comm)
+        CALL mp_sum(d_diago_full,inter_pool_comm)
+     ENDIF
+     !
+  ELSE
+     !
+     CALL mp_sum(d_body1_ifr,inter_bgrp_comm)
+     CALL mp_sum(d_body1_ifr,inter_pool_comm)
+     CALL mp_sum(z_body_rfr,inter_bgrp_comm)
+     CALL mp_sum(z_body_rfr,inter_pool_comm)
+     !
+     IF(l_enable_lanczos) THEN
+        CALL mp_sum(d_body2_ifr,inter_bgrp_comm)
+        CALL mp_sum(d_body2_ifr,inter_pool_comm)
+        CALL mp_sum(d_diago,inter_bgrp_comm)
+        CALL mp_sum(d_diago,inter_pool_comm)
+     ENDIF
+     !
   ENDIF
   !
   CALL stop_bar_type( barra, 'coll_gw' )

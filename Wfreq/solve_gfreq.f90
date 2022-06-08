@@ -312,7 +312,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  diago1 = diago
                  subdiago1 = subdiago
                  !
-                 CALL get_brak_hyper_parallel(dvpsi1,pert%nloc,n_lanczos,q_s,braket,pert%nloc,pert%nlocx,pert%nglob)
+                 CALL get_brak_hyper_parallel(dvpsi1,pert%nloc,n_lanczos,q_s,braket,pert)
                  !
                  DO ip = 1, pert%nloc
                     CALL diago_lanczos( bnorm(ip), diago1( :, ip), subdiago1( :, ip), braket(:,:,ip), pert%nglob )

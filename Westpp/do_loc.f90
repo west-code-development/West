@@ -44,7 +44,9 @@ SUBROUTINE do_loc ( )
   !
   INTEGER :: i1,i2, ipol, ir, local_j, global_j, i, ig, iks, ibnd, local_ib, &
    & global_ib, ir1, ir2, ir3, index1, index2, n_points, nbnd_, iunit
-  REAL(DP),ALLOCATABLE :: aux_loc(:, :), ipr(:, :), density_loc(:), density_gat(:)
+  REAL(DP),ALLOCATABLE :: aux_loc(:, :), ipr(:, :), density_loc(:), &
+   & density_gat(:), ipr_gat(:)
+  LOGICAL, ALLOCATABLE :: filter(:)
   REAL(DP) :: r_vec(3), volume
   CHARACTER(LEN=512)    :: fname, aname, ikstring
   TYPE(bar_type) :: barra
@@ -64,11 +66,44 @@ SUBROUTINE do_loc ( )
   ALLOCATE(aux_loc(nbnd_,k_grid%nps))
   ALLOCATE(ipr(nbnd_,k_grid%nps))
   ALLOCATE(density_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
+  ALLOCATE(ipr_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
+  ALLOCATE(filter(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   !
   psic = 0._DP
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) ) 
   !
+  ! create filter: for each point in space, the filter is TRUE when point is in box, FALSE if not
+  ! loop over all points on FFT grid
+  filter(:) = .FALSE.
+  n_points = 0
+  index2 = 0
+  DO ir3 = 1, dffts%nr3
+    Do ir2 = 1, dffts%nr2
+      DO ir1 = 1, dffts%nr1
+        ! update current index
+        index2 = index2 + 1
+        ! create real-space vector
+        DO i = 1, 3
+          r_vec(i) = dble(ir1 - 1)/dble(dffts%nr1) * alat*at(i,1) &
+            & + dble(ir2 - 1)/dble(dffts%nr2) * alat*at(i,2) &
+            & + dble(ir3 - 1)/dble(dffts%nr3) *alat*at(i,3)
+        END DO
+        ! check whether r-vector is in the box
+        IF ((r_vec(1) .GT. westpp_box(1)) .AND. &
+        & (r_vec(1) .LT. westpp_box(2)) .AND. &
+        & (r_vec(2) .GT. westpp_box(3)) .AND. &
+        & (r_vec(2) .LT. westpp_box(4)) .AND. &
+        & (r_vec(3) .GT. westpp_box(5)) .AND. &
+        & (r_vec(3) .LT. westpp_box(6))) THEN
+          ! if condition fulfilled, set filter to 1
+          n_points = n_points + 1
+          filter(index2) = .TRUE.
+        END IF
+      END DO
+    END DO
+  END DO
+
 
   !
   DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
@@ -113,38 +148,14 @@ SUBROUTINE do_loc ( )
         
         ! only the root has all the data and will continue 
         IF( dffts%mype == dffts%root ) THEN
-          n_points = 0
-          index2 = 0
           index1 = global_ib - westpp_range(1) + 1
+          ! generate Inverse Participation Ratio for each point 
+          ipr_gat(:) = density_gat(:)**2
+          ! Sum IPR over all points in space
+          ipr(index1, iks) = SUM(ipr_gat)
+          ! Sum density over all points in box
+          aux_loc(index1, iks) = SUM(density_gat, filter)
           
-          ! loop over all points on FFT grid
-          DO ir3 = 1, dffts%nr3
-            Do ir2 = 1, dffts%nr2
-              DO ir1 = 1, dffts%nr1
-                ! update current index
-                index2 = index2 + 1
-                ! add to inverse participation ratio
-                ipr(index1, iks) = ipr(index1, iks) + density_gat(index2)**2
-                ! find r-vector for this point
-                DO i = 1, 3
-                  r_vec(i) = dble(ir1 - 1)/dble(dffts%nr1) * alat*at(i,1) &
-                    & + dble(ir2 - 1)/dble(dffts%nr2) * alat*at(i,2) &
-                    & + dble(ir3 - 1)/dble(dffts%nr3) *alat*at(i,3)
-                END DO
-                ! check whether r-vector is in the box
-                IF ((r_vec(1) .GT. westpp_box(1)) .AND. &
-                 & (r_vec(1) .LT. westpp_box(2)) .AND. &
-                  & (r_vec(2) .GT. westpp_box(3)) .AND. &
-                   & (r_vec(2) .LT. westpp_box(4)) .AND. &
-                    & (r_vec(3) .GT. westpp_box(5)) .AND. &
-                    & (r_vec(3) .LT. westpp_box(6))) THEN
-                      ! if condition fulfilled, add to localization function
-                      n_points = n_points + 1
-                      aux_loc(index1, iks) = aux_loc(index1, iks) + density_gat(index2)
-                END IF
-              END DO
-            END DO
-          ENDDO
         ENDIF
         !
         CALL update_bar_type( barra,'westpp', 1 )

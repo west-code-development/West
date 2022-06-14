@@ -25,7 +25,7 @@ SUBROUTINE do_loc ( )
   USE mp_world,              ONLY : mpime, root, world_comm
   USE mp,                    ONLY : mp_bcast, mp_sum
   USE fft_base,              ONLY : dfftp,dffts
-  USE scatter_mod,           ONLY : gather_grid
+  USE scatter_mod,           ONLY : scatter_grid
   USE wvfct,                 ONLY : nbnd
   USE buffers,               ONLY : get_buffer
   USE wavefunctions,         ONLY : evc,psic
@@ -43,10 +43,10 @@ SUBROUTINE do_loc ( )
   ! ... LOCAL variables
   !
   INTEGER :: i1,i2, ipol, ir, local_j, global_j, i, ig, iks, ibnd, local_ib, &
-   & global_ib, ir1, ir2, ir3, index1, index2, n_points, nbnd_, iunit
+   & global_ib, ir1, ir2, ir3, index1, index2, n_points, nbnd_, iunit, err
   REAL(DP),ALLOCATABLE :: aux_loc(:, :), ipr(:, :), density_loc(:), &
-   & density_gat(:), ipr_gat(:)
-  LOGICAL, ALLOCATABLE :: filter(:)
+   & density_gat(:), ipr_loc(:)
+  REAL(DP), ALLOCATABLE :: filter(:), filter_loc(:)
   REAL(DP) :: r_vec(3), volume
   CHARACTER(LEN=512)    :: fname, aname, ikstring
   TYPE(bar_type) :: barra
@@ -63,46 +63,56 @@ SUBROUTINE do_loc ( )
   nbnd_ = westpp_range(2) - westpp_range(1) + 1
   !
   ALLOCATE(density_loc(dffts%nnr))
+  ALLOCATE(filter_loc(dffts%nnr))
+  ALLOCATE(ipr_loc(dffts%nnr))
   ALLOCATE(aux_loc(nbnd_,k_grid%nps))
   ALLOCATE(ipr(nbnd_,k_grid%nps))
   ALLOCATE(density_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
-  ALLOCATE(ipr_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   ALLOCATE(filter(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   !
   psic = 0._DP
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) ) 
-  !
-  ! create filter: for each point in space, the filter is TRUE when point is in box, FALSE if not
-  ! loop over all points on FFT grid
-  filter(:) = .FALSE.
-  n_points = 0
-  index2 = 0
-  DO ir3 = 1, dffts%nr3
-    Do ir2 = 1, dffts%nr2
-      DO ir1 = 1, dffts%nr1
-        ! update current index
-        index2 = index2 + 1
-        ! create real-space vector
-        DO i = 1, 3
-          r_vec(i) = dble(ir1 - 1)/dble(dffts%nr1) * alat*at(i,1) &
-            & + dble(ir2 - 1)/dble(dffts%nr2) * alat*at(i,2) &
-            & + dble(ir3 - 1)/dble(dffts%nr3) *alat*at(i,3)
+
+  ! only the FFT root generates the filter
+  IF( dffts%mype == dffts%root ) THEN
+    !
+    ! create filter: for each point in space, the filter is ZERO when point 
+    ! is in box, ONE if not loop over all points on FFT grid
+    filter(:) = 0.0d0
+    n_points = 0
+    index2 = 0
+    DO ir3 = 1, dffts%nr3
+      Do ir2 = 1, dffts%nr2
+        DO ir1 = 1, dffts%nr1
+          ! update current index
+          index2 = index2 + 1
+          ! create real-space vector
+          DO i = 1, 3
+            r_vec(i) = dble(ir1 - 1)/dble(dffts%nr1) * alat*at(i,1) &
+              & + dble(ir2 - 1)/dble(dffts%nr2) * alat*at(i,2) &
+              & + dble(ir3 - 1)/dble(dffts%nr3) *alat*at(i,3)
+          END DO
+          ! check whether r-vector is in the box
+          IF ((r_vec(1) .GT. westpp_box(1)) .AND. &
+          & (r_vec(1) .LT. westpp_box(2)) .AND. &
+          & (r_vec(2) .GT. westpp_box(3)) .AND. &
+          & (r_vec(2) .LT. westpp_box(4)) .AND. &
+          & (r_vec(3) .GT. westpp_box(5)) .AND. &
+          & (r_vec(3) .LT. westpp_box(6))) THEN
+            ! if condition fulfilled, set filter to 1
+            n_points = n_points + 1
+            filter(index2) = 1.0d0
+          END IF
         END DO
-        ! check whether r-vector is in the box
-        IF ((r_vec(1) .GT. westpp_box(1)) .AND. &
-        & (r_vec(1) .LT. westpp_box(2)) .AND. &
-        & (r_vec(2) .GT. westpp_box(3)) .AND. &
-        & (r_vec(2) .LT. westpp_box(4)) .AND. &
-        & (r_vec(3) .GT. westpp_box(5)) .AND. &
-        & (r_vec(3) .LT. westpp_box(6))) THEN
-          ! if condition fulfilled, set filter to 1
-          n_points = n_points + 1
-          filter(index2) = .TRUE.
-        END IF
       END DO
     END DO
-  END DO
+  END IF
+
+  ! scatter the filter function to all FFT processes
+  CALL scatter_grid(dffts, filter, filter_loc)
+  ! broadcast the number of points in rectangle to all FFT processes
+  CALL mp_bcast(n_points, dffts%root, dffts%comm)
 
 
   !
@@ -143,20 +153,16 @@ SUBROUTINE do_loc ( )
         DO ir = 1, dffts%nnr
           density_loc(ir) = REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) 
         ENDDO 
-        ! gather distributed FFT data
-        CALL gather_grid(dffts, density_loc, density_gat)
         
-        ! only the root has all the data and will continue 
-        IF( dffts%mype == dffts%root ) THEN
-          index1 = global_ib - westpp_range(1) + 1
-          ! generate Inverse Participation Ratio for each point 
-          ipr_gat(:) = density_gat(:)**2
-          ! Sum IPR over all points in space
-          ipr(index1, iks) = SUM(ipr_gat)
-          ! Sum density over all points in box
-          aux_loc(index1, iks) = SUM(density_gat, filter)
-          
-        ENDIF
+        index1 = global_ib - westpp_range(1) + 1
+        ! generate Inverse Participation Ratio for each point
+        ipr_loc(:) = density_loc(:)**2
+        ! sum over all points
+        ipr(index1, iks) = SUM(ipr_loc)
+        ! filter density
+        density_loc(:) = filter_loc(:) * density_loc(:)
+        ! sum localization factor
+        aux_loc(index1, iks) = SUM(density_loc)
         !
         CALL update_bar_type( barra,'westpp', 1 )
         !
@@ -166,6 +172,10 @@ SUBROUTINE do_loc ( )
   ! Post processing 
   aux_loc(:,:) = volume/omega * aux_loc(:,:)/dble(n_points)
   ipr(:,:) = ipr(:,:)/dble(dffts%nr1*dffts%nr2*dffts%nr3)/omega
+
+  ! sum ipr and localization factor over all FFT processes
+  CALL mp_sum(aux_loc, dffts%comm)
+  CALL mp_sum(ipr, dffts%comm)
   
   ! gather localization functions for all bands
   CALL mp_sum(aux_loc,inter_image_comm)

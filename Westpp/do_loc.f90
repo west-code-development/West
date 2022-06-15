@@ -77,8 +77,8 @@ SUBROUTINE do_loc ( )
   ! only the FFT root generates the filter
   IF( dffts%mype == dffts%root ) THEN
     !
-    ! create filter: for each point in space, the filter is ZERO when point 
-    ! is in box, ONE if not loop over all points on FFT grid
+    ! create filter: for each point in space, the filter is ONE when point 
+    ! is in box, ZERO if not. Loop over all points on FFT grid
     filter(:) = 0.0d0
     n_points = 0
     index2 = 0

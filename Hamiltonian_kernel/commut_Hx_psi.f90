@@ -25,19 +25,20 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !    CALL calbec (npw,  vkb, psi, becp1(:,:) )
   !    CALL calbec (npw, work, psi, becp2(:,:) )
   !
-  USE kinds,           ONLY : DP
-  USE cell_base,       ONLY : tpiba, at
-  USE ions_base,       ONLY : nat, ityp, ntyp => nsp
-  USE klist,           ONLY : xk
-  USE gvect,           ONLY : g
-  USE wvfct,           ONLY : npw, npwx, nbnd, g2kin, et
-  USE lsda_mod,        ONLY : nspin
-  USE noncollin_module,ONLY : noncolin, npol
-  USE becmod,          ONLY : bec_type, calbec, allocate_bec_type, deallocate_bec_type
-  USE uspp,            ONLY : nkb, vkb
-  USE uspp_param,      ONLY : nh, nhm
-  USE control_flags,   ONLY : gamma_only
-  USE pwcom,           ONLY : igk_k,current_k
+  USE kinds,            ONLY : DP
+  USE cell_base,        ONLY : tpiba, at
+  USE ions_base,        ONLY : nat, ityp, ntyp => nsp
+  USE klist,            ONLY : xk
+  USE gvect,            ONLY : g
+  USE wvfct,            ONLY : npw, npwx, nbnd, g2kin, et
+  USE lsda_mod,         ONLY : nspin
+  USE noncollin_module, ONLY : noncolin, npol
+  USE becmod,           ONLY : bec_type, calbec, allocate_bec_type, deallocate_bec_type
+  USE uspp,             ONLY : nkb, vkb
+  USE uspp_param,       ONLY : nh, nhm
+  USE uspp_init,        ONLY : gen_us_dj, gen_us_dy
+  USE control_flags,    ONLY : gamma_only
+  USE pwcom,            ONLY : igk_k,current_k
   !
   IMPLICIT NONE
   !
@@ -47,7 +48,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   INTEGER,INTENT(IN) :: m ! number of bands to process
   INTEGER,INTENT(IN) :: ipol ! polarization index
   COMPLEX(DP), INTENT(IN) :: psi(npwx*npol,m) ! input wavefunctions
-  COMPLEX(DP), INTENT(OUT)    :: dpsi(npwx*npol,m) ! output wavefunctions
+  COMPLEX(DP), INTENT(OUT) :: dpsi(npwx*npol,m) ! output wavefunctions
   LOGICAL, INTENT(IN) :: l_skip_nlpp ! skip NLPP
   !
   ! Workspace
@@ -74,7 +75,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
 !$OMP ENDDO
 !$OMP END PARALLEL
   !
-  ! this is  the kinetic contribution to [H,x]:  -2i (k+G)_ipol * psi
+  ! this is the kinetic contribution to [H,x]: -2i (k+G)_ipol * psi
   !
   IF( noncolin ) THEN
 !$OMP PARALLEL DEFAULT(none) SHARED(m,npw,dpsi,at,ipol,gk,psi,npwx) PRIVATE(ibnd,ig)
@@ -113,9 +114,9 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      ENDIF
      ALLOCATE( dvkb(npwx,nkb), dvkb1(npwx, nkb) )
      !
-     dvkb   = 0._DP
-     dvkb1  = 0._DP
-     work   = 0._DP
+     dvkb  = 0._DP
+     dvkb1 = 0._DP
+     work  = 0._DP
      !
      CALL gen_us_dj (ik, dvkb)
      CALL gen_us_dy (ik, at (1, ipol), dvkb1)
@@ -196,8 +197,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
                           DO is=1, npol
                              DO js = 1, npol
                                 ijs=ijs+1
-                                psc(ikb,is,ibnd,1)=psc(ikb,is,ibnd,1)+  &
-                                          (0._DP,-1._DP)*    &
+                                psc(ikb,is,ibnd,1)=psc(ikb,is,ibnd,1)+ &
+                                          (0._DP,-1._DP)* &
                                      becp2%nc(jkb,js,ibnd)*deff_nc(ih,jh,na,ijs)
                                 psc(ikb,is,ibnd,2)=psc(ikb,is,ibnd,2)+ &
                                         (0._DP,-1._DP)* &
@@ -222,8 +223,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
                  ENDDO
                  ijkb0=ijkb0+nh(nt)
               ENDIF
-           ENDDO  ! na
-        ENDDO  ! nt
+           ENDDO ! na
+        ENDDO ! nt
      ENDDO ! nbnd
      IF (ikb /= nkb .OR. jkb /= nkb) call errore ('commut_Hx_psi', 'unexpected error',1)
      !

@@ -5,7 +5,7 @@ include ../../make.inc
 
 # location of needed modules
 MODFLAGS = $(MOD_FLAG)../../Modules \
-           $(MOD_FLAG)../../FFTXlib \
+           $(MOD_FLAG)../../FFTXlib/src \
            $(MOD_FLAG)../../PW/src \
            $(MOD_FLAG)../../UtilXlib \
            $(MOD_FLAG)../../upflib \

@@ -166,8 +166,8 @@ def test_localization_and_ipr(testdir):
   with open('parameters.json', 'r') as f:
     parameters = json.load(f)
 
-  TestLoc, TestIPR = read_localization_and_ipr(testdir + 'west.westpp.save/localization.json')
-  RefLoc, RefIPR = read_localization_and_ipr(testdir + 'ref/localization.json')
+  TestLoc, TestIPR = read_localization_and_ipr(testdir + '/west.westpp.save/localization.json')
+  RefLoc, RefIPR = read_localization_and_ipr(testdir + '/ref/localization.json')
 
   assert np.allclose(TestLoc, RefLoc, rtol=0.0,
       atol=parameters['tolerance']['localization'])

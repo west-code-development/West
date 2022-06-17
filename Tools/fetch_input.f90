@@ -338,8 +338,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = tmp_list%getitem(westpp_box(4), 3)
         IERR = tmp_list%getitem(westpp_box(5), 4)
         IERR = tmp_list%getitem(westpp_box(6), 5)
-        CALL tmp_list%destroy 
-        CALL tmp_obj%destroy 
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         !
         CALL return_dict%destroy
         !

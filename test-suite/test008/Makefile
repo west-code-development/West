@@ -29,5 +29,5 @@ title:
 
 description:
 	@echo
-	@echo "Si bulk kmesh 1x1x2"
+	@echo "MgO gamma_only"
 	@echo

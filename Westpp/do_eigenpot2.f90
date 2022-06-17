@@ -24,6 +24,7 @@ SUBROUTINE do_eigenpot2 ( )
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
   USE distribution_center,   ONLY : pert
+  USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE pdep_db,               ONLY : pdep_db_read
   USE types_bz_grid,         ONLY : q_grid
@@ -41,6 +42,9 @@ SUBROUTINE do_eigenpot2 ( )
   LOGICAL :: l_print_pdep_read
   !
   CALL io_push_title('(E)igenpotentials')
+  !
+  pert = idistribute()
+  CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !
   ALLOCATE(auxr(dffts%nnr))
   !

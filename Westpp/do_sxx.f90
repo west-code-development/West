@@ -30,6 +30,7 @@ SUBROUTINE do_sxx ( )
   USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k,single_fwfft_k
   USE distribution_center,   ONLY : pert
+  USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE gvect,                 ONLY : gstart,ngm
   USE cell_base,             ONLY : omega
@@ -38,7 +39,7 @@ SUBROUTINE do_sxx ( )
   USE constants,             ONLY : rytoev
   USE json_module,           ONLY : json_file
   USE pdep_db,               ONLY : pdep_db_read
-  USE types_bz_grid,         ONLY : k_grid, q_grid, compute_phase
+  USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,         ONLY : pot3D
   !
   IMPLICIT NONE
@@ -64,6 +65,9 @@ SUBROUTINE do_sxx ( )
   LOGICAL :: l_print_pdep_read
   !
   CALL io_push_title('(S)creened eXact eXchange')
+  !
+  pert = idistribute()
+  CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !
   ALLOCATE( sigma_exx( westpp_range(1):westpp_range(2), k_grid%nps) )
   ALLOCATE( sigma_sxx( westpp_range(1):westpp_range(2), k_grid%nps) )

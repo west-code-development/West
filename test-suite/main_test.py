@@ -170,8 +170,8 @@ def test_localization_and_ipr(testdir):
   RefLoc, RefIPR = read_localization_and_ipr(testdir + '/ref/localization.json')
 
   assert np.allclose(TestLoc, RefLoc, rtol=0.0,
-      atol=parameters['tolerance']['localization'])
+      atol=float(parameters['tolerance']['localization']))
 
   assert np.allclose(TestIPR, RefIPR, rtol=0.0,
-      atol=parameters['tolerance']['localization'])
+      atol=float(parameters['tolerance']['localization']))
 

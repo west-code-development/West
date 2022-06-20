@@ -15,7 +15,7 @@ SUBROUTINE do_rho ( )
   !----------------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk
+  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk,nbnd
   USE io_push,               ONLY : io_push_title
   USE westcom,               ONLY : iuwfc,lrwfc,westpp_save_dir,nbnd_occ
   USE mp_global,             ONLY : inter_image_comm,my_image_id
@@ -27,6 +27,7 @@ SUBROUTINE do_rho ( )
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
   USE distribution_center,   ONLY : aband
+  USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE types_bz_grid,         ONLY : k_grid
   !
@@ -40,6 +41,9 @@ SUBROUTINE do_rho ( )
   TYPE(bar_type) :: barra
   !
   CALL io_push_title('(R)ho')
+  !
+  aband = idistribute()
+  CALL aband%init(nbnd,'i','nbnd',.TRUE.)
   !
   ALLOCATE(auxr(dffts%nnr))
   !

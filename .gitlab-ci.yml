@@ -1,6 +1,6 @@
 variables:
   GIT_STRATEGY: none
-  QE_VERSION: qe70_fix_occ_from_input
+  QE_VERSION: qe-7.1
   OMPI_ALLOW_RUN_AS_ROOT: 1
   OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
   OMPI_MCA_btl_vader_single_copy_mechanism: none

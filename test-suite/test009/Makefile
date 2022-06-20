@@ -9,13 +9,16 @@ all: prepare_inputs run
 prepare_inputs:
 	bash prepare_inputs.sh
 
-run: pw westpp
+run: pw wstat wfreq
 
 pw:
 	${PARA_PREFIX_QE} ${BINDIR}/pw.x -i pw.in > pw.out 2> pw.err
 
-westpp: pw
-	${PARA_PREFIX} ${BINDIR}/westpp.x -nimage ${NIMAGE} -i westpp.in > westpp.out 2> westpp.err
+wstat: pw
+	${PARA_PREFIX} ${BINDIR}/wstat.x -nimage ${NIMAGE} -nband ${NBAND} -i wstat.in > wstat.out 2> wstat.err
+
+wfreq: wstat
+	${PARA_PREFIX} ${BINDIR}/wfreq.x -nimage ${NIMAGE} -nband ${NBAND} -i wfreq.in > wfreq.out 2> wfreq.err
 
 clean:
 	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1
@@ -29,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "MgO gamma_only"
+	@echo "O2 molecule gamma_only test fractional occupation"
 	@echo

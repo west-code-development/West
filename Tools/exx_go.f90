@@ -27,6 +27,9 @@ SUBROUTINE exx_go()
   USE buffers,                ONLY : open_buffer,close_buffer
   USE control_flags,          ONLY : io_level
   USE westcom,                ONLY : l_minimize_exx_if_active
+  USE mp_exx,                 ONLY : mp_start_exx
+  USE mp_pools,               ONLY : intra_pool_comm
+  USE command_line_options,   ONLY : nband_,ntg_
   !
   IMPLICIT NONE
   !
@@ -34,30 +37,33 @@ SUBROUTINE exx_go()
   !
   LOGICAL :: exst
   !
+  ! See PW/src/setup.f90: setup_exx
   !
-  IF( xclib_dft_is('hybrid') ) THEN
-     exxdiv_treatment='gb'
+  CALL mp_start_exx(nband_,ntg_,intra_pool_comm)
+  !
+  IF(xclib_dft_is('hybrid')) THEN
+     exxdiv_treatment = 'gb'
      erfc_scrlen = get_screening_parameter()
      gau_scrlen = get_gau_parameter()
      exxalfa = xclib_get_exx_fraction()
      use_ace = .FALSE.
-     IF( l_minimize_exx_if_active ) THEN
+     IF(l_minimize_exx_if_active) THEN
         ecutfock = ecutwfc
      ELSE
         ecutfock = ecutwfc*4
      ENDIF
      !
-     WRITE(stdout, '(7X,"** WARNING : EXX-use_ace          = ", l1)') use_ace
-     WRITE(stdout, '(7X,"** WARNING : EXX-alpha            = ", f14.6)') exxalfa
-     WRITE(stdout, '(7X,"** WARNING : EXX-erfc_scrlen      = ", f14.6)') erfc_scrlen
-     WRITE(stdout, '(7X,"** WARNING : EXX-gau_scrlen       = ", f14.6)') gau_scrlen
-     WRITE(stdout, '(7X,"** WARNING : EXX-ecutfock         = ", f14.6)') ecutfock
-     WRITE(stdout, '(7X,"** WARNING : EXX-exxdiv_treatment = ", a14  )') exxdiv_treatment
+     WRITE(stdout,'(7X,"** WARNING : EXX-use_ace          = ",L1)') use_ace
+     WRITE(stdout,'(7X,"** WARNING : EXX-alpha            = ",F14.6)') exxalfa
+     WRITE(stdout,'(7X,"** WARNING : EXX-erfc_scrlen      = ",F14.6)') erfc_scrlen
+     WRITE(stdout,'(7X,"** WARNING : EXX-gau_scrlen       = ",F14.6)') gau_scrlen
+     WRITE(stdout,'(7X,"** WARNING : EXX-ecutfock         = ",F14.6)') ecutfock
+     WRITE(stdout,'(7X,"** WARNING : EXX-exxdiv_treatment = ",A14)') exxdiv_treatment
      !
      wfc_dir = tmp_dir
-     nwordwfc = nbnd * npwx * npol
+     nwordwfc = nbnd*npwx*npol
      io_level = 1
-     CALL open_buffer ( iunwfc, 'wfc', nwordwfc, io_level, exst )
+     CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
      !
      CALL start_exx()
      CALL weights()
@@ -67,8 +73,8 @@ SUBROUTINE exx_go()
      CALL exx_div_check()
      CALL exxinit(DoLoc=.FALSE.)
      exxdiv = exx_divergence()
-     WRITE(stdout, '(7X,"** WARNING : EXX-exxdiv           = ", f14.6)') exxdiv
-     CALL close_buffer ( iunwfc, 'KEEP' )
+     WRITE(stdout,'(7X,"** WARNING : EXX-exxdiv           = ",F14.6)') exxdiv
+     CALL close_buffer(iunwfc,'KEEP')
      !
   ENDIF
   !

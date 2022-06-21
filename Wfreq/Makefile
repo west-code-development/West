@@ -35,7 +35,7 @@ wfreq_setup.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
+QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
 ../IO_kernel/lib_io_kernel.a \

@@ -27,6 +27,7 @@ SUBROUTINE do_wfc2 ( )
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
   USE distribution_center,   ONLY : aband
+  USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE types_bz_grid,         ONLY : k_grid
   !
@@ -41,6 +42,9 @@ SUBROUTINE do_wfc2 ( )
   CHARACTER(LEN=6) :: labelb,labelk
   !
   CALL io_push_title('(W)avefunctions')
+  !
+  aband = idistribute()
+  CALL aband%init(westpp_range(2)-westpp_range(1)+1,'i','westpp_range',.TRUE.)
   !
   ALLOCATE(auxr(dffts%nnr))
   !
@@ -67,8 +71,7 @@ SUBROUTINE do_wfc2 ( )
         !
         ! local -> global
         !
-        global_ib = aband%l2g(local_ib)
-        IF( global_ib < westpp_range(1) .OR. global_ib > westpp_range(2) ) CYCLE
+        global_ib = aband%l2g(local_ib)+westpp_range(1)-1
         !
         auxr = 0._DP
         IF( gamma_only ) THEN

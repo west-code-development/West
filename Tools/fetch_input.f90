@@ -24,7 +24,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
                              & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,document,l_enable_off_diagonal
+                             & westpp_epsinfty,westpp_box,document,l_enable_off_diagonal
   USE mp_world,         ONLY : mpime, root
   !
   IMPLICIT NONE
@@ -94,6 +94,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.westpp_control.westpp_sign',westpp_sign)
         CALL json%add('input.westpp_control.westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use)
         CALL json%add('input.westpp_control.westpp_r0',westpp_r0)
+        CALL json%add('input.westpp_control.westpp_box',westpp_box)
         CALL json%add('input.westpp_control.westpp_nr',westpp_nr)
         CALL json%add('input.westpp_control.westpp_rmax',westpp_rmax)
         CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
@@ -128,7 +129,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,document,main_input_file,logfile,l_enable_off_diagonal
+                             & westpp_epsinfty,westpp_box,document,main_input_file,logfile,&
+                             & l_enable_off_diagonal
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir, prefix
   USE mp,               ONLY : mp_bcast, mp_barrier
@@ -331,6 +333,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%get(westpp_nr, "westpp_nr", DUMMY_DEFAULT)
         IERR = return_dict%getitem(westpp_rmax, "westpp_rmax")
         IERR = return_dict%getitem(westpp_epsinfty, "westpp_epsinfty")
+        IERR = return_dict%getitem(tmp_obj, "westpp_box")
+        IERR = cast(tmp_list,tmp_obj)
+        IERR = tmp_list%getitem(westpp_box(1), 0)
+        IERR = tmp_list%getitem(westpp_box(2), 1)
+        IERR = tmp_list%getitem(westpp_box(3), 2)
+        IERR = tmp_list%getitem(westpp_box(4), 3)
+        IERR = tmp_list%getitem(westpp_box(5), 4)
+        IERR = tmp_list%getitem(westpp_box(6), 5)
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         !
         CALL return_dict%destroy
         !
@@ -485,6 +497,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(westpp_nr,root,world_comm)
      CALL mp_bcast(westpp_rmax,root,world_comm)
      CALL mp_bcast(westpp_epsinfty,root,world_comm)
+     CALL mp_bcast(westpp_box,root,world_comm)
      !
      ! CHECKS
      !

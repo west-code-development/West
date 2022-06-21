@@ -104,7 +104,7 @@ MODULE dfpt_module
          ALLOCATE( phase(dffts%nnr) )
       ENDIF
       !
-      IF (l_frac_occ .and. .not. gamma_only) THEN
+      IF (l_frac_occ .AND. .NOT. gamma_only) THEN
          CALL errore("dfpt", "fraction occupation only implemented for gamma-only case", 1)
       ENDIF
       !
@@ -342,8 +342,8 @@ MODULE dfpt_module
                   ENDIF
                   !
                   DO CONCURRENT (ir=1:dffts%nnr)
-                     aux_r(ir) = aux_r(ir) + CMPLX( occupation(ibnd,iks) * &
-                     & REAL( psic(ir),KIND=DP) * AIMAG( psic(ir)) , 0.0_DP, KIND=DP)
+                     aux_r(ir) = aux_r(ir) + &
+                     & CMPLX(occupation(ibnd,iks) * REAL(psic(ir),KIND=DP) * AIMAG(psic(ir)), 0.0_DP, KIND=DP)
                   ENDDO
                   !
                ENDDO
@@ -452,21 +452,18 @@ MODULE dfpt_module
       !
       ! If ibnd and jbnd are degenerate, raise an error
       !
-      ! The total perturbed KS orbital should contain a summation over j 
+      ! The total perturbed KS orbital should contain a summation over j
       ! with appropriate prefactors
       !
       USE kinds,                 ONLY : DP
-      USE io_global,             ONLY : stdout
       USE wvfct,                 ONLY : et
       USE fft_base,              ONLY : dffts
-      USE wavefunctions,  ONLY : evc,psic
-      USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
-      USE mp_global,             ONLY : inter_image_comm,inter_pool_comm,my_image_id,intra_bgrp_comm
-      USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
-      USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
-      USE fft_interfaces,        ONLY : fwfft, invfft
+      USE wavefunctions,         ONLY : evc
+      USE mp,                    ONLY : mp_sum
+      USE mp_global,             ONLY : intra_bgrp_comm
+      USE fft_at_gamma,          ONLY : double_invfft_gamma
       USE control_flags,         ONLY : gamma_only
-      USE westcom,               ONLY : l_frac_occ,nbnd_occ,nbnd_occ_full,occupation,de_thr
+      USE westcom,               ONLY : l_frac_occ,de_thr
       USE pwcom,                 ONLY : npw,npwx
       !
       IMPLICIT NONE
@@ -479,7 +476,7 @@ MODULE dfpt_module
       REAL(DP) :: vji, de
       COMPLEX(DP), ALLOCATABLE :: aux_r(:)
       !
-      IF ( .not. gamma_only .or. .not. l_frac_occ ) THEN
+      IF ( .NOT. gamma_only .OR. .NOT. l_frac_occ ) THEN
          CALL errore("compute_pt1_dpsi", "this routine should only be called in gamma_only and frac occ case", 1)
       ENDIF
       !
@@ -495,15 +492,13 @@ MODULE dfpt_module
       !
       vji = 0._DP
       DO ir=1,dffts%nnr
-         vji = vji + DIMAG(aux_r(ir)) * REAL(dvr(ir),KIND=DP) * REAL(aux_r(ir),KIND=DP)
+         vji = vji + AIMAG(aux_r(ir)) * REAL(dvr(ir),KIND=DP) * REAL(aux_r(ir),KIND=DP)
       ENDDO
       vji = vji / (dffts%nr1 * dffts%nr2 * dffts%nr3)
       CALL mp_sum( vji, intra_bgrp_comm )
       !
-      !PRINT*, ibnd, jbnd, de, vji
-      !
       DO ir=1,dffts%nnr
-         dpsi(ir) = (vji / de) * CMPLX(DIMAG(aux_r(ir)), 0._DP, KIND=DP)
+         dpsi(ir) = (vji / de) * CMPLX(AIMAG(aux_r(ir)), 0._DP, KIND=DP)
       ENDDO
       !
       DEALLOCATE( aux_r )

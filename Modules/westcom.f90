@@ -253,16 +253,30 @@ MODULE occ_center
   !
   IMPLICIT NONE
   !
-  REAL(DP),ALLOCATABLE :: occupation(:,:) ! Occupation of each band and ks-point: 0 <= occupation(band,ks-point) <= 1
-  INTEGER, ALLOCATABLE :: nbnd_occ(:) ! max index of occupied bands per ks-point: occupation(band,ks-point)>0, forall band <= nbnd_occ(ks-point); occupation(band,ks-point) = 0, forall bands > nbnd_occ(ks-point)
-  INTEGER,ALLOCATABLE  :: nbnd_occ_full(:) ! max index of contiguous and fully occupied bands per ks-point: occupation(band,ks-point)=1, forall band <= nbnd_occ_full(ks-point); occupation(band,ks-point) < 1, forall bands > nbnd_occ_full(ks-point)
-  LOGICAL              :: l_frac_occ ! If .true. then occupations may be fractional. Note that if l_frac_occ is .false. then nbnd_occ_full = nbnd_occ. 
-  REAL(DP)             :: docc_thr = 0.001 ! Threshold for comparing occupation numbers.
-  REAL(DP)             :: de_thr = 0.001 ! Threshold for comparing single-particle energies. When two orbitals' energies differ by less than this threshold, they are considered degenerate. [An error will be raised if two orbitals with different occupation numbers are degenerate in the fractional occupation case. See subroutine dfpt and compute_pt1_dpsi for details]
+  REAL(DP), ALLOCATABLE :: occupation(:,:)     ! Occupation of each band and k-point:
+                                               ! 0 <= occupation(ib,iks) <= 1
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  INTEGER,  ALLOCATABLE :: nbnd_occ(:)         ! max index of occupied bands per k-point:
+                                               ! occupation(ib,iks) > 0, forall ib <= nbnd_occ(iks)
+                                               ! occupation(ib,iks) = 0, forall ib  > nbnd_occ(iks)
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  INTEGER,  ALLOCATABLE :: nbnd_occ_full(:)    ! max index of contiguous and fully occupied bands per k-point:
+                                               ! occupation(ib,iks) = 1, forall ib <= nbnd_occ_full(iks)
+                                               ! occupation(ib,iks) < 1, forall ib  > nbnd_occ_full(iks)
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  LOGICAL               :: l_frac_occ          ! If .true. then occupations may be fractional
+                                               ! nbnd_occ_full == nbnd_occ when l_frac_occ is .false.
+  REAL(DP)              :: docc_thr = 0.001_DP ! Threshold for comparing occupation numbers
+  REAL(DP)              :: de_thr = 0.001_DP   ! Threshold for comparing single-particle energies
+                                               ! When two orbitals' energies differ by less than this threshold,
+                                               ! they are considered degenerate. An error will be raised if two
+                                               ! orbitals with different occupation numbers are degenerate in
+                                               ! the fractional occupation case. See subroutine dfpt and
+                                               ! compute_pt1_dpsi for details.
   !
 END MODULE
 !
-! 
+!
 MODULE io_unit_numbers
   !
   IMPLICIT NONE

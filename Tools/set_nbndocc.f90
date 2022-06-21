@@ -17,13 +17,12 @@ SUBROUTINE set_nbndocc()
   ! current_spin is needed
   !
   USE kinds,                  ONLY : DP
-  USE pwcom,                  ONLY : nelup,neldw,isk,nelec,lsda,nks,&
-                                   & nbnd,lgauss,ltetra,wg,wk,tfixed_occ
+  USE pwcom,                  ONLY : nbnd,nelup,neldw,isk,nelec,lsda,nks,&
+                                   & lgauss,ltetra,wg,wk,tfixed_occ
   USE constants,              ONLY : degspin
   USE noncollin_module,       ONLY : noncolin
   USE westcom,                ONLY : nbnd_occ,l_frac_occ,occupation,&
                                    & nbnd_occ_full,docc_thr
-  USE types_bz_grid,          ONLY : k_grid
   USE control_flags,          ONLY : gamma_only
   !
   IMPLICIT NONE
@@ -31,38 +30,41 @@ SUBROUTINE set_nbndocc()
   INTEGER :: spin,iks,ibnd
   !
   !
-  IF (ltetra) CALL errore("set_nbndocc", "tetrahedral occupation not implemented", 1)
+  IF(ltetra) CALL errore("set_nbndocc", "tetrahedral occupation not implemented", 1)
   !
-  ! Determine if occupations are fractional 
+  ! Determine if occupations are fractional
   !
-  l_frac_occ = tfixed_occ .or. lgauss 
+  l_frac_occ = tfixed_occ .OR. lgauss
   !
-  IF (l_frac_occ .and. .not. gamma_only) THEN
+  IF(l_frac_occ .AND. .NOT. gamma_only) THEN
      CALL errore("set_nbndocc", "fraction occupation only implemented for gamma-only case", 1)
   ENDIF
   !
   IF(ALLOCATED(occupation)) DEALLOCATE(occupation)
   IF(ALLOCATED(nbnd_occ)) DEALLOCATE(nbnd_occ)
   IF(ALLOCATED(nbnd_occ_full)) DEALLOCATE(nbnd_occ_full)
-  ALLOCATE( occupation(nbnd, k_grid%nps) )
-  ALLOCATE( nbnd_occ(k_grid%nps) )
-  ALLOCATE( nbnd_occ_full(k_grid%nps) )
+  !
+  ! 2nd dimension of occupation, nbnd_occ, and nbnd_occ_full distributed across pools
+  !
+  ALLOCATE(occupation(nbnd,nks))
+  ALLOCATE(nbnd_occ(nks))
+  ALLOCATE(nbnd_occ_full(nks))
   !
   occupation = 0._DP
   nbnd_occ_full = 0
   nbnd_occ = 0
   !
-  IF(l_frac_occ) THEN 
+  IF(l_frac_occ) THEN
      !
      ! FRACTIONAL OCCUPATIONS
      !
-     DO iks = 1, k_grid%nps
-        DO ibnd = 1, nbnd
+     DO iks = 1,nks
+        DO ibnd = 1,nbnd
            !
-           occupation(ibnd,iks) = wg(ibnd,iks) / wk(iks)
+           occupation(ibnd,iks) = wg(ibnd,iks)/wk(iks)
            !
-           IF (occupation(ibnd,iks) > docc_thr) nbnd_occ(iks) = MAX(nbnd_occ(iks),ibnd)
-           IF (occupation(ibnd,iks) > (1-docc_thr)) nbnd_occ_full(iks) = MAX(nbnd_occ_full(iks),ibnd)
+           IF(occupation(ibnd,iks) > docc_thr) nbnd_occ(iks) = MAX(nbnd_occ(iks),ibnd)
+           IF(occupation(ibnd,iks) > (1-docc_thr)) nbnd_occ_full(iks) = MAX(nbnd_occ_full(iks),ibnd)
            !
         ENDDO
      ENDDO
@@ -73,9 +75,9 @@ SUBROUTINE set_nbndocc()
      !
      IF(lsda) THEN
         !
-        ! Collinear spin 
+        ! Collinear spin
         !
-        DO iks = 1,k_grid%nps
+        DO iks = 1,nks
            !
            spin = isk(iks)
            !
@@ -96,19 +98,19 @@ SUBROUTINE set_nbndocc()
         !
      ELSE
         !
-       ! No spin 
+        ! No spin
         !
         nbnd_occ(:) = NINT(nelec)/degspin
         !
      ENDIF
      !
-     DO iks = 1,k_grid%nps
+     DO iks = 1,nks
         occupation(1:nbnd_occ(iks),iks) = 1._DP
      ENDDO
      nbnd_occ_full = nbnd_occ
      !
   ENDIF
   !
-  IF( MAXVAL(nbnd_occ(:)) == 0 ) CALL errore("set_nbndocc", "nbnd_occ was not set", 1) 
+  IF(MAXVAL(nbnd_occ(:)) == 0) CALL errore("set_nbndocc", "nbnd_occ was not set", 1)
   !
-END SUBROUTINE 
+END SUBROUTINE

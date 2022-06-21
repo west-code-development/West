@@ -130,7 +130,7 @@ def test_output(testdir):
     check_files_exist_and_job_done([testdir+'/pw.out',testdir+'/wstat.out',testdir+'/wfreq.out'])
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009'])
 def test_totalEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)

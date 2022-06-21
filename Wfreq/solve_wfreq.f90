@@ -104,8 +104,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   TYPE(bks_type) :: bks
   REAL(DP),ALLOCATABLE :: eprec(:)
   INTEGER :: ierr
-  REAL(DP),ALLOCATABLE :: e(:)  
-   REAL(DP) :: norm2, docc
+  REAL(DP),ALLOCATABLE :: e(:)
+  REAL(DP) :: docc
   !
   CALL io_push_title("(W)-Lanczos")
   !

@@ -50,7 +50,7 @@ PROGRAM westpp
      IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Eigenpotentials
      IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) lgate(4) = .TRUE. ! SXX
      IF( westpp_calculation(i:i) == 'd' .OR. westpp_calculation(i:i) == 'D' ) lgate(5) = .TRUE. ! Dipole matrix
-     IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(6) = .TRUE. ! Localization  
+     IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(6) = .TRUE. ! Localization
   ENDDO
   !
   IF( lgate(1) ) CALL do_rho( )

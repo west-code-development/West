@@ -64,6 +64,8 @@ SUBROUTINE do_loc ( )
   ALLOCATE(density_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   ALLOCATE(filter(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   !
+  ipr = 0._DP
+  aux_loc = 0._DP
   psic = 0._DP
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) )
@@ -193,8 +195,8 @@ SUBROUTINE do_loc ( )
         CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
       ENDDO
       ! don't need pointer anymore
-      nullify(localization_object)
-      nullify(ipr_object)
+      NULLIFY(localization_object)
+      NULLIFY(ipr_object)
     ENDIF
     !
     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//'/localization.json' )
@@ -206,6 +208,12 @@ SUBROUTINE do_loc ( )
   !
   CALL stop_bar_type( barra, 'westpp' )
   !
-  DEALLOCATE(density_loc,density_gat,aux_loc)
+  DEALLOCATE(density_loc)
+  DEALLOCATE(filter_loc)
+  DEALLOCATE(ipr_loc)
+  DEALLOCATE(aux_loc)
+  DEALLOCATE(ipr)
+  DEALLOCATE(density_gat)
+  DEALLOCATE(filter)
   !
 END SUBROUTINE

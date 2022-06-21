@@ -39,7 +39,7 @@ def read_and_test_total_energies(fileA,fileB,tol):
     ref_energy = read_total_energy(fileB)
 
     maxDiff = np.amax(np.abs(test_energy-ref_energy))
-    print(f'Tot energy max diff: {maxDiff}')
+    print(f'Total energy (pwscf) max diff: {maxDiff}')
 
     assert np.allclose(test_energy,ref_energy,rtol=0,atol=tol),'Total energies changed'
 
@@ -73,7 +73,7 @@ def read_and_test_wstat_eigenvalues(fileA,fileB,tol):
     maxDiff = 0.0
     for iq in test_pdep_eig:
         maxDiff = max(maxDiff,np.amax(np.abs(test_pdep_eig[iq]-ref_pdep_eig[iq])))
-    print(f'Pdep eigenvalues (wstat) max diff: {maxDiff}')
+    print(f'PDEP eigenvalues (wstat) max diff: {maxDiff}')
 
     for iq in test_pdep_eig:
         assert np.allclose(test_pdep_eig[iq],ref_pdep_eig[iq],rtol=0,atol=tol),f'PDEP eigenvalues changed, iq {iq}'
@@ -120,10 +120,22 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
             assert np.allclose(test_en[ik][key],ref_en[ik][key],rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
 
 
-########
-# TEST #
-########
+def read_localization_and_ipr(FileName):
+    """
+    Reads localization factor and inverse participation ratio (IPR)
+    """
 
+    with open(FileName,'r') as f:
+        data = json.load(f)
+        localization = data['localization']
+        ipr = data['ipr']
+
+    return localization,ipr
+
+
+#########
+# TESTS #
+#########
 
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007'])
 def test_output(testdir):
@@ -149,3 +161,15 @@ def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))
+
+
+@pytest.mark.parametrize('testdir',['test008'])
+def test_localization_and_ipr(testdir):
+    with open('parameters.json','r') as f:
+        parameters = json.load(f)
+
+    testLoc,testIPR = read_localization_and_ipr(testdir+'/test.westpp.save/localization.json')
+    refLoc,refIPR = read_localization_and_ipr(testdir+'/ref/localization.json')
+
+    assert np.allclose(testLoc,refLoc,rtol=0.0,atol=float(parameters['tolerance']['localization']))
+    assert np.allclose(testIPR,refIPR,rtol=0.0,atol=float(parameters['tolerance']['localization']))

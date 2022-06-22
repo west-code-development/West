@@ -68,15 +68,13 @@ MODULE dfpt_module
       REAL(DP) :: g0(3)
       REAL(DP) :: docc
       REAL(DP) :: de
-      REAL(DP) :: prefactor
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
-      REAL(DP), ALLOCATABLE :: psi_dvpsi_loc(:,:)
       REAL(DP), ALLOCATABLE :: psi_dvpsi(:,:)
       !
       COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:),dpsi(:,:)
-      COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:),aux2_r(:)
+      COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:)
       COMPLEX(DP), ALLOCATABLE :: dpsic(:)
       !
       COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
@@ -291,22 +289,11 @@ MODULE dfpt_module
                !
                nbndval_frac = nbndval - nbndval_full
                !
-               ALLOCATE( psi_dvpsi_loc(nbndval_frac,band_group%nloc) )
-               ALLOCATE( psi_dvpsi(nbndval_frac,nbnd) )
+               ALLOCATE( psi_dvpsi(nbndval_frac,band_group%nloc) )
                !
-               CALL glbrak_gamma(evc(1,nbndval_full+1),dvpsi,psi_dvpsi_loc,npw,npwx,nbndval_frac,&
+               CALL glbrak_gamma(evc(1,nbndval_full+1),dvpsi,psi_dvpsi,npw,npwx,nbndval_frac,&
                & band_group%nloc,nbndval_frac,npol)
-               CALL mp_sum(psi_dvpsi_loc,intra_bgrp_comm)
-               !
-               psi_dvpsi = 0._DP
-               DO lbnd = 1,band_group%nloc
-                  ibnd = band_group%l2g(lbnd)
-                  psi_dvpsi(:,ibnd) = psi_dvpsi_loc(:,lbnd)
-               ENDDO
-               !
-               CALL mp_sum(psi_dvpsi,inter_bgrp_comm)
-               !
-               DEALLOCATE( psi_dvpsi_loc )
+               CALL mp_sum(psi_dvpsi,intra_bgrp_comm)
                !
             ENDIF
             !
@@ -333,6 +320,45 @@ MODULE dfpt_module
                !
             ENDIF
             !
+            IF(l_frac_occ) THEN
+               !
+               ! Add to dpsi: \sum_j <psi_j| dV | psi_i> / (e_i - e_j) |psi_j>
+               !
+               DO lbnd = 1,band_group%nloc
+                  !
+                  ibnd = band_group%l2g(lbnd)
+                  !
+                  DO jbnd = nbndval_full+1,nbndval
+                     !
+                     IF(jbnd <= ibnd) THEN
+                        psi_dvpsi(jbnd-nbndval_full,lbnd) = 0._DP
+                        CYCLE
+                     ENDIF
+                     !
+                     docc = occupation(ibnd,iks) - occupation(jbnd,iks)
+                     !
+                     IF(ABS(docc) < docc_thr) THEN
+                        psi_dvpsi(jbnd-nbndval_full,lbnd) = 0._DP
+                        CYCLE
+                     ENDIF
+                     !
+                     de = et(ibnd,iks) - et(jbnd,iks)
+                     IF(ABS(de) < de_thr) CALL errore('dfpt','fractional occupation degenerate orbitals',1)
+                     !
+                     psi_dvpsi(jbnd-nbndval_full,lbnd) = psi_dvpsi(jbnd-nbndval_full,lbnd) &
+                                                       & * docc / occupation(ibnd,iks) / de
+                     !
+                  ENDDO
+                  !
+               ENDDO
+               !
+               CALL DGEMM('N','N',2*npw,band_group%nloc,nbndval_frac,1._DP,evc(1,nbndval_full+1),2*npwx,&
+               & psi_dvpsi,nbndval_frac,1._DP,dpsi,2*npwx)
+               !
+               DEALLOCATE( psi_dvpsi )
+               !
+            ENDIF
+            !
             ALLOCATE( aux_r(dffts%nnr) )
             !
             aux_r = 0._DP
@@ -346,42 +372,12 @@ MODULE dfpt_module
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dpsi(1,lbnd),psic,'Wave')
                   !
-                  IF(l_frac_occ) THEN
-                     !
-                     ! Compute \sum_j <psi_j| dV | psi_i> / (e_i - e_j) |psi_j>
-                     !
-                     ALLOCATE( aux2_r(dffts%nnr) )
-                     !
-                     DO jbnd = MAX(ibnd+1,nbndval_full+1),nbndval
-                        !
-                        docc = occupation(ibnd,iks) - occupation(jbnd,iks)
-                        IF(ABS(docc) < docc_thr) CYCLE
-                        !
-                        de = et(ibnd,iks) - et(jbnd,iks)
-                        IF(ABS(de) < de_thr) CALL errore('dfpt','fractional occupation degenerate orbitals',1)
-                        !
-                        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jbnd),aux2_r,'Wave')
-                        !
-                        prefactor = docc / occupation(ibnd,iks) / de * psi_dvpsi(jbnd-nbndval_full,ibnd)
-                        !
-                        DO CONCURRENT (ir = 1:dffts%nnr)
-                           psic(ir) = psic(ir) + prefactor * CMPLX(0._DP, REAL(aux2_r(ir),KIND=DP), KIND=DP)
-                        ENDDO
-                        !
-                     ENDDO
-                     !
-                     DEALLOCATE( aux2_r )
-                     !
-                  ENDIF
-                  !
                   DO CONCURRENT (ir = 1:dffts%nnr)
                      aux_r(ir) = aux_r(ir) + &
                      & CMPLX(occupation(ibnd,iks) * REAL(psic(ir),KIND=DP) * AIMAG(psic(ir)), 0._DP, KIND=DP)
                   ENDDO
                   !
                ENDDO
-               !
-               IF(l_frac_occ) DEALLOCATE( psi_dvpsi )
                !
             ELSE
                !

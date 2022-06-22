@@ -29,7 +29,8 @@ MODULE dfpt_module
       USE gvect,                 ONLY : gstart
       USE wavefunctions,         ONLY : evc,psic
       USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
-      USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm
+      USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,&
+                                      & intra_bgrp_comm
       USE mp_world,              ONLY : world_comm
       USE buffers,               ONLY : get_buffer
       USE noncollin_module,      ONLY : noncolin,npol
@@ -39,12 +40,13 @@ MODULE dfpt_module
       USE uspp,                  ONLY : nkb,vkb
       USE uspp_init,             ONLY : init_us_2
       USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-      USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
+      USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
+                                      & double_invfft_gamma
       USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
       USE io_push,               ONLY : io_push_title
       USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
-      USE westcom,               ONLY : iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,&
-                                      & l_frac_occ,nbnd_occ,nbnd_occ_full,occupation,docc_thr
+      USE westcom,               ONLY : iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,l_frac_occ,nbnd_occ,&
+                                      & nbnd_occ_full,occupation,docc_thr,de_thr
       USE distribution_center,   ONLY : band_group,kpt_pool
       !
       IMPLICIT NONE
@@ -59,18 +61,21 @@ MODULE dfpt_module
       !
       ! Workspace
       !
-      INTEGER :: ipert, ig, ir, ibnd, jbnd, ibnd2, lbnd, iks, ikqs, ikq, ik, is, iks_g
-      INTEGER :: nbndval, nbndval_full, ierr
+      INTEGER :: ipert, ig, ir, ibnd, jbnd, lbnd, iks, ikqs, ikq, ik, is, iks_g
+      INTEGER :: nbndval, nbndval_full, nbndval_frac, ierr
       INTEGER :: npwkq
       !
       REAL(DP) :: g0(3)
       REAL(DP) :: docc
+      REAL(DP) :: de
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
+      REAL(DP), ALLOCATABLE :: psi_dvpsi_loc(:,:)
+      REAL(DP), ALLOCATABLE :: psi_dvpsi(:,:)
       !
       COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:),dpsi(:,:)
-      COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:),dpsi_frac(:),dvr(:)
+      COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:),aux2_r(:)
       COMPLEX(DP), ALLOCATABLE :: dpsic(:)
       !
       COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
@@ -89,23 +94,23 @@ MODULE dfpt_module
       l_dost = ( tr2 >= 0._DP )
       !
       IF( l_dost ) THEN
-         WRITE(title,'(a,es14.6)') "Sternheimer eq. solver... with threshold = ", tr2
+         WRITE(title,'(a,es14.6)') 'Sternheimer eq. solver... with threshold = ', tr2
       ELSE
-         WRITE(title,'(a,es14.6)') "Sternheimer eq. solver... with lite-solver"
+         WRITE(title,'(a,es14.6)') 'Sternheimer eq. solver... with lite-solver'
       ENDIF
       CALL io_push_title(TRIM(ADJUSTL(title)))
       !
-      dng=0.0_DP
+      dng = 0._DP
       !
       CALL start_bar_type( barra, 'dfpt', MAX(m,1) * kpt_pool%nloc )
       !
-      IF (.NOT.gamma_only) THEN
+      IF (.NOT. gamma_only) THEN
          ALLOCATE( evckmq(npwx*npol,nbnd) )
          ALLOCATE( phase(dffts%nnr) )
       ENDIF
       !
       IF (l_frac_occ .AND. .NOT. gamma_only) THEN
-         CALL errore("dfpt", "fraction occupation only implemented for gamma-only case", 1)
+         CALL errore('dfpt', 'fraction occupation only implemented for gamma-only case', 1)
       ENDIF
       !
       DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN LOOP
@@ -143,13 +148,12 @@ MODULE dfpt_module
          IF (gamma_only) THEN
             !
             ikqs = iks
-            g0 = 0.0_DP
+            g0 = 0._DP
             !
          ELSE
             !
             ! ... Find G0 and compute phase
             !
-            !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )   !M
             CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )
             ikqs = k_grid%ipis2ips(ikq,is)
             !
@@ -183,11 +187,14 @@ MODULE dfpt_module
          !
          DO ipert = 1, m
             !
-            ALLOCATE( aux_g(npwqx) ); aux_g = 0._DP
-            ALLOCATE( aux_r(dffts%nnr) ); aux_r = 0._DP
+            ALLOCATE( aux_g(npwqx) )
+            ALLOCATE( aux_r(dffts%nnr) )
             !
             DO CONCURRENT (ig = 1:npwq)
                aux_g(ig) = dvg(ig,ipert)
+            ENDDO
+            DO CONCURRENT (ig = npwq+1:npwqx)
+               aux_g(ig) = 0._DP
             ENDDO
             !
             ! ... inverse Fourier transform of the perturbation: (q+)G ---> R
@@ -209,10 +216,10 @@ MODULE dfpt_module
                DO lbnd = 1,band_group%nloc-MOD(band_group%nloc,2),2
                   !
                   ibnd = band_group%l2g(lbnd)
-                  ibnd2 = band_group%l2g(lbnd+1)
+                  jbnd = band_group%l2g(lbnd+1)
                   !
-                  CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd2),psic,'Wave')
-                  DO CONCURRENT (ir=1:dffts%nnr)
+                  CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,jbnd),psic,'Wave')
+                  DO CONCURRENT (ir = 1:dffts%nnr)
                      psic(ir) = psic(ir) * REAL(aux_r(ir),KIND=DP)
                   ENDDO
                   CALL double_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(1,lbnd),dvpsi(1,lbnd+1),'Wave')
@@ -226,7 +233,7 @@ MODULE dfpt_module
                   ibnd = band_group%l2g(lbnd)
                   !
                   CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),psic,'Wave')
-                  DO CONCURRENT (ir=1:dffts%nnr)
+                  DO CONCURRENT (ir = 1:dffts%nnr)
                      psic(ir) = CMPLX( REAL(psic(ir),KIND=DP) * REAL(aux_r(ir),KIND=DP), 0._DP, KIND=DP)
                   ENDDO
                   CALL single_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(1,lbnd),'Wave')
@@ -277,10 +284,29 @@ MODULE dfpt_module
                !
             ENDIF
             !
-            ! keep dV in R space for the calculation of an extra term in frac occ case
-            IF ( l_frac_occ ) THEN
-               ALLOCATE( dvr(dffts%nnr) )
-               dvr = aux_r
+            IF(l_frac_occ) THEN
+               !
+               ! Compute <psi_j| dV |psi_i>
+               !
+               nbndval_frac = nbndval - nbndval_full
+               !
+               ALLOCATE( psi_dvpsi_loc(nbndval_frac,band_group%nloc) )
+               ALLOCATE( psi_dvpsi(nbndval_frac,nbnd) )
+               !
+               CALL glbrak_gamma(evc(1,nbndval_full+1),dvpsi,psi_dvpsi_loc,npw,npwx,nbndval_frac,&
+               & band_group%nloc,nbndval_frac,npol)
+               CALL mp_sum(psi_dvpsi_loc,intra_bgrp_comm)
+               !
+               psi_dvpsi = 0._DP
+               DO lbnd = 1,band_group%nloc
+                  ibnd = band_group%l2g(lbnd)
+                  psi_dvpsi(:,ibnd) = psi_dvpsi_loc(:,lbnd)
+               ENDDO
+               !
+               CALL mp_sum(psi_dvpsi,inter_bgrp_comm)
+               !
+               DEALLOCATE( psi_dvpsi_loc )
+               !
             ENDIF
             !
             DEALLOCATE( aux_g )
@@ -292,7 +318,7 @@ MODULE dfpt_module
             !
             CALL precondition_m_wfcts( band_group%nloc, dvpsi, dpsi, eprec_loc )
             !
-            IF( l_dost) THEN
+            IF(l_dost) THEN
                !
                ! The Sternheimer operator is (H_k - E_(k-q) + alpha * P_v)
                ! The Hamiltonian is evaluated at the k-point current_k in h_psi
@@ -308,7 +334,7 @@ MODULE dfpt_module
             !
             ALLOCATE( aux_r(dffts%nnr) )
             !
-            aux_r=0._DP
+            aux_r = 0._DP
             !
             IF(gamma_only) THEN
                !
@@ -319,34 +345,41 @@ MODULE dfpt_module
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dpsi(1,lbnd),psic,'Wave')
                   !
-                  IF (l_frac_occ) THEN
+                  IF(l_frac_occ) THEN
                      !
-                     ALLOCATE( dpsi_frac(dffts%nnr) )
+                     ! Compute \sum_j <psi_j| dV | psi_i> / (e_i - e_j) |psi_j>
                      !
-                     DO jbnd = MAX(ibnd, nbndval_full), nbndval
+                     ALLOCATE( aux2_r(dffts%nnr) )
+                     !
+                     DO jbnd = MAX(ibnd+1,nbndval_full+1),nbndval
                         !
-                        docc = occupation(ibnd, iks) - occupation(jbnd, iks)
-                        IF ( ABS(docc) < docc_thr ) CYCLE
+                        docc = occupation(ibnd,iks) - occupation(jbnd,iks)
+                        IF(ABS(docc) < docc_thr) CYCLE
                         !
-                        CALL compute_pt1_dpsi(ibnd, jbnd, iks, dvr, dpsi_frac)
+                        de = et(ibnd,iks) - et(jbnd,iks)
+                        IF(ABS(de) < de_thr) CALL errore('dfpt','fractional occupation degenerate orbitals',1)
                         !
-                        DO ir=1,dffts%nnr
-                           psic(ir) = psic(ir) + (docc / occupation(ibnd,iks)) * &
-                           & CMPLX(0._DP, REAL(dpsi_frac(ir),KIND=DP), KIND=DP)
+                        CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jbnd),aux2_r,'Wave')
+                        !
+                        DO CONCURRENT (ir = 1:dffts%nnr)
+                           psic(ir) = psic(ir) + (docc / occupation(ibnd,iks)) * psi_dvpsi(jbnd-nbndval_full,ibnd) &
+                           & * CMPLX(0._DP, REAL(aux2_r(ir),KIND=DP), KIND=DP) / de
                         ENDDO
                         !
                      ENDDO
                      !
-                     DEALLOCATE( dpsi_frac )
+                     DEALLOCATE( aux2_r )
                      !
                   ENDIF
                   !
-                  DO CONCURRENT (ir=1:dffts%nnr)
+                  DO CONCURRENT (ir = 1:dffts%nnr)
                      aux_r(ir) = aux_r(ir) + &
-                     & CMPLX(occupation(ibnd,iks) * REAL(psic(ir),KIND=DP) * AIMAG(psic(ir)), 0.0_DP, KIND=DP)
+                     & CMPLX(occupation(ibnd,iks) * REAL(psic(ir),KIND=DP) * AIMAG(psic(ir)), 0._DP, KIND=DP)
                   ENDDO
                   !
                ENDDO
+               !
+               IF(l_frac_occ) DEALLOCATE( psi_dvpsi )
                !
             ELSE
                !
@@ -364,7 +397,7 @@ MODULE dfpt_module
                   !
                   CALL single_invfft_k(dffts,npw,npwx,dpsi(1,lbnd),dpsic,'Wave',igk_k(1,iks))
                   !
-                  DO CONCURRENT (ir = 1: dffts%nnr)
+                  DO CONCURRENT (ir = 1:dffts%nnr)
                      aux_r(ir) = aux_r(ir) + CONJG( psic(ir) * phase(ir) ) * dpsic(ir)
                   ENDDO
                   !
@@ -379,7 +412,7 @@ MODULE dfpt_module
                      !
                      CALL single_invfft_k(dffts,npw,npwx,dpsi(npwx+1,lbnd),dpsic,'Wave',igk_k(1,iks))
                      !
-                     DO CONCURRENT (ir = 1: dffts%nnr)
+                     DO CONCURRENT (ir = 1:dffts%nnr)
                         aux_r(ir) = aux_r(ir) + CONJG( psic(ir) * phase(ir) ) * dpsic(ir)
                      ENDDO
                      !
@@ -404,14 +437,12 @@ MODULE dfpt_module
                CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,aux_g,'Wave',igq_q(1,iq))
             ENDIF
             !
-            DO CONCURRENT( ig = 1: npwq) ! pert acts only on body
+            DO CONCURRENT (ig = 1:npwq) ! pert acts only on body
                dng(ig,ipert) = dng(ig,ipert) + 2._DP * k_grid%weight(iks_g) * aux_g(ig) / omega
             ENDDO
             !
             DEALLOCATE( aux_g )
             DEALLOCATE( aux_r )
-            !
-            IF ( l_frac_occ ) DEALLOCATE( dvr )
             !
             CALL update_bar_type( barra, 'dfpt', 1 )
             !
@@ -440,68 +471,6 @@ MODULE dfpt_module
       CALL mp_barrier( world_comm )
       !
       CALL stop_bar_type( barra, 'dfpt' )
-      !
-    END SUBROUTINE
-    !
-    !
-    SUBROUTINE compute_pt1_dpsi(ibnd, jbnd, iks, dvr, dpsi)
-      !
-      ! Given perturbation potential dvr (in R space), compute 1st order
-      ! perturbation to ith KS orbital projected into jth orbital
-      ! |dpsi_i> = <psi_j| dV | psi_i> / (ei - ej) |dpsi_j>
-      !
-      ! If ibnd and jbnd are degenerate, raise an error
-      !
-      ! The total perturbed KS orbital should contain a summation over j
-      ! with appropriate prefactors
-      !
-      USE kinds,                 ONLY : DP
-      USE wvfct,                 ONLY : et
-      USE fft_base,              ONLY : dffts
-      USE wavefunctions,         ONLY : evc
-      USE mp,                    ONLY : mp_sum
-      USE mp_global,             ONLY : intra_bgrp_comm
-      USE fft_at_gamma,          ONLY : double_invfft_gamma
-      USE control_flags,         ONLY : gamma_only
-      USE westcom,               ONLY : l_frac_occ,de_thr
-      USE pwcom,                 ONLY : npw,npwx
-      !
-      IMPLICIT NONE
-      !
-      INTEGER,INTENT(IN)  :: ibnd, jbnd, iks
-      COMPLEX(DP),INTENT(IN)   :: dvr(dffts%nnr)
-      COMPLEX(DP),INTENT(OUT)  :: dpsi(dffts%nnr)
-      !
-      INTEGER  :: ir
-      REAL(DP) :: vji, de
-      COMPLEX(DP), ALLOCATABLE :: aux_r(:)
-      !
-      IF ( .NOT. gamma_only .OR. .NOT. l_frac_occ ) THEN
-         CALL errore("compute_pt1_dpsi", "this routine should only be called in gamma_only and frac occ case", 1)
-      ENDIF
-      !
-      dpsi = 0._DP
-      !
-      de = et(ibnd,iks) - et(jbnd,iks)
-      !
-      IF ( ABS(de) < de_thr ) CALL errore("compute_pt1_dpsi", "degenerate orbitals", 1)
-      !
-      ALLOCATE( aux_r(dffts%nnr) )
-      aux_r = 0._DP
-      CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,jbnd),aux_r,'Wave')
-      !
-      vji = 0._DP
-      DO ir=1,dffts%nnr
-         vji = vji + AIMAG(aux_r(ir)) * REAL(dvr(ir),KIND=DP) * REAL(aux_r(ir),KIND=DP)
-      ENDDO
-      vji = vji / (dffts%nr1 * dffts%nr2 * dffts%nr3)
-      CALL mp_sum( vji, intra_bgrp_comm )
-      !
-      DO ir=1,dffts%nnr
-         dpsi(ir) = (vji / de) * CMPLX(AIMAG(aux_r(ir)), 0._DP, KIND=DP)
-      ENDDO
-      !
-      DEALLOCATE( aux_r )
       !
     END SUBROUTINE
     !

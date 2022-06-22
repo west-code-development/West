@@ -68,6 +68,7 @@ MODULE dfpt_module
       REAL(DP) :: g0(3)
       REAL(DP) :: docc
       REAL(DP) :: de
+      REAL(DP) :: prefactor
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
@@ -361,9 +362,10 @@ MODULE dfpt_module
                         !
                         CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jbnd),aux2_r,'Wave')
                         !
+                        prefactor = docc / occupation(ibnd,iks) / de * psi_dvpsi(jbnd-nbndval_full,ibnd)
+                        !
                         DO CONCURRENT (ir = 1:dffts%nnr)
-                           psic(ir) = psic(ir) + (docc / occupation(ibnd,iks)) * psi_dvpsi(jbnd-nbndval_full,ibnd) &
-                           & * CMPLX(0._DP, REAL(aux2_r(ir),KIND=DP), KIND=DP) / de
+                           psic(ir) = psic(ir) + prefactor * CMPLX(0._DP, REAL(aux2_r(ir),KIND=DP), KIND=DP)
                         ENDDO
                         !
                      ENDDO

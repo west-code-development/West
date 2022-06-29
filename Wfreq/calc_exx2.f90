@@ -27,7 +27,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,l_frac_occ,occupation
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -57,7 +57,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   LOGICAL :: l_gammaq
-  REAL(DP) :: g0(3), peso
+  REAL(DP) :: g0(3),peso
   !
   WRITE(stdout,'(5x,a)') ''
   CALL io_push_bar()
@@ -171,9 +171,9 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
                  pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
               ENDDO
               sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - &
-              & occupation(iv,iks)*peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
-              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq ) sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - &
-              & occupation(iv,iks)*pot3D%div
+              & occupation(iv,iks)*peso*DDOT(2*ngm,pertg(1),1,pertg(1),1)/omega*q_grid%weight(iq)
+              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq) &
+              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - occupation(iv,iks)*pot3D%div
               !
            ENDDO ! ivloc
            !

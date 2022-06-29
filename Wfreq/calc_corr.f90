@@ -44,7 +44,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   ! Workspace
   !
   INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g
-  INTEGER :: nbndval, nbndval_full
+  INTEGER :: nbndval,nbndval_full
   REAL(DP) :: peso
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -156,9 +156,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   DO iks = 1, kpt_pool%nloc
      !
      iks_g = kpt_pool%l2g(iks)
-     !
      nbndval = nbnd_occ(iks)
-     IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)  
+     IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -171,8 +170,10 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            !
            glob_im = aband%l2g(im)
            !
-           IF (l_frac_occ) then
-              IF( glob_im > nbndval_full .and. glob_im <= nbndval ) then
+           this_is_a_pole=.FALSE.
+           !
+           IF (l_frac_occ) THEN
+              IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN
                  peso = occupation(glob_im,iks)
               ELSE
                  peso = 1._DP
@@ -180,8 +181,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            ELSE
               peso = 1._DP
            ENDIF
-            !
-           this_is_a_pole=.FALSE.
+           !
            IF( glob_im <= nbndval ) THEN
               segno = -1._DP
               IF( et(glob_im,iks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
@@ -196,41 +196,41 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
               !
               DO ifreq = 1, rfr%nloc
                  !
-                 IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
+                 IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
                  !
                  IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + peso * segno * z_head_rfr(ifreq)
                  !
-                 residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ib, iks )
-                 ! 
+                 residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ib, iks_g )
+                 !
               ENDDO
               !
            ENDIF
            !
-           IF (l_frac_occ) then
+           IF (l_frac_occ) THEN
               !
-              this_is_a_pole=.false.
-              IF( glob_im > nbndval_full .and. glob_im <= nbndval ) THEN
+              this_is_a_pole=.FALSE.
+              IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN
                  segno = 1._DP
                  IF( et(glob_im,iks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
-              ENDIF  
+              ENDIF
               !
               IF( this_is_a_pole ) THEN
                  !
                  CALL retrieve_glob_freq( et(glob_im,iks) - enrg, glob_ifreq )
                  !
-                 DO ifreq = 1, rfr%nloc 
+                 DO ifreq = 1, rfr%nloc
                     !
-                    IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
+                    IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
                     !
                     IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + (1.0 - peso) * segno * z_head_rfr(ifreq)
                     !
-                    residues_b = residues_b + (1.0 - peso) * segno * z_body_rfr( im, ifreq, ib, iks )
-                    ! 
+                    residues_b = residues_b + (1._DP - peso) * segno * z_body_rfr( im, ifreq, ib, iks_g )
+                    !
                  ENDDO
                  !
               ENDIF
               !
-           ENDIF 
+           ENDIF
            !
         ENDDO ! im
         !

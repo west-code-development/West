@@ -53,6 +53,7 @@ PROGRAM wfreq
      IF( wfreq_calculation(i:i) == 'Q' ) lgate(6) = .TRUE.
      IF( wfreq_calculation(i:i) == 'O' ) lgate(7) = .TRUE.
      IF( wfreq_calculation(i:i) == 'P' ) lgate(8) = .TRUE.
+     IF( wfreq_calculation(i:i) == 'H' ) lgate(8) = .TRUE.
   ENDDO
   !
   IF( lgate(1) ) THEN

@@ -25,7 +25,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
   USE noncollin_module,     ONLY : npol
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : evc=>evc_d
-  USE west_cuda,            ONLY : ps_r=>ps_r_d,ps_c=>ps_c_d
+  USE west_gpu,             ONLY : ps_r=>ps_r_d,ps_c=>ps_c_d
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc

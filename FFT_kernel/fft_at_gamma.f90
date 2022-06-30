@@ -20,7 +20,7 @@ MODULE fft_at_gamma
   USE fft_interfaces,       ONLY : fwfft,invfft
   USE fft_types,            ONLY : fft_type_descriptor
 #if defined(__CUDA)
-  USE west_cuda,            ONLY : dfft_nl_d,dfft_nlm_d
+  USE west_gpu,             ONLY : dfft_nl_d,dfft_nlm_d
 #endif
   !
   IMPLICIT NONE

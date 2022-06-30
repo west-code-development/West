@@ -261,7 +261,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b_d,x_d,e_d,eprec_d,tr2,ie
   USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol,noncolin
   USE wvfct_gpum,           ONLY : g2kin_d
-  USE west_cuda,            ONLY : g_d,t_d,h_d,eu_d,a_d,c_d,rho_d,rhoold_d,ibnd_d
+  USE west_gpu,             ONLY : g_d,t_d,h_d,eu_d,a_d,c_d,rho_d,rhoold_d,ibnd_d
   !
   IMPLICIT NONE
   !

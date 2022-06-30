@@ -180,7 +180,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
   USE west_mp,              ONLY : mp_circular_shift_left_begin
-  USE west_cuda,            ONLY : brak_r_d,dvpsi_d,tmp_r3_d,dvpsi_h
+  USE west_gpu,             ONLY : brak_r_d,dvpsi_d,tmp_r3_d,dvpsi_h
   !
   IMPLICIT NONE
   !
@@ -270,7 +270,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
   USE west_mp,              ONLY : mp_circular_shift_left_begin
-  USE west_cuda,            ONLY : brak_c_d,dvpsi_d,tmp_c3_d,dvpsi_h
+  USE west_gpu,             ONLY : brak_c_d,dvpsi_d,tmp_c3_d,dvpsi_h
   !
   IMPLICIT NONE
   !

@@ -39,7 +39,7 @@ CONTAINS
     USE qeh5_base_module,      ONLY : hdf5_start => initialize_hdf5
 #endif
 #if defined(__CUDA)
-    USE west_cuda,             ONLY : west_gpu_start
+    USE west_gpu,              ONLY : west_gpu_start
 #endif
     !
     IMPLICIT NONE
@@ -166,7 +166,7 @@ CONTAINS
     USE qeh5_base_module, ONLY : hdf5_end => finalize_hdf5
 #endif
 #if defined(__CUDA)
-    USE west_cuda,        ONLY : west_gpu_end
+    USE west_gpu,         ONLY : west_gpu_end
 #endif
     !
     IMPLICIT NONE

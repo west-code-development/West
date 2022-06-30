@@ -20,7 +20,7 @@ MODULE fft_at_k
   USE fft_interfaces,       ONLY : fwfft,invfft
   USE fft_types,            ONLY : fft_type_descriptor
 #if defined(__CUDA)
-  USE west_cuda,            ONLY : dfft_nl_d,dfft_nlm_d
+  USE west_gpu,             ONLY : dfft_nl_d,dfft_nlm_d
 #endif
   !
   IMPLICIT NONE
@@ -148,7 +148,7 @@ MODULE fft_at_k
     COMPLEX(DP), DEVICE, INTENT(IN) :: a1(nx)
     COMPLEX(DP), DEVICE, INTENT(OUT) :: b(dfft%nnr)
     CHARACTER(LEN=*), INTENT(IN) :: cdriver
-    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk(n)
+    INTEGER, INTENT(IN), OPTIONAL :: igk(n)
     !
     ! Workspace
     !
@@ -163,7 +163,7 @@ MODULE fft_at_k
     !$acc end parallel
     !
     IF(PRESENT(igk)) THEN
-       !$acc parallel loop
+       !$acc parallel loop present(igk)
        DO ig = 1,n
           b(dfft_nl_d(igk(ig))) = a1(ig)
        ENDDO
@@ -199,7 +199,7 @@ MODULE fft_at_k
     COMPLEX(DP), DEVICE, INTENT(INOUT) :: a(dfft%nnr)
     COMPLEX(DP), DEVICE, INTENT(OUT) :: b1(nx)
     CHARACTER(LEN=*), INTENT(IN) :: cdriver
-    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk(n)
+    INTEGER, INTENT(IN), OPTIONAL :: igk(n)
     !
     ! Workspace
     !
@@ -208,7 +208,7 @@ MODULE fft_at_k
     CALL fwfft(cdriver,a,dfft)
     !
     IF(PRESENT(igk)) THEN
-       !$acc parallel loop
+       !$acc parallel loop present(igk)
        DO ig = 1,n
           b1(ig) = a(dfft_nl_d(igk(ig)))
        ENDDO

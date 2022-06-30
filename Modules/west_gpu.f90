@@ -8,7 +8,7 @@
 ! This file is part of WEST.
 !
 !-----------------------------------------------------------------------
-MODULE west_cuda
+MODULE west_gpu
    !-----------------------------------------------------------------------
    !
    USE kinds,       ONLY : DP,sgl
@@ -18,14 +18,6 @@ MODULE west_cuda
    USE cusolverdn
    !
    IMPLICIT NONE
-   !
-   ! DFPT
-   !
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: evckmq_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: aux_r_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: aux_g_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: dpsi_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: dpsic_d(:)
    !
    ! Linsolve
    !
@@ -46,7 +38,6 @@ MODULE west_cuda
    REAL(DP), DEVICE, ALLOCATABLE :: bg_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: ovlp_r_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: ovlp2_r_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: evckpq_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: pertg_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: pertr_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: pertr_nc_d(:,:)
@@ -126,9 +117,8 @@ MODULE west_cuda
    !
    ! Workspace
    !
-   INTEGER, DEVICE, ALLOCATABLE :: igq_q_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: e_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: eprec_d(:)
+   REAL(DP), DEVICE, ALLOCATABLE :: eprec_loc_d(:)
+   REAL(DP), DEVICE, ALLOCATABLE :: et_loc_d(:)
    REAL(DP), DEVICE, ALLOCATABLE :: ps_r_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: tmp_r_d(:)
    REAL(DP), DEVICE, ALLOCATABLE :: tmp_r3_d(:,:,:)
@@ -138,6 +128,7 @@ MODULE west_cuda
    COMPLEX(DP), DEVICE, ALLOCATABLE :: phase_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: dvpsi_d(:,:)
    COMPLEX(DP), PINNED, ALLOCATABLE :: dvpsi_h(:,:)
+   COMPLEX(DP), DEVICE, ALLOCATABLE :: evck_d(:,:)
    INTEGER, DEVICE, POINTER :: dfft_nl_d(:)
    INTEGER, DEVICE, POINTER :: dfft_nlm_d(:)
    TYPE(cusolverDnHandle) :: cusolver_h
@@ -196,40 +187,24 @@ MODULE west_cuda
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_dfpt_gpu(q_grid_np,max_nbnd)
+   SUBROUTINE allocate_dfpt_gpu(nbndloc)
    !-----------------------------------------------------------------------
    !
-   USE control_flags,         ONLY : gamma_only
    USE fft_base,              ONLY : dffts
-   USE noncollin_module,      ONLY : npol
-   USE pwcom,                 ONLY : npwx
-   USE westcom,               ONLY : npwqx,igq_q
+   USE westcom,               ONLY : igq_q
    !
    IMPLICIT NONE
    !
    ! I/O
    !
-   INTEGER, INTENT(IN) :: q_grid_np
-   INTEGER, INTENT(IN) :: max_nbnd
+   INTEGER, INTENT(IN) :: nbndloc
    !
-   CALL allocate_linsolve_gpu(max_nbnd)
+   CALL allocate_linsolve_gpu(nbndloc)
    !
-   IF(.NOT. gamma_only) THEN
-      ALLOCATE(evckmq_d(npwx*npol,max_nbnd))
-      ALLOCATE(phase_d(dffts%nnr))
-      ALLOCATE(dpsic_d(dffts%nnr))
-   ENDIF
-   ALLOCATE(aux_g_d(npwqx))
-   ALLOCATE(aux_r_d(dffts%nnr))
-   ALLOCATE(dvpsi_d(npwx*npol,max_nbnd))
-   ALLOCATE(dpsi_d(npwx*npol,max_nbnd))
-   ALLOCATE(e_d(max_nbnd))
-   ALLOCATE(eprec_d(max_nbnd))
-   ALLOCATE(igq_q_d(npwqx,q_grid_np))
-   !
-   igq_q_d = igq_q
    dfft_nl_d => dffts%nl_d
    dfft_nlm_d => dffts%nlm_d
+   !
+   !$acc enter data copyin(igq_q)
    !
    END SUBROUTINE
    !
@@ -237,40 +212,12 @@ MODULE west_cuda
    SUBROUTINE deallocate_dfpt_gpu()
    !-----------------------------------------------------------------------
    !
+   USE westcom,               ONLY : igq_q
+   !
    IMPLICIT NONE
    !
    CALL deallocate_linsolve_gpu()
    !
-   IF(ALLOCATED(evckmq_d)) THEN
-      DEALLOCATE(evckmq_d)
-   ENDIF
-   IF(ALLOCATED(phase_d)) THEN
-      DEALLOCATE(phase_d)
-   ENDIF
-   IF(ALLOCATED(dpsic_d)) THEN
-      DEALLOCATE(dpsic_d)
-   ENDIF
-   IF(ALLOCATED(aux_g_d)) THEN
-      DEALLOCATE(aux_g_d)
-   ENDIF
-   IF(ALLOCATED(aux_r_d)) THEN
-      DEALLOCATE(aux_r_d)
-   ENDIF
-   IF(ALLOCATED(dvpsi_d)) THEN
-      DEALLOCATE(dvpsi_d)
-   ENDIF
-   IF(ALLOCATED(dpsi_d)) THEN
-      DEALLOCATE(dpsi_d)
-   ENDIF
-   IF(ALLOCATED(e_d)) THEN
-      DEALLOCATE(e_d)
-   ENDIF
-   IF(ALLOCATED(eprec_d)) THEN
-      DEALLOCATE(eprec_d)
-   ENDIF
-   IF(ALLOCATED(igq_q_d)) THEN
-      DEALLOCATE(igq_q_d)
-   ENDIF
    IF(ASSOCIATED(dfft_nl_d)) THEN
       NULLIFY(dfft_nl_d)
    ENDIF
@@ -278,10 +225,12 @@ MODULE west_cuda
       NULLIFY(dfft_nlm_d)
    ENDIF
    !
+   !$acc exit data delete(igq_q)
+   !
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_linsolve_gpu(max_nbnd)
+   SUBROUTINE allocate_linsolve_gpu(nbndloc)
    !-----------------------------------------------------------------------
    !
    USE noncollin_module,      ONLY : npol
@@ -291,17 +240,17 @@ MODULE west_cuda
    !
    ! I/O
    !
-   INTEGER, INTENT(IN) :: max_nbnd
+   INTEGER, INTENT(IN) :: nbndloc
    !
-   ALLOCATE(ibnd_d(max_nbnd))
-   ALLOCATE(eu_d(max_nbnd))
-   ALLOCATE(a_d(max_nbnd))
-   ALLOCATE(c_d(max_nbnd))
-   ALLOCATE(rho_d(max_nbnd))
-   ALLOCATE(rhoold_d(max_nbnd))
-   ALLOCATE(g_d(npwx*npol,max_nbnd))
-   ALLOCATE(t_d(npwx*npol,max_nbnd))
-   ALLOCATE(h_d(npwx*npol,max_nbnd))
+   ALLOCATE(ibnd_d(nbndloc))
+   ALLOCATE(eu_d(nbndloc))
+   ALLOCATE(a_d(nbndloc))
+   ALLOCATE(c_d(nbndloc))
+   ALLOCATE(rho_d(nbndloc))
+   ALLOCATE(rhoold_d(nbndloc))
+   ALLOCATE(g_d(npwx*npol,nbndloc))
+   ALLOCATE(t_d(npwx*npol,nbndloc))
+   ALLOCATE(h_d(npwx*npol,nbndloc))
    !
    END SUBROUTINE
    !
@@ -348,7 +297,7 @@ MODULE west_cuda
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_gw_gpu(nglob,nlocx,nloc,q_grid_np)
+   SUBROUTINE allocate_gw_gpu(nglob,nlocx,nloc)
    !-----------------------------------------------------------------------
    !
    USE cell_base,             ONLY : bg
@@ -365,12 +314,11 @@ MODULE west_cuda
    INTEGER, INTENT(IN) :: nglob
    INTEGER, INTENT(IN) :: nlocx
    INTEGER, INTENT(IN) :: nloc
-   INTEGER, INTENT(IN) :: q_grid_np
    !
    CALL allocate_lanczos_gpu(nglob,nloc)
    !
    IF(.NOT. gamma_only) THEN
-      ALLOCATE(evckpq_d(npwx*npol,nbnd))
+      ALLOCATE(evck_d(npwx*npol,nbnd))
       ALLOCATE(phase_d(dffts%nnr))
       IF(noncolin) THEN
          ALLOCATE(psick_nc_d(dffts%nnr,npol))
@@ -390,12 +338,12 @@ MODULE west_cuda
    ALLOCATE(dvpsi_d(npwx*npol,nlocx))
    ALLOCATE(dvpsi_h(npwx*npol,nlocx))
    ALLOCATE(l2g_d(nloc))
-   ALLOCATE(igq_q_d(npwqx,q_grid_np))
    !
    bg_d = bg
-   igq_q_d = igq_q
    dfft_nl_d => dffts%nl_d
    dfft_nlm_d => dffts%nlm_d
+   !
+   !$acc enter data copyin(igq_q)
    !
    END SUBROUTINE
    !
@@ -403,12 +351,14 @@ MODULE west_cuda
    SUBROUTINE deallocate_gw_gpu()
    !-----------------------------------------------------------------------
    !
+   USE westcom,               ONLY : igq_q
+   !
    IMPLICIT NONE
    !
    CALL deallocate_lanczos_gpu()
    !
-   IF(ALLOCATED(evckpq_d)) THEN
-      DEALLOCATE(evckpq_d)
+   IF(ALLOCATED(evck_d)) THEN
+      DEALLOCATE(evck_d)
    ENDIF
    IF(ALLOCATED(phase_d)) THEN
       DEALLOCATE(phase_d)
@@ -446,9 +396,6 @@ MODULE west_cuda
    IF(ALLOCATED(l2g_d)) THEN
       DEALLOCATE(l2g_d)
    ENDIF
-   IF(ALLOCATED(igq_q_d)) THEN
-      DEALLOCATE(igq_q_d)
-   ENDIF
    IF(ALLOCATED(ps_r_d)) THEN
       DEALLOCATE(ps_r_d)
    ENDIF
@@ -467,6 +414,8 @@ MODULE west_cuda
    IF(ASSOCIATED(dfft_nlm_d)) THEN
       NULLIFY(dfft_nlm_d)
    ENDIF
+   !
+   !$acc exit data delete(igq_q)
    !
    END SUBROUTINE
    !
@@ -668,8 +617,8 @@ MODULE west_cuda
    !
    IMPLICIT NONE
    !
-   ALLOCATE(e_d(3))
-   ALLOCATE(eprec_d(3))
+   ALLOCATE(eprec_loc_d(3))
+   ALLOCATE(et_loc_d(3))
    ALLOCATE(phi_d(npwx*npol,3))
    ALLOCATE(phi_tmp_d(npwx*npol,3))
    ALLOCATE(gk_d(3,npwx))
@@ -707,11 +656,11 @@ MODULE west_cuda
 
    IMPLICIT NONE
    !
-   IF(ALLOCATED(e_d)) THEN
-      DEALLOCATE(e_d)
+   IF(ALLOCATED(eprec_loc_d)) THEN
+      DEALLOCATE(eprec_loc_d)
    ENDIF
-   IF(ALLOCATED(eprec_d)) THEN
-      DEALLOCATE(eprec_d)
+   IF(ALLOCATED(et_loc_d)) THEN
+      DEALLOCATE(et_loc_d)
    ENDIF
    IF(ALLOCATED(phi_d)) THEN
       DEALLOCATE(phi_d)
@@ -908,7 +857,7 @@ MODULE west_cuda
    IMPLICIT NONE
    !
    IF(.NOT. gamma_only) THEN
-      ALLOCATE(evckpq_d(npwx*npol,nbnd))
+      ALLOCATE(evck_d(npwx*npol,nbnd))
       ALLOCATE(phase_d(dffts%nnr))
    ENDIF
    ALLOCATE(sqvc_d(ngm))
@@ -930,8 +879,8 @@ MODULE west_cuda
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(evckpq_d)) THEN
-      DEALLOCATE(evckpq_d)
+   IF(ALLOCATED(evck_d)) THEN
+      DEALLOCATE(evck_d)
    ENDIF
    IF(ALLOCATED(phase_d)) THEN
       DEALLOCATE(phase_d)

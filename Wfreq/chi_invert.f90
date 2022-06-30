@@ -307,7 +307,7 @@ MODULE chi_invert
       USE kinds,                 ONLY : DP
       USE linear_algebra_kernel, ONLY : matinvrs_dge_gpu
       USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
-      USE west_cuda,             ONLY : body_r_d,x_r_d,wh_r_d,wl_r_d,tmph_r_d,tmpl_r_d,tmpt_r_d,lambda_r_d
+      USE west_gpu,              ONLY : body_r_d,x_r_d,wh_r_d,wl_r_d,tmph_r_d,tmpl_r_d,tmpt_r_d,lambda_r_d
       USE cublas
       !
       IMPLICIT NONE
@@ -416,7 +416,7 @@ MODULE chi_invert
       USE kinds,                 ONLY : DP
       USE linear_algebra_kernel, ONLY : matinvrs_zge_gpu
       USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
-      USE west_cuda,             ONLY : body_c_d,x_c_d,wh_c_d,wl_c_d,tmph_c_d,tmpl_c_d,tmpt_c_d,lambda_c_d
+      USE west_gpu,              ONLY : body_c_d,x_c_d,wh_c_d,wl_c_d,tmph_c_d,tmpl_c_d,tmpt_c_d,lambda_c_d
       USE cublas
       !
       IMPLICIT NONE

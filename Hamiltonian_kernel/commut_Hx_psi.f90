@@ -282,17 +282,17 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   USE cell_base,        ONLY : tpiba, at
   USE ions_base,        ONLY : nat, ityp, ntyp => nsp
   USE klist,            ONLY : xk
+  USE gvect,            ONLY : g
   USE wvfct,            ONLY : npw, npwx, et
   USE noncollin_module, ONLY : noncolin, npol
   USE uspp,             ONLY : nkb, vkb
   USE uspp_param,       ONLY : nh
   USE uspp_init,        ONLY : gen_us_dj_gpu, gen_us_dy_gpu
   USE control_flags,    ONLY : gamma_only
-  USE pwcom,            ONLY : current_k, igk_k_d
-  USE gvect,            ONLY : g_d
+  USE pwcom,            ONLY : igk_k, current_k
   USE becmod_subs_gpum, ONLY : calbec_gpu
   USE wvfct_gpum,       ONLY : g2kin_d
-  USE west_cuda,        ONLY : gk_d, dvkb_d, work_d, ps2_d, psc_d, deff_d, deff_nc_d, becp1_d, &
+  USE west_gpu,         ONLY : gk_d, dvkb_d, work_d, ps2_d, psc_d, deff_d, deff_nc_d, becp1_d, &
                              & becp2_d, becp1_d_nc_d, becp2_d_nc_d, becp1_d_r_d, becp2_d_r_d, &
                              & becp1_d_k_d, becp2_d_k_d
   USE cublas
@@ -327,11 +327,11 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   at2 = at(2,ipol)
   at3 = at(3,ipol)
   !
-  !$acc parallel loop
+  !$acc parallel loop present(g,igk_k)
   DO ig = 1,npw
-     gk_d(1,ig) = (xk1 + g_d(1,igk_k_d(ig,current_k))) * tpiba
-     gk_d(2,ig) = (xk2 + g_d(2,igk_k_d(ig,current_k))) * tpiba
-     gk_d(3,ig) = (xk3 + g_d(3,igk_k_d(ig,current_k))) * tpiba
+     gk_d(1,ig) = (xk1 + g(1,igk_k(ig,current_k))) * tpiba
+     gk_d(2,ig) = (xk2 + g(2,igk_k(ig,current_k))) * tpiba
+     gk_d(3,ig) = (xk3 + g(3,igk_k(ig,current_k))) * tpiba
      g2kin_d(ig) = gk_d(1,ig)**2 + gk_d(2,ig)**2 + gk_d(3,ig)**2
   ENDDO
   !$acc end parallel
@@ -430,11 +430,9 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
         !$acc end parallel
      ENDIF
      !
-     !$acc data present(vkb)
      !$acc host_data use_device(vkb)
      CALL calbec_gpu(npw,vkb,psi_d,becp1_d,m)
      !$acc end host_data
-     !$acc end data
      !
      CALL calbec_gpu(npw,work_d,psi_d,becp2_d,m)
      !
@@ -454,15 +452,16 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
         DO nt = 1,ntyp
            DO na = 1,nat
               IF(nt == ityp(na)) THEN
+                 nh_nt = nh(nt)
                  IF(noncolin) THEN
                     IF(npol == 1) THEN
                        !$acc parallel
                        !$acc loop
-                       DO ih = 1,nh(nt)
+                       DO ih = 1,nh_nt
                           reduce = 0._DP
                           reduce2 = 0._DP
                           !$acc loop reduction(+:reduce,reduce2)
-                          DO jh = 1,nh(nt)
+                          DO jh = 1,nh_nt
                              reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,1)
                              reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,1)
                           ENDDO
@@ -473,13 +472,13 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                     ELSEIF(npol == 2) THEN
                        !$acc parallel
                        !$acc loop
-                       DO ih = 1,nh(nt)
+                       DO ih = 1,nh_nt
                           reduce = 0._DP
                           reduce2 = 0._DP
                           reduce3 = 0._DP
                           reduce4 = 0._DP
                           !$acc loop reduction(+:reduce,reduce2,reduce3,reduce4)
-                          DO jh = 1,nh(nt)
+                          DO jh = 1,nh_nt
                              ! is = 1, js = 1,2
                              reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,1)
                              reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc_d(ih,jh,na,2)
@@ -504,11 +503,11 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                     !
                     !$acc parallel
                     !$acc loop
-                    DO ih = 1,nh(nt)
+                    DO ih = 1,nh_nt
                        reduce = 0._DP
                        reduce2 = 0._DP
                        !$acc loop reduction(+:reduce,reduce2)
-                       DO jh = 1,nh(nt)
+                       DO jh = 1,nh_nt
                           reduce = reduce + becp2_d_r_d(ijkb0+jh,ibnd) * (1._DP,0._DP) * deff_d(ih,jh,na)
                           reduce2 = reduce2 + becp1_d_r_d(ijkb0+jh,ibnd) * (-1._DP,0._DP) * deff_d(ih,jh,na)
                        ENDDO
@@ -519,11 +518,11 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                  ELSE
                     !$acc parallel
                     !$acc loop
-                    DO ih = 1,nh(nt)
+                    DO ih = 1,nh_nt
                        reduce = 0._DP
                        reduce2 = 0._DP
                        !$acc loop reduction(+:reduce,reduce2)
-                       DO jh = 1,nh(nt)
+                       DO jh = 1,nh_nt
                           reduce = reduce + becp2_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff_d(ih,jh,na)
                           reduce2 = reduce2 + becp1_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff_d(ih,jh,na)
                        ENDDO
@@ -539,19 +538,15 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      ENDDO ! nbnd
      !
      IF(noncolin) THEN
-        !$acc data present(vkb)
         !$acc host_data use_device(vkb)
         CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),vkb,npwx,psc_d,nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
-        !$acc end data
         CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work_d,npwx,psc_d(1,1,1,2),nkb,(1._DP,0._DP),&
         & dpsi_d,npwx)
      ELSE
-        !$acc data present(vkb)
         !$acc host_data use_device(vkb)
         CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),vkb,npwx,ps2_d,nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
-        !$acc end data
         CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work_d,npwx,ps2_d(1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
      ENDIF
      !

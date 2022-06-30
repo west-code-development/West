@@ -1024,7 +1024,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               !
 #if defined(__CUDA)
               anorm = 0._DP
-              !$acc parallel loop reduction(+:anorm)
+              !$acc parallel loop reduction(+:anorm) copy(anorm)
               DO ig = 1,npwq
                  anorm = anorm+REAL(amat(ig,k_local),KIND=DP)**2+AIMAG(amat(ig,k_local))**2
               ENDDO
@@ -1052,21 +1052,17 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               !
               za = 1._DP/SQRT(anorm)
               !
-              !$acc data present(amat)
               !$acc host_data use_device(amat)
               CALL ZSCAL(npwq,za,amat(1,k_local),1)
               !$acc end host_data
-              !$acc end data
               !
            ENDIF
            !
            ! 5) Copy the current vector into V
            !
-           !$acc data present(amat,vec)
            !$acc host_data use_device(amat,vec)
            CALL ZCOPY(npwqx,amat(1,k_local),1,vec(1),1)
            !$acc end host_data
-           !$acc end data
            !
            !$acc update host(vec)
            !
@@ -1120,11 +1116,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               !$acc end parallel
            ENDIF
            !
-           !$acc data present(zbraket)
            !$acc host_data use_device(zbraket)
            CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
            !$acc end host_data
-           !$acc end data
 #else
            IF(gamma_only) THEN
               DO ip = j_local,m_local_end !pert%nloc
@@ -1143,11 +1137,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !
            ncol=m_local_end-j_local+1
            !
-           !$acc data present(vec,zbraket,amat)
            !$acc host_data use_device(vec,zbraket,amat)
            CALL ZGERU(npwqx,ncol,MONE,vec(1),1,zbraket(j_local),1,amat(1,j_local),npwqx)
            !$acc end host_data
-           !$acc end data
            !
         ENDIF
         !

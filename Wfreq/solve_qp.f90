@@ -1099,7 +1099,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
-  USE west_cuda,            ONLY : ovlp_r_d,ovlp2_r_d,dtemp_d,ztemp_d,l2g_d,d_epsm1_ifr_d,&
+  USE west_gpu,             ONLY : ovlp_r_d,ovlp2_r_d,dtemp_d,ztemp_d,l2g_d,d_epsm1_ifr_d,&
                                  & d_epsm1_ifr_trans_d,z_epsm1_rfr_trans_d,brak_r_d,d_body2_ifr_d,&
                                  & allocate_qp_gpu,deallocate_qp_gpu
   !
@@ -1608,7 +1608,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
-  USE west_cuda,            ONLY : ovlp_c_d,ovlp2_c_d,ztemp_d,l2g_d,z_epsm1_ifr_q_d,&
+  USE west_gpu,             ONLY : ovlp_c_d,ovlp2_c_d,ztemp_d,l2g_d,z_epsm1_ifr_q_d,&
                                  & z_epsm1_ifr_trans_q_d,z_epsm1_rfr_trans_q_d,z_body2_ifr_q_d,&
                                  & brak_c_d,allocate_qp_gpu,deallocate_qp_gpu
   !

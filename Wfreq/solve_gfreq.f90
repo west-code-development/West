@@ -722,8 +722,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,current_k,ngk,igk_k
-  USE wvfct,                ONLY : nbnd,g2kin
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE wavefunctions,        ONLY : evc
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
@@ -742,8 +741,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   USE types_bz_grid,        ONLY : k_grid
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic_d
-  USE wvfct_gpum,           ONLY : g2kin_d
-  USE west_cuda,            ONLY : sqvc_d,pertg_d,pertr_d,dvpsi_d,q_s_d,ps_r_d,l2g_d,ovlp_r_d,&
+  USE west_gpu,             ONLY : sqvc_d,pertg_d,pertr_d,dvpsi_d,q_s_d,ps_r_d,l2g_d,ovlp_r_d,&
                                  & allocate_gw_gpu,deallocate_gw_gpu,reallocate_ps_gpu,&
                                  & reallocate_overlap_gpu
   !
@@ -786,7 +784,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   !
   ! Initialize GPU
   !
-  CALL allocate_gw_gpu(pert%nglob,pert%nlocx,pert%nloc,1)
+  CALL allocate_gw_gpu(pert%nglob,pert%nlocx,pert%nloc)
   ALLOCATE(l2g(pert%nloc))
   DO ip = 1,pert%nloc
      l2g(ip) = pert%l2g(ip)
@@ -870,8 +868,6 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
      ENDIF
      !
      ! ... Sync GPU
-     !
-     g2kin = g2kin_d
      !
      CALL using_becp_auto(2)
      CALL using_becp_d_auto(0)
@@ -1048,8 +1044,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,current_k,ngk,igk_k,igk_k_d
-  USE wvfct,                ONLY : nbnd,g2kin
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE wavefunctions,        ONLY : evc
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
@@ -1068,10 +1063,9 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   USE types_coulomb,        ONLY : pot3D
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d
-  USE wvfct_gpum,           ONLY : g2kin_d
-  USE west_cuda,            ONLY : sqvc_d,pertg_d,pertr_d,dvpsi_d,q_s_d,evckpq_d,psick_nc_d,psick_d,&
-                                 & phase_d,igq_q_d,ps_c_d,l2g_d,ovlp_c_d,allocate_gw_gpu,&
-                                 & deallocate_gw_gpu,reallocate_ps_gpu,reallocate_overlap_gpu
+  USE west_gpu,             ONLY : sqvc_d,pertg_d,pertr_d,dvpsi_d,q_s_d,evck_d,psick_nc_d,psick_d,&
+                                 & phase_d,ps_c_d,l2g_d,ovlp_c_d,allocate_gw_gpu,deallocate_gw_gpu,&
+                                 & reallocate_ps_gpu,reallocate_overlap_gpu
   !
   IMPLICIT NONE
   !
@@ -1162,7 +1156,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   !
   ! Initialize GPU
   !
-  CALL allocate_gw_gpu(pert%nglob,pert%nlocx,pert%nloc,q_grid%np)
+  CALL allocate_gw_gpu(pert%nglob,pert%nlocx,pert%nloc)
   ALLOCATE(l2g(pert%nloc))
   DO ip = 1,pert%nloc
      l2g(ip) = pert%l2g(ip)
@@ -1208,7 +1202,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
      IF(my_image_id == 0) CALL get_buffer(evck,lrwfc,iuwfc,ikks)
      CALL mp_bcast(evck,0,inter_image_comm)
      !
-     evckpq_d = evck
+     evck_d = evck
      !
      nbndval = nbnd_occ(ikks)
      !
@@ -1227,10 +1221,10 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
         ! PSIC
         !
         IF(noncolin) THEN
-           CALL single_invfft_k(dffts,npwk,npwx,evckpq_d(1:npwx,ib),psick_nc_d(:,1),'Wave',igk_k_d(:,ikks))
-           CALL single_invfft_k(dffts,npwk,npwx,evckpq_d(1+npwx:npwx*2,ib),psick_nc_d(:,2),'Wave',igk_k_d(:,ikks))
+           CALL single_invfft_k(dffts,npwk,npwx,evck_d(1:npwx,ib),psick_nc_d(:,1),'Wave',igk_k(:,ikks))
+           CALL single_invfft_k(dffts,npwk,npwx,evck_d(1+npwx:npwx*2,ib),psick_nc_d(:,2),'Wave',igk_k(:,ikks))
         ELSE
-           CALL single_invfft_k(dffts,npwk,npwx,evckpq_d(:,ib),psick_d,'Wave',igk_k_d(:,ikks))
+           CALL single_invfft_k(dffts,npwk,npwx,evck_d(:,ib),psick_d,'Wave',igk_k(:,ikks))
         ENDIF
         !
         DO iks = 1,k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
@@ -1273,8 +1267,6 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
            !
            ! ... Sync GPU
            !
-           g2kin = g2kin_d
-           !
            CALL using_becp_auto(2)
            CALL using_becp_d_auto(0)
            CALL using_evc(2)
@@ -1300,28 +1292,28 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
               ! Bring it to R-space
               !
               IF(noncolin) THEN
-                 CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr_d,'Wave',igq_q_d(:,iq))
+                 CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr_d,'Wave',igq_q(:,iq))
                  !$acc parallel loop
                  DO ir = 1,dffts_nnr
                     pertr_d(ir) = CONJG(phase_d(ir))*psick_nc_d(ir,1)*CONJG(pertr_d(ir))
                  ENDDO
                  !$acc end parallel
-                 CALL single_fwfft_k(dffts,npw,npwx,pertr_d,dvpsi_d(1:npwx,ip),'Wave',igk_k_d(:,current_k))
-                 CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr_d,'Wave',igq_q_d(:,iq))
+                 CALL single_fwfft_k(dffts,npw,npwx,pertr_d,dvpsi_d(1:npwx,ip),'Wave',igk_k(:,current_k))
+                 CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr_d,'Wave',igq_q(:,iq))
                  !$acc parallel loop
                  DO ir = 1,dffts_nnr
                     pertr_d(ir) = CONJG(phase_d(ir))*psick_nc_d(ir,2)*CONJG(pertr_d(ir))
                  ENDDO
                  !$acc end parallel
-                 CALL single_fwfft_k(dffts,npw,npwx,pertr_d,dvpsi_d(1+npwx:npwx*2,ip),'Wave',igk_k_d(:,current_k))
+                 CALL single_fwfft_k(dffts,npw,npwx,pertr_d,dvpsi_d(1+npwx:npwx*2,ip),'Wave',igk_k(:,current_k))
               ELSE
-                 CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr_d,'Wave',igq_q_d(:,iq))
+                 CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr_d,'Wave',igq_q(:,iq))
                  !$acc parallel loop
                  DO ir = 1,dffts_nnr
                     pertr_d(ir) = CONJG(phase_d(ir))*psick_d(ir)*CONJG(pertr_d(ir))
                  ENDDO
                  !$acc end parallel
-                 CALL single_fwfft_k(dffts,npw,npwx,pertr_d,dvpsi_d(:,ip),'Wave',igk_k_d(:,current_k))
+                 CALL single_fwfft_k(dffts,npw,npwx,pertr_d,dvpsi_d(:,ip),'Wave',igk_k(:,current_k))
               ENDIF
               !
            ENDDO ! pert

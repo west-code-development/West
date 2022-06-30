@@ -291,7 +291,7 @@ MODULE linear_algebra_kernel
       !
       ! Diago of a REAL(DP) SYMMETRIC MATRIX
       !
-      USE west_cuda, ONLY : cusolver_h
+      USE west_gpu, ONLY : cusolver_h
       USE cublas
       USE cusolverdn
       !
@@ -350,7 +350,7 @@ MODULE linear_algebra_kernel
       !
       ! Diagonalization of a COMPLEX(DP) HERMITIAN MATRIX
       !
-      USE west_cuda, ONLY : cusolver_h
+      USE west_gpu, ONLY : cusolver_h
       USE cublas
       USE cusolverdn
       !
@@ -409,7 +409,7 @@ MODULE linear_algebra_kernel
       !
       ! Inversion of a COMPLEX(DP) GENERIC MATRIX
       !
-      USE west_cuda, ONLY : cusolver_h,tmp_c_d,piv_d
+      USE west_gpu, ONLY : cusolver_h,tmp_c_d,piv_d
       USE cublas
       USE cusolverdn
       !
@@ -458,7 +458,7 @@ MODULE linear_algebra_kernel
       !
       ! Inversion of a REAL(DP) GENERIC MATRIX
       !
-      USE west_cuda, ONLY : cusolver_h,tmp_r_d,piv_d
+      USE west_gpu, ONLY : cusolver_h,tmp_r_d,piv_d
       USE cublas
       USE cusolverdn
       !

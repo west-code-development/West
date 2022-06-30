@@ -13,8 +13,8 @@ MODFLAGS = $(MOD_FLAG)../../Modules \
            $(MOD_FLAG).
 
 MODULES_OBJS = \
+west_gpu.o \
 west_version.o \
-west_cuda.o \
 westcom.o
 
 TLDEPS = bindir mods pwlibs pw

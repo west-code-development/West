@@ -220,7 +220,7 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho_gpu(nbnd_to_deflate, NRHS, NLSTEP
   USE pwcom,                ONLY : npw,npwx
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
-  USE west_cuda,            ONLY : beta_d,r_d,tmp_r_d,tmp_c_d
+  USE west_gpu,             ONLY : beta_d,r_d,tmp_r_d,tmp_c_d
   !
   IMPLICIT NONE
   !

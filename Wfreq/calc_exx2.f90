@@ -217,7 +217,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
   USE gvect,                ONLY : gstart,ngm
   USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,nbnd,current_k,ngk,igk_k_d
+  USE pwcom,                ONLY : npw,npwx,nbnd,igk_k,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc
@@ -232,7 +232,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic_d,psic_nc_d
-  USE west_cuda,            ONLY : allocate_exx_gpu,deallocate_exx_gpu,evckmq_d,phase_d,sqvc_d,pertg_d,&
+  USE west_gpu,             ONLY : allocate_exx_gpu,deallocate_exx_gpu,evck_d,phase_d,sqvc_d,pertg_d,&
                                  & pertr_d,pertr_nc_d
   !
   IMPLICIT NONE
@@ -310,10 +310,10 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
         IF(gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,ib),psic_d,'Wave')
         ELSEIF(noncolin) THEN
-           CALL single_invfft_k(dffts,npw,npwx,evc_d(1:npwx,ib),psic_nc_d(:,1),'Wave',igk_k_d(:,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,evc_d(npwx+1:npwx*2,ib),psic_nc_d(:,2),'Wave',igk_k_d(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_d(1:npwx,ib),psic_nc_d(:,1),'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_d(npwx+1:npwx*2,ib),psic_nc_d(:,2),'Wave',igk_k(:,current_k))
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc_d(:,ib),psic_d,'Wave',igk_k_d(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_d(:,ib),psic_d,'Wave',igk_k(:,current_k))
         ENDIF
         !
         DO iq = 1,q_grid%np
@@ -334,7 +334,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
               IF(my_image_id == 0) CALL get_buffer(evckmq,lrwfc,iuwfc,ikqs)
               CALL mp_bcast(evckmq,0,inter_image_comm)
               !
-              evckmq_d = evckmq
+              evck_d = evckmq
               phase_d = phase
            ENDIF
            !
@@ -355,8 +355,8 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
                  !$acc end parallel
                  CALL single_fwfft_gamma(dffts,ngm,ngm,pertr_d,pertg_d,'Rho')
               ELSEIF(noncolin) THEN
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq_d(1:npwx,iv),pertr_nc_d(:,1),'Wave',igk_k_d(:,ikqs))
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq_d(1+npwx:npwx*2,iv),pertr_nc_d(:,2),'Wave',igk_k_d(:,ikqs))
+                 CALL single_invfft_k(dffts,npwkq,npwx,evck_d(1:npwx,iv),pertr_nc_d(:,1),'Wave',igk_k(:,ikqs))
+                 CALL single_invfft_k(dffts,npwkq,npwx,evck_d(1+npwx:npwx*2,iv),pertr_nc_d(:,2),'Wave',igk_k(:,ikqs))
                  !$acc parallel loop
                  DO ir = 1,dffts_nnr
                     pertr_nc_d(ir,1) = CONJG(pertr_nc_d(ir,1)*phase_d(ir))*psic_nc_d(ir,1) &
@@ -365,7 +365,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
                  !$acc end parallel
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc_d(:,1),pertg_d,'Rho') ! no igk
               ELSE
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq_d(:,iv),pertr_d,'Wave',igk_k_d(:,ikqs))
+                 CALL single_invfft_k(dffts,npwkq,npwx,evck_d(:,iv),pertr_d,'Wave',igk_k(:,ikqs))
                  !$acc parallel loop
                  DO ir = 1,dffts_nnr
                     pertr_d(ir) = CONJG(pertr_d(ir)*phase_d(ir))*psic_d(ir)
@@ -381,7 +381,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
               !$acc end parallel
               !
               dot_tmp = 0._DP
-              !$acc parallel loop reduction(+:dot_tmp)
+              !$acc parallel loop reduction(+:dot_tmp) copy(dot_tmp)
               DO ig = 1,ngm
                  dot_tmp = dot_tmp+REAL(pertg_d(ig),KIND=DP)**2+AIMAG(pertg_d(ig))**2
               ENDDO

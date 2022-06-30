@@ -27,7 +27,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -170,8 +170,10 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
               DO ig = 1,ngm
                  pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
               ENDDO
-              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g)-peso*DDOT(2*ngm,pertg(1),1,pertg(1),1)/omega*q_grid%weight(iq)
-              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq) sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g)-pot3D%div
+              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - &
+              & occupation(iv,iks)*peso*DDOT(2*ngm,pertg(1),1,pertg(1),1)/omega*q_grid%weight(iq)
+              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq) &
+              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - occupation(iv,iks)*pot3D%div
               !
            ENDDO ! ivloc
            !

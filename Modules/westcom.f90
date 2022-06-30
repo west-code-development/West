@@ -34,10 +34,6 @@ MODULE scratch_area
   COMPLEX(DP),         ALLOCATABLE :: dvg(:,:)
   LOGICAL,             ALLOCATABLE :: conv(:)
   !
-  ! BANDS
-  !
-  INTEGER, ALLOCATABLE :: nbnd_occ(:)
-  !
   ! Q-POINTS
   !
   INTEGER, ALLOCATABLE :: ngq(:)     ! equivalent of ngk(:) --> ex. ngq(iq) = LOCAL number of PW for (q+G) (global in iq)
@@ -251,6 +247,36 @@ MODULE wan_center
 END MODULE
 !
 !
+MODULE occ_center
+  !
+  USE kinds, ONLY : DP
+  !
+  IMPLICIT NONE
+  !
+  REAL(DP), ALLOCATABLE :: occupation(:,:)     ! Occupation of each band and k-point:
+                                               ! 0 <= occupation(ib,iks) <= 1
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  INTEGER,  ALLOCATABLE :: nbnd_occ(:)         ! max index of occupied bands per k-point:
+                                               ! occupation(ib,iks) > 0, forall ib <= nbnd_occ(iks)
+                                               ! occupation(ib,iks) = 0, forall ib  > nbnd_occ(iks)
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  INTEGER,  ALLOCATABLE :: nbnd_occ_full(:)    ! max index of contiguous and fully occupied bands per k-point:
+                                               ! occupation(ib,iks) = 1, forall ib <= nbnd_occ_full(iks)
+                                               ! occupation(ib,iks) < 1, forall ib  > nbnd_occ_full(iks)
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  LOGICAL               :: l_frac_occ          ! If .true. then occupations may be fractional
+                                               ! nbnd_occ_full == nbnd_occ when l_frac_occ is .false.
+  REAL(DP)              :: docc_thr = 0.001_DP ! Threshold for comparing occupation numbers
+  REAL(DP)              :: de_thr = 0.001_DP   ! Threshold for comparing single-particle energies
+                                               ! When two orbitals' energies differ by less than this threshold,
+                                               ! they are considered degenerate. An error will be raised if two
+                                               ! orbitals with different occupation numbers are degenerate in
+                                               ! the fractional occupation case. See subroutine dfpt and
+                                               ! compute_pt1_dpsi for details.
+  !
+END MODULE
+!
+!
 MODULE io_unit_numbers
   !
   IMPLICIT NONE
@@ -270,6 +296,7 @@ MODULE westcom
   USE wfreq_center
   USE westpp_center
   USE wan_center
+  USE occ_center
   USE io_unit_numbers
   !
 END MODULE

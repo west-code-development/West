@@ -188,7 +188,7 @@ MODULE dfpt_module
             IF (gamma_only) THEN
                CALL single_invfft_gamma(dffts,npwq,npwqx,aux_g,aux_r,TRIM(fftdriver))
             ELSE
-               CALL single_invfft_k(dffts,npwq,npwqx,aux_g,aux_r,'Wave',igq_q(1,iq))
+               CALL single_invfft_k(dffts,npwq,npwqx,aux_g,aux_r,'Wave',igq_q(:,iq))
             ENDIF
             !
             ! The perturbation is in aux_r
@@ -204,11 +204,11 @@ MODULE dfpt_module
                   ibnd = band_group%l2g(lbnd)
                   ibnd2 = band_group%l2g(lbnd+1)
                   !
-                  CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd2),psic,'Wave')
+                  CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd2),psic,'Wave')
                   DO CONCURRENT (ir=1:dffts%nnr)
                      psic(ir) = psic(ir) * REAL(aux_r(ir),KIND=DP)
                   ENDDO
-                  CALL double_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(1,lbnd),dvpsi(1,lbnd+1),'Wave')
+                  CALL double_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(:,lbnd),dvpsi(:,lbnd+1),'Wave')
                   !
                ENDDO
                !
@@ -218,11 +218,11 @@ MODULE dfpt_module
                   lbnd = band_group%nloc
                   ibnd = band_group%l2g(lbnd)
                   !
-                  CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),psic,'Wave')
+                  CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
                   DO CONCURRENT (ir=1:dffts%nnr)
                      psic(ir) = CMPLX( REAL(psic(ir),KIND=DP) * REAL(aux_r(ir),KIND=DP), 0._DP, KIND=DP)
                   ENDDO
-                  CALL single_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(1,lbnd),'Wave')
+                  CALL single_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(:,lbnd),'Wave')
                   !
                ENDIF
                !
@@ -234,7 +234,7 @@ MODULE dfpt_module
                   !
                   ! ... inverse Fourier transform of wfs at [k-q]: (k-q+)G ---> R
                   !
-                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,ibnd),psic,'Wave',igk_k(1,ikqs))
+                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,ibnd),psic,'Wave',igk_k(:,ikqs))
                   !
                   ! ... construct right-hand-side term of Sternheimer equation:
                   ! ... product of wavefunction at [k-q], phase and perturbation in real space
@@ -246,7 +246,7 @@ MODULE dfpt_module
                   ! Fourier transform product of wf at [k-q], phase and
                   ! perturbation of wavevector q: R ---> (k+)G
                   !
-                  CALL single_fwfft_k(dffts,npw,npwx,psic,dvpsi(1,lbnd),'Wave',igk_k(1,iks))
+                  CALL single_fwfft_k(dffts,npw,npwx,psic,dvpsi(1:npwx,lbnd),'Wave',igk_k(:,iks))
                   !
                   ! dv|psi> is in dvpsi
                   !
@@ -257,13 +257,13 @@ MODULE dfpt_module
                      !
                      ibnd = band_group%l2g(lbnd)
                      !
-                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
+                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,ikqs))
                      !
                      DO CONCURRENT (ir = 1:dffts%nnr)
                         psic(ir) = psic(ir) * phase(ir) * aux_r(ir)
                      ENDDO
                      !
-                     CALL single_fwfft_k(dffts,npw,npwx,psic,dvpsi(npwx+1,lbnd),'Wave',igk_k(1,iks))
+                     CALL single_fwfft_k(dffts,npw,npwx,psic,dvpsi(npwx+1:npwx*2,lbnd),'Wave',igk_k(:,iks))
                      !
                   ENDDO
                ENDIF
@@ -304,7 +304,7 @@ MODULE dfpt_module
                   !
                   ibnd = band_group%l2g(lbnd)
                   !
-                  CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dpsi(1,lbnd),psic,'Wave')
+                  CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),dpsi(:,lbnd),psic,'Wave')
                   DO CONCURRENT (ir=1:dffts%nnr)
                      aux_r(ir) = aux_r(ir) + CMPLX( REAL( psic(ir),KIND=DP) * AIMAG( psic(ir)) , 0.0_DP, KIND=DP)
                   ENDDO
@@ -321,11 +321,11 @@ MODULE dfpt_module
                   !
                   ! inverse Fourier transform of wavefunction at [k-q]: (k-q+)G ---> R
                   !
-                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,ibnd),psic,'Wave',igk_k(1,ikqs))
+                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,ibnd),psic,'Wave',igk_k(:,ikqs))
                   !
                   ! inverse Fourier transform of perturbed wavefunction: (k+)G ---> R
                   !
-                  CALL single_invfft_k(dffts,npw,npwx,dpsi(1,lbnd),dpsic,'Wave',igk_k(1,iks))
+                  CALL single_invfft_k(dffts,npw,npwx,dpsi(1:npwx,lbnd),dpsic,'Wave',igk_k(:,iks))
                   !
                   DO CONCURRENT (ir = 1: dffts%nnr)
                      aux_r(ir) = aux_r(ir) + CONJG( psic(ir) * phase(ir) ) * dpsic(ir)
@@ -338,9 +338,9 @@ MODULE dfpt_module
                      !
                      ibnd = band_group%l2g(lbnd)
                      !
-                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1,ibnd),psic,'Wave',igk_k(1,ikqs))
+                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,ikqs))
                      !
-                     CALL single_invfft_k(dffts,npw,npwx,dpsi(npwx+1,lbnd),dpsic,'Wave',igk_k(1,iks))
+                     CALL single_invfft_k(dffts,npw,npwx,dpsi(npwx+1:npwx*2,lbnd),dpsic,'Wave',igk_k(:,iks))
                      !
                      DO CONCURRENT (ir = 1: dffts%nnr)
                         aux_r(ir) = aux_r(ir) + CONJG( psic(ir) * phase(ir) ) * dpsic(ir)
@@ -364,7 +364,7 @@ MODULE dfpt_module
             IF(gamma_only) THEN
                CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,aux_g,TRIM(fftdriver))
             ELSE
-               CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,aux_g,'Wave',igq_q(1,iq))
+               CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,aux_g,'Wave',igq_q(:,iq))
             ENDIF
             !
             DO CONCURRENT( ig = 1: npwq) ! pert acts only on body
@@ -426,6 +426,8 @@ MODULE dfpt_module
       USE uspp,                  ONLY : nkb,vkb
       USE uspp_init,             ONLY : init_us_2
       USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
+      USE fft_at_gamma,          ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
+      USE fft_at_k,              ONLY : single_fwfft_k,single_invfft_k
       USE io_push,               ONLY : io_push_title
       USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
       USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver
@@ -433,9 +435,6 @@ MODULE dfpt_module
       USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
       USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_d,psic_d
       USE wvfct_gpum,            ONLY : g2kin_d
-      USE fft_at_gamma,          ONLY : single_fwfft_gamma_gpu,single_invfft_gamma_gpu,&
-                                      & double_fwfft_gamma_gpu,double_invfft_gamma_gpu
-      USE fft_at_k,              ONLY : single_fwfft_k_gpu,single_invfft_k_gpu
       USE west_cuda,             ONLY : allocate_dfpt_gpu,deallocate_dfpt_gpu,reallocate_ps_gpu,aux_r_d,&
                                       & aux_g_d,dpsic_d,evckmq_d,phase_d,dvpsi_d,dpsi_d,e_d,eprec_d,igq_q_d
       !
@@ -593,9 +592,9 @@ MODULE dfpt_module
             ! ... inverse Fourier transform of the perturbation: (q+)G ---> R
             !
             IF (gamma_only) THEN
-               CALL single_invfft_gamma_gpu(dffts,npwq,npwqx,aux_g_d,aux_r_d,TRIM(fftdriver))
+               CALL single_invfft_gamma(dffts,npwq,npwqx,aux_g_d,aux_r_d,TRIM(fftdriver))
             ELSE
-               CALL single_invfft_k_gpu(dffts,npwq,npwqx,aux_g_d,aux_r_d,'Wave',igq_q_d(1,iq))
+               CALL single_invfft_k(dffts,npwq,npwqx,aux_g_d,aux_r_d,'Wave',igq_q_d(:,iq))
             ENDIF
             !
             ! The perturbation is in aux_r
@@ -608,7 +607,7 @@ MODULE dfpt_module
                   ibnd = band_group%l2g(lbnd)
                   ibnd2 = band_group%l2g(lbnd+1)
                   !
-                  CALL double_invfft_gamma_gpu(dffts,npw,npwx,evc_d(1,ibnd),evc_d(1,ibnd2),psic_d,'Wave')
+                  CALL double_invfft_gamma(dffts,npw,npwx,evc_d(:,ibnd),evc_d(:,ibnd2),psic_d,'Wave')
                   !
                   !$acc parallel loop
                   DO ir = 1,dffts_nnr
@@ -616,7 +615,7 @@ MODULE dfpt_module
                   ENDDO
                   !$acc end parallel
                   !
-                  CALL double_fwfft_gamma_gpu(dffts,npw,npwx,psic_d,dvpsi_d(1,lbnd),dvpsi_d(1,lbnd+1),'Wave')
+                  CALL double_fwfft_gamma(dffts,npw,npwx,psic_d,dvpsi_d(:,lbnd),dvpsi_d(:,lbnd+1),'Wave')
                   !
                ENDDO
                !
@@ -626,7 +625,7 @@ MODULE dfpt_module
                   lbnd = band_group%nloc
                   ibnd = band_group%l2g(lbnd)
                   !
-                  CALL single_invfft_gamma_gpu(dffts,npw,npwx,evc_d(1,ibnd),psic_d,'Wave')
+                  CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,ibnd),psic_d,'Wave')
                   !
                   !$acc parallel loop
                   DO ir = 1,dffts_nnr
@@ -634,7 +633,7 @@ MODULE dfpt_module
                   ENDDO
                   !$acc end parallel
                   !
-                  CALL single_fwfft_gamma_gpu(dffts,npw,npwx,psic_d,dvpsi_d(1,lbnd),'Wave')
+                  CALL single_fwfft_gamma(dffts,npw,npwx,psic_d,dvpsi_d(:,lbnd),'Wave')
                   !
                ENDIF
                !
@@ -646,7 +645,7 @@ MODULE dfpt_module
                   !
                   ! ... inverse Fourier transform of wfs at [k-q]: (k-q+)G ---> R
                   !
-                  CALL single_invfft_k_gpu(dffts,npwkq,npwx,evckmq_d(1,ibnd),psic_d,'Wave',igk_k_d(1,ikqs))
+                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq_d(1:npwx,ibnd),psic_d,'Wave',igk_k_d(:,ikqs))
                   !
                   ! ... construct right-hand-side term of Sternheimer equation:
                   ! ... product of wavefunction at [k-q], phase and perturbation in real space
@@ -660,7 +659,7 @@ MODULE dfpt_module
                   ! Fourier transform product of wf at [k-q], phase and
                   ! perturbation of wavevector q: R ---> (k+)G
                   !
-                  CALL single_fwfft_k_gpu(dffts,npw,npwx,psic_d,dvpsi_d(1,lbnd),'Wave',igk_k_d(1,iks))
+                  CALL single_fwfft_k(dffts,npw,npwx,psic_d,dvpsi_d(1:npwx,lbnd),'Wave',igk_k_d(:,iks))
                   !
                   ! dv|psi> is in dvpsi
                   !
@@ -671,7 +670,7 @@ MODULE dfpt_module
                      !
                      ibnd = band_group%l2g(lbnd)
                      !
-                     CALL single_invfft_k_gpu(dffts,npwkq,npwx,evckmq_d(npwx+1,ibnd),psic_d,'Wave',igk_k_d(1,ikqs))
+                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq_d(npwx+1:npwx*2,ibnd),psic_d,'Wave',igk_k_d(:,ikqs))
                      !
                      !$acc parallel loop
                      DO ir = 1,dffts_nnr
@@ -679,7 +678,7 @@ MODULE dfpt_module
                      ENDDO
                      !$acc end parallel
                      !
-                     CALL single_fwfft_k_gpu(dffts,npw,npwx,psic_d,dvpsi_d(npwx+1,lbnd),'Wave',igk_k_d(1,iks))
+                     CALL single_fwfft_k(dffts,npw,npwx,psic_d,dvpsi_d(npwx+1:npwx*2,lbnd),'Wave',igk_k_d(:,iks))
                      !
                   ENDDO
                ENDIF
@@ -715,7 +714,7 @@ MODULE dfpt_module
                   !
                   ibnd = band_group%l2g(lbnd)
                   !
-                  CALL double_invfft_gamma_gpu(dffts,npw,npwx,evc_d(1,ibnd),dpsi_d(1,lbnd),psic_d,'Wave')
+                  CALL double_invfft_gamma(dffts,npw,npwx,evc_d(:,ibnd),dpsi_d(:,lbnd),psic_d,'Wave')
                   !
                   !$acc parallel loop
                   DO ir = 1,dffts_nnr
@@ -733,11 +732,11 @@ MODULE dfpt_module
                   !
                   ! inverse Fourier transform of wavefunction at [k-q]: (k-q+)G ---> R
                   !
-                  CALL single_invfft_k_gpu(dffts,npwkq,npwx,evckmq_d(1,ibnd),psic_d,'Wave',igk_k_d(1,ikqs))
+                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq_d(1:npwx,ibnd),psic_d,'Wave',igk_k_d(:,ikqs))
                   !
                   ! inverse Fourier transform of perturbed wavefunction: (k+)G ---> R
                   !
-                  CALL single_invfft_k_gpu(dffts,npw,npwx,dpsi_d(1,lbnd),dpsic_d,'Wave',igk_k_d(1,iks))
+                  CALL single_invfft_k(dffts,npw,npwx,dpsi_d(1:npwx,lbnd),dpsic_d,'Wave',igk_k_d(:,iks))
                   !
                   !$acc parallel loop
                   DO ir = 1,dffts_nnr
@@ -752,9 +751,9 @@ MODULE dfpt_module
                      !
                      ibnd = band_group%l2g(lbnd)
                      !
-                     CALL single_invfft_k_gpu(dffts,npwkq,npwx,evckmq_d(npwx+1,ibnd),psic_d,'Wave',igk_k_d(1,ikqs))
+                     CALL single_invfft_k(dffts,npwkq,npwx,evckmq_d(npwx+1:npwx*2,ibnd),psic_d,'Wave',igk_k_d(:,ikqs))
                      !
-                     CALL single_invfft_k_gpu(dffts,npw,npwx,dpsi_d(npwx+1,lbnd),dpsic_d,'Wave',igk_k_d(1,iks))
+                     CALL single_invfft_k(dffts,npw,npwx,dpsi_d(npwx+1:npwx*2,lbnd),dpsic_d,'Wave',igk_k_d(:,iks))
                      !
                      !$acc parallel loop
                      DO ir = 1,dffts_nnr
@@ -776,9 +775,9 @@ MODULE dfpt_module
             ! The perturbation is in aux_r
             !
             IF (gamma_only) THEN
-               CALL single_fwfft_gamma_gpu(dffts,npwq,npwqx,aux_r_d,aux_g_d,TRIM(fftdriver))
+               CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r_d,aux_g_d,TRIM(fftdriver))
             ELSE
-               CALL single_fwfft_k_gpu(dffts,npwq,npwqx,aux_r_d,aux_g_d,'Wave',igq_q_d(1,iq))
+               CALL single_fwfft_k(dffts,npwq,npwqx,aux_r_d,aux_g_d,'Wave',igq_q_d(:,iq))
             ENDIF
             !
             ALLOCATE(aux_g(npwqx))

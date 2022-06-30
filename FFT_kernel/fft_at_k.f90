@@ -27,22 +27,35 @@ MODULE fft_at_k
   !
   PRIVATE
   !
-  PUBLIC :: single_invfft_k, single_fwfft_k
+  INTERFACE single_invfft_k
+     MODULE PROCEDURE single_invfft_k_cpu
 #if defined(__CUDA)
-  PUBLIC :: single_invfft_k_gpu, single_fwfft_k_gpu
+     MODULE PROCEDURE single_invfft_k_gpu
 #endif
+  END INTERFACE
+  !
+  INTERFACE single_fwfft_k
+     MODULE PROCEDURE single_fwfft_k_cpu
+#if defined(__CUDA)
+     MODULE PROCEDURE single_fwfft_k_gpu
+#endif
+  END INTERFACE
+  !
+  PUBLIC :: single_invfft_k
+  PUBLIC :: single_fwfft_k
+  !
+  COMPLEX(DP), PARAMETER :: z_0 = (0._DP,0._DP)
   !
   CONTAINS
   !
   !
-  SUBROUTINE single_invfft_k(dfft,n,nx,a1,b,cdriver,igk)
+  SUBROUTINE single_invfft_k_cpu(dfft,n,nx,a1,b,cdriver,igk)
     !
     ! INVFFT : G ---> R
     !
     ! INPUT  : n     = actual number of PW
-    !          a1     = ONE COMPLEX arrays containing ONE COMPLEX functions in G space
-    !          lda   = leading dimension of a1
-    !          ldb   = leading dimension of b
+    !          nx    = maximum number of PW
+    !          a1    = ONE COMPLEX arrays containing ONE COMPLEX functions in G space
     ! OUTPUT : b     = ONE COMPLEX array containing ONE REAL functions in R space + 0
     !
     IMPLICIT NONE
@@ -60,7 +73,7 @@ MODULE fft_at_k
     !
     INTEGER :: ig
     !
-    b=0.0_DP
+    b = z_0
     IF(PRESENT(igk)) THEN
        DO ig=1,n
           b(dfft%nl(igk(ig)))=a1(ig)
@@ -76,15 +89,14 @@ MODULE fft_at_k
   END SUBROUTINE
   !
   !
-  SUBROUTINE single_fwfft_k(dfft,n,nx,a,b1,cdriver,igk)
+  SUBROUTINE single_fwfft_k_cpu(dfft,n,nx,a,b1,cdriver,igk)
     !
     ! FWFFT : R ---> G
     !
     ! INPUT  : n     = actual number of PW
+    !          nx    = maximum number of PW
     !          a     = ONE COMPLEX array containing ONE REAL functions in R space + 0
-    !          lda   = leading dimension of a
-    !          ldb   = leading dimension of b1
-    ! OUTPUT : b1     = ONE COMPLEX array containing ONE COMPLEX functions in G space
+    ! OUTPUT : b1    = ONE COMPLEX array containing ONE COMPLEX functions in G space
     !
     IMPLICIT NONE
     !
@@ -103,7 +115,7 @@ MODULE fft_at_k
     !
     CALL fwfft(cdriver,a,dfft)
     !
-    b1=0.0_DP
+    b1 = z_0
     !
     IF(PRESENT(igk)) THEN
        DO ig=1,n
@@ -118,14 +130,13 @@ MODULE fft_at_k
   END SUBROUTINE
   !
 #if defined(__CUDA)
-  SUBROUTINE single_invfft_k_gpu(dfft,n,nx,a1_d,b_d,cdriver,igk_d)
+  SUBROUTINE single_invfft_k_gpu(dfft,n,nx,a1,b,cdriver,igk)
     !
     ! INVFFT : G ---> R
     !
     ! INPUT  : n     = actual number of PW
-    !          a1     = ONE COMPLEX arrays containing ONE COMPLEX functions in G space
-    !          lda   = leading dimension of a1
-    !          ldb   = leading dimension of b
+    !          nx    = maximum number of PW
+    !          a1    = ONE COMPLEX arrays containing ONE COMPLEX functions in G space
     ! OUTPUT : b     = ONE COMPLEX array containing ONE REAL functions in R space + 0
     !
     IMPLICIT NONE
@@ -134,45 +145,50 @@ MODULE fft_at_k
     !
     TYPE(fft_type_descriptor), INTENT(IN) :: dfft
     INTEGER, INTENT(IN) :: n, nx
-    COMPLEX(DP), DEVICE, INTENT(IN) :: a1_d(nx)
-    COMPLEX(DP), DEVICE, INTENT(OUT) :: b_d(dfft%nnr)
+    COMPLEX(DP), DEVICE, INTENT(IN) :: a1(nx)
+    COMPLEX(DP), DEVICE, INTENT(OUT) :: b(dfft%nnr)
     CHARACTER(LEN=*), INTENT(IN) :: cdriver
-    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk_d(n)
+    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk(n)
     !
     ! Workspace
     !
-    INTEGER :: ig
+    INTEGER :: ig,dfft_nnr
     !
-    b_d = (0.0_DP,0.0_DP)
+    dfft_nnr = dfft%nnr
     !
-    IF(PRESENT(igk_d)) THEN
+    !$acc parallel loop
+    DO ig = 1,dfft_nnr
+       b(ig) = z_0
+    ENDDO
+    !$acc end parallel
+    !
+    IF(PRESENT(igk)) THEN
        !$acc parallel loop
        DO ig = 1,n
-          b_d(dfft_nl_d(igk_d(ig))) = a1_d(ig)
+          b(dfft_nl_d(igk(ig))) = a1(ig)
        ENDDO
        !$acc end parallel
     ELSE
        !$acc parallel loop
        DO ig = 1,n
-          b_d(dfft_nl_d(ig)) = a1_d(ig)
+          b(dfft_nl_d(ig)) = a1(ig)
        ENDDO
        !$acc end parallel
     ENDIF
     !
-    CALL invfft(cdriver,b_d,dfft)
+    CALL invfft(cdriver,b,dfft)
     !
   END SUBROUTINE
   !
   !
-  SUBROUTINE single_fwfft_k_gpu(dfft,n,nx,a_d,b1_d,cdriver,igk_d)
+  SUBROUTINE single_fwfft_k_gpu(dfft,n,nx,a,b1,cdriver,igk)
     !
     ! FWFFT : R ---> G
     !
     ! INPUT  : n     = actual number of PW
+    !          nx    = maximum number of PW
     !          a     = ONE COMPLEX array containing ONE REAL functions in R space + 0
-    !          lda   = leading dimension of a
-    !          ldb   = leading dimension of b1
-    ! OUTPUT : b1     = ONE COMPLEX array containing ONE COMPLEX functions in G space
+    ! OUTPUT : b1    = ONE COMPLEX array containing ONE COMPLEX functions in G space
     !
     IMPLICIT NONE
     !
@@ -180,33 +196,37 @@ MODULE fft_at_k
     !
     TYPE(fft_type_descriptor), INTENT(IN) :: dfft
     INTEGER, INTENT(IN) :: n,nx
-    COMPLEX(DP), DEVICE, INTENT(INOUT) :: a_d(dfft%nnr)
-    COMPLEX(DP), DEVICE, INTENT(OUT) :: b1_d(nx)
+    COMPLEX(DP), DEVICE, INTENT(INOUT) :: a(dfft%nnr)
+    COMPLEX(DP), DEVICE, INTENT(OUT) :: b1(nx)
     CHARACTER(LEN=*), INTENT(IN) :: cdriver
-    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk_d(n)
+    INTEGER, DEVICE, INTENT(IN), OPTIONAL :: igk(n)
     !
     ! Workspace
     !
     INTEGER :: ig
     !
-    CALL fwfft(cdriver,a_d,dfft)
+    CALL fwfft(cdriver,a,dfft)
     !
-    IF(PRESENT(igk_d)) THEN
+    IF(PRESENT(igk)) THEN
        !$acc parallel loop
        DO ig = 1,n
-          b1_d(ig) = a_d(dfft_nl_d(igk_d(ig)))
+          b1(ig) = a(dfft_nl_d(igk(ig)))
        ENDDO
        !$acc end parallel
     ELSE
        !$acc parallel loop
        DO ig = 1,n
-          b1_d(ig) = a_d(dfft_nl_d(ig))
+          b1(ig) = a(dfft_nl_d(ig))
        ENDDO
        !$acc end parallel
     ENDIF
     !
     IF(nx > n) THEN
-       b1_d(n+1:nx) = (0.0_DP,0.0_DP)
+       !$acc parallel loop
+       DO ig = n+1,nx
+          b1(ig) = z_0
+       ENDDO
+       !$acc end parallel
     ENDIF
     !
   END SUBROUTINE

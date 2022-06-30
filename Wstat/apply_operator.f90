@@ -126,9 +126,9 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
      DO ipert = 1, m
         !
         IF (gamma_only) THEN
-          CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,ipert),aux_r,TRIM(fftdriver))
+           CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,ipert),aux_r,TRIM(fftdriver))
         ELSE
-           CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,ipert),aux_r,'Wave',igq_q(1,iq))
+           CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,ipert),aux_r,'Wave',igq_q(:,iq))
         ENDIF
         !
         filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml"
@@ -167,7 +167,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
         IF(gamma_only) THEN
            CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,dng(:,ipert),TRIM(fftdriver))
         ELSE
-           CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,dng(:,ipert),'Wave',igq_q(1,iq))
+           CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,dng(:,ipert),'Wave',igq_q(:,iq))
         ENDIF
         !
      ENDDO

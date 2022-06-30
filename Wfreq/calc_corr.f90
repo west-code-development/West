@@ -24,10 +24,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
   USE pwcom,                ONLY : et
-  USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
+  USE westcom,              ONLY : qp_bandrange,l_enable_lanczos,n_lanczos,l_macropol,&
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,&
                                  & z_body_rfr,l_enable_off_diagonal,ijpmap,npair, d_body1_ifr_full,&
-                                 & d_body2_ifr_full,d_diago_full,z_body_rfr_full,sigma_corr_full
+                                 & d_body2_ifr_full,d_diago_full,z_body_rfr_full,sigma_corr_full,&
+                                 & l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband,kpt_pool
@@ -46,7 +47,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   ! Workspace
   !
   INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,jb,index
-  INTEGER :: nbndval
+  INTEGER :: nbndval,nbndval_full
+  REAL(DP) :: peso
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
   !
@@ -89,6 +91,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
      !
      iks_g = kpt_pool%l2g(iks)
+     !
      nbndval = nbnd_occ(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
@@ -200,6 +203,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
      !
      iks_g = kpt_pool%l2g(iks)
      nbndval = nbnd_occ(iks)
+     IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)
      !
      DO ib = qp_bandrange(1), qp_bandrange(2)
         !
@@ -226,6 +230,17 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
               glob_im = aband%l2g(im)
               !
               this_is_a_pole=.FALSE.
+              !
+              IF (l_frac_occ) THEN
+                 IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN
+                    peso = occupation(glob_im,iks)
+                 ELSE
+                    peso = 1._DP
+                 ENDIF
+              ELSE
+                 peso = 1._DP
+              ENDIF
+              !
               IF( glob_im <= nbndval ) THEN
                  segno = -1._DP
                  IF( et(glob_im,iks) - enrg >  0.00001_DP ) this_is_a_pole=.TRUE.
@@ -242,18 +257,54 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                     !
                     IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
                     !
-                    IF(glob_im==ib.AND.l_macropol.AND.jb==ib) residues_h = residues_h + segno * z_head_rfr(ifreq)
+                    IF(glob_im==ib.AND.l_macropol.AND.jb==ib) residues_h = residues_h &
+                    & + peso * segno * z_head_rfr(ifreq)
                     !
                     IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                     & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-                       residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks_g )
+                       residues_b = residues_b + 0.5_DP * peso * segno &
+                       & * z_body_rfr_full( im, ifreq, index, iks_g )
                     ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                       residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks_g )
+                       residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ib, iks_g )
                     ENDIF
                     ! 
                  ENDDO
                  !
               ENDIF 
+              !
+              IF (l_frac_occ) THEN
+                 !
+                 this_is_a_pole=.FALSE.
+                 IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN
+                    segno = 1._DP
+                    IF( et(glob_im,iks) - enrg < -0.00001_DP ) this_is_a_pole=.TRUE.
+                 ENDIF
+                 !
+                 IF( this_is_a_pole ) THEN
+                    !
+                    CALL retrieve_glob_freq( et(glob_im,iks) - enrg, glob_ifreq )
+                    !
+                    DO ifreq = 1, rfr%nloc
+                       !
+                       IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
+                       !
+                       IF(glob_im==ib.AND.l_macropol) residues_h = residues_h &
+                       & + (1.0 - peso) * segno * z_head_rfr(ifreq)
+                       !
+                       IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
+                       & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN    
+                          residues_b = residues_b + (1._DP - peso) * segno &
+                          & * z_body_rfr_full( im, ifreq, index, iks_g )
+                       ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
+                          residues_b = residues_b + (1._DP - peso) * segno &
+                          & * z_body_rfr( im, ifreq, ib, iks_g )
+                       ENDIF
+                       !
+                    ENDDO
+                    !
+                 ENDIF
+                 !
+              ENDIF
               !
            ENDDO ! im
            !
@@ -265,6 +316,17 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  glob_im = aband%l2g(im)
                  !
                  this_is_a_pole=.false.
+                 !
+                 IF (l_frac_occ) THEN
+                    IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN
+                       peso = occupation(glob_im,iks)
+                    ELSE
+                       peso = 1._DP
+                    ENDIF
+                 ELSE
+                    peso = 1._DP
+                 ENDIF
+                 !
                  IF( glob_im <= nbndval ) THEN
                     segno = -1._DP
                     IF( et(glob_im,iks) - enrg1 >  0.00001_DP ) this_is_a_pole=.TRUE.
@@ -281,16 +343,37 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                        !
                        IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
                        !
-                       IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
-                       & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-                          residues_b = residues_b + 0.5_DP * segno * z_body_rfr_full( im, ifreq, index, iks_g )
-                       ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                          residues_b = residues_b + segno * z_body_rfr( im, ifreq, ib, iks_g )
-                       ENDIF
+                       residues_b = residues_b + 0.5_DP * peso * segno &
+                       & * z_body_rfr_full( im, ifreq, index, iks_g )
                        ! 
                     ENDDO
                     !
                  ENDIF 
+                 !
+                 IF (l_frac_occ) THEN
+                    !
+                    this_is_a_pole=.FALSE.
+                    IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN
+                       segno = 1._DP
+                       IF( et(glob_im,iks) - enrg1 < -0.00001_DP ) this_is_a_pole=.TRUE.
+                    ENDIF
+                    !
+                    IF( this_is_a_pole ) THEN
+                       !
+                       CALL retrieve_glob_freq( et(glob_im,iks) - enrg1, glob_ifreq )
+                       !
+                       DO ifreq = 1, rfr%nloc 
+                          !
+                          IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
+                          !
+                          residues_b = residues_b + 0.5_DP * peso * segno &
+                          & * z_body_rfr_full( im, ifreq, index, iks_g )
+                          ! 
+                       ENDDO
+                       !
+                    ENDIF 
+                    !
+                 ENDIF
                  !
               ENDDO ! im
               !

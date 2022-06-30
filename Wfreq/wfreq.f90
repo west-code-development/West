@@ -24,7 +24,7 @@ PROGRAM wfreq
   IMPLICIT NONE
   !
   CHARACTER(LEN=9) :: code = 'WFREQ'
-  LOGICAL :: lgate(8)
+  LOGICAL :: lgate(9)
   INTEGER :: i
   !
   ! *** START ***
@@ -53,7 +53,7 @@ PROGRAM wfreq
      IF( wfreq_calculation(i:i) == 'Q' ) lgate(6) = .TRUE.
      IF( wfreq_calculation(i:i) == 'O' ) lgate(7) = .TRUE.
      IF( wfreq_calculation(i:i) == 'P' ) lgate(8) = .TRUE.
-     IF( wfreq_calculation(i:i) == 'H' ) lgate(8) = .TRUE.
+     IF( wfreq_calculation(i:i) == 'H' ) lgate(9) = .TRUE.
   ENDDO
   !
   IF( lgate(1) ) THEN

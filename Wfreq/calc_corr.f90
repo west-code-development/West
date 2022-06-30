@@ -316,6 +316,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   IF(l_verbose) CALL stop_bar_type( barra, 'sigmac_r' )
   !
   CALL mp_sum( sigma_corr, inter_pool_comm )
+  IF (l_enable_off_diagonal .AND. l_full) CALL mp_sum( sigma_corr_full, inter_pool_comm )
   !
 END SUBROUTINE
 !

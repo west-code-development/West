@@ -72,38 +72,34 @@ SUBROUTINE do_loc ( )
   !
   ! only the FFT root generates the filter
   IF( dffts%mype == dffts%root ) THEN
-    !
-    ! create filter: for each point in space, the filter is ONE when point
-    ! is in box, ZERO if not. Loop over all points on FFT grid
-    filter(:) = 0._DP
-    n_points = 0
-    index2 = 0
-    DO ir3 = 1, dffts%nr3
-      Do ir2 = 1, dffts%nr2
-        DO ir1 = 1, dffts%nr1
-          ! update current index
-          index2 = index2 + 1
-          ! create real-space vector
-          DO i = 1, 3
-            r_vec(i) = REAL(ir1-1,KIND=DP)/REAL(dffts%nr1,KIND=DP) * alat*at(i,1) &
-              & + REAL(ir2-1,KIND=DP)/REAL(dffts%nr2,KIND=DP) * alat*at(i,2) &
-              & + REAL(ir3-1,KIND=DP)/REAL(dffts%nr3,KIND=DP) *alat*at(i,3)
-          END DO
-          ! check whether r-vector is in the box
-          IF ((r_vec(1) > westpp_box(1)) .AND. &
-          &   (r_vec(1) < westpp_box(2)) .AND. &
-          &   (r_vec(2) > westpp_box(3)) .AND. &
-          &   (r_vec(2) < westpp_box(4)) .AND. &
-          &   (r_vec(3) > westpp_box(5)) .AND. &
-          &   (r_vec(3) < westpp_box(6))) THEN
-            ! if condition fulfilled, set filter to 1
-            n_points = n_points + 1
-            filter(index2) = 1._DP
-          END IF
-        END DO
-      END DO
-    END DO
-  END IF
+     !
+     ! create filter: for each point in space, the filter is ONE when point
+     ! is in box, ZERO if not. Loop over all points on FFT grid
+     filter(:) = 0._DP
+     n_points = 0
+     index2 = 0
+     DO ir3 = 1, dffts%nr3
+        DO ir2 = 1, dffts%nr2
+           DO ir1 = 1, dffts%nr1
+              ! update current index
+              index2 = index2 + 1
+              ! create real-space vector
+              DO i = 1, 3
+                 r_vec(i) = REAL(ir1-1,KIND=DP)/REAL(dffts%nr1,KIND=DP)*alat*at(i,1) &
+                        & + REAL(ir2-1,KIND=DP)/REAL(dffts%nr2,KIND=DP)*alat*at(i,2) &
+                        & + REAL(ir3-1,KIND=DP)/REAL(dffts%nr3,KIND=DP)*alat*at(i,3)
+              ENDDO
+              ! check whether r-vector is in the box
+              IF ((r_vec(1) > westpp_box(1)) .AND. (r_vec(1) < westpp_box(2)) .AND. &
+                & (r_vec(2) > westpp_box(3)) .AND. (r_vec(2) < westpp_box(4)) .AND. &
+                & (r_vec(3) > westpp_box(5)) .AND. (r_vec(3) < westpp_box(6))) THEN
+                 n_points = n_points + 1
+                 filter(index2) = 1._DP
+              ENDIF
+           ENDDO
+        ENDDO
+     ENDDO
+  ENDIF
   !
   ! scatter the filter function to all FFT processes
   CALL scatter_grid(dffts, filter, filter_loc)
@@ -140,7 +136,7 @@ SUBROUTINE do_loc ( )
         ENDIF
         ! create density
         DO ir = 1, dffts%nnr
-          density_loc(ir) = REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP)
+           density_loc(ir) = REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP)
         ENDDO
         !
         index1 = global_ib - westpp_range(1) + 1
@@ -158,6 +154,7 @@ SUBROUTINE do_loc ( )
      ENDDO
      !
   ENDDO
+  !
   ! Post processing
   aux_loc(:,:) = volume/omega * aux_loc(:,:)/REAL(n_points,KIND=DP)
   ipr(:,:) = ipr(:,:)/REAL(dffts%nr1*dffts%nr2*dffts%nr3,KIND=DP)/omega
@@ -173,38 +170,38 @@ SUBROUTINE do_loc ( )
   !
   ! root writes JSON file
   IF (mpime == root) THEN
-    CALL json%initialize
-    ! initialize the structure
-    CALL json%create_object(json_root, '')
-    !
-    IF (k_grid%nps == 1) THEN
-      ! write localization factor and IPR to JSON file directly
-      CALL json%add(json_root, 'localization', aux_loc(:,1))
-      CALL json%add(json_root, 'ipr', ipr(:,1))
-    ELSE
-      ! add localization object to root
-      CALL json%create_object(localization_object, 'localization')
-      CALL json%create_object(ipr_object, 'ipr')
-      CALL json%add(json_root, localization_object)
-      CALL json%add(json_root, ipr_object)
-      !
-      DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
-        WRITE(ikstring, '(I4)') iks
-        ! write localization factor and IPR for each iks-point
-        CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
-        CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
-      ENDDO
-      ! don't need pointer anymore
-      NULLIFY(localization_object)
-      NULLIFY(ipr_object)
-    ENDIF
-    !
-    OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//'/localization.json' )
-    CALL json%print(json_root,iunit)
-    CLOSE( iunit )
-    !
-    CALL json%destroy()
-  END IF
+     CALL json%initialize
+     ! initialize the structure
+     CALL json%create_object(json_root, '')
+     !
+     IF (k_grid%nps == 1) THEN
+        ! write localization factor and IPR to JSON file directly
+        CALL json%add(json_root, 'localization', aux_loc(:,1))
+        CALL json%add(json_root, 'ipr', ipr(:,1))
+     ELSE
+        ! add localization object to root
+        CALL json%create_object(localization_object, 'localization')
+        CALL json%create_object(ipr_object, 'ipr')
+        CALL json%add(json_root, localization_object)
+        CALL json%add(json_root, ipr_object)
+        !
+        DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
+           WRITE(ikstring, '(I4)') iks
+           ! write localization factor and IPR for each iks-point
+           CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
+           CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
+        ENDDO
+        ! don't need pointer anymore
+        NULLIFY(localization_object)
+        NULLIFY(ipr_object)
+     ENDIF
+     !
+     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//'/localization.json' )
+     CALL json%print(json_root,iunit)
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+  ENDIF
   !
   CALL stop_bar_type( barra, 'westpp' )
   !

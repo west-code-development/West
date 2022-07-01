@@ -42,7 +42,7 @@ SUBROUTINE wfreq_setup
   !
   CALL set_npwq()
   !
-  IF(SIZE(qp_bands) <= 0) THEN
+  IF(qp_bands(1) == 0) THEN
      IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
      ALLOCATE(qp_bands(qp_bandrange(2)-qp_bandrange(1)+1))
      DO i = 1, SIZE(qp_bands)

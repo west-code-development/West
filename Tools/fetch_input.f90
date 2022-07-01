@@ -471,7 +471,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( qp_bandrange(1) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
      IF( qp_bandrange(2) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
      IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
-     IF (list_len == 0) THEN
+     IF (qp_bands(1) == 0) THEN
         CONTINUE
      ELSE 
         DO i = 0, list_len-1 ! Python indices start at 0
@@ -597,7 +597,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
         CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
-        IF (list_len == 0) THEN
+        IF (qp_bands(1) == 0) THEN
            CONTINUE
         ELSE 
            DO i = 0, list_len-1 ! Python indices start at 0

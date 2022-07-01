@@ -185,11 +185,6 @@ MODULE wfreq_center
   REAL(DP), ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP), PARAMETER :: frequency_list_power = 2._DP
   !
-  ! off-diagonal entries mapping
-  !
-  INTEGER,ALLOCATABLE :: ijpmap(:,:)
-  INTEGER :: npair
-  !
   ! gw_etot 
   !
   REAL(DP) :: dft_etot

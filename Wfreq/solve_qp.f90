@@ -267,7 +267,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   CALL stop_bar_type( barra, 'coll_gw' )
   !
   DEALLOCATE( overlap )
-!   DEALLOCATE( d_epsm1_ifr )
+  DEALLOCATE( d_epsm1_ifr )
   DEALLOCATE( z_epsm1_rfr )
   DEALLOCATE( dtemp2 )
   DEALLOCATE( ztemp2 )

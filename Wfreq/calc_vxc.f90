@@ -14,7 +14,7 @@
 SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_vxc(n,iks) = < n,iks | V_xc  | n,iks >     n = qp_bandrange(1):qp_bandrange(2)
+  ! store in sigma_vxc(n,iks) = < n,iks | V_xc  | n,iks >     n = qp_bands(1):qp_bands(SIZE(qp_bands))
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,intra_bgrp_comm
@@ -27,7 +27,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE fft_at_gamma,         ONLY : single_invfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k
   USE wavefunctions,        ONLY : evc,psic
-  USE westcom,              ONLY : qp_bandrange,iuwfc,lrwfc
+  USE westcom,              ONLY : qp_bands,iuwfc,lrwfc
   USE westcom,              ONLY : l_enable_off_diagonal,sigma_vxcl_full,sigma_vxcnl_full,ijpmap
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
@@ -46,8 +46,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   ! I/O
   !
-  REAL(DP),INTENT(OUT) :: sigma_vxcl( qp_bandrange(1):qp_bandrange(2), k_grid%nps )
-  REAL(DP),INTENT(OUT) :: sigma_vxcnl( qp_bandrange(1):qp_bandrange(2), k_grid%nps )
+  REAL(DP),INTENT(OUT) :: sigma_vxcl( SIZE(qp_bands), k_grid%nps )
+  REAL(DP),INTENT(OUT) :: sigma_vxcnl( SIZE(qp_bands), k_grid%nps )
   !
   ! Workspace
   !
@@ -75,7 +75,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   WRITE(stdout,'(5x,a)') 'Vxc'
   CALL io_push_bar()
   !
-  numbandegw = qp_bandrange(2)-qp_bandrange(1)+1
+  numbandegw = SIZE(qp_bands)
   gwbnd = idistribute()
   CALL gwbnd%init(numbandegw,'i','numbandegw',.FALSE.)
   !
@@ -120,25 +120,25 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
         IF(gamma_only) THEN
            !
            DO ib = 1, gwbnd%nloc
-              CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bands(gwbnd%l2g(ib))),psic,'Wave')
               !
               DO jb_glob = 1, numbandegw
                  !
                  braket = 0._DP
                  !
-                 IF (l_enable_off_diagonal) index = ijpmap(qp_bandrange(1)+jb_glob-1,qp_bandrange(1)+gwbnd%l2g(ib)-1)
+                 IF (l_enable_off_diagonal) index = ijpmap(jb_glob,gwbnd%l2g(ib))
                  !
                  IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
                     CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bandrange(1)+jb_glob-1),psic1,'Wave')
                     DO ir = 1, dfftp%nnr
-                       braket = braket + psic(ir)*DCONJG(psic1(ir)) * vxc(ir,current_spin) 
+                       braket = braket + psic(ir)*CONJG(psic1(ir)) * vxc(ir,current_spin) 
                     ENDDO
                     sigma_vxcl_full(index,iks_g) = REAL(braket,KIND=DP) / nnr
                  ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
                     DO ir = 1, dfftp%nnr
-                       braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin) 
+                       braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin) 
                     ENDDO
-                    sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g)&
+                    sigma_vxcl(gwbnd%l2g(ib),iks_g)&
                     &= REAL(braket,KIND=DP) / nnr
                     IF (l_enable_off_diagonal) sigma_vxcl_full(index,iks_g) = REAL(braket,KIND=DP) / nnr
                  ENDIF
@@ -150,24 +150,26 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
         ELSE
            !
            DO ib = 1, gwbnd%nloc
-              CALL single_invfft_k(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,evc(1,qp_bands(gwbnd%l2g(ib)))&
+              & ,psic,'Wave',igk_k(1,current_k))
               braket = 0._DP
               DO ir = 1, dfftp%nnr
                  braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
-              sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL(braket,KIND=DP) / nnr
+              sigma_vxcl(gwbnd%l2g(ib),iks_g) = REAL(braket,KIND=DP) / nnr
            ENDDO
            !
            IF(noncolin) THEN
               !
               DO ib = 1,gwbnd%nloc
-                 CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
+                 CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,qp_bands(gwbnd%l2g(ib))),&
+                 & psic,'Wave',igk_k(1,current_k))
                  braket = 0._DP
                  DO ir = 1, dfftp%nnr
                     braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
                  ENDDO
-                 sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = &
-                 & sigma_vxcl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) + REAL(braket,KIND=DP) / nnr
+                 sigma_vxcl(gwbnd%l2g(ib),iks_g) = &
+                 & sigma_vxcl(gwbnd%l2g(ib),iks_g) + REAL(braket,KIND=DP) / nnr
               ENDDO
               !
            ENDIF
@@ -187,7 +189,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
            !
            xpsi = 0._DP
            DO ib=1,gwbnd%nloc
-              xpsi(:,ib) = evc(:,qp_bandrange(1)+gwbnd%l2g(ib)-1)
+              xpsi(:,ib) = evc(:,qp_bands(gwbnd%l2g(ib)))
            ENDDO
            vxpsi = 0._DP
            CALL vexx( npwx, npw, gwbnd%nloc, xpsi, vxpsi )
@@ -198,7 +200,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  !
                  DO jb_glob = 1, numbandegw
                     !
-                    IF (l_enable_off_diagonal) index = ijpmap(qp_bandrange(1)+jb_glob-1,qp_bandrange(1)+gwbnd%l2g(ib)-1)
+                    IF (l_enable_off_diagonal) index = ijpmap(jb_glob,gwbnd%l2g(ib))
                     !
                     IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
                        braket = 2._DP * REAL( ZDOTC( npw, evc(1,jb_glob),1,vxpsi(1,ib),1) )
@@ -207,7 +209,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                     ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
                        braket = 2._DP * DDOT( 2*npw, xpsi(1,ib), 1, vxpsi(1,ib), 1)
                        IF(gstart==2) braket = braket - REAL( xpsi(1,ib), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
-                       sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL( braket, KIND=DP )
+                       sigma_vxcnl(gwbnd%l2g(ib),iks_g) = REAL( braket, KIND=DP )
                        IF (l_enable_off_diagonal) sigma_vxcnl_full(index,iks_g) = REAL( braket, KIND=DP )
                     ENDIF
                     !
@@ -219,15 +221,15 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               !
               DO ib = 1,gwbnd%nloc
                  braket = ZDOTC( npw, xpsi(1,ib),1,vxpsi(1,ib),1)
-                 sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = REAL( braket, KIND=DP )
+                 sigma_vxcnl(gwbnd%l2g(ib),iks_g) = REAL( braket, KIND=DP )
               ENDDO
               !
               IF(noncolin) THEN
                  !
                  DO ib = 1, gwbnd%nloc
                     braket = ZDOTC( npw, xpsi(1+npwx,ib),1,vxpsi(1+npwx,ib),1)
-                    sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) = &
-                    & sigma_vxcnl(qp_bandrange(1)+gwbnd%l2g(ib)-1,iks_g) + REAL( braket, KIND=DP )
+                    sigma_vxcnl(gwbnd%l2g(ib),iks_g) = &
+                    & sigma_vxcnl(gwbnd%l2g(ib),iks_g) + REAL( braket, KIND=DP )
                  ENDDO
               ENDIF
               !

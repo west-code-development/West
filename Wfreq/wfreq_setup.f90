@@ -21,7 +21,7 @@ SUBROUTINE wfreq_setup
                                    & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
                                    & l_enable_off_diagonal,ijpmap,npair,sigma_exx_full,sigma_vxcl_full,&
-                                   & sigma_vxcnl_full,sigma_corr_full
+                                   & sigma_vxcnl_full,sigma_corr_full,qp_bands
   USE pwcom,                  ONLY : nbnd,nkstot,nks
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
@@ -43,8 +43,16 @@ SUBROUTINE wfreq_setup
   !
   CALL set_npwq()
   !
-  IF(qp_bandrange(1) > nbnd) CALL errore('wfreq_setup','qp_bandrange(1)>nbnd',1)
-  IF(qp_bandrange(2) > nbnd) CALL errore('wfreq_setup','qp_bandrange(2)>nbnd',1)
+  IF(qp_bands(1) == 0) THEN
+     IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
+     ALLOCATE(qp_bands(qp_bandrange(2)-qp_bandrange(1)+1))
+     DO i = 1, SIZE(qp_bands)
+        qp_bands(i) = qp_bandrange(1)+i-1
+     ENDDO
+  ENDIF
+  !
+  IF(qp_bands(1) > nbnd) CALL errore('wfreq_setup','qp_bands(1)>nbnd',1)
+  IF(qp_bands(SIZE(qp_bands)) > nbnd) CALL errore('wfreq_setup','qp_bands(SIZE(qp_bands))>nbnd',1)
   !
   CALL set_nbndocc()
   !
@@ -67,7 +75,7 @@ SUBROUTINE wfreq_setup
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
   !
   IF(kpt_pool%nloc /= nks) CALL errore('wfreq_setup','unexpected kpt_pool initialization error',1)
-  IF(nbgrp > qp_bandrange(2)-qp_bandrange(1)+1) CALL errore('wfreq_setup','nbgrp>nbnd_qp',1)
+  IF(nbgrp > SIZE(qp_bands)) CALL errore('wfreq_setup','nbgrp>nbnd_qp',1)
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('wfreq_setup','nbgrp>nbnd_occ',1)
   !
   CALL set_freqlists()
@@ -87,23 +95,23 @@ SUBROUTINE wfreq_setup
   !
   ! Allocate for output
   !
-  ALLOCATE( sigma_exx       (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_vxcl      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_vxcnl     (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_hf        (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_z         (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_eqplin    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_eqpsec    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_sc_eks    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+  ALLOCATE( sigma_exx       (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_vxcl      (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_vxcnl     (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_hf        (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_z         (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_eqplin    (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_eqpsec    (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_sc_eks    (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqplin (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqpsec (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_diff      (SIZE(qp_bands),k_grid%nps) )
   IF (l_enable_off_diagonal) THEN
-     npair = (qp_bandrange(2)-qp_bandrange(1)+1)*(qp_bandrange(2)-qp_bandrange(1)+2)/2
-     ALLOCATE(ijpmap(qp_bandrange(1):qp_bandrange(2),qp_bandrange(1):qp_bandrange(2)))
+     npair = (SIZE(qp_bands))*(SIZE(qp_bands)+1)/2
+     ALLOCATE(ijpmap(SIZE(qp_bands),SIZE(qp_bands)))
      index = 1
-     DO ib = qp_bandrange(1), qp_bandrange(2)
-        DO jb = ib, qp_bandrange(2)
+     DO ib = 1, SIZE(qp_bands)
+        DO jb = 1, SIZE(qp_bands)
            ijpmap(ib,jb) = index
            ijpmap(jb,ib) = index
            index = index + 1
@@ -136,7 +144,7 @@ SUBROUTINE wfreq_setup
      IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.
   ENDDO
   IF(l_generate_plot) THEN
-     ALLOCATE(sigma_spectralf(n_spectralf,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
+     ALLOCATE(sigma_spectralf(n_spectralf,SIZE(qp_bands),k_grid%nps))
      ALLOCATE(sigma_freq     (n_spectralf))
      sigma_spectralf = 0._DP
      sigma_freq = 0._DP

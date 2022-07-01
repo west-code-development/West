@@ -1049,10 +1049,10 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
            counter = counter + 1
            WRITE( ccounter, '(i10)') counter
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ksb',(/ik,is,ib/))
-           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ein('//TRIM(ADJUSTL(csecitr))//')',en1(ib,iks)*rytoev)
-           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').eout('//TRIM(ADJUSTL(csecitr))//')',en2(ib,iks)*rytoev)
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ein('//TRIM(ADJUSTL(csecitr))//')',en1(i,iks)*rytoev)
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').eout('//TRIM(ADJUSTL(csecitr))//')',en2(i,iks)*rytoev)
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').sc_ein('//TRIM(ADJUSTL(csecitr))//')',&
-              &(/REAL(sc1(ib,iks)*rytoev,KIND=DP),AIMAG(sc1(ib,iks)*rytoev)/))
+              &(/REAL(sc1(i,iks)*rytoev,KIND=DP),AIMAG(sc1(i,iks)*rytoev)/))
         ENDDO
      ENDDO
      !

@@ -80,7 +80,7 @@ MODULE wfreq_db
          !
          ALLOCATE(ilist(SIZE(qp_bands)))
          DO ib = 1,SIZE(qp_bands)
-            ilist(ib) = ib
+            ilist(ib) = qp_bands(ib)
          ENDDO
          CALL json%add('output.Q.bandmap',ilist(1:SIZE(qp_bands)))
          DEALLOCATE(ilist)

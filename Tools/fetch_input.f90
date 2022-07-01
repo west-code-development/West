@@ -161,6 +161,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   INTEGER :: i
   INTEGER :: nq
   INTEGER :: numsp
+  INTEGER :: n_qp_bands
   CHARACTER(LEN=5) :: str
   CHARACTER(LEN=512), EXTERNAL :: trimcheck
   CHARACTER(LEN=:),ALLOCATABLE :: cvalue
@@ -272,6 +273,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = tmp_list%len(list_len)
         IERR = tmp_list%getitem(qp_bandrange(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(qp_bandrange(2), 1) ! Fortran indices start at 1
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
         IERR = return_dict%getitem(tmp_obj, "qp_bands")
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
@@ -445,6 +448,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(wfreq_calculation,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(qp_bandrange,root,world_comm)
+     IF(mpime == root) n_qp_bands = SIZE(qp_bands)
+     CALL mp_bcast(n_qp_bands,root,world_comm)
+     IF(mpime /= root) THEN
+        IF( ALLOCATED(qp_bands) ) DEALLOCATE(qp_bands)
+        ALLOCATE(qp_bands(n_qp_bands))
+     ENDIF
      CALL mp_bcast(qp_bands,root,world_comm)
      CALL mp_bcast(macropol_calculation,root,world_comm)
      CALL mp_bcast(n_lanczos,root,world_comm)

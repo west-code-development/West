@@ -70,7 +70,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,index
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,ib_index,jb_index,jb,index
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
@@ -114,12 +114,14 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      IF(iks < bks%lastdone_ks) CYCLE
      !
      DO ibloc = 1,band_group%nloc
-        ib = qp_bands(band_group%l2g(ibloc))
+        !
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
         IF (l_enable_off_diagonal) THEN
-           barra_load = barra_load + qp_bandrange(2) - ib + 1
+           barra_load = barra_load + SIZE(qp_bands) - ib_index + 1
         ELSE
            barra_load = barra_load + 1
         ENDIF
@@ -261,11 +263,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            CALL solve_deflated_lanczos_w_full_ortho ( nbnd, pert%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
            !
-           DO jb = qp_bandrange(1), qp_bandrange(2)
+           DO jb_index = 1, SIZE(qp_bands)
+              !
+              jb = qp_bands(jb_index)
               !
               IF (l_enable_off_diagonal .and. jb <= ib) THEN     
                  !
-                 index = ijpmap(jb,ib)
+                 index = ijpmap(jb_index,ib_index)
                  !
                  ! PSIC
                  !

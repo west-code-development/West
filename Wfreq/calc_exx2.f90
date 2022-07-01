@@ -131,7 +131,7 @@ SUBROUTINE calc_exx2(sigma_exx)
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
         ENDIF
         !
-        DO jb_index = 1, qp_bands
+        DO jb_index = 1, SIZE(qp_bands)
            !
            jb = qp_bands(jb_index)
            !
@@ -227,7 +227,7 @@ SUBROUTINE calc_exx2(sigma_exx)
             !
         ENDDO ! jb
         !
-        CALL update_bar_type( barra, 'sigmax', nb2-nb1+1  )
+        CALL update_bar_type( barra, 'sigmax', SIZE(qp_bands)  )
         !
      ENDDO ! ibloc
      !

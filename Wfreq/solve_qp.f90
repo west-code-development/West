@@ -182,12 +182,14 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      iks_g = kpt_pool%l2g(iks)
      !
      DO ibloc = 1, band_group%nloc
+        !
         ib_index = band_group%l2g(ibloc)
         ib = qp_bands(ib_index)
         !
         CALL readin_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
         !
         DO jb_index = 1, SIZE(qp_bands)
+           !
            jb = qp_bands(jb_index)
            !
            IF ( l_enable_off_diagonal .AND. jb <= ib ) THEN
@@ -320,7 +322,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            !
         ENDDO ! jbnd
         !
-        CALL update_bar_type( barra, 'coll_gw', qp_bandrange(2)-qp_bandrange(1)+1 )
+        CALL update_bar_type( barra, 'coll_gw', SIZE(qp_bands) )
         !
      ENDDO ! ibnd
      !

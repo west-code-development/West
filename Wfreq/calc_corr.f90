@@ -118,7 +118,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            IF(l_macropol .AND. jb == ib) THEN
               !
               DO ifreq = 1,ifr%nloc
-                 enrg = et(ib,iks) - energy(ib,iks_g)
+                 enrg = et(ib,iks) - energy(ib_index,iks_g)
                  partial_h = partial_h + d_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
               ENDDO
               !

@@ -279,12 +279,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         IF( o_restart_time >= 0._DP ) THEN
            IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
-           IF( ib == qp_bands(-1) ) l_write_restart = .TRUE.
+           IF( ib == qp_bands(SIZE(qp_bands)) ) l_write_restart = .TRUE.
         ENDIF
         !
         ! Write final restart file
         !
-        IF( iks == k_grid%nps .AND. ib == qp_bands(-1) ) l_write_restart = .TRUE.
+        IF( iks == k_grid%nps .AND. ib == qp_bands(SIZE(qp_bands)) ) l_write_restart = .TRUE.
         !
         ! But do not write here when using pool or band group
         !
@@ -313,7 +313,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   IF( npool*nbgrp > 1 ) THEN
      bks%lastdone_ks = k_grid%nps
-     bks%lastdone_band = qp_bands(-1)
+     bks%lastdone_band = qp_bands(SIZE(qp_bands))
      CALL solvegfreq_restart_write( bks )
   ENDIF
   !
@@ -642,12 +642,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            IF( o_restart_time >= 0._DP ) THEN
               IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
-              IF( ib == qp_bands(-1) ) l_write_restart = .TRUE.
+              IF( ib == qp_bands(SIZE(qp_bands)) ) l_write_restart = .TRUE.
            ENDIF
            !
            ! Write final restart file
            !
-           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bands(-1) ) l_write_restart = .TRUE.
+           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bands(SIZE(qp_bands)) ) l_write_restart = .TRUE.
            !
            ! But do not write here when using band group
            !
@@ -687,7 +687,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   IF( nbgrp > 1 ) THEN
      bksks%lastdone_ks = k_grid%nps
      bksks%lastdone_kks = k_grid%nps
-     bksks%lastdone_band = qp_bands(-1)
+     bksks%lastdone_band = qp_bands(SIZE(qp_bands))
      CALL solvegfreq_restart_write_q( bksks )
   ENDIF
   !

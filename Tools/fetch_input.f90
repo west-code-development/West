@@ -471,12 +471,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( qp_bandrange(1) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
      IF( qp_bandrange(2) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
      IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
-     DO i = 0, list_len-1 ! Python indices start at 0
-        WRITE(str,*) i+1
-        IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands('//trim(str)//')<1',1)
-        IF ( i /= list_len-1 .AND. qp_bands(i+1) >= qp_bands(i+2) ) &
-        & CALL errore('fetch_input','Err: '//'qp_bands('//trim(str)//')',1)                    
-     ENDDO
+     IF (list_len == 0) THEN
+        CONTINUE
+     ELSE 
+        DO i = 0, list_len-1 ! Python indices start at 0
+           WRITE(str,"(I5)") i+1
+           IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands('//trim(str)//')<1',1)
+           IF ( i /= list_len-1 .AND. qp_bands(i+1) >= qp_bands(i+2) ) &
+           & CALL errore('fetch_input','Err: '//'qp_bands('//trim(str)//')',1)                    
+        ENDDO
+     ENDIF
      IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_refreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_spectralf(2)<ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
@@ -593,10 +597,14 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
         CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
-        DO i = 0, list_len-1 ! Python indices start at 0
-           WRITE(str,*) i+1
-           CALL io_push_value('qp_bands('//trim(str)//')',qp_bands(i),numsp)
-        ENDDO
+        IF (list_len == 0) THEN
+           CONTINUE
+        ELSE 
+           DO i = 0, list_len-1 ! Python indices start at 0
+              WRITE(str,"(I5)") i+1
+              CALL io_push_value('qp_bands('//trim(str)//')',qp_bands(i),numsp)
+           ENDDO
+        ENDIF
         CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
         CALL io_push_value('n_lanczos',n_lanczos,numsp)
         CALL io_push_value('n_imfreq',n_imfreq,numsp)

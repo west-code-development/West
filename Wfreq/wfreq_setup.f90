@@ -42,16 +42,16 @@ SUBROUTINE wfreq_setup
   !
   CALL set_npwq()
   !
-  IF(SIZE(qp_bands) == 0) THEN 
-     DEALLOCATE(qp_bands)
-     ALLOCATE(qp_bands(qp_bandrange(2)-qp_bandrange(1)))
+  IF(SIZE(qp_bands) <= 0) THEN
+     IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
+     ALLOCATE(qp_bands(qp_bandrange(2)-qp_bandrange(1)+1))
      DO i = 1, SIZE(qp_bands)
         qp_bands(i) = qp_bandrange(1)+i-1
      ENDDO
   ENDIF
   !
   IF(qp_bands(1) > nbnd) CALL errore('wfreq_setup','qp_bands(1)>nbnd',1)
-  IF(qp_bands(-1) > nbnd) CALL errore('wfreq_setup','qp_bands(-1)>nbnd',1)
+  IF(qp_bands(SIZE(qp_bands)) > nbnd) CALL errore('wfreq_setup','qp_bands(SIZE(qp_bands))>nbnd',1)
   !
   CALL set_nbndocc()
   !

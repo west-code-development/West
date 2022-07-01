@@ -15,7 +15,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_corr(n,iks) = < ib,iks | S_c(energy(ib,iks))  | ib,iks >
-  ! ... ib = qp_bands(1):qp_bands(-1)
+  ! ... ib = qp_bands(1):qp_bands(SIZE(qp_bands))
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,intra_bgrp_comm

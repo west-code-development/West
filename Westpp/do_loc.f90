@@ -131,13 +131,15 @@ SUBROUTINE do_loc ( )
         !
         IF( gamma_only ) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
+           DO ir = 1, dffts%nnr
+              density_loc(ir) = REAL(psic(ir),KIND=DP)**2
+           ENDDO
         ELSE
            CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
+           DO ir = 1, dffts%nnr
+              density_loc(ir) = REAL(CONJG(psic(ir))*psic(ir),KIND=DP)
+           ENDDO
         ENDIF
-        ! create density
-        DO ir = 1, dffts%nnr
-           density_loc(ir) = REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP)
-        ENDDO
         !
         index1 = global_ib - westpp_range(1) + 1
         ! generate Inverse Participation Ratio for each point

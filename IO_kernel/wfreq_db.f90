@@ -82,7 +82,7 @@ MODULE wfreq_db
          DO ib = 1,SIZE(qp_bands)
             ilist(ib) = ib
          ENDDO
-         CALL json%add('output.Q.bandmap',ilist(SIZE(qp_bands)))
+         CALL json%add('output.Q.bandmap',ilist(1:SIZE(qp_bands)))
          DEALLOCATE(ilist)
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
@@ -90,27 +90,27 @@ MODULE wfreq_db
             !
             WRITE(my_label_k,'(i6.6)') iks
             !
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl', sigma_vxcnl(SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.hf', sigma_hf(SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(SIZE(qp_bands),iks))
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', et(SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(1:SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(1:SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl', sigma_vxcnl(1:SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.hf', sigma_hf(1:SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(1:SIZE(qp_bands),iks))
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', et(1:SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(1:SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(1:SIZE(qp_bands),iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.re', &
-            & REAL(sigma_sc_eks(SIZE(qp_bands),iks)*rytoev,KIND=DP))
+            & REAL(sigma_sc_eks(1:SIZE(qp_bands),iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.im', &
-            & AIMAG(sigma_sc_eks(SIZE(qp_bands),iks)*rytoev))
+            & AIMAG(sigma_sc_eks(1:SIZE(qp_bands),iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.re', &
-            & REAL(sigma_sc_eqplin(SIZE(qp_bands),iks)*rytoev,KIND=DP))
+            & REAL(sigma_sc_eqplin(1:SIZE(qp_bands),iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.im', &
-            & AIMAG(sigma_sc_eqplin(SIZE(qp_bands),iks)*rytoev))
+            & AIMAG(sigma_sc_eqplin(1:SIZE(qp_bands),iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.re', &
-            & REAL(sigma_sc_eqpsec(SIZE(qp_bands),iks)*rytoev,KIND=DP))
+            & REAL(sigma_sc_eqpsec(1:SIZE(qp_bands),iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
-            & AIMAG(sigma_sc_eqpsec(SIZE(qp_bands),iks)*rytoev))
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(SIZE(qp_bands),iks)*rytoev)
+            & AIMAG(sigma_sc_eqpsec(1:SIZE(qp_bands),iks)*rytoev))
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(1:SIZE(qp_bands),iks)*rytoev)
             !
             IF( l_generate_plot ) THEN
                DO ib = 1, SIZE(qp_bands)

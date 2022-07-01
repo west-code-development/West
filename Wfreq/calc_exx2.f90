@@ -11,10 +11,10 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
+SUBROUTINE calc_exx2(sigma_exx)
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = nb1, nb2
+  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = qp_bands(1):qp_bands(-1)
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
@@ -27,7 +27,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -42,8 +42,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: nb1,nb2
-  REAL(DP), INTENT(OUT) :: sigma_exx(nb1:nb2,k_grid%nps)
+  REAL(DP), INTENT(OUT) :: sigma_exx(SIZE(qp_bands),k_grid%nps)
   !
   ! Workspace
   !
@@ -83,7 +82,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !
   sigma_exx = 0._DP
   !
-  CALL band_group%init(nb2-nb1+1,'b','band_group',.FALSE.)
+  CALL band_group%init(SIZE(qp_bands),'b','band_group',.FALSE.)
   !
   barra_load = kpt_pool%nloc*band_group%nloc
   CALL start_bar_type(barra,'sigmax',barra_load)
@@ -107,7 +106,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
      !
      DO ibloc = 1,band_group%nloc
         !
-        ib = band_group%l2g(ibloc)+nb1-1
+        ib = qp_bands(band_group%l2g(ibloc))
         !
         IF(gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')

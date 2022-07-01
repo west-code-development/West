@@ -15,7 +15,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_corr(n,iks) = < ib,iks | S_c(energy(ib,iks))  | ib,iks >
-  ! ... ib = qp_bandrange(1):qp_bandrange(2)
+  ! ... ib = qp_bands(1):qp_bands(-1)
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,intra_bgrp_comm
@@ -24,7 +24,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
   USE pwcom,                ONLY : et
-  USE westcom,              ONLY : qp_bandrange,l_enable_lanczos,n_lanczos,l_macropol,&
+  USE westcom,              ONLY : qp_bands,l_enable_lanczos,n_lanczos,l_macropol,&
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,&
                                  & z_body_rfr,l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -37,13 +37,13 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !
   ! I/O
   !
-  COMPLEX(DP),INTENT(OUT) :: sigma_corr( qp_bandrange(1):qp_bandrange(2), k_grid%nps )  ! The correlation self-energy, imaginary part is lifetime.
-  REAL(DP),INTENT(IN) :: energy( qp_bandrange(1):qp_bandrange(2), k_grid%nps )          ! The energy variable
+  COMPLEX(DP),INTENT(OUT) :: sigma_corr( SIZE(qp_bands), k_grid%nps )  ! The correlation self-energy, imaginary part is lifetime.
+  REAL(DP),INTENT(IN) :: energy( SIZE(qp_bands), k_grid%nps )          ! The energy variable
   LOGICAL,INTENT(IN) :: l_verbose
   !
   ! Workspace
   !
-  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g
+  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,i
   INTEGER :: nbndval,nbndval_full
   REAL(DP) :: peso
   !
@@ -74,7 +74,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Integrating along the IM axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = kpt_pool%nloc * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = kpt_pool%nloc * ( SIZE(qp_bands) )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_i', barra_load )
   !
   ! LOOP
@@ -85,7 +85,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
      !
      nbndval = nbnd_occ(iks)
      !
-     DO ib = qp_bandrange(1), qp_bandrange(2)
+     DO i = 1, SIZE(qp_bands)
+        !
+        ib = qp_bands(i)
         !
         ! HEAD PART
         !
@@ -148,7 +150,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = kpt_pool%nloc * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = kpt_pool%nloc * ( SIZE(qp_bands) )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP
@@ -159,7 +161,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
      nbndval = nbnd_occ(iks)
      IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)
      !
-     DO ib = qp_bandrange(1), qp_bandrange(2)
+     DO i = 1, SIZE(qp_bands)
+        !
+        ib = qp_bands(i)
         !
         enrg = energy(ib,iks_g)
         !
@@ -258,7 +262,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_corr(n,iks) = < ib,iks | S_c(energy(ib,iks))  | ib,iks >
-  ! ... ib = qp_bandrange(1):qp_bandrange(2)
+  ! ... ib = SIZE(qp_bands)
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
@@ -267,7 +271,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
   USE pwcom,                ONLY : et
-  USE westcom,              ONLY : qp_bandrange,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
+  USE westcom,              ONLY : qp_bands,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
                                  & z_head_ifr,z_head_rfr,z_body1_ifr_q,z_body2_ifr_q,d_diago_q,&
                                  & z_body_rfr_q
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -280,14 +284,14 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   ! I/O
   !
-  COMPLEX(DP),INTENT(OUT) :: sigma_corr( qp_bandrange(1):qp_bandrange(2), k_grid%nps )  ! The correlation self-energy,
+  COMPLEX(DP),INTENT(OUT) :: sigma_corr( SIZE(qp_bands), k_grid%nps )  ! The correlation self-energy,
                                                                                         ! imaginary part is lifetime.
-  REAL(DP),INTENT(IN) :: energy( qp_bandrange(1):qp_bandrange(2), k_grid%nps )          ! The energy variable
+  REAL(DP),INTENT(IN) :: energy( SIZE(qp_bands), k_grid%nps )          ! The energy variable
   LOGICAL,INTENT(IN) :: l_verbose
   !
   ! Workspace
   !
-  INTEGER :: ik,ikk,iks,ikks,iq,ib,ifreq,glob_ifreq,il,im,glob_im,ip,is,iss
+  INTEGER :: ik,ikk,iks,ikks,iq,ib,ifreq,glob_ifreq,il,im,glob_im,ip,is,iss,i
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -317,7 +321,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Integrating along the IM axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = k_grid%nps * ( SIZE(qp_bands) )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_i', barra_load )
   !
   ! LOOP
@@ -327,7 +331,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
      ik = k_grid%ip(iks)
      is = k_grid%is(iks)
      !
-     DO ib = qp_bandrange(1), qp_bandrange(2)
+     DO i = 1, SIZE(qp_bands)
+        !
+        ib = qp_bands(i)
         !
         partial_h = 0._DP
         partial_b = 0._DP
@@ -406,7 +412,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
+  IF(l_verbose) barra_load = k_grid%nps * ( SIZE(qp_bands) )
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP
@@ -416,7 +422,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
      ik = k_grid%ip(iks)
      is = k_grid%is(iks)
      !
-     DO ib = qp_bandrange(1), qp_bandrange(2)
+     DO i = 1, SIZE(qp_bands)
+        !
+        ib = qp_bands(i)
         !
         enrg = energy(ib,iks)
         !

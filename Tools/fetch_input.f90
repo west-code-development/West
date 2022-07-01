@@ -19,12 +19,12 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
                              & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
                              & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
-                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
+                             & n_pdep_eigen_to_use,qp_bandrange,qp_bands,macropol_calculation,n_lanczos,&
                              & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
                              & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty, westpp_box, document
+                             & westpp_epsinfty,westpp_box,document
   USE mp_world,         ONLY : mpime, root
   !
   IMPLICIT NONE
@@ -69,6 +69,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wfreq_control.wfreq_calculation',TRIM(wfreq_calculation))
         CALL json%add('input.wfreq_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
         CALL json%add('input.wfreq_control.qp_bandrange',qp_bandrange)
+        CALL json%add('input.wfreq_control.qp_bands',qp_bands)
         CALL json%add('input.wfreq_control.macropol_calculation',macropol_calculation)
         CALL json%add('input.wfreq_control.n_lanczos',n_lanczos)
         CALL json%add('input.wfreq_control.n_imfreq',n_imfreq)
@@ -123,7 +124,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
                              & l_minimize_exx_if_active,l_use_ecutrho,qlist,wfreq_calculation,&
-                             & n_pdep_eigen_to_use,qp_bandrange,macropol_calculation,n_lanczos,&
+                             & n_pdep_eigen_to_use,qp_bandrange,qp_bands,macropol_calculation,n_lanczos,&
                              & n_imfreq,n_refreq,ecut_imfreq,ecut_refreq,wfreq_eta,n_secant_maxiter,&
                              & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
@@ -160,6 +161,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   INTEGER :: i
   INTEGER :: nq
   INTEGER :: numsp
+  CHARACTER(LEN=5) :: str
   CHARACTER(LEN=512), EXTERNAL :: trimcheck
   CHARACTER(LEN=:),ALLOCATABLE :: cvalue
   TYPE(json_file) :: json
@@ -270,6 +272,14 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = tmp_list%len(list_len)
         IERR = tmp_list%getitem(qp_bandrange(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(qp_bandrange(2), 1) ! Fortran indices start at 1
+        IERR = return_dict%getitem(tmp_obj, "qp_bands")
+        IERR = cast(tmp_list,tmp_obj)
+        IERR = tmp_list%len(list_len)
+        IF( ALLOCATED(qp_bands) ) DEALLOCATE(qp_bands)
+        ALLOCATE(qp_bands(list_len))
+        DO i = 0, list_len-1 ! Python indices start at 0
+           IERR = tmp_list%getitem(qp_bands(i+1), i) ! Fortran indices start at 1
+        ENDDO
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         IERR = return_dict%getitem(cvalue, "macropol_calculation"); macropol_calculation = TRIM(ADJUSTL(cvalue))
@@ -435,6 +445,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(wfreq_calculation,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(qp_bandrange,root,world_comm)
+     CALL mp_bcast(qp_bands,root,world_comm)
      CALL mp_bcast(macropol_calculation,root,world_comm)
      CALL mp_bcast(n_lanczos,root,world_comm)
      CALL mp_bcast(n_imfreq,root,world_comm)
@@ -460,6 +471,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( qp_bandrange(1) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
      IF( qp_bandrange(2) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
      IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
+     DO i = 0, list_len-1 ! Python indices start at 0
+        WRITE(str,*) i+1
+        IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands('//trim(str)//')<1',1)
+        IF ( i /= list_len-1 .AND. qp_bands(i+1) >= qp_bands(i+2) ) &
+        & CALL errore('fetch_input','Err: '//'qp_bands('//trim(str)//')',1)                    
+     ENDDO
      IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_refreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF( ecut_spectralf(2)<ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
@@ -576,6 +593,10 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
         CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
+        DO i = 0, list_len-1 ! Python indices start at 0
+           WRITE(str,*) i+1
+           CALL io_push_value('qp_bands('//trim(str)//')',qp_bands(i),numsp)
+        ENDDO
         CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
         CALL io_push_value('n_lanczos',n_lanczos,numsp)
         CALL io_push_value('n_imfreq',n_imfreq,numsp)

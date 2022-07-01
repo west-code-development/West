@@ -49,6 +49,7 @@ default["wfreq_control"] = {}
 default["wfreq_control"]["wfreq_calculation"] = "XWGQ"
 default["wfreq_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wfreq_control"]["qp_bandrange"] = [1, 2]
+default["wfreq_control"]["qp_bands"] = []
 default["wfreq_control"]["macropol_calculation"] = 'N'
 default["wfreq_control"]["n_lanczos"] = 30
 default["wfreq_control"]["n_imfreq"] = 128

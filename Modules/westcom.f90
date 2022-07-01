@@ -52,16 +52,19 @@ MODULE scratch_area
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq (global in iq)
   !
   ! CORRELATION
-  !
-  REAL(DP),    ALLOCATABLE :: d_head_ifr(:)
-  COMPLEX(DP), ALLOCATABLE :: z_head_ifr(:)
-  REAL(DP),    ALLOCATABLE :: d_body1_ifr(:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr(:,:,:,:)
-  REAL(DP),    ALLOCATABLE :: d_body2_ifr(:,:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr(:,:,:,:,:)
-  REAL(DP),    ALLOCATABLE :: d_diago(:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_head_rfr(:)
-  COMPLEX(DP), ALLOCATABLE :: z_body_rfr(:,:,:,:)
+  REAL(DP),ALLOCATABLE    :: d_head_ifr(:)
+  COMPLEX(DP),ALLOCATABLE :: z_head_ifr(:)
+  REAL(DP),ALLOCATABLE    :: d_body1_ifr(:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: z_body1_ifr(:,:,:,:)
+  REAL(DP),ALLOCATABLE    :: d_body2_ifr(:,:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: z_body2_ifr(:,:,:,:,:)
+  REAL(DP),ALLOCATABLE    :: d_diago(:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: z_head_rfr(:)
+  COMPLEX(DP),ALLOCATABLE :: z_body_rfr(:,:,:,:) 
+  REAL(DP),ALLOCATABLE    :: d_body1_ifr_full(:,:,:,:)
+  REAL(DP),ALLOCATABLE    :: d_body2_ifr_full(:,:,:,:,:)
+  REAL(DP),ALLOCATABLE    :: d_diago_full(:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
   !
   ! CORRELATION with q-points
   !
@@ -152,6 +155,7 @@ MODULE wfreq_center
   INTEGER :: n_imfreq
   INTEGER :: n_refreq
   INTEGER :: qp_bandrange(2)
+  INTEGER, ALLOCATABLE :: qp_bands(:)
   REAL(DP) :: ecut_imfreq
   REAL(DP) :: ecut_refreq
   REAL(DP) :: wfreq_eta
@@ -181,7 +185,12 @@ MODULE wfreq_center
   REAL(DP), ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP), PARAMETER :: frequency_list_power = 2._DP
   !
-  ! gw_etot
+  ! off-diagonal entries mapping
+  !
+  INTEGER,ALLOCATABLE :: ijpmap(:,:)
+  INTEGER :: npair
+  !
+  ! gw_etot 
   !
   REAL(DP) :: dft_etot
   REAL(DP) :: dft_exc
@@ -191,19 +200,23 @@ MODULE wfreq_center
   !
   ! output
   !
-  REAL(DP),    ALLOCATABLE :: sigma_exx(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_vxcl(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_vxcnl(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_hf(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_z(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_eqplin(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_eqpsec(:,:)
-  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks(:,:)
-  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin(:,:)
-  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqpsec(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
-  COMPLEX(DP), ALLOCATABLE :: sigma_spectralf(:,:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_freq(:)
+  REAL(DP),ALLOCATABLE    :: sigma_exx       (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_vxcl      (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_vxcnl     (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_hf        (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_z         (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_eqplin    (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_eqpsec    (:,:)
+  COMPLEX(DP),ALLOCATABLE :: sigma_sc_eks    (:,:)
+  COMPLEX(DP),ALLOCATABLE :: sigma_sc_eqplin (:,:)
+  COMPLEX(DP),ALLOCATABLE :: sigma_sc_eqpsec (:,:)
+  REAL(DP),ALLOCATABLE     :: sigma_diff      (:,:)
+  COMPLEX(DP),ALLOCATABLE :: sigma_spectralf (:,:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_freq      (:)
+  REAL(DP),ALLOCATABLE    :: sigma_exx_full  (:,:) 
+  REAL(DP),ALLOCATABLE    :: sigma_vxcl_full (:,:) 
+  REAL(DP),ALLOCATABLE    :: sigma_vxcnl_full(:,:) 
+  COMPLEX(DP),ALLOCATABLE :: sigma_corr_full (:,:)
   !
 END MODULE
 !

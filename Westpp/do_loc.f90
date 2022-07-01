@@ -15,7 +15,7 @@ SUBROUTINE do_loc ( )
   !----------------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE pwcom,                 ONLY : current_spin,isk,igk_k,npw,npwx,lsda,current_k,ngk
+  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk
   USE io_push,               ONLY : io_push_title
   USE westcom,               ONLY : iuwfc,lrwfc,westpp_range,westpp_save_dir,westpp_box
   USE mp_global,             ONLY : inter_image_comm,my_image_id
@@ -39,10 +39,10 @@ SUBROUTINE do_loc ( )
   !
   ! ... LOCAL variables
   !
-  INTEGER :: ir, i, iks, local_ib, global_ib, ir1, ir2, ir3, index1, index2, n_points, nbnd_, iunit
-  REAL(DP), ALLOCATABLE :: aux_loc(:, :), ipr(:, :), density_loc(:), density_gat(:), ipr_loc(:)
+  INTEGER :: ir, i, iks, local_ib, global_ib, global_ib2, ir1, ir2, ir3, n_points, nbnd_, iunit
+  REAL(DP), ALLOCATABLE :: local_fac(:,:), ipr(:,:)
   REAL(DP), ALLOCATABLE :: filter(:), filter_loc(:)
-  REAL(DP) :: r_vec(3), volume
+  REAL(DP) :: rho, r_vec(3), volume
   CHARACTER(LEN=512) :: ikstring
   TYPE(bar_type) :: barra
   TYPE(json_core) :: json
@@ -56,17 +56,10 @@ SUBROUTINE do_loc ( )
   aband = idistribute()
   CALL aband%init(nbnd_,'i','westpp_range',.TRUE.)
   !
-  ALLOCATE(density_loc(dffts%nnr))
-  ALLOCATE(filter_loc(dffts%nnr))
-  ALLOCATE(ipr_loc(dffts%nnr))
-  ALLOCATE(aux_loc(nbnd_,k_grid%nps))
-  ALLOCATE(ipr(nbnd_,k_grid%nps))
-  ALLOCATE(density_gat(dffts%nr1x*dffts%nr2x*dffts%nr3x))
   ALLOCATE(filter(dffts%nr1x*dffts%nr2x*dffts%nr3x))
-  !
-  ipr = 0._DP
-  aux_loc = 0._DP
-  psic = 0._DP
+  ALLOCATE(filter_loc(dffts%nnr))
+  ALLOCATE(local_fac(nbnd_,k_grid%nps))
+  ALLOCATE(ipr(nbnd_,k_grid%nps))
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) )
   !
@@ -77,12 +70,11 @@ SUBROUTINE do_loc ( )
      ! is in box, ZERO if not. Loop over all points on FFT grid
      filter(:) = 0._DP
      n_points = 0
-     index2 = 0
+     ir = 0
      DO ir3 = 1, dffts%nr3
         DO ir2 = 1, dffts%nr2
            DO ir1 = 1, dffts%nr1
-              ! update current index
-              index2 = index2 + 1
+              ir = ir + 1
               ! create real-space vector
               DO i = 1, 3
                  r_vec(i) = REAL(ir1-1,KIND=DP)/REAL(dffts%nr1,KIND=DP)*alat*at(i,1) &
@@ -94,7 +86,7 @@ SUBROUTINE do_loc ( )
                 & (r_vec(2) > westpp_box(3)) .AND. (r_vec(2) < westpp_box(4)) .AND. &
                 & (r_vec(3) > westpp_box(5)) .AND. (r_vec(3) < westpp_box(6))) THEN
                  n_points = n_points + 1
-                 filter(index2) = 1._DP
+                 filter(ir) = 1._DP
               ENDIF
            ENDDO
         ENDDO
@@ -106,14 +98,15 @@ SUBROUTINE do_loc ( )
   ! broadcast the number of points in rectangle to all FFT processes
   CALL mp_bcast(n_points, dffts%root, dffts%comm)
   !
+  ipr = 0._DP
+  local_fac = 0._DP
+  !
   DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
      current_k = iks
      npw = ngk(iks)
-     IF(lsda) current_spin = isk(iks)
-     call g2_kin(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !
@@ -122,34 +115,28 @@ SUBROUTINE do_loc ( )
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
-     !
      DO local_ib=1,aband%nloc
         !
         ! local -> global
         !
         global_ib = aband%l2g(local_ib)+westpp_range(1)-1
+        global_ib2 = aband%l2g(local_ib)
         !
         IF( gamma_only ) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
            DO ir = 1, dffts%nnr
-              density_loc(ir) = REAL(psic(ir),KIND=DP)**2
+              rho = REAL(psic(ir),KIND=DP)**2
+              local_fac(global_ib2,iks) = local_fac(global_ib2,iks)+filter_loc(ir)*rho
+              ipr(global_ib2,iks) = ipr(global_ib2,iks)+rho**2
            ENDDO
         ELSE
            CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
            DO ir = 1, dffts%nnr
-              density_loc(ir) = REAL(CONJG(psic(ir))*psic(ir),KIND=DP)
+              rho = REAL(CONJG(psic(ir))*psic(ir),KIND=DP)
+              local_fac(global_ib2,iks) = local_fac(global_ib2,iks)+filter_loc(ir)*rho
+              ipr(global_ib2,iks) = ipr(global_ib2,iks)+rho**2
            ENDDO
         ENDIF
-        !
-        index1 = global_ib - westpp_range(1) + 1
-        ! generate Inverse Participation Ratio for each point
-        ipr_loc(:) = density_loc(:)**2
-        ! sum over all points
-        ipr(index1, iks) = SUM(ipr_loc)
-        ! filter density
-        density_loc(:) = filter_loc(:) * density_loc(:)
-        ! sum localization factor
-        aux_loc(index1, iks) = SUM(density_loc)
         !
         CALL update_bar_type( barra,'westpp', 1 )
         !
@@ -158,16 +145,13 @@ SUBROUTINE do_loc ( )
   ENDDO
   !
   ! Post processing
-  aux_loc(:,:) = volume/omega * aux_loc(:,:)/REAL(n_points,KIND=DP)
+  local_fac(:,:) = volume/omega*local_fac(:,:)/REAL(n_points,KIND=DP)
   ipr(:,:) = ipr(:,:)/REAL(dffts%nr1*dffts%nr2*dffts%nr3,KIND=DP)/omega
   !
-  ! sum ipr and localization factor over all FFT processes
-  CALL mp_sum(aux_loc, dffts%comm)
-  CALL mp_sum(ipr, dffts%comm)
-  !
-  ! gather localization functions for all bands
-  CALL mp_sum(aux_loc,inter_image_comm)
-  ! gather IPR for all bands
+  ! sum up results
+  CALL mp_sum(local_fac,dffts%comm)
+  CALL mp_sum(ipr,dffts%comm)
+  CALL mp_sum(local_fac,inter_image_comm)
   CALL mp_sum(ipr,inter_image_comm)
   !
   ! root writes JSON file
@@ -178,7 +162,7 @@ SUBROUTINE do_loc ( )
      !
      IF (k_grid%nps == 1) THEN
         ! write localization factor and IPR to JSON file directly
-        CALL json%add(json_root, 'localization', aux_loc(:,1))
+        CALL json%add(json_root, 'localization', local_fac(:,1))
         CALL json%add(json_root, 'ipr', ipr(:,1))
      ELSE
         ! add localization object to root
@@ -190,7 +174,7 @@ SUBROUTINE do_loc ( )
         DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
            WRITE(ikstring, '(I4)') iks
            ! write localization factor and IPR for each iks-point
-           CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), aux_loc(:,iks))
+           CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), local_fac(:,iks))
            CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
         ENDDO
         ! don't need pointer anymore
@@ -207,12 +191,9 @@ SUBROUTINE do_loc ( )
   !
   CALL stop_bar_type( barra, 'westpp' )
   !
-  DEALLOCATE(density_loc)
-  DEALLOCATE(filter_loc)
-  DEALLOCATE(ipr_loc)
-  DEALLOCATE(aux_loc)
-  DEALLOCATE(ipr)
-  DEALLOCATE(density_gat)
   DEALLOCATE(filter)
+  DEALLOCATE(filter_loc)
+  DEALLOCATE(local_fac)
+  DEALLOCATE(ipr)
   !
 END SUBROUTINE

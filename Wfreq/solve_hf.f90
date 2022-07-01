@@ -76,13 +76,13 @@ SUBROUTINE solve_hf_gamma( )
   !
   ALLOCATE(out_tab(SIZE(qp_bands),6))
   DO iks=1,k_grid%nps
-     DO ib = 0, SIZE(qp_bands)
-        out_tab( ib, 1) = REAL( ib, KIND=DP)
-        out_tab( ib, 2) = et(ib,iks) * rytoev
+     DO ib = 1, SIZE(qp_bands)
+        out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
+        out_tab( ib, 2) = et(qp_bands(ib),iks) * rytoev
         out_tab( ib, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib, 4) = sigma_vxcl(ib,iks) * rytoev
         out_tab( ib, 5) = sigma_vxcnl(ib,iks) * rytoev
-        out_tab( ib, 6) = ( et(ib,iks) + sigma_hf(ib,iks) ) * rytoev
+        out_tab( ib, 6) = ( et(qp_bands(ib),iks) + sigma_hf(ib,iks) ) * rytoev
      ENDDO
      WRITE(myglobk,'(i5.5)') iks
      !
@@ -151,8 +151,8 @@ SUBROUTINE solve_hf_k( )
   !
   ALLOCATE(out_tab(SIZE(qp_bands),6))
   DO iks=1,k_grid%nps
-     DO ib = 0, SIZE(qp_bands)
-        out_tab( ib, 1) = REAL( ib, KIND=DP)
+     DO ib = 1, SIZE(qp_bands)
+        out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
         out_tab( ib, 2) = et(ib,iks) * rytoev
         out_tab( ib, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib, 4) = sigma_vxcl(ib,iks) * rytoev

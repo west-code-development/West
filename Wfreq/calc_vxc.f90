@@ -121,7 +121,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               DO ir = 1, dfftp%nnr
                  braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
-              sigma_vxcl(qp_bands(gwbnd%l2g(ib)),iks_g) = REAL(braket,KIND=DP) / nnr
+              sigma_vxcl(gwbnd%l2g(ib),iks_g) = REAL(braket,KIND=DP) / nnr
            ENDDO
            !
         ELSE
@@ -133,7 +133,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               DO ir = 1, dfftp%nnr
                  braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
               ENDDO
-              sigma_vxcl(qp_bands(gwbnd%l2g(ib)),iks_g) = REAL(braket,KIND=DP) / nnr
+              sigma_vxcl(gwbnd%l2g(ib),iks_g) = REAL(braket,KIND=DP) / nnr
            ENDDO
            !
            IF(noncolin) THEN
@@ -145,8 +145,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  DO ir = 1, dfftp%nnr
                     braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
                  ENDDO
-                 sigma_vxcl(qp_bands(gwbnd%l2g(ib)),iks_g) = &
-                 & sigma_vxcl(qp_bands(gwbnd%l2g(ib)),iks_g) + REAL(braket,KIND=DP) / nnr
+                 sigma_vxcl(gwbnd%l2g(ib),iks_g) = &
+                 & sigma_vxcl(gwbnd%l2g(ib),iks_g) + REAL(braket,KIND=DP) / nnr
               ENDDO
               !
            ENDIF
@@ -176,22 +176,22 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               DO ib = 1,gwbnd%nloc
                  braket = 2._DP * DDOT( 2*npw, xpsi(1,ib), 1, vxpsi(1,ib), 1)
                  IF(gstart==2) braket = braket - REAL( xpsi(1,ib), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
-                 sigma_vxcnl(qp_bands(gwbnd%l2g(ib)),iks_g) = REAL( braket, KIND=DP )
+                 sigma_vxcnl(gwbnd%l2g(ib),iks_g) = REAL( braket, KIND=DP )
               ENDDO
               !
            ELSE
               !
               DO ib = 1,gwbnd%nloc
                  braket = ZDOTC( npw, xpsi(1,ib),1,vxpsi(1,ib),1)
-                 sigma_vxcnl(qp_bands(gwbnd%l2g(ib)),iks_g) = REAL( braket, KIND=DP )
+                 sigma_vxcnl(gwbnd%l2g(ib),iks_g) = REAL( braket, KIND=DP )
               ENDDO
               !
               IF(noncolin) THEN
                  !
                  DO ib = 1, gwbnd%nloc
                     braket = ZDOTC( npw, xpsi(1+npwx,ib),1,vxpsi(1+npwx,ib),1)
-                    sigma_vxcnl(qp_bands(gwbnd%l2g(ib)),iks_g) = &
-                    & sigma_vxcnl(qp_bands(gwbnd%l2g(ib)),iks_g) + REAL( braket, KIND=DP )
+                    sigma_vxcnl(gwbnd%l2g(ib),iks_g) = &
+                    & sigma_vxcnl(gwbnd%l2g(ib),iks_g) + REAL( braket, KIND=DP )
                  ENDDO
               ENDIF
               !

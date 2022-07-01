@@ -107,7 +107,7 @@ SUBROUTINE wfreq_setup
   ALLOCATE( sigma_sc_eqpsec (SIZE(qp_bands),k_grid%nps) )
   ALLOCATE( sigma_diff      (SIZE(qp_bands),k_grid%nps) )
   IF (l_enable_off_diagonal) THEN
-     npair = (SIZE(qp_bands))*(SIZE(qp_bands)+1)/2
+     npair = SIZE(qp_bands)*(SIZE(qp_bands)+1)/2
      ALLOCATE(ijpmap(SIZE(qp_bands),SIZE(qp_bands)))
      index = 1
      DO ib = 1, SIZE(qp_bands)

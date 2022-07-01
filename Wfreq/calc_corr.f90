@@ -43,7 +43,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
   !
   ! Workspace
   !
-  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,i
+  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,ib_index
   INTEGER :: nbndval,nbndval_full
   REAL(DP) :: peso
   !
@@ -85,9 +85,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
      !
      nbndval = nbnd_occ(iks)
      !
-     DO i = 1, SIZE(qp_bands)
+     DO ib_index = 1, SIZE(qp_bands)
         !
-        ib = qp_bands(i)
+        ib = qp_bands(ib_index)
         !
         ! HEAD PART
         !
@@ -96,7 +96,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         IF(l_macropol) THEN
            !
            DO ifreq = 1,ifr%nloc
-              enrg = et(i,iks) - energy(i,iks_g)
+              enrg = et(ib_index,iks) - energy(ib_index,iks_g)
               partial_h = partial_h + d_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
            ENDDO
            !
@@ -109,8 +109,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         DO ifreq = 1,ifr%nloc
            DO im = 1, aband%nloc
               glob_im = aband%l2g(im)
-              enrg = et(glob_im,iks) - energy(i,iks_g)
-              partial_b = partial_b + d_body1_ifr(im,ifreq,i,iks_g)*integrate_imfreq(ifreq,enrg)
+              enrg = et(glob_im,iks) - energy(ib_index,iks_g)
+              partial_b = partial_b + d_body1_ifr(im,ifreq,ib_index,iks_g)*integrate_imfreq(ifreq,enrg)
            ENDDO
         ENDDO
         !
@@ -121,8 +121,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
            DO ifreq = 1,ifr%nloc
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos
-                    enrg = d_diago(il,ip,i,iks_g) - energy(i,iks_g)
-                    partial_b = partial_b + d_body2_ifr(il,ip,ifreq,i,iks_g)*integrate_imfreq(ifreq,enrg)
+                    enrg = d_diago(il,ip,ib_index,iks_g) - energy(ib_index,iks_g)
+                    partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ib_index,iks_g)&
+                    & *integrate_imfreq(ifreq,enrg)
                  ENDDO
               ENDDO
            ENDDO
@@ -133,7 +134,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         CALL mp_sum( partial_b, intra_bgrp_comm)
         CALL mp_sum( partial_b, inter_image_comm)
         !
-        sigma_corr(i,iks_g) = sigma_corr(i,iks_g) + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP )
+        sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
+        & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP )
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
         !
@@ -161,11 +163,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
      nbndval = nbnd_occ(iks)
      IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)
      !
-     DO i = 1, SIZE(qp_bands)
+     DO ib_index = 1, SIZE(qp_bands)
         !
-        ib = qp_bands(i)
+        ib = qp_bands(ib_index)
         !
-        enrg = energy(i,iks_g)
+        enrg = energy(ib_index,iks_g)
         !
         residues_b = 0._DP
         residues_h = 0._DP
@@ -204,7 +206,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
                  !
                  IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + peso * segno * z_head_rfr(ifreq)
                  !
-                 residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, i, iks_g )
+                 residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ib_index, iks_g )
                  !
               ENDDO
               !
@@ -228,7 +230,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
                     !
                     IF(glob_im==ib.AND.l_macropol) residues_h = residues_h + (1.0 - peso) * segno * z_head_rfr(ifreq)
                     !
-                    residues_b = residues_b + (1._DP - peso) * segno * z_body_rfr( im, ifreq, i, iks_g )
+                    residues_b = residues_b + (1._DP - peso) * segno * z_body_rfr( im, ifreq, ib_index, iks_g )
                     !
                  ENDDO
                  !
@@ -243,7 +245,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose)
         CALL mp_sum( residues_b, intra_bgrp_comm )
         CALL mp_sum( residues_b, inter_image_comm )
         !
-        sigma_corr(i,iks_g) = sigma_corr(i,iks_g) + residues_b/omega + residues_h*pot3D%div
+        sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) + residues_b/omega + residues_h*pot3D%div
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
         !
@@ -291,7 +293,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   ! Workspace
   !
-  INTEGER :: ik,ikk,iks,ikks,iq,ib,ifreq,glob_ifreq,il,im,glob_im,ip,is,iss,i
+  INTEGER :: ik,ikk,iks,ikks,iq,ib,ifreq,glob_ifreq,il,im,glob_im,ip,is,iss,ib_index
   INTEGER :: nbndval
   !
   REAL(DP),EXTERNAL :: integrate_imfreq
@@ -331,9 +333,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
      ik = k_grid%ip(iks)
      is = k_grid%is(iks)
      !
-     DO i = 1, SIZE(qp_bands)
+     DO ib_index = 1, SIZE(qp_bands)
         !
-        ib = qp_bands(i)
+        ib = qp_bands(ib_index)
         !
         partial_h = 0._DP
         partial_b = 0._DP
@@ -357,7 +359,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            IF(l_macropol .AND. l_gammaq) THEN
               !
               DO ifreq = 1,ifr%nloc
-                 enrg = et(i,iks) - energy(i,iks)
+                 enrg = et(ib_index,iks) - energy(ib_index,iks)
                  partial_h = partial_h + z_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
               ENDDO
               !
@@ -368,8 +370,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            DO ifreq = 1,ifr%nloc
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
-                 enrg = et(glob_im,ikks) - energy(i,iks)
-                 partial_b = partial_b + z_body1_ifr_q(im,ifreq,i,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
+                 enrg = et(glob_im,ikks) - energy(ib_index,iks)
+                 partial_b = partial_b + z_body1_ifr_q(im,ifreq,ib_index,iks,iq) &
+                 & *integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
               ENDDO
            ENDDO
            !
@@ -381,8 +384,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               DO ifreq = 1,ifr%nloc
                  DO ip = 1, pert%nloc
                     DO il = 1, n_lanczos
-                       enrg = d_diago_q(il,ip,i,iks,iq) - energy(i,iks)
-                       partial_b = partial_b + z_body2_ifr_q(il,ip,ifreq,i,iks,iq)*integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
+                       enrg = d_diago_q(il,ip,ib_index,iks,iq) - energy(ib_index,iks)
+                       partial_b = partial_b + z_body2_ifr_q(il,ip,ifreq,ib_index,iks,iq) &
+                       & *integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
                     ENDDO
                  ENDDO
               ENDDO
@@ -395,7 +399,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         CALL mp_sum( partial_b, intra_bgrp_comm)
         CALL mp_sum( partial_b, inter_image_comm)
         !
-        sigma_corr(i,iks) = sigma_corr(i,iks) + partial_b/omega/pi + partial_h*pot3D%div/pi
+        sigma_corr(ib_index,iks) = sigma_corr(ib_index,iks) + partial_b/omega/pi + partial_h*pot3D%div/pi
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
         !
@@ -422,11 +426,11 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
      ik = k_grid%ip(iks)
      is = k_grid%is(iks)
      !
-     DO i = 1, SIZE(qp_bands)
+     DO ib_index = 1, SIZE(qp_bands)
         !
-        ib = qp_bands(i)
+        ib = qp_bands(ib_index)
         !
-        enrg = energy(i,iks)
+        enrg = energy(ib_index,iks)
         !
         residues_b = 0._DP
         residues_h = 0._DP
@@ -467,7 +471,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
                     !
                     IF(glob_im==ib.AND.l_macropol.AND.l_gammaq) residues_h = residues_h + segno * z_head_rfr(ifreq)
                     !
-                    residues_b = residues_b + segno * z_body_rfr_q( im, ifreq, i, iks, iq )*q_grid%weight(iq)
+                    residues_b = residues_b + segno * z_body_rfr_q( im, ifreq, ib_index, iks, iq )*q_grid%weight(iq)
                     !
                  ENDDO
                  !
@@ -482,7 +486,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         CALL mp_sum( residues_b, intra_bgrp_comm )
         CALL mp_sum( residues_b, inter_image_comm )
         !
-        sigma_corr(i,iks) = sigma_corr(i,iks) + residues_b/omega + residues_h*pot3D%div
+        sigma_corr(ib_index,iks) = sigma_corr(ib_index,iks) + residues_b/omega + residues_h*pot3D%div
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
         !

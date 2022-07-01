@@ -49,7 +49,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   COMPLEX(DP), ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:),phase(:)
   REAL(DP), EXTERNAL :: DDOT
-  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,i
+  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,ib_index
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -106,8 +106,8 @@ SUBROUTINE calc_exx2(sigma_exx)
      !
      DO ibloc = 1,band_group%nloc
         !
-        i = band_group%l2g(ibloc)
-        ib = qp_bands(i)
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')
@@ -170,10 +170,10 @@ SUBROUTINE calc_exx2(sigma_exx)
               DO ig = 1,ngm
                  pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
               ENDDO
-              sigma_exx(i,iks_g) = sigma_exx(i,iks_g) - &
+              sigma_exx(ib_index,iks_g) = sigma_exx(ib_index,iks_g) - &
               & occupation(iv,iks)*peso*DDOT(2*ngm,pertg(1),1,pertg(1),1)/omega*q_grid%weight(iq)
               IF(ib == iv .AND. gstart == 2 .AND. l_gammaq) &
-              sigma_exx(i,iks_g) = sigma_exx(i,iks_g) - occupation(iv,iks)*pot3D%div
+              sigma_exx(ib_index,iks_g) = sigma_exx(ib_index,iks_g) - occupation(iv,iks)*pot3D%div
               !
            ENDDO ! ivloc
            !

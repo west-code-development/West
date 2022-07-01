@@ -75,7 +75,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,i
+  INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,ib_index
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
@@ -154,8 +154,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      iks_g = kpt_pool%l2g(iks)
      !
      DO ibloc = 1, band_group%nloc
-        i = band_group%l2g(ibloc)
-        ib = qp_bands(i)
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         CALL readin_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
         !
@@ -185,7 +185,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         DO ifreq = 1, ifr%nloc
            DO im = 1, aband%nloc
               glob_im = aband%l2g(im)
-              d_body1_ifr(im,ifreq,i,iks_g) = dtemp2(glob_im,ifreq)
+              d_body1_ifr(im,ifreq,ib_index,iks_g) = dtemp2(glob_im,ifreq)
            ENDDO
         ENDDO
         !
@@ -215,7 +215,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         DO ifreq = 1, rfr%nloc
            DO im = 1, aband%nloc
               glob_im = aband%l2g(im)
-              z_body_rfr(im,ifreq,i,iks_g) = ztemp2(glob_im,ifreq)
+              z_body_rfr(im,ifreq,ib_index,iks_g) = ztemp2(glob_im,ifreq)
            ENDDO
         ENDDO
         !
@@ -229,7 +229,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            !
            DO ip = 1, pert%nloc
               DO il = 1, n_lanczos
-                 d_diago(il,ip,i,iks_g) = diago(il,ip)
+                 d_diago(il,ip,ib_index,iks_g) = diago(il,ip)
               ENDDO
            ENDDO
            !
@@ -237,7 +237,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos
                     DO glob_jp = 1, pert%nglob
-                       d_body2_ifr(il,ip,ifreq,i,iks_g) = d_body2_ifr(il,ip,ifreq,i,iks_g) + &
+                       d_body2_ifr(il,ip,ifreq,ib_index,iks_g) = d_body2_ifr(il,ip,ifreq,ib_index,iks_g) + &
                        & braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
                     ENDDO
                  ENDDO
@@ -979,7 +979,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   !
   ! Workspace
   !
-  INTEGER :: ib, iks, ik, is, i
+  INTEGER :: ib, iks, ik, is, ib_index
   CHARACTER(LEN=4) :: symb(2)
   TYPE(json_file) :: json
   INTEGER :: secitr, iunit
@@ -1044,15 +1044,17 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      DO iks = 1, k_grid%nps
         ik = k_grid%ip(iks)
         is = k_grid%is(iks)
-        DO i = 1, SIZE(qp_bands)
-           ib = qp_bands(i)
+        DO ib_index = 1, SIZE(qp_bands)
+           ib = qp_bands(ib_index)
            counter = counter + 1
            WRITE( ccounter, '(i10)') counter
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ksb',(/ik,is,ib/))
-           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ein('//TRIM(ADJUSTL(csecitr))//')',en1(i,iks)*rytoev)
-           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').eout('//TRIM(ADJUSTL(csecitr))//')',en2(i,iks)*rytoev)
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ein('//TRIM(ADJUSTL(csecitr))//')'&
+           & ,en1(ib_index,iks)*rytoev)
+           CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').eout('//TRIM(ADJUSTL(csecitr))//')'&
+           & ,en2(ib_index,iks)*rytoev)
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').sc_ein('//TRIM(ADJUSTL(csecitr))//')',&
-              &(/REAL(sc1(i,iks)*rytoev,KIND=DP),AIMAG(sc1(i,iks)*rytoev)/))
+              &(/REAL(sc1(ib_index,iks)*rytoev,KIND=DP),AIMAG(sc1(ib_index,iks)*rytoev)/))
         ENDDO
      ENDDO
      !

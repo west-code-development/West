@@ -11,10 +11,10 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
+SUBROUTINE calc_exx2(sigma_exx)
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = nb1, nb2
+  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = qp_bands(1):qp_bands(SIZE(qp_bands))
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
@@ -27,7 +27,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands
   USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,npair
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
@@ -43,8 +43,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: nb1,nb2
-  REAL(DP), INTENT(OUT) :: sigma_exx(nb1:nb2,k_grid%nps)
+  REAL(DP), INTENT(OUT) :: sigma_exx(SIZE(qp_bands),k_grid%nps)
   !
   ! Workspace
   !
@@ -53,7 +52,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,jb,index
+  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,jb,ib_index,jb_index,index
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -92,7 +91,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !
   sigma_exx = 0._DP
   !
-  CALL band_group%init(nb2-nb1+1,'b','band_group',.FALSE.)
+  CALL band_group%init(SIZE(qp_bands),'b','band_group',.FALSE.)
   !
   IF (l_enable_off_diagonal) THEN
       barra_load = kpt_pool%nloc*band_group%nloc*band_group%nglob
@@ -120,7 +119,8 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
      !
      DO ibloc = 1,band_group%nloc
         !
-        ib = band_group%l2g(ibloc)+nb1-1
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')
@@ -131,11 +131,13 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
         ENDIF
         !
-        DO jb = nb1, nb2
+        DO jb_index = 1, SIZE(qp_bands)
+           !
+           jb = qp_bands(jb_index)
            !
            IF ( l_enable_off_diagonal ) THEN
               IF (jb > ib) CYCLE
-              index = ijpmap(jb,ib)
+              index = ijpmap(jb_index,ib_index)
               !
               IF (jb < ib) THEN 
                   IF (gamma_only) THEN
@@ -209,11 +211,11 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
                     sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g ) - occupation(iv,iks)*braket
                  ELSEIF ( jb == ib ) THEN
                     braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
-                    sigma_exx( ib, iks_g ) = sigma_exx( ib, iks_g ) - occupation(iv,iks)*braket
+                    sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*braket
                     IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g ) &
                     & - occupation(iv,iks)*braket
                     IF( ib == iv .AND. gstart == 2 .AND. l_gammaq ) THEN
-                       sigma_exx( ib, iks_g ) = sigma_exx( ib, iks_g ) - occupation(iv,iks)*pot3D%div
+                       sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*pot3D%div
                        IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g )&
                        & - occupation(iv,iks)*pot3D%div
                     ENDIF 
@@ -225,7 +227,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
             !
         ENDDO ! jb
         !
-        CALL update_bar_type( barra, 'sigmax', nb2-nb1+1  )
+        CALL update_bar_type( barra, 'sigmax', SIZE(qp_bands)  )
         !
      ENDDO ! ibloc
      !

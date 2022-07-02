@@ -68,6 +68,10 @@ PROGRAM wfreq
      CALL solve_wfreq( .TRUE., lgate(7) )
   ENDIF
   !
+  IF( lgate(9) ) THEN
+     CALL solve_weff()
+  ENDIF
+  !
   IF( lgate(4) ) THEN
      CALL solve_gfreq( .FALSE. )
   ENDIF

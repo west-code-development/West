@@ -606,6 +606,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
         CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
+        IF (mpime == root) write(*,*) qp_bands
         IF (qp_bands(1) == 0) THEN
            CONTINUE
         ELSE 

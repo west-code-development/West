@@ -140,7 +140,7 @@ SUBROUTINE wfreq_setup
      sigma_corr_full = 0._DP
   ENDIF
   l_generate_plot = .FALSE.
-  DO i = 1,8
+  DO i = 1,9
      IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.
   ENDDO
   IF(l_generate_plot) THEN

@@ -44,7 +44,7 @@ PROGRAM wfreq
   CALL wfreq_setup( )
   !
   lgate = .FALSE.
-  DO i = 1, 8
+  DO i = 1, 9
      IF( wfreq_calculation(i:i) == 'X' ) lgate(1) = .TRUE.
      IF( wfreq_calculation(i:i) == 'W' ) lgate(2) = .TRUE.
      IF( wfreq_calculation(i:i) == 'w' ) lgate(3) = .TRUE.

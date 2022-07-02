@@ -34,6 +34,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   USE distribution_center,  ONLY : pert,ifr,rfr,aband,kpt_pool
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
+  USE mp_world,             ONLY : world_comm,mpime,root  
   !
   IMPLICIT NONE
   !
@@ -172,6 +173,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            CALL mp_sum( partial_b, intra_bgrp_comm) 
            CALL mp_sum( partial_b, inter_image_comm) 
            !
+           IF (mpime == root .and. jb == ib) write(*,*) partial_h, partial_b
+           !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
            & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
            IF (l_enable_off_diagonal .AND. l_full ) sigma_corr_full(index,iks_g) = sigma_corr_full(index,iks_g) &
@@ -303,7 +306,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                        !
                        IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                        & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN    
-                          residues_b = residues_b + (1._DP - peso) * segno &
+                          residues_b = residues_b + 0.5_DP * (1._DP - peso) * segno &
                           & * z_body_rfr_full( im, ifreq, index, iks_g )
                        ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                           residues_b = residues_b + (1._DP - peso) * segno &
@@ -376,7 +379,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                           !
                           IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
                           !
-                          residues_b = residues_b + 0.5_DP * peso * segno &
+                          residues_b = residues_b + 0.5_DP * (1._DP - peso) * segno &
                           & * z_body_rfr_full( im, ifreq, index, iks_g )
                           ! 
                        ENDDO
@@ -391,8 +394,10 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            CALL mp_sum( residues_h, intra_bgrp_comm )
            CALL mp_sum( residues_h, inter_image_comm )
-           CALL mp_sum( residues_b, intra_bgrp_comm )
+           CALL mp_sum( residues_h, intra_bgrp_comm )
            CALL mp_sum( residues_b, inter_image_comm )
+           !
+           IF (mpime == root .and. jb == ib ) write(*,*) residues_h, residues_h
            !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
            & + residues_b/omega + residues_h*pot3D%div

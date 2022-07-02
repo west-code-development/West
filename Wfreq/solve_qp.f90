@@ -291,6 +291,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
                  CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ENDIF
               !
+            !   IF ( mpime == root .AND. l_enable_off_diagonal .AND. jb <= ib ) write(*,*) jb, ib, index, shape(d_diago_full)
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos 
                     IF (l_enable_off_diagonal .AND. jb <= ib) THEN

@@ -111,7 +111,7 @@ SUBROUTINE wfreq_setup
      ALLOCATE(ijpmap(SIZE(qp_bands),SIZE(qp_bands)))
      index = 1
      DO ib = 1, SIZE(qp_bands)
-        DO jb = 1, SIZE(qp_bands)
+        DO jb = ib, SIZE(qp_bands)
            ijpmap(ib,jb) = index
            ijpmap(jb,ib) = index
            index = index + 1

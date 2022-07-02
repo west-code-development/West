@@ -70,7 +70,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,ib_index,jb_index,jb,index
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,ib_index,jb_index,index
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
@@ -190,7 +190,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      ! LOOP over band states
      !
      DO ibloc = 1,band_group%nloc
-        ib = qp_bands(band_group%l2g(ibloc))
+        !
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
@@ -553,7 +555,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      ! LOOP over band states
      !
      DO ibloc = 1,band_group%nloc
-        ib = qp_bands(band_group%l2g(ibloc))
+        !
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(ikks == bksks%lastdone_ks .AND. ib < bksks%lastdone_band) CYCLE
         !

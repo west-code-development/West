@@ -34,7 +34,6 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   USE distribution_center,  ONLY : pert,ifr,rfr,aband,kpt_pool
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
-  USE mp_world,             ONLY : world_comm,mpime,root  
   !
   IMPLICIT NONE
   !
@@ -172,8 +171,6 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            CALL mp_sum( partial_h, intra_bgrp_comm) 
            CALL mp_sum( partial_b, intra_bgrp_comm) 
            CALL mp_sum( partial_b, inter_image_comm) 
-           !
-           IF (mpime == root .and. jb == ib) write(*,*) partial_h, partial_b
            !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
            & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
@@ -394,10 +391,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            CALL mp_sum( residues_h, intra_bgrp_comm )
            CALL mp_sum( residues_h, inter_image_comm )
-           CALL mp_sum( residues_h, intra_bgrp_comm )
+           CALL mp_sum( residues_b, intra_bgrp_comm )
            CALL mp_sum( residues_b, inter_image_comm )
-           !
-           IF (mpime == root .and. jb == ib ) write(*,*) residues_h, residues_h
            !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
            & + residues_b/omega + residues_h*pot3D%div

@@ -449,7 +449,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,im,ikks,ikk,iq
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,im,ikks,ikk,iq,ib_index
   INTEGER :: npwk
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25)     :: filepot

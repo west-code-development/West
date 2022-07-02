@@ -455,6 +455,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         ALLOCATE(qp_bands(n_qp_bands))
      ENDIF
      CALL mp_bcast(qp_bands,root,world_comm)
+     write(*,*) qp_bands
      CALL mp_bcast(macropol_calculation,root,world_comm)
      CALL mp_bcast(n_lanczos,root,world_comm)
      CALL mp_bcast(n_imfreq,root,world_comm)
@@ -606,7 +607,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
         CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
-        IF (mpime == root) write(*,*) qp_bands
+      !   write(*,*) qp_bands
         IF (qp_bands(1) == 0) THEN
            CONTINUE
         ELSE 

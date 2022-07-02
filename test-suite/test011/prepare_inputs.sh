@@ -62,7 +62,7 @@ wstat_control:
 wfreq_control:
   wfreq_calculation: XWGQ
   n_pdep_eigen_to_use: 50
-  qp_bands: [1,3,5]
+  qp_bands: [1,2,3,4,5]
   n_refreq: 300
   ecut_refreq: 2.0
 EOF

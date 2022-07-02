@@ -44,7 +44,7 @@ PROGRAM wfreq
   CALL wfreq_setup( )
   !
   lgate = .FALSE.
-  DO i = 1, 8
+  DO i = 1, 9
      IF( wfreq_calculation(i:i) == 'X' ) lgate(1) = .TRUE.
      IF( wfreq_calculation(i:i) == 'W' ) lgate(2) = .TRUE.
      IF( wfreq_calculation(i:i) == 'w' ) lgate(3) = .TRUE.
@@ -66,10 +66,6 @@ PROGRAM wfreq
   !
   IF( lgate(3) ) THEN
      CALL solve_wfreq( .TRUE., lgate(7) )
-  ENDIF
-  !
-  IF( lgate(9) ) THEN
-     CALL solve_weff()
   ENDIF
   !
   IF( lgate(4) ) THEN

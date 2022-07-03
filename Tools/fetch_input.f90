@@ -476,7 +476,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      IF(.NOT. gamma_only) THEN
         DO i = 1, 9
-           IF( wfreq_calculation(i:i) == 'H' ) CALL errore('fetch_input','Err: QDET only supports gamma_only',1)
+           IF( wfreq_calculation(i:i) == 'H' ) CALL errore('fetch_input','Err: QDET requires gamma_only',1)
+        ENDDO
+     ENDIF
+     IF(.NOT. l_enable_off_diagonal) THEN
+        DO i = 1, 9
+           IF( wfreq_calculation(i:i) == 'H' ) CALL errore('fetch_input','Err: QDET requires l_enable_off_diagonal',1)
         ENDDO
      ENDIF
      IF( n_lanczos < 2 ) CALL errore('fetch_input','Err: n_lanczos<2',1)

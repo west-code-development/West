@@ -34,9 +34,9 @@ SUBROUTINE solve_hf_gamma( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,&
-                                 & l_enable_off_diagonal,sigma_exx_full, sigma_vxcl_full,&
-                                 & sigma_vxcnl_full
+  USE westcom,              ONLY : qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
+                                 & sigma_hf,l_enable_off_diagonal,sigma_exx_full,&
+                                 & sigma_vxcl_full,sigma_vxcnl_full
   USE mp_world,             ONLY : mpime,root
   USE pwcom,                ONLY : et
   USE io_push,              ONLY : io_push_title
@@ -71,13 +71,13 @@ SUBROUTINE solve_hf_gamma( )
   !
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
   !
-  CALL writeout_solvehf( sigma_hf(1,1), SIZE(qp_bands), k_grid%nps )
+  CALL writeout_solvehf( sigma_hf(1,1), n_bands, k_grid%nps )
   !
   ! Output it per k-point
   !
-  ALLOCATE(out_tab(SIZE(qp_bands),6))
+  ALLOCATE(out_tab(n_bands,6))
   DO iks=1,k_grid%nps
-     DO ib = 1, SIZE(qp_bands)
+     DO ib = 1, n_bands
         out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
         out_tab( ib, 2) = et(qp_bands(ib),iks) * rytoev
         out_tab( ib, 3) = sigma_exx(ib,iks) * rytoev
@@ -88,7 +88,7 @@ SUBROUTINE solve_hf_gamma( )
      WRITE(myglobk,'(i5.5)') iks
      !
      CALL serial_table_output(mpime==root,'ehf_K'//myglobk,out_tab,&
-     & SIZE(qp_bands),6,&
+     & n_bands,6,&
      & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))
   ENDDO
   DEALLOCATE(out_tab)
@@ -113,8 +113,8 @@ SUBROUTINE solve_hf_k( )
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bands,sigma_exx,sigma_vxcl,&
-                                   & sigma_vxcnl,sigma_hf
+  USE westcom,              ONLY : qp_bands,n_bands,sigma_exx,&
+                                   & sigma_vxcl,sigma_vxcnl,sigma_hf
   USE mp_world,             ONLY : mpime,root
   USE pwcom,                ONLY : et
   USE io_push,              ONLY : io_push_title
@@ -149,13 +149,13 @@ SUBROUTINE solve_hf_k( )
   !
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
   !
-  CALL writeout_solvehf( sigma_hf(1,1), SIZE(qp_bands), k_grid%nps  )
+  CALL writeout_solvehf( sigma_hf(1,1), n_bands, k_grid%nps  )
   !
   ! Output it per k-point
   !
-  ALLOCATE(out_tab(SIZE(qp_bands),6))
+  ALLOCATE(out_tab(n_bands,6))
   DO iks=1,k_grid%nps
-     DO ib = 1, SIZE(qp_bands)
+     DO ib = 1, n_bands
         out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
         out_tab( ib, 2) = et(ib,iks) * rytoev
         out_tab( ib, 3) = sigma_exx(ib,iks) * rytoev
@@ -166,7 +166,7 @@ SUBROUTINE solve_hf_k( )
      WRITE(myglobk,'(i5.5)') iks
      !
      CALL serial_table_output(mpime==root,'ehf_K'//myglobk,out_tab,&
-     & SIZE(qp_bands),6,&
+     & n_bands,6,&
      & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))
   ENDDO
   DEALLOCATE(out_tab)

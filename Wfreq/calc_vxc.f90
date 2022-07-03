@@ -14,7 +14,7 @@
 SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_vxc(n,iks) = < n,iks | V_xc  | n,iks >     n = qp_bands(1):qp_bands(SIZE(qp_bands))
+  ! store in sigma_vxc(n,iks) = < n,iks | V_xc  | n,iks >     n = qp_bands(1):qp_bands(n_bands)
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,intra_bgrp_comm
@@ -27,7 +27,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE fft_at_gamma,         ONLY : single_invfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k
   USE wavefunctions,        ONLY : evc,psic
-  USE westcom,              ONLY : qp_bands,iuwfc,lrwfc
+  USE westcom,              ONLY : qp_bands,n_bands,iuwfc,lrwfc
   USE westcom,              ONLY : l_enable_off_diagonal,sigma_vxcl_full,sigma_vxcnl_full,ijpmap
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
@@ -46,8 +46,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   ! I/O
   !
-  REAL(DP),INTENT(OUT) :: sigma_vxcl( SIZE(qp_bands), k_grid%nps )
-  REAL(DP),INTENT(OUT) :: sigma_vxcnl( SIZE(qp_bands), k_grid%nps )
+  REAL(DP),INTENT(OUT) :: sigma_vxcl( n_bands, k_grid%nps )
+  REAL(DP),INTENT(OUT) :: sigma_vxcnl( n_bands, k_grid%nps )
   !
   ! Workspace
   !
@@ -75,7 +75,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   WRITE(stdout,'(5x,a)') 'Vxc'
   CALL io_push_bar()
   !
-  numbandegw = SIZE(qp_bands)
+  numbandegw = n_bands
   gwbnd = idistribute()
   CALL gwbnd%init(numbandegw,'i','numbandegw',.FALSE.)
   !

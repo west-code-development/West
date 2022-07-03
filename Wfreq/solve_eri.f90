@@ -23,7 +23,6 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   USE mp,                   ONLY : mp_sum, mp_barrier
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
   USE mp_world,             ONLY : mpime,root
-  USE io_global,            ONLY : stdout
   USE io_push,              ONLY : io_push_title, io_push_bar
   !
   USE types_coulomb,        ONLY : pot3D
@@ -45,7 +44,7 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   ! Compute 4-center integrals of W (screened electron repulsion integrals, eri)
   ! (ij|W|kl) = int dx dx' f*_i(x) f_j(x) W(r,r') f*_k(x') f_l(x'), f are projectors in proj_r
   !
-  CALL io_push_title("eri (Symm)")
+  CALL io_push_title("ERI")
   !
   ALLOCATE( chi_body( pert%nglob, pert%nloc ) )
   !
@@ -83,7 +82,7 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   CALL mp_sum( chi_head, intra_bgrp_comm )
   CALL mp_sum( chi_body, intra_bgrp_comm )
   !
-  ! Compute (S)ERI
+  ! Compute ERI
   !
   ALLOCATE( braket(n_pairs,nspin,n_pdep_eigen_to_use) )
   !  
@@ -91,54 +90,28 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   !
   ALLOCATE( eri(n_pairs,n_pairs,nspin,nspin) )
   !
-  ! 4-center integrals of vc
+  ! 4-center integrals of Vc
   !
   eri = 0._DP
   !
-  ! body
-  !
   CALL compute_bv_direct()
-!   CALL compute_bv_pdep()
-  !
-  ! head
   !
   CALL compute_hv()
   !
-  IF ( mpime == root ) THEN
-     !
-     ! Write Vc in save folder. Note that the behavoir of writing .dat files
-     ! in the current working directory will be removed in a future version
-     !
-     WRITE(stdout, "(5x, 'Writing Vc in vc.dat (shape = [',i0,','i0,',',i0,','i0,'])...')") n_pairs,n_pairs,nspin,nspin
-     !
-     OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/vc.dat", STATUS="REPLACE", ACCESS="STREAM")
-     WRITE(iunit) eri * ry_to_ha
-     CLOSE(iunit)
-     !
-  ENDIF
-  !
   ! 4-center integrals of Wp
-  !
-  eri = 0._DP
   !
   CALL compute_wp_pdep(chi_head, chi_body)
   !
-  IF ( mpime == root ) THEN
-     WRITE(stdout, "(5x, 'Writing Wp in wp.dat (shape = [',i0,','i0,',',i0,','i0,'])...')") n_pairs,n_pairs,nspin,nspin
-     OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/wp.dat", STATUS="REPLACE", ACCESS="STREAM")
-     WRITE(iunit) eri * ry_to_ha
-     CLOSE(iunit)
-  ENDIF
-  !
-  WRITE(stdout, "(5x, 'eri calculation finished!')")
   CALL io_push_bar()
   !
   DEALLOCATE( eri, braket, chi_body )
   DEALLOCATE( pijmap, equalpairmap )
   !
 END SUBROUTINE
-
+!
+!-----------------------------------------------------------------------
 SUBROUTINE compute_braket()
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
@@ -172,7 +145,6 @@ SUBROUTINE compute_braket()
   ALLOCATE( phi(npwqx), rho_r(dffts%nnr), rho_g(npwqx) )
   !
   CALL pot3D%init(fftdriver,.FALSE.,"default")
-  CALL pot3D%print_divergence()
   !
   CALL start_bar_type ( barra, 'braket', nspin * macropert%nloc )
   !
@@ -224,8 +196,9 @@ SUBROUTINE compute_braket()
   !
 END SUBROUTINE
 !
-!
+!-----------------------------------------------------------------------
 SUBROUTINE compute_bv_direct()
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
@@ -236,7 +209,6 @@ SUBROUTINE compute_bv_direct()
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
-  USE io_global,            ONLY : stdout
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE types_coulomb,        ONLY : pot3D
@@ -341,8 +313,9 @@ SUBROUTINE compute_bv_direct()
   !
 END SUBROUTINE
 !
-!
+!-----------------------------------------------------------------------
 SUBROUTINE compute_bv_pdep()
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
@@ -352,7 +325,6 @@ SUBROUTINE compute_bv_pdep()
   USE types_coulomb,        ONLY : pot3D
   USE io_push,              ONLY : io_push_title
   USE cell_base,            ONLY : omega
-  USE io_global,            ONLY : stdout
   !
   IMPLICIT NONE
   !
@@ -389,13 +361,13 @@ SUBROUTINE compute_bv_pdep()
   !
 END SUBROUTINE
 !
-!
+!-----------------------------------------------------------------------
 SUBROUTINE compute_hv()
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_bands,eri,equalpairmap
   USE pwcom,                ONLY : nspin
-  USE io_global,            ONLY : stdout
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -404,7 +376,6 @@ SUBROUTINE compute_hv()
   INTEGER     :: s1, s2, p1, p2, i, k
   !
   Hv = pot3D%div
-  WRITE(stdout, "(5x, 'Hv = ', 3f14.7)") Hv
   !
   DO s1 = 1, nspin
      DO s2 = 1, nspin
@@ -423,8 +394,9 @@ SUBROUTINE compute_hv()
   !
 END SUBROUTINE
 !
-!
+!-----------------------------------------------------------------------
 SUBROUTINE compute_wp_pdep(chi_head, chi_body)
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert
@@ -432,7 +404,6 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
   USE westcom,              ONLY : eri,n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,braket,equalpairmap
   USE types_coulomb,        ONLY : pot3D
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
-  USE io_global,            ONLY : stdout
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE io_push,              ONLY : io_push_title
@@ -486,7 +457,6 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
   CALL pot3D%init(fftdriver,.FALSE.,"default")
   !
   Hp = chi_head * pot3D%div
-  WRITE(stdout, "(5x, 'Hp = ', 3f14.7)") Hp
   !
   DO s1 = 1, nspin
      DO s2 = 1, nspin

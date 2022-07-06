@@ -340,7 +340,7 @@ wfreq_control
    * - **Type**
      - list of int
    * - **Default**
-     - [1,2]
+     - [0]
    * - **Description**
      - List of bands to compute the QP corrections.
 

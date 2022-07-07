@@ -51,7 +51,10 @@ SUBROUTINE do_loc ( )
   CALL io_push_title('(L)ocalization Factor')
   !
   ! determine integration volume
-  volume = (westpp_box(2) - westpp_box(1))*(westpp_box(4) - westpp_box(3))*(westpp_box(6) - westpp_box(5))
+  !
+  volume = (westpp_box(2)-westpp_box(1)) * (westpp_box(4)-westpp_box(3)) * (westpp_box(6)-westpp_box(5))
+  IF( .NOT. volume > 0._DP ) CALL errore('do_loc','wrong integration volume',1)
+  !
   nbnd_ = westpp_range(2) - westpp_range(1) + 1
   aband = idistribute()
   CALL aband%init(nbnd_,'i','westpp_range',.TRUE.)
@@ -64,10 +67,11 @@ SUBROUTINE do_loc ( )
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) )
   !
   ! only the FFT root generates the filter
+  !
   IF( dffts%mype == dffts%root ) THEN
      !
-     ! create filter: for each point in space, the filter is ONE when point
-     ! is in box, ZERO if not. Loop over all points on FFT grid
+     ! for each point of FFT grid, the filter is ONE when point is in box/sphere, ZERO if not
+     !
      filter(:) = 0._DP
      n_points = 0
      ir = 0
@@ -75,16 +79,20 @@ SUBROUTINE do_loc ( )
         DO ir2 = 1, dffts%nr2
            DO ir1 = 1, dffts%nr1
               ir = ir + 1
+              !
               ! create real-space vector
+              !
               DO i = 1, 3
-                 r_vec(i) = REAL(ir1-1,KIND=DP)/REAL(dffts%nr1,KIND=DP)*alat*at(i,1) &
-                        & + REAL(ir2-1,KIND=DP)/REAL(dffts%nr2,KIND=DP)*alat*at(i,2) &
-                        & + REAL(ir3-1,KIND=DP)/REAL(dffts%nr3,KIND=DP)*alat*at(i,3)
+                 r_vec(i) = alat * ( REAL(ir1-1,KIND=DP)/REAL(dffts%nr1,KIND=DP)*at(i,1) &
+                                 & + REAL(ir2-1,KIND=DP)/REAL(dffts%nr2,KIND=DP)*at(i,2) &
+                                 & + REAL(ir3-1,KIND=DP)/REAL(dffts%nr3,KIND=DP)*at(i,3) )
               ENDDO
-              ! check whether r-vector is in the box
-              IF ((r_vec(1) > westpp_box(1)) .AND. (r_vec(1) < westpp_box(2)) .AND. &
+              !
+              ! check point is in box/sphere
+              !
+              IF( (r_vec(1) > westpp_box(1)) .AND. (r_vec(1) < westpp_box(2)) .AND. &
                 & (r_vec(2) > westpp_box(3)) .AND. (r_vec(2) < westpp_box(4)) .AND. &
-                & (r_vec(3) > westpp_box(5)) .AND. (r_vec(3) < westpp_box(6))) THEN
+                & (r_vec(3) > westpp_box(5)) .AND. (r_vec(3) < westpp_box(6)) ) THEN
                  n_points = n_points + 1
                  filter(ir) = 1._DP
               ENDIF
@@ -93,10 +101,15 @@ SUBROUTINE do_loc ( )
      ENDDO
   ENDIF
   !
-  ! scatter the filter function to all FFT processes
+  ! scatter filter to all FFT processes
+  !
   CALL scatter_grid(dffts, filter, filter_loc)
-  ! broadcast the number of points in rectangle to all FFT processes
+  !
+  ! broadcast the number of points in box/sphere to all FFT processes
+  !
   CALL mp_bcast(n_points, dffts%root, dffts%comm)
+  !
+  IF( n_points == 0 ) CALL errore('do_loc','no point found in integration volume',1)
   !
   ipr = 0._DP
   local_fac = 0._DP
@@ -145,27 +158,34 @@ SUBROUTINE do_loc ( )
   ENDDO
   !
   ! Post processing
+  !
   local_fac(:,:) = volume/omega*local_fac(:,:)/REAL(n_points,KIND=DP)
   ipr(:,:) = ipr(:,:)/REAL(dffts%nr1*dffts%nr2*dffts%nr3,KIND=DP)/omega
   !
   ! sum up results
+  !
   CALL mp_sum(local_fac,dffts%comm)
   CALL mp_sum(ipr,dffts%comm)
   CALL mp_sum(local_fac,inter_image_comm)
   CALL mp_sum(ipr,inter_image_comm)
   !
   ! root writes JSON file
+  !
   IF (mpime == root) THEN
+     !
      CALL json%initialize
-     ! initialize the structure
      CALL json%create_object(json_root, '')
      !
      IF (k_grid%nps == 1) THEN
+        !
         ! write localization factor and IPR to JSON file directly
+        !
         CALL json%add(json_root, 'localization', local_fac(:,1))
         CALL json%add(json_root, 'ipr', ipr(:,1))
      ELSE
+        !
         ! add localization object to root
+        !
         CALL json%create_object(localization_object, 'localization')
         CALL json%create_object(ipr_object, 'ipr')
         CALL json%add(json_root, localization_object)
@@ -173,13 +193,16 @@ SUBROUTINE do_loc ( )
         !
         DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
            WRITE(ikstring, '(I4)') iks
+           !
            ! write localization factor and IPR for each iks-point
+           !
            CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), local_fac(:,iks))
            CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
         ENDDO
-        ! don't need pointer anymore
+        !
         NULLIFY(localization_object)
         NULLIFY(ipr_object)
+        !
      ENDIF
      !
      OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//'/localization.json' )
@@ -187,6 +210,7 @@ SUBROUTINE do_loc ( )
      CLOSE( iunit )
      !
      CALL json%destroy()
+     !
   ENDIF
   !
   CALL stop_bar_type( barra, 'westpp' )

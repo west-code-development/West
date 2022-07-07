@@ -504,6 +504,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( westpp_epsinfty < 1._DP ) CALL errore('fetch_input','Err: westpp_epsinfty<1.',1)
      IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_n_pdep_eigen_to_use',1)
      IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_nr',1)
+     IF( westpp_box(1) > westpp_box(2) .OR. westpp_box(3) > westpp_box(4) .OR. westpp_box(5) > westpp_box(6) ) &
+     & CALL errore('fetch_input','Err: invalid westpp_box',1)
      !
   ENDIF
   !

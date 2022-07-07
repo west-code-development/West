@@ -478,7 +478,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Integrating along the IM axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = k_grid%nps * ( n_bands )
+  IF(l_verbose) barra_load = k_grid%nps * n_bands
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_i', barra_load )
   !
   ! LOOP
@@ -571,7 +571,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   IF(l_verbose) WRITE(stdout,'(5x,"Residues along the RE axis...")')
   IF(l_verbose) CALL io_push_bar
   !
-  IF(l_verbose) barra_load = k_grid%nps * ( n_bands )
+  IF(l_verbose) barra_load = k_grid%nps * n_bands
   IF(l_verbose) CALL start_bar_type( barra, 'sigmac_r', barra_load )
   !
   ! LOOP

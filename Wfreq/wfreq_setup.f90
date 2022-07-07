@@ -17,17 +17,14 @@ SUBROUTINE wfreq_setup
   USE mp_global,              ONLY : nbgrp,inter_image_comm,my_image_id,mp_bcast
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
-                                   & wfreq_calculation,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,&
-                                   & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
-                                   & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
+                                   & qp_bands,n_bands,wfreq_calculation,sigma_exx,sigma_vxcl,&
+                                   & sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,&
+                                   & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
+                                   & sigma_spectralf,sigma_freq,n_spectralf,&
                                    & l_enable_off_diagonal,ijpmap,pijmap,equalpairmap,n_pairs,&
                                    & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_corr_full,&
-                                   & qp_bands,n_bands,iuwfc,lrwfc,proj_c,proj_r
-  USE wavefunctions,          ONLY : evc,psic
-  USE fft_base,               ONLY : dffts
-  USE buffers,                ONLY : get_buffer
-  USE fft_at_gamma,           ONLY : single_invfft_gamma
-  USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx
+                                   & iuwfc,lrwfc,proj_c,proj_r
+  USE pwcom,                  ONLY : nbnd,nkstot,nks
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool

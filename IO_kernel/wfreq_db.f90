@@ -33,7 +33,7 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,n_spectralf,logfile, &
+      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,n_spectralf,logfile,&
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,&
                                      & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
                                      & sigma_freq,sigma_spectralf,l_enable_off_diagonal,n_pairs,sigma_vxcl_full,&

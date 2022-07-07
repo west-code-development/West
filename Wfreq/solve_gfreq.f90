@@ -35,9 +35,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
-                                 & o_restart_time,npwqx,fftdriver,wstat_save_dir,l_enable_off_diagonal,&
-                                 & ijpmap,qp_bands,n_bands
+  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,&
+                                 & nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver,&
+                                 & wstat_save_dir,l_enable_off_diagonal,ijpmap
   USE mp_global,            ONLY : my_image_id,inter_image_comm,npool,intra_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
@@ -415,9 +415,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
-                                 & o_restart_time,npwqx,wstat_save_dir,ngq,igq_q,&
-                                 & qp_bands,n_bands
+  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,&
+                                 & nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,&
+                                 & wstat_save_dir,ngq,igq_q
   USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm

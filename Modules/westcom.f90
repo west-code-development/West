@@ -61,10 +61,6 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_diago(:,:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_head_rfr(:)
   COMPLEX(DP), ALLOCATABLE :: z_body_rfr(:,:,:,:)
-  REAL(DP),    ALLOCATABLE :: d_body1_ifr_full(:,:,:,:)
-  REAL(DP),    ALLOCATABLE :: d_body2_ifr_full(:,:,:,:,:)
-  REAL(DP),    ALLOCATABLE :: d_diago_full(:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
   !
   ! CORRELATION with q-points
   !
@@ -212,10 +208,6 @@ MODULE wfreq_center
   REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_spectralf(:,:,:)
   REAL(DP),    ALLOCATABLE :: sigma_freq(:)
-  REAL(DP),    ALLOCATABLE :: sigma_exx_full  (:,:) 
-  REAL(DP),    ALLOCATABLE :: sigma_vxcl_full (:,:) 
-  REAL(DP),    ALLOCATABLE :: sigma_vxcnl_full(:,:) 
-  COMPLEX(DP), ALLOCATABLE :: sigma_corr_full (:,:)
   !
 END MODULE
 !

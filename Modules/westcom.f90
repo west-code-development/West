@@ -203,7 +203,7 @@ MODULE wfreq_center
   INTEGER,ALLOCATABLE :: equalpairmap(:)
   !
   ! downfolded Hamiltonian
-  REAL(DP),ALLOCATABLE    :: proj_r(:,:,:)
+  REAL(DP),   ALLOCATABLE    :: proj_r(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
   REAL(DP),ALLOCATABLE :: eri(:,:,:,:)
@@ -232,6 +232,10 @@ MODULE wfreq_center
   REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_spectralf(:,:,:)
   REAL(DP),    ALLOCATABLE :: sigma_freq(:)
+  REAL(DP),    ALLOCATABLE :: sigma_exx_full  (:,:) 
+  REAL(DP),    ALLOCATABLE :: sigma_vxcl_full (:,:) 
+  REAL(DP),    ALLOCATABLE :: sigma_vxcnl_full(:,:) 
+  COMPLEX(DP), ALLOCATABLE :: sigma_corr_full (:,:)
   !
 END MODULE
 !

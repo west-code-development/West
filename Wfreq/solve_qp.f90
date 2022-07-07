@@ -604,7 +604,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
                                  & z_epsm1_ifr_q,z_epsm1_rfr_q,n_spectralf,ecut_spectralf,&
                                  & z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q,sigma_z,&
                                  & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
-                                 & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,&
+                                 & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum

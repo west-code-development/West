@@ -38,14 +38,14 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bands,imfreq_list_integrate,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,imfreq_list_integrate,&
                                  & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,&
                                  & n_imfreq,d_epsm1_ifr,z_epsm1_rfr,n_spectralf,ecut_spectralf,&
                                  & d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr,sigma_z,sigma_eqplin,&
                                  & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,&
-                                 & sigma_diff,sigma_spectralf,sigma_freq,l_enable_off_diagonal,&
-                                 & ijpmap,npair,d_body1_ifr_full,d_body2_ifr_full,d_diago_full,&
-                                 & z_body_rfr_full
+                                 & sigma_diff,sigma_spectralf,sigma_freq,qp_bands,n_bands,&
+                                 & l_enable_off_diagonal,ijpmap,npair,d_body1_ifr_full,&
+                                 & d_body2_ifr_full,d_diago_full,z_body_rfr_full
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,my_pool_id,intra_bgrp_comm,&
                                  & inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
@@ -166,7 +166,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   CALL io_push_title('Collecting results from W and G')
   !
-  CALL band_group%init(SIZE(qp_bands),'b','band_group',.FALSE.)
+  CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   IF (l_enable_off_diagonal) THEN
      barra_load = kpt_pool%nloc * band_group%nloc * band_group%nglob
@@ -373,8 +373,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   ! Get Sigma_X
   !
-  ALLOCATE( sigma_hf (SIZE(qp_bands),k_grid%nps) )
-  CALL readin_solvehf( sigma_hf(1,1), SIZE(qp_bands), k_grid%nps )
+  ALLOCATE( sigma_hf (n_bands,k_grid%nps) )
+  CALL readin_solvehf( sigma_hf(1,1), n_bands, k_grid%nps )
   !
   ! For CORR
   !
@@ -382,13 +382,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      CALL io_push_title('(Q)uasiparticle energies')
      !
-     ALLOCATE( en(SIZE(qp_bands),k_grid%nps,2) )
-     ALLOCATE( sc(SIZE(qp_bands),k_grid%nps,2) )
-     ALLOCATE( l_conv(SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( sigma_cor_in (SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( sigma_cor_out(SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( z_in (SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( qp_energy (SIZE(qp_bands),k_grid%nps) )
+     ALLOCATE( en(n_bands,k_grid%nps,2) )
+     ALLOCATE( sc(n_bands,k_grid%nps,2) )
+     ALLOCATE( l_conv(n_bands,k_grid%nps) )
+     ALLOCATE( sigma_cor_in (n_bands,k_grid%nps) )
+     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+     ALLOCATE( z_in (n_bands,k_grid%nps) )
+     ALLOCATE( qp_energy (n_bands,k_grid%nps) )
      !
      en = 0._DP
      !
@@ -399,7 +399,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         !
         iks_g = kpt_pool%l2g(iks)
         !
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            en(ib,iks_g,1) = et(qp_bands(ib),iks) - eshift*0.5_DP
            en(ib,iks_g,2) = et(qp_bands(ib),iks) + eshift*0.5_DP
         ENDDO
@@ -411,7 +411,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ! Stage sigma_corr_in
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            sigma_cor_in(ib,iks) = ( sc(ib,iks,2) + sc(ib,iks,1) ) * 0.5_DP
         ENDDO
      ENDDO
@@ -419,7 +419,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ! Stage z_in
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            z_in(ib,iks) = 1._DP / ( 1._DP-REAL( sc(ib,iks,2)-sc(ib,iks,1), KIND=DP ) / eshift  )
         ENDDO
      ENDDO
@@ -428,7 +428,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ! en 2 = EKS + Z * ( sigmax - vxc + sigmacorrin)
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            en(ib,iks,1) = et(qp_bands(ib),iks)
            sc(ib,iks,1) = sigma_cor_in(ib,iks)
            en(ib,iks,2) = et(qp_bands(ib),iks) + z_in(ib,iks) &
@@ -443,7 +443,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ! nth step of the secant solver
      !
      l_conv = .FALSE.
-     notconv = k_grid%nps * ( SIZE(qp_bands) )
+     notconv = k_grid%nps * n_bands
      DO ifixed = 1, n_secant_maxiter
         !
         CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE.)
@@ -453,7 +453,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            ! Resulting new energy:
            !
            DO iks = 1, k_grid%nps
-              DO ib = 1, SIZE(qp_bands)
+              DO ib = 1, n_bands
                   IF( .NOT. l_conv(ib,iks) ) THEN
                      qp_energy(ib,iks) = en(ib,iks,2) &
                      & +(et(qp_bands(ib),iks)+sigma_hf(ib,iks)+REAL(sc(ib,iks,2),KIND=DP)-en(ib,iks,2)) &
@@ -465,7 +465,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            ! Estimate l_conv
            !
            DO iks = 1, k_grid%nps
-              DO ib = 1, SIZE(qp_bands)
+              DO ib = 1, n_bands
                  l_conv(ib,iks) = ( ABS( qp_energy(ib,iks) - en(ib,iks,2) ) < trev_secant )
               ENDDO
            ENDDO
@@ -474,7 +474,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            !
            notconv = 0
            DO iks = 1, k_grid%nps
-              DO ib = 1, SIZE(qp_bands)
+              DO ib = 1, n_bands
                  IF( .NOT.l_conv(ib,iks) ) notconv = notconv + 1
               ENDDO
            ENDDO
@@ -522,10 +522,10 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ! Output it per k-point
      !
-     ALLOCATE(out_tab(SIZE(qp_bands),7))
+     ALLOCATE(out_tab(n_bands,7))
      !
      DO iks=1,k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
            out_tab( ib, 2) = et(qp_bands(ib),iks) * rytoev
            out_tab( ib, 3) = (et(qp_bands(ib),iks)+sigma_hf(ib,iks)) * rytoev
@@ -537,7 +537,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         WRITE(myglobk,'(i5.5)') iks
         !
         CALL serial_table_output(mpime==root,'eqp_K'//myglobk,out_tab,&
-           & SIZE(qp_bands),7,&
+           & n_bands,7,&
            & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
      ENDDO
      !
@@ -555,8 +555,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      CALL start_bar_type( barra, 'qplot', n_spectralf )
      !
-     ALLOCATE( en(SIZE(qp_bands),k_grid%nps,1) )
-     ALLOCATE( sc(SIZE(qp_bands),k_grid%nps,1) )
+     ALLOCATE( en(n_bands,k_grid%nps,1) )
+     ALLOCATE( sc(n_bands,k_grid%nps,1) )
      !
      DO glob_ifreq = 1, n_spectralf
         sigma_freq(glob_ifreq) = (ecut_spectralf(2)-ecut_spectralf(1))/REAL(n_spectralf-1,KIND=DP)*REAL(glob_ifreq-1,KIND=DP) &
@@ -568,7 +568,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         & +ecut_spectralf(1)
         CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .FALSE., .FALSE.)
         DO iks=1,k_grid%nps
-           DO ib = 1, SIZE(qp_bands)
+           DO ib = 1, n_bands
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1)
            ENDDO
         ENDDO
@@ -598,12 +598,13 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bands,imfreq_list_integrate,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,imfreq_list_integrate,&
                                  & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,n_imfreq,&
                                  & z_epsm1_ifr_q,z_epsm1_rfr_q,n_spectralf,ecut_spectralf,&
                                  & z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q,sigma_z,&
                                  & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
-                                 & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq
+                                 & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,&
+                                 & qp_bands,n_bands
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum
@@ -681,12 +682,12 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! TEMP
   !
   ALLOCATE( overlap( pert%nglob, nbnd ) )
-  ALLOCATE( z_body1_ifr_q( aband%nloc, ifr%nloc, SIZE(qp_bands), k_grid%nps, q_grid%nps ) )
-  ALLOCATE( z_body_rfr_q( aband%nloc, rfr%nloc, SIZE(qp_bands), k_grid%nps, q_grid%nps ) )
+  ALLOCATE( z_body1_ifr_q( aband%nloc, ifr%nloc, n_bands, k_grid%nps, q_grid%nps ) )
+  ALLOCATE( z_body_rfr_q( aband%nloc, rfr%nloc, n_bands, k_grid%nps, q_grid%nps ) )
   ALLOCATE( ztemp2( nbnd, MAX(ifr%nloc,rfr%nloc) ) )
   IF( l_enable_lanczos ) THEN
-     ALLOCATE( z_body2_ifr_q( n_lanczos, pert%nloc, ifr%nloc, SIZE(qp_bands), k_grid%nps, q_grid%nps ) )
-     ALLOCATE( d_diago_q( n_lanczos, pert%nloc, SIZE(qp_bands), k_grid%nps, q_grid%nps ) )
+     ALLOCATE( z_body2_ifr_q( n_lanczos, pert%nloc, ifr%nloc, n_bands, k_grid%nps, q_grid%nps ) )
+     ALLOCATE( d_diago_q( n_lanczos, pert%nloc, n_bands, k_grid%nps, q_grid%nps ) )
      ALLOCATE( braket( pert%nglob, n_lanczos, pert%nloc ) )
      ALLOCATE( diago( n_lanczos, pert%nloc ) )
   ENDIF
@@ -702,7 +703,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   CALL io_push_title('Collecting results from W and G')
   !
-  CALL band_group%init(SIZE(qp_bands),'b','band_group',.FALSE.)
+  CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   barra_load = k_grid%nps * band_group%nloc * q_grid%nps
   CALL start_bar_type( barra, 'coll_gw', barra_load )
@@ -850,8 +851,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   ! Get Sigma_X
   !
-  ALLOCATE( sigma_hf (SIZE(qp_bands),k_grid%nps) )
-  CALL readin_solvehf( sigma_hf(1,1), SIZE(qp_bands), k_grid%nps )
+  ALLOCATE( sigma_hf (n_bands,k_grid%nps) )
+  CALL readin_solvehf( sigma_hf(1,1), n_bands, k_grid%nps )
   !
   ! For CORR
   !
@@ -859,18 +860,18 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      !
      CALL io_push_title('(Q)uasiparticle energies')
      !
-     ALLOCATE( en(SIZE(qp_bands),k_grid%nps,2) )
-     ALLOCATE( sc(SIZE(qp_bands),k_grid%nps,2) )
-     ALLOCATE( l_conv(SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( sigma_cor_in (SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( sigma_cor_out(SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( z_in (SIZE(qp_bands),k_grid%nps) )
-     ALLOCATE( qp_energy (SIZE(qp_bands),k_grid%nps) )
+     ALLOCATE( en(n_bands,k_grid%nps,2) )
+     ALLOCATE( sc(n_bands,k_grid%nps,2) )
+     ALLOCATE( l_conv(n_bands,k_grid%nps) )
+     ALLOCATE( sigma_cor_in (n_bands,k_grid%nps) )
+     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+     ALLOCATE( z_in (n_bands,k_grid%nps) )
+     ALLOCATE( qp_energy (n_bands,k_grid%nps) )
      !
      ! 1st step of secant solver : E_KS - 0.5 * eshift
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            en(ib,iks,1) = et(qp_bands(ib),iks) - eshift*0.5_DP
         ENDDO
      ENDDO
@@ -879,7 +880,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ! 1st step of secant solver : E_KS + 0.5 * eshift
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            en(ib,iks,2) = et(qp_bands(ib),iks) + eshift*0.5_DP
         ENDDO
      ENDDO
@@ -888,7 +889,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ! Stage sigma_corr_in
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            sigma_cor_in(ib,iks) = ( sc(ib,iks,2) + sc(ib,iks,1) ) * 0.5_DP
         ENDDO
      ENDDO
@@ -896,7 +897,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ! Stage z_in
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            z_in(ib,iks) = 1._DP / ( 1._DP-REAL( sc(ib,iks,2)-sc(ib,iks,1), KIND=DP ) / eshift  )
         ENDDO
      ENDDO
@@ -905,7 +906,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ! en 2 = EKS + Z * ( sigmax - vxc + sigmacorrin)
      !
      DO iks = 1, k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            en(ib,iks,1) = et(qp_bands(ib),iks)
            sc(ib,iks,1) = sigma_cor_in(ib,iks)
            en(ib,iks,2) = et(qp_bands(ib),iks) + z_in(ib,iks) &
@@ -920,7 +921,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ! nth step of the secant solver
      !
      l_conv = .FALSE.
-     notconv =  k_grid%nps * ( SIZE(qp_bands) )
+     notconv =  k_grid%nps * n_bands
      DO ifixed = 1, n_secant_maxiter
         !
         CALL calc_corr_k( sc(:,:,2), en(:,:,2), .TRUE.)
@@ -928,7 +929,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         ! Resulting new energy:
         !
         DO iks = 1, k_grid%nps
-           DO ib = 1, SIZE(qp_bands)
+           DO ib = 1, n_bands
                IF( .NOT. l_conv(ib,iks) ) THEN
                   qp_energy(ib,iks) = en(ib,iks,2) + &
                          & ( et(qp_bands(ib),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2) ) / &
@@ -940,7 +941,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         ! Estimate l_conv
         !
         DO iks = 1, k_grid%nps
-           DO ib = 1, SIZE(qp_bands)
+           DO ib = 1, n_bands
               l_conv(ib,iks) = ( ABS( qp_energy(ib,iks) - en(ib,iks,2) ) < trev_secant )
            ENDDO
         ENDDO
@@ -949,7 +950,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         !
         notconv = 0
         DO iks = 1, k_grid%nps
-           DO ib = 1, SIZE(qp_bands)
+           DO ib = 1, n_bands
               IF( .NOT.l_conv(ib,iks) ) notconv = notconv + 1
            ENDDO
         ENDDO
@@ -988,10 +989,10 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      !
      ! Output it per k-point
      !
-     ALLOCATE(out_tab(SIZE(qp_bands),7))
+     ALLOCATE(out_tab(n_bands,7))
      !
      DO iks=1,k_grid%nps
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
            out_tab( ib, 2) = et(qp_bands(ib),iks) * rytoev
            out_tab( ib, 3) = (et(qp_bands(ib),iks)+sigma_hf(ib,iks)) * rytoev
@@ -1003,7 +1004,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         WRITE(myglobk,'(i5.5)') iks
         !
         CALL serial_table_output(mpime==root,'eqp_K'//myglobk,out_tab,&
-           & SIZE(qp_bands),7,&
+           & n_bands,7,&
            & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
      ENDDO
      !
@@ -1021,8 +1022,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      !
      CALL start_bar_type( barra, 'qplot', n_spectralf )
      !
-     ALLOCATE( en(SIZE(qp_bands),k_grid%nps,1) )
-     ALLOCATE( sc(SIZE(qp_bands),k_grid%nps,1) )
+     ALLOCATE( en(n_bands,k_grid%nps,1) )
+     ALLOCATE( sc(n_bands,k_grid%nps,1) )
      !
      DO glob_ifreq = 1, n_spectralf
         sigma_freq(glob_ifreq) = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) &
@@ -1033,7 +1034,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         en = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) + ecut_spectralf(1)
         CALL calc_corr_k( sc(:,:,1), en(:,:,1), .FALSE.)
         DO iks=1, k_grid%nps
-           DO ib = 1, SIZE(qp_bands)
+           DO ib = 1, n_bands
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1)
            ENDDO
         ENDDO
@@ -1058,7 +1059,7 @@ END SUBROUTINE
 SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : qp_bands,trev_secant,logfile
+  USE westcom,              ONLY : qp_bands,n_bands,trev_secant,logfile
   USE constants,            ONLY : rytoev
   USE mp_world,             ONLY : mpime,root
   USE io_global,            ONLY : stdout
@@ -1071,9 +1072,9 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   ! I/O
   !
   INTEGER,INTENT(IN) :: iteration
-  REAL(DP),INTENT(IN) :: en1(SIZE(qp_bands),k_grid%nps)
-  REAL(DP),INTENT(IN) :: en2(SIZE(qp_bands),k_grid%nps)
-  COMPLEX(DP),INTENT(IN) :: sc1(SIZE(qp_bands),k_grid%nps)
+  REAL(DP),INTENT(IN) :: en1(n_bands,k_grid%nps)
+  REAL(DP),INTENT(IN) :: en2(n_bands,k_grid%nps)
+  COMPLEX(DP),INTENT(IN) :: sc1(n_bands,k_grid%nps)
   !
   ! Workspace
   !
@@ -1097,14 +1098,14 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      IF( lnospin ) THEN
         WRITE(stdout,'(5X,a,1X,a,1X,a)') 'band  ', '   QP en. [eV]', 'conv'
         iks = k_grid%ipis2ips(ik,1)
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            symb(1)='  no'
            IF( (iteration /= 0) .AND. (ABS(en2(ib,iks)-en1(ib,iks)) < trev_secant) ) symb(1)=' yes'
            WRITE(stdout,'(5X,i6.6,1X,1f14.6,1X,a)') qp_bands(ib), en2(ib,iks)*rytoev, symb(1)
         ENDDO
      ELSE
         WRITE(stdout,'(5X,a,1X,a,1X,a,1X,a,1X,a)') 'band  ', '   QP en. [eV]', 'conv', '   QP en. [eV]', 'conv'
-        DO ib = 1, SIZE(qp_bands)
+        DO ib = 1, n_bands
            symb(1:2)='  no'
            IF( (iteration /= 0) .AND. (ABS(en2(ib,k_grid%ipis2ips(ik,1))-en1(ib,k_grid%ipis2ips(ik,1))) &
              & < trev_secant) ) symb(1)=' yes'
@@ -1142,7 +1143,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
      DO iks = 1, k_grid%nps
         ik = k_grid%ip(iks)
         is = k_grid%is(iks)
-        DO ib_index = 1, SIZE(qp_bands)
+        DO ib_index = 1, n_bands
            ib = qp_bands(ib_index)
            counter = counter + 1
            WRITE( ccounter, '(i10)') counter

@@ -14,7 +14,7 @@
 SUBROUTINE calc_exx2(sigma_exx)
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = qp_bands(1):qp_bands(SIZE(qp_bands))
+  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = qp_bands(1):qp_bands(n_bands)
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
@@ -27,7 +27,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands,n_bands
   USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,npair
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
@@ -43,7 +43,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   !
   ! I/O
   !
-  REAL(DP), INTENT(OUT) :: sigma_exx(SIZE(qp_bands),k_grid%nps)
+  REAL(DP), INTENT(OUT) :: sigma_exx(n_bands,k_grid%nps)
   !
   ! Workspace
   !
@@ -91,7 +91,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   !
   sigma_exx = 0._DP
   !
-  CALL band_group%init(SIZE(qp_bands),'b','band_group',.FALSE.)
+  CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   IF (l_enable_off_diagonal) THEN
       barra_load = kpt_pool%nloc*band_group%nloc*band_group%nglob

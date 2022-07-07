@@ -17,11 +17,12 @@ SUBROUTINE wfreq_setup
   USE mp_global,              ONLY : nbgrp
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
-                                   & wfreq_calculation,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,&
-                                   & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
-                                   & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
-                                   & l_enable_off_diagonal,ijpmap,npair,sigma_exx_full,sigma_vxcl_full,&
-                                   & sigma_vxcnl_full,sigma_corr_full,qp_bands
+                                   & qp_bands,n_bands,wfreq_calculation,sigma_exx,sigma_vxcl,&
+                                   & sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,&
+                                   & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
+                                   & sigma_spectralf,sigma_freq,n_spectralf,l_enable_off_diagonal,&
+                                   & ijpmap,npair,sigma_exx_full,sigma_vxcl_full,&
+                                   & sigma_vxcnl_full,sigma_corr_full
   USE pwcom,                  ONLY : nbnd,nkstot,nks
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
@@ -51,8 +52,10 @@ SUBROUTINE wfreq_setup
      ENDDO
   ENDIF
   !
+  n_bands = SIZE(qp_bands)
+  !
   IF(qp_bands(1) > nbnd) CALL errore('wfreq_setup','qp_bands(1)>nbnd',1)
-  IF(qp_bands(SIZE(qp_bands)) > nbnd) CALL errore('wfreq_setup','qp_bands(SIZE(qp_bands))>nbnd',1)
+  IF(qp_bands(n_bands) > nbnd) CALL errore('wfreq_setup','qp_bands(n_bands)>nbnd',1)
   !
   CALL set_nbndocc()
   !
@@ -75,7 +78,7 @@ SUBROUTINE wfreq_setup
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
   !
   IF(kpt_pool%nloc /= nks) CALL errore('wfreq_setup','unexpected kpt_pool initialization error',1)
-  IF(nbgrp > SIZE(qp_bands)) CALL errore('wfreq_setup','nbgrp>nbnd_qp',1)
+  IF(nbgrp > n_bands) CALL errore('wfreq_setup','nbgrp>nbnd_qp',1)
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('wfreq_setup','nbgrp>nbnd_occ',1)
   !
   CALL set_freqlists()
@@ -95,23 +98,23 @@ SUBROUTINE wfreq_setup
   !
   ! Allocate for output
   !
-  ALLOCATE( sigma_exx       (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_vxcl      (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_vxcnl     (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_hf        (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_z         (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_eqplin    (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_eqpsec    (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_sc_eks    (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqplin (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqpsec (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_diff      (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_exx       (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_vxcl      (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_vxcnl     (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_hf        (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_z         (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_eqplin    (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_eqpsec    (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_sc_eks    (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_sc_eqplin (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_sc_eqpsec (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_diff      (n_bands,k_grid%nps) )
   IF (l_enable_off_diagonal) THEN
-     npair = SIZE(qp_bands)*(SIZE(qp_bands)+1)/2
-     ALLOCATE(ijpmap(SIZE(qp_bands),SIZE(qp_bands)))
+     npair = n_bands*(n_bands+1)/2
+     ALLOCATE(ijpmap(n_bands,n_bands))
      index = 1
-     DO ib = 1, SIZE(qp_bands)
-        DO jb = ib, SIZE(qp_bands)
+     DO ib = 1, n_bands
+        DO jb = ib, n_bands
            ijpmap(ib,jb) = index
            ijpmap(jb,ib) = index
            index = index + 1
@@ -144,7 +147,7 @@ SUBROUTINE wfreq_setup
      IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.
   ENDDO
   IF(l_generate_plot) THEN
-     ALLOCATE(sigma_spectralf(n_spectralf,SIZE(qp_bands),k_grid%nps))
+     ALLOCATE(sigma_spectralf(n_spectralf,n_bands,k_grid%nps))
      ALLOCATE(sigma_freq     (n_spectralf))
      sigma_spectralf = 0._DP
      sigma_freq = 0._DP

@@ -33,7 +33,7 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,qp_bands,wfreq_calculation,n_spectralf,logfile, &
+      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,n_spectralf,logfile,&
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,&
                                      & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
                                      & sigma_freq,sigma_spectralf,l_enable_off_diagonal,npair,sigma_vxcl_full,&
@@ -79,11 +79,11 @@ MODULE wfreq_db
             IF( wfreq_calculation(i:i) == 'O' ) l_optics = .TRUE.
          ENDDO
          !
-         ALLOCATE(ilist(SIZE(qp_bands)))
-         DO ib = 1,SIZE(qp_bands)
+         ALLOCATE(ilist(n_bands))
+         DO ib = 1,n_bands
             ilist(ib) = qp_bands(ib)
          ENDDO
-         CALL json%add('output.Q.bandmap',ilist(1:SIZE(qp_bands)))
+         CALL json%add('output.Q.bandmap',ilist(1:n_bands))
          DEALLOCATE(ilist)
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
@@ -91,27 +91,27 @@ MODULE wfreq_db
             !
             WRITE(my_label_k,'(i6.6)') iks
             !
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(1:SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(1:SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl', sigma_vxcnl(1:SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.hf', sigma_hf(1:SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(1:SIZE(qp_bands),iks))
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', et(1:SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(1:SIZE(qp_bands),iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(1:SIZE(qp_bands),iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl', sigma_vxcnl(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.hf', sigma_hf(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(1:n_bands,iks))
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', et(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(1:n_bands,iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.re', &
-            & REAL(sigma_sc_eks(1:SIZE(qp_bands),iks)*rytoev,KIND=DP))
+            & REAL(sigma_sc_eks(1:n_bands,iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.im', &
-            & AIMAG(sigma_sc_eks(1:SIZE(qp_bands),iks)*rytoev))
+            & AIMAG(sigma_sc_eks(1:n_bands,iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.re', &
-            & REAL(sigma_sc_eqplin(1:SIZE(qp_bands),iks)*rytoev,KIND=DP))
+            & REAL(sigma_sc_eqplin(1:n_bands,iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.im', &
-            & AIMAG(sigma_sc_eqplin(1:SIZE(qp_bands),iks)*rytoev))
+            & AIMAG(sigma_sc_eqplin(1:n_bands,iks)*rytoev))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.re', &
-            & REAL(sigma_sc_eqpsec(1:SIZE(qp_bands),iks)*rytoev,KIND=DP))
+            & REAL(sigma_sc_eqpsec(1:n_bands,iks)*rytoev,KIND=DP))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
-            & AIMAG(sigma_sc_eqpsec(1:SIZE(qp_bands),iks)*rytoev))
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(1:SIZE(qp_bands),iks)*rytoev)
+            & AIMAG(sigma_sc_eqpsec(1:n_bands,iks)*rytoev))
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(1:n_bands,iks)*rytoev)
             IF(l_enable_off_diagonal) THEN
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax_full', &
                & sigma_exx_full(1:npair,iks)*rytoev)
@@ -126,7 +126,7 @@ MODULE wfreq_db
             ENDIF
             !
             IF( l_generate_plot ) THEN
-               DO ib = 1, SIZE(qp_bands)
+               DO ib = 1, n_bands
                   WRITE(my_label_b,'(i6.6)') ib
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.re',&
                   &REAL(sigma_spectralf(1:n_spectralf,ib,iks),KIND=DP)*rytoev)

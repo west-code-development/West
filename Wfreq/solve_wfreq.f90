@@ -340,7 +340,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         ! PSIC
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_a(1,iv),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npwq,npwqx,evc_a(1,iv),psic,TRIM(fftdriver))
         !
         ! ZEROS
         !

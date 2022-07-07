@@ -24,6 +24,7 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
   USE mp_world,             ONLY : mpime,root
   USE io_push,              ONLY : io_push_title, io_push_bar
+  USE wfreq_db,             ONLY : qdet_db_write
   !
   USE types_coulomb,        ONLY : pot3D
   !
@@ -90,9 +91,9 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   !
   ALLOCATE( eri(n_pairs,n_pairs,nspin,nspin) )
   !
-  ! 4-center integrals of Vc
-  !
   eri = 0._DP
+  !
+  ! 4-center integrals of Vc
   !
   CALL compute_bv_direct()
   !
@@ -101,6 +102,8 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   ! 4-center integrals of Wp
   !
   CALL compute_wp_pdep(chi_head, chi_body)
+  !
+  CALL qdet_db_write()
   !
   CALL io_push_bar()
   !

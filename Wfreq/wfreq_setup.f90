@@ -23,7 +23,7 @@ SUBROUTINE wfreq_setup
                                    & sigma_spectralf,sigma_freq,n_spectralf,&
                                    & l_enable_off_diagonal,ijpmap,pijmap,equalpairmap,n_pairs,&
                                    & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_corr_full,&
-                                   & iuwfc,lrwfc,proj_c,proj_r
+                                   & iuwfc,lrwfc,proj_c,proj_r,npwq,npwqx,fftdriver
   USE wavefunctions,          ONLY : evc,psic
   USE fft_base,               ONLY : dffts
   USE buffers,                ONLY : get_buffer
@@ -40,7 +40,6 @@ SUBROUTINE wfreq_setup
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: i,ib,jb,index,iks,ib_index
   LOGICAL :: l_generate_plot
-  COMPLEX(DP), ALLOCATABLE :: aux_r(:)
   !
   CALL do_setup()
   !
@@ -158,7 +157,6 @@ SUBROUTINE wfreq_setup
      IF(wfreq_calculation(i:i) == 'H') THEN
         ALLOCATE( proj_r(dffts%nnr,n_bands,k_grid%nps) )
         ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
-        ALLOCATE( aux_r(dffts%nnr) )
         DO iks = 1, k_grid%nps 
            !
            IF(kpt_pool%nloc > 1) THEN
@@ -170,14 +168,12 @@ SUBROUTINE wfreq_setup
               !
               ib = qp_bands(ib_index)
               proj_c(:,ib_index,iks) = evc(:,ib)
-              CALL single_invfft_gamma(dffts,npw,npwx,proj_c(:,ib_index,iks),aux_r,'Wave')
-              proj_r(:,ib_index,iks) = aux_r(:)
+              CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,ib_index,iks),psic,TRIM(fftdriver))
+              proj_r(:,ib_index,iks) = psic(:)
               !
            END DO
            !
         END DO
-        !
-        DEALLOCATE( aux_r )
         EXIT
         !
      ENDIF

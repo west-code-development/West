@@ -203,11 +203,11 @@ MODULE wfreq_center
   INTEGER,ALLOCATABLE :: equalpairmap(:)
   !
   ! downfolded Hamiltonian
-  REAL(DP),   ALLOCATABLE    :: proj_r(:,:,:)
+  REAL(DP),   ALLOCATABLE :: proj_r(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
   REAL(DP),ALLOCATABLE :: eri(:,:,:,:)
-  REAL(DP),ALLOCATABLE :: h1e(:,:,:)
+  REAL(DP),ALLOCATABLE :: h1e(:,:)
   !
   ! gw_etot 
   !

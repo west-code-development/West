@@ -74,7 +74,7 @@ MODULE wfreq_db
          !
          l_generate_plot = .FALSE.
          l_optics = .FALSE.
-         DO i = 1,8
+         DO i = 1,9
             IF( wfreq_calculation(i:i) == 'P' ) l_generate_plot = .TRUE.
             IF( wfreq_calculation(i:i) == 'O' ) l_optics = .TRUE.
          ENDDO

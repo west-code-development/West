@@ -15,7 +15,7 @@ SUBROUTINE solve_h1e()
   !-----------------------------------------------------------------------
   !
   USE westcom,              ONLY : n_bands,n_pairs,proj_c,h1e,iuwfc,lrwfc,&
-                                 & sigma_exx_full,sigma_corr_full
+                                 & sigma_exx_full,sigma_corr_full,wfreq_save_dir
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
   USE wavefunctions,        ONLY : evc
@@ -28,11 +28,13 @@ SUBROUTINE solve_h1e()
   USE realus,               ONLY : real_space
   USE control_flags,        ONLY : gamma_only
   USE wfreq_db,             ONLY : qdet_db_write
+  USE mp_world,             ONLY : mpime,root
   !
   IMPLICIT NONE
   !
   COMPLEX(DP),ALLOCATABLE :: psi(:,:,:), hpsi(:,:,:), h1e_tmp(:,:)
-  INTEGER  :: s,i
+  INTEGER  :: s,i,iunit
+  REAL(DP)  :: ry_to_ha = 0.5_DP
   !
   ! Compute 1-electron integrals h1e(i,j) = <i|H|j> where H is the 1-electron Hamiltonian
   !
@@ -65,12 +67,32 @@ SUBROUTINE solve_h1e()
   CALL compute_vxx(psi, hpsi, h1e_tmp)
   !
   h1e = h1e + sigma_exx_full
+!   IF ( mpime == root ) THEN
+!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_exx_full.dat", STATUS="REPLACE", ACCESS="STREAM")
+!      WRITE(iunit) sigma_exx_full * ry_to_ha
+!      CLOSE(iunit)
+!   ENDIF
   CALL solve_hf( .TRUE. )
   h1e = h1e - sigma_exx_full
+!   IF ( mpime == root ) THEN
+!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_exx_full_a.dat", STATUS="REPLACE", ACCESS="STREAM")
+!      WRITE(iunit) sigma_exx_full * ry_to_ha
+!      CLOSE(iunit)
+!   ENDIF
   !
   h1e = h1e + REAL(sigma_corr_full)
+!   IF ( mpime == root ) THEN
+!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_corr_full.dat", STATUS="REPLACE", ACCESS="STREAM")
+!      WRITE(iunit) sigma_corr_full * ry_to_ha
+!      CLOSE(iunit)
+!   ENDIF
   CALL solve_qp( .FALSE., .FALSE., .TRUE. )
   h1e = h1e - REAL(sigma_corr_full)
+!   IF ( mpime == root ) THEN
+!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_corr_full_a.dat", STATUS="REPLACE", ACCESS="STREAM")
+!      WRITE(iunit) sigma_corr_full * ry_to_ha
+!      CLOSE(iunit)
+!   ENDIF
   !
   CALL qdet_db_write( )
   !

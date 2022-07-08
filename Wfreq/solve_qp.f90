@@ -526,12 +526,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      !   
      sigma_cor_out(:,:) = sc(:,:,2)
      !
-     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., l_QDET)
-     IF (l_QDET) THEN
-        CALL stop_clock( 'solve_qp' )
-        RETURN
-     ENDIF 
-     !
      DEALLOCATE( en, sc, l_conv )
      !
      IF( notconv /= 0 ) THEN
@@ -566,6 +560,14 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      DEALLOCATE( qp_energy )
      !
   ENDIF
+  !
+  ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+  IF (l_enable_off_diagonal) CALL calc_corr_gamma( sigma_cor_out, sigma_eqpsec, .TRUE., .TRUE., l_QDET)
+  DEALLOCATE( sigma_cor_out )
+  IF (l_QDET) THEN
+     CALL stop_clock( 'solve_qp' )
+     RETURN
+  ENDIF 
   !
   IF( l_generate_plot ) THEN
      !

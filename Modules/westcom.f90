@@ -186,14 +186,23 @@ MODULE wfreq_center
   REAL(DP), ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP), PARAMETER :: frequency_list_power = 2._DP
   !
+  ! qp_bands
+  !  
+  INTEGER :: n_bands
+  !
   ! off-diagonal entries mapping
   !
+  INTEGER :: n_pairs
   INTEGER,ALLOCATABLE :: ijpmap(:,:)
-  INTEGER :: npair
+  INTEGER,ALLOCATABLE :: pijmap(:,:)
+  INTEGER,ALLOCATABLE :: equalpairmap(:)
   !
-  ! qp_bands
-  !
-  INTEGER :: n_bands
+  ! downfolded Hamiltonian
+  REAL(DP),   ALLOCATABLE :: proj_r(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
+  REAL(DP),ALLOCATABLE :: eri(:,:,:,:)
+  REAL(DP),ALLOCATABLE :: h1e(:,:)
   !
   ! gw_etot 
   !

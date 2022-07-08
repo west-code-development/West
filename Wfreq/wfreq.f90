@@ -57,7 +57,7 @@ PROGRAM wfreq
   ENDDO
   !
   IF( lgate(1) ) THEN
-     CALL solve_hf( )
+     CALL solve_hf( .FALSE. )
   ENDIF
   !
   IF( lgate(2) ) THEN
@@ -77,7 +77,11 @@ PROGRAM wfreq
   ENDIF
   !
   IF( lgate(6) .OR. lgate(8) ) THEN
-     CALL solve_qp( lgate(6), lgate(8) )
+     CALL solve_qp( lgate(6), lgate(8), .FALSE. )
+  ENDIF
+  !
+  IF( lgate(9) ) THEN
+     CALL solve_h1e( )
   ENDIF
   !
   CALL exx_ungo( )

@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
+SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_corr(n,iks) = < ib,iks | S_c(energy(ib,iks))  | ib,iks >
@@ -26,7 +26,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   USE pwcom,                ONLY : et
   USE westcom,              ONLY : qp_bands,n_bands,l_enable_lanczos,n_lanczos,l_macropol,&
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,&
-                                 & z_body_rfr,l_enable_off_diagonal,ijpmap,npair, d_body1_ifr_full,&
+                                 & z_body_rfr,l_enable_off_diagonal,ijpmap,n_pairs, d_body1_ifr_full,&
                                  & d_body2_ifr_full,d_diago_full,z_body_rfr_full,sigma_corr_full,&
                                  & l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -42,7 +42,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   COMPLEX(DP),INTENT(OUT) :: sigma_corr( n_bands, k_grid%nps )  ! The correlation self-energy, imaginary part is lifetime.
   REAL(DP),INTENT(IN) :: energy( n_bands, k_grid%nps )          ! The energy variable
   LOGICAL,INTENT(IN) :: l_verbose
-  LOGICAL,INTENT(IN) :: l_full
+  LOGICAL,INTENT(IN) :: l_full, l_QDET
   !
   ! Workspace
   !
@@ -67,6 +67,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   ! ZERO
   !
   sigma_corr = 0._DP
+  IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full = 0._DP
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
   !
@@ -79,7 +80,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   !
   IF(l_verbose) THEN
      IF (l_enable_off_diagonal .AND. l_full) THEN
-        barra_load = kpt_pool%nloc * npair
+        barra_load = kpt_pool%nloc * n_pairs
      ELSE
         barra_load = kpt_pool%nloc * n_bands
      ENDIF
@@ -131,6 +132,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            DO ifreq = 1,ifr%nloc
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
+                 !
+                 IF (l_QDET) THEN
+                    IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+                 ENDIF
+                 !
                  enrg = et(glob_im,iks) - energy(ib_index,iks_g)
                  IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                  & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
@@ -146,7 +152,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            ! BODY 2nd part : Lanczos
            !
-           IF( l_enable_lanczos ) THEN
+           IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               DO ifreq = 1,ifr%nloc
                  DO ip = 1, pert%nloc
@@ -196,7 +202,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   !
   IF(l_verbose) THEN
      IF (l_enable_off_diagonal .AND. l_full) THEN
-        barra_load = kpt_pool%nloc * npair
+        barra_load = kpt_pool%nloc * n_pairs
      ELSE
         barra_load = kpt_pool%nloc * n_bands
      ENDIF
@@ -238,6 +244,10 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            DO im = 1,aband%nloc
               !
               glob_im = aband%l2g(im)
+              !
+              IF (l_QDET) THEN
+                 IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+              ENDIF
               !
               this_is_a_pole=.FALSE.
               !
@@ -325,7 +335,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  !
                  glob_im = aband%l2g(im)
                  !
-                 this_is_a_pole=.false.
+                 IF (l_QDET) THEN
+                    IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+                 ENDIF  
+                 !               
+                 this_is_a_pole=.FALSE.
                  !
                  IF (l_frac_occ) THEN
                     IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN

@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_exx2(sigma_exx)
+SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = qp_bands(1):qp_bands(n_bands)
@@ -28,7 +28,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands,n_bands
-  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,npair
+  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,n_pairs
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -44,6 +44,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   ! I/O
   !
   REAL(DP), INTENT(OUT) :: sigma_exx(n_bands,k_grid%nps)
+  LOGICAL,INTENT(IN) :: l_QDET
   !
   ! Workspace
   !
@@ -90,6 +91,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   ! Set to zero
   !
   sigma_exx = 0._DP
+  IF (l_enable_off_diagonal) sigma_exx_full = 0._DP
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
@@ -176,6 +178,10 @@ SUBROUTINE calc_exx2(sigma_exx)
               DO ivloc = 1,vband%nloc
                  !
                  iv = vband%l2g(ivloc)
+                 !
+                 IF (l_QDET) THEN
+                    IF ( ALL(qp_bands(:) /= iv) ) CYCLE
+                 ENDIF
                  !
                  ! Bring it to R-space
                  IF (gamma_only) THEN

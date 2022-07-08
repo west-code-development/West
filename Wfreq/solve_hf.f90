@@ -11,15 +11,19 @@
 ! Marco Govoni
 !
 !----------------------------------------------------------------------------
-SUBROUTINE solve_hf ( )
+SUBROUTINE solve_hf ( l_QDET )
   !----------------------------------------------------------------------------
   !
   USE control_flags,   ONLY : gamma_only
   !
   IMPLICIT NONE
   !
+  ! I/O
+  !
+  LOGICAL,INTENT(IN) :: l_QDET
+  !
   IF( gamma_only ) THEN
-    CALL solve_hf_gamma( )
+    CALL solve_hf_gamma( l_QDET )
   ELSE
     CALL solve_hf_k( )
   ENDIF
@@ -27,7 +31,7 @@ SUBROUTINE solve_hf ( )
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_hf_gamma( )
+SUBROUTINE solve_hf_gamma( l_QDET )
   !-----------------------------------------------------------------------
   !
   ! ... This subroutine solves the DBS problem for GAMMA, at non-zero freqeuncies.
@@ -47,6 +51,10 @@ SUBROUTINE solve_hf_gamma( )
   !
   IMPLICIT NONE
   !
+  ! I/O
+  !
+  LOGICAL,INTENT(IN) :: l_QDET
+  !
   ! Workspace
   !
   CHARACTER(LEN=5) :: myglobk
@@ -61,11 +69,15 @@ SUBROUTINE solve_hf_gamma( )
   !
   ! Get SIGMA Vxc
   !
-  CALL calc_vxc(sigma_vxcl,sigma_vxcnl)
+  IF (.NOT. l_QDET)CALL calc_vxc(sigma_vxcl,sigma_vxcnl)
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2(sigma_exx)
+  CALL calc_exx2(sigma_exx,l_QDET)
+  IF (l_QDET) THEN
+     CALL stop_clock( "solve_hf" )
+     RETURN
+  ENDIF
   !
   ! Get SIGMA X
   !
@@ -143,7 +155,7 @@ SUBROUTINE solve_hf_k( )
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2(sigma_exx)
+  CALL calc_exx2(sigma_exx,.FALSE.)
   !
   ! Get SIGMA X
   !

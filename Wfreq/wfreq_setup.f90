@@ -14,16 +14,21 @@
 SUBROUTINE wfreq_setup
   !-----------------------------------------------------------------------
   !
-  USE mp_global,              ONLY : nbgrp
+  USE mp_global,              ONLY : nbgrp,inter_image_comm,my_image_id,mp_bcast
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
                                    & qp_bands,n_bands,wfreq_calculation,sigma_exx,sigma_vxcl,&
                                    & sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,&
                                    & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
                                    & sigma_spectralf,sigma_freq,n_spectralf,l_enable_off_diagonal,&
-                                   & ijpmap,npair,sigma_exx_full,sigma_vxcl_full,&
-                                   & sigma_vxcnl_full,sigma_corr_full
-  USE pwcom,                  ONLY : nbnd,nkstot,nks
+                                   & ijpmap,pijmap,equalpairmap,n_pairs,sigma_exx_full,&
+                                   & sigma_vxcl_full,sigma_vxcnl_full,sigma_corr_full,&
+                                   & iuwfc,lrwfc,proj_c,proj_r,npwq,npwqx,fftdriver
+  USE wavefunctions,          ONLY : evc,psic
+  USE fft_base,               ONLY : dffts
+  USE buffers,                ONLY : get_buffer
+  USE fft_at_gamma,           ONLY : single_invfft_gamma
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
@@ -33,7 +38,7 @@ SUBROUTINE wfreq_setup
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: i,ib,jb,index
+  INTEGER :: i,ib,jb,index,ib_index,iks
   LOGICAL :: l_generate_plot
   !
   CALL do_setup()
@@ -110,20 +115,25 @@ SUBROUTINE wfreq_setup
   ALLOCATE( sigma_sc_eqpsec (n_bands,k_grid%nps) )
   ALLOCATE( sigma_diff      (n_bands,k_grid%nps) )
   IF (l_enable_off_diagonal) THEN
-     npair = n_bands*(n_bands+1)/2
+     n_pairs = n_bands*(n_bands+1)/2
      ALLOCATE(ijpmap(n_bands,n_bands))
+     ALLOCATE(pijmap(2,n_pairs))
+     ALLOCATE(equalpairmap(n_bands))
      index = 1
      DO ib = 1, n_bands
         DO jb = ib, n_bands
            ijpmap(ib,jb) = index
            ijpmap(jb,ib) = index
+           pijmap(1,index) = ib
+           pijmap(2,index) = jb
+           IF (ib == jb) equalpairmap(ib) = index
            index = index + 1
         ENDDO 
      ENDDO
-     ALLOCATE( sigma_exx_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcl_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcnl_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_corr_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_exx_full (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_vxcl_full (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_vxcnl_full (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_corr_full (n_pairs,k_grid%nps) )
   ENDIF
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP
@@ -142,6 +152,33 @@ SUBROUTINE wfreq_setup
      sigma_vxcnl_full = 0._DP
      sigma_corr_full = 0._DP
   ENDIF
+  !
+  DO i = 1,9
+     IF(wfreq_calculation(i:i) == 'H') THEN
+        ALLOCATE( proj_r(dffts%nnr,n_bands,k_grid%nps) )
+        ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
+        DO iks = 1, k_grid%nps 
+           !
+           IF(kpt_pool%nloc > 1) THEN
+              IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+              CALL mp_bcast( evc, 0, inter_image_comm )
+           ENDIF
+           !
+           DO ib_index = 1, n_bands
+              !
+              ib = qp_bands(ib_index)
+              proj_c(:,ib_index,iks) = evc(:,ib)
+              CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,ib_index,iks),psic,TRIM(fftdriver))
+              proj_r(:,ib_index,iks) = psic(:)
+              !
+           END DO
+           !
+        END DO
+        EXIT
+        !
+     ENDIF
+  ENDDO
+  !
   l_generate_plot = .FALSE.
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.

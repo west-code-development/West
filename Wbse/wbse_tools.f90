@@ -659,7 +659,8 @@ MODULE wbse_tools
       USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
 #if defined(__CUDA)
-      USE wvfct_gpum,           ONLY : g2kin=>g2kin_d,et=>et_d
+      USE wvfct,                ONLY : g2kin
+      USE wvfct_gpum,           ONLY : et=>et_d
 #else
       USE wvfct,                ONLY : g2kin,et
 #endif
@@ -698,13 +699,9 @@ MODULE wbse_tools
       !
       DO iks = 1,kpt_pool%nloc
          !
-#if defined(__CUDA)
-         CALL g2_kin_gpu(iks)
-#else
          CALL g2_kin(iks)
-#endif
          !
-         !$acc kernels present(g2kin_save)
+         !$acc kernels present(g2kin_save,g2kin)
          g2kin_save(:,iks) = g2kin
          !$acc end kernels
          !

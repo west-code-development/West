@@ -297,15 +297,14 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   USE ions_base,        ONLY : nat, ityp, ntyp => nsp
   USE klist,            ONLY : xk
   USE gvect,            ONLY : g
-  USE wvfct,            ONLY : npw, npwx, et
+  USE wvfct,            ONLY : npw, npwx, et, g2kin
   USE noncollin_module, ONLY : noncolin, npol
   USE uspp,             ONLY : nkb, vkb
   USE uspp_param,       ONLY : nh
-  USE uspp_init,        ONLY : gen_us_dj_gpu, gen_us_dy_gpu
+  USE uspp_init,        ONLY : gen_us_dj, gen_us_dy
   USE control_flags,    ONLY : gamma_only
   USE pwcom,            ONLY : igk_k, current_k
   USE becmod_subs_gpum, ONLY : calbec_gpu
-  USE wvfct_gpum,       ONLY : g2kin_d
   USE west_gpu,         ONLY : gk, dvkb, work, ps2, psc, deff, deff_nc, becp1_d, becp2_d, becp1_d_nc_d, &
                              & becp2_d_nc_d, becp1_d_r_d, becp2_d_r_d, becp1_d_k_d, becp2_d_k_d
   USE cublas
@@ -340,12 +339,12 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   at2 = at(2,ipol)
   at3 = at(3,ipol)
   !
-  !$acc parallel loop present(gk,g,igk_k)
+  !$acc parallel loop present(gk,g,igk_k,g2kin)
   DO ig = 1,npw
      gk(1,ig) = (xk1 + g(1,igk_k(ig,current_k))) * tpiba
      gk(2,ig) = (xk2 + g(2,igk_k(ig,current_k))) * tpiba
      gk(3,ig) = (xk3 + g(3,igk_k(ig,current_k))) * tpiba
-     g2kin_d(ig) = gk(1,ig)**2 + gk(2,ig)**2 + gk(3,ig)**2
+     g2kin(ig) = gk(1,ig)**2 + gk(2,ig)**2 + gk(3,ig)**2
   ENDDO
   !$acc end parallel
   !
@@ -373,23 +372,21 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      !
      ! this is the contribution from nonlocal pseudopotentials
      !
-     !$acc parallel loop present(gk)
+     !$acc parallel loop present(g2kin,gk)
      DO ig = 1,npw
-        IF(g2kin_d(ig) < tol) THEN
+        IF(g2kin(ig) < tol) THEN
            gk(1,ig) = 0._DP
            gk(2,ig) = 0._DP
            gk(3,ig) = 0._DP
         ELSE
-           gk(1,ig) = gk(1,ig)/SQRT(g2kin_d(ig))
-           gk(2,ig) = gk(2,ig)/SQRT(g2kin_d(ig))
-           gk(3,ig) = gk(3,ig)/SQRT(g2kin_d(ig))
+           gk(1,ig) = gk(1,ig)/SQRT(g2kin(ig))
+           gk(2,ig) = gk(2,ig)/SQRT(g2kin(ig))
+           gk(3,ig) = gk(3,ig)/SQRT(g2kin(ig))
         ENDIF
      ENDDO
      !$acc end parallel
      !
-     !$acc host_data use_device(dvkb)
-     CALL gen_us_dj_gpu(ik,dvkb)
-     !$acc end host_data
+     CALL gen_us_dj(ik,dvkb)
      !
      !$acc kernels present(work)
      work(:,:) = 0._DP
@@ -413,9 +410,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
         ENDDO
      ENDDO
      !
-     !$acc host_data use_device(dvkb)
-     CALL gen_us_dy_gpu(ik,at(1,ipol),dvkb)
-     !$acc end host_data
+     CALL gen_us_dy(ik,at(1,ipol),dvkb)
      !
      ijkb0 = 0
      DO nt = 1,ntyp
@@ -470,11 +465,9 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      !
      DO ibnd = 1,m
         IF(noncolin) THEN
-           !$acc host_data use_device(deff_nc)
-           CALL compute_deff_nc_gpu(deff_nc,et(ibnd,ik))
-           !$acc end host_data
+           CALL compute_deff_nc(deff_nc,et(ibnd,ik))
         ELSE
-           CALL compute_deff_real_gpu(deff,et(ibnd,ik))
+           CALL compute_deff_real(deff,et(ibnd,ik))
         ENDIF
         ijkb0 = 0
         DO nt = 1,ntyp
@@ -584,7 +577,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_deff_real_gpu(deff, et)
+SUBROUTINE compute_deff_real(deff, et)
   !-----------------------------------------------------------------------
   !
   ! This routine computes the effective value of the D-eS coefficients
@@ -593,7 +586,7 @@ SUBROUTINE compute_deff_real_gpu(deff, et)
   !
   USE kinds,       ONLY : DP
   USE ions_base,   ONLY : nat
-  USE uspp,        ONLY : okvan, deeq_d, qq_at_d
+  USE uspp,        ONLY : okvan, deeq, qq_at
   USE uspp_param,  ONLY : nhm
   USE lsda_mod,    ONLY : current_spin
   !
@@ -609,21 +602,21 @@ SUBROUTINE compute_deff_real_gpu(deff, et)
   INTEGER :: na, i, j
   !
   IF(.NOT. okvan) THEN
-     !$acc parallel loop collapse(3) present(deff)
+     !$acc parallel loop collapse(3) present(deff,deeq)
      DO na = 1,nat
         DO i = 1,nhm
            DO j = 1,nhm
-              deff(i,j,na) = deeq_d(i,j,na,current_spin)
+              deff(i,j,na) = deeq(i,j,na,current_spin)
            ENDDO
         ENDDO
      ENDDO
      !$acc end parallel
   ELSE
-     !$acc parallel loop collapse(3) present(deff)
+     !$acc parallel loop collapse(3) present(deff,deeq,qq_at)
      DO na = 1,nat
         DO i = 1,nhm
            DO j = 1,nhm
-              deff(i,j,na) = deeq_d(i,j,na,current_spin)-et*qq_at_d(i,j,na)
+              deff(i,j,na) = deeq(i,j,na,current_spin)-et*qq_at(i,j,na)
            ENDDO
         ENDDO
      ENDDO

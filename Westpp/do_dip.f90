@@ -31,7 +31,7 @@ SUBROUTINE do_dip()
   USE json_module,          ONLY : json_file,json_core,json_value
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
+  USE uspp,                 ONLY : vkb,nkb,deeq,qq_at
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wvfct_gpum,           ONLY : using_et,using_et_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -106,17 +106,13 @@ SUBROUTINE do_dip()
      current_k = iks
      npw = ngk(iks)
      IF(lsda) current_spin = isk(iks)
-#if defined(__CUDA)
-     CALL g2_kin_gpu(iks)
-     !
-     ! ... More stuff needed by the hamiltonian: nonlocal projectors
-     !
-     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
-#else
      CALL g2_kin(iks)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
+#if defined(__CUDA)
+     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
+#else
      IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.FALSE.)
 #endif
      !
@@ -140,8 +136,7 @@ SUBROUTINE do_dip()
      CALL using_et(2)
      CALL using_et_d(0)
      !
-     deeq_d(:,:,:,:) = deeq
-     qq_at_d(:,:,:) = qq_at
+     !$acc update device(deeq,qq_at)
 #endif
      !
      DO ipol = 1,3

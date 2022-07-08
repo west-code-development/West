@@ -66,7 +66,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc
-  USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
+  USE uspp,                 ONLY : vkb,nkb,deeq,qq_at
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic=>psic_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
@@ -321,17 +321,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      !
      current_k = iks
      IF ( lsda ) current_spin = isk(iks)
-#if defined(__CUDA)
-     CALL g2_kin_gpu( iks )
+     call g2_kin( iks )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
+#if defined(__CUDA)
      IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .TRUE. )
 #else
-     CALL g2_kin( iks )
-     !
-     ! ... More stuff needed by the hamiltonian: nonlocal projectors
-     !
      IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .FALSE. )
 #endif
      !
@@ -354,8 +350,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      CALL using_et_d(0)
      !
      IF(l_macropol) THEN
-        deeq_d(:,:,:,:) = deeq
-        qq_at_d(:,:,:) = qq_at
+        !$acc update device(deeq,qq_at)
      ENDIF
 #endif
      !
@@ -1121,7 +1116,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
+  USE uspp,                 ONLY : vkb,nkb,deeq,qq_at
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
@@ -1374,17 +1369,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         current_k = iks
         IF ( lsda ) current_spin = isk(iks)
-#if defined(__CUDA)
-        CALL g2_kin_gpu( iks )
+        call g2_kin( iks )
         !
         ! ... More stuff needed by the hamiltonian: nonlocal projectors
         !
+#if defined(__CUDA)
         IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb, .TRUE. )
 #else
-        CALL g2_kin( iks )
-        !
-        ! ... More stuff needed by the hamiltonian: nonlocal projectors
-        !
         IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb, .FALSE. )
 #endif
         npw = ngk(iks)
@@ -1413,8 +1404,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         CALL using_et_d(0)
         !
         IF(l_macropol .AND. l_gammaq) THEN
-           deeq_d(:,:,:,:) = deeq
-           qq_at_d(:,:,:) = qq_at
+           !$acc update device(deeq,qq_at)
         ENDIF
 #endif
         !

@@ -260,7 +260,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   USE westcom,              ONLY : n_dfpt_maxiter,alphapv_dfpt
   USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol,noncolin
-  USE wvfct_gpum,           ONLY : g2kin_d
+  USE wvfct,                ONLY : g2kin
   USE west_gpu,             ONLY : is_conv,ibnd_todo,eu,a,c,rho,rhoold,g,t,h
   !
   IMPLICIT NONE
@@ -315,14 +315,14 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      !
      ! Preconditioning
      !
-     !$acc parallel loop collapse(2) present(ibnd_todo,h,g,eprec)
+     !$acc parallel loop collapse(2) present(ibnd_todo,h,g,g2kin,eprec)
      DO lbnd = 1,nbnd_todo
         DO ig = 1,npwx
            ibnd = ibnd_todo(lbnd)
            IF(ig <= npwx) THEN
-              h(ig,ibnd) = g(ig,ibnd)/MAX(1._DP,g2kin_d(ig)/eprec(ibnd))
+              h(ig,ibnd) = g(ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
               IF(noncolin) THEN
-                 h(npwx+ig,ibnd) = g(npwx+ig,ibnd)/MAX(1._DP,g2kin_d(ig)/eprec(ibnd))
+                 h(npwx+ig,ibnd) = g(npwx+ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
               ENDIF
            ELSE
               h(ig,ibnd) = 0._DP

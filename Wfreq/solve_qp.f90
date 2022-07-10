@@ -394,10 +394,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   IF( l_secant ) THEN
      !
-     IF(l_QDET) THEN
-        GOTO 533
-     ENDIF
-     !
      CALL io_push_title('(Q)uasiparticle energies')
      !
      ALLOCATE( en(n_bands,k_grid%nps,2) )
@@ -530,14 +526,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      !   
      sigma_cor_out(:,:) = sc(:,:,2)
      !
-533  IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., l_QDET)
-     IF (l_QDET) THEN
-        DEALLOCATE( en )
-        CALL stop_clock( 'solve_qp' )
-        RETURN
-     ENDIF 
+     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.) 
      !
-     DEALLOCATE( sc, l_conv )
+     DEALLOCATE( en, sc, l_conv )
      !
      IF( notconv /= 0 ) THEN
         CALL io_push_title('CONVERGENCE **NOT** ACHIEVED !!!')
@@ -570,6 +561,15 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      DEALLOCATE( z_in )
      DEALLOCATE( qp_energy )
      !
+  ENDIF
+  !
+  IF (l_QDET) THEN
+     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sigma_cor_out, &
+     & sigma_eqpsec - sigma_diff, .TRUE., .TRUE., .TRUE.)
+     DEALLOCATE( sigma_cor_out )
+     CALL stop_clock( 'solve_qp' )
+     RETURN
   ENDIF
   !
   IF( l_generate_plot ) THEN

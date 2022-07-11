@@ -203,8 +203,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                     IF (l_enable_off_diagonal) index = ijpmap(jb_glob,gwbnd%l2g(ib))
                     !
                     IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
-                       braket = 2._DP * REAL( ZDOTC( npw, evc(1,jb_glob),1,vxpsi(1,ib),1) )
-                       IF(gstart==2) braket = braket - REAL( evc(1,jb_glob), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
+                       braket = 2._DP * REAL( ZDOTC( npw, evc(1,qp_bands(jb_glob)),1,vxpsi(1,ib),1) )
+                       IF(gstart==2) braket = braket - REAL( evc(1,qp_bands(jb_glob)), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
                        sigma_vxcnl_full(index,iks_g) = REAL( braket, KIND=DP )    
                     ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
                        braket = 2._DP * DDOT( 2*npw, xpsi(1,ib), 1, vxpsi(1,ib), 1)

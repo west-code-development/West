@@ -21,15 +21,17 @@ MODULE west_gpu
    !
    ! Linsolve
    !
-   INTEGER, DEVICE, ALLOCATABLE :: ibnd_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: eu_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: a_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: c_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: rho_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: rhoold_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: g_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: t_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: h_d(:,:)
+   LOGICAL, ALLOCATABLE :: is_conv(:)
+   INTEGER, ALLOCATABLE :: ibnd_todo(:)
+   REAL(DP), ALLOCATABLE :: eu(:)
+   REAL(DP), ALLOCATABLE :: a(:)
+   REAL(DP), ALLOCATABLE :: c(:)
+   REAL(DP), ALLOCATABLE :: rho(:)
+   REAL(DP), ALLOCATABLE :: rhoold(:)
+   COMPLEX(DP), ALLOCATABLE :: g(:,:)
+   COMPLEX(DP), ALLOCATABLE :: t(:,:)
+   COMPLEX(DP), ALLOCATABLE :: h(:,:)
+   !$acc declare device_resident(is_conv,ibnd_todo,eu,a,c,rho,rhoold,g,t,h)
    !
    ! GW
    !
@@ -242,15 +244,16 @@ MODULE west_gpu
    !
    INTEGER, INTENT(IN) :: nbndloc
    !
-   ALLOCATE(ibnd_d(nbndloc))
-   ALLOCATE(eu_d(nbndloc))
-   ALLOCATE(a_d(nbndloc))
-   ALLOCATE(c_d(nbndloc))
-   ALLOCATE(rho_d(nbndloc))
-   ALLOCATE(rhoold_d(nbndloc))
-   ALLOCATE(g_d(npwx*npol,nbndloc))
-   ALLOCATE(t_d(npwx*npol,nbndloc))
-   ALLOCATE(h_d(npwx*npol,nbndloc))
+   ALLOCATE(is_conv(nbndloc))
+   ALLOCATE(ibnd_todo(nbndloc))
+   ALLOCATE(eu(nbndloc))
+   ALLOCATE(a(nbndloc))
+   ALLOCATE(c(nbndloc))
+   ALLOCATE(rho(nbndloc))
+   ALLOCATE(rhoold(nbndloc))
+   ALLOCATE(g(npwx*npol,nbndloc))
+   ALLOCATE(t(npwx*npol,nbndloc))
+   ALLOCATE(h(npwx*npol,nbndloc))
    !
    END SUBROUTINE
    !
@@ -260,32 +263,35 @@ MODULE west_gpu
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(ibnd_d)) THEN
-      DEALLOCATE(ibnd_d)
+   IF(ALLOCATED(is_conv)) THEN
+      DEALLOCATE(is_conv)
    ENDIF
-   IF(ALLOCATED(eu_d)) THEN
-      DEALLOCATE(eu_d)
+   IF(ALLOCATED(ibnd_todo)) THEN
+      DEALLOCATE(ibnd_todo)
    ENDIF
-   IF(ALLOCATED(a_d)) THEN
-      DEALLOCATE(a_d)
+   IF(ALLOCATED(eu)) THEN
+      DEALLOCATE(eu)
    ENDIF
-   IF(ALLOCATED(c_d)) THEN
-      DEALLOCATE(c_d)
+   IF(ALLOCATED(a)) THEN
+      DEALLOCATE(a)
    ENDIF
-   IF(ALLOCATED(rho_d)) THEN
-      DEALLOCATE(rho_d)
+   IF(ALLOCATED(c)) THEN
+      DEALLOCATE(c)
    ENDIF
-   IF(ALLOCATED(rhoold_d)) THEN
-      DEALLOCATE(rhoold_d)
+   IF(ALLOCATED(rho)) THEN
+      DEALLOCATE(rho)
    ENDIF
-   IF(ALLOCATED(g_d)) THEN
-      DEALLOCATE(g_d)
+   IF(ALLOCATED(rhoold)) THEN
+      DEALLOCATE(rhoold)
    ENDIF
-   IF(ALLOCATED(t_d)) THEN
-      DEALLOCATE(t_d)
+   IF(ALLOCATED(g)) THEN
+      DEALLOCATE(g)
    ENDIF
-   IF(ALLOCATED(h_d)) THEN
-      DEALLOCATE(h_d)
+   IF(ALLOCATED(t)) THEN
+      DEALLOCATE(t)
+   ENDIF
+   IF(ALLOCATED(h)) THEN
+      DEALLOCATE(h)
    ENDIF
    IF(ALLOCATED(ps_r_d)) THEN
       DEALLOCATE(ps_r_d)

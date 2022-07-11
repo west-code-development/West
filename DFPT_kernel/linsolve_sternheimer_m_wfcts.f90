@@ -216,7 +216,7 @@ END SUBROUTINE
 !
 #if defined(__CUDA)
 !-----------------------------------------------------------------------
-SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b_d,x_d,e_d,eprec_d,tr2,ierr)
+SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   !----------------------------------------------------------------------
   !
   !     iterative solution of the linear system:
@@ -261,7 +261,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b_d,x_d,e_d,eprec_d,tr2,ie
   USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol,noncolin
   USE wvfct_gpum,           ONLY : g2kin_d
-  USE west_gpu,             ONLY : g_d,t_d,h_d,eu_d,a_d,c_d,rho_d,rhoold_d,ibnd_d
+  USE west_gpu,             ONLY : is_conv,ibnd_todo,eu,a,c,rho,rhoold,g,t,h
   !
   IMPLICIT NONE
   !
@@ -269,47 +269,49 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b_d,x_d,e_d,eprec_d,tr2,ie
   !
   INTEGER, INTENT(IN) :: nbndval
   INTEGER, INTENT(IN) :: m
-  REAL(DP), DEVICE, INTENT(IN) :: e_d(m)
-  REAL(DP), DEVICE, INTENT(IN) :: eprec_d(m)
-  COMPLEX(DP), DEVICE, INTENT(INOUT) :: b_d(npwx*npol,m)
-  COMPLEX(DP), DEVICE, INTENT(INOUT) :: x_d(npwx*npol,m)
+  REAL(DP), DEVICE, INTENT(IN) :: e(m)
+  REAL(DP), DEVICE, INTENT(IN) :: eprec(m)
+  COMPLEX(DP), DEVICE, INTENT(INOUT) :: b(npwx*npol,m)
+  COMPLEX(DP), DEVICE, INTENT(INOUT) :: x(npwx*npol,m)
   REAL(DP), INTENT(IN) :: tr2
   INTEGER, INTENT(OUT) :: ierr
   !
   ! Workspace
   !
-  LOGICAL, ALLOCATABLE :: is_conv(:)
-  INTEGER :: ig, iter, ibnd, lbnd, nbnd_todo
-  REAL(DP), ALLOCATABLE :: rho(:)
+  INTEGER :: ig, iter, ibnd, lbnd, nbnd_todo, not_conv
   REAL(DP) :: anorm
   REAL(DP) :: tmp_r, tmp2_r
   !
   CALL start_clock_gpu('linstern')
   !
-  ALLOCATE(rho(m))
-  ALLOCATE(is_conv(m))
-  !
-  is_conv = .FALSE.
   ierr = 0
+  !
+  !$acc parallel loop present(is_conv)
+  DO ibnd = 1,m
+     is_conv(ibnd) = .FALSE.
+  ENDDO
+  !$acc end parallel
   !
   ! Step 1, initialization of the loop
   !
-  CALL apply_sternheimerop_to_m_wfcs(nbndval,x_d,g_d,e_d,alphapv_dfpt,m)
+  !$acc host_data use_device(g)
+  CALL apply_sternheimerop_to_m_wfcs(nbndval,x,g,e,alphapv_dfpt,m)
+  !$acc end host_data
   !
-  !$acc parallel loop collapse(2)
+  !$acc parallel loop collapse(2) present(g)
   DO ibnd = 1,m
      DO ig = 1,npw
-        g_d(ig,ibnd) = g_d(ig,ibnd)-b_d(ig,ibnd)
+        g(ig,ibnd) = g(ig,ibnd)-b(ig,ibnd)
         IF(noncolin) THEN
-           g_d(npwx+ig,ibnd) = g_d(npwx+ig,ibnd)-b_d(npwx+ig,ibnd)
+           g(npwx+ig,ibnd) = g(npwx+ig,ibnd)-b(npwx+ig,ibnd)
         ENDIF
      ENDDO
   ENDDO
   !$acc end parallel
   !
-  ! From now on b_d is no longer needed, use it to store hold
+  ! From now on b is no longer needed, use it to store hold
   !
-  CALL precompute_lbnd(m,is_conv,nbnd_todo,ibnd_d)
+  CALL precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
   !
   ! Loop
   !
@@ -317,200 +319,214 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b_d,x_d,e_d,eprec_d,tr2,ie
      !
      ! Preconditioning
      !
-     h_d = 0.0_DP
-     !
-     !$acc parallel loop collapse(2)
+     !$acc parallel loop collapse(2) present(ibnd_todo,h,g)
      DO lbnd = 1,nbnd_todo
-        DO ig = 1,npw
-           ibnd = ibnd_d(lbnd)
-           h_d(ig,ibnd) = g_d(ig,ibnd)/MAX(1.0_DP,g2kin_d(ig)/eprec_d(ibnd))
-           IF(noncolin) THEN
-              h_d(npwx+ig,ibnd) = g_d(npwx+ig,ibnd)/MAX(1.0_DP,g2kin_d(ig)/eprec_d(ibnd))
+        DO ig = 1,npwx
+           ibnd = ibnd_todo(lbnd)
+           IF(ig <= npwx) THEN
+              h(ig,ibnd) = g(ig,ibnd)/MAX(1._DP,g2kin_d(ig)/eprec(ibnd))
+              IF(noncolin) THEN
+                 h(npwx+ig,ibnd) = g(npwx+ig,ibnd)/MAX(1._DP,g2kin_d(ig)/eprec(ibnd))
+              ENDIF
+           ELSE
+              h(ig,ibnd) = 0._DP
+              IF(noncolin) THEN
+                 h(npwx+ig,ibnd) = 0._DP
+              ENDIF
            ENDIF
         ENDDO
      ENDDO
      !$acc end parallel
      !
      IF(gamma_only) THEN
-        !$acc parallel
+        !$acc parallel present(ibnd_todo,h,g,rho)
         !$acc loop
         DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_d(lbnd)
-           tmp_r = 0.0_DP
+           ibnd = ibnd_todo(lbnd)
+           tmp_r = 0._DP
            !
            !$acc loop reduction(+:tmp_r)
            DO ig = 1,npw
-              tmp_r = tmp_r+REAL(h_d(ig,ibnd),KIND=DP)*REAL(g_d(ig,ibnd),KIND=DP) &
-              & +AIMAG(h_d(ig,ibnd))*AIMAG(g_d(ig,ibnd))
+              tmp_r = tmp_r+REAL(h(ig,ibnd),KIND=DP)*REAL(g(ig,ibnd),KIND=DP) &
+              & +AIMAG(h(ig,ibnd))*AIMAG(g(ig,ibnd))
            ENDDO
            !
            IF(gstart == 2) THEN
-              rho_d(lbnd) = 2.0_DP*tmp_r-REAL(h_d(1,ibnd),KIND=DP)*REAL(g_d(1,ibnd),KIND=DP)
+              rho(lbnd) = 2._DP*tmp_r-REAL(h(1,ibnd),KIND=DP)*REAL(g(1,ibnd),KIND=DP)
            ELSE
-              rho_d(lbnd) = 2.0_DP*tmp_r
+              rho(lbnd) = 2._DP*tmp_r
            ENDIF
         ENDDO
         !$acc end parallel
      ELSE
-        !$acc parallel
+        !$acc parallel present(ibnd_todo,h,g,rho)
         !$acc loop
         DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_d(lbnd)
-           tmp_r = 0.0_DP
+           ibnd = ibnd_todo(lbnd)
+           tmp_r = 0._DP
            !
            !$acc loop reduction(+:tmp_r)
            DO ig = 1,npw
-              tmp_r = tmp_r+REAL(h_d(ig,ibnd),KIND=DP)*REAL(g_d(ig,ibnd),KIND=DP) &
-              & +AIMAG(h_d(ig,ibnd))*AIMAG(g_d(ig,ibnd))
+              tmp_r = tmp_r+REAL(h(ig,ibnd),KIND=DP)*REAL(g(ig,ibnd),KIND=DP) &
+              & +AIMAG(h(ig,ibnd))*AIMAG(g(ig,ibnd))
               IF(noncolin) THEN
-                 tmp_r = tmp_r+REAL(h_d(npwx+ig,ibnd),KIND=DP)*REAL(g_d(npwx+ig,ibnd),KIND=DP) &
-                 & +AIMAG(h_d(npwx+ig,ibnd))*AIMAG(g_d(npwx+ig,ibnd))
+                 tmp_r = tmp_r+REAL(h(npwx+ig,ibnd),KIND=DP)*REAL(g(npwx+ig,ibnd),KIND=DP) &
+                 & +AIMAG(h(npwx+ig,ibnd))*AIMAG(g(npwx+ig,ibnd))
               ENDIF
            ENDDO
            !
-           rho_d(lbnd) = tmp_r
-        ENDDO
-        !$acc end parallel
-     ENDIF
-     !
-     rho(1:nbnd_todo) = rho_d(1:nbnd_todo)
-     !
-     CALL mp_sum(rho(1:nbnd_todo),intra_bgrp_comm)
-     !
-     lbnd = nbnd_todo
-     DO ibnd = m,1,-1
-        IF(is_conv(ibnd)) CYCLE
-        rho(ibnd) = rho(lbnd)
-        lbnd = lbnd-1
-        anorm = SQRT(rho(ibnd))
-        IF(anorm < tr2) is_conv(ibnd) = .TRUE.
-     ENDDO
-     !
-     IF(ALL(is_conv(:))) EXIT
-     !
-     rho_d(1:m) = rho(1:m)
-     !
-     CALL precompute_lbnd(m,is_conv,nbnd_todo,ibnd_d)
-     !
-     ! b_d used to store hold_d
-     !
-     DO lbnd = 1,nbnd_todo
-        !$acc parallel loop
-        DO ig = 1,npwx*npol
-           ibnd = ibnd_d(lbnd)
-           !
-           IF(iter /= 1) THEN
-              h_d(ig,ibnd) = -h_d(ig,ibnd)+rho_d(ibnd)/rhoold_d(ibnd)*b_d(ig,ibnd)
-           ELSE
-              h_d(ig,ibnd) = -h_d(ig,ibnd)
-           ENDIF
-           !
-           b_d(ig,lbnd) = h_d(ig,ibnd)
-        ENDDO
-        !$acc end parallel
-     ENDDO
-     !
-     !$acc parallel loop
-     DO lbnd = 1,nbnd_todo
-        ibnd = ibnd_d(lbnd)
-        eu_d(lbnd) = e_d(ibnd)
-     ENDDO
-     !$acc end parallel
-     !
-     ! b_d used to store hold_d
-     !
-     CALL apply_sternheimerop_to_m_wfcs(nbndval,b_d,t_d,eu_d,alphapv_dfpt,nbnd_todo)
-     !
-     IF(gamma_only) THEN
-        !$acc parallel
-        !$acc loop
-        DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_d(lbnd)
-           tmp_r = 0.0_DP
-           tmp2_r = 0.0_DP
-           !
-           !$acc loop reduction(+:tmp_r,tmp2_r)
-           DO ig = 1,npw
-              tmp_r = tmp_r+REAL(h_d(ig,ibnd),KIND=DP)*REAL(g_d(ig,ibnd),KIND=DP) &
-              & +AIMAG(h_d(ig,ibnd))*AIMAG(g_d(ig,ibnd))
-              tmp2_r = tmp2_r+REAL(h_d(ig,ibnd),KIND=DP)*REAL(t_d(ig,lbnd),KIND=DP) &
-              & +AIMAG(h_d(ig,ibnd))*AIMAG(t_d(ig,lbnd))
-           ENDDO
-           !
-           IF(gstart == 2) THEN
-              a_d(lbnd) = 2.0_DP*tmp_r-REAL(h_d(1,ibnd),KIND=DP)*REAL(g_d(1,ibnd),KIND=DP)
-              c_d(lbnd) = 2.0_DP*tmp2_r-REAL(h_d(1,ibnd),KIND=DP)*REAL(t_d(1,lbnd),KIND=DP)
-           ELSE
-              a_d(lbnd) = 2.0_DP*tmp_r
-              c_d(lbnd) = 2.0_DP*tmp2_r
-           ENDIF
-        ENDDO
-        !$acc end parallel
-     ELSE
-        !$acc parallel
-        !$acc loop
-        DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_d(lbnd)
-           tmp_r = 0.0_DP
-           tmp2_r = 0.0_DP
-           !
-           !$acc loop reduction(+:tmp_r,tmp2_r)
-           DO ig = 1,npw
-              tmp_r = tmp_r+REAL(h_d(ig,ibnd),KIND=DP)*REAL(g_d(ig,ibnd),KIND=DP) &
-              & +AIMAG(h_d(ig,ibnd))*AIMAG(g_d(ig,ibnd))
-              tmp2_r = tmp2_r+REAL(h_d(ig,ibnd),KIND=DP)*REAL(t_d(ig,lbnd),KIND=DP) &
-              & +AIMAG(h_d(ig,ibnd))*AIMAG(t_d(ig,lbnd))
-              IF(noncolin) THEN
-                 tmp_r = tmp_r+REAL(h_d(npwx+ig,ibnd),KIND=DP)*REAL(g_d(npwx+ig,ibnd),KIND=DP) &
-                 & +AIMAG(h_d(npwx+ig,ibnd))*AIMAG(g_d(npwx+ig,ibnd))
-                 tmp2_r = tmp2_r+REAL(h_d(npwx+ig,ibnd),KIND=DP)*REAL(t_d(npwx+ig,lbnd),KIND=DP) &
-                 & +AIMAG(h_d(npwx+ig,ibnd))*AIMAG(t_d(npwx+ig,lbnd))
-              ENDIF
-           ENDDO
-           !
-           a_d(lbnd) = tmp_r
-           c_d(lbnd) = tmp2_r
+           rho(lbnd) = tmp_r
         ENDDO
         !$acc end parallel
      ENDIF
      !
      IF(nproc_bgrp > 1) THEN
-        CALL mp_sum(a_d(1:nbnd_todo),intra_bgrp_comm)
-        CALL mp_sum(c_d(1:nbnd_todo),intra_bgrp_comm)
+        !$acc host_data use_device(rho)
+        CALL mp_sum(rho(1:nbnd_todo),intra_bgrp_comm)
+        !$acc end host_data
      ENDIF
      !
-     ! b_d used to store hold_d
+     lbnd = nbnd_todo
+     not_conv = 0
      !
-     !$acc parallel loop collapse(2)
+     !$acc serial copy(lbnd,not_conv) present(is_conv,rho)
+     DO ibnd = m,1,-1
+        IF(is_conv(ibnd)) CYCLE
+        rho(ibnd) = rho(lbnd)
+        lbnd = lbnd-1
+        anorm = SQRT(rho(ibnd))
+        IF(anorm < tr2) THEN
+           is_conv(ibnd) = .TRUE.
+        ELSE
+           not_conv = not_conv+1
+        ENDIF
+     ENDDO
+     !$acc end serial
+     !
+     IF(not_conv == 0) EXIT
+     !
+     CALL precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
+     !
+     ! hold stored in b
+     !
+     DO lbnd = 1,nbnd_todo
+        !$acc parallel loop present(ibnd_todo,h,rho,rhoold)
+        DO ig = 1,npwx*npol
+           ibnd = ibnd_todo(lbnd)
+           !
+           IF(iter /= 1) THEN
+              h(ig,ibnd) = -h(ig,ibnd)+rho(ibnd)/rhoold(ibnd)*b(ig,ibnd)
+           ELSE
+              h(ig,ibnd) = -h(ig,ibnd)
+           ENDIF
+           !
+           b(ig,lbnd) = h(ig,ibnd)
+        ENDDO
+        !$acc end parallel
+     ENDDO
+     !
+     !$acc parallel loop present(ibnd_todo,eu)
+     DO lbnd = 1,nbnd_todo
+        ibnd = ibnd_todo(lbnd)
+        eu(lbnd) = e(ibnd)
+     ENDDO
+     !$acc end parallel
+     !
+     ! hold stored in b
+     !
+     !$acc host_data use_device(t,eu)
+     CALL apply_sternheimerop_to_m_wfcs(nbndval,b,t,eu,alphapv_dfpt,nbnd_todo)
+     !$acc end host_data
+     !
+     IF(gamma_only) THEN
+        !$acc parallel present(ibnd_todo,h,g,t,a,c)
+        !$acc loop
+        DO lbnd = 1,nbnd_todo
+           ibnd = ibnd_todo(lbnd)
+           tmp_r = 0._DP
+           tmp2_r = 0._DP
+           !
+           !$acc loop reduction(+:tmp_r,tmp2_r)
+           DO ig = 1,npw
+              tmp_r = tmp_r+REAL(h(ig,ibnd),KIND=DP)*REAL(g(ig,ibnd),KIND=DP) &
+              & +AIMAG(h(ig,ibnd))*AIMAG(g(ig,ibnd))
+              tmp2_r = tmp2_r+REAL(h(ig,ibnd),KIND=DP)*REAL(t(ig,lbnd),KIND=DP) &
+              & +AIMAG(h(ig,ibnd))*AIMAG(t(ig,lbnd))
+           ENDDO
+           !
+           IF(gstart == 2) THEN
+              a(lbnd) = 2._DP*tmp_r-REAL(h(1,ibnd),KIND=DP)*REAL(g(1,ibnd),KIND=DP)
+              c(lbnd) = 2._DP*tmp2_r-REAL(h(1,ibnd),KIND=DP)*REAL(t(1,lbnd),KIND=DP)
+           ELSE
+              a(lbnd) = 2._DP*tmp_r
+              c(lbnd) = 2._DP*tmp2_r
+           ENDIF
+        ENDDO
+        !$acc end parallel
+     ELSE
+        !$acc parallel present(ibnd_todo,h,g,t,a,c)
+        !$acc loop
+        DO lbnd = 1,nbnd_todo
+           ibnd = ibnd_todo(lbnd)
+           tmp_r = 0._DP
+           tmp2_r = 0._DP
+           !
+           !$acc loop reduction(+:tmp_r,tmp2_r)
+           DO ig = 1,npw
+              tmp_r = tmp_r+REAL(h(ig,ibnd),KIND=DP)*REAL(g(ig,ibnd),KIND=DP) &
+              & +AIMAG(h(ig,ibnd))*AIMAG(g(ig,ibnd))
+              tmp2_r = tmp2_r+REAL(h(ig,ibnd),KIND=DP)*REAL(t(ig,lbnd),KIND=DP) &
+              & +AIMAG(h(ig,ibnd))*AIMAG(t(ig,lbnd))
+              IF(noncolin) THEN
+                 tmp_r = tmp_r+REAL(h(npwx+ig,ibnd),KIND=DP)*REAL(g(npwx+ig,ibnd),KIND=DP) &
+                 & +AIMAG(h(npwx+ig,ibnd))*AIMAG(g(npwx+ig,ibnd))
+                 tmp2_r = tmp2_r+REAL(h(npwx+ig,ibnd),KIND=DP)*REAL(t(npwx+ig,lbnd),KIND=DP) &
+                 & +AIMAG(h(npwx+ig,ibnd))*AIMAG(t(npwx+ig,lbnd))
+              ENDIF
+           ENDDO
+           !
+           a(lbnd) = tmp_r
+           c(lbnd) = tmp2_r
+        ENDDO
+        !$acc end parallel
+     ENDIF
+     !
+     IF(nproc_bgrp > 1) THEN
+        !$acc host_data use_device(a,c)
+        CALL mp_sum(a(1:nbnd_todo),intra_bgrp_comm)
+        CALL mp_sum(c(1:nbnd_todo),intra_bgrp_comm)
+        !$acc end host_data
+     ENDIF
+     !
+     ! hold stored in b
+     !
+     !$acc parallel loop collapse(2) present(ibnd_todo,a,c,h,g,t)
      DO lbnd = 1,nbnd_todo
         DO ig = 1,npwx*npol
-           ibnd = ibnd_d(lbnd)
-           x_d(ig,ibnd) = x_d(ig,ibnd)-a_d(lbnd)/c_d(lbnd)*h_d(ig,ibnd)
-           g_d(ig,ibnd) = g_d(ig,ibnd)-a_d(lbnd)/c_d(lbnd)*t_d(ig,lbnd)
-           b_d(ig,ibnd) = h_d(ig,ibnd)
+           ibnd = ibnd_todo(lbnd)
+           x(ig,ibnd) = x(ig,ibnd)-a(lbnd)/c(lbnd)*h(ig,ibnd)
+           g(ig,ibnd) = g(ig,ibnd)-a(lbnd)/c(lbnd)*t(ig,lbnd)
+           b(ig,ibnd) = h(ig,ibnd)
         ENDDO
      ENDDO
      !$acc end parallel
      !
-     !$acc parallel loop
+     !$acc parallel loop present(ibnd_todo,rhoold,rho)
      DO lbnd = 1,nbnd_todo
-        ibnd = ibnd_d(lbnd)
-        rhoold_d(ibnd) = rho_d(ibnd)
+        ibnd = ibnd_todo(lbnd)
+        rhoold(ibnd) = rho(ibnd)
      ENDDO
      !$acc end parallel
   ENDDO ! on iterations
   !
-  ierr = m-COUNT(is_conv(:))
-  !
-  DEALLOCATE(rho)
-  DEALLOCATE(is_conv)
+  ierr = not_conv
   !
   CALL stop_clock_gpu('linstern')
   !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE precompute_lbnd(m,is_conv,nbnd_todo,ibnd_d)
+SUBROUTINE precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
   !----------------------------------------------------------------------
   !
   IMPLICIT NONE
@@ -520,27 +536,21 @@ SUBROUTINE precompute_lbnd(m,is_conv,nbnd_todo,ibnd_d)
   INTEGER, INTENT(IN) :: m
   LOGICAL, INTENT(IN) :: is_conv(m)
   INTEGER, INTENT(OUT) :: nbnd_todo
-  INTEGER, DEVICE, INTENT(OUT) :: ibnd_d(m)
+  INTEGER, INTENT(OUT) :: ibnd_todo(m)
   !
   ! Workspace
   !
   INTEGER :: ibnd
-  INTEGER, ALLOCATABLE :: ibnd_h(:)
   !
-  ALLOCATE(ibnd_h(m))
-  !
-  ibnd_h = 0
   nbnd_todo = 0
   !
+  !$acc serial copy(nbnd_todo) present(is_conv,ibnd_todo)
   DO ibnd = 1, m
      IF(is_conv(ibnd)) CYCLE
      nbnd_todo = nbnd_todo+1
-     ibnd_h(nbnd_todo) = ibnd
+     ibnd_todo(nbnd_todo) = ibnd
   ENDDO
-  !
-  ibnd_d = ibnd_h
-  !
-  DEALLOCATE(ibnd_h)
+  !$acc end serial
   !
 END SUBROUTINE
 #endif

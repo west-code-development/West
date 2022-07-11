@@ -188,7 +188,7 @@ MODULE wfreq_center
   ! off-diagonal entries mapping
   !
   INTEGER,ALLOCATABLE :: ijpmap(:,:)
-  INTEGER :: npair
+  INTEGER :: n_pairs
   !
   ! gw_etot 
   !
@@ -200,22 +200,25 @@ MODULE wfreq_center
   !
   ! output
   !
+  REAL(DP),ALLOCATABLE    :: sigma_z         (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_eqplin    (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_eqpsec    (:,:)
+  REAL(DP),ALLOCATABLE    :: sigma_diff      (:,:)
   REAL(DP),ALLOCATABLE    :: sigma_exx       (:,:)
   REAL(DP),ALLOCATABLE    :: sigma_vxcl      (:,:)
   REAL(DP),ALLOCATABLE    :: sigma_vxcnl     (:,:)
   REAL(DP),ALLOCATABLE    :: sigma_hf        (:,:)
-  REAL(DP),ALLOCATABLE    :: sigma_z         (:,:)
-  REAL(DP),ALLOCATABLE    :: sigma_eqplin    (:,:)
-  REAL(DP),ALLOCATABLE    :: sigma_eqpsec    (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_sc_eks    (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_sc_eqplin (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_sc_eqpsec (:,:)
-  REAL(DP),ALLOCATABLE     :: sigma_diff      (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_spectralf (:,:,:)
   REAL(DP),ALLOCATABLE    :: sigma_freq      (:)
   REAL(DP),ALLOCATABLE    :: sigma_exx_full  (:,:) 
   REAL(DP),ALLOCATABLE    :: sigma_vxcl_full (:,:) 
   REAL(DP),ALLOCATABLE    :: sigma_vxcnl_full(:,:) 
+  REAL(DP),ALLOCATABLE    :: sigma_hf_full   (:,:)
+  COMPLEX(DP),ALLOCATABLE :: sigma_sc_eks_full (:,:)
+  COMPLEX(DP),ALLOCATABLE :: sigma_sc_eqplin_full (:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_corr_full (:,:)
   !
 END MODULE

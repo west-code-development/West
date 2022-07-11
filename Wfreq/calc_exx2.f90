@@ -28,7 +28,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation
-  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,npair
+  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,n_pairs
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer

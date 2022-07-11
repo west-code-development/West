@@ -485,7 +485,8 @@ wfreq_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then upper triangular part of self-energy is calculated and written to file.
+     - If (False) then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band). 
+     - If (True) then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
 
 
 .. data:: l_enable_gwetot

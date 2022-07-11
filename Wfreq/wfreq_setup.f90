@@ -21,7 +21,8 @@ SUBROUTINE wfreq_setup
                                    & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
                                    & l_enable_off_diagonal,ijpmap,npair,sigma_exx_full,sigma_vxcl_full,&
-                                   & sigma_vxcnl_full,sigma_corr_full
+                                   & sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,sigma_sc_eqplin_full,&
+                                   & sigma_corr_full
   USE pwcom,                  ONLY : nbnd,nkstot,nks
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
@@ -94,11 +95,24 @@ SUBROUTINE wfreq_setup
   ALLOCATE( sigma_z         (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   ALLOCATE( sigma_eqplin    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   ALLOCATE( sigma_eqpsec    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_sc_eks    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
   ALLOCATE( sigma_diff      (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
-  IF (l_enable_off_diagonal) THEN
+  sigma_exx = 0._DP      
+  sigma_vxcl = 0._DP
+  sigma_vxcnl = 0._DP
+  sigma_hf = 0._DP
+  sigma_z = 0._DP
+  sigma_eqplin = 0._DP
+  sigma_eqpsec = 0._DP
+  sigma_diff = 0._DP  
+  !
+  IF ( .NOT. l_enable_off_diagonal ) THEN
+     ALLOCATE( sigma_sc_eks    (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     ALLOCATE( sigma_sc_eqplin (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     ALLOCATE( sigma_sc_eqpsec (qp_bandrange(1):qp_bandrange(2),k_grid%nps) )
+     sigma_sc_eks = 0._DP
+     sigma_sc_eqplin = 0._DP
+     sigma_sc_eqpsec = 0._DP
+  ELSE
      npair = (qp_bandrange(2)-qp_bandrange(1)+1)*(qp_bandrange(2)-qp_bandrange(1)+2)/2
      ALLOCATE(ijpmap(qp_bandrange(1):qp_bandrange(2),qp_bandrange(1):qp_bandrange(2)))
      index = 1
@@ -112,25 +126,17 @@ SUBROUTINE wfreq_setup
      ALLOCATE( sigma_exx_full (1:npair,k_grid%nps) )
      ALLOCATE( sigma_vxcl_full (1:npair,k_grid%nps) )
      ALLOCATE( sigma_vxcnl_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_sc_eks_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_sc_eqplin_full (1:npair,k_grid%nps) )
      ALLOCATE( sigma_corr_full (1:npair,k_grid%nps) )
-  ENDIF
-  sigma_exx = 0._DP      
-  sigma_vxcl = 0._DP
-  sigma_vxcnl = 0._DP
-  sigma_hf = 0._DP
-  sigma_z = 0._DP
-  sigma_eqplin = 0._DP
-  sigma_eqpsec = 0._DP
-  sigma_sc_eks = 0._DP
-  sigma_sc_eqplin = 0._DP
-  sigma_sc_eqpsec = 0._DP
-  sigma_diff = 0._DP
-  IF (l_enable_off_diagonal) THEN
      sigma_exx_full = 0._DP
      sigma_vxcl_full = 0._DP
      sigma_vxcnl_full = 0._DP
+     sigma_sc_eks_full = 0._DP
+     sigma_sc_eqplin_full = 0._DP
      sigma_corr_full = 0._DP
   ENDIF
+  !
   l_generate_plot = .FALSE.
   DO i = 1,8
      IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.

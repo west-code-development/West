@@ -44,8 +44,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
                                  & d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr,sigma_z,sigma_eqplin,&
                                  & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,&
                                  & sigma_diff,sigma_spectralf,sigma_freq,l_enable_off_diagonal,&
-                                 & ijpmap,npair,d_body1_ifr_full,d_body2_ifr_full,d_diago_full,&
-                                 & z_body_rfr_full
+                                 & ijpmap,n_pairs,d_body1_ifr_full,d_body2_ifr_full,d_diago_full,&
+                                 & z_body_rfr_full,sigma_sc_eks_full,sigma_sc_eqplin_full,&
+                                 & sigma_corr_full
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,my_pool_id,intra_bgrp_comm,&
                                  & inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
@@ -130,11 +131,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   ENDIF
   IF (l_enable_off_diagonal) THEN
      ALLOCATE( overlap1( pert%nglob, nbnd ) )
-     ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, 1:npair, k_grid%nps ) )
-     ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, 1:npair, k_grid%nps ) )
+     ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, 1:n_pairs, k_grid%nps ) )
+     ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, 1:n_pairs, k_grid%nps ) )
      IF ( l_enable_lanczos ) THEN
-        ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, 1:npair, k_grid%nps ) )
-        ALLOCATE( d_diago_full( n_lanczos, pert%nloc, 1:npair, k_grid%nps ) )
+        ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, 1:n_pairs, k_grid%nps ) )
+        ALLOCATE( d_diago_full( n_lanczos, pert%nloc, 1:n_pairs, k_grid%nps ) )
      ENDIF
      !
      d_body1_ifr_full = 0._DP
@@ -399,8 +400,16 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         ENDDO
      ENDDO
      CALL mp_sum(en,inter_pool_comm)
-     CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE.)
-     CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE.)
+     !
+     IF (l_enable_off_diagonal) THEN
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .TRUE.)
+        sigma_sc_eks_full = sigma_corr_full
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE.)
+        sigma_sc_eks_full = ( sigma_sc_eks_full + sigma_corr_full ) * 0.5_DP
+     ELSE
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE.)
+     ENDIF
      !
      ! Stage sigma_corr_in
      !
@@ -430,7 +439,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ENDDO
      sigma_z           = z_in
      sigma_eqplin(:,:) = en(:,:,2)
-     sigma_sc_eks      = sigma_cor_in
+     IF (.NOT. l_enable_off_diagonal) sigma_sc_eks      = sigma_cor_in
      CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
      !
      ! nth step of the secant solver
@@ -439,7 +448,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      notconv = k_grid%nps * ( qp_bandrange(2) - qp_bandrange(1) + 1 )
      DO ifixed = 1, n_secant_maxiter
         !
-        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE.)
+        IF (l_enable_off_diagonal) THEN
+           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE.)
+        ELSE
+           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE.)
+        ENDIF
         !
         IF( my_pool_id == 0 ) THEN
            !
@@ -473,7 +486,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            ENDDO
            !
            IF( ifixed == 1 ) THEN
-              sigma_sc_eqplin(:,:) = sc(:,:,2)
+              IF (l_enable_off_diagonal) THEN
+                 sigma_sc_eqplin_full = sigma_corr_full
+              ELSE
+                 sigma_sc_eqplin(:,:) = sc(:,:,2)
+              ENDIF
            ENDIF
            !
         ENDIF

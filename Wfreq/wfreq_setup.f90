@@ -126,12 +126,14 @@ SUBROUTINE wfreq_setup
      ALLOCATE( sigma_exx_full (1:n_pairs,k_grid%nps) )
      ALLOCATE( sigma_vxcl_full (1:n_pairs,k_grid%nps) )
      ALLOCATE( sigma_vxcnl_full (1:n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_hf_full (1:n_pairs,k_grid%nps) )
      ALLOCATE( sigma_sc_eks_full (1:n_pairs,k_grid%nps) )
      ALLOCATE( sigma_sc_eqplin_full (1:n_pairs,k_grid%nps) )
      ALLOCATE( sigma_corr_full (1:n_pairs,k_grid%nps) )
      sigma_exx_full = 0._DP
      sigma_vxcl_full = 0._DP
      sigma_vxcnl_full = 0._DP
+     sigma_hf_full = 0._DP
      sigma_sc_eks_full = 0._DP
      sigma_sc_eqplin_full = 0._DP
      sigma_corr_full = 0._DP

@@ -112,18 +112,12 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
     maxDiff = 0.0
     for ik in test_en:
         for key in test_en[ik]:
-            if '_full' in key:
-                maxDiff = max(maxDiff,np.amax(np.abs(np.abs(test_en[ik][key])-np.abs(ref_en[ik][key]))))
-            else:
-                maxDiff = max(maxDiff,np.amax(np.abs(test_en[ik][key]-ref_en[ik][key])))
+            maxDiff = max(maxDiff,np.amax(np.abs(np.abs(test_en[ik][key])-np.abs(ref_en[ik][key]))))
     print(f'Single-particle energy (wfreq) max diff: {maxDiff}')
 
     for ik in test_en:
         for key in test_en[ik]:
-            if '_full' in key:
-                assert np.allclose(np.abs(test_en[ik][key]),np.abs(ref_en[ik][key]),rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
-            else:
-                assert np.allclose(test_en[ik][key],ref_en[ik][key],rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
+            assert np.allclose(np.abs(test_en[ik][key]),np.abs(ref_en[ik][key]),rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
 
 
 ########

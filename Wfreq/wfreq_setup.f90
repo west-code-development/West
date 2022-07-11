@@ -20,7 +20,7 @@ SUBROUTINE wfreq_setup
                                    & wfreq_calculation,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,&
                                    & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
-                                   & l_enable_off_diagonal,ijpmap,npair,sigma_exx_full,sigma_vxcl_full,&
+                                   & l_enable_off_diagonal,ijpmap,n_pairs,sigma_exx_full,sigma_vxcl_full,&
                                    & sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,sigma_sc_eqplin_full,&
                                    & sigma_corr_full
   USE pwcom,                  ONLY : nbnd,nkstot,nks
@@ -113,7 +113,7 @@ SUBROUTINE wfreq_setup
      sigma_sc_eqplin = 0._DP
      sigma_sc_eqpsec = 0._DP
   ELSE
-     npair = (qp_bandrange(2)-qp_bandrange(1)+1)*(qp_bandrange(2)-qp_bandrange(1)+2)/2
+     n_pairs = (qp_bandrange(2)-qp_bandrange(1)+1)*(qp_bandrange(2)-qp_bandrange(1)+2)/2
      ALLOCATE(ijpmap(qp_bandrange(1):qp_bandrange(2),qp_bandrange(1):qp_bandrange(2)))
      index = 1
      DO ib = qp_bandrange(1), qp_bandrange(2)
@@ -123,12 +123,12 @@ SUBROUTINE wfreq_setup
            index = index + 1
         ENDDO 
      ENDDO
-     ALLOCATE( sigma_exx_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcl_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcnl_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_sc_eks_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_sc_eqplin_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_corr_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_exx_full (1:n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_vxcl_full (1:n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_vxcnl_full (1:n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_sc_eks_full (1:n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_sc_eqplin_full (1:n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_corr_full (1:n_pairs,k_grid%nps) )
      sigma_exx_full = 0._DP
      sigma_vxcl_full = 0._DP
      sigma_vxcnl_full = 0._DP

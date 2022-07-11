@@ -70,7 +70,7 @@ SUBROUTINE solve_hf_gamma( )
   ! Get SIGMA X
   !
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
-  IF (l_enable_off_diagonal) sigma_hf_full = sigma_exx_full(:,:) &
+  IF (l_enable_off_diagonal) sigma_hf_full(:,:) = sigma_exx_full(:,:) &
   & - sigma_vxcl_full(:,:) - sigma_vxcnl_full(:,:)
   !
   CALL writeout_solvehf( sigma_hf(qp_bandrange(1),1), qp_bandrange(2)-qp_bandrange(1)+1, k_grid%nps )

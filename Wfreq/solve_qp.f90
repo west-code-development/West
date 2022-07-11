@@ -408,7 +408,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         sigma_sc_eks_full = ( sigma_sc_eks_full + sigma_corr_full ) * 0.5_DP
      ELSE
         CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE.)
-        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE.)
      ENDIF
      !
      ! Stage sigma_corr_in

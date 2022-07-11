@@ -233,9 +233,13 @@ MODULE dfpt_module
          !
          !$acc parallel loop
          DO lbnd = 1,band_group_nloc
+            !
+            ! ibnd = band_group%l2g(lbnd)
+            !
             ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
             eprec_loc(lbnd) = eprec(ibnd)
             et_loc(lbnd) = et(ibnd,ikqs)
+            !
          ENDDO
          !$acc end parallel
          !

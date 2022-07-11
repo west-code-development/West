@@ -1085,8 +1085,8 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
                                  & d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr,sigma_z,sigma_eqplin,&
                                  & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,&
                                  & sigma_diff,sigma_spectralf,sigma_freq
-  USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,my_pool_id,intra_bgrp_comm,&
-                                 & inter_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,my_pool_id,&
+                                 & inter_bgrp_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE pwcom,                ONLY : et,nbnd
@@ -1099,9 +1099,9 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
-  USE west_gpu,             ONLY : ovlp_r_d,ovlp2_r_d,dtemp_d,ztemp_d,l2g_d,d_epsm1_ifr_d,&
-                                 & d_epsm1_ifr_trans_d,z_epsm1_rfr_trans_d,brak_r_d,d_body2_ifr_d,&
-                                 & allocate_qp_gpu,deallocate_qp_gpu
+  USE west_gpu,             ONLY : ovlp_r_d,ovlp2_r_d,dtemp_d,ztemp_d,d_epsm1_ifr_d,d_epsm1_ifr_trans_d,&
+                                 & z_epsm1_rfr_trans_d,brak_r_d,d_body2_ifr_d,allocate_qp_gpu,&
+                                 & deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1134,8 +1134,9 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   INTEGER :: barra_load
   REAL(DP) :: reduce_r
   COMPLEX(DP) :: reduce_c
-  INTEGER,ALLOCATABLE :: l2g(:)
   INTEGER :: pert_nloc,pert_nglob,ifr_nloc,rfr_nloc
+  INTEGER,ALLOCATABLE :: l2g(:)
+  !$acc declare device_resident(l2g)
   !
   CALL start_clock_gpu('solve_qp')
   !
@@ -1199,12 +1200,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   ! Initialize GPU
   !
   CALL allocate_qp_gpu(pert%nglob,pert%nloc,ifr%nloc,rfr%nloc,1)
-  ALLOCATE(l2g(pert%nloc))
-  DO ip = 1,pert%nloc
-     l2g(ip) = pert%l2g(ip)
-  ENDDO
-  l2g_d = l2g
-  DEALLOCATE(l2g)
+  !
   d_epsm1_ifr_d = d_epsm1_ifr
   d_epsm1_ifr_trans_d = RESHAPE(d_epsm1_ifr,[pert%nloc,pert%nglob,ifr%nloc],ORDER=[2,1,3])
   z_epsm1_rfr_trans_d = RESHAPE(z_epsm1_rfr,[pert%nloc,pert%nglob,rfr%nloc],ORDER=[2,1,3])
@@ -1212,6 +1208,17 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   pert_nglob = pert%nglob
   ifr_nloc = ifr%nloc
   rfr_nloc = rfr%nloc
+  !
+  ALLOCATE(l2g(pert%nloc))
+  !
+  !$acc parallel loop
+  DO ip = 1,pert_nloc
+     !
+     ! l2g(ip) = pert%l2g(ip)
+     !
+     l2g(ip) = nimage*(ip-1)+my_image_id+1
+  ENDDO
+  !$acc end parallel
   !
   ! LOOP
   !
@@ -1229,7 +1236,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
         !$acc parallel loop collapse(2)
         DO im = 1,nbnd
            DO ip = 1,pert_nloc
-              ovlp2_r_d(ip,im) = ovlp_r_d(l2g_d(ip),im)
+              ovlp2_r_d(ip,im) = ovlp_r_d(l2g(ip),im)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -1341,6 +1348,8 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   ENDDO ! iks
   !
   CALL deallocate_qp_gpu()
+  !
+  DEALLOCATE(l2g)
   !
   CALL mp_sum(d_body1_ifr,inter_bgrp_comm)
   CALL mp_sum(d_body1_ifr,inter_pool_comm)
@@ -1595,7 +1604,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                                  & z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q,sigma_z,&
                                  & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                  & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,inter_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,intra_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum
   USE pwcom,                ONLY : et,nbnd
@@ -1608,9 +1617,9 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
-  USE west_gpu,             ONLY : ovlp_c_d,ovlp2_c_d,ztemp_d,l2g_d,z_epsm1_ifr_q_d,&
-                                 & z_epsm1_ifr_trans_q_d,z_epsm1_rfr_trans_q_d,z_body2_ifr_q_d,&
-                                 & brak_c_d,allocate_qp_gpu,deallocate_qp_gpu
+  USE west_gpu,             ONLY : ovlp_c_d,ovlp2_c_d,ztemp_d,z_epsm1_ifr_q_d,z_epsm1_ifr_trans_q_d,&
+                                 & z_epsm1_rfr_trans_q_d,z_body2_ifr_q_d,brak_c_d,allocate_qp_gpu,&
+                                 & deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1643,8 +1652,9 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   COMPLEX(DP) :: reduce
-  INTEGER,ALLOCATABLE :: l2g(:)
   INTEGER :: pert_nloc,pert_nglob,ifr_nloc,rfr_nloc
+  INTEGER,ALLOCATABLE :: l2g(:)
+  !$acc declare device_resident(l2g)
   !
   CALL start_clock_gpu('solve_qp')
   !
@@ -1707,12 +1717,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   ! Initialize GPU
   !
   CALL allocate_qp_gpu(pert%nglob,pert%nloc,ifr%nloc,rfr%nloc,q_grid%np)
-  ALLOCATE(l2g(pert%nloc))
-  DO ip = 1,pert%nloc
-     l2g(ip) = pert%l2g(ip)
-  ENDDO
-  l2g_d = l2g
-  DEALLOCATE(l2g)
+  !
   z_epsm1_ifr_q_d = z_epsm1_ifr_q
   z_epsm1_ifr_trans_q_d = RESHAPE(z_epsm1_ifr_q,[pert%nloc,pert%nglob,ifr%nloc,q_grid%np],ORDER=[2,1,3,4])
   z_epsm1_rfr_trans_q_d = RESHAPE(z_epsm1_rfr_q,[pert%nloc,pert%nglob,rfr%nloc,q_grid%np],ORDER=[2,1,3,4])
@@ -1720,6 +1725,17 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   pert_nglob = pert%nglob
   ifr_nloc = ifr%nloc
   rfr_nloc = rfr%nloc
+  !
+  ALLOCATE(l2g(pert%nloc))
+  !
+  !$acc parallel loop
+  DO ip = 1,pert_nloc
+     !
+     ! l2g(ip) = pert%l2g(ip)
+     !
+     l2g(ip) = nimage*(ip-1)+my_image_id+1
+  ENDDO
+  !$acc end parallel
   !
   ! LOOP
   !
@@ -1750,7 +1766,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
            !$acc parallel loop collapse(2)
            DO im = 1,nbnd
               DO ip = 1,pert_nloc
-                 ovlp2_c_d(ip,im) = ovlp_c_d(l2g_d(ip),im)
+                 ovlp2_c_d(ip,im) = ovlp_c_d(l2g(ip),im)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -1863,6 +1879,8 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   ENDDO ! iks
   !
   CALL deallocate_qp_gpu()
+  !
+  DEALLOCATE(l2g)
   !
   CALL mp_sum(z_body1_ifr_q,inter_bgrp_comm)
   CALL mp_sum(z_body_rfr_q,inter_bgrp_comm)

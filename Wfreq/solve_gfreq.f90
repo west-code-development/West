@@ -718,7 +718,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
                                  & o_restart_time,npwqx,fftdriver,wstat_save_dir
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,npool,intra_bgrp_comm,nproc_bgrp,nbgrp
+  USE mp_global,            ONLY : nimage,my_image_id,inter_image_comm,npool,intra_bgrp_comm,nproc_bgrp,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
@@ -741,9 +741,8 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   USE types_bz_grid,        ONLY : k_grid
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic_d
-  USE west_gpu,             ONLY : sqvc_d,pertg_d,pertr_d,dvpsi_d,q_s_d,ps_r_d,l2g_d,ovlp_r_d,&
-                                 & allocate_gw_gpu,deallocate_gw_gpu,reallocate_ps_gpu,&
-                                 & reallocate_overlap_gpu
+  USE west_gpu,             ONLY : sqvc_d,pertg_d,pertr_d,dvpsi_d,q_s_d,ps_r_d,ovlp_r_d,allocate_gw_gpu,&
+                                 & deallocate_gw_gpu,reallocate_ps_gpu,reallocate_overlap_gpu
   !
   IMPLICIT NONE
   !
@@ -771,6 +770,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   INTEGER,ALLOCATABLE :: l2g(:)
+  !$acc declare device_resident(l2g)
   !
   CALL io_push_title("(G)-Lanczos")
   !
@@ -785,15 +785,21 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   ! Initialize GPU
   !
   CALL allocate_gw_gpu(pert%nglob,pert%nlocx,pert%nloc)
-  ALLOCATE(l2g(pert%nloc))
-  DO ip = 1,pert%nloc
-     l2g(ip) = pert%l2g(ip)
-  ENDDO
-  l2g_d = l2g
+  !
   sqvc_d = pot3D%sqvc
-  DEALLOCATE(l2g)
   dffts_nnr = dffts%nnr
   pert_nloc = pert%nloc
+  !
+  ALLOCATE(l2g(pert%nloc))
+  !
+  !$acc parallel loop
+  DO ip = 1,pert_nloc
+     !
+     ! l2g(ip) = pert%l2g(ip)
+     !
+     l2g(ip) = nimage*(ip-1)+my_image_id+1
+  ENDDO
+  !$acc end parallel
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read(bks)
@@ -938,7 +944,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
         !$acc parallel loop collapse(2)
         DO im = 1,nbnd
            DO ip = 1,pert_nloc
-              ovlp_r_d(l2g_d(ip),im) = ps_r_d(im,ip)
+              ovlp_r_d(l2g(ip),im) = ps_r_d(im,ip)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -1019,6 +1025,8 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   !
   CALL deallocate_gw_gpu()
   !
+  DEALLOCATE(l2g)
+  !
   ! Write final restart file when using pool or band group
   !
   IF(npool*nbgrp > 1) THEN
@@ -1040,7 +1048,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
                                  & o_restart_time,npwqx,wstat_save_dir,ngq,igq_q
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nproc_bgrp,nbgrp
+  USE mp_global,            ONLY : nimage,my_image_id,inter_image_comm,intra_bgrp_comm,nproc_bgrp,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
@@ -1064,7 +1072,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d
   USE west_gpu,             ONLY : sqvc_d,pertg_d,pertr_d,dvpsi_d,q_s_d,evck_d,psick_nc_d,psick_d,&
-                                 & phase_d,ps_c_d,l2g_d,ovlp_c_d,allocate_gw_gpu,deallocate_gw_gpu,&
+                                 & phase_d,ps_c_d,ovlp_c_d,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & reallocate_ps_gpu,reallocate_overlap_gpu
   !
   IMPLICIT NONE
@@ -1098,6 +1106,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bksks_type) :: bksks
   INTEGER,ALLOCATABLE :: l2g(:)
+  !$acc declare device_resident(l2g)
   !
   CALL io_push_title("(G)-Lanczos")
   !
@@ -1157,14 +1166,20 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   ! Initialize GPU
   !
   CALL allocate_gw_gpu(pert%nglob,pert%nlocx,pert%nloc)
-  ALLOCATE(l2g(pert%nloc))
-  DO ip = 1,pert%nloc
-     l2g(ip) = pert%l2g(ip)
-  ENDDO
-  l2g_d = l2g
-  DEALLOCATE(l2g)
+  !
   dffts_nnr = dffts%nnr
   pert_nloc = pert%nloc
+  !
+  ALLOCATE(l2g(pert%nloc))
+  !
+  !$acc parallel loop
+  DO ip = 1,pert_nloc
+     !
+     ! l2g(ip) = pert%l2g(ip)
+     !
+     l2g(ip) = nimage*(ip-1)+my_image_id+1
+  ENDDO
+  !$acc end parallel
   !
   ! Read PDEP
   !
@@ -1331,7 +1346,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
            !$acc parallel loop collapse(2)
            DO im = 1,nbnd
               DO ip = 1,pert_nloc
-                 ovlp_c_d(l2g_d(ip),im) = ps_c_d(im,ip)
+                 ovlp_c_d(l2g(ip),im) = ps_c_d(im,ip)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -1423,6 +1438,8 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   DEALLOCATE(evck)
   !
   CALL deallocate_gw_gpu()
+  !
+  DEALLOCATE(l2g)
   !
   ! Write final restart file when using band group
   !

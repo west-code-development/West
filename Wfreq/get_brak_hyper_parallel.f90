@@ -194,7 +194,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,il
+  INTEGER :: i1,i2,i1_glob,il
   INTEGER :: nblock_i
   INTEGER :: icycl,idx
   INTEGER :: idistr_nlocx
@@ -237,7 +237,12 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
      DO i1 = 1,nblock_i
         DO il = 1,NLSTEPS
            DO i2 = 1,NRHS
-              brak_r_d(nimage*(i1-1)+idx+1,il,i2) = tmp_r3_d(i1,i2,il)
+              !
+              ! i1_glob = idistr%l2g(i1,idx)
+              !
+              i1_glob = nimage*(i1-1)+idx+1
+              brak_r_d(i1_glob,il,i2) = tmp_r3_d(i1,i2,il)
+              !
            ENDDO
         ENDDO
      ENDDO
@@ -284,7 +289,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
   !
   ! Workspace
   !
-  INTEGER :: i1,i2,il
+  INTEGER :: i1,i2,i1_glob,il
   INTEGER :: nblock_i
   INTEGER :: icycl,idx
   INTEGER :: idistr_nlocx
@@ -327,7 +332,12 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
      DO i1 = 1,nblock_i
         DO il = 1,NLSTEPS
            DO i2 = 1,NRHS
-              brak_c_d(nimage*(i1-1)+idx+1,il,i2) = tmp_c3_d(i1,i2,il)
+              !
+              ! i1_glob = idistr%l2g(i1,idx)
+              !
+              i1_glob = nimage*(i1-1)+idx+1
+              brak_c_d(i1_glob,il,i2) = tmp_c3_d(i1,i2,il)
+              !
            ENDDO
         ENDDO
      ENDDO

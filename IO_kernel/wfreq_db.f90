@@ -36,9 +36,9 @@ MODULE wfreq_db
       USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,n_spectralf,logfile,&
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,&
                                      & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
-                                     & sigma_freq,sigma_spectralf,l_enable_off_diagonal,n_pairs,sigma_vxcl_full,&
-                                     & sigma_vxcnl_full,sigma_exx_full,sigma_hf_full,sigma_sc_eks_full,&
-                                     & sigma_sc_eqplin_full,sigma_corr_full
+                                     & sigma_freq,sigma_spectralf,l_enable_off_diagonal,pijmap,n_pairs,&
+                                     & sigma_vxcl_full,sigma_vxcnl_full,sigma_exx_full,sigma_hf_full,&
+                                     & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
       USE pwcom,                ONLY : et
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -50,8 +50,10 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, ib
+      INTEGER :: iks, ib, index
       CHARACTER(LEN=6) :: my_label_k, my_label_b
+      CHARACTER(LEN=10) :: ccounter
+      INTEGER :: counter
       !
       TYPE(json_file) :: json
       INTEGER :: iunit, i
@@ -86,6 +88,23 @@ MODULE wfreq_db
          ENDDO
          CALL json%add('output.Q.bandmap',ilist(1:n_bands))
          DEALLOCATE(ilist)
+         !
+         IF(l_enable_off_diagonal) THEN
+            counter = 0
+            DO index = 1,n_pairs
+               counter = counter + 1
+               WRITE( ccounter, '(i10)') counter
+               CALL json%add('output.Q.indexmap('//TRIM(ADJUSTL(ccounter))//')',(/pijmap(1,index),pijmap(2,index)/))
+            ENDDO
+         ELSE
+            counter = 0
+            DO ib = 1,n_bands
+               counter = counter + 1
+               WRITE( ccounter, '(i10)') counter
+               CALL json%add('output.Q.indexmap('//TRIM(ADJUSTL(ccounter))//')',(/ib,ib/))
+            ENDDO
+         ENDIF
+         !
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
          DO iks = 1, k_grid%nps

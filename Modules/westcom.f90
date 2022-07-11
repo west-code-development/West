@@ -192,8 +192,10 @@ MODULE wfreq_center
   !  
   ! off-diagonal entries mapping
   !
-  INTEGER,ALLOCATABLE :: ijpmap(:,:)
   INTEGER :: n_pairs
+  INTEGER,ALLOCATABLE :: ijpmap(:,:)
+  INTEGER,ALLOCATABLE :: pijmap(:,:)
+  INTEGER,ALLOCATABLE :: equalpairmap(:)
   !
   ! gw_etot 
   !

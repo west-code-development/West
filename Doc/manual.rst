@@ -331,6 +331,20 @@ wfreq_control
      - Compute the QP corrections from band qp_bandrange[0] to band qp_bandrange[1].
 
 
+.. data:: qp_bands
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - list of int
+   * - **Default**
+     - [0]
+   * - **Description**
+     - List of bands to compute the QP corrections.
+
+
 .. data:: macropol_calculation
 
 .. list-table::

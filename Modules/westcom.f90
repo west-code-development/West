@@ -52,19 +52,19 @@ MODULE scratch_area
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq (global in iq)
   !
   ! CORRELATION
-  REAL(DP),ALLOCATABLE    :: d_head_ifr(:)
-  COMPLEX(DP),ALLOCATABLE :: z_head_ifr(:)
-  REAL(DP),ALLOCATABLE    :: d_body1_ifr(:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: z_body1_ifr(:,:,:,:)
-  REAL(DP),ALLOCATABLE    :: d_body2_ifr(:,:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: z_body2_ifr(:,:,:,:,:)
-  REAL(DP),ALLOCATABLE    :: d_diago(:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: z_head_rfr(:)
-  COMPLEX(DP),ALLOCATABLE :: z_body_rfr(:,:,:,:) 
-  REAL(DP),ALLOCATABLE    :: d_body1_ifr_full(:,:,:,:)
-  REAL(DP),ALLOCATABLE    :: d_body2_ifr_full(:,:,:,:,:)
-  REAL(DP),ALLOCATABLE    :: d_diago_full(:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_head_ifr(:)
+  COMPLEX(DP), ALLOCATABLE :: z_head_ifr(:)
+  REAL(DP),    ALLOCATABLE :: d_body1_ifr(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_body1_ifr(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_body2_ifr(:,:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr(:,:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_diago(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_head_rfr(:)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_body1_ifr_full(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_body2_ifr_full(:,:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_diago_full(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
   !
   ! CORRELATION with q-points
   !
@@ -155,6 +155,7 @@ MODULE wfreq_center
   INTEGER :: n_imfreq
   INTEGER :: n_refreq
   INTEGER :: qp_bandrange(2)
+  INTEGER, ALLOCATABLE :: qp_bands(:)
   REAL(DP) :: ecut_imfreq
   REAL(DP) :: ecut_refreq
   REAL(DP) :: wfreq_eta
@@ -185,6 +186,10 @@ MODULE wfreq_center
   REAL(DP), ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP), PARAMETER :: frequency_list_power = 2._DP
   !
+  ! qp_bands
+  !
+  INTEGER :: n_bands
+  !  
   ! off-diagonal entries mapping
   !
   INTEGER,ALLOCATABLE :: ijpmap(:,:)

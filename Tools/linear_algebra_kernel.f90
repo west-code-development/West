@@ -409,7 +409,7 @@ MODULE linear_algebra_kernel
       !
       ! Inversion of a COMPLEX(DP) GENERIC MATRIX
       !
-      USE west_gpu, ONLY : cusolver_h,tmp_c_d,piv_d
+      USE west_gpu, ONLY : cusolver_h,work_c,piv_d
       USE cublas
       USE cusolverdn
       !
@@ -430,25 +430,27 @@ MODULE linear_algebra_kernel
       ! Note piv_d => NULL
       !
       !$acc data copyout(info_d)
-      !$acc host_data use_device(info_d)
-      info = cusolverDnZgetrf(cusolver_h,n,n,a_d,n,tmp_c_d,piv_d,info_d)
+      !$acc host_data use_device(work_c,info_d)
+      info = cusolverDnZgetrf(cusolver_h,n,n,a_d,n,work_c,piv_d,info_d)
       info = cusolverDnZtrtri(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,n,a_d,&
-      & n,tmp_c_d,SIZE(tmp_c_d),info_d)
+      & n,work_c,SIZE(work_c),info_d)
       !$acc end host_data
       !$acc end data
       !
-      !$acc parallel loop collapse(2)
+      !$acc parallel loop collapse(2) present(work_c)
       DO i2 = 1,n-1
          DO i1 = 2,n
             IF(i1 > i2) THEN
-               tmp_c_d(i1+(i2-1)*n) = a_d(i1,i2)
+               work_c(i1+(i2-1)*n) = a_d(i1,i2)
                a_d(i1,i2) = (0._DP,0._DP)
             ENDIF
          ENDDO
       ENDDO
       !$acc end parallel
       !
-      CALL ZTRSM('R','L','N','U',n,n,(1._DP,0._DP),tmp_c_d,n,a_d,n)
+      !$acc host_data use_device(work_c)
+      CALL ZTRSM('R','L','N','U',n,n,(1._DP,0._DP),work_c,n,a_d,n)
+      !$acc end host_data
       !
     END SUBROUTINE
     !
@@ -458,7 +460,7 @@ MODULE linear_algebra_kernel
       !
       ! Inversion of a REAL(DP) GENERIC MATRIX
       !
-      USE west_gpu, ONLY : cusolver_h,tmp_r_d,piv_d
+      USE west_gpu, ONLY : cusolver_h,work_r,piv_d
       USE cublas
       USE cusolverdn
       !
@@ -479,25 +481,27 @@ MODULE linear_algebra_kernel
       ! Note piv_d => NULL
       !
       !$acc data copyout(info_d)
-      !$acc host_data use_device(info_d)
-      info = cusolverDnDgetrf(cusolver_h,n,n,a_d,n,tmp_r_d,piv_d,info_d)
+      !$acc host_data use_device(work_r,info_d)
+      info = cusolverDnDgetrf(cusolver_h,n,n,a_d,n,work_r,piv_d,info_d)
       info = cusolverDnDtrtri(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,n,a_d,&
-      & n,tmp_r_d,SIZE(tmp_r_d),info_d)
+      & n,work_r,SIZE(work_r),info_d)
       !$acc end host_data
       !$acc end data
       !
-      !$acc parallel loop collapse(2)
+      !$acc parallel loop collapse(2) present(work_r)
       DO i2 = 1,n-1
          DO i1 = 2,n
             IF(i1 > i2) THEN
-               tmp_r_d(i1+(i2-1)*n) = a_d(i1,i2)
+               work_r(i1+(i2-1)*n) = a_d(i1,i2)
                a_d(i1,i2) = 0._DP
             ENDIF
          ENDDO
       ENDDO
       !$acc end parallel
       !
-      CALL DTRSM('R','L','N','U',n,n,1._DP,tmp_r_d,n,a_d,n)
+      !$acc host_data use_device(work_r)
+      CALL DTRSM('R','L','N','U',n,n,1._DP,work_r,n,a_d,n)
+      !$acc end host_data
       !
     END SUBROUTINE
 #endif

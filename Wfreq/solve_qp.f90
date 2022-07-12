@@ -1100,8 +1100,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
   USE west_gpu,             ONLY : ovlp_r_d,ovlp2_r_d,dtemp_d,ztemp_d,d_epsm1_ifr_d,d_epsm1_ifr_trans_d,&
-                                 & z_epsm1_rfr_trans_d,brak_r_d,d_body2_ifr_d,allocate_qp_gpu,&
-                                 & deallocate_qp_gpu
+                                 & z_epsm1_rfr_trans_d,d_body2_ifr_d,allocate_qp_gpu,deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1178,6 +1177,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
      ALLOCATE(d_body2_ifr(n_lanczos,pert%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
      ALLOCATE(d_diago(n_lanczos,pert%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
      ALLOCATE(braket(pert%nglob,n_lanczos,pert%nloc))
+     !$acc enter data create(braket)
      ALLOCATE(diago(n_lanczos,pert%nloc))
   ENDIF
   !
@@ -1313,7 +1313,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
            !
            CALL readin_solvegfreq(kpt_pool%l2g(iks),ib,diago,braket,pert%nloc,pert%nglob,pert%myoffset)
            !
-           brak_r_d = braket
+           !$acc update device(braket)
            !
            DO ip = 1,pert%nloc
               DO il = 1,n_lanczos
@@ -1321,7 +1321,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
               ENDDO
            ENDDO
            !
-           !$acc parallel
+           !$acc parallel present(braket)
            !$acc loop collapse(3)
            DO ifreq = 1,ifr_nloc
               DO ip = 1,pert_nloc
@@ -1329,7 +1329,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
                     reduce_r = 0._DP
                     !$acc loop reduction(+:reduce_r)
                     DO glob_jp = 1,pert_nglob
-                       reduce_r = reduce_r+brak_r_d(glob_jp,il,ip)*d_epsm1_ifr_d(glob_jp,ip,ifreq)
+                       reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr_d(glob_jp,ip,ifreq)
                     ENDDO
                     d_body2_ifr_d(il,ip,ifreq) = reduce_r
                  ENDDO
@@ -1371,6 +1371,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   DEALLOCATE(dtemp2)
   DEALLOCATE(ztemp2)
   IF(l_enable_lanczos) THEN
+     !$acc exit data delete(braket)
      DEALLOCATE(braket)
      DEALLOCATE(diago)
   ENDIF
@@ -1618,8 +1619,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
   USE west_gpu,             ONLY : ovlp_c_d,ovlp2_c_d,ztemp_d,z_epsm1_ifr_q_d,z_epsm1_ifr_trans_q_d,&
-                                 & z_epsm1_rfr_trans_q_d,z_body2_ifr_q_d,brak_c_d,allocate_qp_gpu,&
-                                 & deallocate_qp_gpu
+                                 & z_epsm1_rfr_trans_q_d,z_body2_ifr_q_d,allocate_qp_gpu,deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1695,6 +1695,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
      ALLOCATE(z_body2_ifr_q(n_lanczos,pert%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
      ALLOCATE(d_diago_q(n_lanczos,pert%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
      ALLOCATE(braket(pert%nglob,n_lanczos,pert%nloc))
+     !$acc enter data create(braket)
      ALLOCATE(diago(n_lanczos,pert%nloc))
   ENDIF
   !
@@ -1843,7 +1844,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
               !
               CALL readin_solvegfreq(kpt_pool%l2g(iks),kpt_pool%l2g(ikks),ib,diago,braket,pert%nloc,pert%nglob,pert%myoffset)
               !
-              brak_c_d = braket
+              !$acc update device(braket)
               !
               DO ip = 1,pert%nloc
                  DO il = 1,n_lanczos
@@ -1851,7 +1852,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                  ENDDO
               ENDDO
               !
-              !$acc parallel
+              !$acc parallel present(braket)
               !$acc loop collapse(3)
               DO ifreq = 1,ifr_nloc
                  DO ip = 1,pert_nloc
@@ -1859,7 +1860,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                        reduce = 0._DP
                        !$acc loop reduction(+:reduce)
                        DO glob_jp = 1,pert_nglob
-                          reduce = reduce+brak_c_d(glob_jp,il,ip)*z_epsm1_ifr_q_d(glob_jp,ip,ifreq,iq)
+                          reduce = reduce+braket(glob_jp,il,ip)*z_epsm1_ifr_q_d(glob_jp,ip,ifreq,iq)
                        ENDDO
                        z_body2_ifr_q_d(il,ip,ifreq) = reduce
                     ENDDO
@@ -1897,6 +1898,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   DEALLOCATE(z_epsm1_rfr_q)
   DEALLOCATE(ztemp2)
   IF(l_enable_lanczos) THEN
+     !$acc exit data delete(braket)
      DEALLOCATE(braket)
      DEALLOCATE(diago)
   ENDIF

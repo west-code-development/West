@@ -168,7 +168,7 @@ END SUBROUTINE
 !
 #if defined(__CUDA)
 !-----------------------------------------------------------------------
-SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
+SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !-----------------------------------------------------------------------
   !
   ! ... brak = < dvpsi | x >
@@ -180,7 +180,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
   USE west_mp,              ONLY : mp_circular_shift_left_begin
-  USE west_gpu,             ONLY : brak_r_d,dvpsi_d,tmp_r3_d,dvpsi_h
+  USE west_gpu,             ONLY : dvpsi_d,tmp_r3,dvpsi_h
   !
   IMPLICIT NONE
   !
@@ -189,7 +189,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
   TYPE(idistribute), INTENT(IN) :: idistr
   COMPLEX(DP), INTENT(INOUT) :: dvpsi(npwx*npol,idistr%nlocx)
   INTEGER, INTENT(IN) :: NRHS,NLSTEPS
-  COMPLEX(DP), DEVICE, INTENT(IN) :: x_d(npwx*npol,NRHS,NLSTEPS)
+  COMPLEX(DP), INTENT(IN) :: x(npwx*npol,NRHS,NLSTEPS)
   REAL(DP), INTENT(OUT) :: brak(idistr%nglob,NLSTEPS,NRHS)
   !
   ! Workspace
@@ -197,7 +197,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
   INTEGER :: i1,i2,i1_glob,il
   INTEGER :: nblock_i
   INTEGER :: icycl,idx
-  INTEGER :: idistr_nlocx
+  INTEGER :: idistr_nglob
   INTEGER :: reqs(2)
   !
   CALL start_clock_gpu("brak")
@@ -209,9 +209,17 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
   !
   ! Initialize to zero
   !
-  brak_r_d = 0.0_DP
-  tmp_r3_d = 0.0_DP
-  idistr_nlocx = idistr%nlocx
+  idistr_nglob = idistr%nglob
+  !
+  !$acc parallel loop collapse(3) present(brak)
+  DO i2 = 1,NRHS
+     DO il = 1,NLSTEPS
+        DO i1 = 1,idistr_nglob
+           brak(i1,il,i2) = 0.0_DP
+        ENDDO
+     ENDDO
+  ENDDO
+  !$acc end parallel
   !
   DO icycl = 0,nimage-1
      !
@@ -231,9 +239,11 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     CALL glbrak_gamma_gpu(dvpsi_d,x_d,tmp_r3_d,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     !$acc host_data use_device(x,tmp_r3)
+     CALL glbrak_gamma_gpu(dvpsi_d,x,tmp_r3,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     !$acc end host_data
      !
-     !$acc parallel loop collapse(3)
+     !$acc parallel loop collapse(3) present(brak,tmp_r3)
      DO i1 = 1,nblock_i
         DO il = 1,NLSTEPS
            DO i2 = 1,NRHS
@@ -241,7 +251,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
               ! i1_glob = idistr%l2g(i1,idx)
               !
               i1_glob = nimage*(i1-1)+idx+1
-              brak_r_d(i1_glob,il,i2) = tmp_r3_d(i1,i2,il)
+              brak(i1_glob,il,i2) = tmp_r3(i1,i2,il)
               !
            ENDDO
         ENDDO
@@ -254,7 +264,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
      !
   ENDDO
   !
-  brak = brak_r_d
+  !$acc update self(brak)
   !
   CALL mp_sum(brak,intra_bgrp_comm)
   !
@@ -263,7 +273,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idistr)
+SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !-----------------------------------------------------------------------
   !
   ! ... brak = < dvpsi | x >
@@ -275,7 +285,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
   USE west_mp,              ONLY : mp_circular_shift_left_begin
-  USE west_gpu,             ONLY : brak_c_d,dvpsi_d,tmp_c3_d,dvpsi_h
+  USE west_gpu,             ONLY : dvpsi_d,tmp_c3,dvpsi_h
   !
   IMPLICIT NONE
   !
@@ -284,7 +294,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
   TYPE(idistribute), INTENT(IN) :: idistr
   COMPLEX(DP), INTENT(INOUT) :: dvpsi(npwx*npol,idistr%nlocx)
   INTEGER, INTENT(IN) :: NRHS,NLSTEPS
-  COMPLEX(DP), DEVICE, INTENT(IN) :: x_d(npwx*npol,NRHS,NLSTEPS)
+  COMPLEX(DP), INTENT(IN) :: x(npwx*npol,NRHS,NLSTEPS)
   COMPLEX(DP), INTENT(OUT) :: brak(idistr%nglob,NLSTEPS,NRHS)
   !
   ! Workspace
@@ -292,7 +302,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
   INTEGER :: i1,i2,i1_glob,il
   INTEGER :: nblock_i
   INTEGER :: icycl,idx
-  INTEGER :: idistr_nlocx
+  INTEGER :: idistr_nglob
   INTEGER :: reqs(2)
   !
   CALL start_clock_gpu("brak")
@@ -304,9 +314,17 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
   !
   ! Initialize to zero
   !
-  brak_c_d = 0.0_DP
-  tmp_c3_d = 0.0_DP
-  idistr_nlocx = idistr%nlocx
+  idistr_nglob = idistr%nglob
+  !
+  !$acc parallel loop collapse(3) present(brak)
+  DO i2 = 1,NRHS
+     DO il = 1,NLSTEPS
+        DO i1 = 1,idistr_nglob
+           brak(i1,il,i2) = 0.0_DP
+        ENDDO
+     ENDDO
+  ENDDO
+  !$acc end parallel
   !
   DO icycl = 0,nimage-1
      !
@@ -326,9 +344,11 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     CALL glbrak_k_gpu(dvpsi_d,x_d,tmp_c3_d,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     !$acc host_data use_device(x,tmp_c3)
+     CALL glbrak_k_gpu(dvpsi_d,x,tmp_c3,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     !$acc end host_data
      !
-     !$acc parallel loop collapse(3)
+     !$acc parallel loop collapse(3) present(brak,tmp_c3)
      DO i1 = 1,nblock_i
         DO il = 1,NLSTEPS
            DO i2 = 1,NRHS
@@ -336,7 +356,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
               ! i1_glob = idistr%l2g(i1,idx)
               !
               i1_glob = nimage*(i1-1)+idx+1
-              brak_c_d(i1_glob,il,i2) = tmp_c3_d(i1,i2,il)
+              brak(i1_glob,il,i2) = tmp_c3(i1,i2,il)
               !
            ENDDO
         ENDDO
@@ -349,7 +369,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x_d,brak,idist
      !
   ENDDO
   !
-  brak = brak_c_d
+  !$acc update self(brak)
   !
   CALL mp_sum(brak,intra_bgrp_comm)
   !

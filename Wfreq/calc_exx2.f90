@@ -232,8 +232,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic_d,psic_nc_d
-  USE west_gpu,             ONLY : allocate_exx_gpu,deallocate_exx_gpu,evck_d,phase_d,sqvc_d,pertg_d,&
-                                 & pertr_d,pertr_nc_d
+  USE west_gpu,             ONLY : allocate_exx_gpu,deallocate_exx_gpu,sqvc_d,pertg_d,pertr_d,pertr_nc_d
   !
   IMPLICIT NONE
   !
@@ -253,7 +252,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
   REAL(DP) :: g0(3),peso
   REAL(DP) :: dot_tmp
   COMPLEX(DP), ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
-  COMPLEX(DP), ALLOCATABLE :: evckmq(:,:),phase(:)
+  COMPLEX(DP), PINNED, ALLOCATABLE :: evckmq(:,:),phase(:)
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   !
@@ -268,6 +267,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
      peso = 1._DP
      ALLOCATE(phase(dffts%nnr))
      ALLOCATE(evckmq(npwx*npol,nbnd))
+     !$acc enter data create(phase,evckmq)
   ENDIF
   !
   ! Set to zero
@@ -334,8 +334,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
               IF(my_image_id == 0) CALL get_buffer(evckmq,lrwfc,iuwfc,ikqs)
               CALL mp_bcast(evckmq,0,inter_image_comm)
               !
-              evck_d = evckmq
-              phase_d = phase
+              !$acc update device(evckmq,phase)
            ENDIF
            !
            sqvc_d = pot3D%sqvc
@@ -355,20 +354,24 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
                  !$acc end parallel
                  CALL single_fwfft_gamma(dffts,ngm,ngm,pertr_d,pertg_d,'Rho')
               ELSEIF(noncolin) THEN
-                 CALL single_invfft_k(dffts,npwkq,npwx,evck_d(1:npwx,iv),pertr_nc_d(:,1),'Wave',igk_k(:,ikqs))
-                 CALL single_invfft_k(dffts,npwkq,npwx,evck_d(1+npwx:npwx*2,iv),pertr_nc_d(:,2),'Wave',igk_k(:,ikqs))
-                 !$acc parallel loop
+                 !$acc host_data use_device(evckmq)
+                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,iv),pertr_nc_d(:,1),'Wave',igk_k(:,ikqs))
+                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx:npwx*2,iv),pertr_nc_d(:,2),'Wave',igk_k(:,ikqs))
+                 !$acc end host_data
+                 !$acc parallel loop present(phase)
                  DO ir = 1,dffts_nnr
-                    pertr_nc_d(ir,1) = CONJG(pertr_nc_d(ir,1)*phase_d(ir))*psic_nc_d(ir,1) &
-                    & +CONJG(pertr_nc_d(ir,2)*phase_d(ir))*psic_nc_d(ir,2)
+                    pertr_nc_d(ir,1) = CONJG(pertr_nc_d(ir,1)*phase(ir))*psic_nc_d(ir,1) &
+                    & +CONJG(pertr_nc_d(ir,2)*phase(ir))*psic_nc_d(ir,2)
                  ENDDO
                  !$acc end parallel
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc_d(:,1),pertg_d,'Rho') ! no igk
               ELSE
-                 CALL single_invfft_k(dffts,npwkq,npwx,evck_d(:,iv),pertr_d,'Wave',igk_k(:,ikqs))
-                 !$acc parallel loop
+                 !$acc host_data use_device(evckmq)
+                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(:,iv),pertr_d,'Wave',igk_k(:,ikqs))
+                 !$acc end host_data
+                 !$acc parallel loop present(phase)
                  DO ir = 1,dffts_nnr
-                    pertr_d(ir) = CONJG(pertr_d(ir)*phase_d(ir))*psic_d(ir)
+                    pertr_d(ir) = CONJG(pertr_d(ir)*phase(ir))*psic_d(ir)
                  ENDDO
                  !$acc end parallel
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr_d,pertg_d,'Rho') ! no igk
@@ -407,6 +410,7 @@ SUBROUTINE calc_exx2_gpu(sigma_exx,nb1,nb2)
   CALL mp_sum(sigma_exx,inter_image_comm)
   !
   IF(.NOT. gamma_only) THEN
+     !$acc exit data delete(phase,evckmq)
      DEALLOCATE(phase)
      DEALLOCATE(evckmq)
   ENDIF

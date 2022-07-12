@@ -37,6 +37,8 @@ MODULE west_gpu
    !
    REAL(DP), DEVICE, ALLOCATABLE :: ovlp_r_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: ovlp2_r_d(:,:)
+   COMPLEX(DP), DEVICE, ALLOCATABLE :: dvpsi_d(:,:)
+   COMPLEX(DP), PINNED, ALLOCATABLE :: dvpsi_h(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: pertg_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: pertr_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: pertr_nc_d(:,:)
@@ -47,7 +49,6 @@ MODULE west_gpu
    !
    ! W
    !
-   REAL(DP), DEVICE, ALLOCATABLE :: diago_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: dmati_d(:,:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: zmatr_d(:,:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: zmati_q_d(:,:,:,:)
@@ -75,6 +76,9 @@ MODULE west_gpu
    !
    ! Chi invert
    !
+   REAL(DP), ALLOCATABLE :: work_r(:)
+   COMPLEX(DP), ALLOCATABLE :: work_c(:)
+   !$acc declare device_resident(work_r,work_c)
    REAL(DP), DEVICE, ALLOCATABLE :: body_r_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: x_r_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: wh_r_d(:,:)
@@ -98,7 +102,6 @@ MODULE west_gpu
    REAL(DP), ALLOCATABLE :: tmp_r(:)
    COMPLEX(DP), ALLOCATABLE :: tmp_c(:)
    COMPLEX(DP), ALLOCATABLE :: r(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: q_s_d(:,:,:)
    !
    ! QP
    !
@@ -115,19 +118,12 @@ MODULE west_gpu
    !
    ! Workspace
    !
+   REAL(DP), ALLOCATABLE :: tmp_r3(:,:,:)
+   REAL(DP), ALLOCATABLE :: ps_r(:,:)
+   COMPLEX(DP), ALLOCATABLE :: tmp_c3(:,:,:)
+   COMPLEX(DP), ALLOCATABLE :: ps_c(:,:)
+   !$acc declare device_resident(tmp_r3,ps_r,tmp_c3,ps_c)
    REAL(DP), DEVICE, ALLOCATABLE :: sqvc_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: ps_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: tmp_r_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: tmp_r3_d(:,:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: brak_r_d(:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: ps_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: tmp_c_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: tmp_c3_d(:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: brak_c_d(:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: phase_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: dvpsi_d(:,:)
-   COMPLEX(DP), PINNED, ALLOCATABLE :: dvpsi_h(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: evck_d(:,:)
    INTEGER, DEVICE, POINTER :: dfft_nl_d(:)
    INTEGER, DEVICE, POINTER :: dfft_nlm_d(:)
    TYPE(cusolverDnHandle) :: cusolver_h
@@ -304,39 +300,36 @@ MODULE west_gpu
    IF(ALLOCATED(h)) THEN
       DEALLOCATE(h)
    ENDIF
-   IF(ALLOCATED(ps_r_d)) THEN
-      DEALLOCATE(ps_r_d)
+   IF(ALLOCATED(ps_r)) THEN
+      DEALLOCATE(ps_r)
    ENDIF
-   IF(ALLOCATED(ps_c_d)) THEN
-      DEALLOCATE(ps_c_d)
+   IF(ALLOCATED(ps_c)) THEN
+      DEALLOCATE(ps_c)
    ENDIF
    !
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_gw_gpu(nglob,nlocx,nloc)
+   SUBROUTINE allocate_gw_gpu(nlocx,nloc)
    !-----------------------------------------------------------------------
    !
    USE control_flags,         ONLY : gamma_only
    USE fft_base,              ONLY : dffts
    USE noncollin_module,      ONLY : noncolin,npol
-   USE pwcom,                 ONLY : npwx,nbnd
+   USE pwcom,                 ONLY : npwx
    USE westcom,               ONLY : npwqx,n_lanczos
    !
    IMPLICIT NONE
    !
    ! I/O
    !
-   INTEGER, INTENT(IN) :: nglob
    INTEGER, INTENT(IN) :: nlocx
    INTEGER, INTENT(IN) :: nloc
    !
    CALL allocate_gpu()
-   CALL allocate_lanczos_gpu(nglob,nloc)
+   CALL allocate_lanczos_gpu(nloc)
    !
    IF(.NOT. gamma_only) THEN
-      ALLOCATE(evck_d(npwx*npol,nbnd))
-      ALLOCATE(phase_d(dffts%nnr))
       IF(noncolin) THEN
          ALLOCATE(psick_nc_d(dffts%nnr,npol))
       ELSE
@@ -344,9 +337,9 @@ MODULE west_gpu
       ENDIF
    ENDIF
    IF(gamma_only) THEN
-      ALLOCATE(tmp_r3_d(nlocx,nloc,n_lanczos))
+      ALLOCATE(tmp_r3(nlocx,nloc,n_lanczos))
    ELSE
-      ALLOCATE(tmp_c3_d(nlocx,nloc,n_lanczos))
+      ALLOCATE(tmp_c3(nlocx,nloc,n_lanczos))
    ENDIF
    ALLOCATE(sqvc_d(npwqx))
    ALLOCATE(pertg_d(npwqx))
@@ -365,23 +358,17 @@ MODULE west_gpu
    CALL deallocate_gpu()
    CALL deallocate_lanczos_gpu()
    !
-   IF(ALLOCATED(evck_d)) THEN
-      DEALLOCATE(evck_d)
-   ENDIF
-   IF(ALLOCATED(phase_d)) THEN
-      DEALLOCATE(phase_d)
-   ENDIF
    IF(ALLOCATED(psick_nc_d)) THEN
       DEALLOCATE(psick_nc_d)
    ENDIF
    IF(ALLOCATED(psick_d)) THEN
       DEALLOCATE(psick_d)
    ENDIF
-   IF(ALLOCATED(tmp_r3_d)) THEN
-      DEALLOCATE(tmp_r3_d)
+   IF(ALLOCATED(tmp_r3)) THEN
+      DEALLOCATE(tmp_r3)
    ENDIF
-   IF(ALLOCATED(tmp_c3_d)) THEN
-      DEALLOCATE(tmp_c3_d)
+   IF(ALLOCATED(tmp_c3)) THEN
+      DEALLOCATE(tmp_c3)
    ENDIF
    IF(ALLOCATED(sqvc_d)) THEN
       DEALLOCATE(sqvc_d)
@@ -398,11 +385,11 @@ MODULE west_gpu
    IF(ALLOCATED(dvpsi_h)) THEN
       DEALLOCATE(dvpsi_h)
    ENDIF
-   IF(ALLOCATED(ps_r_d)) THEN
-      DEALLOCATE(ps_r_d)
+   IF(ALLOCATED(ps_r)) THEN
+      DEALLOCATE(ps_r)
    ENDIF
-   IF(ALLOCATED(ps_c_d)) THEN
-      DEALLOCATE(ps_c_d)
+   IF(ALLOCATED(ps_c)) THEN
+      DEALLOCATE(ps_c)
    ENDIF
    IF(ALLOCATED(ovlp_r_d)) THEN
       DEALLOCATE(ovlp_r_d)
@@ -425,7 +412,6 @@ MODULE west_gpu
    !
    USE cell_base,             ONLY : bg
    USE control_flags,         ONLY : gamma_only
-   USE westcom,               ONLY : n_lanczos
    !
    IMPLICIT NONE
    !
@@ -437,7 +423,6 @@ MODULE west_gpu
    INTEGER, INTENT(IN) :: rfr_nloc
    INTEGER, INTENT(IN) :: q_grid_np
    !
-   ALLOCATE(diago_d(n_lanczos,nloc))
    IF(gamma_only) THEN
       ALLOCATE(dmati_d(nglob,nloc,ifr_nloc))
       ALLOCATE(zmatr_d(nglob,nloc,rfr_nloc))
@@ -458,9 +443,6 @@ MODULE west_gpu
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(diago_d)) THEN
-      DEALLOCATE(diago_d)
-   ENDIF
    IF(ALLOCATED(dmati_d)) THEN
       DEALLOCATE(dmati_d)
    ENDIF
@@ -479,19 +461,17 @@ MODULE west_gpu
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_lanczos_gpu(nglob,nloc)
+   SUBROUTINE allocate_lanczos_gpu(nloc)
    !-----------------------------------------------------------------------
    !
    USE control_flags,         ONLY : gamma_only
    USE noncollin_module,      ONLY : npol
    USE pwcom,                 ONLY : npwx
-   USE westcom,               ONLY : n_lanczos
    !
    IMPLICIT NONE
    !
    ! I/O
    !
-   INTEGER, INTENT(IN) :: nglob
    INTEGER, INTENT(IN) :: nloc
    !
    ALLOCATE(r(npwx*npol,nloc))
@@ -501,12 +481,6 @@ MODULE west_gpu
    IF(.NOT. gamma_only) THEN
       ALLOCATE(tmp_c(nloc))
       !$acc enter data create(tmp_c)
-   ENDIF
-   ALLOCATE(q_s_d(npwx*npol,nloc,n_lanczos))
-   IF(gamma_only) THEN
-      ALLOCATE(brak_r_d(nglob,n_lanczos,nloc))
-   ELSE
-      ALLOCATE(brak_c_d(nglob,n_lanczos,nloc))
    ENDIF
    !
    END SUBROUTINE
@@ -529,15 +503,6 @@ MODULE west_gpu
       !$acc exit data delete(tmp_c)
       DEALLOCATE(tmp_c)
    ENDIF
-   IF(ALLOCATED(q_s_d)) THEN
-      DEALLOCATE(q_s_d)
-   ENDIF
-   IF(ALLOCATED(brak_r_d)) THEN
-      DEALLOCATE(brak_r_d)
-   ENDIF
-   IF(ALLOCATED(brak_c_d)) THEN
-      DEALLOCATE(brak_c_d)
-   ENDIF
    !
    END SUBROUTINE
    !
@@ -555,22 +520,22 @@ MODULE west_gpu
    INTEGER, INTENT(IN) :: m
    !
    IF(gamma_only) THEN
-      IF(ALLOCATED(ps_r_d)) THEN
-         IF(SIZE(ps_r_d,DIM=1) /= nbndval .OR. SIZE(ps_r_d,DIM=2) /= m) THEN
-            DEALLOCATE(ps_r_d)
+      IF(ALLOCATED(ps_r)) THEN
+         IF(SIZE(ps_r,DIM=1) /= nbndval .OR. SIZE(ps_r,DIM=2) /= m) THEN
+            DEALLOCATE(ps_r)
          ENDIF
       ENDIF
-      IF(.NOT. ALLOCATED(ps_r_d)) THEN
-         ALLOCATE(ps_r_d(nbndval,m))
+      IF(.NOT. ALLOCATED(ps_r)) THEN
+         ALLOCATE(ps_r(nbndval,m))
       ENDIF
    ELSE
-      IF(ALLOCATED(ps_c_d)) THEN
-         IF(SIZE(ps_c_d,DIM=1) /= nbndval .OR. SIZE(ps_c_d,DIM=2) /= m) THEN
-            DEALLOCATE(ps_c_d)
+      IF(ALLOCATED(ps_c)) THEN
+         IF(SIZE(ps_c,DIM=1) /= nbndval .OR. SIZE(ps_c,DIM=2) /= m) THEN
+            DEALLOCATE(ps_c)
          ENDIF
       ENDIF
-      IF(.NOT. ALLOCATED(ps_c_d)) THEN
-         ALLOCATE(ps_c_d(nbndval,m))
+      IF(.NOT. ALLOCATED(ps_c)) THEN
+         ALLOCATE(ps_c(nbndval,m))
       ENDIF
    ENDIF
    !
@@ -752,7 +717,7 @@ MODULE west_gpu
       lwork = MAX(lwork,lwork2)
       lwork = MAX(lwork,n_pdep_eigen_to_use**2)
       !
-      ALLOCATE(tmp_r_d(lwork))
+      ALLOCATE(work_r(lwork))
    ELSE
       ALLOCATE(body_c_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       ALLOCATE(x_c_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
@@ -773,7 +738,7 @@ MODULE west_gpu
       lwork = MAX(lwork,lwork2)
       lwork = MAX(lwork,n_pdep_eigen_to_use**2)
       !
-      ALLOCATE(tmp_c_d(lwork))
+      ALLOCATE(work_c(lwork))
    ENDIF
    piv_d => NULL()
    !
@@ -809,8 +774,8 @@ MODULE west_gpu
    IF(ALLOCATED(tmpt_r_d)) THEN
       DEALLOCATE(tmpt_r_d)
    ENDIF
-   IF(ALLOCATED(tmp_r_d)) THEN
-      DEALLOCATE(tmp_r_d)
+   IF(ALLOCATED(work_r)) THEN
+      DEALLOCATE(work_r)
    ENDIF
    IF(ALLOCATED(body_c_d)) THEN
       DEALLOCATE(body_c_d)
@@ -836,8 +801,8 @@ MODULE west_gpu
    IF(ALLOCATED(tmpt_c_d)) THEN
       DEALLOCATE(tmpt_c_d)
    ENDIF
-   IF(ALLOCATED(tmp_c_d)) THEN
-      DEALLOCATE(tmp_c_d)
+   IF(ALLOCATED(work_c)) THEN
+      DEALLOCATE(work_c)
    ENDIF
    IF(ASSOCIATED(piv_d)) THEN
       NULLIFY(piv_d)
@@ -849,20 +814,14 @@ MODULE west_gpu
    SUBROUTINE allocate_exx_gpu()
    !-----------------------------------------------------------------------
    !
-   USE control_flags,         ONLY : gamma_only
    USE fft_base,              ONLY : dffts
    USE gvect,                 ONLY : ngm
    USE noncollin_module,      ONLY : noncolin,npol
-   USE pwcom,                 ONLY : npwx,nbnd
    !
    IMPLICIT NONE
    !
    CALL allocate_gpu()
    !
-   IF(.NOT. gamma_only) THEN
-      ALLOCATE(evck_d(npwx*npol,nbnd))
-      ALLOCATE(phase_d(dffts%nnr))
-   ENDIF
    ALLOCATE(sqvc_d(ngm))
    ALLOCATE(pertg_d(ngm))
    IF(noncolin) THEN
@@ -881,12 +840,6 @@ MODULE west_gpu
    !
    CALL deallocate_gpu()
    !
-   IF(ALLOCATED(evck_d)) THEN
-      DEALLOCATE(evck_d)
-   ENDIF
-   IF(ALLOCATED(phase_d)) THEN
-      DEALLOCATE(phase_d)
-   ENDIF
    IF(ALLOCATED(sqvc_d)) THEN
       DEALLOCATE(sqvc_d)
    ENDIF
@@ -932,7 +885,6 @@ MODULE west_gpu
       ALLOCATE(d_epsm1_ifr_d(nglob,nloc,ifr_nloc))
       ALLOCATE(d_epsm1_ifr_trans_d(nloc,nglob,ifr_nloc))
       ALLOCATE(z_epsm1_rfr_trans_d(nloc,nglob,rfr_nloc))
-      ALLOCATE(brak_r_d(nglob,n_lanczos,nloc))
       ALLOCATE(d_body2_ifr_d(n_lanczos,nloc,ifr_nloc))
    ELSE
       ALLOCATE(ovlp_c_d(nglob,nbnd))
@@ -940,7 +892,6 @@ MODULE west_gpu
       ALLOCATE(z_epsm1_ifr_q_d(nglob,nloc,ifr_nloc,q_grid_np))
       ALLOCATE(z_epsm1_ifr_trans_q_d(nloc,nglob,ifr_nloc,q_grid_np))
       ALLOCATE(z_epsm1_rfr_trans_q_d(nloc,nglob,rfr_nloc,q_grid_np))
-      ALLOCATE(brak_c_d(nglob,n_lanczos,nloc))
       ALLOCATE(z_body2_ifr_q_d(n_lanczos,nloc,ifr_nloc))
    ENDIF
    IF(gamma_only) THEN
@@ -987,12 +938,6 @@ MODULE west_gpu
    ENDIF
    IF(ALLOCATED(z_epsm1_rfr_trans_q_d)) THEN
       DEALLOCATE(z_epsm1_rfr_trans_q_d)
-   ENDIF
-   IF(ALLOCATED(brak_r_d)) THEN
-      DEALLOCATE(brak_r_d)
-   ENDIF
-   IF(ALLOCATED(brak_c_d)) THEN
-      DEALLOCATE(brak_c_d)
    ENDIF
    IF(ALLOCATED(d_body2_ifr_d)) THEN
       DEALLOCATE(d_body2_ifr_d)

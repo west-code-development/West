@@ -25,7 +25,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
   USE noncollin_module,     ONLY : npol
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : evc=>evc_d
-  USE west_gpu,             ONLY : ps_r=>ps_r_d,ps_c=>ps_c_d
+  USE west_gpu,             ONLY : ps_r,ps_c
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc
@@ -62,6 +62,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      !
      alpha_r = REAL(alpha,KIND=DP)
      !
+     !$acc host_data use_device(ps_r)
 #if defined(__CUDA)
      CALL glbrak_gamma_gpu(evc,f,ps_r,npw,npwx,nbndval,m,nbndval,npol)
 #else
@@ -75,6 +76,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      !
      CALL DGEMM('N','N',2*npwx*npol,m,nbndval,-alpha_r,evc,2*npwx*npol,ps_r,nbndval,&
      & alpha_r,f,2*npwx*npol)
+     !$acc end host_data
      !
 #if !defined(__CUDA)
      DEALLOCATE(ps_r)
@@ -82,6 +84,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      !
   ELSE
      !
+     !$acc host_data use_device(ps_c)
 #if defined(__CUDA)
      CALL glbrak_k_gpu(evc,f,ps_c,npw,npwx,nbndval,m,nbndval,npol)
 #else
@@ -95,6 +98,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      !
      CALL ZGEMM('N','N',npwx*npol,m,nbndval,-alpha,evc,npwx*npol,ps_c,nbndval,&
      & alpha,f,npwx*npol)
+     !$acc end host_data
      !
 #if !defined(__CUDA)
      DEALLOCATE(ps_c)

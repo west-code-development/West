@@ -27,6 +27,7 @@ SUBROUTINE wfreq_setup
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
   USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
+  USE io_global,              ONLY : stdout
   !
   IMPLICIT NONE
   !
@@ -43,6 +44,7 @@ SUBROUTINE wfreq_setup
   CALL set_npwq()
   !
   IF(qp_bands(1) == 0) THEN
+     WRITE(stdout,'(7X,"** WARNING : qp_bands is set automatically according to qp_bandrange")') 
      IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
      ALLOCATE(qp_bands(qp_bandrange(2)-qp_bandrange(1)+1))
      DO i = 1, SIZE(qp_bands)

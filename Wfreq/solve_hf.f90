@@ -63,11 +63,7 @@ SUBROUTINE solve_hf_gamma( )
   !
   ! Get SIGMA EXX
   !
-#if defined(__CUDA)
-  CALL calc_exx2_gpu(sigma_exx, qp_bandrange(1), qp_bandrange(2))
-#else
   CALL calc_exx2(sigma_exx, qp_bandrange(1), qp_bandrange(2))
-#endif
   !
   ! Get SIGMA X
   !
@@ -141,11 +137,7 @@ SUBROUTINE solve_hf_k( )
   !
   ! Get SIGMA EXX
   !
-#if defined(__CUDA)
-  CALL calc_exx2_gpu(sigma_exx, qp_bandrange(1), qp_bandrange(2))
-#else
   CALL calc_exx2(sigma_exx, qp_bandrange(1), qp_bandrange(2))
-#endif
   !
   ! Get SIGMA X
   !

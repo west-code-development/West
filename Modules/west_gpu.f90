@@ -40,8 +40,6 @@ MODULE west_gpu
    COMPLEX(DP), DEVICE, ALLOCATABLE :: dvpsi_d(:,:)
    COMPLEX(DP), PINNED, ALLOCATABLE :: dvpsi_h(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: pertg_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: pertr_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: pertr_nc_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: psick_nc_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: psick_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: ovlp_c_d(:,:)
@@ -343,7 +341,6 @@ MODULE west_gpu
    ENDIF
    ALLOCATE(sqvc_d(npwqx))
    ALLOCATE(pertg_d(npwqx))
-   ALLOCATE(pertr_d(dffts%nnr))
    ALLOCATE(dvpsi_d(npwx*npol,nlocx))
    ALLOCATE(dvpsi_h(npwx*npol,nlocx))
    !
@@ -376,9 +373,6 @@ MODULE west_gpu
    IF(ALLOCATED(pertg_d)) THEN
       DEALLOCATE(pertg_d)
    ENDIF
-   IF(ALLOCATED(pertr_d)) THEN
-      DEALLOCATE(pertr_d)
-   ENDIF
    IF(ALLOCATED(dvpsi_d)) THEN
       DEALLOCATE(dvpsi_d)
    ENDIF
@@ -396,12 +390,6 @@ MODULE west_gpu
    ENDIF
    IF(ALLOCATED(ovlp_c_d)) THEN
       DEALLOCATE(ovlp_c_d)
-   ENDIF
-   IF(ASSOCIATED(dfft_nl_d)) THEN
-      NULLIFY(dfft_nl_d)
-   ENDIF
-   IF(ASSOCIATED(dfft_nlm_d)) THEN
-      NULLIFY(dfft_nlm_d)
    ENDIF
    !
    END SUBROUTINE
@@ -814,21 +802,13 @@ MODULE west_gpu
    SUBROUTINE allocate_exx_gpu()
    !-----------------------------------------------------------------------
    !
-   USE fft_base,              ONLY : dffts
    USE gvect,                 ONLY : ngm
-   USE noncollin_module,      ONLY : noncolin,npol
    !
    IMPLICIT NONE
    !
    CALL allocate_gpu()
    !
    ALLOCATE(sqvc_d(ngm))
-   ALLOCATE(pertg_d(ngm))
-   IF(noncolin) THEN
-      ALLOCATE(pertr_nc_d(dffts%nnr,npol))
-   ELSE
-      ALLOCATE(pertr_d(dffts%nnr))
-   ENDIF
    !
    END SUBROUTINE
    !
@@ -842,21 +822,6 @@ MODULE west_gpu
    !
    IF(ALLOCATED(sqvc_d)) THEN
       DEALLOCATE(sqvc_d)
-   ENDIF
-   IF(ALLOCATED(pertg_d)) THEN
-      DEALLOCATE(pertg_d)
-   ENDIF
-   IF(ALLOCATED(pertr_nc_d)) THEN
-      DEALLOCATE(pertr_nc_d)
-   ENDIF
-   IF(ALLOCATED(pertr_d)) THEN
-      DEALLOCATE(pertr_d)
-   ENDIF
-   IF(ASSOCIATED(dfft_nl_d)) THEN
-      NULLIFY(dfft_nl_d)
-   ENDIF
-   IF(ASSOCIATED(dfft_nlm_d)) THEN
-      NULLIFY(dfft_nlm_d)
    ENDIF
    !
    END SUBROUTINE

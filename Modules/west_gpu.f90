@@ -95,11 +95,10 @@ MODULE west_gpu
    !
    ! Lanczos
    !
-   REAL(DP), DEVICE, ALLOCATABLE :: beta_d(:)
-   REAL(DP), DEVICE, ALLOCATABLE :: brak_r_d(:,:,:)
+   REAL(DP), ALLOCATABLE :: tmp_r(:)
+   COMPLEX(DP), ALLOCATABLE :: tmp_c(:)
+   COMPLEX(DP), ALLOCATABLE :: r(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: q_s_d(:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: r_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: brak_c_d(:,:,:)
    !
    ! QP
    !
@@ -120,9 +119,11 @@ MODULE west_gpu
    REAL(DP), DEVICE, ALLOCATABLE :: ps_r_d(:,:)
    REAL(DP), DEVICE, ALLOCATABLE :: tmp_r_d(:)
    REAL(DP), DEVICE, ALLOCATABLE :: tmp_r3_d(:,:,:)
+   REAL(DP), DEVICE, ALLOCATABLE :: brak_r_d(:,:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: ps_c_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: tmp_c_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: tmp_c3_d(:,:,:)
+   COMPLEX(DP), DEVICE, ALLOCATABLE :: brak_c_d(:,:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: phase_d(:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: dvpsi_d(:,:)
    COMPLEX(DP), PINNED, ALLOCATABLE :: dvpsi_h(:,:)
@@ -493,13 +494,15 @@ MODULE west_gpu
    INTEGER, INTENT(IN) :: nglob
    INTEGER, INTENT(IN) :: nloc
    !
-   ALLOCATE(beta_d(nloc))
-   ALLOCATE(q_s_d(npwx*npol,nloc,n_lanczos))
-   ALLOCATE(r_d(npwx*npol,nloc))
-   ALLOCATE(tmp_r_d(nloc))
+   ALLOCATE(r(npwx*npol,nloc))
+   !$acc enter data create(r)
+   ALLOCATE(tmp_r(nloc))
+   !$acc enter data create(tmp_r)
    IF(.NOT. gamma_only) THEN
-      ALLOCATE(tmp_c_d(nloc))
+      ALLOCATE(tmp_c(nloc))
+      !$acc enter data create(tmp_c)
    ENDIF
+   ALLOCATE(q_s_d(npwx*npol,nloc,n_lanczos))
    IF(gamma_only) THEN
       ALLOCATE(brak_r_d(nglob,n_lanczos,nloc))
    ELSE
@@ -514,20 +517,20 @@ MODULE west_gpu
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(beta_d)) THEN
-      DEALLOCATE(beta_d)
+   IF(ALLOCATED(r)) THEN
+      !$acc exit data delete(r)
+      DEALLOCATE(r)
+   ENDIF
+   IF(ALLOCATED(tmp_r)) THEN
+      !$acc exit data delete(tmp_r)
+      DEALLOCATE(tmp_r)
+   ENDIF
+   IF(ALLOCATED(tmp_c)) THEN
+      !$acc exit data delete(tmp_c)
+      DEALLOCATE(tmp_c)
    ENDIF
    IF(ALLOCATED(q_s_d)) THEN
       DEALLOCATE(q_s_d)
-   ENDIF
-   IF(ALLOCATED(r_d)) THEN
-      DEALLOCATE(r_d)
-   ENDIF
-   IF(ALLOCATED(tmp_r_d)) THEN
-      DEALLOCATE(tmp_r_d)
-   ENDIF
-   IF(ALLOCATED(tmp_c_d)) THEN
-      DEALLOCATE(tmp_c_d)
    ENDIF
    IF(ALLOCATED(brak_r_d)) THEN
       DEALLOCATE(brak_r_d)

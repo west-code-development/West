@@ -14,7 +14,8 @@
 SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_vxc(n,iks) = < n,iks | V_xc  | n,iks >     n = qp_bands(1):qp_bands(n_bands)
+  ! store in sigma_vxc(n,iks) = < qp_bands(n),iks | V_vxc | qp_bands(n),iks >     n = 1,n_bands
+  ! store in sigma_vxc_full(ijpmap(m,n),iks) = < qp_bands(m),iks | V_vxc | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,intra_bgrp_comm

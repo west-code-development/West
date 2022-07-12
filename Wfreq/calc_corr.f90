@@ -14,8 +14,9 @@
 SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_corr(n,iks) = < ib,iks | S_c(energy(ib,iks))  | ib,iks >
-  ! ... ib = qp_bands(1):qp_bands(n_bands)
+  ! store in sigma_corr(n,iks) = < qp_bands(n),iks | S_c(energy(ib,iks)) | qp_bands(n),iks >     n = 1,n_bands
+  ! store in sigma_corr_full(ijpmap(m,n),iks) = < qp_bands(m),iks | 0.5 * ( S_c(energy(m,iks)) &
+  ! & + S_c(energy(n,iks)) ) | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,intra_bgrp_comm
@@ -417,8 +418,7 @@ END SUBROUTINE
 SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_corr(n,iks) = < ib,iks | S_c(energy(ib,iks))  | ib,iks >
-  ! ... ib = n_bands
+  ! store in sigma_vxc(n,iks) = < qp_bands(n),iks | S_c(energy(n,iks)) | qp_bands(n),iks >     n = 1,n_bands
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm

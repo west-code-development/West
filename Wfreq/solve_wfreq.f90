@@ -1532,10 +1532,9 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
   USE chi_invert,           ONLY : chi_invert_real_gpu,chi_invert_complex_gpu
-  USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,phi_tmp_d,ps_r,ovlp_r_d,dmati_d,zmatr_d,&
-                                 & allocate_gw_gpu,deallocate_gw_gpu,reallocate_ps_gpu,allocate_macropol_gpu,&
-                                 & deallocate_macropol_gpu,allocate_lanczos_gpu,deallocate_lanczos_gpu,&
-                                 & allocate_w_gpu,deallocate_w_gpu,reallocate_overlap_gpu,allocate_chi_gpu,&
+  USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,phi_tmp_d,ps_r,allocate_gw_gpu,deallocate_gw_gpu,&
+                                 & reallocate_ps_gpu,allocate_macropol_gpu,deallocate_macropol_gpu,&
+                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,allocate_chi_gpu,&
                                  & deallocate_chi_gpu
   !
   IMPLICIT NONE
@@ -1551,7 +1550,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
-  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob
+  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob,ifr_nloc,rfr_nloc
   REAL(DP),ALLOCATABLE :: subdiago(:,:),bnorm(:)
   REAL(DP),PINNED,ALLOCATABLE :: diago(:,:),braket(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
@@ -1609,6 +1608,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   ALLOCATE(zmatr(mypara%nglob,mypara%nloc,rfr%nloc))
   dmati = 0._DP
   zmatr = 0._DP
+  !$acc enter data create(dmati,zmatr)
   !
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
@@ -1648,21 +1648,43 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   ! Initialize GPU
   !
   CALL allocate_gw_gpu(mypara%nlocx,mypara%nloc)
-  CALL allocate_w_gpu(mypara%nglob,mypara%nloc,ifr%nloc,rfr%nloc,1)
-  !
-  IF(l_read_restart) THEN
-     dmati_d = dmati
-     zmatr_d = zmatr
-  ELSE
-     dmati_d = 0._DP
-     zmatr_d = 0._DP
-  ENDIF
   !
   sqvc_d = pot3D%sqvc
   dffts_nnr = dffts%nnr
   mypara_nloc = mypara%nloc
   mypara_nglob = mypara%nglob
+  ifr_nloc = ifr%nloc
+  rfr_nloc = rfr%nloc
+  nbndval = MINVAL(nbnd_occ)
   !
+  IF(l_read_restart) THEN
+     !$acc update device(dmati,zmatr)
+  ELSE
+     !$acc parallel loop collapse(3) present(dmati)
+     DO ifreq = 1,ifr_nloc
+        DO ip = 1,mypara_nloc
+           DO glob_jp = 1,mypara_nglob
+              dmati(glob_jp,ip,ifreq) = 0._DP
+           ENDDO
+        ENDDO
+     ENDDO
+     !$acc end parallel
+     !
+     !$acc parallel loop collapse(3) present(zmatr)
+     DO ifreq = 1,rfr_nloc
+        DO ip = 1,mypara_nloc
+           DO glob_jp = 1,mypara_nglob
+              zmatr(glob_jp,ip,ifreq) = 0._DP
+           ENDDO
+        ENDDO
+     ENDDO
+     !$acc end parallel
+  ENDIF
+  !
+  !$acc enter data copyin(bg)
+  !
+  ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
+  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   IF(l_enable_lanczos) THEN
      ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
@@ -1924,22 +1946,26 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
            ENDIF
            !$acc end host_data
            !
-           CALL reallocate_overlap_gpu(mypara%nglob,nbnd-nbndval)
-           ovlp_r_d = 0._DP
-           !$acc parallel loop collapse(2) present(ps_r)
+           !$acc parallel loop collapse(2) present(overlap)
+           DO ic = 1,nbnd-nbndval
+              DO ip = 1,mypara_nglob
+                 overlap(ip,ic) = 0._DP
+              ENDDO
+           ENDDO
+           !$acc end parallel
+           !
+           !$acc parallel loop collapse(2) present(overlap,ps_r)
            DO ic = 1,nbnd-nbndval
               DO ip = 1,mypara_nloc
-                 ovlp_r_d(l2g(ip),ic) = ps_r(ic,ip)
+                 overlap(l2g(ip),ic) = ps_r(ic,ip)
               ENDDO
            ENDDO
            !$acc end parallel
            !
            IF(nimage > 1) THEN
-              ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
-              overlap = ovlp_r_d
+              !$acc update host(overlap)
               CALL mp_sum(overlap,inter_image_comm)
-              ovlp_r_d = overlap
-              DEALLOCATE(overlap)
+              !$acc update device(overlap)
            ENDIF
            !
            ! Update dmati with cond
@@ -1953,11 +1979,11 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
                  ecv = et(ic+nbndval,iks)-et(iv,iks)
                  dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                  !
-                 !$acc parallel loop collapse(2)
+                 !$acc parallel loop collapse(2) present(dmati,overlap)
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
-                       dmati_d(glob_jp,ip,ifreq) = dmati_d(glob_jp,ip,ifreq) &
-                       & +ovlp_r_d(glob_jp,ic)*ovlp_r_d(l2g(ip),ic)*dfactor
+                       dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq) &
+                       & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
                     ENDDO
                  ENDDO
                  !$acc end parallel
@@ -1977,11 +2003,11 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
                  zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                  zfactor = zmwo/zp+zmwo/zm
                  !
-                 !$acc parallel loop collapse(2)
+                 !$acc parallel loop collapse(2) present(zmatr,overlap)
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
-                       zmatr_d(glob_jp,ip,ifreq) = zmatr_d(glob_jp,ip,ifreq) &
-                       & +ovlp_r_d(glob_jp,ic)*ovlp_r_d(l2g(ip),ic)*zfactor
+                       zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
+                       & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
                     ENDDO
                  ENDDO
                  !$acc end parallel
@@ -2027,12 +2053,12 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
               !
               DO il = 1,n_lanczos
                  !
-                 !$acc parallel loop collapse(2) present(diago,braket)
+                 !$acc parallel loop collapse(2) present(diago,dmati,braket)
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
                        ecv = diago(il,ip)-this_et
                        dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
-                       dmati_d(glob_jp,ip,ifreq) = dmati_d(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*dfactor
+                       dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*dfactor
                     ENDDO
                  ENDDO
                  !$acc end parallel
@@ -2047,14 +2073,14 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
               !
               DO il = 1,n_lanczos
                  !
-                 !$acc parallel loop collapse(2) present(diago,braket)
+                 !$acc parallel loop collapse(2) present(diago,zmatr,braket)
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
                        ecv = diago(il,ip)-this_et
                        zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
                        zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                        zfactor = zmwo/zp+zmwo/zm
-                       zmatr_d(glob_jp,ip,ifreq) = zmatr_d(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*zfactor
+                       zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*zfactor
                     ENDDO
                  ENDDO
                  !$acc end parallel
@@ -2082,8 +2108,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
         IF(l_write_restart) THEN
            bks%lastdone_ks = iks
            bks%lastdone_band = iv
-           dmati = dmati_d
-           zmatr = zmatr_d
+           !$acc update host(dmati,zmatr)
            CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
            bks%old_ks = iks
            bks%old_band = iv
@@ -2102,12 +2127,15 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   !
   DEALLOCATE(pertg_all)
   !
-  dmati = dmati_d
-  zmatr = zmatr_d
+  !$acc update host(dmati,zmatr)
+  !$acc exit data delete(dmati,zmatr)
   !
   CALL deallocate_gw_gpu()
-  CALL deallocate_w_gpu()
   !
+  !$acc exit data delete(bg)
+  !
+  !$acc exit data delete(overlap)
+  DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   IF(l_enable_lanczos) THEN
      DEALLOCATE(q_s)
@@ -2271,11 +2299,9 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
   USE chi_invert,           ONLY : chi_invert_complex_gpu
-  USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,psick_nc_d,psick_d,phi_tmp_d,ps_c,ovlp_c_d,zmati_q_d,&
-                                 & zmatr_q_d,allocate_gw_gpu,deallocate_gw_gpu,reallocate_ps_gpu,&
-                                 & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
-                                 & deallocate_lanczos_gpu,allocate_w_gpu,deallocate_w_gpu,&
-                                 & reallocate_overlap_gpu,allocate_chi_gpu,deallocate_chi_gpu
+  USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,phi_tmp_d,ps_c,allocate_gw_gpu,deallocate_gw_gpu,&
+                                 & reallocate_ps_gpu,allocate_macropol_gpu,deallocate_macropol_gpu,&
+                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu
   !
   IMPLICIT NONE
   !
@@ -2290,7 +2316,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
-  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob
+  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob,ifr_nloc,rfr_nloc,q_grid_np
   REAL(DP),ALLOCATABLE :: subdiago(:,:),bnorm(:)
   REAL(DP),PINNED,ALLOCATABLE :: diago(:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: braket(:,:,:)
@@ -2304,6 +2330,8 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   COMPLEX(DP),PINNED,ALLOCATABLE :: pertg_all(:,:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: evckpq(:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: phase(:)
+  COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
+  !$acc declare device_resident(psick,psick_nc)
   INTEGER :: npwkq
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
@@ -2353,7 +2381,13 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   ALLOCATE(zmatr_q(mypara%nglob,mypara%nloc,rfr%nloc,q_grid%np))
   zmati_q = 0._DP
   zmatr_q = 0._DP
+  !$acc enter data create(zmati_q,zmatr_q)
   !
+  IF(noncolin) THEN
+     ALLOCATE(psick_nc(dffts%nnr,npol))
+  ELSE
+     ALLOCATE(psick(dffts%nnr))
+  ENDIF
   ALLOCATE(phase(dffts%nnr))
   ALLOCATE(evckpq(npwx*npol,nbnd))
   !$acc enter data create(phase,evckpq)
@@ -2402,20 +2436,47 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   ! Initialize GPU
   !
   CALL allocate_gw_gpu(mypara%nlocx,mypara%nloc)
-  CALL allocate_w_gpu(mypara%nglob,mypara%nloc,ifr%nloc,rfr%nloc,q_grid%np)
-  !
-  IF(l_read_restart) THEN
-     zmati_q_d = zmati_q
-     zmatr_q_d = zmatr_q
-  ELSE
-     zmati_q_d = 0._DP
-     zmatr_q_d = 0._DP
-  ENDIF
   !
   dffts_nnr = dffts%nnr
   mypara_nloc = mypara%nloc
   mypara_nglob = mypara%nglob
+  ifr_nloc = ifr%nloc
+  rfr_nloc = rfr%nloc
+  q_grid_np = q_grid%np
+  nbndval = MINVAL(nbnd_occ)
   !
+  IF(l_read_restart) THEN
+     !$acc update device(zmati_q,zmatr_q)
+  ELSE
+     !$acc parallel loop collapse(4) present(zmati_q)
+     DO iq = 1,q_grid_np
+        DO ifreq = 1,ifr_nloc
+           DO ip = 1,mypara_nloc
+              DO glob_jp = 1,mypara_nglob
+                 zmati_q(glob_jp,ip,ifreq,iq) = 0._DP
+              ENDDO
+           ENDDO
+        ENDDO
+     ENDDO
+     !$acc end parallel
+     !
+     !$acc parallel loop collapse(4) present(zmatr_q)
+     DO iq = 1,q_grid_np
+        DO ifreq = 1,rfr_nloc
+           DO ip = 1,mypara_nloc
+              DO glob_jp = 1,mypara_nglob
+                 zmatr_q(glob_jp,ip,ifreq,iq) = 0._DP
+              ENDDO
+           ENDDO
+        ENDDO
+     ENDDO
+     !$acc end parallel
+  ENDIF
+  !
+  !$acc enter data copyin(bg)
+  !
+  ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
+  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   IF(l_enable_lanczos) THEN
      ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
@@ -2640,14 +2701,16 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
            !
            ! PSIC
            !
-           !$acc host_data use_device(evckpq)
            IF(noncolin) THEN
-              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(1:npwx,iv),psick_nc_d(:,1),'Wave',igk_k(:,ikqs))
-              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(npwx+1:npwx*2,iv),psick_nc_d(:,2),'Wave',igk_k(:,ikqs))
+              !$acc host_data use_device(evckpq,psick_nc)
+              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(1:npwx,iv),psick_nc(:,1),'Wave',igk_k(:,ikqs))
+              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(npwx+1:npwx*2,iv),psick_nc(:,2),'Wave',igk_k(:,ikqs))
+              !$acc end host_data
            ELSE
-              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(:,iv),psick_d,'Wave',igk_k(:,ikqs))
+              !$acc host_data use_device(evckpq,psick)
+              CALL single_invfft_k(dffts,npwkq,npwx,evckpq(:,iv),psick,'Wave',igk_k(:,ikqs))
+              !$acc end host_data
            ENDIF
-           !$acc end host_data
            !
            dvpsi_d = 0._DP
            !
@@ -2679,7 +2742,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                     !$acc end host_data
                     !$acc parallel loop present(phase)
                     DO ir = 1,dffts_nnr
-                       pertr(ir) = phase(ir)*psick_nc_d(ir,1)*CONJG(pertr(ir))
+                       pertr(ir) = phase(ir)*psick_nc(ir,1)*CONJG(pertr(ir))
                     ENDDO
                     !$acc end parallel
                     !$acc host_data use_device(pertr)
@@ -2688,7 +2751,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                     !$acc end host_data
                     !$acc parallel loop present(phase)
                     DO ir = 1,dffts_nnr
-                       pertr(ir) = phase(ir)*psick_nc_d(ir,2)*CONJG(pertr(ir))
+                       pertr(ir) = phase(ir)*psick_nc(ir,2)*CONJG(pertr(ir))
                     ENDDO
                     !$acc end parallel
                     !$acc host_data use_device(pertr)
@@ -2700,7 +2763,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                     !$acc end host_data
                     !$acc parallel loop present(phase)
                     DO ir = 1,dffts_nnr
-                       pertr(ir) = phase(ir)*psick_d(ir)*CONJG(pertr(ir))
+                       pertr(ir) = phase(ir)*psick(ir)*CONJG(pertr(ir))
                     ENDDO
                     !$acc end parallel
                     !$acc host_data use_device(pertr)
@@ -2740,22 +2803,26 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
               ENDIF
               !$acc end host_data
               !
-              CALL reallocate_overlap_gpu(mypara%nglob,nbnd-nbndval)
-              ovlp_c_d = 0._DP
-              !$acc parallel loop collapse(2) present(ps_c)
+              !$acc parallel loop collapse(2) present(overlap)
+              DO ic = 1,nbnd-nbndval
+                 DO ip = 1,mypara_nglob
+                    overlap(ip,ic) = 0._DP
+                 ENDDO
+              ENDDO
+              !$acc end parallel
+              !
+              !$acc parallel loop collapse(2) present(overlap,ps_c)
               DO ic = 1,nbnd-nbndval
                  DO ip = 1,mypara_nloc
-                    ovlp_c_d(l2g(ip),ic) = ps_c(ic,ip)
+                    overlap(l2g(ip),ic) = ps_c(ic,ip)
                  ENDDO
               ENDDO
               !$acc end parallel
               !
               IF(nimage > 1) THEN
-                 ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
-                 overlap = ovlp_c_d
+                 !$acc update host(overlap)
                  CALL mp_sum(overlap,inter_image_comm)
-                 ovlp_c_d = overlap
-                 DEALLOCATE(overlap)
+                 !$acc update device(overlap)
               ENDIF
               !
               ! Update zmati with cond
@@ -2769,11 +2836,11 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                     ecv = et(ic+nbndval,iks)-et(iv,ikqs)
                     dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                     !
-                    !$acc parallel loop collapse(2)
+                    !$acc parallel loop collapse(2) present(zmati_q,overlap)
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
-                          zmati_q_d(glob_jp,ip,ifreq,iq) = zmati_q_d(glob_jp,ip,ifreq,iq) &
-                          & +CONJG(ovlp_c_d(l2g(ip),ic))*ovlp_c_d(glob_jp,ic)*dfactor
+                          zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) &
+                          & +CONJG(overlap(l2g(ip),ic))*overlap(glob_jp,ic)*dfactor
                        ENDDO
                     ENDDO
                     !$acc end parallel
@@ -2793,11 +2860,11 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                     zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                     zfactor = zmwo/zp+zmwo/zm
                     !
-                    !$acc parallel loop collapse(2)
+                    !$acc parallel loop collapse(2) present(zmatr_q,overlap)
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
-                          zmatr_q_d(glob_jp,ip,ifreq,iq) = zmatr_q_d(glob_jp,ip,ifreq,iq) &
-                          & +CONJG(ovlp_c_d(l2g(ip),ic))*ovlp_c_d(glob_jp,ic)*zfactor
+                          zmatr_q(glob_jp,ip,ifreq,iq) = zmatr_q(glob_jp,ip,ifreq,iq) &
+                          & +CONJG(overlap(l2g(ip),ic))*overlap(glob_jp,ic)*zfactor
                        ENDDO
                     ENDDO
                     !$acc end parallel
@@ -2843,12 +2910,12 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                  !
                  DO il = 1,n_lanczos
                     !
-                    !$acc parallel loop collapse(2) present(diago,braket)
+                    !$acc parallel loop collapse(2) present(diago,zmati_q,braket)
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
                           ecv = diago(il,ip)-this_et
                           dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
-                          zmati_q_d(glob_jp,ip,ifreq,iq) = zmati_q_d(glob_jp,ip,ifreq,iq) &
+                          zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) &
                           & +CONJG(braket(glob_jp,il,ip))*dfactor
                        ENDDO
                     ENDDO
@@ -2865,14 +2932,14 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                  !
                  DO il = 1,n_lanczos
                     !
-                    !$acc parallel loop collapse(2) present(diago,braket)
+                    !$acc parallel loop collapse(2) present(diago,zmatr_q,braket)
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
                           ecv = diago(il,ip)-this_et
                           zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
                           zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                           zfactor = zmwo/zp + zmwo/zm
-                          zmatr_q_d(glob_jp,ip,ifreq,iq) = zmatr_q_d(glob_jp,ip,ifreq,iq) &
+                          zmatr_q(glob_jp,ip,ifreq,iq) = zmatr_q(glob_jp,ip,ifreq,iq) &
                           & +CONJG(braket(glob_jp,il,ip))*zfactor
                        ENDDO
                     ENDDO
@@ -2902,8 +2969,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
               bksq%lastdone_q = iq
               bksq%lastdone_ks = iks
               bksq%lastdone_band = iv
-              zmati_q = zmati_q_d
-              zmatr_q = zmatr_q_d
+              !$acc update host(zmati_q,zmatr_q)
               CALL solvewfreq_restart_write(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
               bksq%old_q = iq
               bksq%old_ks = iks
@@ -2924,16 +2990,24 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   ENDDO ! QPOINT
   !
   DEALLOCATE(pertg_all)
+  IF(noncolin) THEN
+     DEALLOCATE(psick_nc)
+  ELSE
+     DEALLOCATE(psick)
+  ENDIF
   !$acc exit data delete(phase,evckpq)
   DEALLOCATE(phase)
   DEALLOCATE(evckpq)
   !
-  zmati_q = zmati_q_d
-  zmatr_q = zmatr_q_d
+  !$acc update host(zmati_q,zmatr_q)
+  !$acc exit data delete(zmati_q,zmatr_q)
   !
   CALL deallocate_gw_gpu()
-  CALL deallocate_w_gpu()
   !
+  !$acc exit data delete(bg)
+  !
+  !$acc exit data delete(overlap)
+  DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   IF(l_enable_lanczos) THEN
      DEALLOCATE(q_s)

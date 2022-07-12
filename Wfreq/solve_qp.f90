@@ -1094,13 +1094,12 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
   USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
-  USE class_idistribute,    ONLY : idistribute
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
-  USE west_gpu,             ONLY : ovlp_r_d,ovlp2_r_d,dtemp_d,ztemp_d,d_epsm1_ifr_d,d_epsm1_ifr_trans_d,&
-                                 & z_epsm1_rfr_trans_d,d_body2_ifr_d,allocate_qp_gpu,deallocate_qp_gpu
+  USE west_gpu,             ONLY : dtemp_d,ztemp_d,d_epsm1_ifr_d,d_epsm1_ifr_trans_d,z_epsm1_rfr_trans_d,&
+                                 & d_body2_ifr_d,allocate_qp_gpu,deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1129,6 +1128,8 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: diago(:,:)
   REAL(DP),PINNED,ALLOCATABLE :: braket(:,:,:)
   REAL(DP),PINNED,ALLOCATABLE :: overlap(:,:)
+  REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
+  !$acc declare device_resident(overlap_loc)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   REAL(DP) :: reduce_r
@@ -1169,6 +1170,8 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   ! TEMP
   !
   ALLOCATE(overlap(pert%nglob,nbnd))
+  !$acc enter data create(overlap)
+  ALLOCATE(overlap_loc(pert%nloc,nbnd))
   ALLOCATE(d_body1_ifr(aband%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
   ALLOCATE(z_body_rfr(aband%nloc,rfr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
   ALLOCATE(dtemp2(nbnd,ifr%nloc))
@@ -1231,12 +1234,12 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
         !
         CALL readin_overlap('g',kpt_pool%l2g(iks),ib,overlap,pert%nglob,nbnd)
         !
-        ovlp_r_d = overlap
+        !$acc update device(overlap)
         !
-        !$acc parallel loop collapse(2)
+        !$acc parallel loop collapse(2) present(overlap)
         DO im = 1,nbnd
            DO ip = 1,pert_nloc
-              ovlp2_r_d(ip,im) = ovlp_r_d(l2g(ip),im)
+              overlap_loc(ip,im) = overlap(l2g(ip),im)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -1245,7 +1248,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
         ! d_body1_ifr
         ! ------
         !
-        !$acc parallel
+        !$acc parallel present(overlap)
         !$acc loop collapse(2)
         DO ifreq = 1,ifr_nloc
            DO im = 1,nbnd
@@ -1253,7 +1256,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
               !$acc loop collapse(2) reduction(+:reduce_r)
               DO glob_jp = 1,n_pdep_eigen_to_use
                  DO ip = 1,pert_nloc
-                    reduce_r = reduce_r+ovlp_r_d(glob_jp,im)*ovlp2_r_d(ip,im) &
+                    reduce_r = reduce_r+overlap(glob_jp,im)*overlap_loc(ip,im) &
                     & *d_epsm1_ifr_trans_d(ip,glob_jp,ifreq)
                  ENDDO
               ENDDO
@@ -1277,7 +1280,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
         ! z_body_rfr
         ! -----
         !
-        !$acc parallel
+        !$acc parallel present(overlap)
         !$acc loop collapse(2)
         DO ifreq = 1,rfr_nloc
            DO im = 1,nbnd
@@ -1285,7 +1288,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
               !$acc loop collapse(2) reduction(+:reduce_c)
               DO glob_jp = 1,n_pdep_eigen_to_use
                  DO ip = 1,pert_nloc
-                    reduce_c = reduce_c+ovlp_r_d(glob_jp,im)*ovlp2_r_d(ip,im) &
+                    reduce_c = reduce_c+overlap(glob_jp,im)*overlap_loc(ip,im) &
                     & *z_epsm1_rfr_trans_d(ip,glob_jp,ifreq)
                  ENDDO
               ENDDO
@@ -1365,7 +1368,9 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   !
   CALL stop_bar_type(barra,'coll_gw')
   !
+  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
+  DEALLOCATE(overlap_loc)
   DEALLOCATE(d_epsm1_ifr)
   DEALLOCATE(z_epsm1_rfr)
   DEALLOCATE(dtemp2)
@@ -1613,13 +1618,12 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
   USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
-  USE class_idistribute,    ONLY : idistribute
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
-  USE west_gpu,             ONLY : ovlp_c_d,ovlp2_c_d,ztemp_d,z_epsm1_ifr_q_d,z_epsm1_ifr_trans_q_d,&
-                                 & z_epsm1_rfr_trans_q_d,z_body2_ifr_q_d,allocate_qp_gpu,deallocate_qp_gpu
+  USE west_gpu,             ONLY : ztemp_d,z_epsm1_ifr_q_d,z_epsm1_ifr_trans_q_d,z_epsm1_rfr_trans_q_d,&
+                                 & z_body2_ifr_q_d,allocate_qp_gpu,deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1649,6 +1653,8 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: diago(:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: braket(:,:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: overlap(:,:)
+  COMPLEX(DP),ALLOCATABLE :: overlap_loc(:,:)
+  !$acc declare device_resident(overlap_loc)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   COMPLEX(DP) :: reduce
@@ -1688,6 +1694,8 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   ! TEMP
   !
   ALLOCATE(overlap(pert%nglob,nbnd))
+  !$acc enter data create(overlap)
+  ALLOCATE(overlap_loc(pert%nloc,nbnd))
   ALLOCATE(z_body1_ifr_q(aband%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
   ALLOCATE(z_body_rfr_q(aband%nloc,rfr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
   ALLOCATE(ztemp2(nbnd,MAX(ifr%nloc,rfr%nloc)))
@@ -1762,12 +1770,12 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
            !
            CALL readin_overlap('g',kpt_pool%l2g(iks),kpt_pool%l2g(ikks),ib,overlap,pert%nglob,nbnd)
            !
-           ovlp_c_d = overlap
+           !$acc update device(overlap)
            !
-           !$acc parallel loop collapse(2)
+           !$acc parallel loop collapse(2) present(overlap)
            DO im = 1,nbnd
               DO ip = 1,pert_nloc
-                 ovlp2_c_d(ip,im) = ovlp_c_d(l2g(ip),im)
+                 overlap_loc(ip,im) = overlap(l2g(ip),im)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -1776,7 +1784,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
            ! z_body1_ifr_q
            ! ------
            !
-           !$acc parallel
+           !$acc parallel present(overlap)
            !$acc loop collapse(2)
            DO ifreq = 1,ifr_nloc
               DO im = 1,nbnd
@@ -1784,7 +1792,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                  !$acc loop collapse(2) reduction(+:reduce)
                  DO glob_jp = 1,n_pdep_eigen_to_use
                     DO ip = 1,pert_nloc
-                       reduce = reduce+CONJG(ovlp_c_d(glob_jp,im))*ovlp2_c_d(ip,im) &
+                       reduce = reduce+CONJG(overlap(glob_jp,im))*overlap_loc(ip,im) &
                        & *z_epsm1_ifr_trans_q_d(ip,glob_jp,ifreq,iq)
                     ENDDO
                  ENDDO
@@ -1808,7 +1816,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
            ! z_body_rfr_q
            ! -----
            !
-           !$acc parallel
+           !$acc parallel present(overlap)
            !$acc loop collapse(2)
            DO ifreq = 1,rfr_nloc
               DO im = 1,nbnd
@@ -1816,7 +1824,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                  !$acc loop collapse(2) reduction(+:reduce)
                  DO glob_jp = 1,n_pdep_eigen_to_use
                     DO ip = 1,pert_nloc
-                       reduce = reduce+CONJG(ovlp_c_d(glob_jp,im))*ovlp2_c_d(ip,im) &
+                       reduce = reduce+CONJG(overlap(glob_jp,im))*overlap_loc(ip,im) &
                        & *z_epsm1_rfr_trans_q_d(ip,glob_jp,ifreq,iq)
                     ENDDO
                  ENDDO
@@ -1893,7 +1901,9 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   !
   CALL stop_bar_type(barra,'coll_gw')
   !
+  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
+  DEALLOCATE(overlap_loc)
   DEALLOCATE(z_epsm1_ifr_q)
   DEALLOCATE(z_epsm1_rfr_q)
   DEALLOCATE(ztemp2)

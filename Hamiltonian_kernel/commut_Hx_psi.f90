@@ -292,9 +292,8 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   USE pwcom,            ONLY : igk_k, current_k
   USE becmod_subs_gpum, ONLY : calbec_gpu
   USE wvfct_gpum,       ONLY : g2kin_d
-  USE west_gpu,         ONLY : gk_d, dvkb_d, work_d, ps2_d, psc_d, deff_d, deff_nc_d, becp1_d, &
-                             & becp2_d, becp1_d_nc_d, becp2_d_nc_d, becp1_d_r_d, becp2_d_r_d, &
-                             & becp1_d_k_d, becp2_d_k_d
+  USE west_gpu,         ONLY : gk, dvkb, work, ps2, psc, deff, deff_nc, becp1_d, becp2_d, becp1_d_nc_d, &
+                             & becp2_d_nc_d, becp1_d_r_d, becp2_d_r_d, becp1_d_k_d, becp2_d_k_d
   USE cublas
   !
   IMPLICIT NONE
@@ -310,7 +309,7 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   !
   ! Workspace
   !
-  INTEGER :: ig, na, ibnd, ikb, jkb, nt, ih, jh, ijkb0, is, js, ijs
+  INTEGER :: ig, na, ibnd, ikb, jkb, nt, ih, jh, ijkb0, is, js, ijs, ii
   INTEGER :: nh_nt
   REAL(DP) :: xk1, xk2, xk3, at1, at2, at3
   COMPLEX(DP) :: reduce, reduce2, reduce3, reduce4
@@ -327,24 +326,24 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   at2 = at(2,ipol)
   at3 = at(3,ipol)
   !
-  !$acc parallel loop present(g,igk_k)
+  !$acc parallel loop present(gk,g,igk_k)
   DO ig = 1,npw
-     gk_d(1,ig) = (xk1 + g(1,igk_k(ig,current_k))) * tpiba
-     gk_d(2,ig) = (xk2 + g(2,igk_k(ig,current_k))) * tpiba
-     gk_d(3,ig) = (xk3 + g(3,igk_k(ig,current_k))) * tpiba
-     g2kin_d(ig) = gk_d(1,ig)**2 + gk_d(2,ig)**2 + gk_d(3,ig)**2
+     gk(1,ig) = (xk1 + g(1,igk_k(ig,current_k))) * tpiba
+     gk(2,ig) = (xk2 + g(2,igk_k(ig,current_k))) * tpiba
+     gk(3,ig) = (xk3 + g(3,igk_k(ig,current_k))) * tpiba
+     g2kin_d(ig) = gk(1,ig)**2 + gk(2,ig)**2 + gk(3,ig)**2
   ENDDO
   !$acc end parallel
   !
   ! this is the kinetic contribution to [H,x]: -2i (k+G)_ipol * psi
   !
-  !$acc parallel loop collapse(2)
+  !$acc parallel loop collapse(2) present(gk)
   DO ibnd = 1,m
      DO ig = 1,npwx
         IF(ig <= npw) THEN
-           dpsi_d(ig,ibnd) = (at1*gk_d(1,ig) + at2*gk_d(2,ig) + at3*gk_d(3,ig)) * (0._DP,-2._DP) * psi_d(ig,ibnd)
+           dpsi_d(ig,ibnd) = (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig)) * (0._DP,-2._DP) * psi_d(ig,ibnd)
            IF(noncolin) THEN
-              dpsi_d(ig+npwx,ibnd) = (at1*gk_d(1,ig) + at2*gk_d(2,ig) + at3*gk_d(3,ig)) * (0._DP,-2._DP) * psi_d(ig+npwx,ibnd)
+              dpsi_d(ig+npwx,ibnd) = (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig)) * (0._DP,-2._DP) * psi_d(ig+npwx,ibnd)
            ENDIF
         ELSE
            dpsi_d(ig,ibnd) = 0._DP
@@ -360,33 +359,42 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      !
      ! this is the contribution from nonlocal pseudopotentials
      !
-     !$acc parallel loop
+     !$acc parallel loop present(gk)
      DO ig = 1,npw
         IF(g2kin_d(ig) < tol) THEN
-           gk_d(1,ig) = 0._DP
-           gk_d(2,ig) = 0._DP
-           gk_d(3,ig) = 0._DP
+           gk(1,ig) = 0._DP
+           gk(2,ig) = 0._DP
+           gk(3,ig) = 0._DP
         ELSE
-           gk_d(1,ig) = gk_d(1,ig)/SQRT(g2kin_d(ig))
-           gk_d(2,ig) = gk_d(2,ig)/SQRT(g2kin_d(ig))
-           gk_d(3,ig) = gk_d(3,ig)/SQRT(g2kin_d(ig))
+           gk(1,ig) = gk(1,ig)/SQRT(g2kin_d(ig))
+           gk(2,ig) = gk(2,ig)/SQRT(g2kin_d(ig))
+           gk(3,ig) = gk(3,ig)/SQRT(g2kin_d(ig))
         ENDIF
      ENDDO
      !$acc end parallel
      !
-     CALL gen_us_dj_gpu(ik,dvkb_d)
+     !$acc host_data use_device(dvkb)
+     CALL gen_us_dj_gpu(ik,dvkb)
+     !$acc end host_data
      !
-     work_d = 0._DP
+     !$acc parallel loop collapse(2) present(work)
+     DO ikb = 1,nkb
+        DO ig = 1,npwx
+           work(ig,ikb) = 0._DP
+        ENDDO
+     ENDDO
+     !$acc end parallel
+     !
      ijkb0 = 0
      DO nt = 1,ntyp
         nh_nt = nh(nt)
         DO na = 1,nat
            IF(nt == ityp(na)) THEN
-              !$acc parallel loop collapse(2)
+              !$acc parallel loop collapse(2) present(work,dvkb,gk)
               DO ikb = 1,nh_nt
                  DO ig = 1,npw
                     jkb = ijkb0+ikb
-                    work_d(ig,jkb) = dvkb_d(ig,jkb) * (at1*gk_d(1,ig) + at2*gk_d(2,ig) + at3*gk_d(3,ig))
+                    work(ig,jkb) = dvkb(ig,jkb) * (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig))
                  ENDDO
               ENDDO
               !$acc end parallel
@@ -395,18 +403,20 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
         ENDDO
      ENDDO
      !
-     CALL gen_us_dy_gpu(ik,at(1,ipol),dvkb_d)
+     !$acc host_data use_device(dvkb)
+     CALL gen_us_dy_gpu(ik,at(1,ipol),dvkb)
+     !$acc end host_data
      !
      ijkb0 = 0
      DO nt = 1,ntyp
         nh_nt = nh(nt)
         DO na = 1,nat
            IF(nt == ityp(na)) THEN
-              !$acc parallel loop collapse(2)
+              !$acc parallel loop collapse(2) present(work,dvkb)
               DO ikb = 1,nh_nt
                  DO ig = 1,npw
                     jkb = ijkb0+ikb
-                    work_d(ig,jkb) = work_d(ig,jkb) + dvkb_d(ig,jkb)
+                    work(ig,jkb) = work(ig,jkb) + dvkb(ig,jkb)
                  ENDDO
               ENDDO
               !$acc end parallel
@@ -421,10 +431,10 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      ! of becp2 later on.
      !
      IF(gamma_only) THEN
-        !$acc parallel loop collapse(2)
+        !$acc parallel loop collapse(2) present(work)
         DO ikb = 1,nkb
            DO ig = 1,npw
-              work_d(ig,ikb) = (0.0_DP,1.0_DP)*work_d(ig,ikb)
+              work(ig,ikb) = (0.0_DP,1.0_DP)*work(ig,ikb)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -434,19 +444,41 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      CALL calbec_gpu(npw,vkb,psi_d,becp1_d,m)
      !$acc end host_data
      !
-     CALL calbec_gpu(npw,work_d,psi_d,becp2_d,m)
+     !$acc host_data use_device(work)
+     CALL calbec_gpu(npw,work,psi_d,becp2_d,m)
+     !$acc end host_data
      !
      IF(noncolin) THEN
-        psc_d = 0._DP
+        !$acc parallel loop collapse(4) present(psc)
+        DO ii = 1,2
+           DO ibnd = 1,m
+              DO is = 1,npol
+                 DO ikb = 1,nkb
+                    psc(ikb,is,ibnd,ii) = 0._DP
+                 ENDDO
+              ENDDO
+           ENDDO
+        ENDDO
+        !$acc end parallel
      ELSE
-        ps2_d = 0._DP
+        !$acc parallel loop collapse(3) present(ps2)
+        DO ii = 1,2
+           DO ibnd = 1,m
+              DO ikb = 1,nkb
+                 ps2(ikb,ibnd,ii) = 0._DP
+              ENDDO
+           ENDDO
+        ENDDO
+        !$acc end parallel
      ENDIF
      !
      DO ibnd = 1,m
         IF(noncolin) THEN
-           CALL compute_deff_nc_gpu(deff_nc_d,et(ibnd,ik))
+           !$acc host_data use_device(deff_nc)
+           CALL compute_deff_nc_gpu(deff_nc,et(ibnd,ik))
+           !$acc end host_data
         ELSE
-           CALL compute_deff_real_gpu(deff_d,et(ibnd,ik))
+           CALL compute_deff_real_gpu(deff,et(ibnd,ik))
         ENDIF
         ijkb0 = 0
         DO nt = 1,ntyp
@@ -455,22 +487,22 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                  nh_nt = nh(nt)
                  IF(noncolin) THEN
                     IF(npol == 1) THEN
-                       !$acc parallel
+                       !$acc parallel present(deff_nc,psc)
                        !$acc loop
                        DO ih = 1,nh_nt
                           reduce = 0._DP
                           reduce2 = 0._DP
                           !$acc loop reduction(+:reduce,reduce2)
                           DO jh = 1,nh_nt
-                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,1)
-                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,1)
+                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
+                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
                           ENDDO
-                          psc_d(ijkb0+ih,1,ibnd,1) = reduce
-                          psc_d(ijkb0+ih,1,ibnd,2) = reduce2
+                          psc(ijkb0+ih,1,ibnd,1) = reduce
+                          psc(ijkb0+ih,1,ibnd,2) = reduce2
                        ENDDO
                        !$acc end parallel
                     ELSEIF(npol == 2) THEN
-                       !$acc parallel
+                       !$acc parallel present(deff_nc,psc)
                        !$acc loop
                        DO ih = 1,nh_nt
                           reduce = 0._DP
@@ -480,20 +512,20 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                           !$acc loop reduction(+:reduce,reduce2,reduce3,reduce4)
                           DO jh = 1,nh_nt
                              ! is = 1, js = 1,2
-                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,1)
-                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc_d(ih,jh,na,2)
-                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,1)
-                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc_d(ih,jh,na,2)
+                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
+                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,2)
+                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
+                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,2)
                              ! is = 2, js = 1,2
-                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,3)
-                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc_d(ih,jh,na,4)
-                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc_d(ih,jh,na,3)
-                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc_d(ih,jh,na,4)
+                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,3)
+                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,4)
+                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,3)
+                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,4)
                           ENDDO
-                          psc_d(ijkb0+ih,1,ibnd,1) = reduce
-                          psc_d(ijkb0+ih,1,ibnd,2) = reduce2
-                          psc_d(ijkb0+ih,2,ibnd,1) = reduce3
-                          psc_d(ijkb0+ih,2,ibnd,2) = reduce4
+                          psc(ijkb0+ih,1,ibnd,1) = reduce
+                          psc(ijkb0+ih,1,ibnd,2) = reduce2
+                          psc(ijkb0+ih,2,ibnd,1) = reduce3
+                          psc(ijkb0+ih,2,ibnd,2) = reduce4
                        ENDDO
                        !$acc end parallel
                     ENDIF
@@ -501,33 +533,33 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                     ! Note the different prefactors due to the factor of i introduced to work(:,:),
                     ! as becp[1,2] are real.
                     !
-                    !$acc parallel
+                    !$acc parallel present(deff,ps2)
                     !$acc loop
                     DO ih = 1,nh_nt
                        reduce = 0._DP
                        reduce2 = 0._DP
                        !$acc loop reduction(+:reduce,reduce2)
                        DO jh = 1,nh_nt
-                          reduce = reduce + becp2_d_r_d(ijkb0+jh,ibnd) * (1._DP,0._DP) * deff_d(ih,jh,na)
-                          reduce2 = reduce2 + becp1_d_r_d(ijkb0+jh,ibnd) * (-1._DP,0._DP) * deff_d(ih,jh,na)
+                          reduce = reduce + becp2_d_r_d(ijkb0+jh,ibnd) * (1._DP,0._DP) * deff(ih,jh,na)
+                          reduce2 = reduce2 + becp1_d_r_d(ijkb0+jh,ibnd) * (-1._DP,0._DP) * deff(ih,jh,na)
                        ENDDO
-                       ps2_d(ijkb0+ih,ibnd,1) = reduce
-                       ps2_d(ijkb0+ih,ibnd,2) = reduce2
+                       ps2(ijkb0+ih,ibnd,1) = reduce
+                       ps2(ijkb0+ih,ibnd,2) = reduce2
                     ENDDO
                     !$acc end parallel
                  ELSE
-                    !$acc parallel
+                    !$acc parallel present(deff,ps2)
                     !$acc loop
                     DO ih = 1,nh_nt
                        reduce = 0._DP
                        reduce2 = 0._DP
                        !$acc loop reduction(+:reduce,reduce2)
                        DO jh = 1,nh_nt
-                          reduce = reduce + becp2_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff_d(ih,jh,na)
-                          reduce2 = reduce2 + becp1_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff_d(ih,jh,na)
+                          reduce = reduce + becp2_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff(ih,jh,na)
+                          reduce2 = reduce2 + becp1_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff(ih,jh,na)
                        ENDDO
-                       ps2_d(ijkb0+ih,ibnd,1) = reduce
-                       ps2_d(ijkb0+ih,ibnd,2) = reduce2
+                       ps2(ijkb0+ih,ibnd,1) = reduce
+                       ps2(ijkb0+ih,ibnd,2) = reduce2
                     ENDDO
                     !$acc end parallel
                  ENDIF
@@ -535,19 +567,18 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
               ENDIF
            ENDDO ! na
         ENDDO ! nt
-     ENDDO ! nbnd
+     ENDDO ! m
      !
      IF(noncolin) THEN
-        !$acc host_data use_device(vkb)
-        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),vkb,npwx,psc_d,nkb,(1._DP,0._DP),dpsi_d,npwx)
+        !$acc host_data use_device(vkb,psc,work)
+        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),vkb,npwx,psc,nkb,(1._DP,0._DP),dpsi_d,npwx)
+        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work,npwx,psc(:,:,:,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
-        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work_d,npwx,psc_d(1,1,1,2),nkb,(1._DP,0._DP),&
-        & dpsi_d,npwx)
      ELSE
-        !$acc host_data use_device(vkb)
-        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),vkb,npwx,ps2_d,nkb,(1._DP,0._DP),dpsi_d,npwx)
+        !$acc host_data use_device(vkb,ps2,work)
+        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),vkb,npwx,ps2,nkb,(1._DP,0._DP),dpsi_d,npwx)
+        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work,npwx,ps2(:,:,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
-        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work_d,npwx,ps2_d(1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
      ENDIF
      !
   ENDIF
@@ -557,7 +588,7 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_deff_real_gpu(deff_d, et)
+SUBROUTINE compute_deff_real_gpu(deff, et)
   !-----------------------------------------------------------------------
   ! This routine computes the effective value of the D-eS coefficients
   ! which appear often in many expressions in the US or PAW case.
@@ -573,7 +604,7 @@ SUBROUTINE compute_deff_real_gpu(deff_d, et)
   !
   REAL(DP), INTENT(IN) :: et
   ! The eigenvalues of the hamiltonian
-  REAL(DP), DEVICE, INTENT(OUT) :: deff_d(nhm,nhm,nat)
+  REAL(DP), INTENT(OUT) :: deff(nhm,nhm,nat)
   ! Effective values of the D-eS coefficients
   !
   ! ... local variables
@@ -581,21 +612,21 @@ SUBROUTINE compute_deff_real_gpu(deff_d, et)
   INTEGER :: na, i, j
   !
   IF(.NOT. okvan) THEN
-     !$acc parallel loop collapse(3)
+     !$acc parallel loop collapse(3) present(deff)
      DO na = 1,nat
         DO i = 1,nhm
            DO j = 1,nhm
-              deff_d(i,j,na) = deeq_d(i,j,na,current_spin)
+              deff(i,j,na) = deeq_d(i,j,na,current_spin)
            ENDDO
         ENDDO
      ENDDO
      !$acc end parallel
   ELSE
-     !$acc parallel loop collapse(3)
+     !$acc parallel loop collapse(3) present(deff)
      DO na = 1,nat
         DO i = 1,nhm
            DO j = 1,nhm
-              deff_d(i,j,na) = deeq_d(i,j,na,current_spin)-et*qq_at_d(i,j,na)
+              deff(i,j,na) = deeq_d(i,j,na,current_spin)-et*qq_at_d(i,j,na)
            ENDDO
         ENDDO
      ENDDO

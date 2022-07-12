@@ -55,14 +55,15 @@ MODULE west_gpu
    !
    ! Macropol
    !
-   REAL(DP), DEVICE, ALLOCATABLE :: gk_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: deff_d(:,:,:)
+   REAL(DP), ALLOCATABLE :: gk(:,:)
+   REAL(DP), ALLOCATABLE :: deff(:,:,:)
+   COMPLEX(DP), ALLOCATABLE :: deff_nc(:,:,:,:)
+   COMPLEX(DP), ALLOCATABLE :: ps2(:,:,:)
+   COMPLEX(DP), ALLOCATABLE :: psc(:,:,:,:)
+   COMPLEX(DP), ALLOCATABLE :: dvkb(:,:)
+   COMPLEX(DP), ALLOCATABLE :: work(:,:)
+   !$acc declare device_resident(gk,deff,deff_nc,ps2,psc,dvkb,work)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: phi_tmp_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: deff_nc_d(:,:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: ps2_d(:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: psc_d(:,:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: dvkb_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: work_d(:,:)
    REAL(DP), DEVICE, POINTER :: becp1_d_r_d(:,:)
    REAL(DP), DEVICE, POINTER :: becp2_d_r_d(:,:)
    COMPLEX(DP), DEVICE, POINTER :: becp1_d_k_d(:,:)
@@ -617,7 +618,7 @@ MODULE west_gpu
    USE noncollin_module,      ONLY : noncolin, npol
    USE uspp,                  ONLY : nkb
    USE uspp_param,            ONLY : nhm
-   USE wvfct,                 ONLY : npwx, nbnd
+   USE wvfct,                 ONLY : npwx
    USE becmod_subs_gpum,      ONLY : allocate_bec_type_gpu
    !
    IMPLICIT NONE
@@ -625,15 +626,15 @@ MODULE west_gpu
    CALL allocate_linsolve_gpu(3)
    !
    ALLOCATE(phi_tmp_d(npwx*npol,3))
-   ALLOCATE(gk_d(3,npwx))
-   ALLOCATE(dvkb_d(npwx,nkb))
-   ALLOCATE(work_d(npwx,nkb))
+   ALLOCATE(gk(3,npwx))
+   ALLOCATE(dvkb(npwx,nkb))
+   ALLOCATE(work(npwx,nkb))
    IF(noncolin) THEN
-      ALLOCATE(deff_nc_d(nhm,nhm,nat,nspin))
-      ALLOCATE(psc_d(nkb,npol,nbnd,2))
+      ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
+      ALLOCATE(psc(nkb,npol,1,2))
    ELSE
-      ALLOCATE(deff_d(nhm,nhm,nat))
-      ALLOCATE(ps2_d(nkb,nbnd,2))
+      ALLOCATE(deff(nhm,nhm,nat))
+      ALLOCATE(ps2(nkb,1,2))
    ENDIF
    !
    CALL allocate_bec_type_gpu(nkb,1,becp1_d)
@@ -665,26 +666,26 @@ MODULE west_gpu
    IF(ALLOCATED(phi_tmp_d)) THEN
       DEALLOCATE(phi_tmp_d)
    ENDIF
-   IF(ALLOCATED(gk_d)) THEN
-      DEALLOCATE(gk_d)
+   IF(ALLOCATED(gk)) THEN
+      DEALLOCATE(gk)
    ENDIF
-   IF(ALLOCATED(dvkb_d)) THEN
-      DEALLOCATE(dvkb_d)
+   IF(ALLOCATED(dvkb)) THEN
+      DEALLOCATE(dvkb)
    ENDIF
-   IF(ALLOCATED(work_d)) THEN
-      DEALLOCATE(work_d)
+   IF(ALLOCATED(work)) THEN
+      DEALLOCATE(work)
    ENDIF
-   IF(ALLOCATED(deff_nc_d)) THEN
-      DEALLOCATE(deff_nc_d)
+   IF(ALLOCATED(deff_nc)) THEN
+      DEALLOCATE(deff_nc)
    ENDIF
-   IF(ALLOCATED(psc_d)) THEN
-      DEALLOCATE(psc_d)
+   IF(ALLOCATED(psc)) THEN
+      DEALLOCATE(psc)
    ENDIF
-   IF(ALLOCATED(deff_d)) THEN
-      DEALLOCATE(deff_d)
+   IF(ALLOCATED(deff)) THEN
+      DEALLOCATE(deff)
    ENDIF
-   IF(ALLOCATED(ps2_d)) THEN
-      DEALLOCATE(ps2_d)
+   IF(ALLOCATED(ps2)) THEN
+      DEALLOCATE(ps2)
    ENDIF
    IF(ASSOCIATED(becp1_d_r_d)) THEN
       NULLIFY(becp1_d_r_d)

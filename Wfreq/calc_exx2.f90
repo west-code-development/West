@@ -53,7 +53,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,ib_index,jb,jb_index,index
+  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,ib_index,jb,jb_index,ipair
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -138,7 +138,7 @@ SUBROUTINE calc_exx2(sigma_exx)
            !
            IF ( l_enable_off_diagonal ) THEN
               IF (jb > ib) CYCLE
-              index = ijpmap(jb_index,ib_index)
+              ipair = ijpmap(jb_index,ib_index)
               !
               IF (jb < ib) THEN 
                   IF (gamma_only) THEN
@@ -209,15 +209,15 @@ SUBROUTINE calc_exx2(sigma_exx)
                  !
                  IF ( l_enable_off_diagonal .AND. jb < ib ) THEN
                     braket = peso*REAL( ZDOTC( ngm, pertg(1), 1, pertg1(1), 1 ) )/omega*q_grid%weight(iq)
-                    sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g ) - occupation(iv,iks)*braket
+                    sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g ) - occupation(iv,iks)*braket
                  ELSEIF ( jb == ib ) THEN
                     braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
                     sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*braket
-                    IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g ) &
+                    IF ( l_enable_off_diagonal ) sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g ) &
                     & - occupation(iv,iks)*braket
                     IF( ib == iv .AND. gstart == 2 .AND. l_gammaq ) THEN
                        sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*pot3D%div
-                       IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g )&
+                       IF ( l_enable_off_diagonal ) sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g )&
                        & - occupation(iv,iks)*pot3D%div
                     ENDIF 
                  ENDIF

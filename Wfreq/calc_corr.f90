@@ -47,7 +47,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   !
   ! Workspace
   !
-  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,ib_index,jb,jb_index,index
+  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,ib_index,jb,jb_index,ipair
   INTEGER :: nbndval,nbndval_full
   REAL(DP) :: peso
   !
@@ -105,7 +105,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
            & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-              index = ijpmap(jb_index,ib_index)
+              ipair = ijpmap(jb_index,ib_index)
            ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
               CONTINUE
            ELSE
@@ -136,7 +136,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                  & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
                     enrg1 = et(glob_im,iks) - energy(jb_index,iks_g)
-                    partial_b = partial_b + d_body1_ifr_full(im,ifreq,index,iks_g)*0.5_DP*&
+                    partial_b = partial_b + d_body1_ifr_full(im,ifreq,ipair,iks_g)*0.5_DP*&
                     &(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
                  ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                     partial_b = partial_b + d_body1_ifr(im,ifreq,ib_index,iks_g)*integrate_imfreq(ifreq,enrg)
@@ -153,9 +153,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                     DO il = 1, n_lanczos
                        IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                        & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-                          enrg = d_diago_full(il,ip,index,iks_g) - energy(ib_index,iks_g)
-                          enrg1 = d_diago_full(il,ip,index,iks_g) - energy(jb_index,iks_g)
-                          partial_b = partial_b + d_body2_ifr_full(il,ip,ifreq,index,iks_g)* 0.5_DP &
+                          enrg = d_diago_full(il,ip,ipair,iks_g) - energy(ib_index,iks_g)
+                          enrg1 = d_diago_full(il,ip,ipair,iks_g) - energy(jb_index,iks_g)
+                          partial_b = partial_b + d_body2_ifr_full(il,ip,ifreq,ipair,iks_g)* 0.5_DP &
                           &* (integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
                        ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                           enrg = d_diago(il,ip,ib_index,iks_g) - energy(ib_index,iks_g)
@@ -174,7 +174,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
            & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
-           IF (l_enable_off_diagonal .AND. l_full ) sigma_corr_full(index,iks_g) = sigma_corr_full(index,iks_g) &
+           IF (l_enable_off_diagonal .AND. l_full ) sigma_corr_full(ipair,iks_g) = sigma_corr_full(ipair,iks_g) &
            & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP ) 
            !
            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
@@ -223,7 +223,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
            & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
-              index = ijpmap(jb_index,ib_index)
+              ipair = ijpmap(jb_index,ib_index)
            ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
               CONTINUE
            ELSE
@@ -273,7 +273,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                     IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                     & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
                        residues_b = residues_b + 0.5_DP * peso * segno &
-                       & * z_body_rfr_full( im, ifreq, index, iks_g )
+                       & * z_body_rfr_full( im, ifreq, ipair, iks_g )
                     ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                        residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ib_index, iks_g )
                     ENDIF
@@ -304,7 +304,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                        IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                        & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN    
                           residues_b = residues_b + (1._DP - peso) * segno &
-                          & * z_body_rfr_full( im, ifreq, index, iks_g )
+                          & * z_body_rfr_full( im, ifreq, ipair, iks_g )
                        ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                           residues_b = residues_b + (1._DP - peso) * segno &
                           & * z_body_rfr( im, ifreq, ib_index, iks_g )
@@ -354,7 +354,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                        IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
                        !
                        residues_b = residues_b + 0.5_DP * peso * segno &
-                       & * z_body_rfr_full( im, ifreq, index, iks_g )
+                       & * z_body_rfr_full( im, ifreq, ipair, iks_g )
                        ! 
                     ENDDO
                     !
@@ -377,7 +377,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                           IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
                           !
                           residues_b = residues_b + 0.5_DP * peso * segno &
-                          & * z_body_rfr_full( im, ifreq, index, iks_g )
+                          & * z_body_rfr_full( im, ifreq, ipair, iks_g )
                           ! 
                        ENDDO
                        !
@@ -396,7 +396,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
            & + residues_b/omega + residues_h*pot3D%div
-           IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full(index,iks_g) = sigma_corr_full(index,iks_g) &
+           IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full(ipair,iks_g) = sigma_corr_full(ipair,iks_g) &
            & + residues_b/omega + residues_h*pot3D%div
            !
            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )

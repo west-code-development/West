@@ -34,7 +34,7 @@ SUBROUTINE wfreq_setup
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: i,ib,jb,index
+  INTEGER :: i,ib,jb,ipair
   LOGICAL :: l_generate_plot
   !
   CALL do_setup()
@@ -129,15 +129,15 @@ SUBROUTINE wfreq_setup
      ALLOCATE(ijpmap(n_bands,n_bands))
      ALLOCATE(pijmap(2,n_pairs))
      ALLOCATE(equalpairmap(n_bands))
-     index = 1
+     ipair = 1
      DO ib = 1, n_bands
         DO jb = ib, n_bands
-           ijpmap(ib,jb) = index
-           ijpmap(jb,ib) = index
-           pijmap(1,index) = ib
-           pijmap(2,index) = jb
-           IF (ib == jb) equalpairmap(ib) = index
-           index = index + 1
+           ijpmap(ib,jb) = ipair
+           ijpmap(jb,ib) = ipair
+           pijmap(1,ipair) = ib
+           pijmap(2,ipair) = jb
+           IF (ib == jb) equalpairmap(ib) = ipair
+           ipair = ipair + 1
         ENDDO 
      ENDDO
      ALLOCATE( sigma_exx_full (n_pairs,k_grid%nps) )

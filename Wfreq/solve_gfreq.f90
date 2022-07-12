@@ -70,7 +70,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,ib_index,jb_index,index
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,ib_index,jb_index,ipair
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
@@ -269,7 +269,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
               !
               IF (l_enable_off_diagonal .and. jb <= ib) THEN     
                  !
-                 index = ijpmap(jb_index,ib_index)
+                 ipair = ijpmap(jb_index,ib_index)
                  !
                  ! PSIC
                  !
@@ -324,7 +324,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  DEALLOCATE( subdiago1 )
                  !
-                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), index, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), ipair, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
                  ! 
                  DEALLOCATE( diago1, braket )
                  !

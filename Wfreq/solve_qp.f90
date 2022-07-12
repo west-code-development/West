@@ -79,7 +79,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
   INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,&
-           & ib_index,jb,jb_index,index
+           & ib_index,jb,jb_index,ipair
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
@@ -195,7 +195,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            !
            IF ( l_enable_off_diagonal .AND. jb <= ib ) THEN
               !
-              index = ijpmap(jb_index,ib_index)
+              ipair = ijpmap(jb_index,ib_index)
               !
               CALL readin_overlap( 'g', kpt_pool%l2g(iks), jb, overlap1, pert%nglob, nbnd )
            ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
@@ -234,7 +234,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
                  IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                    d_body1_ifr_full(im,ifreq,index,iks) = dtemp2(glob_im,ifreq)
+                    d_body1_ifr_full(im,ifreq,ipair,iks) = dtemp2(glob_im,ifreq)
                  ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                     d_body1_ifr(im,ifreq,ib_index,iks) = dtemp2(glob_im,ifreq)
                  ENDIF
@@ -272,7 +272,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
                  IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                    z_body_rfr_full(im,ifreq,index,iks) = ztemp2(glob_im,ifreq)
+                    z_body_rfr_full(im,ifreq,ipair,iks) = ztemp2(glob_im,ifreq)
                  ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                     z_body_rfr(im,ifreq,ib_index,iks) = ztemp2(glob_im,ifreq)
                  ENDIF
@@ -287,7 +287,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            IF( l_enable_lanczos ) THEN
               !
               IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                  CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ENDIF
@@ -295,7 +295,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos 
                     IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                       d_diago_full(il,ip,index,iks_g) = diago(il,ip) 
+                       d_diago_full(il,ip,ipair,iks_g) = diago(il,ip) 
                     ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                        d_diago(il,ip,ib_index,iks_g) = diago(il,ip)
                     ENDIF
@@ -307,8 +307,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
                     DO il = 1, n_lanczos
                        DO glob_jp = 1, pert%nglob
                           IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                             d_body2_ifr_full(il,ip,ifreq,index,iks_g) = &
-                             & d_body2_ifr_full(il,ip,ifreq,index,iks_g) + braket(glob_jp,il,ip) &
+                             d_body2_ifr_full(il,ip,ifreq,ipair,iks_g) = &
+                             & d_body2_ifr_full(il,ip,ifreq,ipair,iks_g) + braket(glob_jp,il,ip) &
                              & *d_epsm1_ifr(glob_jp,ip,ifreq)
                           ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                              d_body2_ifr(il,ip,ifreq,ib_index,iks_g) = d_body2_ifr(il,ip,ifreq,ib_index,iks_g) &

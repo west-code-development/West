@@ -50,7 +50,7 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, ib, index
+      INTEGER :: iks, ib, ipair
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       CHARACTER(LEN=10) :: ccounter
       INTEGER :: counter
@@ -91,10 +91,10 @@ MODULE wfreq_db
          !
          IF(l_enable_off_diagonal) THEN
             counter = 0
-            DO index = 1,n_pairs
+            DO ipair = 1,n_pairs
                counter = counter + 1
                WRITE( ccounter, '(i10)') counter
-               CALL json%add('output.Q.indexmap('//TRIM(ADJUSTL(ccounter))//')',(/pijmap(1,index),pijmap(2,index)/))
+               CALL json%add('output.Q.indexmap('//TRIM(ADJUSTL(ccounter))//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
             ENDDO
          ELSE
             counter = 0

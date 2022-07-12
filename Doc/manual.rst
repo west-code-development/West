@@ -329,6 +329,7 @@ wfreq_control
      - [1,2]
    * - **Description**
      - Compute the QP corrections from band qp_bandrange[0] to band qp_bandrange[1].
+     - Used only when qp_bands is not set. If qp_bands is set, the value of qp_bandrange is discarded.
 
 
 .. data:: qp_bands

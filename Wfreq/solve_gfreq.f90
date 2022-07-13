@@ -819,6 +819,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
   ! Initialize GPU
   !
   CALL allocate_gw_gpu(pert%nlocx,pert%nloc)
+  CALL reallocate_ps_gpu(nbnd,pert%nloc)
   !
   sqvc_d = pot3D%sqvc
   dffts_nnr = dffts%nnr
@@ -949,7 +950,6 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
         !
         ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
         !
-        CALL reallocate_ps_gpu(nbnd,pert%nloc)
         !$acc host_data use_device(ps_r)
         CALL glbrak_gamma_gpu(evc_d,dvpsi_d,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol)
         IF(nproc_bgrp > 1) THEN
@@ -1196,6 +1196,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
   ! Initialize GPU
   !
   CALL allocate_gw_gpu(pert%nlocx,pert%nloc)
+  CALL reallocate_ps_gpu(nbnd,pert%nloc)
   !
   dffts_nnr = dffts%nnr
   pert_nloc = pert%nloc
@@ -1390,7 +1391,6 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
            !
            ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
            !
-           CALL reallocate_ps_gpu(nbnd,pert%nloc)
            !$acc host_data use_device(ps_c)
            CALL glbrak_k_gpu(evc_d,dvpsi_d,ps_c,npw,npwx,nbnd,pert%nloc,nbnd,npol)
            IF(nproc_bgrp > 1) THEN

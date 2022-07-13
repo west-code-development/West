@@ -122,10 +122,11 @@ MODULE wstat_tools
          !
          time_spent(2) = get_clock('diagox')
 #if defined(__CUDA)
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") &
 #else
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") &
 #endif
+           & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1))))
          !
       ENDIF
       !
@@ -213,10 +214,11 @@ MODULE wstat_tools
          !
          time_spent(2) = get_clock('diagox')
 #if defined(__CUDA)
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") &
 #else
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") &
 #endif
+           & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1))))
          !
       ENDIF
       !
@@ -242,9 +244,6 @@ MODULE wstat_tools
       USE mp_global,             ONLY : me_bgrp,root_bgrp,intra_bgrp_comm,inter_image_comm
       USE linear_algebra_kernel, ONLY : matdiago_dsy
       USE distribution_center,   ONLY : pert
-#if defined(__CUDA)
-      USE linear_algebra_kernel, ONLY : matdiago_dsy_gpu
-#endif
       !
       IMPLICIT NONE
       !
@@ -278,13 +277,7 @@ MODULE wstat_tools
       ee = 0._DP
       !
       IF(me_bgrp == root_bgrp) THEN
-         !
-#if defined(__CUDA)
-         CALL matdiago_dsy_gpu(n,zz,ee,.FALSE.)
-#else
          CALL matdiago_dsy(n,zz,ee,.FALSE.)
-#endif
-         !
       ENDIF
       !
       CALL mp_bcast(ee,root_bgrp,intra_bgrp_comm)
@@ -323,9 +316,6 @@ MODULE wstat_tools
       USE mp_global,             ONLY : me_bgrp,root_bgrp,intra_bgrp_comm,inter_image_comm
       USE linear_algebra_kernel, ONLY : matdiago_zhe
       USE distribution_center,   ONLY : pert
-#if defined(__CUDA)
-      USE linear_algebra_kernel, ONLY : matdiago_zhe_gpu
-#endif
       !
       IMPLICIT NONE
       !
@@ -360,13 +350,7 @@ MODULE wstat_tools
       ee = 0._DP
       !
       IF(me_bgrp == root_bgrp) THEN
-         !
-#if defined(__CUDA)
-         CALL matdiago_zhe_gpu(n,zz,ee,.FALSE.)
-#else
          CALL matdiago_zhe(n,zz,ee,.FALSE.)
-#endif
-         !
       ENDIF
       !
       CALL mp_bcast(ee,root_bgrp,intra_bgrp_comm)

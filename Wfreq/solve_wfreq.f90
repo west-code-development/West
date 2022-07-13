@@ -1527,11 +1527,11 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   USE class_idistribute,    ONLY : idistribute
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE types_bz_grid,        ONLY : k_grid
+  USE chi_invert,           ONLY : chi_invert_real,chi_invert_complex
   USE types_coulomb,        ONLY : pot3D
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
-  USE chi_invert,           ONLY : chi_invert_real_gpu,chi_invert_complex_gpu
   USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,phi_tmp_d,ps_r,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & reallocate_ps_gpu,allocate_macropol_gpu,deallocate_macropol_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,allocate_chi_gpu,&
@@ -2165,6 +2165,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   !
   ALLOCATE(dmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(dlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+  !$acc enter data create(dmatilda,dlambda)
   ALLOCATE(d_epsm1_ifr(pert%nglob,pert%nloc,ifr%nloc))
   d_epsm1_ifr = 0._DP
   IF(l_macropol) THEN
@@ -2187,8 +2188,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
      ENDDO
      !
      CALL mp_sum(dmatilda,inter_image_comm)
-     !
-     CALL chi_invert_real_gpu(dmatilda,dhead,dlambda,mypara%nglob)
+     CALL chi_invert_real(dmatilda,dhead,dlambda,mypara%nglob)
      !
      DO ip = 1,pert%nloc
         glob_ip = pert%l2g(ip)
@@ -2200,6 +2200,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   !
   CALL deallocate_chi_gpu()
   !
+  !$acc exit data delete(dmatilda,dlambda)
   DEALLOCATE(dlambda)
   DEALLOCATE(dmatilda)
   DEALLOCATE(dmati)
@@ -2211,6 +2212,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   !
   ALLOCATE(zmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(zlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+  !$acc enter data create(zmatilda,zlambda)
   ALLOCATE(z_epsm1_rfr(pert%nglob,pert%nloc,rfr%nloc))
   z_epsm1_rfr = 0._DP
   IF(l_macropol) THEN
@@ -2233,7 +2235,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
      ENDDO
      !
      CALL mp_sum(zmatilda,inter_image_comm)
-     CALL chi_invert_complex_gpu(zmatilda,zhead,zlambda,mypara%nglob)
+     CALL chi_invert_complex(zmatilda,zhead,zlambda,mypara%nglob)
      !
      DO ip = 1,pert%nloc
         glob_ip = pert%l2g(ip)
@@ -2245,6 +2247,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   !
   CALL deallocate_chi_gpu()
   !
+  !$acc exit data delete(zmatilda,zlambda)
   DEALLOCATE(zlambda)
   DEALLOCATE(zmatilda)
   DEALLOCATE(zmatr)
@@ -2294,11 +2297,11 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   USE class_idistribute,    ONLY : idistribute
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bksq_type
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
+  USE chi_invert,           ONLY : chi_invert_complex
   USE types_coulomb,        ONLY : pot3D
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
-  USE chi_invert,           ONLY : chi_invert_complex_gpu
   USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,phi_tmp_d,ps_c,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & reallocate_ps_gpu,allocate_macropol_gpu,deallocate_macropol_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu
@@ -3036,6 +3039,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   !
   ALLOCATE(zmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(zlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+  !$acc enter data create(zmatilda,zlambda)
   ALLOCATE(z_epsm1_ifr_q(pert%nglob,pert%nloc,ifr%nloc,q_grid%np))
   z_epsm1_ifr_q = 0._DP
   IF(l_macropol) THEN
@@ -3062,8 +3066,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
         ENDDO
         !
         CALL mp_sum(zmatilda,inter_image_comm)
-        !
-        CALL chi_invert_complex_gpu(zmatilda,zhead,zlambda,mypara%nglob,l_gammaq)
+        CALL chi_invert_complex(zmatilda,zhead,zlambda,mypara%nglob,l_gammaq)
         !
         DO ip = 1,pert%nloc
            glob_ip = pert%l2g(ip)
@@ -3106,7 +3109,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
         ENDDO
         !
         CALL mp_sum(zmatilda,inter_image_comm)
-        CALL chi_invert_complex_gpu(zmatilda,zhead,zlambda,mypara%nglob,l_gammaq)
+        CALL chi_invert_complex(zmatilda,zhead,zlambda,mypara%nglob,l_gammaq)
         !
         DO ip = 1,pert%nloc
            glob_ip = pert%l2g(ip)
@@ -3120,6 +3123,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   !
   CALL deallocate_chi_gpu()
   !
+  !$acc exit data delete(zmatilda,zlambda)
   DEALLOCATE(zlambda)
   DEALLOCATE(zmatilda)
   DEALLOCATE(zmatr_q)

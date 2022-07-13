@@ -62,24 +62,23 @@ MODULE west_gpu
    ! Chi invert
    !
    REAL(DP), ALLOCATABLE :: work_r(:)
+   REAL(DP), ALLOCATABLE :: body_r(:,:)
+   REAL(DP), ALLOCATABLE :: x_r(:,:)
+   REAL(DP), ALLOCATABLE :: wh_r(:,:)
+   REAL(DP), ALLOCATABLE :: wl_r(:,:)
+   REAL(DP), ALLOCATABLE :: temph_r(:,:)
+   REAL(DP), ALLOCATABLE :: templ_r(:,:)
+   REAL(DP), ALLOCATABLE :: tempt_r(:,:)
+   !$acc declare device_resident(work_r,body_r,x_r,wh_r,wl_r,temph_r,templ_r,tempt_r)
    COMPLEX(DP), ALLOCATABLE :: work_c(:)
-   !$acc declare device_resident(work_r,work_c)
-   REAL(DP), DEVICE, ALLOCATABLE :: body_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: x_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: wh_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: wl_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: tmph_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: tmpl_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: tmpt_r_d(:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: lambda_r_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: body_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: x_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: wh_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: wl_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: tmph_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: tmpl_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: tmpt_c_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: lambda_c_d(:,:)
+   COMPLEX(DP), ALLOCATABLE :: body_c(:,:)
+   COMPLEX(DP), ALLOCATABLE :: x_c(:,:)
+   COMPLEX(DP), ALLOCATABLE :: wh_c(:,:)
+   COMPLEX(DP), ALLOCATABLE :: wl_c(:,:)
+   COMPLEX(DP), ALLOCATABLE :: temph_c(:,:)
+   COMPLEX(DP), ALLOCATABLE :: templ_c(:,:)
+   COMPLEX(DP), ALLOCATABLE :: tempt_c(:,:)
+   !$acc declare device_resident(work_c,body_c,x_c,wh_c,wl_c,temph_c,templ_c,tempt_c)
    INTEGER, DEVICE, POINTER :: piv_d(:)
    !
    ! Lanczos
@@ -551,42 +550,44 @@ MODULE west_gpu
    INTEGER :: lwork2
    !
    IF(l_real) THEN
-      ALLOCATE(body_r_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
-      ALLOCATE(x_r_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
-      ALLOCATE(lambda_r_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      ALLOCATE(body_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      ALLOCATE(x_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
-         ALLOCATE(wh_r_d(n_pdep_eigen_to_use,3))
-         ALLOCATE(wl_r_d(3,n_pdep_eigen_to_use))
-         ALLOCATE(tmph_r_d(n_pdep_eigen_to_use,3))
-         ALLOCATE(tmpl_r_d(3,n_pdep_eigen_to_use))
-         ALLOCATE(tmpt_r_d(3,3))
+         ALLOCATE(wh_r(n_pdep_eigen_to_use,3))
+         ALLOCATE(wl_r(3,n_pdep_eigen_to_use))
+         ALLOCATE(temph_r(n_pdep_eigen_to_use,3))
+         ALLOCATE(templ_r(3,n_pdep_eigen_to_use))
+         ALLOCATE(tempt_r(3,3))
       ENDIF
       !
+      !$acc host_data use_device(x_r)
       istat = cusolverDnDgetrf_bufferSize(cusolver_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,&
-      & x_r_d,n_pdep_eigen_to_use,lwork)
+      & x_r,n_pdep_eigen_to_use,lwork)
       istat = cusolverDnDtrtri_buffersize(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,&
-      & n_pdep_eigen_to_use,x_r_d,n_pdep_eigen_to_use,lwork2)
+      & n_pdep_eigen_to_use,x_r,n_pdep_eigen_to_use,lwork2)
+      !$acc end host_data
       !
       lwork = MAX(lwork,lwork2)
       lwork = MAX(lwork,n_pdep_eigen_to_use**2)
       !
       ALLOCATE(work_r(lwork))
    ELSE
-      ALLOCATE(body_c_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
-      ALLOCATE(x_c_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
-      ALLOCATE(lambda_c_d(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      ALLOCATE(body_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      ALLOCATE(x_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
-         ALLOCATE(wh_c_d(n_pdep_eigen_to_use,3))
-         ALLOCATE(wl_c_d(3,n_pdep_eigen_to_use))
-         ALLOCATE(tmph_c_d(n_pdep_eigen_to_use,3))
-         ALLOCATE(tmpl_c_d(3,n_pdep_eigen_to_use))
-         ALLOCATE(tmpt_c_d(3,3))
+         ALLOCATE(wh_c(n_pdep_eigen_to_use,3))
+         ALLOCATE(wl_c(3,n_pdep_eigen_to_use))
+         ALLOCATE(temph_c(n_pdep_eigen_to_use,3))
+         ALLOCATE(templ_c(3,n_pdep_eigen_to_use))
+         ALLOCATE(tempt_c(3,3))
       ENDIF
       !
+      !$acc host_data use_device(x_c)
       istat = cusolverDnZgetrf_bufferSize(cusolver_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,&
-      & x_c_d,n_pdep_eigen_to_use,lwork)
+      & x_c,n_pdep_eigen_to_use,lwork)
       istat = cusolverDnZtrtri_buffersize(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,&
-      & n_pdep_eigen_to_use,x_c_d,n_pdep_eigen_to_use,lwork2)
+      & n_pdep_eigen_to_use,x_c,n_pdep_eigen_to_use,lwork2)
+      !$acc end host_data
       !
       lwork = MAX(lwork,lwork2)
       lwork = MAX(lwork,n_pdep_eigen_to_use**2)
@@ -603,56 +604,50 @@ MODULE west_gpu
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(body_r_d)) THEN
-      DEALLOCATE(body_r_d)
+   IF(ALLOCATED(body_r)) THEN
+      DEALLOCATE(body_r)
    ENDIF
-   IF(ALLOCATED(x_r_d)) THEN
-      DEALLOCATE(x_r_d)
+   IF(ALLOCATED(x_r)) THEN
+      DEALLOCATE(x_r)
    ENDIF
-   IF(ALLOCATED(lambda_r_d)) THEN
-      DEALLOCATE(lambda_r_d)
+   IF(ALLOCATED(wh_r)) THEN
+      DEALLOCATE(wh_r)
    ENDIF
-   IF(ALLOCATED(wh_r_d)) THEN
-      DEALLOCATE(wh_r_d)
+   IF(ALLOCATED(wl_r)) THEN
+      DEALLOCATE(wl_r)
    ENDIF
-   IF(ALLOCATED(wl_r_d)) THEN
-      DEALLOCATE(wl_r_d)
+   IF(ALLOCATED(temph_r)) THEN
+      DEALLOCATE(temph_r)
    ENDIF
-   IF(ALLOCATED(tmph_r_d)) THEN
-      DEALLOCATE(tmph_r_d)
+   IF(ALLOCATED(templ_r)) THEN
+      DEALLOCATE(templ_r)
    ENDIF
-   IF(ALLOCATED(tmpl_r_d)) THEN
-      DEALLOCATE(tmpl_r_d)
-   ENDIF
-   IF(ALLOCATED(tmpt_r_d)) THEN
-      DEALLOCATE(tmpt_r_d)
+   IF(ALLOCATED(tempt_r)) THEN
+      DEALLOCATE(tempt_r)
    ENDIF
    IF(ALLOCATED(work_r)) THEN
       DEALLOCATE(work_r)
    ENDIF
-   IF(ALLOCATED(body_c_d)) THEN
-      DEALLOCATE(body_c_d)
+   IF(ALLOCATED(body_c)) THEN
+      DEALLOCATE(body_c)
    ENDIF
-   IF(ALLOCATED(x_c_d)) THEN
-      DEALLOCATE(x_c_d)
+   IF(ALLOCATED(x_c)) THEN
+      DEALLOCATE(x_c)
    ENDIF
-   IF(ALLOCATED(lambda_c_d)) THEN
-      DEALLOCATE(lambda_c_d)
+   IF(ALLOCATED(wh_c)) THEN
+      DEALLOCATE(wh_c)
    ENDIF
-   IF(ALLOCATED(wh_c_d)) THEN
-      DEALLOCATE(wh_c_d)
+   IF(ALLOCATED(wl_c)) THEN
+      DEALLOCATE(wl_c)
    ENDIF
-   IF(ALLOCATED(wl_c_d)) THEN
-      DEALLOCATE(wl_c_d)
+   IF(ALLOCATED(temph_c)) THEN
+      DEALLOCATE(temph_c)
    ENDIF
-   IF(ALLOCATED(tmph_c_d)) THEN
-      DEALLOCATE(tmph_c_d)
+   IF(ALLOCATED(templ_c)) THEN
+      DEALLOCATE(templ_c)
    ENDIF
-   IF(ALLOCATED(tmpl_c_d)) THEN
-      DEALLOCATE(tmpl_c_d)
-   ENDIF
-   IF(ALLOCATED(tmpt_c_d)) THEN
-      DEALLOCATE(tmpt_c_d)
+   IF(ALLOCATED(tempt_c)) THEN
+      DEALLOCATE(tempt_c)
    ENDIF
    IF(ALLOCATED(work_c)) THEN
       DEALLOCATE(work_c)

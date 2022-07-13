@@ -15,7 +15,10 @@ SUBROUTINE calc_exx2(sigma_exx)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_exx(n,iks) = < qp_bands(n),iks | V_exx | qp_bands(n),iks >     n = 1,n_bands
-  ! store in sigma_exx_full(ijpmap(m,n),iks) = < qp_bands(m),iks | V_exx | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
+  !
+  ! IF (l_enable_off_diagonal .AND. l_full) store in 
+  ! sigma_exx_full(ijpmap(m,n),iks) = < qp_bands(m),iks | V_exx | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
+  ! Note that l_full = False when doing secant solver, and l_full = True when evaluating off_diagonal terms
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm

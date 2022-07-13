@@ -15,7 +15,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_corr(n,iks) = < qp_bands(n),iks | S_c(energy(ib,iks)) | qp_bands(n),iks >     n = 1,n_bands
-  ! store in sigma_corr_full(ijpmap(m,n),iks) = < qp_bands(m),iks | 0.5 * ( S_c(energy(m,iks)) &
+  ! 
+  ! IF (l_enable_off_diagonal .AND. l_full) store in 
+  ! sigma_corr_full(ijpmap(m,n),iks) = < qp_bands(m),iks | 0.5 * ( S_c(energy(m,iks)) &
   ! & + S_c(energy(n,iks)) ) | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
   USE kinds,                ONLY : DP

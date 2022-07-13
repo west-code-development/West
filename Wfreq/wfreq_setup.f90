@@ -20,9 +20,9 @@ SUBROUTINE wfreq_setup
                                    & wfreq_calculation,qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
                                    & sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
-                                   & l_enable_off_diagonal,ijpmap,pijmap,equalpairmap,n_pairs,&
-                                   & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,&
-                                   & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
+                                   & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,sigma_exx_full,&
+                                   & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
+                                   & sigma_sc_eqplin_full,sigma_corr_full
   USE pwcom,                  ONLY : nbnd,nkstot,nks
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
@@ -128,7 +128,6 @@ SUBROUTINE wfreq_setup
      n_pairs = n_bands*(n_bands+1)/2
      ALLOCATE(ijpmap(n_bands,n_bands))
      ALLOCATE(pijmap(2,n_pairs))
-     ALLOCATE(equalpairmap(n_bands))
      ipair = 1
      DO ib = 1, n_bands
         DO jb = ib, n_bands
@@ -136,7 +135,6 @@ SUBROUTINE wfreq_setup
            ijpmap(jb,ib) = ipair
            pijmap(1,ipair) = ib
            pijmap(2,ipair) = jb
-           IF (ib == jb) equalpairmap(ib) = ipair
            ipair = ipair + 1
         ENDDO 
      ENDDO

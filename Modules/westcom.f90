@@ -195,7 +195,6 @@ MODULE wfreq_center
   INTEGER :: n_pairs
   INTEGER,ALLOCATABLE :: ijpmap(:,:)
   INTEGER,ALLOCATABLE :: pijmap(:,:)
-  INTEGER,ALLOCATABLE :: equalpairmap(:)
   !
   ! gw_etot 
   !

@@ -11,7 +11,7 @@
 MODULE west_gpu
    !-----------------------------------------------------------------------
    !
-   USE kinds,       ONLY : DP,sgl
+   USE kinds,       ONLY : DP
 #if defined(__CUDA)
    USE becmod_gpum, ONLY : bec_type_d
    USE cublas
@@ -87,19 +87,6 @@ MODULE west_gpu
    REAL(DP), ALLOCATABLE :: tmp_r(:)
    COMPLEX(DP), ALLOCATABLE :: tmp_c(:)
    COMPLEX(DP), ALLOCATABLE :: r(:,:)
-   !
-   ! QP
-   !
-   REAL(DP), DEVICE, ALLOCATABLE :: d_epsm1_ifr_d(:,:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: d_epsm1_ifr_trans_d(:,:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: d_body2_ifr_d(:,:,:)
-   REAL(DP), DEVICE, ALLOCATABLE :: dtemp_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: z_epsm1_rfr_trans_d(:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: z_epsm1_ifr_q_d(:,:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: z_epsm1_ifr_trans_q_d(:,:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: z_epsm1_rfr_trans_q_d(:,:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: z_body2_ifr_q_d(:,:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: ztemp_d(:,:)
    !
    ! Workspace
    !
@@ -449,7 +436,7 @@ MODULE west_gpu
    USE control_flags,         ONLY : gamma_only
    USE ions_base,             ONLY : nat
    USE lsda_mod,              ONLY : nspin
-   USE noncollin_module,      ONLY : noncolin, npol
+   USE noncollin_module,      ONLY : noncolin,npol
    USE uspp,                  ONLY : nkb
    USE uspp_param,            ONLY : nhm
    USE wvfct,                 ONLY : npwx
@@ -700,83 +687,6 @@ MODULE west_gpu
    !
    IF(ALLOCATED(sqvc_d)) THEN
       DEALLOCATE(sqvc_d)
-   ENDIF
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE allocate_qp_gpu(nglob,nloc,ifr_nloc,rfr_nloc,q_grid_np)
-   !-----------------------------------------------------------------------
-   !
-   USE control_flags,         ONLY : gamma_only
-   USE pwcom,                 ONLY : nbnd
-   USE westcom,               ONLY : n_lanczos
-   !
-   IMPLICIT NONE
-   !
-   ! I/O
-   !
-   INTEGER, INTENT(IN) :: nglob
-   INTEGER, INTENT(IN) :: nloc
-   INTEGER, INTENT(IN) :: ifr_nloc
-   INTEGER, INTENT(IN) :: rfr_nloc
-   INTEGER, INTENT(IN) :: q_grid_np
-   !
-   IF(gamma_only) THEN
-      ALLOCATE(d_epsm1_ifr_d(nglob,nloc,ifr_nloc))
-      ALLOCATE(d_epsm1_ifr_trans_d(nloc,nglob,ifr_nloc))
-      ALLOCATE(z_epsm1_rfr_trans_d(nloc,nglob,rfr_nloc))
-      ALLOCATE(d_body2_ifr_d(n_lanczos,nloc,ifr_nloc))
-   ELSE
-      ALLOCATE(z_epsm1_ifr_q_d(nglob,nloc,ifr_nloc,q_grid_np))
-      ALLOCATE(z_epsm1_ifr_trans_q_d(nloc,nglob,ifr_nloc,q_grid_np))
-      ALLOCATE(z_epsm1_rfr_trans_q_d(nloc,nglob,rfr_nloc,q_grid_np))
-      ALLOCATE(z_body2_ifr_q_d(n_lanczos,nloc,ifr_nloc))
-   ENDIF
-   IF(gamma_only) THEN
-      ALLOCATE(dtemp_d(nbnd,ifr_nloc))
-      ALLOCATE(ztemp_d(nbnd,rfr_nloc))
-   ELSE
-      ALLOCATE(ztemp_d(nbnd,MAX(ifr_nloc,rfr_nloc)))
-   ENDIF
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE deallocate_qp_gpu()
-   !-----------------------------------------------------------------------
-   !
-   IMPLICIT NONE
-   !
-   IF(ALLOCATED(d_epsm1_ifr_d)) THEN
-      DEALLOCATE(d_epsm1_ifr_d)
-   ENDIF
-   IF(ALLOCATED(d_epsm1_ifr_trans_d)) THEN
-      DEALLOCATE(d_epsm1_ifr_trans_d)
-   ENDIF
-   IF(ALLOCATED(z_epsm1_rfr_trans_d)) THEN
-      DEALLOCATE(z_epsm1_rfr_trans_d)
-   ENDIF
-   IF(ALLOCATED(z_epsm1_ifr_q_d)) THEN
-      DEALLOCATE(z_epsm1_ifr_q_d)
-   ENDIF
-   IF(ALLOCATED(z_epsm1_ifr_trans_q_d)) THEN
-      DEALLOCATE(z_epsm1_ifr_trans_q_d)
-   ENDIF
-   IF(ALLOCATED(z_epsm1_rfr_trans_q_d)) THEN
-      DEALLOCATE(z_epsm1_rfr_trans_q_d)
-   ENDIF
-   IF(ALLOCATED(d_body2_ifr_d)) THEN
-      DEALLOCATE(d_body2_ifr_d)
-   ENDIF
-   IF(ALLOCATED(z_body2_ifr_q_d)) THEN
-      DEALLOCATE(z_body2_ifr_q_d)
-   ENDIF
-   IF(ALLOCATED(dtemp_d)) THEN
-      DEALLOCATE(dtemp_d)
-   ENDIF
-   IF(ALLOCATED(ztemp_d)) THEN
-      DEALLOCATE(ztemp_d)
    ENDIF
    !
    END SUBROUTINE

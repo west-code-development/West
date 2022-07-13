@@ -1098,8 +1098,6 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
-  USE west_gpu,             ONLY : dtemp_d,ztemp_d,d_epsm1_ifr_d,d_epsm1_ifr_trans_d,z_epsm1_rfr_trans_d,&
-                                 & d_body2_ifr_d,allocate_qp_gpu,deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1130,6 +1128,12 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   REAL(DP),PINNED,ALLOCATABLE :: overlap(:,:)
   REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
   !$acc declare device_resident(overlap_loc)
+  REAL(DP),ALLOCATABLE :: d_body2_ifr_d(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(DEVICE) :: d_body2_ifr_d
+#endif
+  REAL(DP),ALLOCATABLE :: d_epsm1_ifr_trans(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr_trans(:,:,:)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   REAL(DP) :: reduce_r
@@ -1170,12 +1174,12 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   ! TEMP
   !
   ALLOCATE(overlap(pert%nglob,nbnd))
-  !$acc enter data create(overlap)
   ALLOCATE(overlap_loc(pert%nloc,nbnd))
   ALLOCATE(d_body1_ifr(aband%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
   ALLOCATE(z_body_rfr(aband%nloc,rfr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
   ALLOCATE(dtemp2(nbnd,ifr%nloc))
   ALLOCATE(ztemp2(nbnd,rfr%nloc))
+  !$acc enter data create(overlap,dtemp2,ztemp2) copyin(d_epsm1_ifr)
   IF(l_enable_lanczos) THEN
      ALLOCATE(d_body2_ifr(n_lanczos,pert%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
      ALLOCATE(d_diago(n_lanczos,pert%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps))
@@ -1183,6 +1187,28 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
      !$acc enter data create(braket)
      ALLOCATE(diago(n_lanczos,pert%nloc))
   ENDIF
+  ALLOCATE(d_epsm1_ifr_trans(pert%nloc,pert%nglob,ifr%nloc))
+  ALLOCATE(z_epsm1_rfr_trans(pert%nloc,pert%nglob,rfr%nloc))
+  d_epsm1_ifr_trans = RESHAPE(d_epsm1_ifr,[pert%nloc,pert%nglob,ifr%nloc],ORDER=[2,1,3])
+  z_epsm1_rfr_trans = RESHAPE(z_epsm1_rfr,[pert%nloc,pert%nglob,rfr%nloc],ORDER=[2,1,3])
+  !$acc enter data copyin(d_epsm1_ifr_trans,z_epsm1_rfr_trans)
+  ALLOCATE(d_body2_ifr_d(n_lanczos,pert%nloc,ifr%nloc))
+  !
+  pert_nloc = pert%nloc
+  pert_nglob = pert%nglob
+  ifr_nloc = ifr%nloc
+  rfr_nloc = rfr%nloc
+  !
+  ALLOCATE(l2g(pert%nloc))
+  !
+  !$acc parallel loop
+  DO ip = 1,pert_nloc
+     !
+     ! l2g(ip) = pert%l2g(ip)
+     !
+     l2g(ip) = nimage*(ip-1)+my_image_id+1
+  ENDDO
+  !$acc end parallel
   !
   d_body1_ifr = 0._DP
   z_body_rfr = 0._DP
@@ -1199,29 +1225,6 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   !
   barra_load = kpt_pool%nloc*band_group%nloc
   CALL start_bar_type(barra,'coll_gw',barra_load)
-  !
-  ! Initialize GPU
-  !
-  CALL allocate_qp_gpu(pert%nglob,pert%nloc,ifr%nloc,rfr%nloc,1)
-  !
-  d_epsm1_ifr_d = d_epsm1_ifr
-  d_epsm1_ifr_trans_d = RESHAPE(d_epsm1_ifr,[pert%nloc,pert%nglob,ifr%nloc],ORDER=[2,1,3])
-  z_epsm1_rfr_trans_d = RESHAPE(z_epsm1_rfr,[pert%nloc,pert%nglob,rfr%nloc],ORDER=[2,1,3])
-  pert_nloc = pert%nloc
-  pert_nglob = pert%nglob
-  ifr_nloc = ifr%nloc
-  rfr_nloc = rfr%nloc
-  !
-  ALLOCATE(l2g(pert%nloc))
-  !
-  !$acc parallel loop
-  DO ip = 1,pert_nloc
-     !
-     ! l2g(ip) = pert%l2g(ip)
-     !
-     l2g(ip) = nimage*(ip-1)+my_image_id+1
-  ENDDO
-  !$acc end parallel
   !
   ! LOOP
   !
@@ -1248,7 +1251,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
         ! d_body1_ifr
         ! ------
         !
-        !$acc parallel present(overlap)
+        !$acc parallel present(overlap,dtemp2,d_epsm1_ifr_trans)
         !$acc loop collapse(2)
         DO ifreq = 1,ifr_nloc
            DO im = 1,nbnd
@@ -1257,15 +1260,15 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
               DO glob_jp = 1,n_pdep_eigen_to_use
                  DO ip = 1,pert_nloc
                     reduce_r = reduce_r+overlap(glob_jp,im)*overlap_loc(ip,im) &
-                    & *d_epsm1_ifr_trans_d(ip,glob_jp,ifreq)
+                    & *d_epsm1_ifr_trans(ip,glob_jp,ifreq)
                  ENDDO
               ENDDO
-              dtemp_d(im,ifreq) = reduce_r
+              dtemp2(im,ifreq) = reduce_r
            ENDDO
         ENDDO ! ifreq
         !$acc end parallel
         !
-        dtemp2 = dtemp_d
+        !$acc update host(dtemp2)
         !
         CALL mp_sum(dtemp2,inter_image_comm)
         !
@@ -1280,7 +1283,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
         ! z_body_rfr
         ! -----
         !
-        !$acc parallel present(overlap)
+        !$acc parallel present(overlap,ztemp2,z_epsm1_rfr_trans)
         !$acc loop collapse(2)
         DO ifreq = 1,rfr_nloc
            DO im = 1,nbnd
@@ -1289,15 +1292,15 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
               DO glob_jp = 1,n_pdep_eigen_to_use
                  DO ip = 1,pert_nloc
                     reduce_c = reduce_c+overlap(glob_jp,im)*overlap_loc(ip,im) &
-                    & *z_epsm1_rfr_trans_d(ip,glob_jp,ifreq)
+                    & *z_epsm1_rfr_trans(ip,glob_jp,ifreq)
                  ENDDO
               ENDDO
-              ztemp_d(im,ifreq) = reduce_c
+              ztemp2(im,ifreq) = reduce_c
            ENDDO
         ENDDO ! ifreq
         !$acc end parallel
         !
-        ztemp2 = ztemp_d
+        !$acc update host(ztemp2)
         !
         CALL mp_sum(ztemp2,inter_image_comm)
         !
@@ -1324,7 +1327,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
               ENDDO
            ENDDO
            !
-           !$acc parallel present(braket)
+           !$acc parallel present(braket,d_epsm1_ifr)
            !$acc loop collapse(3)
            DO ifreq = 1,ifr_nloc
               DO ip = 1,pert_nloc
@@ -1332,7 +1335,7 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
                     reduce_r = 0._DP
                     !$acc loop reduction(+:reduce_r)
                     DO glob_jp = 1,pert_nglob
-                       reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr_d(glob_jp,ip,ifreq)
+                       reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
                     ENDDO
                     d_body2_ifr_d(il,ip,ifreq) = reduce_r
                  ENDDO
@@ -1350,10 +1353,6 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
      !
   ENDDO ! iks
   !
-  CALL deallocate_qp_gpu()
-  !
-  DEALLOCATE(l2g)
-  !
   CALL mp_sum(d_body1_ifr,inter_bgrp_comm)
   CALL mp_sum(d_body1_ifr,inter_pool_comm)
   CALL mp_sum(z_body_rfr,inter_bgrp_comm)
@@ -1368,13 +1367,17 @@ SUBROUTINE solve_qp_gamma_gpu(l_secant,l_generate_plot)
   !
   CALL stop_bar_type(barra,'coll_gw')
   !
-  !$acc exit data delete(overlap)
+  !$acc exit data delete(overlap,dtemp2,ztemp2,d_epsm1_ifr,d_epsm1_ifr_trans,z_epsm1_rfr_trans)
+  DEALLOCATE(l2g)
   DEALLOCATE(overlap)
   DEALLOCATE(overlap_loc)
   DEALLOCATE(d_epsm1_ifr)
   DEALLOCATE(z_epsm1_rfr)
   DEALLOCATE(dtemp2)
   DEALLOCATE(ztemp2)
+  DEALLOCATE(d_epsm1_ifr_trans)
+  DEALLOCATE(z_epsm1_rfr_trans)
+  DEALLOCATE(d_body2_ifr_d)
   IF(l_enable_lanczos) THEN
      !$acc exit data delete(braket)
      DEALLOCATE(braket)
@@ -1622,8 +1625,6 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
-  USE west_gpu,             ONLY : ztemp_d,z_epsm1_ifr_q_d,z_epsm1_ifr_trans_q_d,z_epsm1_rfr_trans_q_d,&
-                                 & z_body2_ifr_q_d,allocate_qp_gpu,deallocate_qp_gpu
   !
   IMPLICIT NONE
   !
@@ -1655,6 +1656,12 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   COMPLEX(DP),PINNED,ALLOCATABLE :: overlap(:,:)
   COMPLEX(DP),ALLOCATABLE :: overlap_loc(:,:)
   !$acc declare device_resident(overlap_loc)
+  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q_d(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(DEVICE) :: z_body2_ifr_q_d
+#endif
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_trans_q(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_trans_q(:,:,:,:)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   COMPLEX(DP) :: reduce
@@ -1694,11 +1701,11 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   ! TEMP
   !
   ALLOCATE(overlap(pert%nglob,nbnd))
-  !$acc enter data create(overlap)
   ALLOCATE(overlap_loc(pert%nloc,nbnd))
   ALLOCATE(z_body1_ifr_q(aband%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
   ALLOCATE(z_body_rfr_q(aband%nloc,rfr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
   ALLOCATE(ztemp2(nbnd,MAX(ifr%nloc,rfr%nloc)))
+  !$acc enter data create(overlap,ztemp2) copyin(z_epsm1_ifr_q)
   IF(l_enable_lanczos) THEN
      ALLOCATE(z_body2_ifr_q(n_lanczos,pert%nloc,ifr%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
      ALLOCATE(d_diago_q(n_lanczos,pert%nloc,qp_bandrange(1):qp_bandrange(2),k_grid%nps,q_grid%nps))
@@ -1706,6 +1713,28 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
      !$acc enter data create(braket)
      ALLOCATE(diago(n_lanczos,pert%nloc))
   ENDIF
+  ALLOCATE(z_epsm1_ifr_trans_q(pert%nloc,pert%nglob,ifr%nloc,q_grid%np))
+  ALLOCATE(z_epsm1_rfr_trans_q(pert%nloc,pert%nglob,rfr%nloc,q_grid%np))
+  z_epsm1_ifr_trans_q = RESHAPE(z_epsm1_ifr_q,[pert%nloc,pert%nglob,ifr%nloc,q_grid%np],ORDER=[2,1,3,4])
+  z_epsm1_rfr_trans_q = RESHAPE(z_epsm1_rfr_q,[pert%nloc,pert%nglob,rfr%nloc,q_grid%np],ORDER=[2,1,3,4])
+  !$acc enter data copyin(z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
+  ALLOCATE(z_body2_ifr_q_d(n_lanczos,pert%nloc,ifr%nloc))
+  !
+  pert_nloc = pert%nloc
+  pert_nglob = pert%nglob
+  ifr_nloc = ifr%nloc
+  rfr_nloc = rfr%nloc
+  !
+  ALLOCATE(l2g(pert%nloc))
+  !
+  !$acc parallel loop
+  DO ip = 1,pert_nloc
+     !
+     ! l2g(ip) = pert%l2g(ip)
+     !
+     l2g(ip) = nimage*(ip-1)+my_image_id+1
+  ENDDO
+  !$acc end parallel
   !
   z_body1_ifr_q = 0._DP
   z_body_rfr_q = 0._DP
@@ -1722,29 +1751,6 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   !
   barra_load = k_grid%nps*band_group%nloc*q_grid%nps
   CALL start_bar_type(barra,'coll_gw',barra_load)
-  !
-  ! Initialize GPU
-  !
-  CALL allocate_qp_gpu(pert%nglob,pert%nloc,ifr%nloc,rfr%nloc,q_grid%np)
-  !
-  z_epsm1_ifr_q_d = z_epsm1_ifr_q
-  z_epsm1_ifr_trans_q_d = RESHAPE(z_epsm1_ifr_q,[pert%nloc,pert%nglob,ifr%nloc,q_grid%np],ORDER=[2,1,3,4])
-  z_epsm1_rfr_trans_q_d = RESHAPE(z_epsm1_rfr_q,[pert%nloc,pert%nglob,rfr%nloc,q_grid%np],ORDER=[2,1,3,4])
-  pert_nloc = pert%nloc
-  pert_nglob = pert%nglob
-  ifr_nloc = ifr%nloc
-  rfr_nloc = rfr%nloc
-  !
-  ALLOCATE(l2g(pert%nloc))
-  !
-  !$acc parallel loop
-  DO ip = 1,pert_nloc
-     !
-     ! l2g(ip) = pert%l2g(ip)
-     !
-     l2g(ip) = nimage*(ip-1)+my_image_id+1
-  ENDDO
-  !$acc end parallel
   !
   ! LOOP
   !
@@ -1784,7 +1790,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
            ! z_body1_ifr_q
            ! ------
            !
-           !$acc parallel present(overlap)
+           !$acc parallel present(overlap,ztemp2,z_epsm1_ifr_trans_q)
            !$acc loop collapse(2)
            DO ifreq = 1,ifr_nloc
               DO im = 1,nbnd
@@ -1793,15 +1799,15 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                  DO glob_jp = 1,n_pdep_eigen_to_use
                     DO ip = 1,pert_nloc
                        reduce = reduce+CONJG(overlap(glob_jp,im))*overlap_loc(ip,im) &
-                       & *z_epsm1_ifr_trans_q_d(ip,glob_jp,ifreq,iq)
+                       & *z_epsm1_ifr_trans_q(ip,glob_jp,ifreq,iq)
                     ENDDO
                  ENDDO
-                 ztemp_d(im,ifreq) = reduce
+                 ztemp2(im,ifreq) = reduce
               ENDDO
            ENDDO ! ifreq
            !$acc end parallel
            !
-           ztemp2(:,1:ifr%nloc) = ztemp_d(:,1:ifr%nloc)
+           !$acc update host(ztemp2(1:nbnd,1:ifr_nloc))
            !
            CALL mp_sum(ztemp2(:,1:ifr%nloc),inter_image_comm)
            !
@@ -1816,7 +1822,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
            ! z_body_rfr_q
            ! -----
            !
-           !$acc parallel present(overlap)
+           !$acc parallel present(overlap,ztemp2,z_epsm1_rfr_trans_q)
            !$acc loop collapse(2)
            DO ifreq = 1,rfr_nloc
               DO im = 1,nbnd
@@ -1825,15 +1831,15 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                  DO glob_jp = 1,n_pdep_eigen_to_use
                     DO ip = 1,pert_nloc
                        reduce = reduce+CONJG(overlap(glob_jp,im))*overlap_loc(ip,im) &
-                       & *z_epsm1_rfr_trans_q_d(ip,glob_jp,ifreq,iq)
+                       & *z_epsm1_rfr_trans_q(ip,glob_jp,ifreq,iq)
                     ENDDO
                  ENDDO
-                 ztemp_d(im,ifreq) = reduce
+                 ztemp2(im,ifreq) = reduce
               ENDDO
            ENDDO ! ifreq
            !$acc end parallel
            !
-           ztemp2(:,1:rfr%nloc) = ztemp_d(:,1:rfr%nloc)
+           !$acc update host(ztemp2(1:nbnd,1:rfr_nloc))
            !
            CALL mp_sum(ztemp2(:,1:rfr%nloc),inter_image_comm)
            !
@@ -1860,7 +1866,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                  ENDDO
               ENDDO
               !
-              !$acc parallel present(braket)
+              !$acc parallel present(braket,z_epsm1_ifr_q)
               !$acc loop collapse(3)
               DO ifreq = 1,ifr_nloc
                  DO ip = 1,pert_nloc
@@ -1868,7 +1874,7 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
                        reduce = 0._DP
                        !$acc loop reduction(+:reduce)
                        DO glob_jp = 1,pert_nglob
-                          reduce = reduce+braket(glob_jp,il,ip)*z_epsm1_ifr_q_d(glob_jp,ip,ifreq,iq)
+                          reduce = reduce+braket(glob_jp,il,ip)*z_epsm1_ifr_q(glob_jp,ip,ifreq,iq)
                        ENDDO
                        z_body2_ifr_q_d(il,ip,ifreq) = reduce
                     ENDDO
@@ -1887,10 +1893,6 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
      !
   ENDDO ! iks
   !
-  CALL deallocate_qp_gpu()
-  !
-  DEALLOCATE(l2g)
-  !
   CALL mp_sum(z_body1_ifr_q,inter_bgrp_comm)
   CALL mp_sum(z_body_rfr_q,inter_bgrp_comm)
   !
@@ -1901,12 +1903,16 @@ SUBROUTINE solve_qp_k_gpu(l_secant,l_generate_plot)
   !
   CALL stop_bar_type(barra,'coll_gw')
   !
-  !$acc exit data delete(overlap)
+  !$acc exit data delete(overlap,ztemp2,z_epsm1_ifr_q,z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
+  DEALLOCATE(l2g)
   DEALLOCATE(overlap)
   DEALLOCATE(overlap_loc)
   DEALLOCATE(z_epsm1_ifr_q)
   DEALLOCATE(z_epsm1_rfr_q)
   DEALLOCATE(ztemp2)
+  DEALLOCATE(z_epsm1_ifr_trans_q)
+  DEALLOCATE(z_epsm1_rfr_trans_q)
+  DEALLOCATE(z_body2_ifr_q_d)
   IF(l_enable_lanczos) THEN
      !$acc exit data delete(braket)
      DEALLOCATE(braket)

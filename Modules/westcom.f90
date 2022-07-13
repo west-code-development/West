@@ -53,11 +53,17 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: d_epsm1_ifr
+#endif
   !
   ! EPSILON with q-points
   !
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:) ! EPSILON + iq (global in iq)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq (global in iq)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: z_epsm1_ifr_q
+#endif
   !
   ! CORRELATION
   !

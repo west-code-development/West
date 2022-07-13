@@ -20,6 +20,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   ! sigma_corr_full(ijpmap(m,n),iks) = < qp_bands(m),iks | 0.5 * ( S_c(energy(m,iks)) &
   ! & + S_c(energy(n,iks)) ) | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
+  ! Note that when doing secant solver l_full = False, and when evaluating off_diagonal terms l_full = True
+  !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_barrier

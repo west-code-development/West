@@ -180,11 +180,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! ... MGS
      !
-#if defined(__CUDA)
-     CALL do_mgs_gpu( dvg, 1, nvec )
-#else
      CALL do_mgs( dvg, 1, nvec )
-#endif
      !
      dfpt_dim = nbase
      diago_dim = nbase
@@ -219,11 +215,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ! < EXTRA STEP >
      !
      dvg = dng
-#if defined(__CUDA)
-     CALL do_mgs_gpu( dvg, 1, nvec )
-#else
      CALL do_mgs( dvg, 1, nvec )
-#endif
      !
      dfpt_dim = nbase
      diago_dim = nbase
@@ -330,11 +322,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! ... MGS
      !
-#if defined(__CUDA)
-     CALL do_mgs_gpu( dvg, nbase+1, nbase+notcnv )
-#else
      CALL do_mgs( dvg, nbase+1, nbase+notcnv )
-#endif
      !
      ! apply the response function to new vectors
      !
@@ -684,11 +672,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! ... MGS
         !
-#if defined(__CUDA)
-        CALL do_mgs_gpu( dvg, 1, nvec )
-#else
         CALL do_mgs( dvg, 1, nvec )
-#endif
         !
         dfpt_dim = nbase
         diago_dim = nbase
@@ -724,11 +708,7 @@ SUBROUTINE davidson_diago_k ( )
         ! < EXTRA STEP >
         !
         dvg = dng
-#if defined(__CUDA)
-        CALL do_mgs_gpu( dvg, 1, nvec )
-#else
         CALL do_mgs( dvg, 1, nvec )
-#endif
         !
         dfpt_dim = nbase
         diago_dim = nbase
@@ -836,11 +816,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! ... MGS
         !
-#if defined(__CUDA)
-        CALL do_mgs_gpu( dvg, nbase+1, nbase+notcnv )
-#else
         CALL do_mgs( dvg, nbase+1, nbase+notcnv )
-#endif
         !
         ! apply the response function to new vectors
         !
@@ -1005,6 +981,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   USE westcom,                ONLY : npwq,npwqx
   USE control_flags,          ONLY : gamma_only
   USE distribution_center,    ONLY : pert
+#if defined(__CUDA)
+  USE cublas
+#endif
   !
   IMPLICIT NONE
   !
@@ -1015,19 +994,31 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! Workspace
   !
-  INTEGER :: ig, ip, ncol
-  INTEGER :: k_global, k_local, j_local, k_id
-  REAL(DP) :: anorm
-  REAL(DP),ALLOCATABLE :: braket(:)
-  COMPLEX(DP),ALLOCATABLE :: vec(:),zbraket(:)
   LOGICAL :: unfinished
-  COMPLEX(DP) :: za
+  INTEGER :: ig,ip,ncol
+  INTEGER :: k_global,k_local,j_local,k_id
   INTEGER :: m_local_start,m_local_end
-  !
+  REAL(DP) :: anorm
+  REAL(DP) :: tmp_r
+  COMPLEX(DP) :: tmp_c
+  COMPLEX(DP) :: za
+  REAL(DP),ALLOCATABLE :: braket(:)
+  COMPLEX(DP),ALLOCATABLE :: zbraket(:)
+  !$acc declare device_resident(zbraket)
+  COMPLEX(DP),ALLOCATABLE :: vec(:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: vec
+#endif
+#if !defined(__CUDA)
   REAL(DP),EXTERNAL :: DDOT
   COMPLEX(DP),EXTERNAL :: ZDOTC
+#endif
   !
-  CALL start_clock ('paramgs')
+#if defined(__CUDA)
+  CALL start_clock_gpu('paramgs')
+#else
+  CALL start_clock('paramgs')
+#endif
   !
   ! 1) Run some checks
   !
@@ -1036,7 +1027,13 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
      !
-     ALLOCATE( vec(npwqx), zbraket(pert%nloc), braket(pert%nloc) )
+     ALLOCATE(vec(npwqx))
+     ALLOCATE(zbraket(pert%nloc))
+#if !defined(__CUDA)
+     ALLOCATE(braket(pert%nloc))
+#endif
+     !
+     !$acc enter data create(vec) copyin(amat)
      !
      ! 2) Localize m_global_start
      !
@@ -1073,25 +1070,53 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               !
               ! anorm = < k_l | k_l >
               !
+#if defined(__CUDA)
+              anorm = 0._DP
+              !$acc parallel loop reduction(+:anorm)
+              DO ig = 1,npwq
+                 anorm = anorm+REAL(amat(ig,k_local),KIND=DP)**2+AIMAG(amat(ig,k_local))**2
+              ENDDO
+              !$acc end parallel
+              !
+              IF(gamma_only) THEN
+                 anorm = 2._DP*anorm
+                 IF(gstart == 2) THEN
+                    !$acc update host(amat(1:1,1:k_local))
+                    anorm = anorm-REAL(amat(1,k_local),KIND=DP)**2
+                 ENDIF
+              ENDIF
+#else
               IF(gamma_only) THEN
                  anorm = 2._DP * DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
                  IF(gstart==2) anorm = anorm - REAL(amat(1,k_local),KIND=DP) * REAL(amat(1,k_local),KIND=DP)
               ELSE
                  anorm = DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
               ENDIF
+#endif
               !
               CALL mp_sum(anorm,intra_bgrp_comm)
               !
               ! normalize | k_l >
               !
-              za = CMPLX( 1._DP/SQRT(anorm), 0._DP,KIND=DP)
+              za = 1._DP/SQRT(anorm)
+              !
+              !$acc data present(amat)
+              !$acc host_data use_device(amat)
               CALL ZSCAL(npwq,za,amat(1,k_local),1)
+              !$acc end host_data
+              !$acc end data
               !
            ENDIF
            !
            ! 5) Copy the current vector into V
            !
+           !$acc data present(amat,vec)
+           !$acc host_data use_device(amat,vec)
            CALL ZCOPY(npwqx,amat(1,k_local),1,vec(1),1)
+           !$acc end host_data
+           !$acc end data
+           !
+           !$acc update host(vec)
            !
            j_local=MAX(k_local+1,m_local_start)
            !
@@ -1107,8 +1132,48 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
         !
         IF(unfinished) THEN
            !
+           !$acc update device(vec)
+           !
            ! In the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
            !
+#if defined(__CUDA)
+           IF(gamma_only) THEN
+              !$acc parallel vector_length(1024)
+              !$acc loop
+              DO ip = j_local,m_local_end
+                 tmp_r = 0._DP
+                 !$acc loop reduction(+:tmp_r)
+                 DO ig = 1,npwq
+                    tmp_r = tmp_r+REAL(vec(ig),KIND=DP)*REAL(amat(ig,ip),KIND=DP) &
+                    & +AIMAG(vec(ig))*AIMAG(amat(ig,ip))
+                 ENDDO
+                 IF(gstart == 2) THEN
+                    zbraket(ip) = 2._DP*tmp_r-REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
+                 ELSE
+                    zbraket(ip) = 2._DP*tmp_r
+                 ENDIF
+              ENDDO
+              !$acc end parallel
+           ELSE
+              !$acc parallel vector_length(1024)
+              !$acc loop
+              DO ip = j_local,m_local_end
+                 tmp_c = 0._DP
+                 !$acc loop reduction(+:tmp_c)
+                 DO ig = 1,npwq
+                    tmp_c = tmp_c+CONJG(vec(ig))*amat(ig,ip)
+                 ENDDO
+                 zbraket(ip) = tmp_c
+              ENDDO
+              !$acc end parallel
+           ENDIF
+           !
+           !$acc data present(zbraket)
+           !$acc host_data use_device(zbraket)
+           CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
+           !$acc end host_data
+           !$acc end data
+#else
            IF(gamma_only) THEN
               DO ip = j_local,m_local_end !pert%nloc
                  braket(ip) = 2._DP * DDOT(2*npwq,vec(1),1,amat(1,ip),1)
@@ -1122,22 +1187,38 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               ENDDO
               CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
            ENDIF
+#endif
            !
            ncol=m_local_end-j_local+1
+           !
+           !$acc data present(vec,zbraket,amat)
+           !$acc host_data use_device(vec,zbraket,amat)
            CALL ZGERU(npwqx,ncol,MONE,vec(1),1,zbraket(j_local),1,amat(1,j_local),npwqx)
+           !$acc end host_data
+           !$acc end data
            !
         ENDIF
         !
      ENDDO
      !
-     DEALLOCATE( vec,zbraket,braket )
+     !$acc exit data delete(vec) copyout(amat)
+     !
+     DEALLOCATE(vec)
+     DEALLOCATE(zbraket)
+#if !defined(__CUDA)
+     DEALLOCATE(braket)
+#endif
      !
   ENDIF
   !
   CALL mp_bcast(amat,0,inter_bgrp_comm)
   CALL mp_bcast(amat,0,inter_pool_comm)
   !
-  CALL stop_clock ('paramgs')
+#if defined(__CUDA)
+  CALL stop_clock_gpu('paramgs')
+#else
+  CALL stop_clock('paramgs')
+#endif
   !
 END SUBROUTINE
 !
@@ -1442,197 +1523,3 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
    ENDIF
    !
 END SUBROUTINE
-!
-!
-#if defined(__CUDA)
-SUBROUTINE do_mgs_gpu(amat,m_global_start,m_global_end)
-  !
-  ! MGS of the vectors beloging to the interval [ m_global_start, m_global_end ]
-  ! also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
-  !
-  USE kinds,                  ONLY : DP
-  USE mp_global,              ONLY : inter_pool_comm,my_pool_id,intra_bgrp_comm,inter_bgrp_comm,&
-                                   & my_bgrp_id,nproc_bgrp,inter_image_comm,my_image_id
-  USE gvect,                  ONLY : gstart
-  USE mp,                     ONLY : mp_sum,mp_bcast
-  USE westcom,                ONLY : npwq,npwqx
-  USE control_flags,          ONLY : gamma_only
-  USE distribution_center,    ONLY : pert
-  USE west_cuda,              ONLY : allocate_mgs_gpu,deallocate_mgs_gpu,amat_d,vec_d,zbraket_d
-  USE cublas
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  INTEGER,INTENT(IN) :: m_global_start,m_global_end
-  COMPLEX(DP),INTENT(INOUT) :: amat(npwqx,pert%nlocx)
-  !
-  ! Workspace
-  !
-  LOGICAL :: unfinished
-  INTEGER :: ig,ip,ncol
-  INTEGER :: k_global,k_local,j_local,k_id
-  INTEGER :: m_local_start,m_local_end
-  INTEGER :: ii
-  REAL(DP) :: anorm
-  REAL(DP) :: tmp_r
-  COMPLEX(DP) :: tmp_c
-  COMPLEX(DP) :: za
-  COMPLEX(DP),PINNED,ALLOCATABLE :: vec(:)
-  !
-  CALL start_clock_gpu('paramgs')
-  !
-  ! 1) Run some checks
-  !
-  IF(m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob) &
-  & CALL errore('mgs','do_mgs problem',1)
-  !
-  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-     !
-     ! 2) Localize m_global_start
-     !
-     m_local_start = 1
-     DO ip = 1,pert%nloc
-        ig = pert%l2g(ip)
-        IF(ig < m_global_start) CYCLE
-        m_local_start = ip
-        EXIT
-     ENDDO
-     !
-     ! 3) Localize m_global_end
-     !
-     m_local_end = pert%nloc
-     DO ip = pert%nloc,1,-1
-        ig = pert%l2g(ip)
-        IF(ig > m_global_end) CYCLE
-        m_local_end = ip
-        EXIT
-     ENDDO
-     !
-     j_local = 1
-     unfinished = .TRUE.
-     !
-     ALLOCATE(vec(npwqx))
-     !
-     CALL allocate_mgs_gpu(pert%nlocx,pert%nloc)
-     !
-     amat_d = amat
-     !
-     DO k_global = 1,m_global_end
-        !
-        CALL pert%g2l(k_global,k_local,k_id)
-        !
-        IF(my_image_id == k_id) THEN
-           !
-           ! 4) Eventually, normalize the current vector
-           !
-           IF(k_global >= m_global_start) THEN
-              !
-              ! anorm = < k_l | k_l >
-              !
-              anorm = 0._DP
-              !$acc parallel loop reduction(+:anorm)
-              DO ii = 1,npwq
-                 anorm = anorm+REAL(amat_d(ii,k_local),KIND=DP)**2+AIMAG(amat_d(ii,k_local))**2
-              ENDDO
-              !$acc end parallel
-              !
-              IF(gamma_only) THEN
-                 anorm = 2._DP*anorm
-                 IF(gstart == 2) THEN
-                    tmp_c = amat_d(1,k_local)
-                    anorm = anorm-REAL(tmp_c,KIND=DP)**2
-                 ENDIF
-              ENDIF
-              !
-              CALL mp_sum(anorm,intra_bgrp_comm)
-              !
-              ! normalize | k_l >
-              !
-              za = 1._DP/SQRT(anorm)
-              CALL ZSCAL(npwq,za,amat_d(1,k_local),1)
-              !
-           ENDIF
-           !
-           ! 5) Copy the current vector into V
-           !
-           CALL ZCOPY(npwqx,amat_d(1,k_local),1,vec_d,1)
-           !
-           vec = vec_d
-           !
-           j_local = MAX(k_local+1,m_local_start)
-           !
-           IF(j_local > m_local_end) unfinished = .FALSE.
-           !
-        ENDIF
-        !
-        ! BCAST | vec >
-        !
-        CALL mp_bcast(vec,k_id,inter_image_comm)
-        !
-        ! Update when needed
-        !
-        IF(unfinished) THEN
-           !
-           vec_d = vec
-           !
-           ! In the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
-           !
-           IF(gamma_only) THEN
-              !$acc parallel vector_length(1024)
-              !$acc loop
-              DO ip = j_local,m_local_end
-                 tmp_r = 0._DP
-                 !$acc loop reduction(+:tmp_r)
-                 DO ii = 1,npwq
-                    tmp_r = tmp_r+REAL(vec_d(ii),KIND=DP)*REAL(amat_d(ii,ip),KIND=DP) &
-                    & +AIMAG(vec_d(ii))*AIMAG(amat_d(ii,ip))
-                 ENDDO
-                 IF(gstart == 2) THEN
-                    zbraket_d(ip) = 2._DP*tmp_r-REAL(vec_d(1),KIND=DP)*REAL(amat_d(1,ip),KIND=DP)
-                 ELSE
-                    zbraket_d(ip) = 2._DP*tmp_r
-                 ENDIF
-              ENDDO
-              !$acc end parallel
-           ELSE
-              !$acc parallel vector_length(1024)
-              !$acc loop
-              DO ip = j_local,m_local_end
-                 tmp_c = 0._DP
-                 !$acc loop reduction(+:tmp_c)
-                 DO ii = 1,npwq
-                    tmp_c = tmp_c+CONJG(vec_d(ii))*amat_d(ii,ip)
-                 ENDDO
-                 zbraket_d(ip) = tmp_c
-              ENDDO
-              !$acc end parallel
-           ENDIF
-           !
-           IF(nproc_bgrp > 1) THEN
-              CALL mp_sum(zbraket_d(j_local:m_local_end),intra_bgrp_comm)
-           ENDIF
-           !
-           ncol = m_local_end-j_local+1
-           CALL ZGERU(npwqx,ncol,MONE,vec_d,1,zbraket_d(j_local),1,amat_d(1,j_local),npwqx)
-           !
-        ENDIF
-        !
-     ENDDO
-     !
-     amat = amat_d
-     !
-     CALL deallocate_mgs_gpu()
-     !
-     DEALLOCATE(vec)
-     !
-  ENDIF
-  !
-  CALL mp_bcast(amat,0,inter_bgrp_comm)
-  CALL mp_bcast(amat,0,inter_pool_comm)
-  !
-  CALL stop_clock_gpu('paramgs')
-  !
-END SUBROUTINE
-#endif

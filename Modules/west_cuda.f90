@@ -47,9 +47,6 @@ MODULE west_cuda
    COMPLEX(DP), DEVICE, ALLOCATABLE :: b_g_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: h_g_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: h2_g_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: amat_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: vec_d(:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: zbraket_d(:)
    !
    ! GW
    !
@@ -1189,43 +1186,6 @@ MODULE west_cuda
    ENDIF
    IF(ALLOCATED(h_g_d)) THEN
       DEALLOCATE(h_g_d)
-   ENDIF
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE allocate_mgs_gpu(nlocx,nloc)
-   !-----------------------------------------------------------------------
-   !
-   USE westcom,               ONLY : npwqx
-   !
-   IMPLICIT NONE
-   !
-   ! I/O
-   !
-   INTEGER, INTENT(IN) :: nlocx
-   INTEGER, INTENT(IN) :: nloc
-   !
-   ALLOCATE(amat_d(npwqx,nlocx))
-   ALLOCATE(vec_d(npwqx))
-   ALLOCATE(zbraket_d(nloc))
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE deallocate_mgs_gpu()
-   !-----------------------------------------------------------------------
-   !
-   IMPLICIT NONE
-   !
-   IF(ALLOCATED(amat_d)) THEN
-      DEALLOCATE(amat_d)
-   ENDIF
-   IF(ALLOCATED(vec_d)) THEN
-      DEALLOCATE(vec_d)
-   ENDIF
-   IF(ALLOCATED(zbraket_d)) THEN
-      DEALLOCATE(zbraket_d)
    ENDIF
    !
    END SUBROUTINE

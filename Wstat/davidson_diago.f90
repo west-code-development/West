@@ -54,7 +54,7 @@ SUBROUTINE davidson_diago_gamma ( )
                                    & refresh_with_vr_distr
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
-  USE wstat_tools,          ONLY : update_with_vr_distr_gpu,refresh_with_vr_distr_gpu
+  USE wstat_tools,          ONLY : refresh_with_vr_distr_gpu
 #endif
   !
   IMPLICIT NONE
@@ -310,11 +310,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift )
      DEALLOCATE(ishift)
-#if defined(__CUDA)
-     CALL update_with_vr_distr_gpu( dvg, dng, notcnv, nbase, nvecx, vr_distr, ew )
-#else
      CALL update_with_vr_distr( dvg, dng, notcnv, nbase, nvecx, vr_distr, ew )
-#endif
      !
      ! ... MGS
      !
@@ -487,7 +483,7 @@ SUBROUTINE davidson_diago_k ( )
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
-  USE wstat_tools,          ONLY : update_with_vr_distr_gpu,refresh_with_vr_distr_gpu
+  USE wstat_tools,          ONLY : refresh_with_vr_distr_gpu
 #endif
   !
   IMPLICIT NONE
@@ -796,11 +792,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift )
         DEALLOCATE(ishift)
-#if defined(__CUDA)
-        CALL update_with_vr_distr_gpu( dvg, dng, notcnv, nbase, nvecx, vr_distr, ew )
-#else
         CALL update_with_vr_distr( dvg, dng, notcnv, nbase, nvecx, vr_distr, ew )
-#endif
         !
         ! ... MGS
         !

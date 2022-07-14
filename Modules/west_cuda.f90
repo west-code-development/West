@@ -42,9 +42,7 @@ MODULE west_cuda
    ! Wstat
    !
    COMPLEX(DP), DEVICE, ALLOCATABLE :: a_g_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: b_g_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: h_g_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: h2_g_d(:,:)
    !
    ! GW
    !
@@ -1066,47 +1064,6 @@ MODULE west_cuda
    IF(ALLOCATED(ztemp_d)) THEN
       DEALLOCATE(ztemp_d)
    ENDIF
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE allocate_update_vr_gpu(nlocx)
-   !-----------------------------------------------------------------------
-   !
-   USE westcom,               ONLY : npwqx
-   !
-   IMPLICIT NONE
-   !
-   ! I/O
-   !
-   INTEGER, INTENT(IN) :: nlocx
-   !
-   ALLOCATE(a_g_d(npwqx,nlocx))
-   ALLOCATE(b_g_d(npwqx,nlocx))
-   ALLOCATE(h_g_d(npwqx,nlocx))
-   ALLOCATE(h2_g_d(npwqx,nlocx))
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE deallocate_update_vr_gpu()
-   !-----------------------------------------------------------------------
-   !
-   IMPLICIT NONE
-   !
-   IF(ALLOCATED(a_g_d)) THEN
-      DEALLOCATE(a_g_d)
-   ENDIF
-   IF(ALLOCATED(b_g_d)) THEN
-      DEALLOCATE(b_g_d)
-   ENDIF
-   IF(ALLOCATED(h_g_d)) THEN
-      DEALLOCATE(h_g_d)
-   ENDIF
-   IF(ALLOCATED(h2_g_d)) THEN
-      DEALLOCATE(h2_g_d)
-   ENDIF
-   !
    !
    END SUBROUTINE
    !

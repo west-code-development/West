@@ -54,7 +54,7 @@ SUBROUTINE davidson_diago_gamma ( )
                                    & refresh_with_vr_distr
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
-  USE wstat_tools,          ONLY : build_hr_gpu,update_with_vr_distr_gpu,refresh_with_vr_distr_gpu
+  USE wstat_tools,          ONLY : update_with_vr_distr_gpu,refresh_with_vr_distr_gpu
 #endif
   !
   IMPLICIT NONE
@@ -243,11 +243,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! hr = <dvg|dng>
      !
-#if defined(__CUDA)
-     CALL build_hr_gpu( dvg, dng, mstart, mstart+mloc-1, hr_distr, nvec )
-#else
      CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nvec )
-#endif
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -347,11 +343,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! hr = <dvg|dng>
      !
-#if defined(__CUDA)
-     CALL build_hr_gpu( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
-#else
      CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
-#endif
      !
      nbase = nbase + notcnv
      !
@@ -495,7 +487,7 @@ SUBROUTINE davidson_diago_k ( )
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
-  USE wstat_tools,          ONLY : build_hr_gpu,update_with_vr_distr_gpu,refresh_with_vr_distr_gpu
+  USE wstat_tools,          ONLY : update_with_vr_distr_gpu,refresh_with_vr_distr_gpu
 #endif
   !
   IMPLICIT NONE
@@ -737,11 +729,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! hr = <dvg|dng>
         !
-#if defined(__CUDA)
-        CALL build_hr_gpu( dvg, dng, mstart, mstart+mloc-1, hr_distr, nvec )
-#else
         CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nvec )
-#endif
         !
         ! ... diagonalize the reduced hamiltonian
         !
@@ -842,11 +830,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         ! hr = <dvg|dng>
         !
-#if defined(__CUDA)
-        CALL build_hr_gpu( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
-#else
         CALL build_hr( dvg, dng, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
-#endif
         !
         nbase = nbase + notcnv
         !

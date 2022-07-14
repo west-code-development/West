@@ -43,10 +43,6 @@ MODULE wstat_tools
   END INTERFACE
   !
 #if defined(__CUDA)
-  INTERFACE build_hr_gpu
-     MODULE PROCEDURE build_hr_real_gpu, build_hr_complex_gpu
-  END INTERFACE
-  !
   INTERFACE update_with_vr_distr_gpu
      MODULE PROCEDURE update_with_vr_distr_real_gpu, update_with_vr_distr_complex_gpu
   END INTERFACE
@@ -423,45 +419,92 @@ MODULE wstat_tools
       COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
       COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: l2_s,l2_e
-      REAL(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
+      REAL(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
       INTEGER,INTENT(IN) :: g_e
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1
-      INTEGER :: icycl,idx,nloc
-      !
+      INTEGER :: il1,il2,il3,l3_s,ig1
+      INTEGER :: icycl,idx,nloc,pert_nglob,pert_nlocx
+      REAL(DP) :: reduce
+#if !defined(__CUDA)
       REAL(DP),EXTERNAL :: DDOT
+#endif
       !
+#if defined(__CUDA)
+      CALL start_clock_gpu('build_hr')
+#else
       CALL start_clock('build_hr')
+#endif
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         ! Initialize to zero
-         !
-         c_distr(:,l2_s:l2_e) = 0._DP
+         IF(l2_e >= l2_s) THEN
+            !
+            pert_nglob = pert%nglob
+            pert_nlocx = pert%nlocx
+            !
+            !$acc enter data create(ag,c_distr(1:pert_nglob,l2_s:l2_e)) copyin(bg)
+            !
+            !$acc parallel loop collapse(2)
+            DO il2 = l2_s,l2_e
+               DO il1 = 1,pert_nglob
+                  c_distr(il1,il2) = 0._DP
+               ENDDO
+            ENDDO
+            !$acc end parallel
+            !
+         ENDIF
          !
          DO icycl = 0,nimage-1
             !
-            idx = MOD(my_image_id+icycl,nimage)
-            nloc = pert%nglob/nimage
-            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-            !
-            DO il1 = 1,nloc
+            IF(l2_e >= l2_s) THEN
                !
-               ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
+               idx = MOD(my_image_id+icycl,nimage)
+               nloc = pert%nglob/nimage
+               IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
                !
-               DO il2 = l2_s,l2_e
+               !$acc update device(ag) wait
+               !
+               DO il1 = 1,nloc
                   !
+                  ig1 = pert%l2g(il1,idx)
+                  IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
+                  !
+#if defined(__CUDA)
                   IF(gstart == 1) THEN
-                     c_distr(ig1,il2) = 2._DP*DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
+                     l3_s = 1
                   ELSE
-                     c_distr(ig1,il2) = 2._DP*DDOT(2*npwq-2,ag(2,il1),1,bg(2,il2),1)
+                     l3_s = 2
                   ENDIF
                   !
+                  !$acc parallel async
+                  !$acc loop
+                  DO il2 = l2_s,l2_e
+                     reduce = 0._DP
+                     !$acc loop reduction(+:reduce)
+                     DO il3 = l3_s,npwq
+                        reduce = reduce+REAL(ag(il3,il1),KIND=DP)*REAL(bg(il3,il2),KIND=DP) &
+                        & +AIMAG(ag(il3,il1))*AIMAG(bg(il3,il2))
+                     ENDDO
+                     c_distr(ig1,il2) = 2._DP*reduce
+                  ENDDO
+                  !$acc end parallel
+#else
+                  DO il2 = l2_s,l2_e
+                     !
+                     IF(gstart == 1) THEN
+                        c_distr(ig1,il2) = 2._DP*DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
+                     ELSE
+                        c_distr(ig1,il2) = 2._DP*DDOT(2*npwq-2,ag(2,il1),1,bg(2,il2),1)
+                     ENDIF
+                     !
+                  ENDDO
+#endif
+                  !
                ENDDO
-            ENDDO
+               !
+            ENDIF
             !
             ! Cycle ag
             !
@@ -469,16 +512,25 @@ MODULE wstat_tools
             !
          ENDDO
          !
-         ! Syncronize c_distr
-         !
-         CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+         IF(l2_e >= l2_s) THEN
+            !
+            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e)) wait
+            !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+            !
+            CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+            !
+         ENDIF
          !
       ENDIF
       !
       CALL mp_bcast(c_distr,0,inter_bgrp_comm)
       CALL mp_bcast(c_distr,0,inter_pool_comm)
       !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('build_hr')
+#else
       CALL stop_clock('build_hr')
+#endif
       !
     END SUBROUTINE
     !
@@ -501,41 +553,81 @@ MODULE wstat_tools
       COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
       COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
       INTEGER,INTENT(IN) :: l2_s,l2_e
-      COMPLEX(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
       INTEGER,INTENT(IN) :: g_e
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1
-      INTEGER :: icycl,idx,nloc
-      !
+      INTEGER :: il1,il2,il3,ig1
+      INTEGER :: icycl,idx,nloc,pert_nglob,pert_nlocx
+      COMPLEX(DP) :: reduce
+#if !defined(__CUDA)
       COMPLEX(DP),EXTERNAL :: ZDOTC
+#endif
       !
+#if defined(__CUDA)
+      CALL start_clock_gpu('build_hr')
+#else
       CALL start_clock('build_hr')
+#endif
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         ! Initialize to zero
-         !
-         c_distr(:,l2_s:l2_e) = 0._DP
+         IF(l2_e >= l2_s) THEN
+            !
+            pert_nglob = pert%nglob
+            pert_nlocx = pert%nlocx
+            !
+            !$acc enter data create(ag,c_distr(1:pert_nglob,l2_s:l2_e)) copyin(bg)
+            !
+            !$acc parallel loop collapse(2)
+            DO il2 = l2_s,l2_e
+               DO il1 = 1,pert_nglob
+                  c_distr(il1,il2) = 0._DP
+               ENDDO
+            ENDDO
+            !$acc end parallel
+            !
+         ENDIF
          !
          DO icycl = 0,nimage-1
             !
-            idx = MOD(my_image_id+icycl,nimage)
-            nloc = pert%nglob/nimage
-            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-            !
-            DO il1 = 1,nloc
+            IF(l2_e >= l2_s) THEN
                !
-               ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
+               idx = MOD(my_image_id+icycl,nimage)
+               nloc = pert%nglob/nimage
+               IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
                !
-               DO il2 = l2_s,l2_e
+               !$acc update device(ag) wait
+               !
+               DO il1 = 1,nloc
                   !
-                  c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
+                  ig1 = pert%l2g(il1,idx)
+                  IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
+                  !
+#if defined(__CUDA)
+                  !$acc parallel async
+                  !$acc loop
+                  DO il2 = l2_s,l2_e
+                     reduce = 0._DP
+                     !$acc loop reduction(+:reduce)
+                     DO il3 = 1,npwq
+                        reduce = reduce+CONJG(ag(il3,il1))*bg(il3,il2)
+                     ENDDO
+                     c_distr(ig1,il2) = reduce
+                  ENDDO
+                  !$acc end parallel
+#else
+                  DO il2 = l2_s,l2_e
+                     !
+                     c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
+                     !
+                  ENDDO
+#endif
                   !
                ENDDO
-            ENDDO
+               !
+            ENDIF
             !
             ! Cycle ag
             !
@@ -543,16 +635,25 @@ MODULE wstat_tools
             !
          ENDDO
          !
-         ! Syncronize c_distr
-         !
-         CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+         IF(l2_e >= l2_s) THEN
+            !
+            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e)) wait
+            !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+            !
+            CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+            !
+         ENDIF
          !
       ENDIF
       !
       CALL mp_bcast(c_distr,0,inter_bgrp_comm)
       CALL mp_bcast(c_distr,0,inter_pool_comm)
       !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('build_hr')
+#else
       CALL stop_clock('build_hr')
+#endif
       !
     END SUBROUTINE
     !
@@ -1237,196 +1338,6 @@ MODULE wstat_tools
     END SUBROUTINE
     !
 #if defined(__CUDA)
-    !------------------------------------------------------------------------
-    SUBROUTINE build_hr_real_gpu(ag,bg,l2_s,l2_e,c_distr,g_e)
-      !------------------------------------------------------------------------
-      !
-      !  c_distr = < ag | bg >
-      !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,&
-                                     & inter_bgrp_comm,my_bgrp_id,inter_pool_comm,my_pool_id
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
-      USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq,npwqx
-      USE gvect,                ONLY : gstart
-      USE west_cuda,            ONLY : a_g_d,b_g_d,c_distr_r_d,allocate_build_hr_gpu,deallocate_build_hr_gpu
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
-      COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
-      INTEGER,INTENT(IN) :: l2_s,l2_e
-      REAL(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
-      INTEGER,INTENT(IN) :: g_e
-      !
-      ! Workspace
-      !
-      INTEGER :: il1,il2,il3,l3_s,ig1
-      INTEGER :: icycl,idx,nloc
-      REAL(DP) :: reduce
-      !
-      CALL start_clock_gpu('build_hr')
-      !
-      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-         !
-         ! Initialize
-         !
-         CALL allocate_build_hr_gpu(pert%nlocx,pert%nglob,MAX(1,l2_e-l2_s+1))
-         !
-         c_distr_r_d = 0._DP
-         b_g_d = bg
-         !
-         DO icycl = 0,nimage-1
-            !
-            idx = MOD(my_image_id+icycl,nimage)
-            nloc = pert%nglob/nimage
-            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-            !
-            !$acc wait
-            a_g_d = ag
-            !
-            DO il1 = 1,nloc
-               !
-               ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
-               !
-               IF(gstart == 1) THEN
-                  l3_s = 1
-               ELSE
-                  l3_s = 2
-               ENDIF
-               !
-               !$acc parallel async
-               !$acc loop
-               DO il2 = l2_s,l2_e
-                  reduce = 0._DP
-                  !$acc loop reduction(+:reduce)
-                  DO il3 = l3_s,npwq
-                     reduce = reduce+REAL(a_g_d(il3,il1),KIND=DP)*REAL(b_g_d(il3,il2),KIND=DP) &
-                     & +AIMAG(a_g_d(il3,il1))*AIMAG(b_g_d(il3,il2))
-                  ENDDO
-                  c_distr_r_d(ig1,il2-l2_s+1) = 2._DP*reduce
-               ENDDO
-               !$acc end parallel
-            ENDDO
-            !
-            ! Cycle ag
-            !
-            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
-            !
-         ENDDO
-         !
-         IF(l2_e >= l2_s) THEN
-            !$acc wait
-            c_distr(:,l2_s:l2_e) = c_distr_r_d
-            !
-            CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
-         ENDIF
-         !
-         CALL deallocate_build_hr_gpu()
-         !
-      ENDIF
-      !
-      CALL mp_bcast(c_distr,0,inter_bgrp_comm)
-      CALL mp_bcast(c_distr,0,inter_pool_comm)
-      !
-      CALL stop_clock_gpu('build_hr')
-      !
-    END SUBROUTINE
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE build_hr_complex_gpu(ag,bg,l2_s,l2_e,c_distr,g_e)
-      !------------------------------------------------------------------------
-      !
-      !  c_distr = < ag | bg >
-      !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,&
-                                     & inter_bgrp_comm,my_bgrp_id,inter_pool_comm,my_pool_id
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_bcast
-      USE distribution_center,  ONLY : pert
-      USE westcom,              ONLY : npwq,npwqx
-      USE west_cuda,            ONLY : a_g_d,b_g_d,c_distr_c_d,allocate_build_hr_gpu,deallocate_build_hr_gpu
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwqx,pert%nlocx)
-      COMPLEX(DP),INTENT(IN) :: bg(npwqx,pert%nlocx)
-      INTEGER,INTENT(IN) :: l2_s,l2_e
-      COMPLEX(DP),INTENT(OUT) :: c_distr(pert%nglob,pert%nlocx)
-      INTEGER,INTENT(IN) :: g_e
-      !
-      ! Workspace
-      !
-      INTEGER :: il1,il2,il3,ig1
-      INTEGER :: icycl,idx,nloc
-      COMPLEX(DP) :: reduce
-      !
-      CALL start_clock_gpu('build_hr')
-      !
-      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-         !
-         ! Initialize
-         !
-         CALL allocate_build_hr_gpu(pert%nlocx,pert%nglob,MAX(1,l2_e-l2_s+1))
-         !
-         c_distr_c_d = 0._DP
-         b_g_d = bg
-         !
-         DO icycl = 0,nimage-1
-            !
-            idx = MOD(my_image_id+icycl,nimage)
-            nloc = pert%nglob/nimage
-            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-            !
-            !$acc wait
-            a_g_d = ag
-            !
-            DO il1 = 1,nloc
-               !
-               ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
-               !
-               !$acc parallel async
-               !$acc loop
-               DO il2 = l2_s,l2_e
-                  reduce = 0._DP
-                  !$acc loop reduction(+:reduce)
-                  DO il3 = 1,npwq
-                     reduce = reduce+CONJG(a_g_d(il3,il1))*b_g_d(il3,il2)
-                  ENDDO
-                  c_distr_c_d(ig1,il2-l2_s+1) = reduce
-               ENDDO
-               !$acc end parallel
-            ENDDO
-            !
-            ! Cycle ag
-            !
-            CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
-            !
-         ENDDO
-         !
-         IF(l2_e >= l2_s) THEN
-            !$acc wait
-            c_distr(:,l2_s:l2_e) = c_distr_c_d
-            !
-            CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
-         ENDIF
-         !
-         CALL deallocate_build_hr_gpu()
-         !
-      ENDIF
-      !
-      CALL mp_bcast(c_distr,0,inter_bgrp_comm)
-      CALL mp_bcast(c_distr,0,inter_pool_comm)
-      !
-      CALL stop_clock_gpu('build_hr')
-      !
-    END SUBROUTINE
-    !
     !------------------------------------------------------------------------
     SUBROUTINE update_with_vr_distr_real_gpu(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------

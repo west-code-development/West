@@ -41,8 +41,6 @@ MODULE west_cuda
    !
    ! Wstat
    !
-   REAL(DP), DEVICE, ALLOCATABLE :: c_distr_r_d(:,:)
-   COMPLEX(DP), DEVICE, ALLOCATABLE :: c_distr_c_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: a_g_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: b_g_d(:,:)
    COMPLEX(DP), DEVICE, ALLOCATABLE :: h_g_d(:,:)
@@ -1067,52 +1065,6 @@ MODULE west_cuda
    ENDIF
    IF(ALLOCATED(ztemp_d)) THEN
       DEALLOCATE(ztemp_d)
-   ENDIF
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE allocate_build_hr_gpu(nlocx,nglob,c_nloc)
-   !-----------------------------------------------------------------------
-   !
-   USE control_flags,         ONLY : gamma_only
-   USE westcom,               ONLY : npwqx
-   !
-   IMPLICIT NONE
-   !
-   ! I/O
-   !
-   INTEGER, INTENT(IN) :: nlocx
-   INTEGER, INTENT(IN) :: nglob
-   INTEGER, INTENT(IN) :: c_nloc
-   !
-   ALLOCATE(a_g_d(npwqx,nlocx))
-   ALLOCATE(b_g_d(npwqx,nlocx))
-   IF(gamma_only) THEN
-      ALLOCATE(c_distr_r_d(nglob,c_nloc))
-   ELSE
-      ALLOCATE(c_distr_c_d(nglob,c_nloc))
-   ENDIF
-   !
-   END SUBROUTINE
-   !
-   !-----------------------------------------------------------------------
-   SUBROUTINE deallocate_build_hr_gpu()
-   !-----------------------------------------------------------------------
-   !
-   IMPLICIT NONE
-   !
-   IF(ALLOCATED(a_g_d)) THEN
-      DEALLOCATE(a_g_d)
-   ENDIF
-   IF(ALLOCATED(b_g_d)) THEN
-      DEALLOCATE(b_g_d)
-   ENDIF
-   IF(ALLOCATED(c_distr_r_d)) THEN
-      DEALLOCATE(c_distr_r_d)
-   ENDIF
-   IF(ALLOCATED(c_distr_c_d)) THEN
-      DEALLOCATE(c_distr_c_d)
    ENDIF
    !
    END SUBROUTINE

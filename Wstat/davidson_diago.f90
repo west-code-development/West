@@ -53,9 +53,6 @@ SUBROUTINE davidson_diago_gamma ( )
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
                                    & refresh_with_vr_distr
   USE types_coulomb,        ONLY : pot3D
-#if defined(__CUDA)
-  USE wstat_tools,          ONLY : refresh_with_vr_distr_gpu
-#endif
   !
   IMPLICIT NONE
   !
@@ -381,11 +378,7 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            CALL stop_clock( 'chidiago:last' )
            !
-#if defined(__CUDA)
-           CALL refresh_with_vr_distr_gpu( dvg, nvec, nbase, nvecx, vr_distr )
-#else
            CALL refresh_with_vr_distr( dvg, nvec, nbase, nvecx, vr_distr )
-#endif
            !
            CALL pdep_db_write( )
            CALL wstat_restart_clear()
@@ -413,13 +406,8 @@ SUBROUTINE davidson_diago_gamma ( )
         !
         WRITE(stdout,'(/,7x,"Refresh the basis set")')
         !
-#if defined(__CUDA)
-        CALL refresh_with_vr_distr_gpu( dvg, nvec, nbase, nvecx, vr_distr )
-        CALL refresh_with_vr_distr_gpu( dng, nvec, nbase, nvecx, vr_distr )
-#else
         CALL refresh_with_vr_distr( dvg, nvec, nbase, nvecx, vr_distr )
         CALL refresh_with_vr_distr( dng, nvec, nbase, nvecx, vr_distr )
-#endif
         !
         ! ... refresh the reduced hamiltonian
         !
@@ -482,9 +470,6 @@ SUBROUTINE davidson_diago_k ( )
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,refresh_with_vr_distr
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
-#if defined(__CUDA)
-  USE wstat_tools,          ONLY : refresh_with_vr_distr_gpu
-#endif
   !
   IMPLICIT NONE
   !
@@ -864,11 +849,7 @@ SUBROUTINE davidson_diago_k ( )
               !
               CALL stop_clock( 'chidiago:last' )
               !
-#if defined(__CUDA)
-              CALL refresh_with_vr_distr_gpu( dvg, nvec, nbase, nvecx, vr_distr )
-#else
               CALL refresh_with_vr_distr( dvg, nvec, nbase, nvecx, vr_distr )
-#endif
               !
               CALL pdep_db_write( iq )
               CALL wstat_restart_clear()
@@ -896,13 +877,8 @@ SUBROUTINE davidson_diago_k ( )
            !
            WRITE(stdout,'(/,7x,"Refresh the basis set")')
            !
-#if defined(__CUDA)
-           CALL refresh_with_vr_distr_gpu( dvg, nvec, nbase, nvecx, vr_distr )
-           CALL refresh_with_vr_distr_gpu( dng, nvec, nbase, nvecx, vr_distr )
-#else
            CALL refresh_with_vr_distr( dvg, nvec, nbase, nvecx, vr_distr )
            CALL refresh_with_vr_distr( dng, nvec, nbase, nvecx, vr_distr )
-#endif
            !
            ! ... refresh the reduced hamiltonian
            !

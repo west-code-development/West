@@ -180,7 +180,7 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
   USE west_mp,              ONLY : mp_circular_shift_left_begin
-  USE west_gpu,             ONLY : dvpsi_d,tmp_r3,dvpsi_h
+  USE west_gpu,             ONLY : tmp_r3,dvpsi_h,memcpy_H2D
   !
   IMPLICIT NONE
   !
@@ -197,7 +197,6 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   INTEGER :: i1,i2,i1_glob,il
   INTEGER :: nblock_i
   INTEGER :: icycl,idx
-  INTEGER :: idistr_nglob
   INTEGER :: reqs(2)
   !
   CALL start_clock_gpu("brak")
@@ -209,17 +208,9 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !
   ! Initialize to zero
   !
-  idistr_nglob = idistr%nglob
-  !
-  !$acc parallel loop collapse(3) present(brak)
-  DO i2 = 1,NRHS
-     DO il = 1,NLSTEPS
-        DO i1 = 1,idistr_nglob
-           brak(i1,il,i2) = 0.0_DP
-        ENDDO
-     ENDDO
-  ENDDO
-  !$acc end parallel
+  !$acc kernels present(brak)
+  brak(:,:,:) = 0.0_DP
+  !$acc end kernels
   !
   DO icycl = 0,nimage-1
      !
@@ -228,19 +219,19 @@ SUBROUTINE get_brak_hyper_parallel_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      IF(MOD(icycl,2) == 0) THEN
         CALL mp_circular_shift_left_begin(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
         !
-        dvpsi_d = dvpsi
+        !$acc update device(dvpsi)
      ELSE
         CALL mp_circular_shift_left_begin(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
         !
-        dvpsi_d = dvpsi_h
+        CALL memcpy_H2D(dvpsi,dvpsi_h,npwx*npol*idistr%nlocx)
      ENDIF
      !
      idx = MOD(my_image_id+icycl,nimage)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     !$acc host_data use_device(x,tmp_r3)
-     CALL glbrak_gamma_gpu(dvpsi_d,x,tmp_r3,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     !$acc host_data use_device(dvpsi,x,tmp_r3)
+     CALL glbrak_gamma_gpu(dvpsi,x,tmp_r3,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
      !$acc end host_data
      !
      !$acc parallel loop collapse(3) present(brak,tmp_r3)
@@ -285,7 +276,7 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
   USE west_mp,              ONLY : mp_circular_shift_left_begin
-  USE west_gpu,             ONLY : dvpsi_d,tmp_c3,dvpsi_h
+  USE west_gpu,             ONLY : tmp_c3,dvpsi_h,memcpy_H2D
   !
   IMPLICIT NONE
   !
@@ -302,7 +293,6 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   INTEGER :: i1,i2,i1_glob,il
   INTEGER :: nblock_i
   INTEGER :: icycl,idx
-  INTEGER :: idistr_nglob
   INTEGER :: reqs(2)
   !
   CALL start_clock_gpu("brak")
@@ -314,17 +304,9 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !
   ! Initialize to zero
   !
-  idistr_nglob = idistr%nglob
-  !
-  !$acc parallel loop collapse(3) present(brak)
-  DO i2 = 1,NRHS
-     DO il = 1,NLSTEPS
-        DO i1 = 1,idistr_nglob
-           brak(i1,il,i2) = 0.0_DP
-        ENDDO
-     ENDDO
-  ENDDO
-  !$acc end parallel
+  !$acc kernels present(brak)
+  brak(:,:,:) = 0.0_DP
+  !$acc end kernels
   !
   DO icycl = 0,nimage-1
      !
@@ -333,19 +315,19 @@ SUBROUTINE get_brak_hyper_parallel_complex_gpu(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      IF(MOD(icycl,2) == 0) THEN
         CALL mp_circular_shift_left_begin(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
         !
-        dvpsi_d = dvpsi
+        !$acc update device(dvpsi)
      ELSE
         CALL mp_circular_shift_left_begin(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
         !
-        dvpsi_d = dvpsi_h
+        CALL memcpy_H2D(dvpsi,dvpsi_h,npwx*npol*idistr%nlocx)
      ENDIF
      !
      idx = MOD(my_image_id+icycl,nimage)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     !$acc host_data use_device(x,tmp_c3)
-     CALL glbrak_k_gpu(dvpsi_d,x,tmp_c3,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     !$acc host_data use_device(dvpsi,x,tmp_c3)
+     CALL glbrak_k_gpu(dvpsi,x,tmp_c3,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
      !$acc end host_data
      !
      !$acc parallel loop collapse(3) present(brak,tmp_c3)

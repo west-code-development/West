@@ -48,7 +48,8 @@ MODULE dfpt_module
       USE wavefunctions,         ONLY : evc_host=>evc
       USE wvfct_gpum,            ONLY : using_et,using_et_d,et=>et_d
       USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
-      USE west_gpu,              ONLY : allocate_dfpt_gpu,deallocate_dfpt_gpu,reallocate_ps_gpu
+      USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,allocate_linsolve_gpu,deallocate_linsolve_gpu,&
+                                      & reallocate_ps_gpu
 #else
       USE wavefunctions,         ONLY : evc_work=>evc,psic
       USE wvfct,                 ONLY : et
@@ -127,7 +128,8 @@ MODULE dfpt_module
       ENDIF
       !
 #if defined(__CUDA)
-      CALL allocate_dfpt_gpu(band_group%nloc)
+      CALL allocate_gpu()
+      CALL allocate_linsolve_gpu(band_group%nloc)
 #endif
       !
       l_dost = (tr2 >= 0._DP)
@@ -231,7 +233,7 @@ MODULE dfpt_module
          !
          band_group_nloc = band_group%nloc
          !
-         !$acc parallel loop
+         !$acc parallel loop present(eprec_loc,eprec,et_loc)
          DO lbnd = 1,band_group_nloc
             !
             ! ibnd = band_group%l2g(lbnd)
@@ -270,7 +272,7 @@ MODULE dfpt_module
                   !
                   CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,ibnd2),psic,'Wave')
                   !
-                  !$acc parallel loop
+                  !$acc parallel loop present(aux_r)
                   DO ir = 1,dffts_nnr
                      psic(ir) = psic(ir)*REAL(aux_r(ir),KIND=DP)
                   ENDDO
@@ -290,7 +292,7 @@ MODULE dfpt_module
                   !
                   CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
                   !
-                  !$acc parallel loop
+                  !$acc parallel loop present(aux_r)
                   DO ir = 1,dffts_nnr
                      psic(ir) = REAL(psic(ir),KIND=DP)*REAL(aux_r(ir),KIND=DP)
                   ENDDO
@@ -317,7 +319,7 @@ MODULE dfpt_module
                   ! ... construct right-hand-side term of Sternheimer equation:
                   ! ... product of wavefunction at [k-q], phase and perturbation in real space
                   !
-                  !$acc parallel loop present(phase)
+                  !$acc parallel loop present(phase,aux_r)
                   DO ir = 1,dffts_nnr
                      psic(ir) = psic(ir)*phase(ir)*aux_r(ir)
                   ENDDO
@@ -343,7 +345,7 @@ MODULE dfpt_module
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,ikqs))
                      !$acc end host_data
                      !
-                     !$acc parallel loop present(phase)
+                     !$acc parallel loop present(phase,aux_r)
                      DO ir = 1,dffts_nnr
                         psic(ir) = psic(ir)*phase(ir)*aux_r(ir)
                      ENDDO
@@ -388,11 +390,9 @@ MODULE dfpt_module
                !
             ENDIF
             !
-            !$acc parallel loop
-            DO ir = 1,dffts_nnr
-               aux_r(ir) = zero
-            ENDDO
-            !$acc end parallel
+            !$acc kernels present(aux_r)
+            aux_r(:) = zero
+            !$acc end kernels
             !
             IF (gamma_only) THEN
                !
@@ -405,7 +405,7 @@ MODULE dfpt_module
                   CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),dpsi(:,lbnd),psic,'Wave')
                   !$acc end host_data
                   !
-                  !$acc parallel loop
+                  !$acc parallel loop present(aux_r)
                   DO ir = 1,dffts_nnr
                      aux_r(ir) = aux_r(ir)+REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
                   ENDDO
@@ -431,7 +431,7 @@ MODULE dfpt_module
                   CALL single_invfft_k(dffts,npw,npwx,dpsi(1:npwx,lbnd),dpsic,'Wave',igk_k(:,iks))
                   !$acc end host_data
                   !
-                  !$acc parallel loop present(phase)
+                  !$acc parallel loop present(aux_r,phase,dpsic)
                   DO ir = 1,dffts_nnr
                      aux_r(ir) = aux_r(ir)+CONJG(psic(ir)*phase(ir))*dpsic(ir)
                   ENDDO
@@ -452,7 +452,7 @@ MODULE dfpt_module
                      CALL single_invfft_k(dffts,npw,npwx,dpsi(npwx+1:npwx*2,lbnd),dpsic,'Wave',igk_k(:,iks))
                      !$acc end host_data
                      !
-                     !$acc parallel loop present(phase)
+                     !$acc parallel loop present(aux_r,phase,dpsic)
                      DO ir = 1,dffts_nnr
                         aux_r(ir) = aux_r(ir)+CONJG(psic(ir)*phase(ir))*dpsic(ir)
                      ENDDO
@@ -520,7 +520,8 @@ MODULE dfpt_module
       ENDIF
       !
 #if defined(__CUDA)
-      CALL deallocate_dfpt_gpu()
+      CALL deallocate_gpu()
+      CALL deallocate_linsolve_gpu()
 #endif
       !
       CALL mp_barrier(world_comm)
@@ -528,5 +529,4 @@ MODULE dfpt_module
       CALL stop_bar_type(barra,'dfpt')
       !
     END SUBROUTINE
-  !
 END MODULE

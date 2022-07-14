@@ -152,15 +152,11 @@ MODULE fft_at_k
     !
     ! Workspace
     !
-    INTEGER :: ig,dfft_nnr
+    INTEGER :: ig
     !
-    dfft_nnr = dfft%nnr
-    !
-    !$acc parallel loop
-    DO ig = 1,dfft_nnr
-       b(ig) = z_0
-    ENDDO
-    !$acc end parallel
+    !$acc kernels
+    b(:) = z_0
+    !$acc end kernels
     !
     IF(PRESENT(igk)) THEN
        !$acc parallel loop present(igk)
@@ -222,11 +218,9 @@ MODULE fft_at_k
     ENDIF
     !
     IF(nx > n) THEN
-       !$acc parallel loop
-       DO ig = n+1,nx
-          b1(ig) = z_0
-       ENDDO
-       !$acc end parallel
+       !$acc kernels
+       b1(n+1:nx) = z_0
+       !$acc end kernels
     ENDIF
     !
   END SUBROUTINE

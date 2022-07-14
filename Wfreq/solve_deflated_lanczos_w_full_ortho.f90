@@ -243,8 +243,9 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho_gpu(nbnd_to_deflate, NRHS, NLSTEP
   !
   ! INIT
   !
-  r = b
-  !$acc update device(r)
+  !$acc kernels present(r,b)
+  r(:,:) = b
+  !$acc end kernels
   !
   CALL start_clock_gpu("lan_H")
   !

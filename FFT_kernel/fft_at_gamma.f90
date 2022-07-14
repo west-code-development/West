@@ -267,15 +267,11 @@ MODULE fft_at_gamma
     !
     ! Workspace
     !
-    INTEGER :: ig,dfft_nnr
+    INTEGER :: ig
     !
-    dfft_nnr = dfft%nnr
-    !
-    !$acc parallel loop
-    DO ig = 1,dfft_nnr
-       b(ig) = z_0
-    ENDDO
-    !$acc end parallel
+    !$acc kernels
+    b(:) = z_0
+    !$acc end kernels
     !
     !$acc parallel loop
     DO ig = 1,n
@@ -329,12 +325,10 @@ MODULE fft_at_gamma
     !$acc end parallel
     !
     IF(nx > n) THEN
-       !$acc parallel loop
-       DO ig = n+1,nx
-          b1(ig) = z_0
-          b2(ig) = z_0
-       ENDDO
-       !$acc end parallel
+       !$acc kernels
+       b1(n+1:nx) = z_0
+       b2(n+1:nx) = z_0
+       !$acc end kernels
     ENDIF
     !
   END SUBROUTINE
@@ -361,15 +355,11 @@ MODULE fft_at_gamma
     !
     ! Workspace
     !
-    INTEGER :: ig,dfft_nnr
+    INTEGER :: ig
     !
-    dfft_nnr = dfft%nnr
-    !
-    !$acc parallel loop
-    DO ig = 1,dfft_nnr
-       b(ig) = z_0
-    ENDDO
-    !$acc end parallel
+    !$acc kernels
+    b(:) = z_0
+    !$acc end kernels
     !
     !$acc parallel loop
     DO ig = 1,n
@@ -417,11 +407,9 @@ MODULE fft_at_gamma
     !$acc end parallel
     !
     IF(nx > n) THEN
-       !$acc parallel loop
-       DO ig = n+1,nx
-          b1(ig) = z_0
-       ENDDO
-       !$acc end parallel
+       !$acc kernels
+       b1(n+1:nx) = z_0
+       !$acc end kernels
     ENDIF
     !
   END SUBROUTINE

@@ -309,7 +309,7 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   !
   ! Workspace
   !
-  INTEGER :: ig, na, ibnd, ikb, jkb, nt, ih, jh, ijkb0, is, js, ijs, ii
+  INTEGER :: ig, na, ibnd, ikb, jkb, nt, ih, jh, ijkb0, is, js, ijs
   INTEGER :: nh_nt
   REAL(DP) :: xk1, xk2, xk3, at1, at2, at3
   COMPLEX(DP) :: reduce, reduce2, reduce3, reduce4
@@ -377,13 +377,9 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      CALL gen_us_dj_gpu(ik,dvkb)
      !$acc end host_data
      !
-     !$acc parallel loop collapse(2) present(work)
-     DO ikb = 1,nkb
-        DO ig = 1,npwx
-           work(ig,ikb) = 0._DP
-        ENDDO
-     ENDDO
-     !$acc end parallel
+     !$acc kernels present(work)
+     work(:,:) = 0._DP
+     !$acc end kernels
      !
      ijkb0 = 0
      DO nt = 1,ntyp
@@ -449,27 +445,13 @@ SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      !$acc end host_data
      !
      IF(noncolin) THEN
-        !$acc parallel loop collapse(4) present(psc)
-        DO ii = 1,2
-           DO ibnd = 1,m
-              DO is = 1,npol
-                 DO ikb = 1,nkb
-                    psc(ikb,is,ibnd,ii) = 0._DP
-                 ENDDO
-              ENDDO
-           ENDDO
-        ENDDO
-        !$acc end parallel
+        !$acc kernels present(psc)
+        psc(:,:,:,:) = 0._DP
+        !$acc end kernels
      ELSE
-        !$acc parallel loop collapse(3) present(ps2)
-        DO ii = 1,2
-           DO ibnd = 1,m
-              DO ikb = 1,nkb
-                 ps2(ikb,ibnd,ii) = 0._DP
-              ENDDO
-           ENDDO
-        ENDDO
-        !$acc end parallel
+        !$acc kernels present(ps2)
+        ps2(:,:,:) = 0._DP
+        !$acc end kernels
      ENDIF
      !
      DO ibnd = 1,m

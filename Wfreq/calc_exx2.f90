@@ -39,7 +39,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d,psic_nc=>psic_nc_d
-  USE west_gpu,             ONLY : allocate_exx_gpu,deallocate_exx_gpu,sqvc_d
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,memcpy_H2D
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic,psic_nc
 #endif
@@ -67,6 +67,8 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: evckmq,phase
 #endif
+  REAL(DP), ALLOCATABLE :: sqvc(:)
+  !$acc declare device_resident(sqvc)
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   !
@@ -100,7 +102,9 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   CALL start_bar_type(barra,'sigmax',barra_load)
   !
 #if defined(__CUDA)
-  CALL allocate_exx_gpu()
+  CALL allocate_gpu()
+  !
+  ALLOCATE(sqvc(ngm))
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -168,7 +172,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
            ENDIF
            !
 #if defined(__CUDA)
-           sqvc_d = pot3D%sqvc
+           CALL memcpy_H2D(sqvc,pot3D%sqvc,ngm)
 #endif
            !
            vband = idistribute()
@@ -181,7 +185,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
                  !$acc host_data use_device(pertr)
                  CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,iv),pertr,'Wave')
                  !$acc end host_data
-                 !$acc parallel loop
+                 !$acc parallel loop present(pertr)
                  DO ir = 1,dffts_nnr
                     pertr(ir) = psic(ir)*pertr(ir)
                  ENDDO
@@ -194,7 +198,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,iv),pertr_nc(:,1),'Wave',igk_k(:,ikqs))
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx:npwx*2,iv),pertr_nc(:,2),'Wave',igk_k(:,ikqs))
                  !$acc end host_data
-                 !$acc parallel loop present(phase)
+                 !$acc parallel loop present(pertr_nc,phase)
                  DO ir = 1,dffts_nnr
                     pertr_nc(ir,1) = CONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1) &
                     & +CONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
@@ -207,7 +211,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
                  !$acc host_data use_device(evckmq,pertr)
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(:,iv),pertr,'Wave',igk_k(:,ikqs))
                  !$acc end host_data
-                 !$acc parallel loop present(phase)
+                 !$acc parallel loop present(pertr,phase)
                  DO ir = 1,dffts_nnr
                     pertr(ir) = CONJG(pertr(ir)*phase(ir))*psic(ir)
                  ENDDO
@@ -217,10 +221,10 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
                  !$acc end host_data
               ENDIF
               !
-              !$acc parallel loop
+              !$acc parallel loop present(pertg,sqvc)
               DO ig = 1,ngm
 #if defined(__CUDA)
-                 pertg(ig) = pertg(ig)*sqvc_d(ig)
+                 pertg(ig) = pertg(ig)*sqvc(ig)
 #else
                  pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
 #endif
@@ -228,7 +232,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
               !$acc end parallel
               !
               dot_tmp = 0._DP
-              !$acc parallel loop reduction(+:dot_tmp) copy(dot_tmp)
+              !$acc parallel loop reduction(+:dot_tmp) present(pertg) copy(dot_tmp)
               DO ig = 1,ngm
                  dot_tmp = dot_tmp+REAL(pertg(ig),KIND=DP)**2+AIMAG(pertg(ig))**2
               ENDDO
@@ -247,7 +251,9 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   ENDDO ! iks
   !
 #if defined(__CUDA)
-  CALL deallocate_exx_gpu()
+  CALL deallocate_gpu()
+  !
+  DEALLOCATE(sqvc)
 #endif
   !
   CALL stop_bar_type(barra,'sigmax')

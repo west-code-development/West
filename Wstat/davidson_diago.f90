@@ -1024,7 +1024,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               !
 #if defined(__CUDA)
               anorm = 0._DP
-              !$acc parallel loop reduction(+:anorm) copy(anorm)
+              !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
               DO ig = 1,npwq
                  anorm = anorm+REAL(amat(ig,k_local),KIND=DP)**2+AIMAG(amat(ig,k_local))**2
               ENDDO
@@ -1086,7 +1086,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !
 #if defined(__CUDA)
            IF(gamma_only) THEN
-              !$acc parallel vector_length(1024)
+              !$acc parallel vector_length(1024) present(vec,amat,zbraket)
               !$acc loop
               DO ip = j_local,m_local_end
                  tmp_r = 0._DP
@@ -1103,7 +1103,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               ENDDO
               !$acc end parallel
            ELSE
-              !$acc parallel vector_length(1024)
+              !$acc parallel vector_length(1024) present(vec,amat,zbraket)
               !$acc loop
               DO ip = j_local,m_local_end
                  tmp_c = 0._DP

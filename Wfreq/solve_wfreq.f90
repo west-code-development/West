@@ -1532,10 +1532,10 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
-  USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,phi_tmp_d,ps_r,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & reallocate_ps_gpu,allocate_macropol_gpu,deallocate_macropol_gpu,&
-                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,allocate_chi_gpu,&
-                                 & deallocate_chi_gpu
+  USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
+                                 & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
+                                 & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
+                                 & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
   !
   IMPLICIT NONE
   !
@@ -1550,16 +1550,18 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
-  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob,ifr_nloc,rfr_nloc
+  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob
   REAL(DP),ALLOCATABLE :: subdiago(:,:),bnorm(:)
   REAL(DP),PINNED,ALLOCATABLE :: diago(:,:),braket(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
   !$acc declare device_resident(q_s)
   COMPLEX(DP),PINNED,ALLOCATABLE :: dvpsi(:,:)
   COMPLEX(DP),ALLOCATABLE :: phi(:,:)
+  COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
+  !$acc declare device_resident(phi_tmp)
   COMPLEX(DP),PINNED,ALLOCATABLE :: phis(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: pertr(:)
-  !$acc declare device_resident(pertr)
+  COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
+  !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),PINNED,ALLOCATABLE :: pertg_all(:,:)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
@@ -1580,9 +1582,10 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   INTEGER,ALLOCATABLE :: l2g(:)
   REAL(DP),ALLOCATABLE :: eprec_loc(:)
   REAL(DP),ALLOCATABLE :: et_loc(:)
-  !$acc declare device_resident(l2g,eprec_loc,et_loc)
+  REAL(DP),ALLOCATABLE :: sqvc(:)
+  !$acc declare device_resident(l2g,eprec_loc,et_loc,sqvc)
   !
-  CALL io_push_title("(W)-Lanczos")
+  CALL io_push_title('(W)-Lanczos')
   !
   ! DISTRIBUTING...
   !
@@ -1647,46 +1650,39 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   !
   ! Initialize GPU
   !
+  CALL allocate_gpu()
   CALL allocate_gw_gpu(mypara%nlocx,mypara%nloc)
   !
-  sqvc_d = pot3D%sqvc
   dffts_nnr = dffts%nnr
   mypara_nloc = mypara%nloc
   mypara_nglob = mypara%nglob
-  ifr_nloc = ifr%nloc
-  rfr_nloc = rfr%nloc
   nbndval = MINVAL(nbnd_occ)
   !
   IF(l_read_restart) THEN
      !$acc update device(dmati,zmatr)
   ELSE
-     !$acc parallel loop collapse(3) present(dmati)
-     DO ifreq = 1,ifr_nloc
-        DO ip = 1,mypara_nloc
-           DO glob_jp = 1,mypara_nglob
-              dmati(glob_jp,ip,ifreq) = 0._DP
-           ENDDO
-        ENDDO
-     ENDDO
-     !$acc end parallel
+     !$acc kernels present(dmati)
+     dmati(:,:,:) = 0._DP
+     !$acc end kernels
      !
-     !$acc parallel loop collapse(3) present(zmatr)
-     DO ifreq = 1,rfr_nloc
-        DO ip = 1,mypara_nloc
-           DO glob_jp = 1,mypara_nglob
-              zmatr(glob_jp,ip,ifreq) = 0._DP
-           ENDDO
-        ENDDO
-     ENDDO
-     !$acc end parallel
+     !$acc kernels present(zmatr)
+     zmatr(:,:,:) = 0._DP
+     !$acc end kernels
   ENDIF
   !
   !$acc enter data copyin(bg)
   !
+  ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
+  !$acc enter data create(dvpsi)
+  ALLOCATE(sqvc(npwqx))
+  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
   ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
+  ALLOCATE(pertg(npwqx))
   IF(l_enable_lanczos) THEN
+     ALLOCATE(bnorm(mypara%nloc))
+     ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
      ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
      ALLOCATE(diago(n_lanczos,mypara%nloc))
      ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
@@ -1694,7 +1690,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
   ENDIF
   ALLOCATE(l2g(mypara%nloc))
   !
-  !$acc parallel loop
+  !$acc parallel loop present(l2g)
   DO ip = 1,mypara_nloc
      !
      ! l2g(ip) = mypara%l2g(ip)
@@ -1715,7 +1711,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
      !
      IF(glob_ip <= n_pdep_eigen_to_use) THEN
         CALL generate_pdep_fname(filepot,glob_ip)
-        fname = TRIM(wstat_save_dir)//"/"//filepot
+        fname = TRIM(wstat_save_dir)//'/'//filepot
         CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip))
      ENDIF
   ENDDO
@@ -1759,8 +1755,8 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
      CALL using_et_d(0)
      !
      IF(l_macropol) THEN
-        deeq_d = deeq
-        qq_at_d = qq_at
+        deeq_d(:,:,:,:) = deeq
+        qq_at_d(:,:,:) = qq_at
      ENDIF
      !
      nbndval = nbnd_occ(iks)
@@ -1779,6 +1775,7 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
         !
         ALLOCATE(eprec_loc(3))
         ALLOCATE(et_loc(3))
+        ALLOCATE(phi_tmp(npwx*npol,3))
         ALLOCATE(phi(npwx*npol,3))
         !$acc enter data create(phi)
         !
@@ -1794,14 +1791,16 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
            !
            iv = occband%l2g(ivloc)
            !
-           CALL commut_Hx_psi_gpu(iks,1,1,evc_d(1,iv),phi_tmp_d(1,1),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,2,evc_d(1,iv),phi_tmp_d(1,2),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,3,evc_d(1,iv),phi_tmp_d(1,3),l_skip_nl_part_of_hcomr)
+           !$acc host_data use_device(phi_tmp)
+           CALL commut_Hx_psi_gpu(iks,1,1,evc_d(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,2,evc_d(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,3,evc_d(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
+           !$acc end host_data
            !
-           !$acc parallel loop collapse(2) present(phi,bg)
+           !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
            DO i1 = 1,3
               DO i3 = 1,npwx*npol
-                 phi(i3,i1) = phi_tmp_d(i3,1)*bg(i1,1)+phi_tmp_d(i3,2)*bg(i1,2)+phi_tmp_d(i3,3)*bg(i1,3)
+                 phi(i3,i1) = phi_tmp(i3,1)*bg(i1,1)+phi_tmp(i3,2)*bg(i1,2)+phi_tmp(i3,3)*bg(i1,3)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -1814,23 +1813,24 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
            CALL set_eprec(1,evc_d(:,iv),eprec_loc(1))
            !$acc end host_data
            !
-           !$acc parallel loop
+           !$acc parallel loop present(eprec_loc,et_loc)
            DO i1 = 1,3
               eprec_loc(i1) = eprec_loc(1)
               et_loc(i1) = et_d(iv,iks)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(phi,eprec_loc,et_loc)
-           CALL precondition_m_wfcts(3,phi,phi_tmp_d,eprec_loc)
-           CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phi_tmp_d,et_loc,eprec_loc,tr2_dfpt,ierr)
+           !$acc host_data use_device(phi,phi_tmp,eprec_loc,et_loc)
+           CALL precondition_m_wfcts(3,phi,phi_tmp,eprec_loc)
+           CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
            !$acc end host_data
            !
            IF(ierr /= 0) THEN
               WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
            ENDIF
            !
-           phis(:,:,ivloc) = phi_tmp_d(:,:)
+           CALL memcpy_D2H(phis(:,:,ivloc),phi_tmp,npwx*npol*3)
+           !
         ENDDO
         !
         CALL deallocate_macropol_gpu()
@@ -1838,12 +1838,11 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
         !$acc exit data delete(phi)
         DEALLOCATE(eprec_loc)
         DEALLOCATE(et_loc)
+        DEALLOCATE(phi_tmp)
         DEALLOCATE(phi)
         !
         CALL allocate_lanczos_gpu(mypara%nloc)
      ENDIF ! macropol
-     !
-     ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
      !
      time_spent(1) = get_clock('wlanczos')
      !
@@ -1878,7 +1877,9 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
         !
         CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,iv),psic_d,'Wave')
         !
-        dvpsi_d = 0._DP
+        !$acc kernels present(dvpsi)
+        dvpsi(:,:) = 0._DP
+        !$acc end kernels
         !
         DO ip = 1,mypara%nloc
            !
@@ -1890,37 +1891,37 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
               !
               ! Use pertg_all read above
               !
-              pertg_d = pertg_all(:,ip)
+              CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
               !
               ! Multiply by sqvc
               !
-              !$acc parallel loop
+              !$acc parallel loop present(pertg,sqvc)
               DO ig = 1,npwq
-                 pertg_d(ig) = sqvc_d(ig)*pertg_d(ig)
+                 pertg(ig) = sqvc(ig)*pertg(ig)
               ENDDO
               !$acc end parallel
               !
               ! Bring it to R-space
               !
-              !$acc host_data use_device(pertr)
-              CALL single_invfft_gamma(dffts,npwq,npwqx,pertg_d,pertr,TRIM(fftdriver))
+              !$acc host_data use_device(pertg,pertr)
+              CALL single_invfft_gamma(dffts,npwq,npwqx,pertg,pertr,TRIM(fftdriver))
               !$acc end host_data
               !
-              !$acc parallel loop
+              !$acc parallel loop present(pertr)
               DO ir = 1,dffts_nnr
                  pertr(ir) = psic_d(ir)*pertr(ir)
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(pertr)
-              CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi_d(:,ip),'Wave')
+              !$acc host_data use_device(pertr,dvpsi)
+              CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(:,ip),'Wave')
               !$acc end host_data
               !
            ELSE
               !
               ipol = glob_ip-n_pdep_eigen_to_use
               dvpsi(:,ip) = phi(:,ipol)*SQRT(fpi*e2)
-              dvpsi_d(:,ip) = dvpsi(:,ip)
+              !$acc update device(dvpsi(:,ip))
               !
            ENDIF
            !
@@ -1931,28 +1932,26 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
         ENDIF
         !
         CALL reallocate_ps_gpu(nbndval,mypara%nloc)
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,mypara%nloc,dvpsi_d,(1._DP,0._DP))
+        !$acc host_data use_device(dvpsi)
+        CALL apply_alpha_pc_to_m_wfcs(nbndval,mypara%nloc,dvpsi,(1._DP,0._DP))
+        !$acc end host_data
         !
         IF(nbnd > nbndval) THEN
            !
            ! OVERLAP( glob_ip, im=1:nbnd ) = < psi_im iks | dvpsi_glob_ip >
            !
            CALL reallocate_ps_gpu(nbnd-nbndval,mypara%nloc)
-           !$acc host_data use_device(ps_r)
-           CALL glbrak_gamma_gpu(evc_d(:,nbndval+1:nbnd),dvpsi_d,ps_r,npw,npwx,nbnd-nbndval,&
+           !$acc host_data use_device(dvpsi,ps_r)
+           CALL glbrak_gamma_gpu(evc_d(:,nbndval+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval,&
            & mypara%nloc,nbnd-nbndval,npol)
            IF(nproc_bgrp > 1) THEN
               CALL mp_sum(ps_r,intra_bgrp_comm)
            ENDIF
            !$acc end host_data
            !
-           !$acc parallel loop collapse(2) present(overlap)
-           DO ic = 1,nbnd-nbndval
-              DO ip = 1,mypara_nglob
-                 overlap(ip,ic) = 0._DP
-              ENDDO
-           ENDDO
-           !$acc end parallel
+           !$acc kernels present(overlap)
+           overlap(:,1:nbnd-nbndval) = 0._DP
+           !$acc end kernels
            !
            !$acc parallel loop collapse(2) present(overlap,ps_r)
            DO ic = 1,nbnd-nbndval
@@ -2019,17 +2018,16 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
         ! Apply Pc, to be sure
         !
         CALL reallocate_ps_gpu(nbnd,mypara%nloc)
-        CALL apply_alpha_pc_to_m_wfcs(nbnd,mypara%nloc,dvpsi_d,(1._DP,0._DP))
+        !$acc host_data use_device(dvpsi)
+        CALL apply_alpha_pc_to_m_wfcs(nbnd,mypara%nloc,dvpsi,(1._DP,0._DP))
+        !$acc end host_data
         !
-        dvpsi = dvpsi_d
+        !$acc update host(dvpsi)
         !
         ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
         ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
         !
         IF(l_enable_lanczos) THEN
-           !
-           ALLOCATE(bnorm(mypara%nloc))
-           ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
            !
            CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,mypara%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
            CALL get_brak_hyper_parallel_gpu(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
@@ -2037,9 +2035,6 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
            DO ip = 1,mypara%nloc
               CALL diago_lanczos(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),mypara%nglob)
            ENDDO
-           !
-           DEALLOCATE(bnorm)
-           DEALLOCATE(subdiago)
            !
            !$acc update device(diago,braket)
            !
@@ -2121,29 +2116,31 @@ SUBROUTINE solve_wfreq_gamma_gpu(l_read_restart,l_generate_plot)
      !
      IF(l_macropol) DEALLOCATE(phis)
      !
-     DEALLOCATE(dvpsi)
-     !
   ENDDO ! KPOINT-SPIN
   !
-  DEALLOCATE(pertg_all)
+  CALL deallocate_gpu()
+  CALL deallocate_gw_gpu()
   !
   !$acc update host(dmati,zmatr)
   !$acc exit data delete(dmati,zmatr)
-  !
-  CALL deallocate_gw_gpu()
-  !
   !$acc exit data delete(bg)
-  !
+  !$acc exit data delete(dvpsi)
+  DEALLOCATE(dvpsi)
+  DEALLOCATE(sqvc)
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
+  DEALLOCATE(pertg)
   IF(l_enable_lanczos) THEN
+     DEALLOCATE(bnorm)
+     DEALLOCATE(subdiago)
      DEALLOCATE(q_s)
      !$acc exit data delete(diago,braket)
      DEALLOCATE(diago)
      DEALLOCATE(braket)
   ENDIF
   DEALLOCATE(l2g)
+  DEALLOCATE(pertg_all)
   !
   ! Synchronize and write final restart file when using pool or band group
   !
@@ -2274,7 +2271,8 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                                  & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,&
                                  & tr2_dfpt,z_head_rfr,z_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,&
                                  & wstat_save_dir,ngq,igq_q
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,nimage,inter_bgrp_comm,intra_bgrp_comm,nbgrp,nproc_bgrp
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,nimage,inter_bgrp_comm,intra_bgrp_comm,nbgrp,&
+                                 & nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE io_global,            ONLY : stdout
@@ -2302,9 +2300,10 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
-  USE west_gpu,             ONLY : sqvc_d,pertg_d,dvpsi_d,phi_tmp_d,ps_c,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & reallocate_ps_gpu,allocate_macropol_gpu,deallocate_macropol_gpu,&
-                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu
+  USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
+                                 & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
+                                 & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
+                                 & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
   !
   IMPLICIT NONE
   !
@@ -2319,7 +2318,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
-  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob,ifr_nloc,rfr_nloc,q_grid_np
+  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob
   REAL(DP),ALLOCATABLE :: subdiago(:,:),bnorm(:)
   REAL(DP),PINNED,ALLOCATABLE :: diago(:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: braket(:,:,:)
@@ -2328,9 +2327,11 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   COMPLEX(DP),PINNED,ALLOCATABLE :: dvpsi(:,:)
   COMPLEX(DP),ALLOCATABLE :: phi(:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: phis(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: pertr(:)
-  !$acc declare device_resident(pertr)
-  COMPLEX(DP),PINNED,ALLOCATABLE :: pertg_all(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
+  !$acc declare device_resident(phi_tmp)
+  COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
+  !$acc declare device_resident(pertg,pertr)
+  COMPLEX(DP),PINNED,ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: evckpq(:,:)
   COMPLEX(DP),PINNED,ALLOCATABLE :: phase(:)
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
@@ -2356,9 +2357,10 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   INTEGER,ALLOCATABLE :: l2g(:)
   REAL(DP),ALLOCATABLE :: eprec_loc(:)
   REAL(DP),ALLOCATABLE :: et_loc(:)
-  !$acc declare device_resident(l2g,eprec_loc,et_loc)
+  REAL(DP),ALLOCATABLE :: sqvc(:)
+  !$acc declare device_resident(l2g,eprec_loc,et_loc,sqvc)
   !
-  CALL io_push_title("(W)-Lanczos")
+  CALL io_push_title('(W)-Lanczos')
   !
   ! DISTRIBUTING...
   !
@@ -2438,50 +2440,38 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   !
   ! Initialize GPU
   !
+  CALL allocate_gpu()
   CALL allocate_gw_gpu(mypara%nlocx,mypara%nloc)
   !
   dffts_nnr = dffts%nnr
   mypara_nloc = mypara%nloc
   mypara_nglob = mypara%nglob
-  ifr_nloc = ifr%nloc
-  rfr_nloc = rfr%nloc
-  q_grid_np = q_grid%np
   nbndval = MINVAL(nbnd_occ)
   !
   IF(l_read_restart) THEN
      !$acc update device(zmati_q,zmatr_q)
   ELSE
-     !$acc parallel loop collapse(4) present(zmati_q)
-     DO iq = 1,q_grid_np
-        DO ifreq = 1,ifr_nloc
-           DO ip = 1,mypara_nloc
-              DO glob_jp = 1,mypara_nglob
-                 zmati_q(glob_jp,ip,ifreq,iq) = 0._DP
-              ENDDO
-           ENDDO
-        ENDDO
-     ENDDO
-     !$acc end parallel
+     !$acc kernels present(zmati_q)
+     zmati_q(:,:,:,:) = 0._DP
+     !$acc end kernels
      !
-     !$acc parallel loop collapse(4) present(zmatr_q)
-     DO iq = 1,q_grid_np
-        DO ifreq = 1,rfr_nloc
-           DO ip = 1,mypara_nloc
-              DO glob_jp = 1,mypara_nglob
-                 zmatr_q(glob_jp,ip,ifreq,iq) = 0._DP
-              ENDDO
-           ENDDO
-        ENDDO
-     ENDDO
-     !$acc end parallel
+     !$acc kernels present(zmatr_q)
+     zmatr_q(:,:,:,:) = 0._DP
+     !$acc end kernels
   ENDIF
   !
   !$acc enter data copyin(bg)
   !
+  ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
+  !$acc enter data create(dvpsi)
+  ALLOCATE(sqvc(npwqx))
   ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
+  ALLOCATE(pertg(npwqx))
   IF(l_enable_lanczos) THEN
+     ALLOCATE(bnorm(mypara%nloc))
+     ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
      ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
      ALLOCATE(diago(n_lanczos,mypara%nloc))
      ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
@@ -2489,7 +2479,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   ENDIF
   ALLOCATE(l2g(mypara%nloc))
   !
-  !$acc parallel loop
+  !$acc parallel loop present(l2g)
   DO ip = 1,mypara_nloc
      !
      ! l2g(ip) = mypara%l2g(ip)
@@ -2498,26 +2488,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   ENDDO
   !$acc end parallel
   !
-  ! Read PDEP
-  !
-  ALLOCATE(pertg_all(npwqx,mypara%nloc,q_grid%np))
-  pertg_all = 0._DP
-  !
-  DO iq = 1,q_grid%np
-     npwq = ngq(iq)
-     !
-     DO ip = 1,mypara%nloc
-        glob_ip = mypara%l2g(ip)
-        !
-        ! Decide whether read dbs E or dhpi
-        !
-        IF(glob_ip <= n_pdep_eigen_to_use) THEN
-           CALL generate_pdep_fname(filepot,glob_ip,iq)
-           fname = TRIM(wstat_save_dir)//"/"//filepot
-           CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip,iq),iq)
-        ENDIF
-     ENDDO
-  ENDDO
+  ALLOCATE(pertg_all(npwqx,mypara%nloc))
   !
   ! LOOP
   !
@@ -2534,7 +2505,20 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
      !
      CALL pot3D%init('Wave',.TRUE.,'default',iq)
      !
-     sqvc_d = pot3D%sqvc
+     CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
+     !
+     ! Read PDEP
+     !
+     pertg_all = 0._DP
+     !
+     DO ip = 1,mypara%nloc
+        glob_ip = mypara%l2g(ip)
+        IF(glob_ip <= n_pdep_eigen_to_use) THEN
+           CALL generate_pdep_fname(filepot,glob_ip,iq)
+           fname = TRIM(wstat_save_dir)//'/'//filepot
+           CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip),iq)
+        ENDIF
+     ENDDO
      !
      DO iks = 1,k_grid%nps   ! KPOINT-SPIN
         !
@@ -2571,8 +2555,8 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
         CALL using_et_d(0)
         !
         IF(l_macropol .AND. l_gammaq) THEN
-           deeq_d = deeq
-           qq_at_d = qq_at
+           deeq_d(:,:,:,:) = deeq
+           qq_at_d(:,:,:) = qq_at
         ENDIF
         !
         CALL k_grid%find(k_grid%p_cart(:,ik)+q_grid%p_cart(:,iq),'cart',ikq,g0)
@@ -2607,6 +2591,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
            !
            ALLOCATE(eprec_loc(3))
            ALLOCATE(et_loc(3))
+           ALLOCATE(phi_tmp(npwx*npol,3))
            ALLOCATE(phi(npwx*npol,3))
            !$acc enter data create(phi)
            !
@@ -2622,14 +2607,16 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
               !
               iv = occband%l2g(ivloc)
               !
-              CALL commut_Hx_psi_gpu(iks,1,1,evc_d(1,iv),phi_tmp_d(1,1),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi_gpu(iks,1,2,evc_d(1,iv),phi_tmp_d(1,2),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi_gpu(iks,1,3,evc_d(1,iv),phi_tmp_d(1,3),l_skip_nl_part_of_hcomr)
+              !$acc host_data use_device(phi_tmp)
+              CALL commut_Hx_psi_gpu(iks,1,1,evc_d(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
+              CALL commut_Hx_psi_gpu(iks,1,2,evc_d(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
+              CALL commut_Hx_psi_gpu(iks,1,3,evc_d(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
+              !$acc end host_data
               !
-              !$acc parallel loop collapse(2) present(phi,bg)
+              !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
               DO i1 = 1,3
                  DO i3 = 1,npwx*npol
-                    phi(i3,i1) = phi_tmp_d(i3,1)*bg(i1,1)+phi_tmp_d(i3,2)*bg(i1,2)+phi_tmp_d(i3,3)*bg(i1,3)
+                    phi(i3,i1) = phi_tmp(i3,1)*bg(i1,1)+phi_tmp(i3,2)*bg(i1,2)+phi_tmp(i3,3)*bg(i1,3)
                  ENDDO
               ENDDO
               !$acc end parallel
@@ -2642,23 +2629,24 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
               CALL set_eprec(1,evc_d(:,iv),eprec_loc(1))
               !$acc end host_data
               !
-              !$acc parallel loop
+              !$acc parallel loop present(eprec_loc,et_loc)
               DO i1 = 1,3
                  eprec_loc(i1) = eprec_loc(1)
                  et_loc(i1) = et_d(iv,iks)
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(phi,eprec_loc,et_loc)
-              CALL precondition_m_wfcts(3,phi,phi_tmp_d,eprec_loc)
-              CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phi_tmp_d,et_loc,eprec_loc,tr2_dfpt,ierr)
+              !$acc host_data use_device(phi,phi_tmp,eprec_loc,et_loc)
+              CALL precondition_m_wfcts(3,phi,phi_tmp,eprec_loc)
+              CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
               !$acc end host_data
               !
               IF(ierr /= 0) THEN
                  WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
               ENDIF
               !
-              phis(:,:,ivloc) = phi_tmp_d(:,:)
+              CALL memcpy_D2H(phis(:,:,ivloc),phi_tmp,npwx*npol*3)
+              !
            END DO
            !
            CALL deallocate_macropol_gpu()
@@ -2666,12 +2654,11 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
            !$acc exit data delete(phi)
            DEALLOCATE(eprec_loc)
            DEALLOCATE(et_loc)
+           DEALLOCATE(phi_tmp)
            DEALLOCATE(phi)
            !
            CALL allocate_lanczos_gpu(mypara%nloc)
         ENDIF ! macropol
-        !
-        ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
         !
         time_spent(1) = get_clock('wlanczos')
         !
@@ -2715,7 +2702,9 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
               !$acc end host_data
            ENDIF
            !
-           dvpsi_d = 0._DP
+           !$acc kernels present(dvpsi)
+           dvpsi(:,:) = 0._DP
+           !$acc end kernels
            !
            DO ip = 1,mypara%nloc
               !
@@ -2727,50 +2716,50 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                  !
                  ! Use pertg_all read above
                  !
-                 pertg_d = pertg_all(:,ip,iq)
+                 CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
                  !
                  ! Multiply by sqvc
                  !
-                 !$acc parallel loop
+                 !$acc parallel loop present(pertg,sqvc)
                  DO ig = 1,npwq
-                    pertg_d(ig) = sqvc_d(ig)*pertg_d(ig)
+                    pertg(ig) = sqvc(ig)*pertg(ig)
                  ENDDO
                  !$acc end parallel
                  !
                  ! Bring it to R-space
                  !
                  IF(noncolin) THEN
-                    !$acc host_data use_device(pertr)
-                    CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr,'Wave',igq_q(:,iq))
+                    !$acc host_data use_device(pertg,pertr)
+                    CALL single_invfft_k(dffts,npwq,npwqx,pertg,pertr,'Wave',igq_q(:,iq))
                     !$acc end host_data
-                    !$acc parallel loop present(phase)
+                    !$acc parallel loop present(pertr,phase,psick_nc)
                     DO ir = 1,dffts_nnr
                        pertr(ir) = phase(ir)*psick_nc(ir,1)*CONJG(pertr(ir))
                     ENDDO
                     !$acc end parallel
-                    !$acc host_data use_device(pertr)
-                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi_d(1:npwx,ip),'Wave',igk_k(:,current_k))
-                    CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr,'Wave',igq_q(:,iq))
+                    !$acc host_data use_device(pertr,dvpsi,pertg)
+                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1:npwx,ip),'Wave',igk_k(:,current_k))
+                    CALL single_invfft_k(dffts,npwq,npwqx,pertg,pertr,'Wave',igq_q(:,iq))
                     !$acc end host_data
-                    !$acc parallel loop present(phase)
+                    !$acc parallel loop present(pertr,phase,psick_nc)
                     DO ir = 1,dffts_nnr
                        pertr(ir) = phase(ir)*psick_nc(ir,2)*CONJG(pertr(ir))
                     ENDDO
                     !$acc end parallel
-                    !$acc host_data use_device(pertr)
-                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi_d(npwx+1:npwx*2,ip),'Wave',igk_k(:,current_k))
+                    !$acc host_data use_device(pertr,dvpsi)
+                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(npwx+1:npwx*2,ip),'Wave',igk_k(:,current_k))
                     !$acc end host_data
                  ELSE
-                    !$acc host_data use_device(pertr)
-                    CALL single_invfft_k(dffts,npwq,npwqx,pertg_d,pertr,'Wave',igq_q(:,iq))
+                    !$acc host_data use_device(pertg,pertr)
+                    CALL single_invfft_k(dffts,npwq,npwqx,pertg,pertr,'Wave',igq_q(:,iq))
                     !$acc end host_data
-                    !$acc parallel loop present(phase)
+                    !$acc parallel loop present(pertr,phase,psick)
                     DO ir = 1,dffts_nnr
                        pertr(ir) = phase(ir)*psick(ir)*CONJG(pertr(ir))
                     ENDDO
                     !$acc end parallel
-                    !$acc host_data use_device(pertr)
-                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi_d(:,ip),'Wave',igk_k(:,current_k))
+                    !$acc host_data use_device(pertr,dvpsi)
+                    CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(:,ip),'Wave',igk_k(:,current_k))
                     !$acc end host_data
                  ENDIF
                  !
@@ -2779,7 +2768,7 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
                  IF (l_gammaq) THEN
                     ipol = glob_ip-n_pdep_eigen_to_use
                     dvpsi(:,ip) = phi(:,ipol)*SQRT(fpi*e2)
-                    dvpsi_d(:,ip) = dvpsi(:,ip)
+                    !$acc update device(dvpsi(:,ip))
                  ENDIF
                  !
               ENDIF
@@ -2791,28 +2780,26 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
            ENDIF
            !
            CALL reallocate_ps_gpu(nbndval,mypara%nloc)
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,mypara%nloc,dvpsi_d,(1._DP,0._DP))
+           !$acc host_data use_device(dvpsi)
+           CALL apply_alpha_pc_to_m_wfcs(nbndval,mypara%nloc,dvpsi,(1._DP,0._DP))
+           !$acc end host_data
            !
            IF(nbnd > nbndval) THEN
               !
               ! OVERLAP( glob_ip, im=1:nbnd ) = < psi_im iks | dvpsi_glob_ip >
               !
               CALL reallocate_ps_gpu(nbnd-nbndval,mypara%nloc)
-              !$acc host_data use_device(ps_c)
-              CALL glbrak_k_gpu(evc_d(:,nbndval+1:nbnd),dvpsi_d,ps_c,npw,npwx,nbnd-nbndval,&
+              !$acc host_data use_device(dvpsi,ps_c)
+              CALL glbrak_k_gpu(evc_d(:,nbndval+1:nbnd),dvpsi,ps_c,npw,npwx,nbnd-nbndval,&
               & mypara%nloc,nbnd-nbndval,npol)
               IF(nproc_bgrp > 1) THEN
                  CALL mp_sum(ps_c,intra_bgrp_comm)
               ENDIF
               !$acc end host_data
               !
-              !$acc parallel loop collapse(2) present(overlap)
-              DO ic = 1,nbnd-nbndval
-                 DO ip = 1,mypara_nglob
-                    overlap(ip,ic) = 0._DP
-                 ENDDO
-              ENDDO
-              !$acc end parallel
+              !$acc kernels present(overlap)
+              overlap(:,1:nbnd-nbndval) = 0._DP
+              !$acc end kernels
               !
               !$acc parallel loop collapse(2) present(overlap,ps_c)
               DO ic = 1,nbnd-nbndval
@@ -2879,17 +2866,16 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
            ! Apply Pc, to be sure
            !
            CALL reallocate_ps_gpu(nbnd,mypara%nloc)
-           CALL apply_alpha_pc_to_m_wfcs(nbnd,mypara%nloc,dvpsi_d,(1._DP,0._DP))
+           !$acc host_data use_device(dvpsi)
+           CALL apply_alpha_pc_to_m_wfcs(nbnd,mypara%nloc,dvpsi,(1._DP,0._DP))
+           !$acc end host_data
            !
-           dvpsi = dvpsi_d
+           !$acc update host(dvpsi)
            !
            ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
            ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
            !
            IF(l_enable_lanczos) THEN
-              !
-              ALLOCATE(bnorm(mypara%nloc))
-              ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
               !
               CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,mypara%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
               CALL get_brak_hyper_parallel_complex_gpu(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
@@ -2897,9 +2883,6 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
               DO ip = 1,mypara%nloc
                  CALL diago_lanczos_complex(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),mypara%nglob)
               ENDDO
-              !
-              DEALLOCATE(bnorm)
-              DEALLOCATE(subdiago)
               !
               !$acc update device(diago,braket)
               !
@@ -2986,13 +2969,13 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
         !
         IF(l_macropol .AND. l_gammaq) DEALLOCATE(phis)
         !
-        DEALLOCATE(dvpsi)
-        !
      ENDDO ! KPOINT-SPIN
      !
   ENDDO ! QPOINT
   !
-  DEALLOCATE(pertg_all)
+  CALL deallocate_gpu()
+  CALL deallocate_gw_gpu()
+  !
   IF(noncolin) THEN
      DEALLOCATE(psick_nc)
   ELSE
@@ -3004,21 +2987,24 @@ SUBROUTINE solve_wfreq_k_gpu(l_read_restart,l_generate_plot)
   !
   !$acc update host(zmati_q,zmatr_q)
   !$acc exit data delete(zmati_q,zmatr_q)
-  !
-  CALL deallocate_gw_gpu()
-  !
   !$acc exit data delete(bg)
-  !
+  !$acc exit data delete(dvpsi)
+  DEALLOCATE(dvpsi)
+  DEALLOCATE(sqvc)
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
+  DEALLOCATE(pertg)
   IF(l_enable_lanczos) THEN
+     DEALLOCATE(bnorm)
+     DEALLOCATE(subdiago)
      DEALLOCATE(q_s)
      !$acc exit data delete(diago,braket)
      DEALLOCATE(diago)
      DEALLOCATE(braket)
   ENDIF
   DEALLOCATE(l2g)
+  DEALLOCATE(pertg_all)
   !
   ! Synchronize and write final restart file when using band group
   !

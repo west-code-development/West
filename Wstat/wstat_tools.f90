@@ -399,7 +399,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,l3_s,ig1
-      INTEGER :: icycl,idx,nloc,pert_nglob,pert_nlocx
+      INTEGER :: icycl,idx,nloc
       REAL(DP) :: reduce
 #if !defined(__CUDA)
       REAL(DP),EXTERNAL :: DDOT
@@ -415,18 +415,11 @@ MODULE wstat_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            pert_nglob = pert%nglob
-            pert_nlocx = pert%nlocx
+            !$acc enter data create(ag,c_distr(1:pert%nglob,l2_s:l2_e)) copyin(bg)
             !
-            !$acc enter data create(ag,c_distr(1:pert_nglob,l2_s:l2_e)) copyin(bg)
-            !
-            !$acc parallel loop collapse(2)
-            DO il2 = l2_s,l2_e
-               DO il1 = 1,pert_nglob
-                  c_distr(il1,il2) = 0._DP
-               ENDDO
-            ENDDO
-            !$acc end parallel
+            !$acc kernels present(c_distr(1:pert%nglob,l2_s:l2_e))
+            c_distr(1:pert%nglob,l2_s:l2_e) = 0._DP
+            !$acc end kernels
             !
          ENDIF
          !
@@ -452,7 +445,7 @@ MODULE wstat_tools
                      l3_s = 2
                   ENDIF
                   !
-                  !$acc parallel async
+                  !$acc parallel async present(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e))
                   !$acc loop
                   DO il2 = l2_s,l2_e
                      reduce = 0._DP
@@ -488,8 +481,8 @@ MODULE wstat_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e)) wait
-            !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+            !$acc update host(c_distr(1:pert%nglob,l2_s:l2_e)) wait
+            !$acc exit data delete(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e))
             !
             CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
             !
@@ -533,7 +526,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1
-      INTEGER :: icycl,idx,nloc,pert_nglob,pert_nlocx
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP) :: reduce
 #if !defined(__CUDA)
       COMPLEX(DP),EXTERNAL :: ZDOTC
@@ -549,18 +542,11 @@ MODULE wstat_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            pert_nglob = pert%nglob
-            pert_nlocx = pert%nlocx
+            !$acc enter data create(ag,c_distr(1:pert%nglob,l2_s:l2_e)) copyin(bg)
             !
-            !$acc enter data create(ag,c_distr(1:pert_nglob,l2_s:l2_e)) copyin(bg)
-            !
-            !$acc parallel loop collapse(2)
-            DO il2 = l2_s,l2_e
-               DO il1 = 1,pert_nglob
-                  c_distr(il1,il2) = 0._DP
-               ENDDO
-            ENDDO
-            !$acc end parallel
+            !$acc kernels present(c_distr(1:pert%nglob,l2_s:l2_e))
+            c_distr(1:pert%nglob,l2_s:l2_e) = 0._DP
+            !$acc end kernels
             !
          ENDIF
          !
@@ -580,7 +566,7 @@ MODULE wstat_tools
                   IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
                   !
 #if defined(__CUDA)
-                  !$acc parallel async
+                  !$acc parallel async present(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e))
                   !$acc loop
                   DO il2 = l2_s,l2_e
                      reduce = 0._DP
@@ -611,8 +597,8 @@ MODULE wstat_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e)) wait
-            !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+            !$acc update host(c_distr(1:pert%nglob,l2_s:l2_e)) wait
+            !$acc exit data delete(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e))
             !
             CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
             !
@@ -1008,7 +994,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: icycl,idx,nloc,pert_nlocx
+      INTEGER :: icycl,idx,nloc
       REAL(DP) :: dconst
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
@@ -1025,21 +1011,15 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         pert_nlocx = pert%nlocx
-         !
          ALLOCATE(hg(npwqx,pert%nlocx))
          ALLOCATE(hg2(npwqx,pert%nlocx))
          !
          !$acc enter data create(ag,bg,hg,hg2)
          !
-         !$acc parallel loop collapse(2)
-         DO il2 = 1,pert_nlocx
-            DO il1 = 1,npwqx
-               hg(il1,il2) = 0._DP
-               hg2(il1,il2) = 0._DP
-            ENDDO
-         ENDDO
-         !$acc end parallel
+         !$acc kernels present(hg,hg2)
+         hg(:,:) = 0._DP
+         hg2(:,:) = 0._DP
+         !$acc end kernels
          !
          DO icycl = 0,nimage-1
             !
@@ -1062,7 +1042,7 @@ MODULE wstat_tools
 #if defined(__CUDA)
                   dconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async
+                  !$acc parallel loop async present(hg,hg2,ag,bg)
                   DO il3 = 1,npwq
                      hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
                      hg2(il3,il2) = dconst*bg(il3,il1)+hg2(il3,il2)
@@ -1132,7 +1112,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: icycl,idx,nloc,pert_nlocx
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
       COMPLEX(DP),ALLOCATABLE :: hg2(:,:)
@@ -1148,21 +1128,15 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         pert_nlocx = pert%nlocx
-         !
          ALLOCATE(hg(npwqx,pert%nlocx))
          ALLOCATE(hg2(npwqx,pert%nlocx))
          !
          !$acc enter data create(ag,bg,hg,hg2)
          !
-         !$acc parallel loop collapse(2)
-         DO il2 = 1,pert_nlocx
-            DO il1 = 1,npwqx
-               hg(il1,il2) = 0._DP
-               hg2(il1,il2) = 0._DP
-            ENDDO
-         ENDDO
-         !$acc end parallel
+         !$acc kernels present(hg,hg2)
+         hg(:,:) = 0._DP
+         hg2(:,:) = 0._DP
+         !$acc end kernels
          !
          DO icycl = 0,nimage-1
             !
@@ -1185,7 +1159,7 @@ MODULE wstat_tools
 #if defined(__CUDA)
                   zconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async
+                  !$acc parallel loop async present(hg,hg2,ag,bg)
                   DO il3 = 1,npwq
                      hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
                      hg2(il3,il2) = zconst*bg(il3,il1)+hg2(il3,il2)
@@ -1252,7 +1226,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: icycl,idx,nloc,pert_nlocx
+      INTEGER :: icycl,idx,nloc
       REAL(DP) :: dconst
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
@@ -1268,19 +1242,13 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         pert_nlocx = pert%nlocx
-         !
          ALLOCATE(hg(npwqx,pert%nlocx))
          !
          !$acc enter data create(ag,hg)
          !
-         !$acc parallel loop collapse(2)
-         DO il2 = 1,pert_nlocx
-            DO il1 = 1,npwqx
-               hg(il1,il2) = 0._DP
-            ENDDO
-         ENDDO
-         !$acc end parallel
+         !$acc kernels present(hg)
+         hg(:,:) = 0._DP
+         !$acc end kernels
          !
          DO icycl = 0,nimage-1
             !
@@ -1303,7 +1271,7 @@ MODULE wstat_tools
 #if defined(__CUDA)
                   dconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async
+                  !$acc parallel loop async present(hg,ag)
                   DO il3 = 1,npwq
                      hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
                   ENDDO
@@ -1370,7 +1338,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: icycl,idx,nloc,pert_nlocx
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
 #if defined(__CUDA)
@@ -1385,19 +1353,13 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         pert_nlocx = pert%nlocx
-         !
          ALLOCATE(hg(npwqx,pert%nlocx))
          !
          !$acc enter data create(ag,hg)
          !
-         !$acc parallel loop collapse(2)
-         DO il2 = 1,pert_nlocx
-            DO il1 = 1,npwqx
-               hg(il1,il2) = 0._DP
-            ENDDO
-         ENDDO
-         !$acc end parallel
+         !$acc kernels present(hg)
+         hg(:,:) = 0._DP
+         !$acc end kernels
          !
          DO icycl = 0,nimage-1
             !
@@ -1420,7 +1382,7 @@ MODULE wstat_tools
 #if defined(__CUDA)
                   zconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async
+                  !$acc parallel loop async present(hg,ag)
                   DO il3 = 1,npwq
                      hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
                   ENDDO

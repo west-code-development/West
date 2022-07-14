@@ -286,11 +286,9 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   !
   ierr = 0
   !
-  !$acc parallel loop present(is_conv)
-  DO ibnd = 1,m
-     is_conv(ibnd) = .FALSE.
-  ENDDO
-  !$acc end parallel
+  !$acc kernels present(is_conv)
+  is_conv(:) = .FALSE.
+  !$acc end kernels
   !
   ! Step 1, initialization of the loop
   !

@@ -51,7 +51,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   !
   ! Workspace
   !
-  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,ib_index,jb,jb_index,ipair
+  INTEGER :: iks,ib,ifreq,glob_ifreq,il,im,glob_im,ip,iks_g,jb,ib_index,jb_index,ipair
   INTEGER :: nbndval,nbndval_full
   REAL(DP) :: peso
   !
@@ -72,6 +72,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   ! ZERO
   !
   sigma_corr = 0._DP
+  IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full = 0._DP
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
   !
@@ -140,10 +141,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                  & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN
                     enrg1 = et(glob_im,iks) - energy(jb_index,iks_g)
-                    partial_b = partial_b + d_body1_ifr_full(im,ifreq,ipair,iks_g)*0.5_DP*&
-                    &(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
+                    partial_b = partial_b + d_body1_ifr_full(im,ifreq,ipair,iks_g)*0.5_DP&
+                    &*(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
                  ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                    partial_b = partial_b + d_body1_ifr(im,ifreq,ib_index,iks_g)*integrate_imfreq(ifreq,enrg)
+                    partial_b = partial_b + d_body1_ifr(im,ifreq,ib_index,iks_g)&
+                    &*integrate_imfreq(ifreq,enrg)
                  ENDIF
               ENDDO
            ENDDO
@@ -307,7 +309,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                        !
                        IF (l_enable_off_diagonal .AND. l_full .AND. jb <= ib .OR. &
                        & l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib) THEN    
-                          residues_b = residues_b + (1._DP - peso) * segno &
+                          residues_b = residues_b + 0.5_DP * (1._DP - peso) * segno &
                           & * z_body_rfr_full( im, ifreq, ipair, iks_g )
                        ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                           residues_b = residues_b + (1._DP - peso) * segno &
@@ -329,7 +331,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  !
                  glob_im = aband%l2g(im)
                  !
-                 this_is_a_pole=.false.
+                 this_is_a_pole=.FALSE.
                  !
                  IF (l_frac_occ) THEN
                     IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN
@@ -380,7 +382,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                           !
                           IF( rfr%l2g(ifreq) .NE. glob_ifreq ) CYCLE
                           !
-                          residues_b = residues_b + 0.5_DP * peso * segno &
+                          residues_b = residues_b + 0.5_DP * (1._DP - peso) * segno &
                           & * z_body_rfr_full( im, ifreq, ipair, iks_g )
                           ! 
                        ENDDO

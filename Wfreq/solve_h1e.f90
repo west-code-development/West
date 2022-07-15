@@ -67,32 +67,12 @@ SUBROUTINE solve_h1e()
   CALL compute_vxx(psi, hpsi, h1e_tmp)
   !
   h1e = h1e + sigma_exx_full
-!   IF ( mpime == root ) THEN
-!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_exx_full.dat", STATUS="REPLACE", ACCESS="STREAM")
-!      WRITE(iunit) sigma_exx_full * ry_to_ha
-!      CLOSE(iunit)
-!   ENDIF
   CALL solve_hf( .TRUE. )
   h1e = h1e - sigma_exx_full
-!   IF ( mpime == root ) THEN
-!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_exx_full_a.dat", STATUS="REPLACE", ACCESS="STREAM")
-!      WRITE(iunit) sigma_exx_full * ry_to_ha
-!      CLOSE(iunit)
-!   ENDIF
   !
   h1e = h1e + REAL(sigma_corr_full)
-!   IF ( mpime == root ) THEN
-!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_corr_full.dat", STATUS="REPLACE", ACCESS="STREAM")
-!      WRITE(iunit) sigma_corr_full * ry_to_ha
-!      CLOSE(iunit)
-!   ENDIF
   CALL solve_qp( .FALSE., .FALSE., .TRUE. )
   h1e = h1e - REAL(sigma_corr_full)
-!   IF ( mpime == root ) THEN
-!      OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/sigma_corr_full_a.dat", STATUS="REPLACE", ACCESS="STREAM")
-!      WRITE(iunit) sigma_corr_full * ry_to_ha
-!      CLOSE(iunit)
-!   ENDIF
   !
   CALL qdet_db_write( )
   !

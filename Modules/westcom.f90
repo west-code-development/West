@@ -198,16 +198,15 @@ MODULE wfreq_center
   ! off-diagonal entries mapping
   !
   INTEGER :: n_pairs
-  INTEGER,ALLOCATABLE :: ijpmap(:,:)
-  INTEGER,ALLOCATABLE :: pijmap(:,:)
-  INTEGER,ALLOCATABLE :: equalpairmap(:)
+  INTEGER,    ALLOCATABLE :: ijpmap(:,:)
+  INTEGER,    ALLOCATABLE :: pijmap(:,:)
   !
   ! downfolded Hamiltonian
   REAL(DP),   ALLOCATABLE :: proj_r(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
-  REAL(DP),ALLOCATABLE :: eri(:,:,:,:)
-  REAL(DP),ALLOCATABLE :: h1e(:,:)
+  REAL(DP),   ALLOCATABLE :: eri(:,:,:,:)
+  REAL(DP),   ALLOCATABLE :: h1e(:,:)
   !
   ! gw_etot 
   !
@@ -235,6 +234,9 @@ MODULE wfreq_center
   REAL(DP),    ALLOCATABLE :: sigma_exx_full  (:,:) 
   REAL(DP),    ALLOCATABLE :: sigma_vxcl_full (:,:) 
   REAL(DP),    ALLOCATABLE :: sigma_vxcnl_full(:,:) 
+  REAL(DP),    ALLOCATABLE :: sigma_hf_full   (:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks_full (:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin_full (:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_corr_full (:,:)
   !
 END MODULE

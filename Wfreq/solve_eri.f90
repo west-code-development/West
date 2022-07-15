@@ -15,7 +15,7 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   !-----------------------------------------------------------------------
   !
   USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,iuwfc,lrwfc,&
-                                 & imfreq_list,refreq_list,ijpmap,pijmap,equalpairmap,braket,eri,&
+                                 & imfreq_list,refreq_list,ijpmap,pijmap,braket,eri,&
                                  & wfreq_save_dir,z_head_rfr_a,d_head_ifr_a,n_bands,n_pairs
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE kinds,                ONLY : DP
@@ -108,7 +108,6 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   CALL io_push_bar()
   !
   DEALLOCATE( eri, braket, chi_body )
-  DEALLOCATE( pijmap, equalpairmap )
   !
 END SUBROUTINE
 !
@@ -369,7 +368,7 @@ SUBROUTINE compute_hv()
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_bands,eri,equalpairmap
+  USE westcom,              ONLY : n_bands,eri,ijpmap
   USE pwcom,                ONLY : nspin
   USE types_coulomb,        ONLY : pot3D
   !
@@ -385,8 +384,8 @@ SUBROUTINE compute_hv()
         DO i = 1, n_bands
            DO k = 1, n_bands
               !
-              p1 = equalpairmap(i)
-              p2 = equalpairmap(k)
+              p1 = ijpmap(i,i)
+              p2 = ijpmap(k,k)
               !
               eri(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Hv
               !
@@ -404,7 +403,7 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : eri,n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,braket,equalpairmap
+  USE westcom,              ONLY : eri,n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,braket,ijpmap
   USE types_coulomb,        ONLY : pot3D
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -466,8 +465,8 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
         DO i = 1, n_bands
            DO k = 1, n_bands
               !
-              p1 = equalpairmap(i)
-              p2 = equalpairmap(k)
+              p1 = ijpmap(i,i)
+              p2 = ijpmap(k,k)
               !
               eri(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Hp
               !

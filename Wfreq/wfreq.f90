@@ -61,10 +61,10 @@ PROGRAM wfreq
   ENDIF
   !
   IF( lgate(2) ) THEN
-     CALL solve_wfreq( .FALSE., lgate(7), lgate(9) )
+     CALL solve_wfreq( .FALSE., lgate(7), .FALSE. )
   ENDIF
   !
-  IF( lgate(3) ) THEN
+  IF( lgate(3) .OR. lgate(9) ) THEN
      CALL solve_wfreq( .TRUE., lgate(7), lgate(9) )
   ENDIF
   !

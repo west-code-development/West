@@ -205,7 +205,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      ! Exit loop if no work to do
      !
      IF(.NOT. l_QDET .AND. barra_load == 0) EXIT
-     IF(l_QDET .AND. barra_load > 0) CALL errore('solve_wfreq','Err: l_QDET requires reading W from file',1)
      !
      IF(iks < bks%lastdone_ks) CYCLE
      !
@@ -637,6 +636,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   ! EPS-1 imfreq
   !
+  IF (ALLOCATED(d_epsm1_ifr)) DEALLOCATE(d_epsm1_ifr)
+  IF (ALLOCATED(d_head_ifr)) DEALLOCATE(d_head_ifr)
   ALLOCATE(dmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(dlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
   ALLOCATE(d_epsm1_ifr(pert%nglob,pert%nloc,ifr%nloc))
@@ -707,6 +708,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   ! EPS-1 refreq
   !
+  IF (ALLOCATED(z_epsm1_rfr)) DEALLOCATE(z_epsm1_rfr)
+  IF (ALLOCATED(z_head_rfr)) DEALLOCATE(z_head_rfr)
   ALLOCATE(zmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(zlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
   ALLOCATE(z_epsm1_rfr(pert%nglob,pert%nloc,rfr%nloc))

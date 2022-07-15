@@ -72,6 +72,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   ! ZERO
   !
   sigma_corr = 0._DP
+  IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full = 0._DP
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
   !
@@ -330,7 +331,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  !
                  glob_im = aband%l2g(im)
                  !
-                 this_is_a_pole=.false.
+                 this_is_a_pole=.FALSE.
                  !
                  IF (l_frac_occ) THEN
                     IF( glob_im > nbndval_full .AND. glob_im <= nbndval ) THEN

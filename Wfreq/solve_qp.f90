@@ -38,14 +38,15 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,imfreq_list_integrate,&
-                                 & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,&
-                                 & n_imfreq,d_epsm1_ifr,z_epsm1_rfr,n_spectralf,ecut_spectralf,&
-                                 & d_body1_ifr,d_body2_ifr,d_diago,z_body_rfr,sigma_z,sigma_eqplin,&
-                                 & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,&
-                                 & sigma_diff,sigma_spectralf,sigma_freq,qp_bands,n_bands,&
-                                 & l_enable_off_diagonal,ijpmap,n_pairs,d_body1_ifr_full,&
-                                 & d_body2_ifr_full,d_diago_full,z_body_rfr_full
+  USE westcom,              ONLY : n_pdep_eigen_to_use,qp_bands,n_bands,n_lanczos,&
+                                 & imfreq_list_integrate,n_secant_maxiter,trev_secant,&
+                                 & l_enable_lanczos,imfreq_list,n_imfreq,d_epsm1_ifr,z_epsm1_rfr,&
+                                 & n_spectralf,ecut_spectralf,d_body1_ifr,d_body2_ifr,d_diago,&
+                                 & z_body_rfr,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
+                                 & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,&
+                                 & sigma_freq,l_enable_off_diagonal,ijpmap,n_pairs,d_body1_ifr_full,&
+                                 & d_body2_ifr_full,d_diago_full,z_body_rfr_full,sigma_sc_eks_full,&
+                                 & sigma_sc_eqplin_full,sigma_corr_full
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,my_pool_id,intra_bgrp_comm,&
                                  & inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
@@ -77,8 +78,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,jb
-  INTEGER :: ib_index,jb_index,index
+  INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,jb,&
+           & ib_index,jb_index,ipair
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
@@ -198,7 +199,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            !
            IF ( l_enable_off_diagonal .AND. jb <= ib ) THEN
               !
-              index = ijpmap(jb_index,ib_index)
+              ipair = ijpmap(jb_index,ib_index)
               !
               CALL readin_overlap( 'g', kpt_pool%l2g(iks), jb, overlap1, pert%nglob, nbnd )
            ELSEIF ( .NOT. l_enable_off_diagonal .AND. jb == ib ) THEN
@@ -241,7 +242,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
                  IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                    d_body1_ifr_full(im,ifreq,index,iks) = dtemp2(glob_im,ifreq)
+                    d_body1_ifr_full(im,ifreq,ipair,iks) = dtemp2(glob_im,ifreq)
                  ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                     d_body1_ifr(im,ifreq,ib_index,iks) = dtemp2(glob_im,ifreq)
                  ENDIF
@@ -283,7 +284,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
                  IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                    z_body_rfr_full(im,ifreq,index,iks) = ztemp2(glob_im,ifreq)
+                    z_body_rfr_full(im,ifreq,ipair,iks) = ztemp2(glob_im,ifreq)
                  ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                     z_body_rfr(im,ifreq,ib_index,iks) = ztemp2(glob_im,ifreq)
                  ENDIF
@@ -298,7 +299,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), index, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                  CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ENDIF
@@ -306,7 +307,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos 
                     IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                       d_diago_full(il,ip,index,iks_g) = diago(il,ip) 
+                       d_diago_full(il,ip,ipair,iks_g) = diago(il,ip) 
                     ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                        d_diago(il,ip,ib_index,iks_g) = diago(il,ip)
                     ENDIF
@@ -318,8 +319,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                     DO il = 1, n_lanczos
                        DO glob_jp = 1, pert%nglob
                           IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                             d_body2_ifr_full(il,ip,ifreq,index,iks_g) = &
-                             & d_body2_ifr_full(il,ip,ifreq,index,iks_g) + braket(glob_jp,il,ip) &
+                             d_body2_ifr_full(il,ip,ifreq,ipair,iks_g) = &
+                             & d_body2_ifr_full(il,ip,ifreq,ipair,iks_g) + braket(glob_jp,il,ip) &
                              & *d_epsm1_ifr(glob_jp,ip,ifreq)
                           ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                              d_body2_ifr(il,ip,ifreq,ib_index,iks_g) = d_body2_ifr(il,ip,ifreq,ib_index,iks_g) &
@@ -419,8 +420,16 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
         ENDDO
      ENDDO
      CALL mp_sum(en,inter_pool_comm)
-     CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE., .FALSE.)
-     CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE., .FALSE.)
+     !
+     IF (l_enable_off_diagonal) THEN
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .TRUE., .FALSE.)
+        sigma_sc_eks_full = sigma_corr_full
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.)
+        sigma_sc_eks_full = ( sigma_sc_eks_full + sigma_corr_full ) * 0.5_DP
+     ELSE
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE., .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE., .FALSE.)
+     ENDIF
      !
      ! Stage sigma_corr_in
      !
@@ -451,7 +460,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      ENDDO
      sigma_z           = z_in
      sigma_eqplin(:,:) = en(:,:,2)
-     sigma_sc_eks      = sigma_cor_in
+     IF (.NOT. l_enable_off_diagonal) sigma_sc_eks      = sigma_cor_in
      CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
      !
      ! nth step of the secant solver
@@ -460,7 +469,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      notconv = k_grid%nps * n_bands
      DO ifixed = 1, n_secant_maxiter
         !
-        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE., .FALSE.)
+        IF (l_enable_off_diagonal) THEN
+           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.)
+        ELSE
+           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE., .FALSE.)
+        ENDIF
         !
         IF( my_pool_id == 0 ) THEN
            !
@@ -494,7 +507,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            ENDDO
            !
            IF( ifixed == 1 ) THEN
-              sigma_sc_eqplin(:,:) = sc(:,:,2)
+              IF (l_enable_off_diagonal) THEN
+                 sigma_sc_eqplin_full = sigma_corr_full
+              ELSE
+                 sigma_sc_eqplin(:,:) = sc(:,:,2)
+              ENDIF
            ENDIF
            !
         ENDIF

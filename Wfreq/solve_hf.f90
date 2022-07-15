@@ -40,7 +40,7 @@ SUBROUTINE solve_hf_gamma( l_QDET )
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
                                  & sigma_hf,l_enable_off_diagonal,sigma_exx_full,&
-                                 & sigma_vxcl_full,sigma_vxcnl_full
+                                 & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full
   USE mp_world,             ONLY : mpime,root
   USE pwcom,                ONLY : et
   USE io_push,              ONLY : io_push_title
@@ -82,6 +82,8 @@ SUBROUTINE solve_hf_gamma( l_QDET )
   ! Get SIGMA X
   !
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
+  IF (l_enable_off_diagonal) sigma_hf_full(:,:) = sigma_exx_full(:,:) &
+  & - sigma_vxcl_full(:,:) - sigma_vxcnl_full(:,:)
   !
   CALL writeout_solvehf( sigma_hf(1,1), n_bands, k_grid%nps )
   !
@@ -109,9 +111,6 @@ SUBROUTINE solve_hf_gamma( l_QDET )
   !DEALLOCATE( sigma_vxcl )
   !DEALLOCATE( sigma_vxcnl)
   !DEALLOCATE( sigma_hf   )
-!   DO ib = 1, qp_bandrange(2)-qp_bandrange(1)+1
-!      WRITE(stdout,*) sigma_exx_full(ib,ib,1) - sigma_vxcl_full(ib,ib,1) - sigma_vxcnl_full(ib,ib,1)
-!   ENDDO
   !
   CALL stop_clock( "solve_hf" )
   !

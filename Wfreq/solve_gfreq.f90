@@ -70,7 +70,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,ib_index,jb_index,index
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,ib_index,jb_index,ipair
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
@@ -121,7 +121,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
         IF (l_enable_off_diagonal) THEN
-           barra_load = barra_load + SIZE(qp_bands) - ib_index + 1
+           barra_load = barra_load + n_bands - ib_index + 1
         ELSE
            barra_load = barra_load + 1
         ENDIF
@@ -265,13 +265,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            CALL solve_deflated_lanczos_w_full_ortho ( nbnd, pert%nloc, n_lanczos, dvpsi, diago, subdiago, q_s, bnorm)
            !
-           DO jb_index = 1, SIZE(qp_bands)
+           DO jb_index = 1, n_bands
               !
               jb = qp_bands(jb_index)
               !
               IF (l_enable_off_diagonal .and. jb <= ib) THEN     
                  !
-                 index = ijpmap(jb_index,ib_index)
+                 ipair = ijpmap(jb_index,ib_index)
                  !
                  ! PSIC
                  !
@@ -326,7 +326,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  DEALLOCATE( subdiago1 )
                  !
-                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), index, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), ipair, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
                  ! 
                  DEALLOCATE( diago1, braket )
                  !

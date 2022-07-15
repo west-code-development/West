@@ -14,7 +14,10 @@
 SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = qp_bands(1):qp_bands(n_bands)
+  ! store in sigma_exx(n,iks) = < qp_bands(n),iks | V_exx | qp_bands(n),iks >     n = 1,n_bands
+  !
+  ! IF (l_enable_off_diagonal .AND. l_full) store in 
+  ! sigma_exx_full(ijpmap(m,n),iks) = < qp_bands(m),iks | V_exx | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
@@ -53,7 +56,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,jb,ib_index,jb_index,index
+  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,jb,ib_index,jb_index,ipair
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
@@ -133,13 +136,13 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
         ENDIF
         !
-        DO jb_index = 1, SIZE(qp_bands)
+        DO jb_index = 1,n_bands
            !
            jb = qp_bands(jb_index)
            !
            IF ( l_enable_off_diagonal ) THEN
               IF (jb > ib) CYCLE
-              index = ijpmap(jb_index,ib_index)
+              ipair = ijpmap(jb_index,ib_index)
               !
               IF (jb < ib) THEN 
                   IF (gamma_only) THEN
@@ -214,15 +217,15 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
                  !
                  IF ( l_enable_off_diagonal .AND. jb < ib ) THEN
                     braket = peso*REAL( ZDOTC( ngm, pertg(1), 1, pertg1(1), 1 ) )/omega*q_grid%weight(iq)
-                    sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g ) - occupation(iv,iks)*braket
+                    sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g ) - occupation(iv,iks)*braket
                  ELSEIF ( jb == ib ) THEN
                     braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
                     sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*braket
-                    IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g ) &
+                    IF ( l_enable_off_diagonal ) sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g ) &
                     & - occupation(iv,iks)*braket
                     IF( ib == iv .AND. gstart == 2 .AND. l_gammaq ) THEN
                        sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*pot3D%div
-                       IF ( l_enable_off_diagonal ) sigma_exx_full( index, iks_g ) = sigma_exx_full( index, iks_g )&
+                       IF ( l_enable_off_diagonal ) sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g )&
                        & - occupation(iv,iks)*pot3D%div
                     ENDIF 
                  ENDIF
@@ -233,7 +236,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
             !
         ENDDO ! jb
         !
-        CALL update_bar_type( barra, 'sigmax', SIZE(qp_bands)  )
+        CALL update_bar_type( barra, 'sigmax', n_bands  )
         !
      ENDDO ! ibloc
      !

@@ -70,7 +70,7 @@ SUBROUTINE do_loc ( )
   !
   IF( dffts%mype == dffts%root ) THEN
      !
-     ! for each point of FFT grid, the filter is ONE when point is in box/sphere, ZERO if not
+     ! for each point of FFT grid, the filter is ONE when point is in box, ZERO if not
      !
      filter(:) = 0._DP
      n_points = 0
@@ -88,7 +88,7 @@ SUBROUTINE do_loc ( )
                                  & + REAL(ir3-1,KIND=DP)/REAL(dffts%nr3,KIND=DP)*at(i,3) )
               ENDDO
               !
-              ! check point is in box/sphere
+              ! check point is in box
               !
               IF( (r_vec(1) > westpp_box(1)) .AND. (r_vec(1) < westpp_box(2)) .AND. &
                 & (r_vec(2) > westpp_box(3)) .AND. (r_vec(2) < westpp_box(4)) .AND. &
@@ -105,7 +105,7 @@ SUBROUTINE do_loc ( )
   !
   CALL scatter_grid(dffts, filter, filter_loc)
   !
-  ! broadcast the number of points in box/sphere to all FFT processes
+  ! broadcast the number of points in box to all FFT processes
   !
   CALL mp_bcast(n_points, dffts%root, dffts%comm)
   !

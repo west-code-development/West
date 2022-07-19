@@ -558,8 +558,7 @@ westpp_control
        - "E" : Output the eigenpotentials.
        - "S" : Output the screened exchange constant.
        - "D" : Output the dipole matrix elements.
-       - "L" : Output the localization factor and the inverse participation
-         ratio.
+       - "L" : Output the localization factor and the inverse participation ratio.
 
 
 .. data:: westpp_range
@@ -679,6 +678,7 @@ westpp_control
    * - **Description**
      - Macroscopic relative dielectric constant. Used in the "S" runlevel.
 
+
 .. data:: westpp_box
 
 .. list-table::
@@ -690,9 +690,8 @@ westpp_control
    * - **Default**
      - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
    * - **Description**
-     - Size of box [x_0, x_1, y_0, y_1, z_0, z_1] used for calculation of the
-       localization factor. The box parameters are given in atomic units. Used
-       in the "L" runlevel.
+     - Box [x_0, x_1, y_0, y_1, z_0, z_1] (in a.u.) within which the localization factor is computed (the "L" runlevel).
+
 |
 
 --------------

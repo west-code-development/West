@@ -57,6 +57,5 @@ input_west:
 westpp_control:
   westpp_calculation: L
   westpp_range: [50,80]
-  westpp_format: C
   westpp_box: [4.015, 12.045, 4.015, 12.045, 0.00, 8.03]
 EOF

@@ -11,10 +11,13 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
+SUBROUTINE calc_exx2(sigma_exx)
   !-----------------------------------------------------------------------
   !
-  ! store in sigma_exx(n,iks) = < n,iks | V_exx | n,iks >     n = nb1, nb2
+  ! store in sigma_exx(n,iks) = < qp_bands(n),iks | V_exx | qp_bands(n),iks >     n = 1,n_bands
+  !
+  ! IF (l_enable_off_diagonal .AND. l_full) store in 
+  ! sigma_exx_full(ijpmap(m,n),iks) = < qp_bands(m),iks | V_exx | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
@@ -27,7 +30,8 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE wavefunctions,        ONLY : evc,psic,psic_nc
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands,n_bands
+  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,n_pairs
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -42,22 +46,24 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: nb1,nb2
-  REAL(DP), INTENT(OUT) :: sigma_exx(nb1:nb2,k_grid%nps)
+  REAL(DP), INTENT(OUT) :: sigma_exx(n_bands,k_grid%nps)
   !
   ! Workspace
   !
-  COMPLEX(DP), ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
-  COMPLEX(DP), ALLOCATABLE :: evckmq(:,:),phase(:)
+  COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
+  COMPLEX(DP),ALLOCATABLE :: psic1(:), pertr1(:), pertg1(:)
+  COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
-  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g
+  COMPLEX(DP), EXTERNAL :: ZDOTC
+  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,ib_index,jb,jb_index,ipair
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   LOGICAL :: l_gammaq
-  REAL(DP) :: g0(3),peso
+  REAL(DP) :: g0(3), peso
+  COMPLEX(DP) :: braket
   !
   WRITE(stdout,'(5x,a)') ''
   CALL io_push_bar()
@@ -67,6 +73,11 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   ALLOCATE(pertg(ngm))
   IF (gamma_only) THEN
      peso = 2._DP
+     IF (l_enable_off_diagonal) THEN
+        ALLOCATE( psic1(dffts%nnr) )
+        ALLOCATE( pertr1(dffts%nnr) )
+        ALLOCATE( pertg1(ngm) )
+     ENDIF
   ELSE
      peso = 1._DP
      ALLOCATE(phase(dffts%nnr))
@@ -83,9 +94,13 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !
   sigma_exx = 0._DP
   !
-  CALL band_group%init(nb2-nb1+1,'b','band_group',.FALSE.)
+  CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  barra_load = kpt_pool%nloc*band_group%nloc
+  IF (l_enable_off_diagonal) THEN
+      barra_load = kpt_pool%nloc*band_group%nloc*band_group%nglob
+  ELSE
+      barra_load = kpt_pool%nloc*band_group%nloc
+  ENDIF
   CALL start_bar_type(barra,'sigmax',barra_load)
   !
   ! LOOP
@@ -107,7 +122,8 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
      !
      DO ibloc = 1,band_group%nloc
         !
-        ib = band_group%l2g(ibloc)+nb1-1
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')
@@ -118,68 +134,103 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
            CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
         ENDIF
         !
-        DO iq = 1,q_grid%np
+        DO jb_index = 1,n_bands
            !
-           IF(gamma_only) THEN
-              l_gammaq = .TRUE.
-              CALL pot3D%init('Rho',.FALSE.,'gb')
-              nbndval = nbnd_occ(iks)
-           ELSE
-              l_gammaq = q_grid%l_pIsGamma(iq)
-              CALL pot3D%init('Rho',.FALSE.,'gb',iq)
+           jb = qp_bands(jb_index)
+           !
+           IF ( l_enable_off_diagonal ) THEN
+              IF (jb > ib) CYCLE
+              ipair = ijpmap(jb_index,ib_index)
               !
-              CALL k_grid%find(k_grid%p_cart(:,ik)-q_grid%p_cart(:,iq),'cart',ikq,g0)
-              ikqs = k_grid%ipis2ips(ikq,is)
-              CALL compute_phase(g0,'cart',phase)
+              IF (jb < ib) THEN 
+                  IF (gamma_only) THEN
+                     CALL single_invfft_gamma(dffts,npw,npwx,evc(1,jb),psic1,'Wave')
+                  ENDIF
+               ENDIF
               !
-              nbndval = nbnd_occ(ikqs)
-              npwkq = ngk(ikqs)
-              IF(my_image_id == 0) CALL get_buffer(evckmq,lrwfc,iuwfc,ikqs)
-              CALL mp_bcast(evckmq,0,inter_image_comm)
+           ELSE 
+              IF (jb /= ib) CYCLE
            ENDIF
            !
-           vband = idistribute()
-           CALL vband%init(nbndval,'i','nbndval',.FALSE.)
-           !
-           DO ivloc = 1,vband%nloc
+           DO iq = 1, q_grid%np
               !
-              iv = vband%l2g(ivloc)
-              !
-              ! Bring it to R-space
-              IF(gamma_only) THEN
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),pertr,'Wave')
-                 DO ir = 1,dffts%nnr
-                    pertr(ir) = psic(ir)*pertr(ir)
-                 ENDDO
-                 CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Rho')
-              ELSEIF(noncolin) THEN
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
-                 DO ir = 1,dffts%nnr
-                    pertr_nc(ir,1) = CONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+CONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
-                 ENDDO
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Rho') ! no igk
+              IF (gamma_only) THEN
+                 l_gammaq = .TRUE.
+                 CALL pot3D%init('Rho',.FALSE.,'gb')
+                 nbndval = nbnd_occ(iks)
               ELSE
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv),pertr,'Wave',igk_k(1,ikqs))
-                 DO ir = 1,dffts%nnr
-                    pertr(ir) = CONJG(pertr(ir)*phase(ir))*psic(ir)
-                 ENDDO
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
+                 l_gammaq = q_grid%l_pIsGamma(iq)
+                 CALL pot3D%init('Rho',.FALSE.,'gb',iq)
+                 !
+                 !CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), is, 'cart', ikqs, g0 )  !M
+                 CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )        
+                 ikqs = k_grid%ipis2ips(ikq,is)                                                        
+                 CALL compute_phase( g0, 'cart', phase )
+                 !
+                 nbndval = nbnd_occ(ikqs)
+                 npwkq = ngk(ikqs)
+                 IF ( my_image_id == 0 ) CALL get_buffer( evckmq, lrwfc, iuwfc, ikqs )
+                 CALL mp_bcast( evckmq, 0, inter_image_comm )
               ENDIF
               !
-              DO ig = 1,ngm
-                 pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
-              ENDDO
-              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - &
-              & occupation(iv,iks)*peso*DDOT(2*ngm,pertg(1),1,pertg(1),1)/omega*q_grid%weight(iq)
-              IF(ib == iv .AND. gstart == 2 .AND. l_gammaq) &
-              sigma_exx(ib,iks_g) = sigma_exx(ib,iks_g) - occupation(iv,iks)*pot3D%div
+              vband = idistribute()
+              CALL vband%init(nbndval,'i','nbndval',.FALSE.)
               !
-           ENDDO ! ivloc
-           !
-        ENDDO ! iq
+              DO ivloc = 1,vband%nloc
+                 !
+                 iv = vband%l2g(ivloc)
+                 !
+                 ! Bring it to R-space
+                 IF (gamma_only) THEN
+                    CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),pertr,'Wave')
+                    DO ir=1,dffts%nnr
+                       IF ( l_enable_off_diagonal .AND. jb < ib ) pertr1(ir)=psic1(ir)*pertr(ir)
+                       pertr(ir)=psic(ir)*pertr(ir)
+                    ENDDO
+                    CALL single_fwfft_gamma(dffts,ngm,ngm,pertr,pertg,'Rho')
+                    IF ( l_enable_off_diagonal .AND. jb < ib ) CALL single_fwfft_gamma(dffts,ngm,ngm,pertr1,pertg1,'Rho')
+                 ELSEIF(noncolin) THEN
+                    CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
+                    CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
+                    DO ir=1,dffts%nnr 
+                       pertr_nc(ir,1)=DCONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+DCONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
+                    ENDDO
+                    CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Rho') ! no igk
+                 ELSE
+                    CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv),pertr,'Wave',igk_k(1,ikqs))
+                    DO ir=1,dffts%nnr 
+                       pertr(ir)=DCONJG(pertr(ir)*phase(ir)) * psic(ir)
+                    ENDDO
+                    CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
+                 ENDIF 
+                 !
+                 DO ig = 1,ngm
+                    pertg(ig) = pertg(ig) * pot3D%sqvc(ig) 
+                    IF ( l_enable_off_diagonal .AND. jb < ib ) pertg1(ig) = pertg1(ig) * pot3D%sqvc(ig)
+                 ENDDO
+                 !
+                 IF ( l_enable_off_diagonal .AND. jb < ib ) THEN
+                    braket = peso*REAL( ZDOTC( ngm, pertg(1), 1, pertg1(1), 1 ) )/omega*q_grid%weight(iq)
+                    sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g ) - occupation(iv,iks)*braket
+                 ELSEIF ( jb == ib ) THEN
+                    braket = peso*DDOT( 2*ngm, pertg(1), 1, pertg(1), 1)/omega*q_grid%weight(iq)
+                    sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*braket
+                    IF ( l_enable_off_diagonal ) sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g ) &
+                    & - occupation(iv,iks)*braket
+                    IF( ib == iv .AND. gstart == 2 .AND. l_gammaq ) THEN
+                       sigma_exx( ib_index, iks_g ) = sigma_exx( ib_index, iks_g ) - occupation(iv,iks)*pot3D%div
+                       IF ( l_enable_off_diagonal ) sigma_exx_full( ipair, iks_g ) = sigma_exx_full( ipair, iks_g )&
+                       & - occupation(iv,iks)*pot3D%div
+                    ENDIF 
+                 ENDIF
+                 !
+              ENDDO ! iv
+              !
+            ENDDO ! iq
+            !
+        ENDDO ! jb
         !
-        CALL update_bar_type(barra,'sigmax',1)
+        CALL update_bar_type( barra, 'sigmax', n_bands  )
         !
      ENDDO ! ibloc
      !
@@ -190,13 +241,21 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   CALL mp_sum(sigma_exx,intra_bgrp_comm)
   CALL mp_sum(sigma_exx,inter_bgrp_comm)
   CALL mp_sum(sigma_exx,inter_pool_comm)
-  CALL mp_sum(sigma_exx,inter_image_comm)
+  CALL mp_sum(sigma_exx,inter_image_comm) 
+  IF (l_enable_off_diagonal) THEN
+     CALL mp_sum(sigma_exx_full,intra_bgrp_comm)
+     CALL mp_sum(sigma_exx_full,inter_bgrp_comm)
+     CALL mp_sum(sigma_exx_full,inter_pool_comm)
+     CALL mp_sum(sigma_exx_full,inter_image_comm)
+  ENDIF
   !
-  DEALLOCATE(pertg)
-  IF(noncolin) THEN
-    DEALLOCATE(pertr_nc)
+  DEALLOCATE( pertg ) 
+  IF (l_enable_off_diagonal) DEALLOCATE( pertg1 )
+  IF( noncolin ) THEN 
+    DEALLOCATE( pertr_nc ) 
   ELSE
-    DEALLOCATE(pertr)
+    DEALLOCATE( pertr ) 
+    IF (l_enable_off_diagonal) DEALLOCATE( pertr1, psic1 )
   ENDIF
   IF(.NOT. gamma_only) THEN
      DEALLOCATE(phase)

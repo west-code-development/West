@@ -149,7 +149,7 @@ MODULE wfreq_center
   !
   ! INPUT FOR wfreq_control
   !
-  CHARACTER(LEN=8) :: wfreq_calculation
+  CHARACTER(LEN=9) :: wfreq_calculation
   INTEGER :: n_lanczos
   INTEGER :: n_pdep_eigen_to_use
   INTEGER :: n_imfreq

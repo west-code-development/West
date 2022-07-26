@@ -989,7 +989,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
         IF(l_enable_lanczos) THEN
            !
            CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
-           CALL get_brak_hyper_parallel_gpu(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
+           CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
            !
            DO ip = 1,pert%nloc
               CALL diago_lanczos(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),pert%nglob)
@@ -1429,7 +1429,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
            IF(l_enable_lanczos) THEN
               !
               CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
-              CALL get_brak_hyper_parallel_complex_gpu(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
+              CALL get_brak_hyper_parallel_complex(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
               !
               DO ip = 1,pert%nloc
                  CALL diago_lanczos_complex(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),pert%nglob)

@@ -977,9 +977,7 @@ SUBROUTINE solve_gfreq_gamma_gpu(l_read_restart)
         CALL mp_sum(overlap,inter_image_comm)
         CALL writeout_overlap('g',kpt_pool%l2g(iks),ib,overlap,pert%nglob,nbnd)
         !
-        !$acc host_data use_device(dvpsi)
         CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi,(1._DP,0._DP))
-        !$acc end host_data
         !
         !$acc update host(dvpsi)
         !
@@ -1417,9 +1415,7 @@ SUBROUTINE solve_gfreq_k_gpu(l_read_restart)
            CALL mp_sum(overlap,inter_image_comm)
            CALL writeout_overlap('g',kpt_pool%l2g(ikks),kpt_pool%l2g(iks),ib,overlap,pert%nglob,nbnd)
            !
-           !$acc host_data use_device(dvpsi)
            CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi,(1._DP,0._DP))
-           !$acc end host_data
            !
            !$acc update host(dvpsi)
            !

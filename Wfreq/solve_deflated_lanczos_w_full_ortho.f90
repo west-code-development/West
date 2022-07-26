@@ -316,8 +316,8 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho_gpu(nbnd_to_deflate, NRHS, NLSTEP
      !
      !$acc host_data use_device(q_s,r)
      CALL h_psi__gpu(npwx,npw,NRHS,q_s(:,:,il),r)
-     CALL apply_alpha_pc_to_m_wfcs(nbnd_to_deflate,NRHS,r,(1.0_DP,0.0_DP))
      !$acc end host_data
+     CALL apply_alpha_pc_to_m_wfcs(nbnd_to_deflate,NRHS,r,(1.0_DP,0.0_DP))
      !
      ! use beta
      !

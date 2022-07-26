@@ -41,9 +41,6 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
   INTEGER, INTENT(IN) :: lda,n,m
   COMPLEX(DP), INTENT(IN) :: psi(lda*npol,m)
   COMPLEX(DP), INTENT(OUT) :: hpsi(lda*npol,m)
-#if defined(__CUDA)
-  ATTRIBUTES(DEVICE) :: psi,hpsi
-#endif
   !
   INTEGER :: ibnd,ig
   !
@@ -56,7 +53,7 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
   ! ... Here we apply the kinetic energy (k+G)^2 psi
   !
 #if defined(__CUDA)
-  !$acc parallel loop collapse(2)
+  !$acc parallel loop collapse(2) present(hpsi,psi)
 #else
   !$OMP PARALLEL DEFAULT(NONE) SHARED(m,n,hpsi,g2kin,psi,lda,noncolin) PRIVATE(ibnd,ig)
   !$OMP DO COLLAPSE(2)
@@ -87,7 +84,7 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
   !
   IF(gamma_only .AND. gstart == 2) THEN
 #if defined(__CUDA)
-     !$acc parallel loop
+     !$acc parallel loop present(hpsi)
 #else
      !$OMP PARALLEL DO
 #endif

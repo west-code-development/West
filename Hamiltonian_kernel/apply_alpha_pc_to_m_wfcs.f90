@@ -38,9 +38,6 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
   INTEGER, INTENT(IN) :: nbndval,m
   COMPLEX(DP), INTENT(IN) :: alpha
   COMPLEX(DP), INTENT(INOUT) :: f(npwx*npol,m)
-#if defined(__CUDA)
-  ATTRIBUTES(DEVICE) :: f
-#endif
   !
   ! Workspace
   !
@@ -62,7 +59,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      !
      alpha_r = REAL(alpha,KIND=DP)
      !
-     !$acc host_data use_device(ps_r)
+     !$acc host_data use_device(f,ps_r)
 #if defined(__CUDA)
      CALL glbrak_gamma_gpu(evc,f,ps_r,npw,npwx,nbndval,m,nbndval,npol)
 #else
@@ -84,7 +81,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      !
   ELSE
      !
-     !$acc host_data use_device(ps_c)
+     !$acc host_data use_device(f,ps_c)
 #if defined(__CUDA)
      CALL glbrak_k_gpu(evc,f,ps_c,npw,npwx,nbndval,m,nbndval,npol)
 #else

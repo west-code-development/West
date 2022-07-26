@@ -31,16 +31,13 @@ SUBROUTINE precondition_m_wfcts(m,f,pf,eprec)
   COMPLEX(DP),INTENT(IN) :: f(npwx*npol,m)
   COMPLEX(DP),INTENT(OUT) :: pf(npwx*npol,m)
   REAL(DP),INTENT(IN) :: eprec(m)
-#if defined(__CUDA)
-  ATTRIBUTES(DEVICE) :: f,pf,eprec
-#endif
   !
   ! Workspace
   !
   INTEGER :: ibnd,ig
   !
 #if defined(__CUDA)
-  !$acc parallel loop collapse(2)
+  !$acc parallel loop collapse(2) present(pf,f,eprec)
 #else
   !$OMP PARALLEL DO COLLAPSE(2)
 #endif

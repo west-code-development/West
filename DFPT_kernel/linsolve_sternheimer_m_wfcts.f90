@@ -269,10 +269,10 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   !
   INTEGER, INTENT(IN) :: nbndval
   INTEGER, INTENT(IN) :: m
-  REAL(DP), DEVICE, INTENT(IN) :: e(m)
-  REAL(DP), DEVICE, INTENT(IN) :: eprec(m)
-  COMPLEX(DP), DEVICE, INTENT(INOUT) :: b(npwx*npol,m)
-  COMPLEX(DP), DEVICE, INTENT(INOUT) :: x(npwx*npol,m)
+  REAL(DP), INTENT(IN) :: e(m)
+  REAL(DP), INTENT(IN) :: eprec(m)
+  COMPLEX(DP), INTENT(INOUT) :: b(npwx*npol,m)
+  COMPLEX(DP), INTENT(INOUT) :: x(npwx*npol,m)
   REAL(DP), INTENT(IN) :: tr2
   INTEGER, INTENT(OUT) :: ierr
   !
@@ -292,11 +292,9 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   !
   ! Step 1, initialization of the loop
   !
-  !$acc host_data use_device(g)
   CALL apply_sternheimerop_to_m_wfcs(nbndval,x,g,e,alphapv_dfpt,m)
-  !$acc end host_data
   !
-  !$acc parallel loop collapse(2) present(g)
+  !$acc parallel loop collapse(2) present(g,b)
   DO ibnd = 1,m
      DO ig = 1,npw
         g(ig,ibnd) = g(ig,ibnd)-b(ig,ibnd)
@@ -317,7 +315,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      !
      ! Preconditioning
      !
-     !$acc parallel loop collapse(2) present(ibnd_todo,h,g)
+     !$acc parallel loop collapse(2) present(ibnd_todo,h,g,eprec)
      DO lbnd = 1,nbnd_todo
         DO ig = 1,npwx
            ibnd = ibnd_todo(lbnd)
@@ -408,7 +406,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      ! hold stored in b
      !
      DO lbnd = 1,nbnd_todo
-        !$acc parallel loop present(ibnd_todo,h,rho,rhoold)
+        !$acc parallel loop present(ibnd_todo,h,rho,rhoold,b)
         DO ig = 1,npwx*npol
            ibnd = ibnd_todo(lbnd)
            !
@@ -423,7 +421,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         !$acc end parallel
      ENDDO
      !
-     !$acc parallel loop present(ibnd_todo,eu)
+     !$acc parallel loop present(ibnd_todo,eu,e)
      DO lbnd = 1,nbnd_todo
         ibnd = ibnd_todo(lbnd)
         eu(lbnd) = e(ibnd)
@@ -432,9 +430,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      !
      ! hold stored in b
      !
-     !$acc host_data use_device(t,eu)
      CALL apply_sternheimerop_to_m_wfcs(nbndval,b,t,eu,alphapv_dfpt,nbnd_todo)
-     !$acc end host_data
      !
      IF(gamma_only) THEN
         !$acc parallel present(ibnd_todo,h,g,t,a,c)
@@ -498,7 +494,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      !
      ! hold stored in b
      !
-     !$acc parallel loop collapse(2) present(ibnd_todo,a,c,h,g,t)
+     !$acc parallel loop collapse(2) present(ibnd_todo,x,a,c,h,g,t,b)
      DO lbnd = 1,nbnd_todo
         DO ig = 1,npwx*npol
            ibnd = ibnd_todo(lbnd)

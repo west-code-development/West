@@ -366,10 +366,8 @@ MODULE dfpt_module
             CALL reallocate_ps_gpu(nbndval,band_group%nloc)
 #endif
             !
-            !$acc host_data use_device(dvpsi,dpsi,eprec_loc)
             CALL apply_alpha_pc_to_m_wfcs(nbndval,band_group%nloc,dvpsi,(-1._DP,0._DP))
             CALL precondition_m_wfcts(band_group%nloc,dvpsi,dpsi,eprec_loc)
-            !$acc end host_data
             !
             IF (l_dost) THEN
                !
@@ -378,9 +376,7 @@ MODULE dfpt_module
                ! (see also PHonon/PH/cch_psi_all.f90, where H_(k+q) is evaluated)
                !
 #if defined(__CUDA)
-               !$acc host_data use_device(dvpsi,dpsi,et_loc,eprec_loc)
                CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,band_group%nloc,dvpsi,dpsi,et_loc,eprec_loc,tr2,ierr)
-               !$acc end host_data
 #else
                CALL linsolve_sternheimer_m_wfcts(nbndval,band_group%nloc,dvpsi,dpsi,et_loc,eprec_loc,tr2,ierr)
 #endif

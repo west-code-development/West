@@ -31,9 +31,6 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval,psi,hpsi,e,alpha,m)
   ! input: the eigenvalue
   COMPLEX(DP), INTENT(IN) :: psi(npwx*npol,m)
   COMPLEX(DP), INTENT(OUT) :: hpsi(npwx*npol,m)
-#if defined(__CUDA)
-  ATTRIBUTES(DEVICE) :: e,psi,hpsi
-#endif
   ! input: the vector
   ! output: the operator applied to the vector
   !
@@ -58,7 +55,9 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval,psi,hpsi,e,alpha,m)
      ! handles band parallelization separately in dfpt_module
      !
 #if defined(__CUDA)
+     !$acc host_data use_device(psi,hpsi)
      CALL h_psi__gpu(npwx,npw,m,psi,hpsi)
+     !$acc end host_data
 #else
      CALL h_psi_(npwx,npw,m,psi,hpsi)
 #endif
@@ -67,7 +66,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval,psi,hpsi,e,alpha,m)
   ! then we compute the operator H-epsilon S
   !
 #if defined(__CUDA)
-  !$acc parallel loop collapse(2)
+  !$acc parallel loop collapse(2) present(hpsi,e,psi)
   DO ibnd = 1,m
      DO ig = 1,npw
         hpsi(ig,ibnd) = hpsi(ig,ibnd)-e(ibnd)*psi(ig,ibnd)

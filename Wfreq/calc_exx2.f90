@@ -47,7 +47,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   ! I/O
   !
   REAL(DP), INTENT(OUT) :: sigma_exx(n_bands,k_grid%nps)
-  LOGICAL,INTENT(IN) :: l_QDET
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   ! Workspace
   !
@@ -181,7 +181,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
               DO ivloc = 1,vband%nloc
                  !
                  iv = vband%l2g(ivloc)
-                 !
+                 ! for QDET double counting term, all states need to be within qp_bands
                  IF (l_QDET) THEN
                     IF ( ALL(qp_bands(:) /= iv) ) CYCLE
                  ENDIF

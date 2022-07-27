@@ -42,6 +42,8 @@ SUBROUTINE solve_h1e()
   !
   ! You need to modify this file if you plan to use things like
   ! Hubbard U, electric field, meta-GGA, etc. that are not considered here.
+  
+  ! Initial checks
   IF ( real_space ) CALL errore("solve_h1e", "real_space not supported", 1)
   IF ( lda_plus_u ) CALL errore("solve_h1e", "lda_plus_u not supported", 1)
   IF ( lelfield ) CALL errore("solve_h1e", "lelfield not supported", 1)
@@ -61,19 +63,36 @@ SUBROUTINE solve_h1e()
   ENDDO
   !
   CALL compute_hks(psi, hpsi, h1e_tmp)
+  ! H1e = H^{KS}
+  h1e = h1e_tmp
   !
   CALL compute_vxc(psi, hpsi, h1e_tmp)
+  ! H1e = H^{KS} - V_{xc}
+  h1e = h1e - h1e_tmp
   !
   CALL compute_vxx(psi, hpsi, h1e_tmp)
-  !
+  ! H1e = H^{KS} - V_{xc} - V_{xx}
+  h1e = h1e - h1e_tmp
+  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x}
   h1e = h1e + sigma_exx_full
+  print *, 'SIGMA EXX BEFORE'
+  print *, sigma_exx_full
+  !
   CALL solve_hf( .TRUE. )
+  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc}
+  print *, 'SIGMA EXX AFTER'
+  print *, sigma_exx_full
   h1e = h1e - sigma_exx_full
-  !
+  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c}
   h1e = h1e + REAL(sigma_corr_full)
+  ! Call to solve_qp with
+  ! l_secant = .FALSE.
+  ! l_generate_plot = .FALSE.
+  ! l_QDET = .TRUE. 
   CALL solve_qp( .FALSE., .FALSE., .TRUE. )
+  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c} - \Sigma^{c}_{dc}
   h1e = h1e - REAL(sigma_corr_full)
-  !
+  ! write H1e to JSON file
   CALL qdet_db_write( )
   !
   CALL io_push_bar()
@@ -89,7 +108,7 @@ SUBROUTINE compute_hks(psi, hpsi, h1e_tmp)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx,nbnd
-  USE westcom,              ONLY : n_bands,n_pairs,h1e
+  USE westcom,              ONLY : n_bands,n_pairs
   USE uspp,                 ONLY : nkb
   USE becmod,               ONLY : becp,allocate_bec_type,is_allocated_bec_type,deallocate_bec_type
   USE wvfct,                ONLY : current_k
@@ -102,6 +121,8 @@ SUBROUTINE compute_hks(psi, hpsi, h1e_tmp)
   COMPLEX(DP), INTENT(OUT) :: hpsi(npwx,n_bands,nspin)
   REAL(DP), INTENT(OUT)    :: h1e_tmp(n_pairs,nspin)
   INTEGER  :: i, s
+  !
+  ! Computes matrix elements of the Kohn-Sham Hamiltonian in the pair-basis of Kohn-Sham eigenstates. 
   !
   hpsi = 0._DP
   !
@@ -117,9 +138,8 @@ SUBROUTINE compute_hks(psi, hpsi, h1e_tmp)
      !
   ENDDO
   !
+  ! compute integrals from psi and hpsi and transform into pair-basis.
   CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "hks.dat")
-  !
-  h1e = h1e_tmp
   !
   CALL deallocate_bec_type(becp)
   !
@@ -131,7 +151,7 @@ SUBROUTINE compute_vxc(psi, hpsi, h1e_tmp)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : n_bands,n_pairs,h1e
+  USE westcom,              ONLY : n_bands,n_pairs
   USE scf,                  ONLY : scf_type,rho,rho_core,rhog_core, &
                                  & create_scf_type,destroy_scf_type
   USE xc_lib,               ONLY : exx_is_active
@@ -147,6 +167,8 @@ SUBROUTINE compute_vxc(psi, hpsi, h1e_tmp)
   INTEGER  :: i, s
   TYPE(scf_type) :: vhxc
   REAL(DP) :: ehart, charge, etxc, vtxc, eth, etotefield, ee
+  !
+  ! Computes Matrix elements of V_{xc} in the pair-basis.
   !
   CALL create_scf_type(vhxc, do_not_allocate_becsum = .true.)
   !
@@ -165,8 +187,6 @@ SUBROUTINE compute_vxc(psi, hpsi, h1e_tmp)
   !
   CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "vxc.dat")
   !
-  h1e = h1e - h1e_tmp
-  !
   CALL destroy_scf_type(vhxc)
   !
 END SUBROUTINE
@@ -177,7 +197,7 @@ SUBROUTINE compute_vxx(psi, hpsi, h1e_tmp)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : n_bands,n_pairs,h1e
+  USE westcom,              ONLY : n_bands,n_pairs
   USE scf,                  ONLY : scf_type,rho,rho_core,rhog_core, &
                                  & create_scf_type,destroy_scf_type
   USE xc_lib,               ONLY : exx_is_active
@@ -217,8 +237,6 @@ SUBROUTINE compute_vxx(psi, hpsi, h1e_tmp)
   END IF
   !
   CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "vxx.dat")
-  !
-  h1e = h1e - h1e_tmp
   !
   CALL destroy_scf_type(vhxc)
   !

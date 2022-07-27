@@ -20,7 +20,7 @@ SUBROUTINE solve_hf ( l_QDET )
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_QDET
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   IF( gamma_only ) THEN
     CALL solve_hf_gamma( l_QDET )
@@ -53,7 +53,7 @@ SUBROUTINE solve_hf_gamma( l_QDET )
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_QDET
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   ! Workspace
   !
@@ -74,6 +74,7 @@ SUBROUTINE solve_hf_gamma( l_QDET )
   ! Get SIGMA EXX
   !
   CALL calc_exx2(sigma_exx,l_QDET)
+  ! if only QDET double-counting term is required, calculation finishes here.
   IF (l_QDET) THEN
      CALL stop_clock( "solve_hf" )
      RETURN

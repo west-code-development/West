@@ -20,7 +20,8 @@ SUBROUTINE solve_qp(l_secant,l_generate_plot,l_QDET)
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot,l_QDET
+  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot,
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   IF( gamma_only ) THEN
      CALL solve_qp_gamma( l_secant, l_generate_plot, l_QDET )
@@ -65,7 +66,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot,l_QDET
+  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot,
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   ! Workspace
   !
@@ -217,7 +219,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            DO ifreq = 1, ifr%nloc 
               !
               DO im = 1, nbnd 
-                 !
+                 ! For the QDET double-counting term, all states need to be within qp_bands
                  IF (l_QDET) THEN
                     IF ( ALL(qp_bands(:) /= im) ) CYCLE
                  ENDIF
@@ -259,7 +261,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            DO ifreq = 1, rfr%nloc 
               !
               DO im = 1, nbnd 
-                 !
+                 ! For the QDET double-counting term, all states need to be within qp_bands
                  IF (l_QDET) THEN
                     IF ( ALL(qp_bands(:) /= im) ) CYCLE
                  ENDIF
@@ -295,7 +297,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            ! -----------------------------
            ! LANCZOS part : d_diago, d_body2_ifr
            ! -----------------------------
-           !
+           ! For the QDET double-counting term, there are no contributions from the Lanczos chain
            IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               IF (l_enable_off_diagonal .AND. jb <= ib) THEN
@@ -582,6 +584,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   IF (l_QDET) THEN
      ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+     ! sigma_cor_out is not required, the important output is contained in the
+     ! global variable sigma_corr_full
      IF (l_enable_off_diagonal) CALL calc_corr_gamma( sigma_cor_out, &
      & sigma_eqpsec - sigma_diff, .TRUE., .TRUE., .TRUE.)
      DEALLOCATE( sigma_cor_out )

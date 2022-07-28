@@ -92,8 +92,10 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   !
   ALLOCATE( screened_eri(n_pairs,n_pairs,nspin,nspin) )
   ALLOCATE( bare_eri(n_pairs,n_pairs,nspin,nspin) )
+  ALLOCATE( eri(n_pairs,n_pairs,nspin,nspin) )
   !
   bare_eri = 0._DP
+  eri = 0._DP
   !
   ! 4-center integrals of Vc
   !
@@ -304,7 +306,7 @@ SUBROUTINE compute_bv_direct(bare)
               p1 = bandpair%l2g(p1loc)
               !
               Bv = (1/omega) * 2.0_DP * DDOT(2*ngm,rho_gs(:,p1loc,s1),1,rho_g,1)
-              bare(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Bv
+              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + REAL(Bv)
            ENDDO
         ENDDO
         !
@@ -323,7 +325,7 @@ SUBROUTINE compute_bv_direct(bare)
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_bv_pdep()
+SUBROUTINE compute_bv_pdep(bare)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -337,6 +339,7 @@ SUBROUTINE compute_bv_pdep()
   !
   IMPLICIT NONE
   !
+  REAL(DP), INTENT(INOUT) :: bare(n_pairs,n_pairs,nspin,nspin)
   COMPLEX(DP) :: Hv,Bv
   INTEGER     :: s1, s2, p1, p2
   TYPE(bar_type) :: barra
@@ -356,7 +359,7 @@ SUBROUTINE compute_bv_pdep()
               !
               Bv = (1/omega) * ZDOTC(n_pdep_eigen_to_use,braket(p2,s2,:),1,braket(p1,s1,:),1)
               !
-              eri(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + Bv
+              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + REAL(Bv)
               !
            ENDDO
            !
@@ -375,7 +378,7 @@ SUBROUTINE compute_hv(bare)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_bands,eri,ijpmap
+  USE westcom,              ONLY : n_bands,eri,ijpmap,n_pairs
   USE pwcom,                ONLY : nspin
   USE types_coulomb,        ONLY : pot3D
   !
@@ -395,7 +398,7 @@ SUBROUTINE compute_hv(bare)
               p1 = ijpmap(i,i)
               p2 = ijpmap(k,k)
               !
-              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + Hv
+              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + REAL(Hv)
               !
            ENDDO
         ENDDO
@@ -422,7 +425,7 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body, screened)
   IMPLICIT NONE
   !
   COMPLEX(DP), INTENT(IN)  :: chi_head, chi_body(pert%nglob,pert%nloc)
-  COMPLEX(DP), INTENT(IN)  :: screened(n_pairs,n_pairs,nspin,nspin)
+  COMPLEX(DP), INTENT(INOUT)  :: screened(n_pairs,n_pairs,nspin,nspin)
   !
   COMPLEX(DP) :: Hp,Bp
   INTEGER     :: s1, s2, p1, p2, i, k, m, nloc, n

@@ -38,8 +38,8 @@ def test_indexmap():
     Test length and content of indexmap
     """
 
-    ref_map = read_indexmap_from_json('./ref/wfreq.json')
-    test_map = read_indexmap_from_json('./west.wfreq.save/wfreq.json')
+    ref_map = read_indexmap_from_json('./test012/ref/wfreq.json')
+    test_map = read_indexmap_from_json('./test012/west.wfreq.save/wfreq.json')
 
     np.testing.assert_array_equal(ref_map, test_map)
     
@@ -48,11 +48,11 @@ def test_eri():
     Test whether matrix elements of the screened Coulomb potential are correct.
     """
     # get parameters from JSON file
-    with open('../parameters.json', 'r') as f:
+    with open('./parameters.json', 'r') as f:
         parameters = json.load(f)
 
-    ref_eri = read_eri_from_json('./ref/wfreq.json')
-    test_eri = read_eri_from_json('./west.wfreq.save/wfreq.json')
+    ref_eri = read_eri_from_json('./test012/ref/wfreq.json')
+    test_eri = read_eri_from_json('./test012/west.wfreq.save/wfreq.json')
 
     np.testing.assert_almost_equal(ref_eri, test_eri,
             decimal=np.log10(float(parameters['tolerance']['pdep_eigenvalue'])))

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/H_ONCV_PBE-1.0.upf
-${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Si_ONCV_PBE-1.1.upf
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Mg_ONCV_PBE-1.2.upf
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/O_ONCV_PBE-1.2.upf
 
 cat > pw.in << EOF
 &CONTROL

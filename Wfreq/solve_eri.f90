@@ -37,6 +37,7 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   INTEGER  :: who, iloc, iunit
   COMPLEX(DP) :: freq, chi_head
   REAL(DP)    :: ry_to_ha = 0.5_DP
+  REAL(DP), ALLOCATABLE :: bare_eri(:,:,:,:), screened_eri(:,:,:,:)
   !
   COMPLEX(DP),ALLOCATABLE  :: chi_body(:,:)
   !
@@ -89,19 +90,24 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   !  
   CALL compute_braket()
   !
-  ALLOCATE( eri(n_pairs,n_pairs,nspin,nspin) )
+  ALLOCATE( screened_eri(n_pairs,n_pairs,nspin,nspin) )
+  ALLOCATE( bare_eri(n_pairs,n_pairs,nspin,nspin) )
   !
-  eri = 0._DP
+  bare_eri = 0._DP
   !
   ! 4-center integrals of Vc
   !
-  CALL compute_bv_direct()
+  CALL compute_bv_direct(bare_eri)
   !
-  CALL compute_hv()
+  CALL compute_hv(bare_eri)
   !
   ! 4-center integrals of Wp
+  screened_eri = 0._DP
   !
-  CALL compute_wp_pdep(chi_head, chi_body)
+  CALL compute_wp_pdep(chi_head, chi_body, screened_eri)
+  !
+  ! calculate total 4-center integrals
+  eri = bare_eri + REAL(screened_eri)
   !
   CALL qdet_db_write()
   !
@@ -199,7 +205,7 @@ SUBROUTINE compute_braket()
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_bv_direct()
+SUBROUTINE compute_bv_direct(bare)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -221,6 +227,7 @@ SUBROUTINE compute_bv_direct()
   !
   IMPLICIT NONE
   !
+  REAL(DP), INTENT(INOUT) :: bare(n_pairs,n_pairs,nspin,nspin)
   COMPLEX(DP),ALLOCATABLE  :: rho_gs(:,:,:), rho_g(:), rho_r(:), psi1(:), psi2(:)
   !
   COMPLEX(DP) :: Hv,Bv
@@ -297,7 +304,7 @@ SUBROUTINE compute_bv_direct()
               p1 = bandpair%l2g(p1loc)
               !
               Bv = (1/omega) * 2.0_DP * DDOT(2*ngm,rho_gs(:,p1loc,s1),1,rho_g,1)
-              eri(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Bv
+              bare(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Bv
            ENDDO
         ENDDO
         !
@@ -306,8 +313,8 @@ SUBROUTINE compute_bv_direct()
      ENDDO
   ENDDO  ! Iterate over k, l
   !
-  CALL mp_sum( eri, intra_bgrp_comm )
-  CALL mp_sum( eri, inter_image_comm )
+  CALL mp_sum( bare, intra_bgrp_comm )
+  CALL mp_sum( bare, inter_image_comm )
   !
   CALL stop_bar_type ( barra, 'Bv' )
   !
@@ -349,7 +356,7 @@ SUBROUTINE compute_bv_pdep()
               !
               Bv = (1/omega) * ZDOTC(n_pdep_eigen_to_use,braket(p2,s2,:),1,braket(p1,s1,:),1)
               !
-              eri(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Bv
+              eri(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + Bv
               !
            ENDDO
            !
@@ -364,7 +371,7 @@ SUBROUTINE compute_bv_pdep()
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_hv()
+SUBROUTINE compute_hv(bare)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -374,6 +381,7 @@ SUBROUTINE compute_hv()
   !
   IMPLICIT NONE
   !
+  REAL(DP), INTENT(INOUT) :: bare(n_pairs,n_pairs,nspin,nspin)
   COMPLEX(DP) :: Hv
   INTEGER     :: s1, s2, p1, p2, i, k
   !
@@ -387,7 +395,7 @@ SUBROUTINE compute_hv()
               p1 = ijpmap(i,i)
               p2 = ijpmap(k,k)
               !
-              eri(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Hv
+              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + Hv
               !
            ENDDO
         ENDDO
@@ -397,13 +405,13 @@ SUBROUTINE compute_hv()
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_wp_pdep(chi_head, chi_body)
+SUBROUTINE compute_wp_pdep(chi_head, chi_body, screened)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : eri,n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,braket,ijpmap
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,braket,ijpmap
   USE types_coulomb,        ONLY : pot3D
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -414,6 +422,7 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
   IMPLICIT NONE
   !
   COMPLEX(DP), INTENT(IN)  :: chi_head, chi_body(pert%nglob,pert%nloc)
+  COMPLEX(DP), INTENT(IN)  :: screened(n_pairs,n_pairs,nspin,nspin)
   !
   COMPLEX(DP) :: Hp,Bp
   INTEGER     :: s1, s2, p1, p2, i, k, m, nloc, n
@@ -437,7 +446,7 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
                  DO p2 = 1, n_pairs
                     !
                     Bp = (1/omega) * chi_body(m,nloc) * braket(p1,s1,m) * CONJG(braket(p2,s2,n))
-                    eri(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Bp
+                    screened(p2,p1,s2,s1) = screened(p2,p1,s2,s1) + Bp
                     !
                  ENDDO
               ENDDO
@@ -450,7 +459,7 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
      !
   ENDDO ! Iterate over m, n
   !
-  CALL mp_sum(eri, inter_image_comm)
+  CALL mp_sum(screened, inter_image_comm)
   !
   CALL stop_bar_type ( barra, 'Wp' )
   !
@@ -468,7 +477,7 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body)
               p1 = ijpmap(i,i)
               p2 = ijpmap(k,k)
               !
-              eri(p2,p1,s2,s1) = eri(p2,p1,s2,s1) + Hp
+              screened(p2,p1,s2,s1) = screened(p2,p1,s2,s1) + Hp
               !
            ENDDO
         ENDDO

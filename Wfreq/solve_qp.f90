@@ -20,7 +20,7 @@ SUBROUTINE solve_qp(l_secant,l_generate_plot,l_QDET)
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot,
+  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot
   LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   IF( gamma_only ) THEN
@@ -66,7 +66,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot,
+  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot
   LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   ! Workspace

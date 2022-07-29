@@ -21,7 +21,7 @@ def test_h1e():
         parameters = json.load(f)     
     
     ref_h1e = read_h1e_from_json('./test012/ref/wfreq.json')     
-    test_h1e = read_h1e_from_json('./test012/west.wfreq.save/wfreq.json')     
+    test_h1e = read_h1e_from_json('./test012/test.wfreq.save/wfreq.json')     
     
     np.testing.assert_almost_equal(ref_h1e, test_h1e,
             decimal=np.log10(float(parameters['tolerance']['pdep_eigenvalue'])))

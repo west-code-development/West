@@ -65,17 +65,20 @@ EOF
 
 
 cat > wfreq.in << EOF
-wstat_control:                                                                  
-  wstat_calculation: S                                                          
-  l_minimize_exx_if_active: true                                                
-  n_pdep_eigen: 61                                                              
-  trev_pdep: 0.01                                                               
-                                                                                
-wfreq_control:                                                                  
-  qp_bands: [61, 63, 64, 65]                                                    
-  wfreq_calculation: XWGQH                                                      
-  n_pdep_eigen_to_use: 61                                                       
-  l_enable_lanczos: true                                                        
-  l_enable_off_diagonal: true                                                   
-  macropol_calculation: C
+input_west:
+  qe_prefix: test
+  west_prefix: test
+  outdir: ./
+
+wstat_control:
+  wstat_calculation: S
+  n_pdep_eigen: 50
+
+wfreq_control:
+  wfreq_calculation: XWGQH
+  l_enable_off_diagonal: true
+  n_pdep_eigen_to_use: 50
+  qp_bands: [8,9,10]
+  n_refreq: 300
+  ecut_refreq: 2.0
 EOF

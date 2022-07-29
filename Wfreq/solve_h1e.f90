@@ -75,13 +75,9 @@ SUBROUTINE solve_h1e()
   h1e = h1e - h1e_tmp
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x}
   h1e = h1e + sigma_exx_full
-  print *, 'SIGMA EXX BEFORE'
-  print *, sigma_exx_full
   !
   CALL solve_hf( .TRUE. )
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc}
-  print *, 'SIGMA EXX AFTER'
-  print *, sigma_exx_full
   h1e = h1e - sigma_exx_full
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c}
   h1e = h1e + REAL(sigma_corr_full)
@@ -259,8 +255,9 @@ SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
   COMPLEX(DP), INTENT(IN)  :: psi(npwx,n_bands,nspin)
   COMPLEX(DP), INTENT(OUT) :: hpsi(npwx,n_bands,nspin)
   REAL(DP), INTENT(OUT)    :: h1e(n_pairs,nspin)
-  REAL(DP),ALLOCATABLE     :: h1e_tmp(:,:,:)
   CHARACTER(LEN=*), INTENT(IN) :: fname
+  !
+  REAL(DP),ALLOCATABLE     :: h1e_tmp(:,:,:)
   INTEGER   :: npw2, npwx2
   INTEGER   :: i, j, s, ib_index, jb_Index
   INTEGER   :: iunit

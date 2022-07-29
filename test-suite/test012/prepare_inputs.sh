@@ -1,53 +1,39 @@
 #!/bin/bash
 
-${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Mg_ONCV_PBE-1.2.upf
-${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/O_ONCV_PBE-1.2.upf
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Si_ONCV_PBE-1.1.upf
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/H_ONCV_PBE-1.0.upf
 
 cat > pw.in << EOF
-&CONTROL                                                                        
-  calculation = 'scf',                                                          
-  pseudo_dir = './'                                                             
-  wf_collect = .TRUE.                                                           
-/                                                                               
-&SYSTEM                                                                         
-  ibrav = 0,                                                                    
-  nat = 15,                                                                     
-  ntyp = 2,                                                                     
-  input_dft = 'PBE'                                                             
-  ecutwfc = 80                                                                  
-  nspin = 1                                                                     
-  nbnd = 80                                                                     
-/                                                                               
-&ELECTRONS                                                                      
-/                                                                               
-&IONS                                                                           
-/                                                                               
-&CELL                                                                           
-/                                                                               
-ATOMIC_SPECIES                                                                  
-  Mg  24.3050 Mg_ONCV_PBE-1.2.upf                                               
-  O  15.9994 O_ONCV_PBE-1.2.upf                                                 
-ATOMIC_POSITIONS crystal                                                        
-Mg      -0.000000000   0.000000000  -0.000000000                                
-Mg      -0.002103461  -0.002103461   0.502103461                                
-Mg      -0.002103461   0.502103461  -0.002103461                                
-Mg      -0.002103461   0.502103461   0.502103461                                
-Mg       0.502103461  -0.002103461  -0.002103461                                
-Mg       0.502103461  -0.002103461   0.502103461                                
-Mg       0.502103461   0.502103461  -0.002103461                                
-Mg       0.500000000   0.500000000   0.500000000                                
-O        0.250000000   0.250000000   0.750000000                                
-O        0.250000000   0.750000000   0.250000000                                
-O        0.250000000   0.750000000   0.750000000                                
-O        0.750000000   0.250000000   0.250000000                                
-O        0.750000000   0.250000000   0.750000000                                
-O        0.750000000   0.750000000   0.250000000                                
-O        0.750000000   0.750000000   0.750000000                                
-K_POINTS gamma                                                                  
-CELL_PARAMETERS angstrom                                                        
-  -0.000000 4.249236 4.249236                                                   
-  4.249236 0.000000 4.249236                                                    
-  4.249236 4.249236 0.000000
+&control
+calculation  = 'scf'
+restart_mode = 'from_scratch'
+pseudo_dir   = './'
+outdir       = './'
+prefix       = 'test'
+wf_collect   = .true.
+/
+&system
+ibrav           = 1
+celldm(1)       = 20
+nat             = 5
+ntyp            = 2
+ecutwfc         = 25.0
+nbnd            = 10
+assume_isolated = 'mp'
+/
+&electrons
+diago_full_acc = .true.
+/
+ATOMIC_SPECIES
+Si 28.0855  Si_ONCV_PBE-1.1.upf
+H  1.00794   H_ONCV_PBE-1.0.upf
+ATOMIC_POSITIONS bohr
+Si      10.000000   10.000000  10.000000
+H       11.614581   11.614581  11.614581
+H        8.385418    8.385418  11.614581
+H        8.385418   11.614581   8.385418
+H       11.614581    8.385418   8.385418
+K_POINTS {gamma}
 EOF
 
 

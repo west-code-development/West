@@ -38,15 +38,14 @@ EOF
 
 
 cat > wstat.in << EOF
-{                                                                               
-  "input_west": {},                                                             
-  "wstat_control": {                                                            
-    "wstat_calculation": "S",                                                   
-    "l_minimize_exx_if_active": true,                                           
-    "n_pdep_eigen": 61,                                                         
-    "trev_pdep": 0.01                                                           
-  }                                                                             
-}      
+input_west:
+  qe_prefix: test
+  west_prefix: test
+  outdir: ./
+
+wstat_control:
+  wstat_calculation: S
+  n_pdep_eigen: 50
 EOF
 
 

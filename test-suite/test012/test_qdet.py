@@ -52,7 +52,7 @@ def test_eri():
         parameters = json.load(f)
 
     ref_eri = read_eri_from_json('./test012/ref/wfreq.json')
-    test_eri = read_eri_from_json('./test012/west.wfreq.save/wfreq.json')
+    test_eri = read_eri_from_json('./test012/test.wfreq.save/wfreq.json')
 
     np.testing.assert_almost_equal(ref_eri, test_eri,
             decimal=np.log10(float(parameters['tolerance']['pdep_eigenvalue'])))

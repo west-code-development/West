@@ -39,7 +39,7 @@ def test_indexmap():
     """
 
     ref_map = read_indexmap_from_json('./test012/ref/wfreq.json')
-    test_map = read_indexmap_from_json('./test012/west.wfreq.save/wfreq.json')
+    test_map = read_indexmap_from_json('./test012/test.wfreq.save/wfreq.json')
 
     np.testing.assert_array_equal(ref_map, test_map)
     

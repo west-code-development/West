@@ -37,7 +37,8 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   INTEGER  :: who, iloc, iunit
   COMPLEX(DP) :: freq, chi_head
   REAL(DP)    :: ry_to_ha = 0.5_DP
-  REAL(DP), ALLOCATABLE :: bare_eri(:,:,:,:), screened_eri(:,:,:,:)
+  REAL(DP), ALLOCATABLE :: bare_eri(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: screened_eri(:,:,:,:)
   !
   COMPLEX(DP),ALLOCATABLE  :: chi_body(:,:)
   !
@@ -109,7 +110,7 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   CALL compute_wp_pdep(chi_head, chi_body, screened_eri)
   !
   ! calculate total 4-center integrals
-  eri = bare_eri + REAL(screened_eri)
+  eri(:,:,:,:) = bare_eri(:,:,:,:) + REAL(screened_eri(:,:,:,:))
   !
   CALL qdet_db_write()
   !

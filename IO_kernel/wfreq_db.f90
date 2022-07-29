@@ -237,6 +237,7 @@ MODULE wfreq_db
          !
          CALL json%initialize()
          !
+         PRINT *, 'logfile=', TRIM(logfile)
          CALL json%load(filename=TRIM(logfile))
          !
          ! ALLOCATE( h1e(n_pairs,nspin) )

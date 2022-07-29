@@ -68,10 +68,6 @@ PROGRAM wfreq
      CALL solve_wfreq( .TRUE., lgate(7), lgate(9) )
   ENDIF
   !
-  IF( lgate(9) ) THEN
-     CALL solve_eri( 1, .TRUE. )
-  ENDIF
-  !
   IF( lgate(4) ) THEN
      CALL solve_gfreq( .FALSE. )
   ENDIF
@@ -82,6 +78,10 @@ PROGRAM wfreq
   !
   IF( lgate(6) .OR. lgate(8) ) THEN
      CALL solve_qp( lgate(6), lgate(8) )
+  ENDIF
+  !
+  IF( lgate(9) ) THEN
+     CALL solve_eri( 1, .TRUE. )
   ENDIF
   !
   CALL exx_ungo( )

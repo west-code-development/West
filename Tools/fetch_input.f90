@@ -493,8 +493,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ELSE 
         DO i = 0, SIZE(qp_bands)-1 ! Python indices start at 0
            IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands',1)
-           IF ( i /= SIZE(qp_bands)-1 .AND. qp_bands(i+1) >= qp_bands(i+2) ) &
-           & CALL errore('fetch_input','Err: qp_bands',1)                    
         ENDDO
      ENDIF
      IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)

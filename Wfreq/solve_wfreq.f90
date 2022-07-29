@@ -91,11 +91,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
-  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob
+  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob,ifr_nloc,rfr_nloc
   REAL(DP),ALLOCATABLE :: subdiago(:,:),bnorm(:)
   REAL(DP),ALLOCATABLE :: diago(:,:),braket(:,:,:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: diago,braket
+  ATTRIBUTES(PINNED) :: braket
 #endif
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
   !$acc declare device_resident(q_s)
@@ -225,9 +225,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   dffts_nnr = dffts%nnr
   mypara_nloc = mypara%nloc
   mypara_nglob = mypara%nglob
+  ifr_nloc = ifr%nloc
+  rfr_nloc = rfr%nloc
   nbndval = MINVAL(nbnd_occ)
   !
-  !$acc enter data copyin(bg)
+  !$acc enter data copyin(bg,imfreq_list,refreq_list)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
   !$acc enter data create(dvpsi)
@@ -239,14 +241,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
-  IF(l_enable_lanczos) THEN
-     ALLOCATE(bnorm(mypara%nloc))
-     ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
-     ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
-     ALLOCATE(diago(n_lanczos,mypara%nloc))
-     ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
-     !$acc enter data create(diago,braket)
-  ENDIF
   ALLOCATE(l2g(mypara%nloc))
   !
   !$acc parallel loop present(l2g)
@@ -342,7 +336,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ! Parallel macropol
      IF(l_macropol) THEN
 #if defined(__CUDA)
-        CALL deallocate_lanczos_gpu()
         CALL allocate_macropol_gpu()
         CALL reallocate_ps_gpu(nbndval,3)
 #endif
@@ -429,12 +422,24 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
 #if defined(__CUDA)
         CALL deallocate_macropol_gpu()
-        CALL allocate_lanczos_gpu(mypara%nloc)
 #endif
         !
      ENDIF ! macropol
      !
      time_spent(1) = get_clock( 'wlanczos' )
+     !
+     IF(l_enable_lanczos) THEN
+#if defined(__CUDA)
+        CALL allocate_lanczos_gpu(mypara%nloc)
+#endif
+        !
+        ALLOCATE(bnorm(mypara%nloc))
+        ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
+        ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
+        ALLOCATE(diago(n_lanczos,mypara%nloc))
+        ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
+        !$acc enter data create(diago,braket)
+     ENDIF
      !
      CALL band_group%init(nbndval,'b','band_group',.FALSE.)
      !
@@ -579,51 +584,47 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            ! Update dmati with cond
            !
-           DO ifreq = 1, ifr%nloc
+           DO ic = 1,nbnd-nbndval
               !
-              frequency = imfreq_list( ifreq )
+              ecv = et(ic+nbndval,iks)-et(iv,iks)
               !
-              DO ic = 1,nbnd-nbndval
-                 !
-                 ecv = et(ic+nbndval,iks)-et(iv,iks)
-                 dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
-                 !
-                 !$acc parallel loop collapse(2) present(dmati,overlap)
+              !$acc parallel loop collapse(3) present(imfreq_list,dmati,overlap)
+              DO ifreq = 1,ifr_nloc
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
+                       frequency = imfreq_list(ifreq)
+                       dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                        dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq) &
                        & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
                     ENDDO
                  ENDDO
-                 !$acc end parallel
-                 !
-              ENDDO ! ic
-           ENDDO ! ifreq
+              ENDDO ! ifreq
+              !$acc end parallel
+              !
+           ENDDO ! ic
            !
            ! Update zmatr with cond
            !
-           DO ifreq = 1, rfr%nloc
+           DO ic = 1,nbnd-nbndval
               !
-              frequency = refreq_list( ifreq )
+              ecv = et(ic+nbndval,iks)-et(iv,iks)
               !
-              DO ic = 1,nbnd-nbndval
-                 !
-                 ecv = et(ic+nbndval,iks)-et(iv,iks)
-                 zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
-                 zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
-                 zfactor = zmwo/zp+zmwo/zm
-                 !
-                 !$acc parallel loop collapse(2) present(zmatr,overlap)
+              !$acc parallel loop collapse(3) present(refreq_list,zmatr,overlap)
+              DO ifreq = 1,rfr_nloc
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
+                       frequency = refreq_list(ifreq)
+                       zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
+                       zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
+                       zfactor = zmwo/zp+zmwo/zm
                        zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
                        & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
                     ENDDO
                  ENDDO
-                 !$acc end parallel
-                 !
-              ENDDO ! ic
-           ENDDO ! ifreq
+              ENDDO ! ifreq
+              !$acc end parallel
+              !
+           ENDDO ! ic
            !
         ENDIF
         !
@@ -658,36 +659,32 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            ! Update dmati with lanczos
            !
-           DO ifreq = 1, ifr%nloc
+           DO il = 1,n_lanczos
               !
-              frequency = imfreq_list( ifreq )
-              !
-              DO il = 1, n_lanczos
-                 !
-                 !$acc parallel loop collapse(2) present(diago,dmati,braket)
+              !$acc parallel loop collapse(3) present(imfreq_list,diago,dmati,braket)
+              DO ifreq = 1,ifr_nloc
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
+                       frequency = imfreq_list(ifreq)
                        ecv = diago(il,ip)-this_et
                        dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                        dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*dfactor
                     ENDDO
                  ENDDO
-                 !$acc end parallel
-                 !
-              ENDDO ! il
-           ENDDO ! ifreq
+              ENDDO ! ifreq
+              !$acc end parallel
+              !
+           ENDDO ! il
            !
            ! Update zmatr with lanczos
            !
-           DO ifreq = 1, rfr%nloc
+           DO il = 1, n_lanczos
               !
-              frequency = refreq_list( ifreq )
-              !
-              DO il = 1, n_lanczos
-                 !
-                 !$acc parallel loop collapse(2) present(diago,zmatr,braket)
+              !$acc parallel loop collapse(3) present(refreq_list,diago,zmatr,braket)
+              DO ifreq = 1,rfr_nloc
                  DO ip = 1,mypara_nloc
                     DO glob_jp = 1,mypara_nglob
+                       frequency = refreq_list(ifreq)
                        ecv = diago(il,ip)-this_et
                        zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
                        zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
@@ -695,10 +692,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                        zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*zfactor
                     ENDDO
                  ENDDO
-                 !$acc end parallel
-                 !
-              ENDDO ! il
-           ENDDO ! ifreq
+              ENDDO ! ifreq
+              !$acc end parallel
+              !
+           ENDDO ! il
            !
         ENDIF ! l_enable_lanczos
         !
@@ -734,6 +731,19 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      IF(l_macropol) DEALLOCATE(phis)
      !
+     IF(l_enable_lanczos) THEN
+#if defined(__CUDA)
+        CALL deallocate_lanczos_gpu()
+#endif
+        !
+        DEALLOCATE(bnorm)
+        DEALLOCATE(subdiago)
+        DEALLOCATE(q_s)
+        !$acc exit data delete(diago,braket)
+        DEALLOCATE(diago)
+        DEALLOCATE(braket)
+     ENDIF
+     !
   ENDDO ! KPOINT-SPIN
   !
 #if defined(__CUDA)
@@ -743,7 +753,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   !$acc update host(dmati,zmatr)
   !$acc exit data delete(dmati,zmatr)
-  !$acc exit data delete(bg)
+  !$acc exit data delete(bg,imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
   DEALLOCATE(sqvc)
@@ -751,14 +761,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
-  IF(l_enable_lanczos) THEN
-     DEALLOCATE(bnorm)
-     DEALLOCATE(subdiago)
-     DEALLOCATE(q_s)
-     !$acc exit data delete(diago,braket)
-     DEALLOCATE(diago)
-     DEALLOCATE(braket)
-  ENDIF
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !
@@ -952,12 +954,12 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
-  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob
+  INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob,ifr_nloc,rfr_nloc
   REAL(DP),ALLOCATABLE :: subdiago(:,:),bnorm(:)
   REAL(DP),ALLOCATABLE :: diago(:,:)
   COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: diago,braket
+  ATTRIBUTES(PINNED) :: braket
 #endif
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
   !$acc declare device_resident(q_s)
@@ -976,10 +978,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evckpq(:,:)
-  COMPLEX(DP),ALLOCATABLE :: phase(:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: pertg_all,evckpq,phase
+  ATTRIBUTES(PINNED) :: pertg_all,evckpq
 #endif
+  COMPLEX(DP),ALLOCATABLE :: phase(:)
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
   !$acc declare device_resident(psick,psick_nc)
   INTEGER :: npwkq
@@ -1108,9 +1110,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   dffts_nnr = dffts%nnr
   mypara_nloc = mypara%nloc
   mypara_nglob = mypara%nglob
+  ifr_nloc = ifr%nloc
+  rfr_nloc = rfr%nloc
   nbndval = MINVAL(nbnd_occ)
   !
-  !$acc enter data copyin(bg)
+  !$acc enter data copyin(bg,imfreq_list,refreq_list)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
   !$acc enter data create(dvpsi)
@@ -1119,14 +1123,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
-  IF(l_enable_lanczos) THEN
-     ALLOCATE(bnorm(mypara%nloc))
-     ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
-     ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
-     ALLOCATE(diago(n_lanczos,mypara%nloc))
-     ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
-     !$acc enter data create(diago,braket)
-  ENDIF
   ALLOCATE(l2g(mypara%nloc))
   !
   !$acc parallel loop present(l2g)
@@ -1254,7 +1250,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         IF(l_macropol .AND. l_gammaq) THEN
 #if defined(__CUDA)
-           CALL deallocate_lanczos_gpu()
            CALL allocate_macropol_gpu()
            CALL reallocate_ps_gpu(nbndval,3)
 #endif
@@ -1341,12 +1336,24 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
 #if defined(__CUDA)
            CALL deallocate_macropol_gpu()
-           CALL allocate_lanczos_gpu(mypara%nloc)
 #endif
            !
         ENDIF ! macropol
         !
         time_spent(1) = get_clock( 'wlanczos' )
+        !
+        IF(l_enable_lanczos) THEN
+#if defined(__CUDA)
+           CALL allocate_lanczos_gpu(mypara%nloc)
+#endif
+           !
+           ALLOCATE(bnorm(mypara%nloc))
+           ALLOCATE(subdiago(n_lanczos-1,mypara%nloc))
+           ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
+           ALLOCATE(diago(n_lanczos,mypara%nloc))
+           ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
+           !$acc enter data create(diago,braket)
+        ENDIF
         !
         CALL band_group%init(nbndval,'b','band_group',.FALSE.)
         !
@@ -1522,51 +1529,47 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               ! Update zmati with cond
               !
-              DO ifreq = 1, ifr%nloc
+              DO ic = 1,nbnd-nbndval
                  !
-                 frequency = imfreq_list( ifreq )
+                 ecv = et(ic+nbndval,iks)-et(iv,ikqs)
                  !
-                 DO ic = 1,nbnd-nbndval
-                    !
-                    ecv = et(ic+nbndval,iks)-et(iv,ikqs)
-                    dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
-                    !
-                    !$acc parallel loop collapse(2) present(zmati_q,overlap)
+                 !$acc parallel loop collapse(3) present(imfreq_list,zmati_q,overlap)
+                 DO ifreq = 1,ifr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
+                          frequency = imfreq_list(ifreq)
+                          dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                           zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) &
                           & +CONJG(overlap(l2g(ip),ic))*overlap(glob_jp,ic)*dfactor
                        ENDDO
                     ENDDO
-                    !$acc end parallel
-                    !
-                 ENDDO ! ic
-              ENDDO ! ifreq
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ENDDO ! ic
               !
               ! Update zmatr with cond
               !
-              DO ifreq = 1, rfr%nloc
+              DO ic = 1,nbnd-nbndval
                  !
-                 frequency = refreq_list( ifreq )
+                 ecv = et(ic+nbndval,iks)-et(iv,ikqs)
                  !
-                 DO ic = 1,nbnd-nbndval
-                    !
-                    ecv = et(ic+nbndval,iks)-et(iv,ikqs)
-                    zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
-                    zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
-                    zfactor = zmwo/zp+zmwo/zm
-                    !
-                    !$acc parallel loop collapse(2) present(zmatr_q,overlap)
+                 !$acc parallel loop collapse(3) present(refreq_list,zmatr_q,overlap)
+                 DO ifreq = 1,rfr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
+                          frequency = refreq_list(ifreq)
+                          zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
+                          zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
+                          zfactor = zmwo/zp+zmwo/zm
                           zmatr_q(glob_jp,ip,ifreq,iq) = zmatr_q(glob_jp,ip,ifreq,iq) &
                           & +CONJG(overlap(l2g(ip),ic))*overlap(glob_jp,ic)*zfactor
                        ENDDO
                     ENDDO
-                    !$acc end parallel
-                    !
-                 ENDDO ! ic
-              ENDDO ! ifreq
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ENDDO ! ic
               !
            ENDIF
            !
@@ -1601,37 +1604,33 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               ! Update zmati with lanczos
               !
-              DO ifreq = 1, ifr%nloc
+              DO il = 1,n_lanczos
                  !
-                 frequency = imfreq_list( ifreq )
-                 !
-                 DO il = 1, n_lanczos
-                    !
-                    !$acc parallel loop collapse(2) present(diago,zmati_q,braket)
+                 !$acc parallel loop collapse(3) present(imfreq_list,diago,zmati_q,braket)
+                 DO ifreq = 1,ifr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
+                          frequency = imfreq_list(ifreq)
                           ecv = diago(il,ip)-this_et
                           dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                           zmati_q(glob_jp,ip,ifreq,iq) = zmati_q(glob_jp,ip,ifreq,iq) &
                           & +CONJG(braket(glob_jp,il,ip))*dfactor
                        ENDDO
                     ENDDO
-                    !$acc end parallel
-                    !
-                 ENDDO ! il
-              ENDDO ! ifreq
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ENDDO ! il
               !
               ! Update zmatr with lanczos
               !
-              DO ifreq = 1, rfr%nloc
+              DO il = 1,n_lanczos
                  !
-                 frequency = refreq_list( ifreq )
-                 !
-                 DO il = 1, n_lanczos
-                    !
-                    !$acc parallel loop collapse(2) present(diago,zmatr_q,braket)
+                 !$acc parallel loop collapse(3) present(refreq_list,diago,zmatr_q,braket)
+                 DO ifreq = 1,rfr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
+                          frequency = refreq_list(ifreq)
                           ecv = diago(il,ip)-this_et
                           zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
                           zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
@@ -1640,10 +1639,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                           & +CONJG(braket(glob_jp,il,ip))*zfactor
                        ENDDO
                     ENDDO
-                    !$acc end parallel
-                    !
-                 ENDDO ! il
-              ENDDO ! ifreq
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ENDDO ! il
               !
            ENDIF ! l_enable_lanczos
            !
@@ -1681,6 +1680,19 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         IF(l_macropol .AND. l_gammaq) DEALLOCATE(phis)
         !
+        IF(l_enable_lanczos) THEN
+#if defined(__CUDA)
+           CALL deallocate_lanczos_gpu()
+#endif
+           !
+           DEALLOCATE(bnorm)
+           DEALLOCATE(subdiago)
+           DEALLOCATE(q_s)
+           !$acc exit data delete(diago,braket)
+           DEALLOCATE(diago)
+           DEALLOCATE(braket)
+        ENDIF
+        !
      ENDDO ! KPOINT-SPIN
      !
   ENDDO ! QPOINT
@@ -1701,7 +1713,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   !$acc update host(zmati_q,zmatr_q)
   !$acc exit data delete(zmati_q,zmatr_q)
-  !$acc exit data delete(bg)
+  !$acc exit data delete(bg,imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
   DEALLOCATE(sqvc)
@@ -1709,14 +1721,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
-  IF(l_enable_lanczos) THEN
-     DEALLOCATE(bnorm)
-     DEALLOCATE(subdiago)
-     DEALLOCATE(q_s)
-     !$acc exit data delete(diago,braket)
-     DEALLOCATE(diago)
-     DEALLOCATE(braket)
-  ENDIF
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !

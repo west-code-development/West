@@ -86,10 +86,10 @@ MODULE dfpt_module
       !$acc declare device_resident(dvpsi,dpsi,aux_r,dpsic)
       !
       COMPLEX(DP), ALLOCATABLE :: aux_g(:)
-      COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
       COMPLEX(DP), ALLOCATABLE :: phase(:)
+      COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
 #if defined(__CUDA)
-      ATTRIBUTES(PINNED) :: aux_g,evckmq,phase
+      ATTRIBUTES(PINNED) :: evckmq
 #endif
       !
       TYPE(bar_type) :: barra

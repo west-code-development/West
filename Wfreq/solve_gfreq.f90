@@ -62,7 +62,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & reallocate_ps_gpu,memcpy_H2D
+                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
@@ -159,6 +159,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL allocate_gpu()
   CALL allocate_gw_gpu(pert%nlocx,pert%nloc)
   CALL reallocate_ps_gpu(nbnd,pert%nloc)
+  IF(l_enable_lanczos) THEN
+     CALL allocate_lanczos_gpu(pert%nloc)
+  ENDIF
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -412,6 +415,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if defined(__CUDA)
   CALL deallocate_gw_gpu()
   CALL deallocate_gpu()
+  IF(l_enable_lanczos) THEN
+     CALL deallocate_lanczos_gpu()
+  ENDIF
 #endif
   !
 #if !defined(__CUDA)
@@ -481,7 +487,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & reallocate_ps_gpu,memcpy_H2D
+                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
 #else
   USE wavefunctions,        ONLY : evc_work=>evc
 #endif
@@ -518,7 +524,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evck(:,:),phase(:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: pertg_all,evck,phase
+  ATTRIBUTES(PINNED) :: pertg_all,evck
 #endif
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
   !$acc declare device_resident(psick,psick_nc)
@@ -598,6 +604,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   CALL allocate_gpu()
   CALL allocate_gw_gpu(pert%nlocx,pert%nloc)
   CALL reallocate_ps_gpu(nbnd,pert%nloc)
+  IF(l_enable_lanczos) THEN
+     CALL allocate_lanczos_gpu(pert%nloc)
+  ENDIF
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -928,6 +937,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if defined(__CUDA)
   CALL deallocate_gpu()
   CALL deallocate_gw_gpu()
+  IF(l_enable_lanczos) THEN
+     CALL deallocate_lanczos_gpu()
+  ENDIF
 #endif
   !
   IF(noncolin) THEN

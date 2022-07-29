@@ -65,7 +65,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   !$acc declare device_resident(pertg,pertr,pertr_nc)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:),phase(:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: evckmq,phase
+  ATTRIBUTES(PINNED) :: evckmq
 #endif
   REAL(DP), ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(sqvc)

@@ -958,9 +958,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   COMPLEX(DP),ALLOCATABLE :: zbraket(:)
   !$acc declare device_resident(zbraket)
   COMPLEX(DP),ALLOCATABLE :: vec(:)
-#if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: vec
-#endif
 #if !defined(__CUDA)
   REAL(DP),EXTERNAL :: DDOT
   COMPLEX(DP),EXTERNAL :: ZDOTC

@@ -267,8 +267,6 @@ MODULE west_gpu_data
    INTEGER, INTENT(IN) :: nlocx
    INTEGER, INTENT(IN) :: nloc
    !
-   CALL allocate_lanczos_gpu(nloc)
-   !
    IF(gamma_only) THEN
       ALLOCATE(tmp_r3(nlocx,nloc,n_lanczos))
    ELSE
@@ -283,8 +281,6 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    IMPLICIT NONE
-   !
-   CALL deallocate_lanczos_gpu()
    !
    IF(ALLOCATED(tmp_r3)) THEN
       DEALLOCATE(tmp_r3)

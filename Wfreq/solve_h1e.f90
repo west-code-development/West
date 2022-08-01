@@ -32,7 +32,8 @@ SUBROUTINE solve_h1e()
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP),ALLOCATABLE :: psi(:,:,:), hpsi(:,:,:), h1e_tmp(:,:)
+  COMPLEX(DP),ALLOCATABLE :: psi(:,:,:), hpsi(:,:,:)
+  REAL(DP), ALLOCATABLE :: h1e_tmp(:,:)
   INTEGER  :: s,i,iunit
   REAL(DP)  :: ry_to_ha = 0.5_DP
   !
@@ -89,12 +90,12 @@ SUBROUTINE solve_h1e()
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c} - \Sigma^{c}_{dc}
   h1e = h1e - REAL(sigma_corr_full)
   ! write H1e to JSON file
-  CALL qdet_db_write( )
+  !CALL qdet_db_write( )
   !
   CALL io_push_bar()
   !
   DEALLOCATE( psi, hpsi )
-  DEALLOCATE( h1e, h1e_tmp )
+  DEALLOCATE( h1e_tmp )
   !
 END SUBROUTINE
 !

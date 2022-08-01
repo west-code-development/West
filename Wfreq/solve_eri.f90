@@ -112,7 +112,6 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   ! calculate total 4-center integrals
   eri(:,:,:,:) = bare_eri(:,:,:,:) + REAL(screened_eri(:,:,:,:))
   !
-  CALL qdet_db_write()
   !
   CALL io_push_bar()
   !

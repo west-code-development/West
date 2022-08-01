@@ -13,6 +13,15 @@ def read_indexmap_from_json(filename):
 
     return np.array(raw_['output']['Q']['indexmap'], dtype=int)
 
+ef read_h1e_from_json(filename):
+    """
+    Read QDET one-body terms from JSON file.
+    """
+    with open(filename, 'r') as f:
+        raw_ = json.load(f)
+    
+    return np.array(raw_['qdet']['h1e']['K000001'], dtype=float)
+
 def read_eri_from_json(filename):
     """
     Read screened two-body terms from JSON file.
@@ -55,4 +64,18 @@ def test_eri():
     test_eri = read_eri_from_json('./test012/test.wfreq.save/wfreq.json')
 
     np.testing.assert_almost_equal(ref_eri, test_eri,
+            decimal=np.log10(float(parameters['tolerance']['pdep_eigenvalue'])))
+
+def test_h1e():     
+    """     
+    Test whether matrix elements of the screened Coulomb potential are correct.     
+    """     
+    # get parameters from JSON file     
+    with open('./parameters.json', 'r') as f:         
+        parameters = json.load(f)     
+    
+    ref_h1e = read_h1e_from_json('./test012/ref/wfreq.json')     
+    test_h1e = read_h1e_from_json('./test012/test.wfreq.save/wfreq.json')     
+    
+    np.testing.assert_almost_equal(ref_h1e, test_h1e,
             decimal=np.log10(float(parameters['tolerance']['pdep_eigenvalue'])))

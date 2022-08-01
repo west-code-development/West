@@ -185,6 +185,7 @@ SUBROUTINE wfreq_setup
         !
      ENDIF
   ENDDO
+  !
   l_generate_plot = .FALSE.
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.

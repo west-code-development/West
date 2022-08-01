@@ -237,24 +237,16 @@ MODULE wfreq_db
          !
          CALL json%initialize()
          !
-         PRINT *, 'logfile=', TRIM(logfile)
          CALL json%load(filename=TRIM(logfile))
          !
-         ! ALLOCATE( h1e(n_pairs,nspin) )
-         ! h1e = 0._DP
-         ! !
-         ! DO iks = 1, nspin
-         !    !
-         !    WRITE(my_label_ik,'(i6.6)') iks
-         !    !
-         !    IF(l_enable_off_diagonal) THEN
-         !       CALL json%add('qdet.h1e.K'//TRIM(my_label_ik), &
-         !       & h1e(1:n_pairs,iks)*rytoev)
-         !    ENDIF
-         !    !
-         ! ENDDO
-         !
          DO iks = 1, nspin
+            !
+	     WRITE(my_label_ik,'(i6.6)') iks
+            !
+            IF(l_enable_off_diagonal) THEN
+               CALL json%add('qdet.h1e.K'//TRIM(my_label_ik), &
+               & h1e(1:n_pairs,iks)*rytoev)
+            ENDIF
             !
             DO jks = 1, nspin
                !

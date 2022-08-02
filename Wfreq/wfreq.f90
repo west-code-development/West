@@ -20,6 +20,7 @@ PROGRAM wfreq
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end
   USE westcom,              ONLY : wfreq_calculation
+  USE wfreq_db,             ONLY : qdet_db_write
   !
   IMPLICIT NONE
   !

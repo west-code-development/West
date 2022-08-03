@@ -143,7 +143,7 @@ SUBROUTINE compute_braket()
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP),ALLOCATABLE :: phi(:), rho_r(:), rho_g(:), 
+  COMPLEX(DP),ALLOCATABLE :: phi(:), rho_r(:), rho_g(:) 
   REAL(DP), ALLOCATABLE :: psi1(:), psi2(:)
   !
   INTEGER :: s, m, p1, i, j, ig, ir, mloc
@@ -246,7 +246,7 @@ SUBROUTINE compute_bv_direct(bare)
   IMPLICIT NONE
   !
   REAL(DP), INTENT(INOUT) :: bare(n_pairs,n_pairs,nspin,nspin)
-  COMPLEX(DP),ALLOCATABLE  :: rho_gs(:,:,:), rho_g(:), rho_r(:), 
+  COMPLEX(DP),ALLOCATABLE  :: rho_gs(:,:,:), rho_g(:), rho_r(:)
   REAL(DP), ALLOCATABLE :: psi1(:), psi2(:)
   !
   COMPLEX(DP) :: Hv,Bv

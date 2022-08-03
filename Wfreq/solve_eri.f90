@@ -139,7 +139,7 @@ SUBROUTINE compute_braket()
   USE distribution_center,  ONLY : macropert,kpt_pool
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
-  USE wavefunctions,        ONLY : evc
+  USE wavefunctions,        ONLY : evc, psic
   !
   IMPLICIT NONE
   !
@@ -191,8 +191,10 @@ SUBROUTINE compute_braket()
               CALL mp_bcast( evc, 0, inter_image_comm )
            ENDIF
            !
-           CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s),psi1,TRIM(fftdriver))
-           CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,j,s),psi2,TRIM(fftdriver))
+           CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s),psic,TRIM(fftdriver))
+           psi1(:) = psic(:)
+           CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,j,s),psic,TRIM(fftdriver))
+           psi2(:) = psic(:)
            !
            DO ir=1,dffts%nnr
               rho_r(ir)=psi1(ir)*psi2(ir)
@@ -241,7 +243,7 @@ SUBROUTINE compute_bv_direct(bare)
   USE gvect,                ONLY : ngm
   USE cell_base,            ONLY : omega
   USE class_idistribute,    ONLY : idistribute
-  USE wavefunctions,        ONLY : evc
+  USE wavefunctions,        ONLY : evc, psic
   !
   IMPLICIT NONE
   !
@@ -287,8 +289,10 @@ SUBROUTINE compute_bv_direct(bare)
            CALL mp_bcast( evc, 0, inter_image_comm )
         ENDIF
         !
-        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),psi1,TRIM(fftdriver))
-        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,j,s1),psi2,TRIM(fftdriver))
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),psic,TRIM(fftdriver))
+        psi1(:) = psi(:)
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,j,s1),psic,TRIM(fftdriver))
+        psi2(:) = psi(:)
         !
         DO ir=1,dffts%nnr
            rho_r(ir)=psi1(ir)*psi2(ir)
@@ -324,8 +328,10 @@ SUBROUTINE compute_bv_direct(bare)
            CALL mp_bcast( evc, 0, inter_image_comm )
         ENDIF
         !
-        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s2),psi1,TRIM(fftdriver))
-        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,l,s2),psi2,TRIM(fftdriver))
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s2),psic,TRIM(fftdriver))
+        psi1(:) = psic(:)
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,l,s2),psic,TRIM(fftdriver))
+        psi2(:) = psic(:)
         !
         DO ir=1,dffts%nnr
            rho_r(ir)=psi1(ir)*psi2(ir)

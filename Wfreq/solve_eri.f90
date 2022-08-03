@@ -127,10 +127,11 @@ SUBROUTINE compute_braket()
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
   USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,iuwfc,lrwfc,&
-                                 & n_bands,n_pairs,braket,pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
+                                 & proj_c,n_bands,n_pairs,braket,pijmap
+  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id,mp_bcast
   USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma
+  USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum,mp_barrier
   USE types_coulomb,        ONLY : pot3D
@@ -225,12 +226,13 @@ SUBROUTINE compute_bv_direct(bare)
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
   USE westcom,              ONLY : iuwfc,lrwfc,eri,n_pdep_eigen_to_use,n_bands,n_pairs,&
-                                 & pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
+                                 & pijmap, proj_c, npwq,npwqx, fftdriver
+  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id, mp_bcast
   USE distribution_center,  ONLY : bandpair,kpt_pool
   USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma
+  USE buffers,              ONLY : get_buffer
+  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm, mp_bcast
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE types_coulomb,        ONLY : pot3D
@@ -238,6 +240,7 @@ SUBROUTINE compute_bv_direct(bare)
   USE gvect,                ONLY : ngm
   USE cell_base,            ONLY : omega
   USE class_idistribute,    ONLY : idistribute
+  USE wavefunctions,        ONLY : evc
   !
   IMPLICIT NONE
   !
@@ -277,8 +280,16 @@ SUBROUTINE compute_bv_direct(bare)
         i = pijmap(1,p1)
         j = pijmap(2,p1)
         !
+        IF(kpt_pool%nloc > 1) THEN
+           IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, s1 )
+           CALL mp_bcast( evc, 0, inter_image_comm )
+        ENDIF
+        !
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),psi1,TRIM(fftdriver))
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,j,s1),psi2,TRIM(fftdriver))
+        !
         DO ir=1,dffts%nnr
-           rho_r(ir)=proj_r(ir,i,s1)*proj_r(ir,j,s1)
+           rho_r(ir)=psi1(ir)*psi2(ir)
         ENDDO
         !
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_gs(:,p1loc,s1),'Rho')
@@ -306,8 +317,16 @@ SUBROUTINE compute_bv_direct(bare)
         k = pijmap(1,p2)
         l = pijmap(2,p2)
         !
+        IF(kpt_pool%nloc > 1) THEN
+           IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, s1 )
+           CALL mp_bcast( evc, 0, inter_image_comm )
+        ENDIF
+        !
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s2),psi1,TRIM(fftdriver))
+        CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,l,s2),psi2,TRIM(fftdriver))
+        !
         DO ir=1,dffts%nnr
-           rho_r(ir)=proj_r(ir,k,s2)*proj_r(ir,l,s2)
+           rho_r(ir)=psi1(ir)*psi2(ir)
         ENDDO
         !
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g,'Rho')

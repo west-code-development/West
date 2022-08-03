@@ -290,9 +290,9 @@ SUBROUTINE compute_bv_direct(bare)
         ENDIF
         !
         CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),psic,TRIM(fftdriver))
-        psi1(:) = psi(:)
+        psi1(:) = psic(:)
         CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,j,s1),psic,TRIM(fftdriver))
-        psi2(:) = psi(:)
+        psi2(:) = psic(:)
         !
         DO ir=1,dffts%nnr
            rho_r(ir)=psi1(ir)*psi2(ir)

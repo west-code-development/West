@@ -175,8 +175,6 @@ SUBROUTINE wfreq_setup
               !
               ib = qp_bands(ib_index)
               proj_c(:,ib_index,iks) = evc(:,ib)
-              CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,ib_index,iks),psic,TRIM(fftdriver))
-              proj_r(:,ib_index,iks) = psic(:)
               !
            END DO
            !

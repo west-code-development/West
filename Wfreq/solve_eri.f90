@@ -127,7 +127,7 @@ SUBROUTINE compute_braket()
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
   USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,iuwfc,lrwfc,&
-                                 & n_bands,n_pairs,proj_r,braket,pijmap
+                                 & n_bands,n_pairs,braket,pijmap
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma
@@ -138,6 +138,7 @@ SUBROUTINE compute_braket()
   USE distribution_center,  ONLY : macropert,kpt_pool
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
+  USE wavefunctions,        ONLY : evc
   !
   IMPLICIT NONE
   !
@@ -154,6 +155,7 @@ SUBROUTINE compute_braket()
   CALL io_push_title('braket')
   !
   ALLOCATE( phi(npwqx), rho_r(dffts%nnr), rho_g(npwqx) )
+  ALLOCATE(psi1(dffts%nnr), psi2(dffts%nnr))
   !
   CALL pot3D%init(fftdriver,.FALSE.,"default")
   !
@@ -182,8 +184,16 @@ SUBROUTINE compute_braket()
            i = pijmap(1,p1)
            j = pijmap(2,p1)
            !
+           IF(kpt_pool%nloc > 1) THEN
+              IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, s )
+              CALL mp_bcast( evc, 0, inter_image_comm )
+           ENDIF
+           !
+           CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s),psi1,TRIM(fftdriver))
+           CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,j,s),psi2,TRIM(fftdriver))
+           !
            DO ir=1,dffts%nnr
-              rho_r(ir)=proj_r(ir,i,s)*proj_r(ir,j,s)
+              rho_r(ir)=psi1(ir)*psi2(ir)
            ENDDO
            !
            CALL single_fwfft_gamma(dffts,npwq,npwqx,rho_r,rho_g,TRIM(fftdriver))
@@ -204,6 +214,7 @@ SUBROUTINE compute_braket()
   CALL stop_bar_type( barra,'braket' )
   !
   DEALLOCATE( phi, rho_r, rho_g )
+  DEALLOCATE( psi1, psi2 )
   !
 END SUBROUTINE
 !
@@ -213,7 +224,7 @@ SUBROUTINE compute_bv_direct(bare)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : iuwfc,lrwfc,eri,n_pdep_eigen_to_use,n_bands,n_pairs,proj_r,&
+  USE westcom,              ONLY : iuwfc,lrwfc,eri,n_pdep_eigen_to_use,n_bands,n_pairs,&
                                  & pijmap
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
   USE distribution_center,  ONLY : bandpair,kpt_pool

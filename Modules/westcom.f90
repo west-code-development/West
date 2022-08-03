@@ -202,7 +202,6 @@ MODULE wfreq_center
   INTEGER,    ALLOCATABLE :: pijmap(:,:)
   !
   ! downfolded Hamiltonian
-  REAL(DP),   ALLOCATABLE :: proj_r(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
   REAL(DP),   ALLOCATABLE :: eri(:,:,:,:)

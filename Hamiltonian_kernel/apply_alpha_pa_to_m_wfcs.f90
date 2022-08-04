@@ -70,8 +70,6 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
      !
   ENDIF
   !
-  DEALLOCATE(proj_c)
-  !
   CALL stop_clock ('alphapa')
   !
 END SUBROUTINE

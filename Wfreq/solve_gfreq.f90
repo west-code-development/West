@@ -372,6 +372,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   COMPLEX(DP),ALLOCATABLE :: q_s( :, :, : )
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:), pertr(:)
+  COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP), ALLOCATABLE :: evck(:,:), phase(:)
   COMPLEX(DP), ALLOCATABLE :: psick(:), psick_nc(:,:)
   COMPLEX(DP),ALLOCATABLE :: ps_c(:,:)
@@ -513,6 +514,17 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
         CALL mp_bcast( evc, 0, inter_image_comm )
         !
+        ! Read PDEP
+        !
+        ALLOCATE(pertg_all(npwqx,pert%nloc))
+        !
+        DO ip = 1,pert%nloc
+           glob_ip = pert%l2g(ip)
+           CALL generate_pdep_fname(filepot,glob_ip,iq)
+           fname = TRIM(wstat_save_dir)//'/'//filepot
+           CALL pdep_read_G_and_distribute(fname,pertg_all(:,ip),iq)
+        ENDDO
+        !
         ! LOOP over band states
         !
         DO ibloc = 1,band_group%nloc
@@ -533,19 +545,13 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            dvpsi = 0._DP
            !
-           ! Read PDEP
-           !
            ALLOCATE( pertg( npwqx ) )
            ALLOCATE( pertr( dffts%nnr ) )
            !
            DO ip=1,pert%nloc
               glob_ip = pert%l2g(ip)
               !
-              ! Exhume dbs eigenvalue
-              !
-              CALL generate_pdep_fname( filepot, glob_ip, iq )
-              fname = TRIM( wstat_save_dir ) // "/"// filepot
-              CALL pdep_read_G_and_distribute(fname,pertg,iq)
+              pertg = pertg_all(:,ip)
               !
               ! Multiply by sqvc
               !pertg(:) = sqvc(:) * pertg(:) ! / SQRT(fpi*e2)     ! CONTROLLARE QUESTO
@@ -664,6 +670,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            CALL update_bar_type( barra, 'glanczos', 1 )
            !
         ENDDO ! BANDS
+        !
+        DEALLOCATE(pertg_all)
         !
      ENDDO ! KPOINT-SPIN (INTEGRAL OVER K')
      !

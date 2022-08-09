@@ -488,7 +488,7 @@ SUBROUTINE davidson_diago_k ( )
     ! do-loop counters
     ! counter on the bands
   INTEGER :: ierr,mloc,mstart
-  INTEGER, ALLOCATABLE :: ishift(:)
+  INTEGER,ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   COMPLEX(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
 #if defined(__CUDA)

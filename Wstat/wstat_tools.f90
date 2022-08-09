@@ -69,11 +69,7 @@ MODULE wstat_tools
       CHARACTER(LEN=8) :: aux_label_npuc
       !
 #if defined(__SCALAPACK)
-#if defined(__CUDA)
-      IF(nproc > 3 .AND. nbase > 8000) THEN
-#else
       IF(nproc > 3 .AND. nbase > 2000) THEN
-#endif
          l_parallel = .TRUE.
       ELSE
          l_parallel = .FALSE.
@@ -88,11 +84,7 @@ MODULE wstat_tools
          !
          time_spent(1) = get_clock('diagox')
          !
-#if defined(__ELPA) && defined(__CUDA)
-         npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/64),KIND=DP))),2)
-#else
          npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/8),KIND=DP))),2)
-#endif
          npuc = npur
          !
 #if defined(__SCALAPACK)
@@ -103,11 +95,7 @@ MODULE wstat_tools
          WRITE(aux_label_npur,'(i8)') npur
          WRITE(aux_label_npuc,'(i8)') npuc
 #if defined(__ELPA)
-#if defined(__CUDA)
-         WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA (GPU), grid ',a)") &
-#else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA, grid ',a)") &
-#endif
 #else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
@@ -122,7 +110,7 @@ MODULE wstat_tools
          !
          time_spent(2) = get_clock('diagox')
 #if defined(__CUDA)
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") &
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER')") &
 #else
          WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") &
 #endif
@@ -161,11 +149,7 @@ MODULE wstat_tools
       CHARACTER(LEN=8) :: aux_label_npuc
       !
 #if defined(__SCALAPACK)
-#if defined(__CUDA)
-      IF(nproc > 3 .AND. nbase > 8000) THEN
-#else
       IF(nproc > 3 .AND. nbase > 2000) THEN
-#endif
          l_parallel = .TRUE.
       ELSE
          l_parallel = .FALSE.
@@ -180,11 +164,7 @@ MODULE wstat_tools
          !
          time_spent(1) = get_clock('diagox')
          !
-#if defined(__ELPA) && defined(__CUDA)
-         npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/64),KIND=DP))),2)
-#else
          npur = MAX(FLOOR(SQRT(REAL(MIN(nproc,nbase/8),KIND=DP))),2)
-#endif
          npuc = npur
          !
 #if defined(__SCALAPACK)
@@ -195,11 +175,7 @@ MODULE wstat_tools
          WRITE(aux_label_npur,'(i8)') npur
          WRITE(aux_label_npuc,'(i8)') npuc
 #if defined(__ELPA)
-#if defined(__CUDA)
-         WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA (GPU), grid ',a)") &
-#else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ELPA, grid ',a)") &
-#endif
 #else
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
@@ -214,7 +190,7 @@ MODULE wstat_tools
          !
          time_spent(2) = get_clock('diagox')
 #if defined(__CUDA)
-         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER (GPU)')") &
+         WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with cuSOLVER')") &
 #else
          WRITE(stdout,"(5x,'s-DIAGOX done in ',a,' with LAPACK')") &
 #endif
@@ -277,7 +253,9 @@ MODULE wstat_tools
       ee = 0._DP
       !
       IF(me_bgrp == root_bgrp) THEN
+         !
          CALL matdiago_dsy(n,zz,ee,.FALSE.)
+         !
       ENDIF
       !
       CALL mp_bcast(ee,root_bgrp,intra_bgrp_comm)
@@ -350,7 +328,9 @@ MODULE wstat_tools
       ee = 0._DP
       !
       IF(me_bgrp == root_bgrp) THEN
+         !
          CALL matdiago_zhe(n,zz,ee,.FALSE.)
+         !
       ENDIF
       !
       CALL mp_bcast(ee,root_bgrp,intra_bgrp_comm)

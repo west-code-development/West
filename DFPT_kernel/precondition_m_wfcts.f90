@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE precondition_m_wfcts(m,f,pf,eprec)
+SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
@@ -34,7 +34,7 @@ SUBROUTINE precondition_m_wfcts(m,f,pf,eprec)
   !
   ! Workspace
   !
-  INTEGER :: ibnd,ig
+  INTEGER :: ibnd, ig
   !
 #if defined(__CUDA)
   !$acc parallel loop collapse(2) present(pf,f,eprec)

@@ -28,11 +28,11 @@ MODULE scratch_area
   !
   ! DBS
   !
-  LOGICAL,     ALLOCATABLE :: conv(:)
-  REAL(DP),    ALLOCATABLE :: ev(:)
-  REAL(DP),    ALLOCATABLE :: ev_distr(:)
-  COMPLEX(DP), ALLOCATABLE :: dng(:,:)
-  COMPLEX(DP), ALLOCATABLE :: dvg(:,:)
+  REAL(DP),            ALLOCATABLE :: ev(:)
+  REAL(DP),            ALLOCATABLE :: ev_distr(:)
+  COMPLEX(DP),         ALLOCATABLE :: dng(:,:)
+  COMPLEX(DP),         ALLOCATABLE :: dvg(:,:)
+  LOGICAL,             ALLOCATABLE :: conv(:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dng
   ATTRIBUTES(PINNED) :: dvg

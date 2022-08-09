@@ -111,7 +111,7 @@ MODULE linear_algebra_kernel
       !
       ! Workspace
       !
-      INTEGER :: lwork,info,info_d
+      INTEGER :: lwork, info, info_d
       REAL(DP),ALLOCATABLE :: work(:)
       !$acc declare device_resident(work)
       REAL(DP),ALLOCATABLE :: m(:,:)
@@ -209,9 +209,9 @@ MODULE linear_algebra_kernel
       !
       ! Workspace
       !
-      INTEGER :: lwork,info,info_d
+      INTEGER :: lwork, info, info_d
       REAL(DP),ALLOCATABLE :: rwork(:)
-      COMPLEX(DP),ALLOCATABLE :: m(:,:),work(:)
+      COMPLEX(DP),ALLOCATABLE :: m(:,:), work(:)
       !$acc declare device_resident(work)
       !
 #if defined(__CUDA)

@@ -228,17 +228,17 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      current_k = iks
      IF ( lsda ) current_spin = isk(iks)
 #if defined(__CUDA)
-     CALL g2_kin_gpu(iks)
+     CALL g2_kin_gpu( iks )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
+     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .TRUE. )
 #else
-     CALL g2_kin(iks)
+     CALL g2_kin( iks )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.FALSE.)
+     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .FALSE. )
 #endif
      !
      ! ... read in wavefunctions from the previous iteration
@@ -698,17 +698,17 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         current_k = iks
         IF ( lsda ) current_spin = isk(iks)
 #if defined(__CUDA)
-        call g2_kin_gpu(iks)
+        call g2_kin_gpu( iks )
         !
         ! ... More stuff needed by the hamiltonian: nonlocal projectors
         !
-        IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
+        IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .TRUE. )
 #else
-        call g2_kin(iks)
+        call g2_kin( iks )
         !
         ! ... More stuff needed by the hamiltonian: nonlocal projectors
         !
-        IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.FALSE.)
+        IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .FALSE. )
 #endif
         !
 !       ! ... Needed for LDA+U

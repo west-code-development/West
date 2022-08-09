@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval,psi,hpsi,e,alpha,m)
+SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -23,14 +23,14 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval,psi,hpsi,e,alpha,m)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: nbndval,m
+  INTEGER, INTENT(IN) :: nbndval, m
   ! input: the number of val bands
   ! input: the number of bands
-  REAL(DP), INTENT(IN) :: e(m)
+  REAL(DP), INTENT(IN) :: e (m)
   COMPLEX(DP), INTENT(IN) :: alpha
   ! input: the eigenvalue
-  COMPLEX(DP), INTENT(IN) :: psi(npwx*npol,m)
-  COMPLEX(DP), INTENT(OUT) :: hpsi(npwx*npol,m)
+  COMPLEX(DP), INTENT(IN) :: psi (npwx*npol,m)
+  COMPLEX(DP), INTENT(OUT) :: hpsi (npwx*npol,m)
   ! input: the vector
   ! output: the operator applied to the vector
   !
@@ -48,7 +48,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval,psi,hpsi,e,alpha,m)
   ! compute the product of the hamiltonian with the h vector
   !
   IF(l_kinetic_only) THEN
-     CALL k_psi(npwx,npw,m,psi,hpsi)
+     CALL k_psi( npwx, npw, m, psi, hpsi )
   ELSE
      !
      ! use h_psi_, i.e. h_psi without band parallelization, as wstat
@@ -56,10 +56,10 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval,psi,hpsi,e,alpha,m)
      !
 #if defined(__CUDA)
      !$acc host_data use_device(psi,hpsi)
-     CALL h_psi__gpu(npwx,npw,m,psi,hpsi)
+     CALL h_psi__gpu( npwx, npw, m, psi, hpsi )
      !$acc end host_data
 #else
-     CALL h_psi_(npwx,npw,m,psi,hpsi)
+     CALL h_psi_( npwx, npw, m, psi, hpsi )
 #endif
   ENDIF
   !

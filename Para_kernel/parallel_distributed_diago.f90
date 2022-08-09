@@ -288,22 +288,6 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
      !
      CALL elpa_h%set('solver',ELPA_SOLVER_2STAGE,ierr)
      if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set solver',ierr)
-#if defined(__CUDA)
-     CALL elpa_h%set('gpu',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set gpu',ierr)
-     CALL elpa_h%set('gpu_bandred',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set gpu_bandred',ierr)
-     CALL elpa_h%set('gpu_solve_tridi',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set gpu_solve_tridi',ierr)
-     CALL elpa_h%set('gpu_trans_ev_tridi_to_band',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set gpu_trans_ev_tridi_to_band',ierr)
-     CALL elpa_h%set('gpu_trans_ev_band_to_full',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set gpu_trans_ev_band_to_full',ierr)
-     CALL elpa_h%set('real_kernel',ELPA_2STAGE_REAL_GPU,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set real_kernel',ierr)
-     CALL elpa_h%set('complex_kernel',ELPA_2STAGE_COMPLEX_GPU,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_dsy','elpa set complex_kernel',ierr)
-#endif
      !
      ! Fill in lower from upper
      !
@@ -738,22 +722,6 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
      !
      CALL elpa_h%set('solver',ELPA_SOLVER_2STAGE,ierr)
      if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set solver',ierr)
-#if defined(__CUDA)
-     CALL elpa_h%set('gpu',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set gpu',ierr)
-     CALL elpa_h%set('gpu_bandred',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set gpu_bandred',ierr)
-     CALL elpa_h%set('gpu_solve_tridi',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set gpu_solve_tridi',ierr)
-     CALL elpa_h%set('gpu_trans_ev_tridi_to_band',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set gpu_trans_ev_tridi_to_band',ierr)
-     CALL elpa_h%set('gpu_trans_ev_band_to_full',1,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set gpu_trans_ev_band_to_full',ierr)
-     CALL elpa_h%set('real_kernel',ELPA_2STAGE_REAL_GPU,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set real_kernel',ierr)
-     CALL elpa_h%set('complex_kernel',ELPA_2STAGE_COMPLEX_GPU,ierr)
-     if(ierr /= 0) CALL errore('parallel_distributed_diago_zhe','elpa set complex_kernel',ierr)
-#endif
      !
      ! Fill in lower from upper
      !

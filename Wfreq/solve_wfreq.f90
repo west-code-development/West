@@ -283,17 +283,17 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      current_k = iks
      IF ( lsda ) current_spin = isk(iks)
 #if defined(__CUDA)
-     CALL g2_kin_gpu(iks)
+     CALL g2_kin_gpu( iks )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
+     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .TRUE. )
 #else
-     CALL g2_kin(iks)
+     CALL g2_kin( iks )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.FALSE.)
+     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb, .FALSE. )
 #endif
      !
      ! ... read in wavefunctions from the previous iteration
@@ -476,13 +476,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         dvpsi(:,:) = 0._DP
         !$acc end kernels
         !
-        DO ip = 1,mypara%nloc
+        DO ip=1,mypara%nloc
            !
            glob_ip = mypara%l2g(ip)
            !
            ! Decide whether read dbs E or dhpi
            !
-           IF(glob_ip <= n_pdep_eigen_to_use) THEN
+           IF(glob_ip<=n_pdep_eigen_to_use) THEN
               !
 #if defined(__CUDA)
               CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
@@ -1180,23 +1180,23 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         current_k = iks
         IF ( lsda ) current_spin = isk(iks)
 #if defined(__CUDA)
-        CALL g2_kin_gpu(iks)
+        CALL g2_kin_gpu( iks )
         !
         ! ... More stuff needed by the hamiltonian: nonlocal projectors
         !
-        IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),k_grid%p_cart(1,ik),vkb,.TRUE.)
+        IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb, .TRUE. )
 #else
-        CALL g2_kin(iks)
+        CALL g2_kin( iks )
         !
         ! ... More stuff needed by the hamiltonian: nonlocal projectors
         !
-        IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),k_grid%p_cart(1,ik),vkb,.FALSE.)
+        IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb, .FALSE. )
 #endif
         npw = ngk(iks)
         !
         ! ... read in wavefunctions from the previous iteration
         !
-        IF(k_grid%nps > 1) THEN
+        IF(k_grid%nps>1) THEN
 #if defined(__CUDA)
            IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc_host,0,inter_image_comm)
@@ -1399,13 +1399,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            dvpsi(:,:) = 0._DP
            !$acc end kernels
            !
-           DO ip = 1,mypara%nloc
+           DO ip=1,mypara%nloc
               !
               glob_ip = mypara%l2g(ip)
               !
               ! Decide whether read dbs E or dhpi
               !
-              IF(glob_ip <= n_pdep_eigen_to_use) THEN
+              IF(glob_ip<=n_pdep_eigen_to_use) THEN
                  !
 #if defined(__CUDA)
                  CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)

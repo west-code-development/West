@@ -77,7 +77,7 @@ SUBROUTINE calc_exx2(sigma_exx,nb1,nb2)
   WRITE(stdout,'(5x,a)') '(X)-Sigma'
   CALL io_push_bar()
   !
-  IF(gamma_only) THEN
+  IF (gamma_only) THEN
      peso = 2._DP
   ELSE
      peso = 1._DP

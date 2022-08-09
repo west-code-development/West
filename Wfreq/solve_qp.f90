@@ -202,7 +202,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   ! LOOP
   !
-  DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
+  DO iks = 1,kpt_pool%nloc ! KPOINT-SPIN
      !
      iks_g = kpt_pool%l2g(iks)
      !
@@ -515,7 +515,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      !
      ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
      !
-     DO iks = 1, k_grid%nps
+     DO iks=1,k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP)
            out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
@@ -558,7 +558,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
         en = (ecut_spectralf(2)-ecut_spectralf(1))/REAL(n_spectralf-1,KIND=DP)*REAL(glob_ifreq-1,KIND=DP) &
         & +ecut_spectralf(1)
         CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .FALSE.)
-        DO iks = 1, k_grid%nps
+        DO iks=1,k_grid%nps
            DO ib = qp_bandrange(1), qp_bandrange(2)
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1)
            ENDDO
@@ -760,7 +760,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! ... Inner k-point loop (wfc summed over k'): ikks
   ! ... BEWARE: iks and ikks are switched w.r.t. solve_gfreq_k
   !
-  DO iks = 1, k_grid%nps ! KPOINT-SPIN (MATRIX ELEMENT)
+  DO iks = 1, k_grid%nps   ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      ik = k_grid%ip(iks)
      is = k_grid%is(iks)
@@ -768,7 +768,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      DO ibloc = 1, band_group%nloc
         ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
         !
-        DO ikks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
+        DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
            !
            ikk = k_grid%ip(ikks)
            iss = k_grid%is(ikks)
@@ -1071,7 +1071,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      !
      ALLOCATE(out_tab(qp_bandrange(2)-qp_bandrange(1)+1,7))
      !
-     DO iks = 1, k_grid%nps
+     DO iks=1,k_grid%nps
         DO ib = qp_bandrange(1), qp_bandrange(2)
            out_tab( ib - qp_bandrange(1) + 1, 1) = REAL( ib, KIND=DP)
            out_tab( ib - qp_bandrange(1) + 1, 2) = et(ib,iks) * rytoev
@@ -1113,7 +1113,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      DO glob_ifreq = 1, n_spectralf
         en = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) + ecut_spectralf(1)
         CALL calc_corr_k( sc(:,:,1), en(:,:,1), .FALSE.)
-        DO iks = 1, k_grid%nps
+        DO iks=1, k_grid%nps
            DO ib = qp_bandrange(1), qp_bandrange(2)
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1)
            ENDDO
@@ -1176,7 +1176,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   lnospin = ( k_grid%nps == k_grid%np )
   WRITE(stdout,'(5X)')
   CALL io_push_bar()
-  IF( iteration >= 0 ) WRITE(stdout,'(5X,"Iter: ",i6.6)') iteration
+  IF( iteration >= 0 ) WRITE(stdout,'(5X,"Iter: ",I6.6)') iteration
   DO ik = 1, k_grid%np
      WRITE( stdout, '(5x,"k(",i6.6,") = (",3f12.7,") cryst. coord.")') ik, k_grid%p_cryst(1:3,ik)
      IF( lnospin ) THEN

@@ -19,7 +19,7 @@ MODULE dfpt_module
   CONTAINS
     !
     !-------------------------------------------------------------------------
-    SUBROUTINE dfpt(m,dvg,dng,tr2,iq)
+    SUBROUTINE dfpt (m,dvg,dng,tr2,iq)
       !-----------------------------------------------------------------------
       !
       USE kinds,                 ONLY : DP
@@ -73,24 +73,21 @@ MODULE dfpt_module
       INTEGER :: dffts_nnr,band_group_nloc
       !
       REAL(DP) :: g0(3)
-      !
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
       !$acc declare device_resident(eprec,eprec_loc,et_loc)
       !
-      COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:)
-      COMPLEX(DP), ALLOCATABLE :: dpsi(:,:)
+      COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:),dpsi(:,:)
+      COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:)
       COMPLEX(DP), ALLOCATABLE :: dpsic(:)
-      COMPLEX(DP), ALLOCATABLE :: aux_r(:)
       !$acc declare device_resident(dvpsi,dpsi,aux_r,dpsic)
       !
-      COMPLEX(DP), ALLOCATABLE :: aux_g(:)
-      COMPLEX(DP), ALLOCATABLE :: phase(:)
       COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
 #if defined(__CUDA)
       ATTRIBUTES(PINNED) :: evckmq
 #endif
+      COMPLEX(DP), ALLOCATABLE :: phase(:)
       !
       TYPE(bar_type) :: barra
       !
@@ -100,9 +97,9 @@ MODULE dfpt_module
       !
       COMPLEX(DP), PARAMETER :: zero = (0._DP,0._DP)
       !
-      CALL mp_barrier(world_comm)
+      CALL mp_barrier( world_comm )
       !
-      CALL report_dynamical_memory()
+      CALL report_dynamical_memory( )
       !
       ! Allocation
       !
@@ -132,10 +129,10 @@ MODULE dfpt_module
       CALL allocate_linsolve_gpu(band_group%nloc)
 #endif
       !
-      l_dost = (tr2 >= 0._DP)
+      l_dost = ( tr2 >= 0._DP )
       !
-      IF (l_dost) THEN
-         WRITE(title,'(A,ES14.6)') 'Sternheimer eq. solver... with threshold = ',tr2
+      IF( l_dost ) THEN
+         WRITE(title,'(A,ES14.6)') 'Sternheimer eq. solver... with threshold = ', tr2
       ELSE
          WRITE(title,'(A,ES14.6)') 'Sternheimer eq. solver... with lite-solver'
       ENDIF
@@ -143,9 +140,9 @@ MODULE dfpt_module
       !
       dng = zero
       !
-      CALL start_bar_type(barra,'dfpt',MAX(m,1)*kpt_pool%nloc)
+      CALL start_bar_type( barra, 'dfpt', MAX(m,1) * kpt_pool%nloc )
       !
-      DO iks = 1,kpt_pool%nloc ! KPOINT-SPIN LOOP
+      DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN LOOP
          !
          iks_g = kpt_pool%l2g(iks)
          ik = k_grid%ip(iks_g)
@@ -154,24 +151,24 @@ MODULE dfpt_module
          ! ... Set k-point, spin, kinetic energy, needed by Hpsi
          !
          current_k = iks
-         IF (lsda) current_spin = isk(iks)
+         IF ( lsda ) current_spin = isk(iks)
 #if defined(__CUDA)
          CALL g2_kin_gpu(iks)
          !
          ! ... More stuff needed by the hamiltonian: nonlocal projectors
          !
-         IF (nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),k_grid%p_cart(1,ik),vkb,.TRUE.)
+         IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb, .TRUE. )
 #else
          CALL g2_kin(iks)
          !
          ! ... More stuff needed by the hamiltonian: nonlocal projectors
          !
-         IF (nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),k_grid%p_cart(1,ik),vkb,.FALSE.)
+         IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), k_grid%p_cart(1,ik), vkb, .FALSE. )
 #endif
          !
          nbndval = nbnd_occ(iks)
          !
-         CALL band_group%init(nbndval,'b','band_group',.FALSE.)
+         CALL band_group%init( nbndval, 'b', 'band_group', .FALSE. )
          !
          ! ... Number of G vectors for PW expansion of wfs at k
          !
@@ -179,13 +176,13 @@ MODULE dfpt_module
          !
          ! ... Read wavefuctions at k in G space, for all bands, and store them in evc
          !
-         IF (kpt_pool%nloc > 1) THEN
+         IF(kpt_pool%nloc > 1) THEN
 #if defined(__CUDA)
-            IF (my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-            CALL mp_bcast(evc_host,0,inter_image_comm)
+            IF ( my_image_id == 0 ) CALL get_buffer( evc_host, lrwfc, iuwfc, iks )
+            CALL mp_bcast( evc_host, 0, inter_image_comm )
 #else
-            IF (my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-            CALL mp_bcast(evc_work,0,inter_image_comm)
+            IF ( my_image_id == 0 ) CALL get_buffer( evc_work, lrwfc, iuwfc, iks )
+            CALL mp_bcast( evc_work, 0, inter_image_comm )
 #endif
          ENDIF
          !
@@ -210,10 +207,10 @@ MODULE dfpt_module
             !
             ! ... Find G0 and compute phase
             !
-            CALL k_grid%find(k_grid%p_cart(:,ik)-q_grid%p_cart(:,iq),'cart',ikq,g0)
+            CALL k_grid%find( k_grid%p_cart(:,ik) - q_grid%p_cart(:,iq), 'cart', ikq, g0 )
             ikqs = k_grid%ipis2ips(ikq,is)
             !
-            CALL compute_phase(g0,'cart',phase)
+            CALL compute_phase( g0, 'cart', phase )
             !
             ! ... Number of G vectors for PW expansion of wfs at [k-q]
             !
@@ -221,8 +218,8 @@ MODULE dfpt_module
             !
             ! ... Set wavefunctions at [k-q] in G space, for all bands, and store them in evckmq
             !
-            IF (my_image_id == 0) CALL get_buffer(evckmq,lrwfc,iuwfc,ikqs)
-            CALL mp_bcast(evckmq,0,inter_image_comm)
+            IF ( my_image_id == 0 ) CALL get_buffer( evckmq, lrwfc, iuwfc, ikqs )
+            CALL mp_bcast( evckmq, 0, inter_image_comm )
             !
             !$acc update device(evckmq,phase)
          ENDIF
@@ -245,7 +242,7 @@ MODULE dfpt_module
          ENDDO
          !$acc end parallel
          !
-         DO ipert = 1,m
+         DO ipert = 1, m
             !
             aux_g(1:npwq) = dvg(1:npwq,ipert)
             !$acc update device(aux_g)
@@ -262,7 +259,7 @@ MODULE dfpt_module
             !
             ! The perturbation is in aux_r
             !
-            IF (gamma_only) THEN
+            IF(gamma_only) THEN
                !
                ! double bands @ gamma
                DO lbnd = 1,band_group%nloc-MOD(band_group%nloc,2),2
@@ -285,7 +282,7 @@ MODULE dfpt_module
                ENDDO
                !
                ! single band @ gamma
-               IF (MOD(band_group%nloc,2) == 1) THEN
+               IF( MOD(band_group%nloc,2) == 1 ) THEN
                   !
                   lbnd = band_group%nloc
                   ibnd = band_group%l2g(lbnd)
@@ -366,8 +363,9 @@ MODULE dfpt_module
             CALL reallocate_ps_gpu(nbndval,band_group%nloc)
 #endif
             !
-            CALL apply_alpha_pc_to_m_wfcs(nbndval,band_group%nloc,dvpsi,(-1._DP,0._DP))
-            CALL precondition_m_wfcts(band_group%nloc,dvpsi,dpsi,eprec_loc)
+            CALL apply_alpha_pc_to_m_wfcs( nbndval, band_group%nloc,dvpsi, (-1._DP,0._DP) )
+            !
+            CALL precondition_m_wfcts( band_group%nloc, dvpsi, dpsi, eprec_loc )
             !
             IF (l_dost) THEN
                !
@@ -376,12 +374,12 @@ MODULE dfpt_module
                ! (see also PHonon/PH/cch_psi_all.f90, where H_(k+q) is evaluated)
                !
 #if defined(__CUDA)
-               CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,band_group%nloc,dvpsi,dpsi,et_loc,eprec_loc,tr2,ierr)
+               CALL linsolve_sternheimer_m_wfcts_gpu( nbndval, band_group%nloc, dvpsi, dpsi, et_loc, eprec_loc, tr2, ierr )
 #else
-               CALL linsolve_sternheimer_m_wfcts(nbndval,band_group%nloc,dvpsi,dpsi,et_loc,eprec_loc,tr2,ierr)
+               CALL linsolve_sternheimer_m_wfcts( nbndval, band_group%nloc, dvpsi, dpsi, et_loc, eprec_loc, tr2, ierr )
 #endif
                !
-               IF (ierr /= 0) &
+               IF(ierr /= 0) &
                   WRITE(stdout, '(7X,"** WARNING : PERT ",I8," iks ",I8," not converged, ierr = ",I8)') ipert,iks,ierr
                !
             ENDIF
@@ -390,7 +388,7 @@ MODULE dfpt_module
             aux_r(:) = zero
             !$acc end kernels
             !
-            IF (gamma_only) THEN
+            IF(gamma_only) THEN
                !
                ! double band @ gamma
                DO lbnd = 1,band_group%nloc
@@ -470,7 +468,7 @@ MODULE dfpt_module
             ! The perturbation is in aux_r
             !
             !$acc host_data use_device(aux_r,aux_g)
-            IF (gamma_only) THEN
+            IF(gamma_only) THEN
                CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,aux_g,TRIM(fftdriver))
             ELSE
                CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,aux_g,'Wave',igq_q(:,iq))
@@ -487,14 +485,14 @@ MODULE dfpt_module
             !
          ENDDO ! ipert
          !
-         IF (m == 0) CALL update_bar_type(barra,'dfpt',1)
+         IF( m == 0 ) CALL update_bar_type( barra, 'dfpt', 1 )
          !
       ENDDO ! K-POINT and SPIN
       !
-      IF (gamma_only) THEN
-         IF (gstart == 2) dng(1,1:m) = zero
+      IF ( gamma_only ) THEN
+         IF ( gstart == 2 ) dng(1,1:m) = zero
       ELSE
-         IF (gstart == 2 .AND. q_grid%l_pIsGamma(iq)) dng(1,1:m) = zero
+         IF ( gstart == 2 .AND. q_grid%l_pIsGamma(iq) ) dng(1,1:m) = zero
       ENDIF
       !
       CALL mp_sum(dng,inter_pool_comm)
@@ -520,9 +518,10 @@ MODULE dfpt_module
       CALL deallocate_linsolve_gpu()
 #endif
       !
-      CALL mp_barrier(world_comm)
+      CALL mp_barrier( world_comm )
       !
-      CALL stop_bar_type(barra,'dfpt')
+      CALL stop_bar_type( barra, 'dfpt' )
       !
     END SUBROUTINE
+    !
 END MODULE

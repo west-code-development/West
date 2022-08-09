@@ -204,7 +204,7 @@ SUBROUTINE compute_braket(braket)
            !
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s),proj_c(1,j,s),psic,'Wave')
            !
-           DO CONCURRENT (ir = 1,dffts%nnr)
+           DO CONCURRENT (ir = 1:dffts%nnr)
               rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
            !
@@ -294,14 +294,14 @@ SUBROUTINE compute_eri_vc(eri_vc)
         !
         CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),proj_c(1,j,s1),psic,'Wave')
         ! 
-        DO CONCURRENT (ir = 1,dffts%nnr)
+        DO CONCURRENT (ir = 1:dffts%nnr)
            rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
         ENDDO
         !
         rho_g1 = 0._DP
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !
-        DO CONCURRENT (ig = 1, ngm)
+        DO CONCURRENT (ig = 1:ngm)
            rho_g1(ig) = pot3D%sqvc(ig)**2 * rho_g1(ig)
         ENDDO
         !
@@ -321,7 +321,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            !
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s1),proj_c(1,l,s1),psic,'Wave')
            ! 
-           DO CONCURRENT (ir = 1,dffts%nnr)
+           DO CONCURRENT (ir = 1:dffts%nnr)
               rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
            !
@@ -363,14 +363,14 @@ SUBROUTINE compute_eri_vc(eri_vc)
         !
         CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),proj_c(1,j,s2),psic,'Wave')
         ! 
-        DO CONCURRENT (ir = 1,dffts%nnr)
+        DO CONCURRENT (ir = 1:dffts%nnr)
            rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
         ENDDO
         !
         rho_g1 = 0._DP
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !
-        DO CONCURRENT (ig = 1, ngm)
+        DO CONCURRENT (ig = 1:ngm)
            rho_g1(ig) = pot3D%sqvc(ig)**2 * rho_g1(ig)
         ENDDO
         !
@@ -394,7 +394,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            !
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s1),proj_c(1,l,s2),psic,'Wave')
            ! 
-           DO CONCURRENT (ir = 1,dffts%nnr)
+           DO CONCURRENT (ir = 1:dffts%nnr)
               rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
            !

@@ -203,8 +203,6 @@ MODULE wfreq_center
   !
   ! downfolded Hamiltonian
   COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
-  REAL(DP),   ALLOCATABLE :: eri(:,:,:,:)
   REAL(DP),   ALLOCATABLE :: h1e(:,:)
   !
   ! gw_etot 

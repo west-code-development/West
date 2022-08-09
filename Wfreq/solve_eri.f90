@@ -140,7 +140,7 @@ SUBROUTINE compute_braket(braket)
                                  & proj_c,n_bands,n_pairs,pijmap
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id,mp_bcast
   USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma, double_invfft_gamma
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum,mp_barrier
@@ -242,7 +242,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id, mp_bcast
   USE distribution_center,  ONLY : bandpair,kpt_pool
   USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma, double_invfft_gamma
   USE buffers,              ONLY : get_buffer
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm, mp_bcast
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type

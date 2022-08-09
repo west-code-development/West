@@ -45,7 +45,8 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   ! TODO: check if G=0 component is double counted in any dot products
   !
   ! Compute 4-center integrals of W (screened electron repulsion integrals, eri)
-  ! (ij|W|kl) = int dx dx' f*_i(x) f_j(x) W(r,r') f*_k(x') f_l(x'), f are projectors in proj_r
+  ! (ij|W|kl) = int dx dx' f^*_i(x) f_j(x) W(r,r') f^*_k(x') f_l(x')
+  ! f_i is the Fourier transfor to direct space of westcom/proj_c_i
   !
   CALL io_push_title("ERI")
   !
@@ -56,6 +57,8 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   freq = 0._DP
   chi_head = 0._DP
   chi_body = 0._DP
+  !
+  ! Extract response quantities corresponding to the input frequency 
   !
   IF ( real_freq ) THEN
      !
@@ -124,6 +127,12 @@ END SUBROUTINE
 SUBROUTINE compute_braket()
   !-----------------------------------------------------------------------
   !
+  ! braket_{ij(s),m} = < ij(s) | pdep_m * V_c^0.5 >
+  ! ij is a pair of functions taken from westcom/proj_c 
+  ! s is the spin index 
+  ! m is the PDEP index 
+  ! V_c is the bare Coulomb potential
+  !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
   USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,iuwfc,lrwfc,&
@@ -171,15 +180,21 @@ SUBROUTINE compute_braket()
         !
         m = macropert%l2g(mloc)
         !
-        IF (m > n_pdep_eigen_to_use) CYCLE
+        IF (m > n_pdep_eigen_to_use) CYCLE ! skip the head, use only the body
+        !
+        ! Read the m-th PDEP 
         !
         CALL generate_pdep_fname( filepot, m ) 
         fname = TRIM( wstat_save_dir ) // "/"// filepot
         CALL pdep_read_G_and_distribute(fname,phi(:))
         !
+        ! Mulitply by V_c^0.5
+        !
         DO ig = 1, npwq
            phi(ig) = pot3D%sqvc(ig) * phi(ig)
         ENDDO
+        !
+        ! Compute the braket for each pair of functions 
         !
         DO p1 = 1, n_pairs
            !

@@ -328,7 +328,8 @@ SUBROUTINE compute_eri_vc(eri_vc)
            rho_g2 = 0._DP
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
            !
-           eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + 2.0_DP * DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
+           eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + 2.0_DP * &
+           & DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
            IF(i==j .AND. k==l .AND. gstart==2) THEN 
               eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + pot3D%div 
            ENDIF
@@ -401,7 +402,8 @@ SUBROUTINE compute_eri_vc(eri_vc)
            rho_g2 = 0._DP
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
            !
-           eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + 2.0_DP * DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
+           eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + 2.0_DP * &
+           & DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
            IF( i==j .AND. k==l .AND. gstart==2 ) THEN 
               eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + pot3D%div
            ENDIF
@@ -431,13 +433,13 @@ END SUBROUTINE
 !
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, screened)
+SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,ijpmap
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,ijpmap,pijmap
   USE types_coulomb,        ONLY : pot3D
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -477,7 +479,8 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, screened)
                     i = pijmap(1,p1)
                     j = pijmap(2,p1)
                     !
-                    eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
+                    eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + &
+                    & braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
                     IF( i==j .AND. k==l ) THEN 
                        eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + chi_head*pot3D%div
                     ENDIF 

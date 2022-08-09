@@ -30,7 +30,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   USE ions_base,        ONLY : nat, ityp, ntyp => nsp
   USE klist,            ONLY : xk
   USE gvect,            ONLY : g
-  USE wvfct,            ONLY : npw, npwx, nbnd, g2kin, et
+  USE wvfct,            ONLY : npw, npwx, g2kin, et
   USE lsda_mod,         ONLY : nspin
   USE noncollin_module, ONLY : noncolin, npol
   USE becmod,           ONLY : bec_type, calbec, allocate_bec_type, deallocate_bec_type
@@ -38,7 +38,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   USE uspp_param,       ONLY : nh, nhm
   USE uspp_init,        ONLY : gen_us_dj, gen_us_dy
   USE control_flags,    ONLY : gamma_only
-  USE pwcom,            ONLY : igk_k,current_k
+  USE pwcom,            ONLY : igk_k, current_k
   !
   IMPLICIT NONE
   !
@@ -162,7 +162,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      ! calbec otherwise we would be stuck with the wrong component
      ! of becp2 later on.
      !
-     IF (gamma_only) work=(0.0_DP,1.0_DP)*work
+     IF (gamma_only) work=(0._DP,1._DP)*work
      !
      CALL allocate_bec_type ( nkb, m, becp1 )
      CALL allocate_bec_type ( nkb, m, becp2 )
@@ -171,10 +171,10 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      CALL calbec (npw, work, psi, becp2, m)
      !
      IF( noncolin ) THEN
-        ALLOCATE( psc (nkb,npol,nbnd,2) )
+        ALLOCATE( psc (nkb,npol,m,2) )
         psc=0._DP
      ELSE
-        ALLOCATE( ps2 (nkb,nbnd,2) )
+        ALLOCATE( ps2 (nkb,m,2) )
         ps2=0._DP
      END IF
      !
@@ -225,8 +225,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
               ENDIF
            ENDDO ! na
         ENDDO ! nt
-     ENDDO ! nbnd
-     IF (ikb /= nkb .OR. jkb /= nkb) call errore ('commut_Hx_psi', 'unexpected error',1)
+     ENDDO ! m
+     IF (ikb /= nkb .OR. jkb /= nkb) CALL errore ('commut_Hx_psi', 'unexpected error',1)
      !
      CALL deallocate_bec_type( becp1 )
      CALL deallocate_bec_type( becp2 )

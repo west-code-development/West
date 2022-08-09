@@ -15,6 +15,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
 !------------------------------------------------------------------------
   !
   ! | g_i > = alpha * P_a | f_i >            forall i = 1:n_bands
+  ! P_a = sum_{i from 1 to westcom/n_bands} |westcom/proj_c_i><westcom/proj_c_i| 
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : npw,npwx
@@ -41,7 +42,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
   !
   CALL start_clock ('alphapa')
   !
-  ! ps = < proj_c | f >
+  ! ps_{ij} = < westcom/proj_c_i | f_j >
   !
   IF( gamma_only ) THEN
      !

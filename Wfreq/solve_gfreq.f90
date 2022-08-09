@@ -464,72 +464,70 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
      !
-     ! LOOP over band states
-     !
-     DO ibloc = 1,band_group%nloc
-        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+     DO iks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
+        IF(ikks == bksks%lastdone_ks .AND. iks < bksks%lastdone_kks) CYCLE
         !
-        IF(ikks == bksks%lastdone_ks .AND. ib < bksks%lastdone_band) CYCLE
+        ik = k_grid%ip(iks)
         !
-        ! PSIC
+        time_spent(1) = get_clock( 'glanczos' )
         !
-        IF(noncolin) THEN
-           CALL single_invfft_k(dffts,npwk,npwx,evck(1     ,ib),psick_nc(1,1),'Wave',igk_k(1,ikks))
-           CALL single_invfft_k(dffts,npwk,npwx,evck(1+npwx,ib),psick_nc(1,2),'Wave',igk_k(1,ikks))
-        ELSE
-           CALL single_invfft_k(dffts,npwk,npwx,evck(1,ib),psick,'Wave',igk_k(1,ikks))
-        ENDIF
+        CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 'cart', iq, g0 )
         !
-        DO iks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
-           IF (ikks==bksks%lastdone_ks .AND. ib==bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE
+        npwq = ngq(iq)
+        !
+        ! compute Coulomb potential
+        !
+        CALL pot3D%init('Wave',.TRUE.,'default',iq)
+        !
+        ! The Hamiltonian is evaluated at k'
+        !
+        npw = ngk(iks)
+        !
+        ! ... Set k-point, spin, kinetic energy, needed by Hpsi
+        !
+        current_k = iks
+        IF ( lsda ) current_spin = isk(iks)
+        call g2_kin( iks )
+        !
+        ! ... More stuff needed by the hamiltonian: nonlocal projectors
+        !
+        IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
+        !
+!       ! ... Needed for LDA+U
+!       !
+!       IF ( kpt_pool%nloc > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
+!            CALL get_buffer ( wfcU, nwordwfcU, iunhub, iks )
+!       !
+!       current_k = iks
+!       current_spin = isk(iks)
+!       !
+!       CALL gk_sort(xk(1,iks),ngm,g,gcutw,npw,igk,g2kin)
+!       g2kin=g2kin*tpiba2
+!       !
+!       ! reads unperturbed wavefuctions psi_k in G_space, for all bands
+!       !
+!       CALL init_us_2 (npw, igk, xk (1, iks), vkb)
+!       !
+        CALL compute_phase( g0, 'cart', phase )
+        !
+        IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+        CALL mp_bcast( evc, 0, inter_image_comm )
+        !
+        ! LOOP over band states
+        !
+        DO ibloc = 1,band_group%nloc
+           ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
            !
-           ik = k_grid%ip(iks)
+           IF (ikks == bksks%lastdone_ks .AND. iks == bksks%lastdone_kks .AND. ib <= bksks%lastdone_band) CYCLE
            !
-           time_spent(1) = get_clock( 'glanczos' )
+           ! PSIC
            !
-           CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 'cart', iq, g0 )
-           !
-           npwq = ngq(iq)
-           !
-           ! compute Coulomb potential
-           !
-           CALL pot3D%init('Wave',.TRUE.,'default',iq)
-           !
-           ! The Hamiltonian is evaluated at k'
-           !
-           npw = ngk(iks)
-           !
-           ! ... Set k-point, spin, kinetic energy, needed by Hpsi
-           !
-           current_k = iks
-           IF ( lsda ) current_spin = isk(iks)
-           call g2_kin( iks )
-           !
-           ! ... More stuff needed by the hamiltonian: nonlocal projectors
-           !
-           IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
-           !
-!          !
-!          ! ... Needed for LDA+U
-!          !
-!          IF ( kpt_pool%nloc > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
-!               CALL get_buffer ( wfcU, nwordwfcU, iunhub, iks )
-!          !
-!          current_k = iks
-!          current_spin = isk(iks)
-!          !
-!          CALL gk_sort(xk(1,iks),ngm,g,gcutw,npw,igk,g2kin)
-!          g2kin=g2kin*tpiba2
-!          !
-!          ! reads unperturbed wavefuctions psi_k in G_space, for all bands
-!          !
-!          !
-!          CALL init_us_2 (npw, igk, xk (1, iks), vkb)
-           !
-           CALL compute_phase( g0, 'cart', phase )
-           !
-           IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-           CALL mp_bcast( evc, 0, inter_image_comm )
+           IF(noncolin) THEN
+              CALL single_invfft_k(dffts,npwk,npwx,evck(1     ,ib),psick_nc(1,1),'Wave',igk_k(1,ikks))
+              CALL single_invfft_k(dffts,npwk,npwx,evck(1+npwx,ib),psick_nc(1,2),'Wave',igk_k(1,ikks))
+           ELSE
+              CALL single_invfft_k(dffts,npwk,npwx,evck(1,ib),psick,'Wave',igk_k(1,ikks))
+           ENDIF
            !
            ! ZEROS
            !
@@ -665,9 +663,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            CALL update_bar_type( barra, 'glanczos', 1 )
            !
-        ENDDO ! KPOINT-SPIN (INTEGRAL OVER K')
+        ENDDO ! BANDS
         !
-     ENDDO ! BANDS
+     ENDDO ! KPOINT-SPIN (INTEGRAL OVER K')
      !
      DEALLOCATE(dvpsi)
      !

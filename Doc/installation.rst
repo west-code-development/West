@@ -58,3 +58,5 @@ Suggested configuration options
    installations/macos.rst
    installations/dgx.rst
    installations/summit.rst
+   installations/bebop.rst
+   installations/swing.rst

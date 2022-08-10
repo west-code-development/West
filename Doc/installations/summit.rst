@@ -26,6 +26,7 @@ WEST executables can be compiled using the following script (tested on August 9,
    module load essl/6.3.0
    module load netlib-lapack/3.9.1
    module load python/3.8-anaconda3
+   module load git/2.36.1
    module unload darshan-runtime
 
    export BLAS_LIBS="$OLCF_ESSL_ROOT/lib64/libessl.so"

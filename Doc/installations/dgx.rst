@@ -11,6 +11,14 @@ Requirements:
 - NVIDIA HPC SDK (21.9 or newer)
 - Python3
 
+To download and install NVIDIA HPC SDK, do:
+
+.. code-block:: bash
+
+   $ wget https://developer.download.nvidia.com/hpc-sdk/21.9/nvhpc_2021_219_Linux_x86_64_cuda_multi.tar.gz
+   $ tar xpzf nvhpc_2021_219_Linux_x86_64_cuda_multi.tar.gz
+   $ nvhpc_2021_219_Linux_x86_64_cuda_multi/install
+
 Building WEST
 ~~~~~~~~~~~~~
 

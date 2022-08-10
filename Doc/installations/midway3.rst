@@ -34,6 +34,7 @@ WEST executables can be compiled using the following script (tested on May 4, 20
    make -j 8 pw
 
    cd West
+
    make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
    sed -i 's/-L.*config-3.8-x86_64-linux-gnu //' west_make.inc
    make -j 8 all

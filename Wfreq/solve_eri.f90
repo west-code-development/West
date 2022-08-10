@@ -14,7 +14,7 @@
 SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !-----------------------------------------------------------------------
   !
-  USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,iuwfc,lrwfc,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,&
                                  & imfreq_list,refreq_list,ijpmap,pijmap,&
                                  & wfreq_save_dir,z_head_rfr_a,d_head_ifr_a,n_bands,n_pairs
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
@@ -43,7 +43,6 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   
   REAL(DP),ALLOCATABLE :: braket(:,:,:)
   REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: eri_wp(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: eri_w (:,:,:,:)
   !
   !
@@ -94,7 +93,6 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   ! Compute ERI (Electron Repulsion Integrals)
   !
   ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
-  ALLOCATE( eri_wp(n_pairs,n_pairs,nspin,nspin) )
   ALLOCATE( eri_w (n_pairs,n_pairs,nspin,nspin) )
   !
   ! 4-center integrals of Vc
@@ -106,11 +104,11 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   ALLOCATE( braket(n_pairs,nspin,n_pdep_eigen_to_use) )
   !
   CALL compute_braket(braket)
-  CALL compute_eri_wp(braket, chi_head, chi_body, eri_wp)
+  CALL compute_eri_wp(braket, chi_head, chi_body, eri_w)
   !
   ! 4-center integrals of W
   !
-  eri_w = eri_vc + eri_wp
+  eri_w = eri_vc + eri_w
   !
   CALL qdet_db_write(eri_vc,eri_w)
   !
@@ -119,7 +117,6 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   DEALLOCATE( chi_body )
   DEALLOCATE( braket ) 
   DEALLOCATE( eri_vc )
-  DEALLOCATE( eri_wp )
   DEALLOCATE( eri_w )
   !
 END SUBROUTINE
@@ -136,7 +133,7 @@ SUBROUTINE compute_braket(braket)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,iuwfc,lrwfc,&
+  USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,&
                                  & proj_c,n_bands,n_pairs,pijmap
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id,mp_bcast
   USE fft_base,             ONLY : dffts
@@ -146,7 +143,7 @@ SUBROUTINE compute_braket(braket)
   USE mp,                   ONLY : mp_sum,mp_barrier
   USE types_coulomb,        ONLY : pot3D
   USE io_push,              ONLY : io_push_title
-  USE distribution_center,  ONLY : macropert,kpt_pool
+  USE distribution_center,  ONLY : macropert
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
   USE wavefunctions,        ONLY : psic
@@ -237,10 +234,10 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : iuwfc,lrwfc,n_pdep_eigen_to_use,n_bands,n_pairs,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,n_pairs,&
                                  & pijmap, proj_c, npwq,npwqx, fftdriver
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id, mp_bcast
-  USE distribution_center,  ONLY : bandpair,kpt_pool
+  USE distribution_center,  ONLY : bandpair
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma, double_invfft_gamma
   USE buffers,              ONLY : get_buffer
@@ -302,7 +299,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !
         DO CONCURRENT (ig = 1:ngm)
-           rho_g1(ig) = pot3D%sqvc(ig)**2 * rho_g1(ig)
+           rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
         ENDDO
         !
         ! (s1 = s2); (p2 = p1)
@@ -327,6 +324,10 @@ SUBROUTINE compute_eri_vc(eri_vc)
            !
            rho_g2 = 0._DP
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
+           !
+           DO CONCURRENT (ig = 1:ngm)
+              rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
+           ENDDO
            !
            eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + 2.0_DP * &
            & DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
@@ -372,23 +373,12 @@ SUBROUTINE compute_eri_vc(eri_vc)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !
         DO CONCURRENT (ig = 1:ngm)
-           rho_g1(ig) = pot3D%sqvc(ig)**2 * rho_g1(ig)
+           rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
         ENDDO
         !
-        ! (s1 < s2); (p2 = p1)
+        ! (s1 < s2)
         !
-        eri_vc(p1,p1,s1,s2) = eri_vc(p1,p1,s1,s2) + 2.0_DP * DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g1(gstart:ngm),1)/omega
-        IF( i==j .AND. gstart==2 ) THEN
-           eri_vc(p1,p1,s1,s2) = eri_vc(p1,p1,s1,s2) + pot3D%div 
-        ENDIF
-        !
-        ! Apply symmetry
-        !
-        eri_vc(p1,p1,s2,s1) = eri_vc(p1,p1,s1,s2) 
-        !
-        ! (s1 < s2); (p2 > p1)
-        !
-        DO p2 = p1+1, n_pairs
+        DO p2 = 1, n_pairs
            !
            k = pijmap(1,p2)
            l = pijmap(2,p2)
@@ -401,6 +391,10 @@ SUBROUTINE compute_eri_vc(eri_vc)
            !
            rho_g2 = 0._DP
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
+           !
+           DO CONCURRENT (ig = 1:ngm)
+              rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
+           ENDDO
            !
            eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + 2.0_DP * &
            & DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega

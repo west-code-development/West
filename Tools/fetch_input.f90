@@ -24,8 +24,8 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
                              & trev_secant,l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty, westpp_box, document
-  USE mp_world,         ONLY : mpime, root
+                             & westpp_epsinfty,westpp_box,document
+  USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
   !
@@ -60,7 +60,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
         CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
-        CALL json%add('input.wstat_control.qlist', qlist)
+        CALL json%add('input.wstat_control.qlist',qlist)
         !
      ENDIF
      !
@@ -113,12 +113,9 @@ END SUBROUTINE
 
 SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
-  USE io_push,          ONLY : io_push_title, io_push_value, io_push_bar, io_push_es0, io_push_c512
-  USE forpy_mod,        ONLY : call_py, import_py, module_py
-  USE forpy_mod,        ONLY : tuple, tuple_create
-  USE forpy_mod,        ONLY : dict, dict_create
-  USE forpy_mod,        ONLY : list, list_create
-  USE forpy_mod,        ONLY : object, cast
+  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512
+  USE forpy_mod,        ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,dict_create,&
+                             & list,object,cast
   USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
                              & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
@@ -130,12 +127,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
                              & westpp_epsinfty,westpp_box,document,main_input_file,logfile
   USE kinds,            ONLY : DP
-  USE io_files,         ONLY : tmp_dir, prefix
-  USE mp,               ONLY : mp_bcast, mp_barrier
-  USE mp_world,         ONLY : mpime, root, world_comm
+  USE io_files,         ONLY : tmp_dir,prefix
+  USE mp,               ONLY : mp_bcast,mp_barrier
+  USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
   USE gvect,            ONLY : ecutrho
-  USE start_k,          ONLY : nk1, nk2, nk3
+  USE start_k,          ONLY : nk1,nk2,nk3
   USE control_flags,    ONLY : gamma_only
   USE json_module,      ONLY : json_file
   USE pwcom,            ONLY : nelec
@@ -153,7 +150,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   TYPE(tuple) :: args
   TYPE(dict) :: kwargs
   TYPE(module_py) :: pymod
-  TYPE(object) :: return_obj, tmp_obj
+  TYPE(object) :: return_obj,tmp_obj
   TYPE(dict) :: return_dict
   TYPE(list) :: tmp_list
   INTEGER :: list_len

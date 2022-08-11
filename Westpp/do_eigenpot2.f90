@@ -76,9 +76,9 @@ SUBROUTINE do_eigenpot2 ( )
         !
         auxr = 0._DP
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(1,local_j),psic,TRIM(fftdriver))
+           CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,local_j),psic,TRIM(fftdriver))
         ELSE
-           CALL single_invfft_k(dffts,npwq,npwqx,dvg(1,local_j),psic,'Wave',igq_q(1,iq))
+           CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,local_j),psic,'Wave',igq_q(:,iq))
         ENDIF
         IF( westpp_sign ) THEN
            DO ir = 1, dffts%nnr

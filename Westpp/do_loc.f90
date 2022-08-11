@@ -136,14 +136,14 @@ SUBROUTINE do_loc ( )
         global_ib2 = aband%l2g(local_ib)
         !
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
            DO ir = 1, dffts%nnr
               rho = REAL(psic(ir),KIND=DP)**2
               local_fac(global_ib2,iks) = local_fac(global_ib2,iks)+filter_loc(ir)*rho
               ipr(global_ib2,iks) = ipr(global_ib2,iks)+rho**2
            ENDDO
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
            DO ir = 1, dffts%nnr
               rho = REAL(CONJG(psic(ir))*psic(ir),KIND=DP)
               local_fac(global_ib2,iks) = local_fac(global_ib2,iks)+filter_loc(ir)*rho

@@ -95,7 +95,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      current_k = iks
      IF ( lsda ) current_spin = isk(iks)
-     call g2_kin( iks )
+     CALL g2_kin( iks )
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
@@ -116,7 +116,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
         IF(gamma_only) THEN
            !
            DO ib = 1, gwbnd%nloc
-              CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave')
               braket = 0._DP
               DO ir = 1, dfftp%nnr
                  braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
@@ -127,7 +127,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
         ELSE
            !
            DO ib = 1, gwbnd%nloc
-              CALL single_invfft_k(dffts,npw,npwx,evc(1,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,evc(1:npwx,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(:,current_k))
               braket = 0._DP
               DO ir = 1, dfftp%nnr
                  braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)
@@ -138,7 +138,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
            IF(noncolin) THEN
               !
               DO ib = 1,gwbnd%nloc
-                 CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,qp_bandrange(1)+gwbnd%l2g(ib)-1),psic,'Wave',igk_k(1,current_k))
+                 CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx:npwx*2,qp_bandrange(1)+gwbnd%l2g(ib)-1),&
+                 & psic,'Wave',igk_k(:,current_k))
                  braket = 0._DP
                  DO ir = 1, dfftp%nnr
                     braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin)

@@ -38,6 +38,9 @@ CONTAINS
     USE hdf5_qe,               ONLY : phdf5_start => initialize_hdf5
     USE qeh5_base_module,      ONLY : hdf5_start => initialize_hdf5
 #endif
+#if defined(__CUDA)
+    USE west_gpu,              ONLY : west_gpu_start
+#endif
     !
     IMPLICIT NONE
     !
@@ -139,6 +142,10 @@ CONTAINS
     CALL errore(TRIM(code), 'West need MPI to run', 1 )
 #endif
     !
+#if defined(__CUDA)
+    CALL west_gpu_start( )
+#endif
+    !
 #if defined(__HDF5)
     CALL hdf5_start( )
     CALL phdf5_start( )
@@ -158,6 +165,9 @@ CONTAINS
     USE hdf5_qe,          ONLY : phdf5_end => finalize_hdf5
     USE qeh5_base_module, ONLY : hdf5_end => finalize_hdf5
 #endif
+#if defined(__CUDA)
+    USE west_gpu,         ONLY : west_gpu_end
+#endif
     !
     IMPLICIT NONE
     !
@@ -171,6 +181,10 @@ CONTAINS
 #if defined(_HDF5)
     CALL phdf5_end( )
     CALL hdf5_end( )
+#endif
+    !
+#if defined(__CUDA)
+    CALL west_gpu_end( )
 #endif
     !
     IF ( meta_ionode ) WRITE( stdout, * )

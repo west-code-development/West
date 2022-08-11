@@ -75,9 +75,9 @@ SUBROUTINE do_wfc2 ( )
         !
         auxr = 0._DP
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
         ENDIF
         IF( westpp_sign ) THEN
            DO ir = 1, dffts%nnr

@@ -17,7 +17,11 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   ! Set eprec, for precondiconditioning
   !
   USE kinds,                 ONLY : DP
+#if defined(__CUDA)
+  USE wvfct_gpum,            ONLY : g2kin=>g2kin_d
+#else
   USE wvfct,                 ONLY : g2kin
+#endif
   USE noncollin_module,      ONLY : noncolin,npol
   USE pwcom,                 ONLY : npw,npwx
   USE mp,                    ONLY : mp_sum
@@ -30,29 +34,31 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   INTEGER,INTENT(IN) :: m
   COMPLEX(DP),INTENT(IN) :: wfc(npwx*npol,m)
   REAL(DP),INTENT(OUT) :: eprec(m)
+#if defined(__CUDA)
+  ATTRIBUTES(DEVICE) :: wfc,eprec
+#endif
   !
   ! Workspace
   !
-  INTEGER :: ibnd, ig
+  INTEGER :: ibnd,ig
+  REAL(DP) :: reduce
+  REAL(DP),PARAMETER :: factor = 1.35_DP
   !
-  eprec = 0._DP
-  !
-  DO ibnd = 1, m
-     !
-     DO ig = 1, npw
-        eprec(ibnd) = eprec(ibnd) + CONJG( wfc(ig,ibnd) ) * wfc(ig,ibnd) * g2kin(ig)
+  !$acc parallel vector_length(1024)
+  !$acc loop
+  DO ibnd = 1,m
+     reduce = 0._DP
+     !$acc loop reduction(+:reduce)
+     DO ig = 1,npw
+        reduce = reduce+CONJG(wfc(ig,ibnd))*wfc(ig,ibnd)*g2kin(ig)
+        IF(noncolin) THEN
+           reduce = reduce+CONJG(wfc(ig+npwx,ibnd))*wfc(ig+npwx,ibnd)*g2kin(ig)
+        ENDIF
      ENDDO
-     !
-     IF (noncolin) THEN
-        DO ig = 1, npw
-           eprec(ibnd) = eprec(ibnd) + CONJG( wfc(ig+npwx,ibnd) ) * wfc(ig+npwx,ibnd) * g2kin(ig)
-        ENDDO
-     ENDIF
-     !
+     eprec(ibnd) = reduce*factor
   ENDDO
+  !$acc end parallel
   !
   CALL mp_sum(eprec,intra_bgrp_comm)
-  !
-  eprec = eprec * 1.35_DP
   !
 END SUBROUTINE

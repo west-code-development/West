@@ -42,6 +42,10 @@ MODULE chi_invert
       USE kinds,                 ONLY : DP
       USE linear_algebra_kernel, ONLY : matinvrs_dge
       USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
+#if defined(__CUDA)
+      USE west_gpu,              ONLY : body_r,x_r,wh_r,wl_r,temph_r,templ_r,tempt_r
+      USE cublas
+#endif
       !
       IMPLICIT NONE
       !
@@ -56,22 +60,34 @@ MODULE chi_invert
       INTEGER :: i1,i2
       REAL(DP) :: f
       REAL(DP) :: ky
-      REAL(DP) :: tempt(3,3)
-      REAL(DP),ALLOCATABLE :: body(:,:)
-      REAL(DP),ALLOCATABLE :: wh(:,:)
-      REAL(DP),ALLOCATABLE :: wl(:,:)
-      REAL(DP),ALLOCATABLE :: x(:,:)
-      REAL(DP),ALLOCATABLE :: temph(:,:)
-      REAL(DP),ALLOCATABLE :: templ(:,:)
+#if !defined(__CUDA)
+      REAL(DP) :: tempt_r(3,3)
+      REAL(DP),ALLOCATABLE :: body_r(:,:)
+      REAL(DP),ALLOCATABLE :: wh_r(:,:)
+      REAL(DP),ALLOCATABLE :: wl_r(:,:)
+      REAL(DP),ALLOCATABLE :: x_r(:,:)
+      REAL(DP),ALLOCATABLE :: temph_r(:,:)
+      REAL(DP),ALLOCATABLE :: templ_r(:,:)
       !
-      ALLOCATE(body(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
-      ALLOCATE(x(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      ALLOCATE(body_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      ALLOCATE(x_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      IF(l_macropol) THEN
+         ALLOCATE(wh_r(n_pdep_eigen_to_use,3))
+         ALLOCATE(wl_r(3,n_pdep_eigen_to_use))
+         ALLOCATE(temph_r(n_pdep_eigen_to_use,3))
+         ALLOCATE(templ_r(3,n_pdep_eigen_to_use))
+      ENDIF
+#endif
       !
+      !$acc update device(matilda)
+      !
+      !$acc parallel loop collapse(2) present(body_r,matilda)
       DO i2 = 1,n_pdep_eigen_to_use
          DO i1 = 1,n_pdep_eigen_to_use
-            body(i1,i2) = matilda(i1,i2)
+            body_r(i1,i2) = matilda(i1,i2)
          ENDDO
       ENDDO
+      !$acc end parallel
       !
       IF(l_macropol) THEN
          !
@@ -80,51 +96,66 @@ MODULE chi_invert
             f = f+matilda(n_pdep_eigen_to_use+i1,n_pdep_eigen_to_use+i1)/3._DP
          ENDDO
          !
-         ALLOCATE(wh(n_pdep_eigen_to_use,3))
+         !$acc parallel loop collapse(2) present(wh_r,matilda)
          DO i2 = 1,3
             DO i1 = 1,n_pdep_eigen_to_use
-               wh(i1,i2) = matilda(i1,n_pdep_eigen_to_use+i2)
+               wh_r(i1,i2) = matilda(i1,n_pdep_eigen_to_use+i2)
             ENDDO
          ENDDO
+         !$acc end parallel
          !
-         ALLOCATE(wl(3,n_pdep_eigen_to_use))
+         !$acc parallel loop collapse(2) present(wl_r,matilda)
          DO i2 = 1,n_pdep_eigen_to_use
             DO i1 = 1,3
-               wl(i1,i2) = matilda(n_pdep_eigen_to_use+i1,i2)
+               wl_r(i1,i2) = matilda(n_pdep_eigen_to_use+i1,i2)
             ENDDO
          ENDDO
+         !$acc end parallel
          !
       ENDIF
       !
       ! X = (1-B)^{-1}
-      x(:,:) = -body
-      DO i1 = 1,n_pdep_eigen_to_use
-         x(i1,i1) = x(i1,i1)+1._DP
-      ENDDO
       !
-      CALL matinvrs_dge(n_pdep_eigen_to_use,x)
+      !$acc parallel loop collapse(2) present(x_r,body_r)
+      DO i2 = 1,n_pdep_eigen_to_use
+         DO i1 = 1,n_pdep_eigen_to_use
+            IF(i1 == i2) THEN
+               x_r(i1,i2) = 1._DP-body_r(i1,i2)
+            ELSE
+               x_r(i1,i2) = -body_r(i1,i2)
+            ENDIF
+         ENDDO
+      ENDDO
+      !$acc end parallel
+      !
+      CALL matinvrs_dge(n_pdep_eigen_to_use,x_r)
       !
       IF(l_macropol) THEN
          !
          ! temph = X * wh
-         ALLOCATE(temph(n_pdep_eigen_to_use,3))
-         CALL DGEMM('N','N',n_pdep_eigen_to_use,3,n_pdep_eigen_to_use,1._DP,x,n_pdep_eigen_to_use,&
-         & wh,n_pdep_eigen_to_use,0._DP,temph,n_pdep_eigen_to_use)
-         DEALLOCATE(wh)
+         !
+         !$acc host_data use_device(x_r,wh_r,wl_r,temph_r,templ_r,tempt_r)
+         CALL DGEMM('N','N',n_pdep_eigen_to_use,3,n_pdep_eigen_to_use,1._DP,x_r,n_pdep_eigen_to_use,&
+         & wh_r,n_pdep_eigen_to_use,0._DP,temph_r,n_pdep_eigen_to_use)
          !
          ! templ = wl * X
-         ALLOCATE(templ(3,n_pdep_eigen_to_use))
-         CALL DGEMM('N','N',3,n_pdep_eigen_to_use,n_pdep_eigen_to_use,1._DP,wl,3,x,&
-         & n_pdep_eigen_to_use,0._DP,templ,3)
+         !
+         CALL DGEMM('N','N',3,n_pdep_eigen_to_use,n_pdep_eigen_to_use,1._DP,wl_r,3,x_r,&
+         & n_pdep_eigen_to_use,0._DP,templ_r,3)
          !
          ! tempt = wl * temph
-         CALL DGEMM('N','N',3,3,n_pdep_eigen_to_use,1._DP,wl,3,temph,n_pdep_eigen_to_use,0._DP,tempt,3)
-         DEALLOCATE(wl)
+         !
+         CALL DGEMM('N','N',3,3,n_pdep_eigen_to_use,1._DP,wl_r,3,temph_r,n_pdep_eigen_to_use,0._DP,&
+         & tempt_r,3)
+         !$acc end host_data
+         !
+         !$acc update host(tempt_r)
          !
          ! ky = 1 - f - Tr ( tempt ) / 3
+         !
          ky = 1._DP-f
          DO i1 = 1,3
-            ky = ky-tempt(i1,i1)/3._DP
+            ky = ky-tempt_r(i1,i1)/3._DP
          ENDDO
          !
          head = (1._DP-ky)/ky
@@ -133,17 +164,29 @@ MODULE chi_invert
          head = 0._DP
       ENDIF
       !
-      CALL DGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,1._DP,x,n_pdep_eigen_to_use,&
-      & body,n_pdep_eigen_to_use,0._DP,lambda,n_pdep_eigen_to_use)
+      !$acc host_data use_device(x_r,body_r,temph_r,templ_r,lambda)
+      CALL DGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,1._DP,x_r,&
+      & n_pdep_eigen_to_use,body_r,n_pdep_eigen_to_use,0._DP,lambda,n_pdep_eigen_to_use)
       !
       IF(l_macropol) THEN
-         CALL DGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,3,1._DP/(3._DP*ky),temph,&
-         & n_pdep_eigen_to_use,templ,3,1._DP,lambda,n_pdep_eigen_to_use)
-         DEALLOCATE(temph)
-         DEALLOCATE(templ)
+         f = 1._DP/(3._DP*ky)
+         CALL DGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,3,f,temph_r,n_pdep_eigen_to_use,&
+         & templ_r,3,1._DP,lambda,n_pdep_eigen_to_use)
       ENDIF
+      !$acc end host_data
       !
-      DEALLOCATE(body,x)
+      !$acc update host(lambda)
+      !
+#if !defined(__CUDA)
+      DEALLOCATE(body_r)
+      DEALLOCATE(x_r)
+      IF(l_macropol) THEN
+         DEALLOCATE(wh_r)
+         DEALLOCATE(wl_r)
+         DEALLOCATE(temph_r)
+         DEALLOCATE(templ_r)
+      ENDIF
+#endif
       !
     END SUBROUTINE
     !
@@ -167,6 +210,10 @@ MODULE chi_invert
       USE kinds,                 ONLY : DP
       USE linear_algebra_kernel, ONLY : matinvrs_zge
       USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
+#if defined(__CUDA)
+      USE west_gpu,              ONLY : body_c,x_c,wh_c,wl_c,temph_c,templ_c,tempt_c
+      USE cublas
+#endif
       !
       IMPLICIT NONE
       !
@@ -183,16 +230,18 @@ MODULE chi_invert
       INTEGER :: i1,i2
       COMPLEX(DP) :: f
       COMPLEX(DP) :: ky
-      COMPLEX(DP) :: tempt(3,3)
-      COMPLEX(DP),ALLOCATABLE :: body(:,:)
-      COMPLEX(DP),ALLOCATABLE :: wh(:,:)
-      COMPLEX(DP),ALLOCATABLE :: wl(:,:)
-      COMPLEX(DP),ALLOCATABLE :: x(:,:)
-      COMPLEX(DP),ALLOCATABLE :: temph(:,:)
-      COMPLEX(DP),ALLOCATABLE :: templ(:,:)
+#if !defined(__CUDA)
+      COMPLEX(DP) :: tempt_c(3,3)
+      COMPLEX(DP),ALLOCATABLE :: body_c(:,:)
+      COMPLEX(DP),ALLOCATABLE :: wh_c(:,:)
+      COMPLEX(DP),ALLOCATABLE :: wl_c(:,:)
+      COMPLEX(DP),ALLOCATABLE :: x_c(:,:)
+      COMPLEX(DP),ALLOCATABLE :: temph_c(:,:)
+      COMPLEX(DP),ALLOCATABLE :: templ_c(:,:)
+#endif
       !
-      COMPLEX(DP),PARAMETER :: one = CMPLX(1._DP,0._DP,KIND=DP)
-      COMPLEX(DP),PARAMETER :: zero = CMPLX(0._DP,0._DP,KIND=DP)
+      COMPLEX(DP),PARAMETER :: one = (1._DP,0._DP)
+      COMPLEX(DP),PARAMETER :: zero = (0._DP,0._DP)
       !
       IF(PRESENT(l_gammaq)) THEN
          l_dohead = l_macropol .AND. l_gammaq
@@ -200,14 +249,26 @@ MODULE chi_invert
          l_dohead = l_macropol
       ENDIF
       !
-      ALLOCATE(body(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
-      ALLOCATE(x(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+#if !defined(__CUDA)
+      ALLOCATE(body_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      ALLOCATE(x_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+      IF(l_dohead) THEN
+         ALLOCATE(wh_c(n_pdep_eigen_to_use,3))
+         ALLOCATE(wl_c(3,n_pdep_eigen_to_use))
+         ALLOCATE(temph_c(n_pdep_eigen_to_use,3))
+         ALLOCATE(templ_c(3,n_pdep_eigen_to_use))
+      ENDIF
+#endif
       !
+      !$acc update device(matilda)
+      !
+      !$acc parallel loop collapse(2) present(body_c,matilda)
       DO i2 = 1,n_pdep_eigen_to_use
          DO i1 = 1,n_pdep_eigen_to_use
-            body(i1,i2) = matilda(i1,i2)
+            body_c(i1,i2) = matilda(i1,i2)
          ENDDO
       ENDDO
+      !$acc end parallel
       !
       IF(l_dohead) THEN
          !
@@ -216,51 +277,66 @@ MODULE chi_invert
             f = f+matilda(n_pdep_eigen_to_use+i1,n_pdep_eigen_to_use+i1)/3._DP
          ENDDO
          !
-         ALLOCATE(wh(n_pdep_eigen_to_use,3))
+         !$acc parallel loop collapse(2) present(wh_c,matilda)
          DO i2 = 1,3
             DO i1 = 1,n_pdep_eigen_to_use
-               wh(i1,i2) = matilda(i1,n_pdep_eigen_to_use+i2)
+               wh_c(i1,i2) = matilda(i1,n_pdep_eigen_to_use+i2)
             ENDDO
          ENDDO
+         !$acc end parallel
          !
-         ALLOCATE(wl(3,n_pdep_eigen_to_use))
+         !$acc parallel loop collapse(2) present(wl_c,matilda)
          DO i2 = 1,n_pdep_eigen_to_use
             DO i1 = 1,3
-               wl(i1,i2) = matilda(n_pdep_eigen_to_use+i1,i2)
+               wl_c(i1,i2) = matilda(n_pdep_eigen_to_use+i1,i2)
             ENDDO
          ENDDO
+         !$acc end parallel
          !
       ENDIF
       !
       ! X = (1-B)^{-1}
-      x(:,:) = -body
-      DO i1 = 1,n_pdep_eigen_to_use
-         x(i1,i1) = x(i1,i1)+one
-      ENDDO
       !
-      CALL matinvrs_zge(n_pdep_eigen_to_use,x)
+      !$acc parallel loop collapse(2) present(x_c,body_c)
+      DO i2 = 1,n_pdep_eigen_to_use
+         DO i1 = 1,n_pdep_eigen_to_use
+            IF(i1 == i2) THEN
+               x_c(i1,i2) = 1._DP-body_c(i1,i2)
+            ELSE
+               x_c(i1,i2) = -body_c(i1,i2)
+            ENDIF
+         ENDDO
+      ENDDO
+      !$acc end parallel
+      !
+      CALL matinvrs_zge(n_pdep_eigen_to_use,x_c)
       !
       IF(l_dohead) THEN
          !
          ! temph = X * wh
-         ALLOCATE(temph(n_pdep_eigen_to_use,3))
-         CALL ZGEMM('N','N',n_pdep_eigen_to_use,3,n_pdep_eigen_to_use,one,x,n_pdep_eigen_to_use,&
-         & wh,n_pdep_eigen_to_use,zero,temph,n_pdep_eigen_to_use)
-         DEALLOCATE(wh)
+         !
+         !$acc host_data use_device(x_c,wh_c,wl_c,temph_c,templ_c,tempt_c)
+         CALL ZGEMM('N','N',n_pdep_eigen_to_use,3,n_pdep_eigen_to_use,one,x_c,n_pdep_eigen_to_use,&
+         & wh_c,n_pdep_eigen_to_use,zero,temph_c,n_pdep_eigen_to_use)
          !
          ! templ = wl * X
-         ALLOCATE(templ(3,n_pdep_eigen_to_use))
-         CALL ZGEMM('N','N',3,n_pdep_eigen_to_use,n_pdep_eigen_to_use,one,wl,3,x,&
-         & n_pdep_eigen_to_use,zero,templ,3)
+         !
+         CALL ZGEMM('N','N',3,n_pdep_eigen_to_use,n_pdep_eigen_to_use,one,wl_c,3,x_c,&
+         & n_pdep_eigen_to_use,zero,templ_c,3)
          !
          ! tempt = wl * temph
-         CALL ZGEMM('N','N',3,3,n_pdep_eigen_to_use,one,wl,3,temph,n_pdep_eigen_to_use,zero,tempt,3)
-         DEALLOCATE(wl)
+         !
+         CALL ZGEMM('N','N',3,3,n_pdep_eigen_to_use,one,wl_c,3,temph_c,n_pdep_eigen_to_use,zero,&
+         & tempt_c,3)
+         !$acc end host_data
+         !
+         !$acc update host(tempt_c)
          !
          ! ky = 1 - f - Tr ( tempt ) / 3
+         !
          ky = one-f
          DO i1 = 1,3
-            ky = ky-tempt(i1,i1)/3._DP
+            ky = ky-tempt_c(i1,i1)/3._DP
          ENDDO
          !
          head = (one-ky)/ky
@@ -269,17 +345,29 @@ MODULE chi_invert
          head = zero
       ENDIF
       !
-      CALL ZGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,one,x,n_pdep_eigen_to_use,&
-      & body,n_pdep_eigen_to_use,zero,lambda,n_pdep_eigen_to_use)
+      !$acc host_data use_device(x_c,body_c,temph_c,templ_c,lambda)
+      CALL ZGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,one,x_c,&
+      & n_pdep_eigen_to_use,body_c,n_pdep_eigen_to_use,zero,lambda,n_pdep_eigen_to_use)
       !
       IF(l_dohead) THEN
-         CALL ZGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,3,one/(3._DP*ky),temph,&
-         & n_pdep_eigen_to_use,templ,3,one,lambda,n_pdep_eigen_to_use)
-         DEALLOCATE(temph)
-         DEALLOCATE(templ)
+         f = one/(3._DP*ky)
+         CALL ZGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,3,f,temph_c,n_pdep_eigen_to_use,&
+         & templ_c,3,one,lambda,n_pdep_eigen_to_use)
       ENDIF
+      !$acc end host_data
       !
-      DEALLOCATE(body,x)
+      !$acc update host(lambda)
+      !
+#if !defined(__CUDA)
+      DEALLOCATE(body_c)
+      DEALLOCATE(x_c)
+      IF(l_dohead) THEN
+         DEALLOCATE(wh_c)
+         DEALLOCATE(wl_c)
+         DEALLOCATE(temph_c)
+         DEALLOCATE(templ_c)
+      ENDIF
+#endif
       !
    END SUBROUTINE
    !

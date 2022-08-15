@@ -316,3 +316,6 @@ texinfo_documents = [
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3.6', None)
 }
+
+# Do not execute notebooks
+nbsphinx_execute = 'never'

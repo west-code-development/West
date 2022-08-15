@@ -1,15 +1,15 @@
 Change Log
 ==========
 
-Not released
+v5.1.0 (2022/08/19) -- Not yet released
 ------------
 
-- Updated WEST to be compatible with QE 7.1 (before it was compatible with QE 7.0). QE must be compiled without CMake.
-- Added GPU acceleration of `wstat` and `wfreq` on NVIDIA GPUs.
+- Full release of GPU-accelerated full-frequency GW implementation (V. Yu and M. Govoni, JCTC 18 4690 (2022)), e.g., enabling the use of WEST at OLCF/Summit, NERSC/Perlmutter, ALCF/Polaris. GPU acceleration of `wstat` and `wfreq` is restricted to NVIDIA GPUs.
+- Code updated for compatibility with Quantum Espresso 7.1. QE must be compiled without CMake.
 - Added the calculation of inverse participation ratio and localization factor in `westpp`.
 - Bug fix. Fixed calculation of dipole matrix elements in `westpp`.
 - Updated CI/CD to use the pytest framework.
-- Updated documentation. Updated build instructions for ALCF/Theta, NERSC/Cori, and UChicago/RCC/Midway3. Added build instructions for OLCF/Summit, ANL/LCRC/Bebop, ANL/LCRC/Swing, and NVIDIA DGX A100.
+- Updated documentation. Updated build instructions for ALCF/Theta, NERSC/Cori, and UChicago/RCC/Midway3. Added build instructions for OLCF/Summit, ANL/LCRC/Bebop, ANL/LCRC/Swing, and NVIDIA DGX A100. Added more tutorials.
 
 v5.0.0 (2022/05/13)
 -------------------

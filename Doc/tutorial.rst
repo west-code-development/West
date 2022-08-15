@@ -13,6 +13,7 @@ Contents:
    tutorials/basic/basic_001.ipynb
    tutorials/basic/basic_002.ipynb
    tutorials/basic/basic_003.ipynb
+   tutorials/basic/basic_004.ipynb
 
 In addition, the tutorials used in the MICCoM School 2017 are provided:
 

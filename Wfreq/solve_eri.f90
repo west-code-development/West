@@ -115,7 +115,7 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   !
   CALL io_push_bar()
   !
-  DEALLOCATE( eri, braket, chi_body )
+  DEALLOCATE( braket, chi_body )
   !
 END SUBROUTINE
 !

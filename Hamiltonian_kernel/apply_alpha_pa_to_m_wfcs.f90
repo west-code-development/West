@@ -31,7 +31,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
   !
   INTEGER, INTENT(IN) :: m
   COMPLEX(DP), INTENT(IN) :: alpha
-  COMPLEX(DP), INTENT(IN) :: f(npwx*npol,m)
+  COMPLEX(DP), INTENT(INOUT) :: f(npwx*npol,m)
   !
   ! Workspace
   !

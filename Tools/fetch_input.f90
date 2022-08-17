@@ -474,6 +474,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      ! CHECKS
      !
+     IF(.NOT. gamma_only) THEN
+        DO i = 1, 9
+           IF( wfreq_calculation(i:i) == 'H' ) CALL errore('fetch_input','Err: QDET requires gamma_only',1)
+        ENDDO
+     ENDIF
+     IF(.NOT. l_enable_off_diagonal) THEN
+        DO i = 1, 9
+           IF( wfreq_calculation(i:i) == 'H' ) CALL errore('fetch_input','Err: QDET requires l_enable_off_diagonal',1)
+        ENDDO
+     ENDIF
      IF( n_lanczos < 2 ) CALL errore('fetch_input','Err: n_lanczos<2',1)
      IF( n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use<1',1)
      IF( n_pdep_eigen_to_use > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use>n_pdep_eigen',1)
@@ -488,8 +498,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ELSE 
         DO i = 0, SIZE(qp_bands)-1 ! Python indices start at 0
            IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands',1)
-           IF ( i /= SIZE(qp_bands)-1 .AND. qp_bands(i+1) >= qp_bands(i+2) ) &
-           & CALL errore('fetch_input','Err: qp_bands',1)                    
         ENDDO
      ENDIF
      IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)

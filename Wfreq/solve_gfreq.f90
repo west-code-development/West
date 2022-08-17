@@ -35,9 +35,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
-                                 & o_restart_time,npwqx,fftdriver,wstat_save_dir,l_enable_off_diagonal,&
-                                 & ijpmap
+  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,&
+                                 & nbnd_occ,iuwfc,lrwfc,o_restart_time,npwqx,fftdriver,&
+                                 & wstat_save_dir,l_enable_off_diagonal,ijpmap
   USE mp_global,            ONLY : my_image_id,inter_image_comm,npool,intra_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
@@ -114,7 +114,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      IF(iks < bks%lastdone_ks) CYCLE
      !
      DO ibloc = 1,band_group%nloc
-        ib = qp_bands(band_group%l2g(ibloc))
+        !
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !

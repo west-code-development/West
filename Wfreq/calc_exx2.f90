@@ -55,7 +55,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,ib_index,jb,jb_index,ipair
+  INTEGER :: ib,iv,ir,iks,ik,is,ig,ivloc,ibloc,iq,ikqs,ikq,iks_g,jb,ib_index,jb_index,ipair
   INTEGER :: nbndval
   INTEGER :: npwkq
   TYPE(idistribute) :: vband

@@ -134,12 +134,12 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
                     CALL single_invfft_gamma(dffts,npw,npwx,evc(1,qp_bands(jb_glob)),psic1,'Wave')
                     DO ir = 1, dfftp%nnr
-                       braket = braket + psic(ir)*DCONJG(psic1(ir)) * vxc(ir,current_spin) 
+                       braket = braket + psic(ir)*CONJG(psic1(ir)) * vxc(ir,current_spin) 
                     ENDDO
                     sigma_vxcl_full(ipair,iks_g) = REAL(braket,KIND=DP) / nnr
                  ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
                     DO ir = 1, dfftp%nnr
-                       braket = braket + psic(ir)*DCONJG(psic(ir)) * vxc(ir,current_spin) 
+                       braket = braket + psic(ir)*CONJG(psic(ir)) * vxc(ir,current_spin) 
                     ENDDO
                     sigma_vxcl(gwbnd%l2g(ib),iks_g)&
                     &= REAL(braket,KIND=DP) / nnr

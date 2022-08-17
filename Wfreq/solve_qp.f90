@@ -78,8 +78,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,&
-           & ib_index,jb,jb_index,ipair
+  INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,jb,&
+           & ib_index,jb_index,ipair
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
@@ -292,6 +292,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
                  CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
               ENDIF
               !
+            !   IF ( mpime == root .AND. l_enable_off_diagonal .AND. jb <= ib ) write(*,*) jb, ib, index, shape(d_diago_full)
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos 
                     IF (l_enable_off_diagonal .AND. jb <= ib) THEN
@@ -614,13 +615,13 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,imfreq_list_integrate,&
-                                 & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,n_imfreq,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bands,n_bands,&
+                                 & imfreq_list_integrate,n_secant_maxiter,trev_secant,&
+                                 & l_enable_lanczos,imfreq_list,n_imfreq,&
                                  & z_epsm1_ifr_q,z_epsm1_rfr_q,n_spectralf,ecut_spectralf,&
                                  & z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q,sigma_z,&
                                  & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
-                                 & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,&
-                                 & qp_bands,n_bands
+                                 & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,inter_bgrp_comm
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum

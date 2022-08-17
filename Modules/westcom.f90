@@ -45,6 +45,9 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr(:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_epsm1_ifr_a(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_a(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_a(:,:,:)
   !
   ! EPSILON with q-points
   !
@@ -65,6 +68,8 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_body2_ifr_full(:,:,:,:,:)
   REAL(DP),    ALLOCATABLE :: d_diago_full(:,:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_head_ifr_a(:)
+  COMPLEX(DP), ALLOCATABLE :: z_head_rfr_a(:)
   !
   ! CORRELATION with q-points
   !
@@ -193,15 +198,13 @@ MODULE wfreq_center
   ! off-diagonal entries mapping
   !
   INTEGER :: n_pairs
-  INTEGER,ALLOCATABLE :: ijpmap(:,:)
-  INTEGER,ALLOCATABLE :: pijmap(:,:)
+  INTEGER,    ALLOCATABLE :: ijpmap(:,:)
+  INTEGER,    ALLOCATABLE :: pijmap(:,:)
   !
   ! downfolded Hamiltonian
-  REAL(DP),   ALLOCATABLE :: proj_r(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
-  REAL(DP),ALLOCATABLE :: eri(:,:,:,:)
-  REAL(DP),ALLOCATABLE :: h1e(:,:)
+  REAL(DP),   ALLOCATABLE :: h1e(:,:)
+  COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   !
   ! gw_etot 
   !

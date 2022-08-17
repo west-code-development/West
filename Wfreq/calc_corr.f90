@@ -446,9 +446,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
   USE pwcom,                ONLY : et
-  USE westcom,              ONLY : qp_bands,n_bands,nbnd_occ,l_enable_lanczos,n_lanczos,&
-                                 & l_macropol,z_head_ifr,z_head_rfr,z_body1_ifr_q,&
-                                 & z_body2_ifr_q,d_diago_q,z_body_rfr_q
+  USE westcom,              ONLY : qp_bands,n_bands,nbnd_occ,l_enable_lanczos,n_lanczos,l_macropol,&
+                                 & z_head_ifr,z_head_rfr,z_body1_ifr_q,z_body2_ifr_q,d_diago_q,&
+                                 & z_body_rfr_q
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
   USE distribution_center,  ONLY : pert,ifr,rfr,aband

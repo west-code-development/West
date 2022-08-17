@@ -17,7 +17,7 @@ SUBROUTINE wfreq_setup
   USE mp_global,              ONLY : nbgrp,inter_image_comm,my_image_id,mp_bcast
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
-                                   & wfreq_calculation,qp_bands,n_bands,sigma_exx,sigma_vxcl,&
+                                   & qp_bands,n_bands,wfreq_calculation,sigma_exx,sigma_vxcl,&
                                    & sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,&
                                    & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
                                    & sigma_spectralf,sigma_freq,n_spectralf,l_enable_off_diagonal,&
@@ -40,7 +40,7 @@ SUBROUTINE wfreq_setup
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: i,ib,jb,ipair,ib_index,iks
+  INTEGER :: i,ib,jb,iks,ib_index,ipair
   LOGICAL :: l_generate_plot
   !
   CALL do_setup()
@@ -106,14 +106,33 @@ SUBROUTINE wfreq_setup
   !
   ! Allocate for output
   !
-  ALLOCATE( sigma_exx       (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_vxcl      (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_vxcnl     (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_hf        (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_z         (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_eqplin    (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_eqpsec    (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_diff      (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_exx       (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_vxcl      (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_vxcnl     (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_hf        (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_z         (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_eqplin    (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_eqpsec    (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_sc_eks    (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqplin (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_sc_eqpsec (SIZE(qp_bands),k_grid%nps) )
+  ALLOCATE( sigma_diff      (SIZE(qp_bands),k_grid%nps) )
+  IF (l_enable_off_diagonal) THEN
+     npair = SIZE(qp_bands)*(SIZE(qp_bands)+1)/2
+     ALLOCATE(ijpmap(SIZE(qp_bands),SIZE(qp_bands)))
+     index = 1
+     DO ib = 1, SIZE(qp_bands)
+        DO jb = ib, SIZE(qp_bands)
+           ijpmap(ib,jb) = index
+           ijpmap(jb,ib) = index
+           index = index + 1
+        ENDDO 
+     ENDDO
+     ALLOCATE( sigma_exx_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_vxcl_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_vxcnl_full (1:npair,k_grid%nps) )
+     ALLOCATE( sigma_corr_full (1:npair,k_grid%nps) )
+  ENDIF
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
@@ -162,7 +181,6 @@ SUBROUTINE wfreq_setup
   !
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'H') THEN
-        ALLOCATE( proj_r(dffts%nnr,n_bands,k_grid%nps) )
         ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
         DO iks = 1, k_grid%nps 
            !
@@ -175,8 +193,6 @@ SUBROUTINE wfreq_setup
               !
               ib = qp_bands(ib_index)
               proj_c(:,ib_index,iks) = evc(:,ib)
-              CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,ib_index,iks),psic,TRIM(fftdriver))
-              proj_r(:,ib_index,iks) = psic(:)
               !
            END DO
            !

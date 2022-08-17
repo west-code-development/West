@@ -316,7 +316,7 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks,
+      INTEGER :: iks
       CHARACTER(LEN=6) :: my_label_ik
       !
       TYPE(json_file) :: json

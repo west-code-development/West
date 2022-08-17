@@ -27,7 +27,7 @@ SUBROUTINE solve_h1e()
   USE bp,                   ONLY : lelfield
   USE realus,               ONLY : real_space
   USE control_flags,        ONLY : gamma_only
-  USE wfreq_db,             ONLY : qdet_db_write
+  USE wfreq_db,             ONLY : qdet_db_write_h1e
   USE mp_world,             ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -89,7 +89,7 @@ SUBROUTINE solve_h1e()
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c} - \Sigma^{c}_{dc}
   h1e = h1e - REAL(sigma_corr_full)
   ! write H1e to JSON file
-  CALL qdet_db_write(h1e)
+  CALL qdet_db_write_h1e(h1e)
   !
   CALL io_push_bar()
   !

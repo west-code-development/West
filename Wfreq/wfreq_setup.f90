@@ -24,7 +24,7 @@ SUBROUTINE wfreq_setup
                                    & ijpmap,pijmap,n_pairs,sigma_exx_full,sigma_vxcl_full,&
                                    & sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
                                    & sigma_sc_eqplin_full,sigma_corr_full,&
-                                   & iuwfc,lrwfc,proj_c,proj_r,npwq,npwqx,fftdriver
+                                   & iuwfc,lrwfc,proj_c,npwq,npwqx,fftdriver
   USE wavefunctions,          ONLY : evc,psic
   USE fft_base,               ONLY : dffts
   USE buffers,                ONLY : get_buffer
@@ -117,22 +117,6 @@ SUBROUTINE wfreq_setup
   ALLOCATE( sigma_sc_eqplin (SIZE(qp_bands),k_grid%nps) )
   ALLOCATE( sigma_sc_eqpsec (SIZE(qp_bands),k_grid%nps) )
   ALLOCATE( sigma_diff      (SIZE(qp_bands),k_grid%nps) )
-  IF (l_enable_off_diagonal) THEN
-     npair = SIZE(qp_bands)*(SIZE(qp_bands)+1)/2
-     ALLOCATE(ijpmap(SIZE(qp_bands),SIZE(qp_bands)))
-     index = 1
-     DO ib = 1, SIZE(qp_bands)
-        DO jb = ib, SIZE(qp_bands)
-           ijpmap(ib,jb) = index
-           ijpmap(jb,ib) = index
-           index = index + 1
-        ENDDO 
-     ENDDO
-     ALLOCATE( sigma_exx_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcl_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_vxcnl_full (1:npair,k_grid%nps) )
-     ALLOCATE( sigma_corr_full (1:npair,k_grid%nps) )
-  ENDIF
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP

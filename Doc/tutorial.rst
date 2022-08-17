@@ -3,9 +3,9 @@
 Tutorials
 =========
 
-These tutorials demonstrate how to utilize core features of **WEST**.
+The following tutorials demonstrate how to utilize core features of **WEST**.
 
-Contents:
+Basic tutorials:
 
 .. toctree::
    :maxdepth: 1
@@ -15,7 +15,7 @@ Contents:
    tutorials/basic/basic_003.ipynb
    tutorials/basic/basic_004.ipynb
 
-In addition, the tutorials used in the MICCoM School 2017 are provided:
+The following tutorials were used in 2017 for MICCoM's Computational Summer School:
 
 .. toctree::
    :maxdepth: 1

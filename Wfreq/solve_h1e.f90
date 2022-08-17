@@ -89,7 +89,7 @@ SUBROUTINE solve_h1e()
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c} - \Sigma^{c}_{dc}
   h1e = h1e - REAL(sigma_corr_full)
   ! write H1e to JSON file
-  CALL qdet_db_write( )
+  CALL qdet_db_write(h1e)
   !
   CALL io_push_bar()
   !

@@ -13,7 +13,7 @@ def read_indexmap_from_json(filename):
 
     return np.array(raw_['output']['Q']['indexmap'], dtype=int)
 
-ef read_h1e_from_json(filename):
+def read_h1e_from_json(filename):
     """
     Read QDET one-body terms from JSON file.
     """

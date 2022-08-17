@@ -236,6 +236,10 @@ MODULE wfreq_center
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin_full (:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_corr_full (:,:)
   !
+  ! QDET
+  !
+  COMPLEX(DP), ALLOCATABLE :: eri(:,:,:,:)
+  !
 END MODULE
 !
 !

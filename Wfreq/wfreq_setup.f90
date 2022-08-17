@@ -113,9 +113,6 @@ SUBROUTINE wfreq_setup
   ALLOCATE( sigma_z         (SIZE(qp_bands),k_grid%nps) )
   ALLOCATE( sigma_eqplin    (SIZE(qp_bands),k_grid%nps) )
   ALLOCATE( sigma_eqpsec    (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_sc_eks    (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqplin (SIZE(qp_bands),k_grid%nps) )
-  ALLOCATE( sigma_sc_eqpsec (SIZE(qp_bands),k_grid%nps) )
   ALLOCATE( sigma_diff      (SIZE(qp_bands),k_grid%nps) )
   sigma_exx = 0._DP      
   sigma_vxcl = 0._DP

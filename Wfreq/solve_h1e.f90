@@ -135,7 +135,7 @@ SUBROUTINE compute_hks(psi, hpsi, h1e_tmp)
   ENDDO
   !
   ! compute integrals from psi and hpsi and transform into pair-basis.
-  CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "hks.dat")
+  CALL compute_integrals(psi, hpsi, h1e_tmp)
   !
   CALL deallocate_bec_type(becp)
   !
@@ -181,7 +181,7 @@ SUBROUTINE compute_vxc(psi, hpsi, h1e_tmp)
     !
   ENDDO
   !
-  CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "vxc.dat")
+  CALL compute_integrals(psi, hpsi, h1e_tmp)
   !
   CALL destroy_scf_type(vhxc)
   !
@@ -232,14 +232,14 @@ SUBROUTINE compute_vxx(psi, hpsi, h1e_tmp)
      !
   END IF
   !
-  CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "vxx.dat")
+  CALL compute_integrals(psi, hpsi, h1e_tmp)
   !
   CALL destroy_scf_type(vhxc)
   !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------  
-SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
+SUBROUTINE compute_integrals(psi, hpsi, h1e)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -255,7 +255,6 @@ SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
   COMPLEX(DP), INTENT(IN)  :: psi(npwx,n_bands,nspin)
   COMPLEX(DP), INTENT(OUT) :: hpsi(npwx,n_bands,nspin)
   REAL(DP), INTENT(OUT)    :: h1e(n_pairs,nspin)
-  CHARACTER(LEN=*), INTENT(IN) :: fname
   !
   REAL(DP),ALLOCATABLE     :: h1e_tmp(:,:,:)
   INTEGER   :: npw2, npwx2
@@ -300,12 +299,6 @@ SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
        ENDDO
     ENDDO
   ENDDO
-  !
-  IF ( mpime == root ) THEN
-     OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/"//TRIM(fname), STATUS="REPLACE", ACCESS="STREAM")
-     WRITE(iunit) h1e * ry_to_ha
-     CLOSE(iunit)
-  ENDIF
   !
   DEALLOCATE(h1e_tmp)
   !

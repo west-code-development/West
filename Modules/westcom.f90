@@ -238,7 +238,7 @@ MODULE wfreq_center
   !
   ! QDET
   !
-  COMPLEX(DP), ALLOCATABLE :: eri(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   !
 END MODULE
 !

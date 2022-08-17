@@ -17,7 +17,7 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,&
                                  & imfreq_list,refreq_list,ijpmap,pijmap,&
                                  & wfreq_save_dir,z_head_rfr_a,d_head_ifr_a,&
-                                 & n_bands,n_pairs, eri
+                                 & n_bands,n_pairs, eri_w
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
@@ -93,7 +93,7 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   ! Compute ERI (Electron Repulsion Integrals)
   !
   ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
-  ALLOCATE( eri(n_pairs,n_pairs,nspin,nspin) )
+  ALLOCATE( eri_w(n_pairs,n_pairs,nspin,nspin) )
   !
   ! 4-center integrals of Vc
   !
@@ -104,13 +104,13 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   ALLOCATE( braket(n_pairs,nspin,n_pdep_eigen_to_use) )
   !
   CALL compute_braket(braket)
-  CALL compute_eri_wp(braket, chi_head, chi_body, eri)
+  CALL compute_eri_wp(braket, chi_head, chi_body, eri_w)
   !
   ! 4-center integrals of W
   !
-  eri = eri_vc + eri
+  eri_w = eri_vc + eri_w
   !
-  CALL qdet_db_write(eri_vc,eri)
+  CALL qdet_db_write(eri_vc,eri_w)
   !
   CALL io_push_bar()
   !

@@ -175,6 +175,7 @@ west_doc_build:
     - pip install -q nbsphinx
     - pip install -q sphinx_rtd_theme
     - pip install -q ipython
+    - pip install -q ipykernel
   script:
     - rm -rf West
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

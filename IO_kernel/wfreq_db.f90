@@ -38,7 +38,7 @@ MODULE wfreq_db
                                      & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
                                      & sigma_freq,sigma_spectralf,l_enable_off_diagonal,pijmap,n_pairs,&
                                      & sigma_vxcl_full,sigma_vxcnl_full,sigma_exx_full,sigma_hf_full,&
-                                     & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
+                                     & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,occupation
       USE pwcom,                ONLY : et, nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -93,7 +93,7 @@ MODULE wfreq_db
          ALLOCATE(occ_(n_bands, k_grid%nps))
          DO iks = 1, k_grid%nps
           DO ib = 1, n_bands
-            band_index = qp_bands(iband)
+            band_index = qp_bands(ib)
             occ_(ib, iks) = occupation(band_index, iks) 
           ENDDO
          ENDDO

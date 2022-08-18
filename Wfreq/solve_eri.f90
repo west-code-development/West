@@ -11,12 +11,13 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_eri(ifreq,real_freq)
+SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !-----------------------------------------------------------------------
   !
-  USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,iuwfc,lrwfc,&
-                                 & imfreq_list,refreq_list,ijpmap,pijmap,braket,eri,&
-                                 & wfreq_save_dir,z_head_rfr_a,d_head_ifr_a,n_bands,n_pairs
+  USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,&
+                                 & imfreq_list,refreq_list,ijpmap,pijmap,&
+                                 & wfreq_save_dir,z_head_rfr_a,d_head_ifr_a,&
+                                 & n_bands,n_pairs, eri_w
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
@@ -31,33 +32,37 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   IMPLICIT NONE
   !
   INTEGER,INTENT(IN) :: ifreq
-  LOGICAL,INTENT(IN) :: real_freq
+  LOGICAL,INTENT(IN) :: l_isFreqReal
   !
   INTEGER  :: i, j, p1
   INTEGER  :: who, iloc, iunit
-  COMPLEX(DP) :: freq, chi_head
-  REAL(DP)    :: ry_to_ha = 0.5_DP
-  REAL(DP), ALLOCATABLE :: bare_eri(:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: screened_eri(:,:,:,:)
   !
-  COMPLEX(DP),ALLOCATABLE  :: chi_body(:,:)
+  REAL(DP) :: freq
+  !
+  COMPLEX(DP) :: chi_head
+  COMPLEX(DP),ALLOCATABLE :: chi_body(:,:)
+  
+  REAL(DP),ALLOCATABLE :: braket(:,:,:)
+  REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:)
+  !
   !
   ! TODO: check if G=0 component is double counted in any dot products
   !
   ! Compute 4-center integrals of W (screened electron repulsion integrals, eri)
-  ! (ij|W|kl) = int dx dx' f*_i(x) f_j(x) W(r,r') f*_k(x') f_l(x'), f are projectors in proj_r
+  ! (ij|W|kl) = int dx dx' f_i(x) f_j(x) W(r,r') f_k(x') f_l(x')
+  ! f_i is the Fourier transform to direct space of westcom/proj_c_i
   !
   CALL io_push_title("ERI")
   !
   ALLOCATE( chi_body( pert%nglob, pert%nloc ) )
   !
-  ! Load chi at given frequency
+  ! Load chi at given frequency (index and logical from input)
   !
   freq = 0._DP
   chi_head = 0._DP
   chi_body = 0._DP
   !
-  IF ( real_freq ) THEN
+  IF ( l_isFreqReal ) THEN
      !
      CALL rfr%g2l(ifreq,iloc,who)
      IF ( me_bgrp == who ) THEN
@@ -74,8 +79,8 @@ SUBROUTINE solve_eri(ifreq,real_freq)
      IF ( me_bgrp == who ) THEN
         !
         freq = imfreq_list(iloc)
-        chi_head = d_head_ifr_a(ifreq)
-        chi_body(:,:) = d_epsm1_ifr_a(:,:,ifreq)
+        chi_head = CMPLX(d_head_ifr_a(ifreq),0._DP)
+        chi_body(:,:) = CMPLX(d_epsm1_ifr_a(:,:,ifreq),0._DP)
         !
      ENDIF
      !
@@ -85,62 +90,68 @@ SUBROUTINE solve_eri(ifreq,real_freq)
   CALL mp_sum( chi_head, intra_bgrp_comm )
   CALL mp_sum( chi_body, intra_bgrp_comm )
   !
-  ! Compute ERI
+  ! Compute ERI (Electron Repulsion Integrals)
   !
-  ALLOCATE( braket(n_pairs,nspin,n_pdep_eigen_to_use) )
-  !  
-  CALL compute_braket()
-  !
-  ALLOCATE( screened_eri(n_pairs,n_pairs,nspin,nspin) )
-  ALLOCATE( bare_eri(n_pairs,n_pairs,nspin,nspin) )
-  ALLOCATE( eri(n_pairs,n_pairs,nspin,nspin) )
-  !
-  bare_eri = 0._DP
-  eri = 0._DP
+  ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
+  ALLOCATE( eri_w(n_pairs,n_pairs,nspin,nspin) )
   !
   ! 4-center integrals of Vc
   !
-  CALL compute_bv_direct(bare_eri)
-  !
-  CALL compute_hv(bare_eri)
+  CALL compute_eri_vc(eri_vc)
   !
   ! 4-center integrals of Wp
-  screened_eri = 0._DP
   !
-  CALL compute_wp_pdep(chi_head, chi_body, screened_eri)
+  ALLOCATE( braket(n_pairs,nspin,n_pdep_eigen_to_use) )
   !
-  ! calculate total 4-center integrals
-  eri(:,:,:,:) = bare_eri(:,:,:,:) + REAL(screened_eri(:,:,:,:))
+  CALL compute_braket(braket)
+  CALL compute_eri_wp(braket, chi_head, chi_body, eri_w)
   !
+  ! 4-center integrals of W
+  !
+  eri_w = eri_vc + eri_w
+  !
+  CALL qdet_db_write(eri_vc,eri_w)
   !
   CALL io_push_bar()
   !
-  DEALLOCATE( braket, chi_body )
+  DEALLOCATE( chi_body )
+  DEALLOCATE( braket ) 
+  DEALLOCATE( eri_vc )
   !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_braket()
+SUBROUTINE compute_braket(braket)
   !-----------------------------------------------------------------------
+  !
+  ! braket_{ij(s)m} = < ij(s) | pdep_m * V_c^0.5 >
+  ! ij is a pair of functions taken from westcom/proj_c 
+  ! s is the spin index 
+  ! m is the PDEP index 
+  ! V_c is the bare Coulomb potential
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,iuwfc,lrwfc,&
-                                 & n_bands,n_pairs,proj_r,braket,pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
+  USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,&
+                                 & proj_c,n_bands,n_pairs,pijmap
+  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id,mp_bcast
   USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma, double_invfft_gamma
+  USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum,mp_barrier
   USE types_coulomb,        ONLY : pot3D
   USE io_push,              ONLY : io_push_title
-  USE distribution_center,  ONLY : macropert,kpt_pool
+  USE distribution_center,  ONLY : macropert
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute 
+  USE wavefunctions,        ONLY : psic
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP),ALLOCATABLE :: phi(:), rho_r(:), rho_g(:), psi1(:), psi2(:)
+  REAL(DP),INTENT(INOUT) :: braket(n_pairs,nspin,n_pdep_eigen_to_use)
+  !
+  COMPLEX(DP),ALLOCATABLE :: phi(:), rho_r(:), rho_g(:) 
   !
   INTEGER :: s, m, p1, i, j, ig, ir, mloc
   INTEGER :: iunit
@@ -166,28 +177,36 @@ SUBROUTINE compute_braket()
         !
         m = macropert%l2g(mloc)
         !
-        IF (m > n_pdep_eigen_to_use) CYCLE
+        IF (m > n_pdep_eigen_to_use) CYCLE ! skip the head, use only the body
+        !
+        ! Read the m-th PDEP 
         !
         CALL generate_pdep_fname( filepot, m ) 
         fname = TRIM( wstat_save_dir ) // "/"// filepot
         CALL pdep_read_G_and_distribute(fname,phi(:))
         !
+        ! Mulitply by V_c^0.5
+        !
         DO ig = 1, npwq
            phi(ig) = pot3D%sqvc(ig) * phi(ig)
         ENDDO
+        !
+        ! Compute the braket for each pair of functions 
         !
         DO p1 = 1, n_pairs
            !
            i = pijmap(1,p1)
            j = pijmap(2,p1)
            !
-           DO ir=1,dffts%nnr
-              rho_r(ir)=proj_r(ir,i,s)*proj_r(ir,j,s)
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s),proj_c(1,j,s),psic,'Wave')
+           !
+           DO CONCURRENT (ir = 1:dffts%nnr)
+              rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
            !
            CALL single_fwfft_gamma(dffts,npwq,npwqx,rho_r,rho_g,TRIM(fftdriver))
            !
-           braket(p1,s,m) = CMPLX(2.0_DP * DDOT(2*npwq,rho_g,1,phi,1), 0._DP)  ! assume Gamma-only case
+           braket(p1,s,m) = 2.0_DP * DDOT(2*npwq,rho_g,1,phi,1)  ! assume Gamma-only case
            !
         ENDDO
         !
@@ -202,37 +221,42 @@ SUBROUTINE compute_braket()
   !
   CALL stop_bar_type( barra,'braket' )
   !
-  DEALLOCATE( phi, rho_r, rho_g )
+  DEALLOCATE( phi )
+  DEALLOCATE( rho_r )
+  DEALLOCATE( rho_g )
   !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE compute_bv_direct(bare)
+SUBROUTINE compute_eri_vc(eri_vc)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : iuwfc,lrwfc,eri,n_pdep_eigen_to_use,n_bands,n_pairs,proj_r,&
-                                 & pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
-  USE distribution_center,  ONLY : bandpair,kpt_pool
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,n_pairs,&
+                                 & pijmap, proj_c, npwq,npwqx, fftdriver
+  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id, mp_bcast
+  USE distribution_center,  ONLY : bandpair
   USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma, double_invfft_gamma
+  USE buffers,              ONLY : get_buffer
+  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm, mp_bcast
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE types_coulomb,        ONLY : pot3D
   USE io_push,              ONLY : io_push_title
-  USE gvect,                ONLY : ngm
+  USE gvect,                ONLY : gstart,ngm
   USE cell_base,            ONLY : omega
   USE class_idistribute,    ONLY : idistribute
+  USE wavefunctions,        ONLY : psic
   !
   IMPLICIT NONE
   !
-  REAL(DP), INTENT(INOUT) :: bare(n_pairs,n_pairs,nspin,nspin)
-  COMPLEX(DP),ALLOCATABLE  :: rho_gs(:,:,:), rho_g(:), rho_r(:), psi1(:), psi2(:)
+  REAL(DP), INTENT(INOUT) :: eri_vc(n_pairs,n_pairs,nspin,nspin)
   !
-  COMPLEX(DP) :: Hv,Bv
+  COMPLEX(DP),ALLOCATABLE  :: rho_g1(:), rho_g2(:), rho_r(:)
+  !
+  COMPLEX(DP) :: Hv
   INTEGER     :: i, j, k, l, p1, p1loc, p2, s1, s2
   INTEGER     :: ir, ig
   TYPE(bar_type) :: barra
@@ -248,14 +272,13 @@ SUBROUTINE compute_bv_direct(bare)
   !
   CALL pot3D%init('Rho',.FALSE.,"gb")
   !
-  ALLOCATE( rho_gs(ngm,bandpair%nloc,nspin) )
-  ALLOCATE( psi1(dffts%nnr), psi2(dffts%nnr), rho_r(dffts%nnr), rho_g(ngm) )
+  ALLOCATE( rho_r(dffts%nnr), rho_g1(ngm), rho_g2(ngm) )
   !
-  CALL start_bar_type ( barra, 'rho', nspin * bandpair%nloc )
+  eri_vc = 0._DP
   !
-  rho_gs = 0._DP
+  ! eri_vc with SAME SPIN --> compute only p2>=p1, obtain p2<p1 by symmetry
   !
-  ! Iterate over i, j, store results in rho_gs
+  CALL start_bar_type ( barra, 'eri_vc_same_spin', nspin )
   !
   DO s1 = 1, nspin
      !
@@ -265,156 +288,151 @@ SUBROUTINE compute_bv_direct(bare)
         i = pijmap(1,p1)
         j = pijmap(2,p1)
         !
-        DO ir=1,dffts%nnr
-           rho_r(ir)=proj_r(ir,i,s1)*proj_r(ir,j,s1)
+        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),proj_c(1,j,s1),psic,'Wave')
+        ! 
+        DO CONCURRENT (ir = 1:dffts%nnr)
+           rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
         ENDDO
         !
-        CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_gs(:,p1loc,s1),'Rho')
+        rho_g1 = 0._DP
+        CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !
-        DO ig = 1, ngm
-           rho_gs(ig,p1loc,s1) = pot3D%sqvc(ig)**2 * rho_gs(ig,p1loc,s1)
+        DO CONCURRENT (ig = 1:ngm)
+           rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
         ENDDO
         !
-        CALL update_bar_type ( barra, 'rho', 1 )
+        ! (s1 = s2); (p2 = p1)
+        !
+        eri_vc(p1,p1,s1,s1) = eri_vc(p1,p1,s1,s1) + 2.0_DP * DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g1(gstart:ngm),1)/omega
+        IF(i==j .AND. gstart==2) THEN
+           eri_vc(p1,p1,s1,s1) = eri_vc(p1,p1,s1,s1) + pot3D%div 
+        ENDIF 
+        !
+        ! (s1 = s2); (p2 > p1)
+        !
+        DO p2 = p1+1, n_pairs
+           !
+           k = pijmap(1,p2)
+           l = pijmap(2,p2)
+           !
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s1),proj_c(1,l,s1),psic,'Wave')
+           ! 
+           DO CONCURRENT (ir = 1:dffts%nnr)
+              rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
+           ENDDO
+           !
+           rho_g2 = 0._DP
+           CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
+           !
+           DO CONCURRENT (ig = 1:ngm)
+              rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
+           ENDDO
+           !
+           eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + 2.0_DP * &
+           & DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
+           IF(i==j .AND. k==l .AND. gstart==2) THEN 
+              eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + pot3D%div 
+           ENDIF
+           !
+           ! Apply symmetry
+           !
+           eri_vc(p2,p1,s1,s1) = eri_vc(p1,p2,s1,s1)
+           !
+        ENDDO
+        !
+        CALL update_bar_type ( barra, 'eri_vc_same_spin', 1 )
         !
      ENDDO
-  ENDDO  ! Iterate over i, j
+  ENDDO 
   !
-  CALL stop_bar_type ( barra, 'rho' )
+  CALL stop_bar_type ( barra, 'eri_vc_same_spin' )
   !
-  CALL io_push_title('Vc Integrals (Direct)')
-  CALL start_bar_type ( barra, 'Bv', nspin * n_pairs )
+  ! eri_vc with DIFFERENT SPIN --> compute only s2>s1, obtain s2<s1 by symmetry
   !
-  ! Iterate over k, l
-  !
-  DO s2 = 1, nspin
+  IF (nspin==2) THEN  
+     ! 
+     CALL start_bar_type ( barra, 'eri_vc_diff_spin', 1 )
      !
-     DO p2 = 1, n_pairs
+     s1 = 1
+     s2 = 2 
+     !
+     DO p1loc = 1, bandpair%nloc
         !
-        k = pijmap(1,p2)
-        l = pijmap(2,p2)
+        p1 = bandpair%l2g(p1loc)
+        i = pijmap(1,p1)
+        j = pijmap(2,p1)
         !
-        DO ir=1,dffts%nnr
-           rho_r(ir)=proj_r(ir,k,s2)*proj_r(ir,l,s2)
+        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),proj_c(1,j,s2),psic,'Wave')
+        ! 
+        DO CONCURRENT (ir = 1:dffts%nnr)
+           rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
         ENDDO
         !
-        CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g,'Rho')
+        rho_g1 = 0._DP
+        CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !
-        DO s1 = 1, nspin
-           DO p1loc = 1, bandpair%nloc
-              !
-              p1 = bandpair%l2g(p1loc)
-              !
-              Bv = (1/omega) * 2.0_DP * DDOT(2*ngm,rho_gs(:,p1loc,s1),1,rho_g,1)
-              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + REAL(Bv)
-           ENDDO
+        DO CONCURRENT (ig = 1:ngm)
+           rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
         ENDDO
         !
-        CALL update_bar_type ( barra, 'Bv', 1 )
+        ! (s1 < s2)
         !
-     ENDDO
-  ENDDO  ! Iterate over k, l
-  !
-  CALL mp_sum( bare, intra_bgrp_comm )
-  CALL mp_sum( bare, inter_image_comm )
-  !
-  CALL stop_bar_type ( barra, 'Bv' )
-  !
-  DEALLOCATE( rho_gs, psi1, psi2, rho_r, rho_g )
-  !
-END SUBROUTINE
-!
-!-----------------------------------------------------------------------
-SUBROUTINE compute_bv_pdep(bare)
-  !-----------------------------------------------------------------------
-  !
-  USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : eri,n_pdep_eigen_to_use,n_bands,n_pairs,fftdriver,braket
-  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE mp,                   ONLY : mp_sum
-  USE types_coulomb,        ONLY : pot3D
-  USE io_push,              ONLY : io_push_title
-  USE cell_base,            ONLY : omega
-  !
-  IMPLICIT NONE
-  !
-  REAL(DP), INTENT(INOUT) :: bare(n_pairs,n_pairs,nspin,nspin)
-  COMPLEX(DP) :: Hv,Bv
-  INTEGER     :: s1, s2, p1, p2
-  TYPE(bar_type) :: barra
-  !
-  COMPLEX(DP), EXTERNAL :: ZDOTC
-  !
-  CALL io_push_title('Vc Integrals (PDEP)')
-  !
-  CALL pot3D%init(fftdriver,.FALSE.,"default")
-  !
-  CALL start_bar_type ( barra, 'Bv', nspin * nspin * n_pairs )
-  !
-  DO s1 = 1, nspin
-     DO s2 = 1, nspin
-        DO p1 = 1, n_pairs
-           DO p2 = 1, n_pairs
-              !
-              Bv = (1/omega) * ZDOTC(n_pdep_eigen_to_use,braket(p2,s2,:),1,braket(p1,s1,:),1)
-              !
-              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + REAL(Bv)
-              !
+        DO p2 = 1, n_pairs
+           !
+           k = pijmap(1,p2)
+           l = pijmap(2,p2)
+           !
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s1),proj_c(1,l,s2),psic,'Wave')
+           ! 
+           DO CONCURRENT (ir = 1:dffts%nnr)
+              rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
            !
-           CALL update_bar_type ( barra, 'Bv', 1 )
+           rho_g2 = 0._DP
+           CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
+           !
+           DO CONCURRENT (ig = 1:ngm)
+              rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
+           ENDDO
+           !
+           eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + 2.0_DP * &
+           & DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
+           IF( i==j .AND. k==l .AND. gstart==2 ) THEN 
+              eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + pot3D%div
+           ENDIF
+           !
+           ! Apply symmetry
+           !
+           eri_vc(p2,p1,s2,s1) = eri_vc(p1,p2,s1,s2)
            !
         ENDDO
-     ENDDO
-  ENDDO
+        !
+        CALL update_bar_type ( barra, 'eri_vc_diff_spin', 1 )
+        !
+     ENDDO 
+     !
+     CALL stop_bar_type ( barra, 'eri_vc_diff_spin' )
+     !
+  ENDIF
   !
-  CALL stop_bar_type ( barra, 'Bv' )
+  CALL mp_sum( eri_vc, intra_bgrp_comm )
+  CALL mp_sum( eri_vc, inter_image_comm )
   !
-END SUBROUTINE
-!
-!-----------------------------------------------------------------------
-SUBROUTINE compute_hv(bare)
-  !-----------------------------------------------------------------------
-  !
-  USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_bands,eri,ijpmap,n_pairs
-  USE pwcom,                ONLY : nspin
-  USE types_coulomb,        ONLY : pot3D
-  !
-  IMPLICIT NONE
-  !
-  REAL(DP), INTENT(INOUT) :: bare(n_pairs,n_pairs,nspin,nspin)
-  COMPLEX(DP) :: Hv
-  INTEGER     :: s1, s2, p1, p2, i, k
-  !
-  Hv = pot3D%div
-  !
-  DO s1 = 1, nspin
-     DO s2 = 1, nspin
-        DO i = 1, n_bands
-           DO k = 1, n_bands
-              !
-              p1 = ijpmap(i,i)
-              p2 = ijpmap(k,k)
-              !
-              bare(p2,p1,s2,s1) = bare(p2,p1,s2,s1) + REAL(Hv)
-              !
-           ENDDO
-        ENDDO
-     ENDDO
-  ENDDO
+  DEALLOCATE( rho_r )
+  DEALLOCATE( rho_g1 )
+  DEALLOCATE( rho_g2 )
   !
 END SUBROUTINE
 !
+!
 !-----------------------------------------------------------------------
-SUBROUTINE compute_wp_pdep(chi_head, chi_body, screened)
+SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,braket,ijpmap
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,ijpmap,pijmap
   USE types_coulomb,        ONLY : pot3D
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -424,18 +442,20 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body, screened)
   !
   IMPLICIT NONE
   !
+  REAL(DP),INTENT(IN) :: braket(n_pairs,nspin,n_pdep_eigen_to_use)
   COMPLEX(DP), INTENT(IN)  :: chi_head, chi_body(pert%nglob,pert%nloc)
-  COMPLEX(DP), INTENT(INOUT)  :: screened(n_pairs,n_pairs,nspin,nspin)
+  COMPLEX(DP), INTENT(INOUT)  :: eri_wp(n_pairs,n_pairs,nspin,nspin)
   !
-  COMPLEX(DP) :: Hp,Bp
-  INTEGER     :: s1, s2, p1, p2, i, k, m, nloc, n
+  INTEGER     :: s1, s2, p1, p2, i, j, k, l, m, nloc, n
   TYPE(bar_type) :: barra
   !
   CALL io_push_title('Wp Integrals (PDEP)')
   !
   CALL start_bar_type(barra, 'Wp', macropert%nloc)
   !
-  ! Body of Wp (Bp)
+  CALL pot3D%init(fftdriver,.FALSE.,"default")
+  !
+  eri_wp = 0._DP
   !
   DO nloc = 1, macropert%nloc  ! Iterate over m, n
      n = macropert%l2g(nloc)
@@ -443,13 +463,20 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body, screened)
      DO m = 1, macropert%nglob
         IF (m > n_pdep_eigen_to_use) CYCLE
         !
-        DO s1 = 1, nspin
-           DO s2 = 1, nspin
-              DO p1 = 1, n_pairs
-                 DO p2 = 1, n_pairs
+        DO s2 = 1, nspin
+           DO s1 = 1, nspin
+              DO p2 = 1, n_pairs
+                 k = pijmap(1,p2)
+                 l = pijmap(2,p2)
+                 DO p1 = 1, n_pairs
+                    i = pijmap(1,p1)
+                    j = pijmap(2,p1)
                     !
-                    Bp = (1/omega) * chi_body(m,nloc) * braket(p1,s1,m) * CONJG(braket(p2,s2,n))
-                    screened(p2,p1,s2,s1) = screened(p2,p1,s2,s1) + Bp
+                    eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + &
+                    & braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
+                    IF( i==j .AND. k==l ) THEN 
+                       eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + chi_head*pot3D%div
+                    ENDIF 
                     !
                  ENDDO
               ENDDO
@@ -458,33 +485,12 @@ SUBROUTINE compute_wp_pdep(chi_head, chi_body, screened)
         !
      ENDDO
      !
-     CALL update_bar_type ( barra, 'Wp', 1)
+     CALL update_bar_type ( barra, 'Wp', 1 )
      !
   ENDDO ! Iterate over m, n
   !
-  CALL mp_sum(screened, inter_image_comm)
+  CALL mp_sum(eri_wp, inter_image_comm)
   !
   CALL stop_bar_type ( barra, 'Wp' )
-  !
-  ! head of Wp (Hp)
-  !
-  CALL pot3D%init(fftdriver,.FALSE.,"default")
-  !
-  Hp = chi_head * pot3D%div
-  !
-  DO s1 = 1, nspin
-     DO s2 = 1, nspin
-        DO i = 1, n_bands
-           DO k = 1, n_bands
-              !
-              p1 = ijpmap(i,i)
-              p2 = ijpmap(k,k)
-              !
-              screened(p2,p1,s2,s1) = screened(p2,p1,s2,s1) + Hp
-              !
-           ENDDO
-        ENDDO
-     ENDDO
-  ENDDO
   !
 END SUBROUTINE

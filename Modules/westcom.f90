@@ -202,10 +202,7 @@ MODULE wfreq_center
   INTEGER,    ALLOCATABLE :: pijmap(:,:)
   !
   ! downfolded Hamiltonian
-  REAL(DP),   ALLOCATABLE :: proj_r(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
-  REAL(DP),   ALLOCATABLE :: eri(:,:,:,:)
   REAL(DP),   ALLOCATABLE :: h1e(:,:)
   !
   ! gw_etot 
@@ -238,6 +235,10 @@ MODULE wfreq_center
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks_full (:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin_full (:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_corr_full (:,:)
+  !
+  ! QDET
+  !
+  COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   !
 END MODULE
 !

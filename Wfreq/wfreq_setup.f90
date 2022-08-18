@@ -24,7 +24,7 @@ SUBROUTINE wfreq_setup
                                    & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,&
                                    & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,&
                                    & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,&
-                                   & iuwfc,lrwfc,proj_c,proj_r,npwq,npwqx,fftdriver
+                                   & iuwfc,lrwfc,proj_c,npwq,npwqx,fftdriver
   USE wavefunctions,          ONLY : evc,psic
   USE fft_base,               ONLY : dffts
   USE buffers,                ONLY : get_buffer
@@ -162,7 +162,6 @@ SUBROUTINE wfreq_setup
   !
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'H') THEN
-        ALLOCATE( proj_r(dffts%nnr,n_bands,k_grid%nps) )
         ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
         DO iks = 1, k_grid%nps 
            !
@@ -175,8 +174,6 @@ SUBROUTINE wfreq_setup
               !
               ib = qp_bands(ib_index)
               proj_c(:,ib_index,iks) = evc(:,ib)
-              CALL single_invfft_gamma(dffts,npwq,npwqx,proj_c(1,ib_index,iks),psic,TRIM(fftdriver))
-              proj_r(:,ib_index,iks) = psic(:)
               !
            END DO
            !

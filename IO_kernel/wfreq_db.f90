@@ -39,7 +39,7 @@ MODULE wfreq_db
                                      & sigma_freq,sigma_spectralf,l_enable_off_diagonal,pijmap,n_pairs,&
                                      & sigma_vxcl_full,sigma_vxcnl_full,sigma_exx_full,sigma_hf_full,&
                                      & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
-      USE pwcom,                ONLY : et
+      USE pwcom,                ONLY : et, nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
       USE constants,            ONLY : rytoev
@@ -50,7 +50,7 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, ib, ipair
+      INTEGER :: iks, ib, ipair, band_index
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       CHARACTER(LEN=10) :: ccounter
       INTEGER :: counter
@@ -58,6 +58,7 @@ MODULE wfreq_db
       TYPE(json_file) :: json
       INTEGER :: iunit, i
       INTEGER,ALLOCATABLE :: ilist(:)
+      REAL(DP), ALLOCATABLE :: occ_(:,:)
       LOGICAL :: l_generate_plot, l_optics
       !
       ! MPI BARRIER
@@ -88,6 +89,15 @@ MODULE wfreq_db
          ENDDO
          CALL json%add('output.Q.bandmap',ilist(1:n_bands))
          DEALLOCATE(ilist)
+         ! generate occupations and write to JSON
+         ALLOCATE(occ_(n_bands, k_grid%nps))
+         DO iks = 1, k_grid%nps
+          DO ib = 1, n_bands
+            band_index = qp_bands(iband)
+            occ_(ib, iks) = occupation(band_index, iks) 
+          ENDDO
+         ENDDO
+         IF (nspin == 1) occ_(:,:) = 2.0_DP * occ_(:,:)
          !
          IF(l_enable_off_diagonal) THEN
             counter = 0
@@ -116,6 +126,7 @@ MODULE wfreq_db
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(1:n_bands,iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(1:n_bands,iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(1:n_bands,iks)*rytoev)            
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.occupation', occ_(1:n_bands,iks))            
             IF ( .NOT. l_enable_off_diagonal ) THEN
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(1:n_bands,iks)*rytoev)
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(1:n_bands,iks)*rytoev)

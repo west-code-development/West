@@ -53,6 +53,7 @@ MODULE dfpt_module
       USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
       USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,allocate_linsolve_gpu,deallocate_linsolve_gpu,&
                                       & reallocate_ps_gpu
+      USE cublas
 #else
       USE wavefunctions,         ONLY : evc_work=>evc,psic
       USE wvfct,                 ONLY : et

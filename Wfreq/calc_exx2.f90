@@ -70,6 +70,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   COMPLEX(DP), ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
   !$acc declare device_resident(pertg,pertr,pertr_nc)
   COMPLEX(DP), ALLOCATABLE :: psic1(:),pertg1(:),pertr1(:)
+  !$acc declare device_resident(psic1,pertg1,pertr1)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:),phase(:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: evckmq
@@ -339,22 +340,21 @@ SUBROUTINE calc_exx2(sigma_exx)
   ENDIF
   !
   DEALLOCATE(pertg)
-  IF(l_enable_off_diagonal) THEN
-     DEALLOCATE(pertg1)
+  IF(gamma_only) THEN
+     IF(l_enable_off_diagonal) THEN
+        DEALLOCATE(psic1)
+        DEALLOCATE(pertr1)
+        DEALLOCATE(pertg1)
+     ENDIF
+  ELSE
+     !$acc exit data delete(phase,evckmq)
+     DEALLOCATE(phase)
+     DEALLOCATE(evckmq)
   ENDIF
   IF(noncolin) THEN
      DEALLOCATE(pertr_nc)
   ELSE
      DEALLOCATE(pertr)
-     IF(l_enable_off_diagonal) THEN
-        DEALLOCATE(pertr1)
-        DEALLOCATE(psic1)
-     ENDIF
-  ENDIF
-  IF(.NOT. gamma_only) THEN
-     !$acc exit data delete(phase,evckmq)
-     DEALLOCATE(phase)
-     DEALLOCATE(evckmq)
   ENDIF
   !
 END SUBROUTINE

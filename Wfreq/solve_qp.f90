@@ -92,9 +92,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   ATTRIBUTES(PINNED) :: dtemp2,ztemp2
 #endif
   REAL(DP),ALLOCATABLE :: diago(:,:)
-  REAL(DP),ALLOCATABLE :: braket(:,:,:),overlap(:,:),overlap1(:,:)
+  REAL(DP),ALLOCATABLE :: braket(:,:,:),overlap(:,:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: braket,overlap,overlap1
+  ATTRIBUTES(PINNED) :: braket,overlap
 #endif
   REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
   !$acc declare device_resident(overlap_loc)
@@ -161,18 +161,16 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ALLOCATE( braket( pert%nglob, n_lanczos, pert%nloc ) )
      !$acc enter data create(braket)
      ALLOCATE( diago( n_lanczos, pert%nloc ) )
+#if defined(__CUDA)
+     ALLOCATE( d_body2_ifr_tmp( n_lanczos, pert%nloc, ifr%nloc ) )
+#endif
   ENDIF
   IF( l_enable_off_diagonal ) THEN
-     ALLOCATE( overlap1( pert%nglob, nbnd ) )
-     !$acc enter data create(overlap1)
      ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, n_pairs, k_grid%nps ) )
      ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, n_pairs, k_grid%nps ) )
      IF( l_enable_lanczos ) THEN
         ALLOCATE( d_diago_full( n_lanczos, pert%nloc, n_pairs, k_grid%nps ) )
         ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, n_pairs, k_grid%nps ) )
-#if defined(__CUDA)
-        ALLOCATE( d_body2_ifr_tmp( n_lanczos, pert%nloc, ifr%nloc ) )
-#endif
      ENDIF
      !
      d_body1_ifr_full(:,:,:,:) = 0._DP
@@ -188,9 +186,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      IF( l_enable_lanczos ) THEN
         ALLOCATE( d_diago( n_lanczos, pert%nloc, n_bands, k_grid%nps ) )
         ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, n_bands, k_grid%nps ) )
-#if defined(__CUDA)
-        ALLOCATE( d_body2_ifr_tmp( n_lanczos, pert%nloc, ifr%nloc ) )
-#endif
      ENDIF
      !
      d_body1_ifr(:,:,:,:) = 0._DP
@@ -446,13 +441,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   DEALLOCATE( ztemp2 )
   DEALLOCATE( d_epsm1_ifr_trans )
   DEALLOCATE( z_epsm1_rfr_trans )
-#if defined(__CUDA)
-  DEALLOCATE( d_body2_ifr_tmp )
-#endif
   IF( l_enable_lanczos ) THEN
      !$acc exit data delete(braket)
      DEALLOCATE( braket )
      DEALLOCATE( diago )
+#if defined(__CUDA)
+     DEALLOCATE( d_body2_ifr_tmp )
+#endif
   ENDIF
   !
   ! Get Sigma_X

@@ -208,7 +208,106 @@ MODULE wfreq_db
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE qdet_db_write(eri_vc,eri_w)
+    SUBROUTINE qdet_db_write_eri(eri_vc,eri_w)
+      !------------------------------------------------------------------------
+      !
+      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root,world_comm
+      USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,&
+                                     & l_enable_off_diagonal,n_pairs,logfile
+      USE pwcom,                ONLY : et,nspin
+      USE io_push,              ONLY : io_push_bar
+      USE json_module,          ONLY : json_file
+      USE constants,            ONLY : rytoev
+      USE types_bz_grid,        ONLY : k_grid
+      !
+      IMPLICIT NONE
+      !
+      REAL(DP),INTENT(IN):: eri_vc(n_pairs,n_pairs,nspin,nspin)
+      COMPLEX(DP),INTENT(IN):: eri_w(n_pairs,n_pairs,nspin,nspin)
+      !
+      REAL(DP), EXTERNAL    :: GET_CLOCK
+      REAL(DP) :: time_spent(2)
+      CHARACTER(20),EXTERNAL :: human_readable_time
+      INTEGER :: iks, jks, ib
+      CHARACTER(LEN=6) :: my_label_ik, my_label_jk, my_label_b, my_label_ipair
+      !
+      TYPE(json_file) :: json
+      INTEGER :: iunit, i, ipair
+      INTEGER,ALLOCATABLE :: ilist(:)
+      LOGICAL :: l_generate_plot, l_optics
+      !
+      ! MPI BARRIER
+      !
+      CALL mp_barrier(world_comm)
+      !
+      ! TIMING
+      !
+      CALL start_clock('qdet_db')
+      time_spent(1)=get_clock('qdet_db')
+      !
+      IF ( mpime == root ) THEN
+         !
+         CALL json%initialize()
+         !
+         CALL json%load(filename=TRIM(logfile))
+         !
+         DO iks = 1, nspin
+            !
+            DO jks = 1, nspin
+               !
+               WRITE(my_label_ik,'(i6.6)') iks
+               !
+               WRITE(my_label_jk,'(i6.6)') jks
+               !
+               IF(l_enable_off_diagonal) THEN
+                  DO ipair = 1, n_pairs
+                     !
+                     WRITE(my_label_ipair,'(i6.6)') ipair
+                     !
+                     CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
+                     & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
+                     & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     !
+                     ! CHANGE TO KEY TO: eri_w
+                     CALL json%add('qdet.eri.K'//TRIM(my_label_ik)//'.K'// &
+                     & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
+                     & REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
+                     !
+                  ENDDO
+               ENDIF
+               !
+            ENDDO
+            !
+         ENDDO
+         !
+         OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
+         CALL json%print( iunit )
+         CLOSE( iunit )
+         CALL json%destroy()
+         !
+      ENDIF
+      !
+      ! MPI BARRIER
+      !
+      CALL mp_barrier( world_comm )
+      !
+      ! TIMING
+      !
+      time_spent(2)=get_clock('qdet_db')
+      CALL stop_clock('qdet_db')
+      !
+      WRITE(stdout,'(  5x," ")')
+      CALL io_push_bar()
+      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )
+      CALL io_push_bar()
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE qdet_db_write_h1e()
       !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_barrier
@@ -255,37 +354,13 @@ MODULE wfreq_db
          !
          DO iks = 1, nspin
             !
-	     WRITE(my_label_ik,'(i6.6)') iks
+            WRITE(my_label_ik,'(i6.6)') iks
             !
             IF(l_enable_off_diagonal) THEN
                CALL json%add('qdet.h1e.K'//TRIM(my_label_ik), &
                & h1e(1:n_pairs,iks)*rytoev)
             ENDIF
             !
-            DO jks = 1, nspin
-               !
-               WRITE(my_label_ik,'(i6.6)') iks
-               !
-               WRITE(my_label_jk,'(i6.6)') jks
-               !
-               IF(l_enable_off_diagonal) THEN
-                  DO ipair = 1, n_pairs
-                     !
-                     WRITE(my_label_ipair,'(i6.6)') ipair
-                     !
-                     CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
-                     & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                     & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
-                     !
-                     ! CHANGE TO KEY TO: eri_w
-                     CALL json%add('qdet.eri.K'//TRIM(my_label_ik)//'.K'// &
-                     & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                     & REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
-                     !
-                  ENDDO
-               ENDIF
-               !
-            ENDDO
             !
          ENDDO
          !

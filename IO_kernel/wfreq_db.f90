@@ -323,9 +323,6 @@ MODULE wfreq_db
       !
       IMPLICIT NONE
       !
-      REAL(DP),INTENT(IN):: eri_vc(n_pairs,n_pairs,nspin,nspin)
-      COMPLEX(DP),INTENT(IN):: eri_w(n_pairs,n_pairs,nspin,nspin)
-      !
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time

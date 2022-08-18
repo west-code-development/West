@@ -5,7 +5,7 @@ Tutorials
 
 The following tutorials demonstrate how to utilize core features of **WEST**.
 
-Basic tutorials:
+Intro tutorials:
 
 .. toctree::
    :maxdepth: 1

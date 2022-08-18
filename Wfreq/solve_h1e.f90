@@ -321,7 +321,7 @@ SUBROUTINE compute_hartree_double_counting(h1e_tmp)
 !-----------------------------------------------------------------------
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_bands, n_pairs, ijpmap, eri, occupation, qp_bands
+  USE westcom,              ONLY : n_bands, n_pairs, ijpmap, eri_w, occupation, qp_bands
   
   REAL(DP), INTENT(OUT)    :: h1e_tmp(n_pairs,nspin)
   !
@@ -334,7 +334,7 @@ SUBROUTINE compute_hartree_double_counting(h1e_tmp)
         DO iband = 1, n_bands
           jpair = ijpmap(iband, iband)
           band_index = qp_bands(iband)
-          h1e_tmp(ipair, s1) = h1e_tmp(ipair, s1) + eri(ipair,jpair,s1,s2)*occupation(band_index,s2)
+          h1e_tmp(ipair, s1) = h1e_tmp(ipair, s1) + eri_w(ipair,jpair,s1,s2)*occupation(band_index,s2)
         ENDDO
       ENDDO
     ENDDO

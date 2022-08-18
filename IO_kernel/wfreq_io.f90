@@ -41,7 +41,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos )
     !
     USE kinds,               ONLY : DP,i8b
-    USE westcom,             ONLY : n_lanczos,wfreq_save_dir
+    USE westcom,             ONLY : n_lanczos,wfreq_save_dir,l_enable_off_diagonal
     USE mod_mpiio,           ONLY : mp_write_dmsg_at
     !
     IMPLICIT NONE
@@ -69,11 +69,19 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
-    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    IF (l_enable_off_diagonal) THEN
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
+    ELSE
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    ENDIF
     CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
     !
     myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
-    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    IF (l_enable_off_diagonal) THEN
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
+    ELSE
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    ENDIF
     CALL mp_write_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     !
     CALL stop_clock('write_gfreq')
@@ -182,7 +190,7 @@ MODULE wfreq_io
     ! WHAT?       ... braket( ndim, n_lanczos )
     !
     USE kinds,          ONLY : DP,i8b
-    USE westcom,        ONLY : n_lanczos,wfreq_save_dir
+    USE westcom,        ONLY : n_lanczos,wfreq_save_dir,l_enable_off_diagonal
     USE mod_mpiio,      ONLY : mp_read_dmsg_at
     !
     IMPLICIT NONE
@@ -210,11 +218,19 @@ MODULE wfreq_io
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
-    fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    IF (l_enable_off_diagonal) THEN
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
+    ELSE
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    ENDIF
     CALL mp_read_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
     !
     myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
-    fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    IF (l_enable_off_diagonal) THEN
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
+    ELSE
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    ENDIF
     CALL mp_read_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     !
     CALL stop_clock('read_gfreq')

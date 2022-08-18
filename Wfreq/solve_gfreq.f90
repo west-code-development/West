@@ -35,8 +35,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
-                                 & o_restart_time,npwqx,fftdriver,wstat_save_dir
+  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
+                                 & o_restart_time,npwqx,fftdriver,wstat_save_dir,l_enable_off_diagonal,&
+                                 & ijpmap
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,npool,intra_bgrp_comm,nproc_bgrp,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
@@ -76,7 +77,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,ib_index,jb_index,ipair
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
@@ -86,12 +87,14 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: braket
 #endif
+  REAL(DP),ALLOCATABLE :: diago1(:,:),subdiago1(:,:)
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
   !$acc declare device_resident(q_s)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dvpsi
 #endif
+  COMPLEX(DP),ALLOCATABLE :: psic1(:),dvpsi1(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
   !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
@@ -122,7 +125,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
-  CALL band_group%init(qp_bandrange(2)-qp_bandrange(1)+1,'b','band_group',.FALSE.)
+  CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read( bks )
@@ -140,11 +143,16 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      IF(iks < bks%lastdone_ks) CYCLE
      !
      DO ibloc = 1,band_group%nloc
-        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
-        barra_load = barra_load+1
+        IF (l_enable_off_diagonal) THEN
+           barra_load = barra_load + n_bands - ib_index + 1
+        ELSE
+           barra_load = barra_load + 1
+        ENDIF
      ENDDO
   ENDDO
   !
@@ -187,6 +195,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      ALLOCATE(q_s(npwx*npol,pert%nloc,n_lanczos))
      ALLOCATE(braket(pert%nglob,n_lanczos,pert%nloc))
      !$acc enter data create(braket)
+     IF(l_enable_off_diagonal) THEN
+        ALLOCATE(dvpsi1(npwx*npol,pert%nlocx))
+        ALLOCATE(psic1(dffts%nnr))
+        !$acc enter data create(dvpsi1,psic1)
+        ALLOCATE(diago1(n_lanczos,pert%nloc))
+        ALLOCATE(subdiago1(n_lanczos-1,pert%nloc))
+     ENDIF
   ENDIF
   ALLOCATE(l2g(pert%nloc))
   !
@@ -273,7 +288,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      ! LOOP over band states
      !
      DO ibloc = 1,band_group%nloc
-        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+        !
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
@@ -286,6 +303,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !$acc end kernels
         !
         DO ip = 1,pert%nloc
+           !
            glob_ip = pert%l2g(ip)
            !
 #if defined(__CUDA)
@@ -369,15 +387,99 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #else
            CALL solve_deflated_lanczos_w_full_ortho(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
 #endif
-           CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
            !
-           DO ip = 1, pert%nloc
-              CALL diago_lanczos(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),pert%nglob)
+           DO jb_index = 1,n_bands
+              !
+              jb = qp_bands(jb_index)
+              !
+              IF(l_enable_off_diagonal .AND. jb <= ib) THEN
+                 !
+                 ipair = ijpmap(jb_index,ib_index)
+                 !
+                 ! PSIC
+                 !
+                 !$acc host_data use_device(psic1)
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,jb),psic1,'Wave')
+                 !$acc end host_data
+                 !
+                 !$acc kernels present(dvpsi1)
+                 dvpsi1(:,:) = 0._DP
+                 !$acc end kernels
+                 !
+                 DO ip = 1,pert%nloc
+                    !
+                    glob_ip = pert%l2g(ip)
+#if defined(__CUDA)
+                    CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
+#else
+                    pertg = pertg_all(:,ip)
+#endif
+                    !
+                    ! Multiply by sqvc
+                    !
+                    !$acc parallel loop present(pertg,sqvc)
+                    DO ig = 1,npwq
+#if defined(__CUDA)
+                       pertg(ig) = sqvc(ig)*pertg(ig)
+#else
+                       pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
+#endif
+                    ENDDO
+                    !
+                    ! Bring it to R-space
+                    !
+                    !$acc host_data use_device(pertg,pertr)
+                    CALL single_invfft_gamma(dffts,npwq,npwqx,pertg,pertr,TRIM(fftdriver))
+                    !$acc end host_data
+                    !
+                    !$acc parallel loop present(pertr,psic1)
+                    DO ir = 1,dffts_nnr
+                       pertr(ir) = psic1(ir)*pertr(ir)
+                    ENDDO
+                    !$acc end parallel
+                    !
+                    !$acc host_data use_device(pertr,dvpsi1)
+                    CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi1(:,ip),'Wave')
+                    !$acc end host_data
+                    !
+                 ENDDO ! pert
+                 !
+                 CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi1,(1._DP,0._DP))
+                 !
+                 !$acc update host(dvpsi1)
+                 !
+                 CALL get_brak_hyper_parallel(dvpsi1,pert%nloc,n_lanczos,q_s,braket,pert)
+                 !
+                 diago1(:,:) = diago
+                 subdiago1(:,:) = subdiago
+                 !
+                 DO ip = 1, pert%nloc
+                    CALL diago_lanczos(bnorm(ip),diago1(:,ip),subdiago1(:,ip),braket(:,:,ip),pert%nglob)
+                 ENDDO
+                 !
+                 ! MPI-IO
+                 !
+                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), ipair, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 !
+                 CALL update_bar_type( barra, 'glanczos', 1 )
+                 !
+              ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
+                 !
+                 CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
+                 !
+                 DO ip = 1, pert%nloc
+                    CALL diago_lanczos(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),pert%nglob)
+                 ENDDO
+                 !
+                 ! MPI-IO
+                 !
+                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 !
+                 CALL update_bar_type( barra, 'glanczos', 1 )
+                 !
+              ENDIF
+              !
            ENDDO
-           !
-           ! MPI-IO
-           !
-           CALL writeout_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
            !
         ENDIF ! l_enable_lanczos
         !
@@ -386,12 +488,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         IF( o_restart_time >= 0._DP ) THEN
            IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
-           IF( ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+           IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
         ENDIF
         !
         ! Write final restart file
         !
-        IF( iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+        IF( iks == k_grid%nps .AND. ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
         !
         ! But do not write here when using pool or band group
         !
@@ -405,8 +507,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            bks%old_band = ib
            time_spent(1) = get_clock( 'glanczos' )
         ENDIF
-        !
-        CALL update_bar_type( barra, 'glanczos', 1 )
         !
      ENDDO ! BANDS
      !
@@ -437,6 +537,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      DEALLOCATE(q_s)
      !$acc exit data delete(braket)
      DEALLOCATE(braket)
+     IF(l_enable_off_diagonal) THEN
+        !$acc exit data delete(dvpsi1,psic1)
+        DEALLOCATE(dvpsi1)
+        DEALLOCATE(psic1)
+        DEALLOCATE(subdiago1)
+        DEALLOCATE(diago1)
+     ENDIF
   ENDIF
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
@@ -445,7 +552,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   IF( npool*nbgrp > 1 ) THEN
      bks%lastdone_ks = k_grid%nps
-     bks%lastdone_band = qp_bandrange(2)
+     bks%lastdone_band = qp_bands(n_bands)
      CALL solvegfreq_restart_write( bks )
   ENDIF
   !
@@ -460,8 +567,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,qp_bandrange,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
-                                 & o_restart_time,npwqx,wstat_save_dir,ngq,igq_q
+  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,nbnd_occ,iuwfc,&
+                                 & lrwfc,o_restart_time,npwqx,wstat_save_dir,ngq,igq_q
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,nproc_bgrp,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
@@ -501,7 +608,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,im,ikks,ikk,iq
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,im,ikks,ikk,iq,ib_index
   INTEGER :: npwk
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
@@ -551,7 +658,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   CALL deallocate_bec_type( becp )
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
-  CALL band_group%init(qp_bandrange(2)-qp_bandrange(1)+1,'b','band_group',.FALSE.)
+  CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   IF(l_read_restart) THEN
      CALL solvegfreq_restart_read_q( bksks )
@@ -573,7 +680,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      IF(ikks < bksks%lastdone_ks) CYCLE
      !
      DO ibloc = 1,band_group%nloc
-        ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         IF(ikks == bksks%lastdone_ks .AND. ib < bksks%lastdone_band) CYCLE
         !
@@ -760,7 +868,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         ! LOOP over band states
         !
         DO ibloc = 1,band_group%nloc
-           ib = band_group%l2g(ibloc)+qp_bandrange(1)-1
+           !
+           ib_index = band_group%l2g(ibloc)
+           ib = qp_bands(ib_index)
            !
            IF(ikks == bksks%lastdone_ks .AND. iks == bksks%lastdone_kks .AND. ib <= bksks%lastdone_band) CYCLE
            !
@@ -904,12 +1014,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            IF( o_restart_time >= 0._DP ) THEN
               IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
-              IF( ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+              IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
            ENDIF
            !
            ! Write final restart file
            !
-           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bandrange(2) ) l_write_restart = .TRUE.
+           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
            !
            ! But do not write here when using band group
            !
@@ -977,7 +1087,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   IF( nbgrp > 1 ) THEN
      bksks%lastdone_ks = k_grid%nps
      bksks%lastdone_kks = k_grid%nps
-     bksks%lastdone_band = qp_bandrange(2)
+     bksks%lastdone_band = qp_bands(n_bands)
      CALL solvegfreq_restart_write_q( bksks )
   ENDIF
   !

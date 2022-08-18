@@ -36,9 +36,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,z_epsm1_rfr,&
-                                 & l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,&
-                                 & tr2_dfpt,z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,&
-                                 & npwqx,fftdriver,wstat_save_dir
+                                 & l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
+                                 & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,&
+                                 & fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
   USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,npool,inter_bgrp_comm,&
                                  & intra_bgrp_comm,nbgrp,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
@@ -90,7 +90,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   INTEGER :: i1,i2,i3,ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ipol,iks_g
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
-  INTEGER :: nbndval
+  INTEGER :: nbndval,nbndval_full
   INTEGER :: dffts_nnr,mypara_nloc,mypara_nglob,ifr_nloc,rfr_nloc
   REAL(DP),ALLOCATABLE :: subdiago(:,:),bnorm(:)
   REAL(DP),ALLOCATABLE :: diago(:,:),braket(:,:,:)
@@ -140,7 +140,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   INTEGER :: ierr
-  REAL(DP) :: this_et
+  REAL(DP) :: this_et,this_occ,docc
   INTEGER,ALLOCATABLE :: l2g(:)
   REAL(DP),ALLOCATABLE :: eprec_loc(:)
   REAL(DP),ALLOCATABLE :: et_loc(:)
@@ -227,7 +227,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   mypara_nglob = mypara%nglob
   ifr_nloc = ifr%nloc
   rfr_nloc = rfr%nloc
-  nbndval = MINVAL(nbnd_occ)
+  IF(l_frac_occ) THEN
+     nbndval_full = MINVAL(nbnd_occ_full)
+  ELSE
+     nbndval_full = MINVAL(nbnd_occ)
+  ENDIF
   !
   !$acc enter data copyin(bg,imfreq_list,refreq_list)
   !
@@ -237,7 +241,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
 #if defined(__CUDA)
   CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
 #endif
-  ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
+  ALLOCATE(overlap(mypara%nglob,nbnd-nbndval_full))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
@@ -326,9 +330,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
 #endif
      !
      nbndval = nbnd_occ(iks)
+     IF(l_frac_occ) THEN
+        nbndval_full = nbnd_occ_full(iks)
+     ELSE
+        nbndval_full = nbnd_occ(iks)
+     ENDIF
      !
      mwo = -k_grid%weight(iks_g)/omega
-     zmwo = mwo
+     zmwo = CMPLX(mwo,KIND=DP)
      !
      bks%max_band = nbndval
      bks%min_band = 1
@@ -378,7 +387,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            ENDDO
            !$acc end parallel
            !
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,3,phi,(1._DP,0._DP))
+           CALL apply_alpha_pc_to_m_wfcs(nbndval_full,3,phi,(1._DP,0._DP))
            !
            !$acc host_data use_device(eprec_loc)
            CALL set_eprec(1,evc_work(:,iv),eprec_loc(1))
@@ -397,9 +406,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            CALL precondition_m_wfcts(3,phi,phi_tmp,eprec_loc)
 #if defined(__CUDA)
-           CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
+           CALL linsolve_sternheimer_m_wfcts_gpu(nbndval_full,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
 #else
-           CALL linsolve_sternheimer_m_wfcts(nbndval,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
+           CALL linsolve_sternheimer_m_wfcts(nbndval_full,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
 #endif
            !
            IF(ierr/=0) THEN
@@ -534,25 +543,25 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         ENDIF
         !
 #if defined(__CUDA)
-        CALL reallocate_ps_gpu(nbndval,mypara%nloc)
+        CALL reallocate_ps_gpu(nbndval_full,mypara%nloc)
 #endif
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,mypara%nloc,dvpsi,(1._DP,0._DP))
+        CALL apply_alpha_pc_to_m_wfcs(nbndval_full,mypara%nloc,dvpsi,(1._DP,0._DP))
         !
-        IF(nbnd > nbndval) THEN
+        IF(nbnd > nbndval_full) THEN
            !
            ! OVERLAP( glob_ip, im=1:nbnd ) = < psi_im iks | dvpsi_glob_ip >
            !
 #if defined(__CUDA)
-           CALL reallocate_ps_gpu(nbnd-nbndval,mypara%nloc)
+           CALL reallocate_ps_gpu(nbnd-nbndval_full,mypara%nloc)
            !$acc host_data use_device(dvpsi,ps_r)
-           CALL glbrak_gamma_gpu(evc_work(:,nbndval+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval,&
-           & mypara%nloc,nbnd-nbndval,npol)
+           CALL glbrak_gamma_gpu(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
+           & mypara%nloc,nbnd-nbndval_full,npol)
            !$acc end host_data
 #else
            IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
-           ALLOCATE(ps_r(nbnd-nbndval,mypara%nloc))
-           CALL glbrak_gamma(evc_work(:,nbndval+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval,&
-           & mypara%nloc,nbnd-nbndval,npol)
+           ALLOCATE(ps_r(nbnd-nbndval_full,mypara%nloc))
+           CALL glbrak_gamma(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
+           & mypara%nloc,nbnd-nbndval_full,npol)
 #endif
            IF(nproc_bgrp > 1) THEN
               !$acc host_data use_device(ps_r)
@@ -561,11 +570,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            ENDIF
            !
            !$acc kernels present(overlap)
-           overlap(:,1:nbnd-nbndval) = 0._DP
+           overlap(:,1:nbnd-nbndval_full) = 0._DP
            !$acc end kernels
            !
            !$acc parallel loop collapse(2) present(overlap,ps_r)
-           DO ic = 1,nbnd-nbndval
+           DO ic = 1,nbnd-nbndval_full
               DO ip = 1,mypara_nloc
                  overlap(l2g(ip),ic) = ps_r(ic,ip)
               ENDDO
@@ -584,9 +593,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            ! Update dmati with cond
            !
-           DO ic = 1,nbnd-nbndval
+           DO ic = 1,nbnd-nbndval_full
               !
-              ecv = et(ic+nbndval,iks)-et(iv,iks)
+              ! Avoid double counting in frac occ case
+              !
+              IF(ic+nbndval_full <= iv) CYCLE
+              !
+              ecv = et(ic+nbndval_full,iks)-et(iv,iks)
+              IF(l_frac_occ) docc = occupation(iv,iks)-occupation(ic+nbndval_full,iks)
               !
               !$acc parallel loop collapse(3) present(imfreq_list,dmati,overlap)
               DO ifreq = 1,ifr_nloc
@@ -594,6 +608,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                     DO glob_jp = 1,mypara_nglob
                        frequency = imfreq_list(ifreq)
                        dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
+                       IF(l_frac_occ) dfactor = dfactor*docc
                        dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq) &
                        & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
                     ENDDO
@@ -605,9 +620,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
            ! Update zmatr with cond
            !
-           DO ic = 1,nbnd-nbndval
+           DO ic = 1,nbnd-nbndval_full
               !
-              ecv = et(ic+nbndval,iks)-et(iv,iks)
+              ! Avoid double counting in frac occ case
+              !
+              IF(ic+nbndval_full <= iv) CYCLE
+              !
+              ecv = et(ic+nbndval_full,iks)-et(iv,iks)
+              IF(l_frac_occ) docc = occupation(iv,iks)-occupation(ic+nbndval_full,iks)
               !
               !$acc parallel loop collapse(3) present(refreq_list,zmatr,overlap)
               DO ifreq = 1,rfr_nloc
@@ -617,6 +637,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                        zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
                        zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                        zfactor = zmwo/zp+zmwo/zm
+                       IF(l_frac_occ) zfactor = zfactor*docc
                        zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
                        & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
                     ENDDO
@@ -656,6 +677,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !$acc update device(diago,braket)
            !
            this_et = et(iv,iks)
+           this_occ = occupation(iv,iks)
            !
            ! Update dmati with lanczos
            !
@@ -668,6 +690,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                        frequency = imfreq_list(ifreq)
                        ecv = diago(il,ip)-this_et
                        dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
+                       IF(l_frac_occ) dfactor = dfactor*this_occ
                        dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*dfactor
                     ENDDO
                  ENDDO
@@ -689,6 +712,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                        zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
                        zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                        zfactor = zmwo/zp+zmwo/zm
+                       IF(l_frac_occ) zfactor = zfactor*this_occ
                        zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq)+braket(glob_jp,il,ip)*zfactor
                     ENDDO
                  ENDDO
@@ -1241,7 +1265,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         nbndval = nbnd_occ(iks)
         !
         mwo = -k_grid%weight(iks)/omega
-        zmwo = mwo
+        zmwo = CMPLX(mwo,KIND=DP)
         !
         bksq%max_band = nbndval
         bksq%min_band = 1

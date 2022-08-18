@@ -54,6 +54,7 @@ Suggested configuration options
 
    installations/cori.rst
    installations/theta.rst
+   installations/midway2.rst
    installations/midway3.rst
    installations/macos.rst
    installations/dgx.rst

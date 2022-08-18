@@ -301,7 +301,7 @@ END SUBROUTINE
     !
     CALL mp_max (gkcut, inter_pool_comm )
     !
-    dfft%has_task_groups = (ntask_groups >1) .and. .not. real_space
+    dfft%has_task_groups = (ntask_groups >1) .AND. .NOT. real_space
     CALL fft_type_init( dfft, smap, "wave", gamma_only, lpara, intra_bgrp_comm, at, bg, gkcut, &
     & MAX(gcutms/gkcut/4.0_DP,1.0_DP), fft_fact=fft_fact,nyfft=nyfft,nmany=nmany_)
     !

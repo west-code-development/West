@@ -1,10 +1,11 @@
 Change Log
 ==========
 
-v5.1.0 (2022/08/19) -- Not yet released
+v5.1.0 (2022/08/19)
 ------------
 
 - Full release of GPU-accelerated full-frequency GW implementation (V. Yu and M. Govoni, JCTC 18 4690 (2022)), e.g., enabling the use of WEST at OLCF/Summit, NERSC/Perlmutter, ALCF/Polaris. GPU acceleration of `wstat` and `wfreq` is restricted to NVIDIA GPUs.
+- Introduced infrastructure changes to prepare for QDET release. Enabled calculation with fractional occupation, added the possibility to specify a set of bands, instead of a range in `wfreq`, enabled the computation of the off-diagonal matrix elements in G0W0.
 - Code updated for compatibility with Quantum Espresso 7.1. QE must be compiled without CMake.
 - Added the calculation of inverse participation ratio and localization factor in `westpp`.
 - Bug fix. Fixed calculation of dipole matrix elements in `westpp`.

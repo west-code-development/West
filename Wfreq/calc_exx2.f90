@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_exx2(sigma_exx)
+SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_exx(n,iks) = < qp_bands(n),iks | V_exx | qp_bands(n),iks >     n = 1,n_bands
@@ -47,6 +47,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   ! I/O
   !
   REAL(DP), INTENT(OUT) :: sigma_exx(n_bands,k_grid%nps)
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   ! Workspace
   !
@@ -93,6 +94,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   ! Set to zero
   !
   sigma_exx = 0._DP
+  IF (l_enable_off_diagonal) sigma_exx_full = 0._DP
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
@@ -179,6 +181,10 @@ SUBROUTINE calc_exx2(sigma_exx)
               DO ivloc = 1,vband%nloc
                  !
                  iv = vband%l2g(ivloc)
+                 ! for QDET double counting term, all states need to be within qp_bands
+                 IF (l_QDET) THEN
+                    IF ( ALL(qp_bands(:) /= iv) ) CYCLE
+                 ENDIF
                  !
                  ! Bring it to R-space
                  IF (gamma_only) THEN

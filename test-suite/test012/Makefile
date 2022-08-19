@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "V_O in MgO test qdet"
+	@echo "SiH4 molecule qdet test"
 	@echo

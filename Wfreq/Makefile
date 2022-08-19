@@ -29,6 +29,7 @@ solve_hf.o \
 solve_qp.o \
 solve_eri.o \
 solve_wfreq.o \
+solve_h1e.o \
 wfreq.o \
 wfreq_readin.o \
 wfreq_restart.o \

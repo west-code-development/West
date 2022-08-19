@@ -25,7 +25,7 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
   USE mp_world,             ONLY : mpime,root
   USE io_push,              ONLY : io_push_title, io_push_bar
-  USE wfreq_db,             ONLY : qdet_db_write
+  USE wfreq_db,             ONLY : qdet_db_write_eri
   !
   USE types_coulomb,        ONLY : pot3D
   !
@@ -110,7 +110,7 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   eri_w = eri_vc + eri_w
   !
-  CALL qdet_db_write(eri_vc,eri_w)
+  CALL qdet_db_write_eri(eri_vc,eri_w)
   !
   CALL io_push_bar()
   !

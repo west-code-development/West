@@ -250,6 +250,7 @@ SUBROUTINE compute_integrals(psi, hpsi, h1e)
   USE mp,                   ONLY : mp_sum
   USE mp_world,             ONLY : mpime,root  
   USE gvect,                ONLY : gstart
+  USE noncollin_module,     ONLY : npol
   !
   IMPLICIT NONE
   !
@@ -258,14 +259,10 @@ SUBROUTINE compute_integrals(psi, hpsi, h1e)
   REAL(DP), INTENT(OUT)    :: h1e(n_pairs,nspin)
   !
   REAL(DP),ALLOCATABLE     :: h1e_tmp(:,:,:)
-  INTEGER   :: npw2, npwx2
   INTEGER   :: i, j, s, ib_index, jb_Index
   INTEGER   :: iunit
   REAL(DP)  :: ry_to_ha = 0.5_DP
   REAL(DP), EXTERNAL    :: DDOT
-  !
-  npw2  = 2*npw
-  npwx2  = 2*npwx
   !
   ALLOCATE( h1e_tmp(n_bands,n_bands,nspin) )
   h1e_tmp = 0._DP
@@ -281,12 +278,7 @@ SUBROUTINE compute_integrals(psi, hpsi, h1e)
      ! Following regterg subroutine, compute overlap integrals between psi and hpsi
      ! Hamiltonian matrix (or its components) is assumed to be real and symmetric
      !
-     CALL DGEMM( 'T', 'N', n_bands, n_bands, npw2, 2.D0 , &
-                 psi(:,:,s), npwx2, hpsi(:,:,s), npwx2, 0.D0, h1e_tmp(:,:,s), n_bands )
-     !
-     IF ( gstart == 2 ) THEN
-        CALL DGER( n_bands, n_bands, -1.D0, psi(:,:,s), npwx2, hpsi(:,:,s), npwx2, h1e_tmp(:,:,s), n_bands )
-     ENDIF
+     CALL glbrak_gamma( psi(:,:,s), hpsi(:,:,s), h1e_tmp(:,:,s), npw, npwx, n_bands, n_bands, n_bands, npol)
      !
   ENDDO
   !

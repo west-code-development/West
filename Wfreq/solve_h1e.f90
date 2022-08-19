@@ -33,7 +33,8 @@ SUBROUTINE solve_h1e()
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP),ALLOCATABLE :: psi(:,:,:), hpsi(:,:,:), h1e_tmp(:,:)
+  COMPLEX(DP),ALLOCATABLE :: psi(:,:,:), hpsi(:,:,:)
+  REAL(DP), ALLOCATABLE :: h1e_tmp(:,:)
   INTEGER  :: s,i,iunit
   REAL(DP)  :: ry_to_ha = 0.5_DP
   !
@@ -74,20 +75,24 @@ SUBROUTINE solve_h1e()
   CALL compute_vxx(psi, hpsi, h1e_tmp)
   ! H1e = H^{KS} - V_{xc} - V_{xx}
   h1e = h1e - h1e_tmp
-  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x}
+  !
+  CALL compute_hartree_double_counting(h1e_tmp)
+  ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc}
+  h1e = h1e - h1e_tmp
+  ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc} + \Sigma^{x}
   h1e = h1e + sigma_exx_full
   !
   CALL calc_exx2(sigma_exx, .TRUE.)
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc}
   h1e = h1e - sigma_exx_full
-  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c}
+  ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c}
   h1e = h1e + REAL(sigma_corr_full)
   ! Call to solve_qp with
   ! l_secant = .FALSE.
   ! l_generate_plot = .FALSE.
   ! l_QDET = .TRUE. 
   CALL solve_qp( .FALSE., .FALSE., .TRUE. )
-  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c} - \Sigma^{c}_{dc}
+  ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c} - \Sigma^{c}_{dc}
   h1e = h1e - REAL(sigma_corr_full)
   ! write H1e to JSON file
   CALL qdet_db_write_h1e(h1e)
@@ -190,7 +195,7 @@ END SUBROUTINE
 !
 !-----------------------------------------------------------------------  
 SUBROUTINE compute_vxx(psi, hpsi, h1e_tmp)
-  !-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
@@ -295,4 +300,33 @@ SUBROUTINE compute_integrals(psi, hpsi, h1e)
   !
   DEALLOCATE(h1e_tmp)
   !
+END SUBROUTINE
+!
+!-----------------------------------------------------------------------  
+SUBROUTINE compute_hartree_double_counting(h1e_tmp)
+!-----------------------------------------------------------------------
+  USE kinds,                ONLY : DP
+  USE pwcom,                ONLY : nspin
+  USE westcom,              ONLY : n_bands, n_pairs, ijpmap, eri_w, occupation, qp_bands
+  
+  REAL(DP), INTENT(OUT)    :: h1e_tmp(n_pairs,nspin)
+  !
+  INTEGER                  :: s1, s2, ipair, jpair, iband, band_index
+  
+  h1e_tmp = 0.0_DP
+  DO s1 = 1, nspin
+    DO ipair = 1, n_pairs
+      DO s2= 1, nspin
+        DO iband = 1, n_bands
+          jpair = ijpmap(iband, iband)
+          band_index = qp_bands(iband)
+          h1e_tmp(ipair, s1) = h1e_tmp(ipair, s1) + eri_w(ipair,jpair,s1,s2)*occupation(band_index,s2)
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+  
+  IF (nspin == 1) THEN
+    h1e_tmp(:,:) = 2.0_DP * h1e_tmp(:,:)
+  ENDIF
 END SUBROUTINE

@@ -81,11 +81,8 @@ PROGRAM wfreq
   ENDIF
   !
   IF( lgate(9) ) THEN
-     CALL solve_h1e( )
-  ENDIF
-  !
-  IF( lgate(9) ) THEN
      CALL solve_eri( 1, .TRUE. )
+     CALL solve_h1e( )
   ENDIF
   !
   CALL exx_ungo( )

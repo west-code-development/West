@@ -1,4 +1,3 @@
-# Makefile
 
 include ../maketest.inc
 

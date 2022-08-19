@@ -94,10 +94,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   TYPE(idistribute) :: mypara
   REAL(DP),ALLOCATABLE :: overlap(:,:)
   REAL(DP) :: mwo, ecv, dfactor, frequency, dhead
-  COMPLEX(DP) :: zmwo, zfactor,zm,zp, zhead
+  COMPLEX(DP) :: zmwo, zfactor,zm,zp, zhead, zhead_a
   INTEGER :: glob_jp,ic,ifreq,il
   REAL(DP),ALLOCATABLE :: dmatilda(:,:), dlambda(:,:)
-  COMPLEX(DP),ALLOCATABLE :: zmatilda(:,:), zlambda(:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatilda(:,:), zlambda(:,:), zlambda_a(:,:)
   REAL(DP),ALLOCATABLE :: dmati(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr(:,:,:)
   REAL(DP) :: time_spent(2)
@@ -112,7 +112,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   REAL(DP),ALLOCATABLE :: dmati_a(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr_a(:,:,:)
   REAL(DP),ALLOCATABLE :: dmatilda_a(:,:)
-  COMPLEX(DP),ALLOCATABLE :: zmatilda_a(:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatilda_a(:,:), zmatilda_diff(:,:)
   !
   CALL io_push_title("(W)-Lanczos")
   !
@@ -318,7 +318,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         iv = band_group%l2g(ivloc2)
         !
-        IF(iks == bks%lastdone_ks .AND. iv <= bks%lastdone_band) CYCLE
+        IF(iks == bks%lastdone_ks .AND. iv <= bks%lastdone_band .AND. .NOT. l_QDET) CYCLE
         !
         ! MACROPOL CASE
         !
@@ -583,7 +583,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         ! Write final restart file
         !
-        IF( iks == k_grid%nps .AND. iv == nbndval ) l_write_restart = .TRUE.
+        IF( iks == k_grid%nps .AND. iv == nbndval .AND. .NOT. l_QDET ) l_write_restart = .TRUE.
         !
         ! But do not write here when using pool or band group
         !
@@ -613,7 +613,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   ! Synchronize and write final restart file when using pool or band group
   !
-  IF(npool*nbgrp > 1 .AND. .NOT. l_read_restart) THEN
+  IF(npool*nbgrp > 1 .AND. .NOT. l_read_restart .AND. .NOT. l_QDET) THEN
      bks%lastdone_ks = k_grid%nps
      bks%lastdone_band = nbndval
      CALL mp_sum(dmati,inter_bgrp_comm)
@@ -712,10 +712,12 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   IF (ALLOCATED(z_head_rfr)) DEALLOCATE(z_head_rfr)
   ALLOCATE(zmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(zlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+  ALLOCATE(zlambda_a(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
   ALLOCATE(z_epsm1_rfr(pert%nglob,pert%nloc,rfr%nloc))
   z_epsm1_rfr = 0._DP
   IF (l_QDET) THEN
      ALLOCATE(zmatilda_a(mypara%nglob,mypara%nglob))
+     ALLOCATE(zmatilda_diff(mypara%nglob,mypara%nglob))
      ALLOCATE(z_epsm1_rfr_a(pert%nglob,pert%nloc,rfr%nloc))
      z_epsm1_rfr_a = 0._DP
   ENDIF
@@ -743,17 +745,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      ENDDO
      !
      CALL mp_sum(zmatilda,inter_image_comm)
-     !
-     IF(l_QDET) THEN
-        CALL mp_sum(zmatilda_a,inter_image_comm)
-        CALL chi_invert_complex(zmatilda-zmatilda_a,zhead,zlambda,mypara%nglob)
-        DO ip = 1,pert%nloc
-           glob_ip = pert%l2g(ip)
-           z_epsm1_rfr_a(1:n_pdep_eigen_to_use,ip,ifreq) = zlambda(1:n_pdep_eigen_to_use,glob_ip)
-        ENDDO
-        IF(l_macropol) z_head_rfr_a(ifreq) = zhead
-     ENDIF 
-     !
      CALL chi_invert_complex(zmatilda,zhead,zlambda,mypara%nglob)
      !
      DO ip = 1,pert%nloc
@@ -762,13 +753,25 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      ENDDO
      IF(l_macropol) z_head_rfr(ifreq) = zhead
      !
+     IF(l_QDET) THEN
+        CALL mp_sum(zmatilda_a,inter_image_comm)
+        zmatilda_diff = zmatilda - zmatilda_a
+        CALL chi_invert_complex(zmatilda_diff,zhead_a,zlambda_a,mypara%nglob)
+        DO ip = 1,pert%nloc
+           glob_ip = pert%l2g(ip)
+           z_epsm1_rfr_a(1:n_pdep_eigen_to_use,ip,ifreq) = zlambda_a(1:n_pdep_eigen_to_use,glob_ip)
+        ENDDO
+        IF(l_macropol) z_head_rfr_a(ifreq) = zhead_a
+     ENDIF
+     !
   ENDDO
   !
   DEALLOCATE(zlambda)
   DEALLOCATE(zmatilda)
   DEALLOCATE(zmatr)
   IF(l_QDET) THEN
-     DEALLOCATE(zmatilda_a)
+     DEALLOCATE(zlambda_a)
+     DEALLOCATE(zmatilda_a, zmatilda_diff)
      DEALLOCATE(zmatr_a)
   ENDIF  
   !

@@ -53,7 +53,7 @@ To use the script do:
 Running WEST Jobs
 ~~~~~~~~~~~~~~~~~
 
-Summit uses the `jsrun <https://docs.olcf.ornl.gov/systems/summit_user_guide.html#job-launcher-jsrun>`_ job manager. The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Summit with 12 MPI ranks and 12 GPUs per node. The <project_name> must be replaced with an active project allocation.
+Summit uses the `jsrun <https://docs.olcf.ornl.gov/systems/summit_user_guide.html#job-launcher-jsrun>`_ job manager. The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Summit with 6 MPI ranks and 6 GPUs per node. The <project_name> must be replaced with an active project allocation.
 
 .. code-block:: bash
 

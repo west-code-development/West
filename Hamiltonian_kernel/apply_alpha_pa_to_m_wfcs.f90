@@ -14,8 +14,8 @@
 SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
 !------------------------------------------------------------------------
   !
-  ! | g_i > = alpha * P_a | f_i >            forall i = 1:n_bands
-  ! P_a = sum_{i from 1 to westcom/n_bands} |westcom/proj_c_i><westcom/proj_c_i| 
+  ! | f_i > = alpha * P_a | f_i >            forall i = 1:n_bands
+  ! P_a = sum_{i from 1 to n_bands} |proj_c_i><proj_c_i| 
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : npw,npwx

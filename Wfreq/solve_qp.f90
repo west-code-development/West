@@ -471,11 +471,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      notconv = k_grid%nps * n_bands
      DO ifixed = 1, n_secant_maxiter
         !
-        IF (l_enable_off_diagonal) THEN
-           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.)
-        ELSE
-           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE., .FALSE.)
-        ENDIF
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., l_off_diagonal, .FALSE.)
         !
         IF( my_pool_id == 0 ) THEN
            !

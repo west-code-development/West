@@ -15,7 +15,8 @@ SUBROUTINE solve_h1e()
   !-----------------------------------------------------------------------
   !
   USE westcom,              ONLY : n_bands,n_pairs,proj_c,h1e,iuwfc,lrwfc,&
-                                 & sigma_exx_full,sigma_corr_full,wfreq_save_dir
+                                 & sigma_exx_full,sigma_corr_full,wfreq_save_dir,&
+                                 & sigma_exx
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
   USE wavefunctions,        ONLY : evc
@@ -76,7 +77,7 @@ SUBROUTINE solve_h1e()
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x}
   h1e = h1e + sigma_exx_full
   !
-  CALL solve_hf( .TRUE. )
+  CALL calc_exx2(sigma_exx, .TRUE.)
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc}
   h1e = h1e - sigma_exx_full
   ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c}

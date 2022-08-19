@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !----------------------------------------------------------------------------
-SUBROUTINE solve_hf ( l_QDET )
+SUBROUTINE solve_hf ()
   !----------------------------------------------------------------------------
   !
   USE control_flags,   ONLY : gamma_only
@@ -20,10 +20,8 @@ SUBROUTINE solve_hf ( l_QDET )
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
-  !
   IF( gamma_only ) THEN
-    CALL solve_hf_gamma( l_QDET )
+    CALL solve_hf_gamma()
   ELSE
     CALL solve_hf_k( )
   ENDIF
@@ -31,7 +29,7 @@ SUBROUTINE solve_hf ( l_QDET )
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_hf_gamma( l_QDET )
+SUBROUTINE solve_hf_gamma()
   !-----------------------------------------------------------------------
   !
   ! ... This subroutine solves the DBS problem for GAMMA, at non-zero freqeuncies.
@@ -53,8 +51,6 @@ SUBROUTINE solve_hf_gamma( l_QDET )
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
-  !
   ! Workspace
   !
   CHARACTER(LEN=5) :: myglobk
@@ -69,16 +65,11 @@ SUBROUTINE solve_hf_gamma( l_QDET )
   !
   ! Get SIGMA Vxc
   !
-  IF (.NOT. l_QDET)CALL calc_vxc(sigma_vxcl,sigma_vxcnl)
+  CALL calc_vxc(sigma_vxcl,sigma_vxcnl)
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2(sigma_exx,l_QDET)
-  ! if only QDET double-counting term is required, calculation finishes here.
-  IF (l_QDET) THEN
-     CALL stop_clock( "solve_hf" )
-     RETURN
-  ENDIF
+  CALL calc_exx2(sigma_exx, .FALSE.)
   !
   ! Get SIGMA X
   !

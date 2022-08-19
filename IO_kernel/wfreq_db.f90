@@ -50,7 +50,7 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, ib, ipair, band_index
+      INTEGER :: iks, ib, ipair
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       CHARACTER(LEN=10) :: ccounter
       INTEGER :: counter
@@ -209,7 +209,7 @@ MODULE wfreq_db
     !
     !------------------------------------------------------------------------
     SUBROUTINE qdet_db_write_eri(eri_vc,eri_w)
-      !------------------------------------------------------------------------
+    !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
@@ -236,7 +236,6 @@ MODULE wfreq_db
       TYPE(json_file) :: json
       INTEGER :: iunit, i, ipair
       INTEGER,ALLOCATABLE :: ilist(:)
-      LOGICAL :: l_generate_plot, l_optics
       !
       ! MPI BARRIER
       !
@@ -307,14 +306,14 @@ MODULE wfreq_db
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE qdet_db_write_h1e()
-      !------------------------------------------------------------------------
+    SUBROUTINE qdet_db_write_h1e(h1e)
+    !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,&
-                                     & l_enable_off_diagonal,n_pairs,h1e,logfile
+                                     & l_enable_off_diagonal,n_pairs,logfile
       USE pwcom,                ONLY : et,nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -323,16 +322,17 @@ MODULE wfreq_db
       !
       IMPLICIT NONE
       !
+      REAL(DP),INTENT(IN):: h1e(n_pairs,nspin)
+      !
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, jks, ib
-      CHARACTER(LEN=6) :: my_label_ik, my_label_jk, my_label_b, my_label_ipair
+      INTEGER :: iks
+      CHARACTER(LEN=6) :: my_label_ik
       !
       TYPE(json_file) :: json
       INTEGER :: iunit, i, ipair
       INTEGER,ALLOCATABLE :: ilist(:)
-      LOGICAL :: l_generate_plot, l_optics
       !
       ! MPI BARRIER
       !
@@ -357,7 +357,6 @@ MODULE wfreq_db
                CALL json%add('qdet.h1e.K'//TRIM(my_label_ik), &
                & h1e(1:n_pairs,iks)*rytoev)
             ENDIF
-            !
             !
          ENDDO
          !

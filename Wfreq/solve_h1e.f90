@@ -15,7 +15,8 @@ SUBROUTINE solve_h1e()
   !-----------------------------------------------------------------------
   !
   USE westcom,              ONLY : n_bands,n_pairs,proj_c,h1e,iuwfc,lrwfc,&
-                                 & sigma_exx_full,sigma_corr_full,wfreq_save_dir
+                                 & sigma_exx_full,sigma_corr_full,wfreq_save_dir,&
+                                 & sigma_exx
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,npw,npwx
   USE wavefunctions,        ONLY : evc
@@ -81,8 +82,8 @@ SUBROUTINE solve_h1e()
   ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc} + \Sigma^{x}
   h1e = h1e + sigma_exx_full
   !
-  CALL solve_hf( .TRUE. )
-  ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc} + \Sigma^{x} - \Sigma^{x}_{dc}
+  CALL calc_exx2(sigma_exx, .TRUE.)
+  ! H1e = H^{KS} - V_{xc} - V_{xx} + \Sigma^{x} - \Sigma^{x}_{dc}
   h1e = h1e - sigma_exx_full
   ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c}
   h1e = h1e + REAL(sigma_corr_full)
@@ -94,12 +95,12 @@ SUBROUTINE solve_h1e()
   ! H1e = H^{KS} - V_{xc} - V_{xx} - V^{H}_{dc} + \Sigma^{x} - \Sigma^{x}_{dc} + \Sigma^{c} - \Sigma^{c}_{dc}
   h1e = h1e - REAL(sigma_corr_full)
   ! write H1e to JSON file
-  CALL qdet_db_write_h1e( )
+  CALL qdet_db_write_h1e(h1e)
   !
   CALL io_push_bar()
   !
   DEALLOCATE( psi, hpsi )
-  DEALLOCATE( h1e_tmp )
+  DEALLOCATE( h1e, h1e_tmp )
   !
 END SUBROUTINE
 !
@@ -140,7 +141,7 @@ SUBROUTINE compute_hks(psi, hpsi, h1e_tmp)
   ENDDO
   !
   ! compute integrals from psi and hpsi and transform into pair-basis.
-  CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "hks.dat")
+  CALL compute_integrals(psi, hpsi, h1e_tmp)
   !
   CALL deallocate_bec_type(becp)
   !
@@ -186,7 +187,7 @@ SUBROUTINE compute_vxc(psi, hpsi, h1e_tmp)
     !
   ENDDO
   !
-  CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "vxc.dat")
+  CALL compute_integrals(psi, hpsi, h1e_tmp)
   !
   CALL destroy_scf_type(vhxc)
   !
@@ -237,14 +238,14 @@ SUBROUTINE compute_vxx(psi, hpsi, h1e_tmp)
      !
   END IF
   !
-  CALL compute_and_write_integrals(psi, hpsi, h1e_tmp, "vxx.dat")
+  CALL compute_integrals(psi, hpsi, h1e_tmp)
   !
   CALL destroy_scf_type(vhxc)
   !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------  
-SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
+SUBROUTINE compute_integrals(psi, hpsi, h1e)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -254,23 +255,19 @@ SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
   USE mp,                   ONLY : mp_sum
   USE mp_world,             ONLY : mpime,root  
   USE gvect,                ONLY : gstart
+  USE noncollin_module,     ONLY : npol
   !
   IMPLICIT NONE
   !
   COMPLEX(DP), INTENT(IN)  :: psi(npwx,n_bands,nspin)
   COMPLEX(DP), INTENT(OUT) :: hpsi(npwx,n_bands,nspin)
   REAL(DP), INTENT(OUT)    :: h1e(n_pairs,nspin)
-  CHARACTER(LEN=*), INTENT(IN) :: fname
   !
   REAL(DP),ALLOCATABLE     :: h1e_tmp(:,:,:)
-  INTEGER   :: npw2, npwx2
   INTEGER   :: i, j, s, ib_index, jb_Index
   INTEGER   :: iunit
   REAL(DP)  :: ry_to_ha = 0.5_DP
   REAL(DP), EXTERNAL    :: DDOT
-  !
-  npw2  = 2*npw
-  npwx2  = 2*npwx
   !
   ALLOCATE( h1e_tmp(n_bands,n_bands,nspin) )
   h1e_tmp = 0._DP
@@ -286,12 +283,7 @@ SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
      ! Following regterg subroutine, compute overlap integrals between psi and hpsi
      ! Hamiltonian matrix (or its components) is assumed to be real and symmetric
      !
-     CALL DGEMM( 'T', 'N', n_bands, n_bands, npw2, 2.D0 , &
-                 psi(:,:,s), npwx2, hpsi(:,:,s), npwx2, 0.D0, h1e_tmp(:,:,s), n_bands )
-     !
-     IF ( gstart == 2 ) THEN
-        CALL DGER( n_bands, n_bands, -1.D0, psi(:,:,s), npwx2, hpsi(:,:,s), npwx2, h1e_tmp(:,:,s), n_bands )
-     ENDIF
+     CALL glbrak_gamma( psi(:,:,s), hpsi(:,:,s), h1e_tmp(:,:,s), npw, npwx, n_bands, n_bands, n_bands, npol)
      !
   ENDDO
   !
@@ -305,12 +297,6 @@ SUBROUTINE compute_and_write_integrals(psi, hpsi, h1e, fname)
        ENDDO
     ENDDO
   ENDDO
-  !
-  IF ( mpime == root ) THEN
-     OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/"//TRIM(fname), STATUS="REPLACE", ACCESS="STREAM")
-     WRITE(iunit) h1e * ry_to_ha
-     CLOSE(iunit)
-  ENDIF
   !
   DEALLOCATE(h1e_tmp)
   !

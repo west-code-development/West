@@ -515,7 +515,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            IF(l_macropol .AND. l_gammaq) THEN
               !
               DO ifreq = 1,ifr%nloc
-                 enrg = et(ib_index,iks) - energy(ib_index,iks)
+                 enrg = et(ib,iks) - energy(ib_index,iks)
                  partial_h = partial_h + z_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
               ENDDO
               !

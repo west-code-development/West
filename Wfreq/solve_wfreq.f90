@@ -498,7 +498,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         ! PSIC
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,iv),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npw,npwx,evc_a(:,iv),psic,'Wave')
         !
         !$acc kernels present(dvpsi)
         dvpsi(:,:) = 0._DP
@@ -574,7 +574,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #if defined(__CUDA)
            CALL reallocate_ps_gpu(nbnd-nbndval_full,mypara%nloc)
            !$acc host_data use_device(dvpsi,ps_r)
-           CALL glbrak_gamma_gpu(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
+           CALL glbrak_gamma_gpu(evc_a(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
            & mypara%nloc,nbnd-nbndval_full,npol)
            !$acc end host_data
 #else
@@ -629,13 +629,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                        frequency = imfreq_list(ifreq)
                        dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                        IF(l_frac_occ) dfactor = dfactor*docc
-			IF (l_QDET) THEN                       
-				dmati_a(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
-                       	& +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
-			ELSE                       
-				dmati(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
-                       	& +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
-			ENDIF
+                       IF (l_QDET) THEN                       
+                         dmati_a(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
+                         & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
+                       ELSE                       
+                         dmati(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
+                         & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
+                       ENDIF
                     ENDDO
                  ENDDO
               ENDDO ! ifreq
@@ -663,14 +663,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                        zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                        zfactor = zmwo/zp+zmwo/zm
                        IF(l_frac_occ) zfactor = zfactor*docc
-			!
-			IF (l_QDET) THEN                       
-			  zmatr_a(glob_jp,ip,ifreq) = zmatr_a(glob_jp,ip,ifreq) &
-                         & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
-			ELSE
-			  zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
-                         & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
-        		ENDIF
+                         !
+                         IF (l_QDET) THEN                       
+                           zmatr_a(glob_jp,ip,ifreq) = zmatr_a(glob_jp,ip,ifreq) &
+                           & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
+                         ELSE
+                           zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
+                           & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
+                         ENDIF
                    ENDDO
                  ENDDO
               ENDDO ! ifreq

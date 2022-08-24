@@ -230,7 +230,6 @@ MODULE wfreq_center
   REAL(DP),    ALLOCATABLE :: sigma_z(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_eqplin(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_eqpsec(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_exx(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcl(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcnl(:,:)

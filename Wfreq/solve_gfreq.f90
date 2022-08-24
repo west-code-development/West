@@ -283,9 +283,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      bks%max_band = nbndval
      bks%min_band = 1
      !
-     ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
-     IF (l_enable_off_diagonal) ALLOCATE(dvpsi1(npwx*npol,pert%nlocx))
-     !
      time_spent(1) = get_clock( 'glanczos' )
      !
      ! LOOP over band states

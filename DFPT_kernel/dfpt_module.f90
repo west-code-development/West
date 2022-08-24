@@ -24,8 +24,10 @@ MODULE dfpt_module
       !
       USE kinds,                 ONLY : DP
       USE io_global,             ONLY : stdout
+      USE wvfct,                 ONLY : et
       USE fft_base,              ONLY : dffts
       USE gvect,                 ONLY : gstart
+      USE wavefunctions,         ONLY : evc,psic
       USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
       USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_pool_comm,nbgrp,my_bgrp_id,&
                                       & inter_bgrp_comm,intra_bgrp_comm
@@ -248,9 +250,6 @@ MODULE dfpt_module
          !
          !$acc parallel loop present(eprec_loc,eprec,et_loc)
          DO lbnd = 1,band_group_nloc
-            !
-            ! ibnd = band_group%l2g(lbnd)
-            !
             ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
             eprec_loc(lbnd) = eprec(ibnd)
             et_loc(lbnd) = et(ibnd,ikqs)

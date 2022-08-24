@@ -342,7 +342,8 @@ wfreq_control
    * - **Default**
      - [0]
    * - **Description**
-     - List of bands to compute the QP corrections. If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
+     - List of bands to compute the QP corrections.
+     - If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
 
 
 .. data:: macropol_calculation

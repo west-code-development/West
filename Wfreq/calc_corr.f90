@@ -11,12 +11,12 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
+SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_corr(n,iks) = < qp_bands(n),iks | S_c(energy(ib,iks)) | qp_bands(n),iks >     n = 1,n_bands
-  !
-  ! IF (l_enable_off_diagonal .AND. l_full) store in
+  ! 
+  ! IF (l_enable_off_diagonal .AND. l_full) store in 
   ! sigma_corr_full(ijpmap(m,n),iks) = < qp_bands(m),iks | 0.5 * ( S_c(energy(m,iks)) &
   ! & + S_c(energy(n,iks)) ) | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
@@ -47,7 +47,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   COMPLEX(DP),INTENT(OUT) :: sigma_corr( n_bands, k_grid%nps )  ! The correlation self-energy, imaginary part is lifetime.
   REAL(DP),INTENT(IN) :: energy( n_bands, k_grid%nps )          ! The energy variable
   LOGICAL,INTENT(IN) :: l_verbose
-  LOGICAL,INTENT(IN) :: l_full
+  LOGICAL,INTENT(IN) :: l_full                                  ! True if off-diagonal elements of the self-energy are calculated
+  LOGICAL,INTENT(IN) :: l_QDET                                  ! True if correlation double-counting is calculated
   !
   ! Workspace
   !
@@ -135,6 +136,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            DO ifreq = 1,ifr%nloc
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
+                 ! For double-counting term, all KS states in summation must be 
+                 ! within the active space.
+                 IF (l_QDET) THEN
+                    IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+                 ENDIF
+                 !
                  enrg = et(glob_im,iks) - energy(ib_index,iks_g)
                  IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                  & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
@@ -150,7 +157,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            !
            ! BODY 2nd part : Lanczos
            !
-           IF( l_enable_lanczos ) THEN
+           ! For QDET: The active space is formed by KS states, no summation over
+           ! infinite ammount of conduction orbitals.
+           IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               DO ifreq = 1,ifr%nloc
                  DO ip = 1, pert%nloc
@@ -240,6 +249,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
            DO im = 1,aband%nloc
               !
               glob_im = aband%l2g(im)
+              ! For double-counting term, all KS states in summation must be 
+              ! within the active space.
+              IF (l_QDET) THEN
+                 IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+              ENDIF
               !
               this_is_a_pole=.FALSE.
               !
@@ -327,6 +341,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
                  !
                  glob_im = aband%l2g(im)
                  !
+                 ! For double-counting term, all KS states in summation must be 
+                 ! within the active space.
+                 IF (l_QDET) THEN
+                    IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+                 ENDIF  
+                 !               
                  this_is_a_pole=.FALSE.
                  !
                  IF (l_frac_occ) THEN

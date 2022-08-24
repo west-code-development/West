@@ -154,8 +154,31 @@ SUBROUTINE wfreq_setup
      sigma_corr_full = 0._DP
   ENDIF
   !
+  DO i = 1,9
+     IF(wfreq_calculation(i:i) == 'H') THEN
+        ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
+        DO iks = 1, k_grid%nps 
+           !
+           IF(kpt_pool%nloc > 1) THEN
+              IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+              CALL mp_bcast( evc, 0, inter_image_comm )
+           ENDIF
+           !
+           DO ib_index = 1, n_bands
+              !
+              ib = qp_bands(ib_index)
+              proj_c(:,ib_index,iks) = evc(:,ib)
+              !
+           END DO
+           !
+        END DO
+        EXIT
+        !
+     ENDIF
+  ENDDO
+  !
   l_generate_plot = .FALSE.
-  DO i = 1,8
+  DO i = 1,9
      IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.
   ENDDO
   IF(l_generate_plot) THEN

@@ -11,12 +11,12 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_exx2(sigma_exx)
+SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_exx(n,iks) = < qp_bands(n),iks | V_exx | qp_bands(n),iks >     n = 1,n_bands
   !
-  ! IF (l_enable_off_diagonal .AND. l_full) store in
+  ! IF (l_enable_off_diagonal .AND. l_full) store in 
   ! sigma_exx_full(ijpmap(m,n),iks) = < qp_bands(m),iks | V_exx | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
   USE kinds,                ONLY : DP
@@ -29,8 +29,9 @@ SUBROUTINE calc_exx2(sigma_exx)
   USE pwcom,                ONLY : npw,npwx,nbnd,igk_k,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands,n_bands,l_enable_off_diagonal,&
-                                 & sigma_exx_full,ijpmap,n_pairs
+  USE wavefunctions,        ONLY : evc,psic,psic_nc
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands,n_bands
+  USE westcom,              ONLY : l_enable_off_diagonal,sigma_exx_full,ijpmap,n_pairs
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -53,6 +54,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   ! I/O
   !
   REAL(DP), INTENT(OUT) :: sigma_exx(n_bands,k_grid%nps)
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   ! Workspace
   !
@@ -109,7 +111,11 @@ SUBROUTINE calc_exx2(sigma_exx)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  barra_load = kpt_pool%nloc*band_group%nloc*band_group%nglob
+  IF (l_enable_off_diagonal) THEN
+      barra_load = kpt_pool%nloc*band_group%nloc*band_group%nglob
+  ELSE
+      barra_load = kpt_pool%nloc*band_group%nloc
+  ENDIF
   CALL start_bar_type(barra,'sigmax',barra_load)
   !
 #if defined(__CUDA)

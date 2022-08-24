@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_qp(l_secant,l_generate_plot)
+SUBROUTINE solve_qp(l_secant,l_generate_plot,l_QDET)
   !-----------------------------------------------------------------------
   !
   USE control_flags,        ONLY : gamma_only
@@ -21,9 +21,10 @@ SUBROUTINE solve_qp(l_secant,l_generate_plot)
   ! I/O
   !
   LOGICAL,INTENT(IN) :: l_secant,l_generate_plot
+  LOGICAL,INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated.
   !
   IF( gamma_only ) THEN
-     CALL solve_qp_gamma( l_secant, l_generate_plot )
+     CALL solve_qp_gamma( l_secant, l_generate_plot, l_QDET )
   ELSE
      CALL solve_qp_k( l_secant, l_generate_plot )
   ENDIF
@@ -31,7 +32,7 @@ SUBROUTINE solve_qp(l_secant,l_generate_plot)
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
+SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !-----------------------------------------------------------------------
   !
   ! ... This subroutine solves the DBS problem for GAMMA, at non-zero freqeuncies.
@@ -59,9 +60,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
-#if defined(__CUDA)
-  USE west_gpu,             ONLY : memcpy_D2H
-#endif
   !
   IMPLICIT NONE
   !
@@ -118,7 +116,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   CALL start_clock('solve_qp')
 #endif
   !
-  ALLOCATE( imfreq_list_integrate( 2, ifr%nloc ) )
+  IF ( .NOT. l_QDET ) THEN
+     ALLOCATE( imfreq_list_integrate( 2, ifr%nloc ) )
+  ENDIF
   ALLOCATE( dtemp( n_imfreq ) )
   !
   dtemp(:) = 0._DP
@@ -219,7 +219,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  barra_load = kpt_pool%nloc * band_group%nloc * band_group%nglob
+  IF (l_enable_off_diagonal) THEN
+     barra_load = kpt_pool%nloc * band_group%nloc * band_group%nglob
+  ELSE
+     barra_load = kpt_pool%nloc * band_group%nloc
+  ENDIF
   CALL start_bar_type( barra, 'coll_gw', barra_load )
   !
   ! LOOP
@@ -271,6 +275,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               !$acc loop collapse(2)
               DO ifreq = 1, ifr_nloc
                  DO im = 1, nbnd
+		    ! For the QDET double-counting term, all states need to be within qp_bands
+                    IF (l_QDET) THEN
+                      IF ( ALL(qp_bands(:) /= im) ) CYCLE
+                    ENDIF
+                    !
                     reduce_r = 0._DP
                     !$acc loop collapse(2) reduction(+:reduce_r)
                     DO glob_jp = 1, n_pdep_eigen_to_use
@@ -310,6 +319,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               !$acc loop collapse(2)
               DO ifreq = 1, rfr_nloc
                  DO im = 1, nbnd
+		    ! For the QDET double-counting term, all states need to be within qp_bands
+                    IF (l_QDET) THEN
+                      IF ( ALL(qp_bands(:) /= im) ) CYCLE
+                    ENDIF
+                    !	
                     reduce_c = 0._DP
                     !$acc loop collapse(2) reduction(+:reduce_c)
                     DO glob_jp = 1, n_pdep_eigen_to_use
@@ -342,8 +356,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
            ! -----------------------------
            ! LANCZOS part : d_diago, d_body2_ifr
            ! -----------------------------
-           !
-           IF( l_enable_lanczos ) THEN
+           ! For the QDET double-counting term, there are no contributions from the Lanczos chain
+           IF( .NOT. l_QDET l_enable_lanczos ) THEN
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
                  CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
@@ -533,11 +547,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      notconv = k_grid%nps * n_bands
      DO ifixed = 1, n_secant_maxiter
         !
-        IF (l_enable_off_diagonal) THEN
-           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE.)
-        ELSE
-           CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE.)
-        ENDIF
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., l_enable_off_diagonal, .FALSE.)
         !
         IF( my_pool_id == 0 ) THEN
            !
@@ -641,6 +651,17 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      DEALLOCATE( z_in )
      DEALLOCATE( qp_energy )
      !
+  ENDIF
+  !
+  IF (l_QDET) THEN
+     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+     ! sigma_cor_out is not required, the important output is contained in the
+     ! global variable sigma_corr_full
+     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sigma_cor_out, &
+     & sigma_eqpsec - sigma_diff, .TRUE., .TRUE., .TRUE.)
+     DEALLOCATE( sigma_cor_out )
+     CALL stop_clock( 'solve_qp' )
+     RETURN
   ENDIF
   !
   IF( l_generate_plot ) THEN

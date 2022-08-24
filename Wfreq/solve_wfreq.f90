@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_wfreq(l_read_restart,l_generate_plot)
+SUBROUTINE solve_wfreq(l_read_restart,l_generate_plot,l_QDET)
   !-----------------------------------------------------------------------
   !
   USE control_flags,        ONLY : gamma_only
@@ -20,10 +20,10 @@ SUBROUTINE solve_wfreq(l_read_restart,l_generate_plot)
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_read_restart,l_generate_plot
+  LOGICAL,INTENT(IN) :: l_read_restart,l_generate_plot,l_QDET
   !
   IF( gamma_only ) THEN
-     CALL solve_wfreq_gamma( l_read_restart,l_generate_plot )
+     CALL solve_wfreq_gamma( l_read_restart,l_generate_plot,l_QDET )
   ELSE
      CALL solve_wfreq_k( l_read_restart,l_generate_plot )
   ENDIF
@@ -31,7 +31,7 @@ SUBROUTINE solve_wfreq(l_read_restart,l_generate_plot)
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
+SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -82,7 +82,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_read_restart,l_generate_plot
+  LOGICAL,INTENT(IN) :: l_read_restart,l_generate_plot,l_QDET
   !
   ! Workspace
   !
@@ -147,7 +147,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   REAL(DP),ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(l2g,eprec_loc,et_loc,sqvc)
   !
-  CALL io_push_title('(W)-Lanczos')
+  COMPLEX(DP),ALLOCATABLE :: evc_a(:,:)
+  REAL(DP),ALLOCATABLE :: dmati_a(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatr_a(:,:,:)
+  REAL(DP),ALLOCATABLE :: dmatilda_a(:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatilda_a(:,:), zmatilda_diff(:,:)
+  !
+  CALL io_push_title("(W)-Lanczos")
   !
   ! DISTRIBUTING...
   !
@@ -171,6 +177,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   ALLOCATE( dmati( mypara%nglob, mypara%nloc, ifr%nloc) )
   ALLOCATE( zmatr( mypara%nglob, mypara%nloc, rfr%nloc) )
+  !
+  ALLOCATE( evc_a(npwx*npol, nbnd) )
+  IF(l_QDET) THEN
+     ALLOCATE( dmati_a( mypara%nglob, mypara%nloc, ifr%nloc) )
+     ALLOCATE( zmatr_a( mypara%nglob, mypara%nloc, rfr%nloc) )
+     dmati_a = 0._DP
+     zmatr_a = 0._DP
+  ENDIF
   !$acc enter data create(dmati,zmatr)
   !
   IF(l_read_restart) THEN
@@ -276,7 +290,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      !
      ! Exit loop if no work to do
      !
-     IF(barra_load == 0) EXIT
+     IF(.NOT. l_QDET .AND. barra_load == 0) EXIT
      !
      IF(iks < bks%lastdone_ks) CYCLE
      !
@@ -329,8 +343,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ENDIF
 #endif
      !
+     evc_a = evc_work
+     IF(l_QDET) THEN
+         CALL apply_alpha_pa_to_m_wfcs(nbnd,evc_a,(1.0_DP,0.0_DP))
+     ENDIF
+     !
      nbndval = nbnd_occ(iks)
-     IF(l_frac_occ) THEN
+     IF (l_frac_occ) THEN
         nbndval_full = nbnd_occ_full(iks)
      ELSE
         nbndval_full = nbnd_occ(iks)
@@ -369,14 +388,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
 #if defined(__CUDA)
            !$acc host_data use_device(phi_tmp)
-           CALL commut_Hx_psi_gpu(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,1,evc_a(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,2,evc_a(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,3,evc_a(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
            !$acc end host_data
 #else
-           CALL commut_Hx_psi(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi(iks,1,1,evc_a(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi(iks,1,2,evc_a(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi(iks,1,3,evc_a(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
 #endif
            !
            !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
@@ -390,7 +409,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            CALL apply_alpha_pc_to_m_wfcs(nbndval_full,3,phi,(1._DP,0._DP))
            !
            !$acc host_data use_device(eprec_loc)
-           CALL set_eprec(1,evc_work(:,iv),eprec_loc(1))
+           CALL set_eprec(1,evc_a(:,iv),eprec_loc(1))
            !$acc end host_data
            !
            !$acc parallel loop present(eprec_loc,et_loc)
@@ -458,7 +477,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
         !
         iv = band_group%l2g(ivloc2)
         !
-        IF(iks == bks%lastdone_ks .AND. iv <= bks%lastdone_band) CYCLE
+        IF(iks == bks%lastdone_ks .AND. iv <= bks%lastdone_band .AND. .NOT. l_QDET) CYCLE
         !
         ! MACROPOL CASE
         !
@@ -545,6 +564,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
 #if defined(__CUDA)
         CALL reallocate_ps_gpu(nbndval_full,mypara%nloc)
 #endif
+        IF(l_QDET) CALL apply_alpha_pa_to_m_wfcs(mypara%nlocx,dvpsi,(1._DP,0._DP))
         CALL apply_alpha_pc_to_m_wfcs(nbndval_full,mypara%nloc,dvpsi,(1._DP,0._DP))
         !
         IF(nbnd > nbndval_full) THEN
@@ -560,7 +580,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
 #else
            IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
            ALLOCATE(ps_r(nbnd-nbndval_full,mypara%nloc))
-           CALL glbrak_gamma(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
+           CALL glbrak_gamma(evc_a(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
            & mypara%nloc,nbnd-nbndval_full,npol)
 #endif
            IF(nproc_bgrp > 1) THEN
@@ -609,8 +629,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                        frequency = imfreq_list(ifreq)
                        dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
                        IF(l_frac_occ) dfactor = dfactor*docc
-                       dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq) &
-                       & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
+			IF (l_QDET) THEN                       
+				dmati_a(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
+                       	& +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
+			ELSE                       
+				dmati(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
+                       	& +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
+			ENDIF
                     ENDDO
                  ENDDO
               ENDDO ! ifreq
@@ -638,9 +663,15 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
                        zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
                        zfactor = zmwo/zp+zmwo/zm
                        IF(l_frac_occ) zfactor = zfactor*docc
-                       zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
-                       & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
-                    ENDDO
+			!
+			IF (l_QDET) THEN                       
+			  zmatr_a(glob_jp,ip,ifreq) = zmatr_a(glob_jp,ip,ifreq) &
+                         & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
+			ELSE
+			  zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
+                         & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
+        		ENDIF
+                   ENDDO
                  ENDDO
               ENDDO ! ifreq
               !$acc end parallel
@@ -649,6 +680,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
            !
         ENDIF
         !
+        !
+        IF(l_QDET) CYCLE
+        !   
         ! Apply Pc, to be sure
         !
 #if defined(__CUDA)
@@ -790,7 +824,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !
   ! Synchronize and write final restart file when using pool or band group
   !
-  IF(npool*nbgrp > 1 .AND. .NOT. l_read_restart) THEN
+  IF(npool*nbgrp > 1 .AND. .NOT. l_read_restart .AND. .NOT. l_QDET) THEN
      bks%lastdone_ks = k_grid%nps
      bks%lastdone_band = nbndval
      CALL mp_sum(dmati,inter_bgrp_comm)
@@ -798,6 +832,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      CALL mp_sum(zmatr,inter_bgrp_comm)
      CALL mp_sum(zmatr,inter_pool_comm)
      CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
+  ENDIF
+  !
+  IF(l_QDET) THEN
+     CALL mp_sum(dmati_a,inter_bgrp_comm)
+     CALL mp_sum(dmati_a,inter_pool_comm)
+     CALL mp_sum(zmatr_a,inter_bgrp_comm)
+     CALL mp_sum(zmatr_a,inter_pool_comm)
   ENDIF
   !
   CALL stop_bar_type( barra, 'wlanczos' )
@@ -811,9 +852,18 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   !$acc enter data create(dmatilda,dlambda)
   ALLOCATE(d_epsm1_ifr(pert%nglob,pert%nloc,ifr%nloc))
   d_epsm1_ifr = 0._DP
+  IF (l_QDET) THEN
+     ALLOCATE(dmatilda_a(mypara%nglob,mypara%nglob))
+     ALLOCATE(d_epsm1_ifr_a(pert%nglob,pert%nloc,ifr%nloc))
+     d_epsm1_ifr_a = 0._DP
+  ENDIF
   IF(l_macropol) THEN
      ALLOCATE(d_head_ifr(ifr%nloc))
      d_head_ifr = 0._DP
+     IF(l_QDET) THEN
+        ALLOCATE(d_head_ifr_a(ifr%nloc))
+        d_head_ifr_a = 0._DP  
+     ENDIF     
   ENDIF
   !
 #if defined(__CUDA)
@@ -827,12 +877,24 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ifreq = band_group%l2g(ifloc)
      !
      dmatilda = 0._DP
+     IF (l_QDET) dmatilda_a = 0._DP
      DO ip = 1,mypara%nloc
         glob_ip = mypara%l2g(ip)
         dmatilda(:,glob_ip) = dmati(:,ip,ifreq)
+        IF (l_QDET) dmatilda_a(:,glob_ip) = dmati_a(:,ip,ifreq)
      ENDDO
      !
      CALL mp_sum(dmatilda,inter_image_comm)
+     IF(l_QDET) THEN
+        CALL mp_sum(dmatilda_a,inter_image_comm)
+        CALL chi_invert_real(dmatilda-dmatilda_a,dhead,dlambda,mypara%nglob)
+        DO ip = 1,pert%nloc
+           glob_ip = pert%l2g(ip)
+           d_epsm1_ifr_a(1:n_pdep_eigen_to_use,ip,ifreq) = dlambda(1:n_pdep_eigen_to_use,glob_ip)
+        ENDDO
+        IF(l_macropol) d_head_ifr_a(ifreq) = dhead
+     ENDIF 
+     !
      CALL chi_invert_real(dmatilda,dhead,dlambda,mypara%nglob)
      !
      DO ip = 1,pert%nloc
@@ -851,20 +913,38 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   DEALLOCATE(dlambda)
   DEALLOCATE(dmatilda)
   DEALLOCATE(dmati)
+  IF(l_QDET) THEN
+     DEALLOCATE(dmatilda_a)
+     DEALLOCATE(dmati_a)
+  ENDIF     
   !
   CALL mp_sum(d_epsm1_ifr,inter_bgrp_comm)
   IF(l_macropol) CALL mp_sum(d_head_ifr,inter_bgrp_comm)
+  IF(l_QDET) THEN
+     CALL mp_sum(d_epsm1_ifr_a,inter_bgrp_comm)
+     IF(l_macropol) CALL mp_sum(d_head_ifr_a,inter_bgrp_comm)
+  ENDIF
   !
   ! EPS-1 refreq
   !
   ALLOCATE(zmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(zlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
-  !$acc enter data create(zmatilda,zlambda)
+  ALLOCATE(zlambda_a(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
   ALLOCATE(z_epsm1_rfr(pert%nglob,pert%nloc,rfr%nloc))
   z_epsm1_rfr = 0._DP
+  IF (l_QDET) THEN
+     ALLOCATE(zmatilda_a(mypara%nglob,mypara%nglob))
+     ALLOCATE(zmatilda_diff(mypara%nglob,mypara%nglob))
+     ALLOCATE(z_epsm1_rfr_a(pert%nglob,pert%nloc,rfr%nloc))
+     z_epsm1_rfr_a = 0._DP
+  ENDIF
   IF(l_macropol) THEN
      ALLOCATE(z_head_rfr(rfr%nloc))
      z_head_rfr = 0._DP
+     IF(l_QDET) THEN
+        ALLOCATE(z_head_rfr_a(rfr%nloc))
+        z_head_rfr_a = 0._DP  
+     ENDIF 
   ENDIF
   !
 #if defined(__CUDA)
@@ -878,9 +958,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ifreq = band_group%l2g(ifloc)
      !
      zmatilda = 0._DP
+     IF (l_QDET) zmatilda_a = 0._DP
      DO ip = 1,mypara%nloc
         glob_ip = mypara%l2g(ip)
         zmatilda(:,glob_ip) = zmatr(:,ip,ifreq)
+        IF (l_QDET) zmatilda_a(:,glob_ip) = zmatr_a(:,ip,ifreq)
      ENDDO
      !
      CALL mp_sum(zmatilda,inter_image_comm)
@@ -892,6 +974,17 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
      ENDDO
      IF(l_macropol) z_head_rfr(ifreq) = zhead
      !
+     IF(l_QDET) THEN
+        CALL mp_sum(zmatilda_a,inter_image_comm)
+        zmatilda_diff = zmatilda - zmatilda_a
+        CALL chi_invert_complex(zmatilda_diff,zhead_a,zlambda_a,mypara%nglob)
+        DO ip = 1,pert%nloc
+           glob_ip = pert%l2g(ip)
+           z_epsm1_rfr_a(1:n_pdep_eigen_to_use,ip,ifreq) = zlambda_a(1:n_pdep_eigen_to_use,glob_ip)
+        ENDDO
+        IF(l_macropol) z_head_rfr_a(ifreq) = zhead_a
+     ENDIF
+     !
   ENDDO
   !
 #if defined(__CUDA)
@@ -902,9 +995,18 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot)
   DEALLOCATE(zlambda)
   DEALLOCATE(zmatilda)
   DEALLOCATE(zmatr)
+  IF(l_QDET) THEN
+     DEALLOCATE(zlambda_a)
+     DEALLOCATE(zmatilda_a, zmatilda_diff)
+     DEALLOCATE(zmatr_a)
+  ENDIF  
   !
   CALL mp_sum(z_epsm1_rfr,inter_bgrp_comm)
   IF(l_macropol) CALL mp_sum(z_head_rfr,inter_bgrp_comm)
+  IF(l_QDET) THEN
+     CALL mp_sum(z_epsm1_rfr_a,inter_bgrp_comm)
+     IF(l_macropol) CALL mp_sum(z_head_rfr_a,inter_bgrp_comm)
+  ENDIF
   !
   CALL stop_clock('chi_invert')
   !
@@ -1571,6 +1673,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !$acc end parallel
                  !
               ENDDO ! ic
+           ENDDO ! ifreq
+           !
+           ! Update zmatr with cond
+           !
+           DO ifreq = 1, rfr%nloc
               !
               ! Update zmatr with cond
               !

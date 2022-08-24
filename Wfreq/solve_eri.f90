@@ -362,7 +362,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
         i = pijmap(1,p1)
         j = pijmap(2,p1)
         !
-        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),proj_c(1,j,s2),psic,'Wave')
+        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,i,s1),proj_c(1,j,s1),psic,'Wave')
         ! 
         DO CONCURRENT (ir = 1:dffts%nnr)
            rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
@@ -382,7 +382,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            k = pijmap(1,p2)
            l = pijmap(2,p2)
            !
-           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s1),proj_c(1,l,s2),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(1,k,s2),proj_c(1,l,s2),psic,'Wave')
            ! 
            DO CONCURRENT (ir = 1:dffts%nnr)
               rho_r(ir)=REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))

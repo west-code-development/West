@@ -634,7 +634,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                          dmati_a(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
                          & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
                        ELSE                       
-                         dmati(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
+                         dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq) &
                          & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
                        ENDIF
                     ENDDO

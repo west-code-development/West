@@ -38,7 +38,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,z_epsm1_rfr,&
                                  & l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
                                  & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,&
-                                 & fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
+                                 & fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ,nbnd_occ_full,&
+                                 & d_epsm1_ifr_a, d_head_ifr_a, z_epsm1_rfr_a, z_head_rfr_a 
   USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,npool,inter_bgrp_comm,&
                                  & intra_bgrp_comm,nbgrp,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
@@ -127,10 +128,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ATTRIBUTES(PINNED) :: overlap
 #endif
   REAL(DP) :: mwo,ecv,dfactor,frequency,dhead
-  COMPLEX(DP) :: zmwo,zfactor,zm,zp,zhead
+  COMPLEX(DP) :: zmwo,zfactor,zm,zp,zhead, zhead_a
   INTEGER :: glob_jp,ic,ifreq,il
   REAL(DP),ALLOCATABLE :: dmatilda(:,:),dlambda(:,:)
-  COMPLEX(DP),ALLOCATABLE :: zmatilda(:,:),zlambda(:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatilda(:,:),zlambda(:,:), zlambda_a(:,:)
   REAL(DP),ALLOCATABLE :: dmati(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr(:,:,:)
 #if defined(__CUDA)
@@ -1673,11 +1674,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !$acc end parallel
                  !
               ENDDO ! ic
-           ENDDO ! ifreq
-           !
-           ! Update zmatr with cond
-           !
-           DO ifreq = 1, rfr%nloc
               !
               ! Update zmatr with cond
               !

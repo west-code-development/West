@@ -65,7 +65,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   ! I/O
   !
-  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot
+  LOGICAL,INTENT(IN) :: l_secant,l_generate_plot, l_QDET
   !
   ! Workspace
   !
@@ -357,7 +357,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            ! LANCZOS part : d_diago, d_body2_ifr
            ! -----------------------------
            ! For the QDET double-counting term, there are no contributions from the Lanczos chain
-           IF( .NOT. l_QDET l_enable_lanczos ) THEN
+           IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
                  CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, pert%nglob, pert%myoffset )

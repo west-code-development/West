@@ -14,7 +14,7 @@
 SUBROUTINE wfreq_setup
   !-----------------------------------------------------------------------
   !
-  USE mp_global,              ONLY : nbgrp
+  USE mp_global,              ONLY : nbgrp, inter_image_comm, my_image_id, mp_bcast
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
                                    & wfreq_calculation,qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
@@ -22,8 +22,12 @@ SUBROUTINE wfreq_setup
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
                                    & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,sigma_exx_full,&
                                    & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
-                                   & sigma_sc_eqplin_full,sigma_corr_full
-  USE pwcom,                  ONLY : nbnd,nkstot,nks
+                                   & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc
+  USE wavefunctions,          ONLY : evc,psic
+  USE fft_base,               ONLY : dffts
+  USE buffers,                ONLY : get_buffer
+  USE fft_at_gamma,           ONLY : single_invfft_gamma
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
@@ -34,7 +38,7 @@ SUBROUTINE wfreq_setup
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: i,ib,jb,ipair
+  INTEGER :: i,ib,jb,ipair,iks,ib_index
   LOGICAL :: l_generate_plot
   !
   CALL do_setup()

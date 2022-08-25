@@ -500,13 +500,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      CALL mp_sum(en,inter_pool_comm)
      !
      IF (l_enable_off_diagonal) THEN
-        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .TRUE.)
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .TRUE., .FALSE.)
         sigma_sc_eks_full(:,:) = sigma_corr_full
-        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE.)
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.)
         sigma_sc_eks_full(:,:) = ( sigma_sc_eks_full + sigma_corr_full ) * 0.5_DP
      ELSE
-        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE.)
-        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .FALSE., .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE., .FALSE.)
      ENDIF
      !
      ! Stage sigma_corr_in
@@ -547,7 +547,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      notconv = k_grid%nps * n_bands
      DO ifixed = 1, n_secant_maxiter
         !
-        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., l_enable_off_diagonal, .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., l_enable_off_diagonal, .FALSE., .FALSE.)
         !
         IF( my_pool_id == 0 ) THEN
            !
@@ -617,7 +617,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      !
      sigma_cor_out(:,:) = sc(:,:,2)
      !
-     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE.)
+     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.)
      !
      DEALLOCATE( en, sc, l_conv )
      !
@@ -681,7 +681,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      DO glob_ifreq = 1, n_spectralf
         en(:,:,:) = (ecut_spectralf(2)-ecut_spectralf(1))/REAL(n_spectralf-1,KIND=DP)*REAL(glob_ifreq-1,KIND=DP) &
         & +ecut_spectralf(1)
-        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .FALSE., .FALSE.)
+        CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .FALSE., .FALSE., .FALSE.)
         DO iks=1,k_grid%nps
            DO ib = 1, n_bands
               sigma_spectralf(glob_ifreq,ib,iks) = sc(ib,iks,1)

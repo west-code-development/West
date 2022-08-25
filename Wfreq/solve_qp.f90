@@ -219,7 +219,17 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  barra_load = kpt_pool%nloc * band_group%nloc * band_group%nglob
+  barra_load = 0
+  DO ibloc = 1,band_group%nloc
+     ib_index = band_group%l2g(ibloc)
+     !
+     IF(l_enable_off_diagonal) THEN
+        barra_load = barra_load+n_bands-ib_index+1
+     ELSE
+        barra_load = barra_load+1
+     ENDIF
+  ENDDO
+  barra_load = barra_load*kpt_pool%nloc
   CALL start_bar_type( barra, 'coll_gw', barra_load )
   !
   ! LOOP
@@ -397,9 +407,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               !
            ENDIF
            !
+           CALL update_bar_type( barra, 'coll_gw', 1 )
+           !
         ENDDO ! jbnd
-        !
-        CALL update_bar_type( barra, 'coll_gw', n_bands )
         !
      ENDDO ! ibnd
      !

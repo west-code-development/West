@@ -166,19 +166,21 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
 #endif
   ENDIF
   IF( l_enable_off_diagonal ) THEN
-     ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, n_pairs, k_grid%nps ) )
-     ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, n_pairs, k_grid%nps ) )
-     IF( l_enable_lanczos ) THEN
+    IF ( .NOT. l_QDET) THEN
+      ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, n_pairs, k_grid%nps ) )
+      ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, n_pairs, k_grid%nps ) )
+      IF( l_enable_lanczos ) THEN
         ALLOCATE( d_diago_full( n_lanczos, pert%nloc, n_pairs, k_grid%nps ) )
         ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, n_pairs, k_grid%nps ) )
-     ENDIF
-     !
-     d_body1_ifr_full(:,:,:,:) = 0._DP
-     z_body_rfr_full(:,:,:,:) = 0._DP
-     IF( l_enable_lanczos ) THEN
-        d_body2_ifr_full(:,:,:,:,:) = 0._DP
-        d_diago_full(:,:,:,:) = 0._DP
-     ENDIF
+      ENDIF
+    ENDIF
+    !
+    d_body1_ifr_full(:,:,:,:) = 0._DP
+    z_body_rfr_full(:,:,:,:) = 0._DP
+    IF( l_enable_lanczos ) THEN
+      d_body2_ifr_full(:,:,:,:,:) = 0._DP
+      d_diago_full(:,:,:,:) = 0._DP
+    ENDIF
   ELSE
      !
      ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, n_bands, k_grid%nps ) )
@@ -449,8 +451,10 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   DEALLOCATE( l2g )
   DEALLOCATE( overlap )
   DEALLOCATE( overlap_loc )
-  DEALLOCATE( d_epsm1_ifr )
-  DEALLOCATE( z_epsm1_rfr )
+  IF (l_QDET) THEN
+    DEALLOCATE( d_epsm1_ifr )
+    DEALLOCATE( z_epsm1_rfr )
+  END IF
   DEALLOCATE( dtemp2 )
   DEALLOCATE( ztemp2 )
   DEALLOCATE( d_epsm1_ifr_trans )

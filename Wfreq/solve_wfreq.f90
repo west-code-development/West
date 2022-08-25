@@ -851,6 +851,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ALLOCATE(dmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(dlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
   !$acc enter data create(dmatilda,dlambda)
+  IF (ALLOCATED(d_epsm1_ifr)) DEALLOCATE(d_epsm1_ifr)
+  IF (ALLOCATED(d_head_ifr)) DEALLOCATE(d_head_ifr)
   ALLOCATE(d_epsm1_ifr(pert%nglob,pert%nloc,ifr%nloc))
   d_epsm1_ifr = 0._DP
   IF (l_QDET) THEN
@@ -931,6 +933,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ALLOCATE(zmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(zlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
   ALLOCATE(zlambda_a(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+  !
+  IF (ALLOCATED(z_epsm1_rfr)) DEALLOCATE(z_epsm1_rfr)
+  IF (ALLOCATED(z_head_rfr)) DEALLOCATE(z_head_rfr)
   ALLOCATE(z_epsm1_rfr(pert%nglob,pert%nloc,rfr%nloc))
   z_epsm1_rfr = 0._DP
   IF (l_QDET) THEN

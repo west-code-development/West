@@ -75,7 +75,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full)
   sigma_corr = 0._DP
   IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full = 0._DP
   !
-  CALL pot3D%init('Wave',.FALSE.,'default')
+  CALL pot3D%compute_divergence('default')
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
@@ -486,6 +486,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   sigma_corr = 0._DP
   !
+  CALL pot3D%compute_divergence('default')
+  !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   ! -----------------------------------
@@ -522,12 +524,9 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            iss = k_grid%is(ikks)
            IF( is /= iss ) CYCLE
            !
-           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 ) !M
            CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)
-           !
-           CALL pot3D%init('Wave',.TRUE.,'default',iq)
            !
            ! HEAD PART
            !
@@ -621,7 +620,6 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
            !
            IF( is /= iss ) CYCLE
            !
-           !CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 1, 'cart', iq, g0 )  !M
            CALL k_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )
            l_gammaq = q_grid%l_pIsGamma(iq)
            nbndval = nbnd_occ(ikks)

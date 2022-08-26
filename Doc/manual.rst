@@ -297,6 +297,8 @@ wfreq_control
        - "XWGQ" : Compute the QP corrections.
        - "XwGQ" : Compute the QP corrections, restart from an interrupted / just read W run.
        - "XwgQ" : Compute the QP corrections, restart from an interrupted / just read G run.
+       - "XWGQ" : Compute the QP corrections and parameters of QDET effective Hamiltonian. Only available for Gamma-point sampling.
+       - "XwGQ" : Compute the QP corrections and parameters of QDET effective Hamiltonian, restart from interrupted / just read W run. Only available for Gamma-point sampling.
        - "X" : Compute the HF corrections.
        - "XWO" : Compute the optical properties.
        - "XWGQP" : Compute the QP corrections, and plot spectral functions.

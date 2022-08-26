@@ -60,6 +60,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : memcpy_D2H
+#endif
   !
   IMPLICIT NONE
   !

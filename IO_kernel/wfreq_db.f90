@@ -270,7 +270,7 @@ MODULE wfreq_db
                      & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
                      !
                      ! CHANGE TO KEY TO: eri_w
-                     CALL json%add('qdet.eri.K'//TRIM(my_label_ik)//'.K'// &
+                     CALL json%add('qdet.eri_w.K'//TRIM(my_label_ik)//'.K'// &
                      & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
                      & REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
                      !

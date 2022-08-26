@@ -57,7 +57,7 @@ PROGRAM wfreq
   ENDDO
   !
   IF( lgate(1) ) THEN
-     CALL solve_hf( .FALSE. )
+     CALL solve_hf()
   ENDIF
   !
   IF( lgate(2) ) THEN

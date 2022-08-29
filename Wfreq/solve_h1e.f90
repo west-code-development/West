@@ -107,49 +107,6 @@ SUBROUTINE solve_h1e()
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------  
-SUBROUTINE compute_hks(psi, hpsi, h1e_tmp)
-  !-----------------------------------------------------------------------
-  !
-  USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : nspin,npw,npwx,nbnd
-  USE westcom,              ONLY : n_bands,n_pairs
-  USE uspp,                 ONLY : nkb
-  USE becmod,               ONLY : becp,allocate_bec_type,is_allocated_bec_type,deallocate_bec_type
-  USE wvfct,                ONLY : current_k
-  USE lsda_mod,             ONLY : current_spin
-  USE wavefunctions, ONLY : evc
-  !
-  IMPLICIT NONE
-  !
-  COMPLEX(DP), INTENT(IN)  :: psi(npwx,n_bands,nspin)
-  COMPLEX(DP), INTENT(OUT) :: hpsi(npwx,n_bands,nspin)
-  REAL(DP), INTENT(OUT)    :: h1e_tmp(n_pairs,nspin)
-  INTEGER  :: i, s
-  !
-  ! Computes matrix elements of the Kohn-Sham Hamiltonian in the pair-basis of Kohn-Sham eigenstates. 
-  !
-  hpsi = 0._DP
-  !
-  IF ( is_allocated_bec_type( becp ) )  CALL deallocate_bec_type( becp )
-  CALL allocate_bec_type(nkb, nbnd, becp)
-  !
-  DO s = 1, nspin
-     !
-     current_k = s
-     current_spin = s
-     !
-     CALL h_psi(npwx, npw, n_bands, psi(:,:,s), hpsi(:,:,s))
-     !
-  ENDDO
-  !
-  ! compute integrals from psi and hpsi and transform into pair-basis.
-  CALL compute_integrals(psi, hpsi, h1e_tmp)
-  !
-  CALL deallocate_bec_type(becp)
-  !
-END SUBROUTINE
-!
-!-----------------------------------------------------------------------  
 SUBROUTINE compute_vxc(psi, hpsi, h1e_tmp)
   !-----------------------------------------------------------------------
   !

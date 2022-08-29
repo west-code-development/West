@@ -36,7 +36,7 @@ def read_eri_from_json(filename):
 
     for i in range(n_pairs):
         string = 'pair' + format(i+1, '06d')
-        eri[i, :] = np.array(raw_['qdet']['eri']['K000001']['K000001'][string],
+        eri[i, :] = np.array(raw_['qdet']['eri_w']['K000001']['K000001'][string],
                 dtype=float)
 
     return eri

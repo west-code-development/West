@@ -297,6 +297,8 @@ wfreq_control
        - "XWGQ" : Compute the QP corrections.
        - "XwGQ" : Compute the QP corrections, restart from an interrupted / just read W run.
        - "XwgQ" : Compute the QP corrections, restart from an interrupted / just read G run.
+       - "XWGQ" : Compute the QP corrections and parameters of QDET effective Hamiltonian. Only available for Gamma-point sampling.
+       - "XwGQ" : Compute the QP corrections and parameters of QDET effective Hamiltonian, restart from interrupted / just read W run. Only available for Gamma-point sampling.
        - "X" : Compute the HF corrections.
        - "XWO" : Compute the optical properties.
        - "XWGQP" : Compute the QP corrections, and plot spectral functions.
@@ -342,8 +344,7 @@ wfreq_control
    * - **Default**
      - [0]
    * - **Description**
-     - List of bands to compute the QP corrections.
-     - If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
+     - List of bands to compute the QP corrections. If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
 
 
 .. data:: macropol_calculation

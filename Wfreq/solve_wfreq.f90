@@ -933,6 +933,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ALLOCATE(zmatilda(mypara%nglob,mypara%nglob))
   ALLOCATE(zlambda(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
   ALLOCATE(zlambda_a(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
+  !$acc enter data create(zmatilda,zlambda)
   !
   IF (ALLOCATED(z_epsm1_rfr)) DEALLOCATE(z_epsm1_rfr)
   IF (ALLOCATED(z_head_rfr)) DEALLOCATE(z_head_rfr)

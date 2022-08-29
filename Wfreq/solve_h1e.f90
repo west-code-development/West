@@ -33,7 +33,6 @@ SUBROUTINE solve_h1e()
   !
   IMPLICIT NONE
   !
-  REAL(DP), ALLOCATABLE :: h1e_tmp(:,:)
   INTEGER  :: s, i, iband, iunit
   REAL(DP)  :: ry_to_ha = 0.5_DP
   !
@@ -50,10 +49,9 @@ SUBROUTINE solve_h1e()
   IF ( lelfield ) CALL errore("solve_h1e", "lelfield not supported", 1)
   IF ( .NOT. gamma_only ) CALL errore("solve_h1e", "only support gamma-point case", 1)
   !
-  ALLOCATE( h1e(n_pairs,nspin), h1e_tmp(n_pairs,nspin) )
+  ALLOCATE( h1e(n_pairs,nspin))
   !
   h1e = 0._DP
-  h1e_tmp = 0._DP
   !
   !
   DO s = 1, nspin
@@ -64,9 +62,8 @@ SUBROUTINE solve_h1e()
   ! H1e = H^{KS} - V_{xc} + \Sigma^{x} + \Sigma^{c}
   h1e = h1e + sigma_hf_full + REAL(sigma_corr_full)
   !
-  CALL compute_hartree_double_counting(h1e_tmp)
   ! H1e = H^{KS} - V_{xc} + \Sigma^{x} + \Sigma^{c} - V^{H}_{dc}
-  h1e = h1e - h1e_tmp
+  CALL compute_hartree_double_counting(h1e)
   !
   CALL calc_exx2(sigma_exx, .TRUE.)
   ! H1e = H^{KS} - V_{xc} + \Sigma^{x} + \Sigma^{c} - V^{H}_{dc} - \Sigma^{x}_{dc}
@@ -83,7 +80,7 @@ SUBROUTINE solve_h1e()
   !
   CALL io_push_bar()
   !
-  DEALLOCATE( h1e, h1e_tmp )
+  DEALLOCATE( h1e )
   !
 END SUBROUTINE
 !
@@ -94,24 +91,27 @@ SUBROUTINE compute_hartree_double_counting(h1e_tmp)
   USE pwcom,                ONLY : nspin
   USE westcom,              ONLY : n_bands, n_pairs, ijpmap, eri_w, occupation, qp_bands
   
-  REAL(DP), INTENT(OUT)    :: h1e_tmp(n_pairs,nspin)
+  REAL(DP), INTENT(INOUT)    :: h1e_tmp(n_pairs,nspin)
   !
   INTEGER                  :: s1, s2, ipair, jpair, iband, band_index
+  REAL(DP) :: prefactor
   
-  h1e_tmp = 0.0_DP
+  ! if nspin=1, a factor of 2 has to be applied to the occupation
+  IF (nspin == 1) THEN
+    prefactor = 2.0_DP
+  ELSE
+    prefactor = 1.0_DP
+  ENDIF
+
   DO s1 = 1, nspin
     DO ipair = 1, n_pairs
       DO s2= 1, nspin
         DO iband = 1, n_bands
           jpair = ijpmap(iband, iband)
           band_index = qp_bands(iband)
-          h1e_tmp(ipair, s1) = h1e_tmp(ipair, s1) + eri_w(ipair,jpair,s1,s2)*occupation(band_index,s2)
+          h1e_tmp(ipair, s1) = h1e_tmp(ipair, s1) - prefactor*eri_w(ipair,jpair,s1,s2)*occupation(band_index,s2)
         ENDDO
       ENDDO
     ENDDO
   ENDDO
-  
-  IF (nspin == 1) THEN
-    h1e_tmp(:,:) = 2.0_DP * h1e_tmp(:,:)
-  ENDIF
 END SUBROUTINE

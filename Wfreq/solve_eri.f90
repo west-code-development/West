@@ -15,27 +15,23 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !-----------------------------------------------------------------------
   !
   USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,&
-                                 & imfreq_list,refreq_list,ijpmap,pijmap,&
-                                 & wfreq_save_dir,z_head_rfr_a,d_head_ifr_a,&
-                                 & n_bands,n_pairs, eri_w
-  USE distribution_center,  ONLY : pert,macropert,ifr,rfr
+                                 & imfreq_list,refreq_list,&
+                                 & z_head_rfr_a,d_head_ifr_a,&
+                                 & n_pairs, eri_w
+  USE distribution_center,  ONLY : pert,ifr,rfr
   USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : nspin,npw,npwx
+  USE pwcom,                ONLY : nspin
   USE mp,                   ONLY : mp_sum, mp_barrier
-  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id
-  USE mp_world,             ONLY : mpime,root
+  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp
   USE io_push,              ONLY : io_push_title, io_push_bar
   USE wfreq_db,             ONLY : qdet_db_write_eri
-  !
-  USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
   !
   INTEGER,INTENT(IN) :: ifreq
   LOGICAL,INTENT(IN) :: l_isFreqReal
   !
-  INTEGER  :: i, j, p1
-  INTEGER  :: who, iloc, iunit
+  INTEGER  :: who, iloc
   !
   REAL(DP) :: freq
   !
@@ -131,10 +127,10 @@ SUBROUTINE compute_braket(braket)
   ! V_c is the bare Coulomb potential
   !
   USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : nspin,npw,npwx
+  USE pwcom,                ONLY : nspin
   USE westcom,              ONLY : wstat_save_dir,npwq,n_pdep_eigen_to_use,npwqx,fftdriver,&
                                  & proj_c,n_bands,n_pairs,pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id,mp_bcast
+  USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm,mp_bcast
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma, double_invfft_gamma
   USE buffers,              ONLY : get_buffer
@@ -153,8 +149,7 @@ SUBROUTINE compute_braket(braket)
   !
   COMPLEX(DP),ALLOCATABLE :: phi(:), rho_r(:), rho_g(:) 
   !
-  INTEGER :: s, m, p1, i, j, ig, ir, mloc
-  INTEGER :: iunit
+  INTEGER :: s, m, p1, i, j, ig, mloc
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   TYPE(bar_type) :: barra
@@ -232,10 +227,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : nspin,npw,npwx
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,n_pairs,&
-                                 & pijmap, proj_c, npwq,npwqx, fftdriver
-  USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp,inter_image_comm,my_image_id, mp_bcast
+  USE pwcom,                ONLY : nspin
+  USE westcom,              ONLY : n_pairs,pijmap, proj_c, npwq,npwqx
+  USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm,mp_bcast
   USE distribution_center,  ONLY : bandpair
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma, single_invfft_gamma, double_invfft_gamma
@@ -256,9 +250,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   COMPLEX(DP),ALLOCATABLE  :: rho_g1(:), rho_g2(:), rho_r(:)
   !
-  COMPLEX(DP) :: Hv
   INTEGER     :: i, j, k, l, p1, p1loc, p2, s1, s2
-  INTEGER     :: ir, ig
   TYPE(bar_type) :: barra
   !
   COMPLEX(DP), EXTERNAL :: ZDOTC
@@ -432,9 +424,9 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_bands,fftdriver,n_pairs,ijpmap,pijmap
+  USE westcom,              ONLY : n_pdep_eigen_to_use,fftdriver,n_pairs,pijmap
   USE types_coulomb,        ONLY : pot3D
-  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE io_push,              ONLY : io_push_title

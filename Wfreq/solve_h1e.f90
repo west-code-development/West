@@ -14,27 +14,23 @@
 SUBROUTINE solve_h1e()
   !-----------------------------------------------------------------------
   !
-  USE westcom,              ONLY : n_bands,n_pairs,proj_c,h1e,iuwfc,lrwfc,&
-                                 & sigma_exx_full,sigma_corr_full,wfreq_save_dir,&
+  USE westcom,              ONLY : n_bands,n_pairs,h1e,iuwfc,&
+                                 & sigma_exx_full,sigma_corr_full,&
                                  & sigma_exx, sigma_hf_full, qp_bands, ijpmap
   USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : nspin,npw,npwx,et
-  USE wavefunctions,        ONLY : evc
+  USE pwcom,                ONLY : nspin,et
   USE buffers,              ONLY : get_buffer
-  USE io_global,            ONLY : stdout
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,mp_bcast
+  USE mp_global,            ONLY : mp_bcast
   USE io_push,              ONLY : io_push_title, io_push_bar
   USE ldaU,                 ONLY : lda_plus_u
   USE bp,                   ONLY : lelfield
   USE realus,               ONLY : real_space
   USE control_flags,        ONLY : gamma_only
   USE wfreq_db,             ONLY : qdet_db_write_h1e
-  USE mp_world,             ONLY : mpime,root
   !
   IMPLICIT NONE
   !
-  INTEGER  :: s, i, iband, iunit
-  REAL(DP)  :: ry_to_ha = 0.5_DP
+  INTEGER  :: s, iband
   !
   ! Compute 1-electron integrals h1e(i,j) = <i|H|j> where H is the 1-electron Hamiltonian
   !

@@ -23,11 +23,10 @@ SUBROUTINE wfreq_setup
                                    & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,sigma_exx_full,&
                                    & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
                                    & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc
-  USE wavefunctions,          ONLY : evc,psic
-  USE fft_base,               ONLY : dffts
+  USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
   USE fft_at_gamma,           ONLY : single_invfft_gamma
-  USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool

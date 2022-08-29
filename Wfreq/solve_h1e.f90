@@ -16,9 +16,9 @@ SUBROUTINE solve_h1e()
   !
   USE westcom,              ONLY : n_bands,n_pairs,proj_c,h1e,iuwfc,lrwfc,&
                                  & sigma_exx_full,sigma_corr_full,wfreq_save_dir,&
-                                 & sigma_exx
+                                 & sigma_exx, qp_bands, ijpmap
   USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : nspin,npw,npwx
+  USE pwcom,                ONLY : nspin,npw,npwx,et
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
   USE io_global,            ONLY : stdout
@@ -35,7 +35,7 @@ SUBROUTINE solve_h1e()
   !
   COMPLEX(DP),ALLOCATABLE :: psi(:,:,:), hpsi(:,:,:)
   REAL(DP), ALLOCATABLE :: h1e_tmp(:,:)
-  INTEGER  :: s,i,iunit
+  INTEGER  :: s, i, iband, iunit
   REAL(DP)  :: ry_to_ha = 0.5_DP
   !
   ! Compute 1-electron integrals h1e(i,j) = <i|H|j> where H is the 1-electron Hamiltonian
@@ -64,9 +64,11 @@ SUBROUTINE solve_h1e()
     !
   ENDDO
   !
-  CALL compute_hks(psi, hpsi, h1e_tmp)
-  ! H1e = H^{KS}
-  h1e = h1e_tmp
+  DO s = 1, nspin
+    DO iband = 1, n_bands
+      h1e(ijpmap(iband, iband),s) = et(qp_bands(iband), s)  
+    ENDDO
+  ENDDO 
   !
   CALL compute_vxc(psi, hpsi, h1e_tmp)
   ! H1e = H^{KS} - V_{xc}

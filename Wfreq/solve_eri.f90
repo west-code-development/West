@@ -150,6 +150,7 @@ SUBROUTINE compute_braket(braket)
   COMPLEX(DP),ALLOCATABLE :: phi(:), rho_r(:), rho_g(:) 
   !
   INTEGER :: s, m, p1, i, j, ig, mloc
+  INTEGER :: ir
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   TYPE(bar_type) :: barra
@@ -251,6 +252,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   COMPLEX(DP),ALLOCATABLE  :: rho_g1(:), rho_g2(:), rho_r(:)
   !
   INTEGER     :: i, j, k, l, p1, p1loc, p2, s1, s2
+  INTEGER :: ir, ig
   TYPE(bar_type) :: barra
   !
   COMPLEX(DP), EXTERNAL :: ZDOTC

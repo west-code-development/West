@@ -82,7 +82,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
   INTEGER :: ib,ibloc,ib_index,jb,jb_index,ipair,iks,iks_g
-  INTEGER :: ifixed,ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq
+  INTEGER :: ifixed,ip,ifreq,il,im,im_index,glob_im,glob_jp,glob_ifreq
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
@@ -154,7 +154,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ALLOCATE( overlap_loc(pert%nloc,nbnd ) )
   ALLOCATE( dtemp2( nbnd, ifr%nloc ) )
   ALLOCATE( ztemp2( nbnd, rfr%nloc ) )
-  !$acc enter data create(overlap,dtemp2,ztemp2) copyin(d_epsm1_ifr)
+  !$acc enter data create(overlap,dtemp2,ztemp2) copyin(qp_bands,d_epsm1_ifr)
   ALLOCATE( d_epsm1_ifr_trans( pert%nloc, pert%nglob, ifr%nloc ) )
   ALLOCATE( z_epsm1_rfr_trans( pert%nloc, pert%nglob, rfr%nloc ) )
   d_epsm1_ifr_trans(:,:,:) = RESHAPE( d_epsm1_ifr, [pert%nloc,pert%nglob,ifr%nloc], ORDER=[2,1,3] )
@@ -283,29 +283,48 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            !
            IF((l_enable_off_diagonal .AND. jb <= ib) &
            & .OR. (.NOT. l_enable_off_diagonal .AND. jb == ib)) THEN
-              !$acc parallel present(overlap,overlap_loc,d_epsm1_ifr_trans,dtemp2)
-              !$acc loop collapse(2)
-              DO ifreq = 1, ifr_nloc
-                 DO im = 1, nbnd
-                    !
-                    ! For the QDET double-counting term, all states need to be within qp_bands
-                    !
-                    IF (l_QDET) THEN
-                      IF ( ALL(qp_bands(:) /= im) ) CYCLE
-                    ENDIF
-                    !
-                    reduce_r = 0._DP
-                    !$acc loop collapse(2) reduction(+:reduce_r)
-                    DO glob_jp = 1, n_pdep_eigen_to_use
-                       DO ip = 1, pert_nloc
-                          reduce_r = reduce_r+overlap(glob_jp,im)*overlap_loc(ip,im) &
-                          & *d_epsm1_ifr_trans(ip,glob_jp,ifreq)
+              IF(l_QDET) THEN
+                 !
+                 ! For the QDET double-counting term, all states need to be within qp_bands
+                 !
+                 !$acc parallel present(qp_bands,overlap,overlap_loc,d_epsm1_ifr_trans,dtemp2)
+                 !$acc loop collapse(2)
+                 DO ifreq = 1, ifr_nloc
+                    DO im_index = 1, n_bands
+                       im = qp_bands(im_index)
+                       reduce_r = 0._DP
+                       !$acc loop collapse(2) reduction(+:reduce_r)
+                       DO glob_jp = 1, n_pdep_eigen_to_use
+                          DO ip = 1, pert_nloc
+                             reduce_r = reduce_r+overlap(glob_jp,im)*overlap_loc(ip,im) &
+                             & *d_epsm1_ifr_trans(ip,glob_jp,ifreq)
+                          ENDDO
                        ENDDO
-                    ENDDO
-                    dtemp2(im,ifreq) = reduce_r
-                 ENDDO ! im
-              ENDDO ! ifreq
-              !$acc end parallel
+                       dtemp2(im,ifreq) = reduce_r
+                    ENDDO ! im_index
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ELSE
+                 !
+                 !$acc parallel present(overlap,overlap_loc,d_epsm1_ifr_trans,dtemp2)
+                 !$acc loop collapse(2)
+                 DO ifreq = 1, ifr_nloc
+                    DO im = 1, nbnd
+                       reduce_r = 0._DP
+                       !$acc loop collapse(2) reduction(+:reduce_r)
+                       DO glob_jp = 1, n_pdep_eigen_to_use
+                          DO ip = 1, pert_nloc
+                             reduce_r = reduce_r+overlap(glob_jp,im)*overlap_loc(ip,im) &
+                             & *d_epsm1_ifr_trans(ip,glob_jp,ifreq)
+                          ENDDO
+                       ENDDO
+                       dtemp2(im,ifreq) = reduce_r
+                    ENDDO ! im
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ENDIF
            ENDIF
            !
            !$acc update host(dtemp2)
@@ -329,29 +348,48 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            !
            IF((l_enable_off_diagonal .AND. jb <= ib) &
            & .OR. (.NOT. l_enable_off_diagonal .AND. jb == ib)) THEN
-              !$acc parallel present(overlap,overlap_loc,z_epsm1_rfr_trans,ztemp2)
-              !$acc loop collapse(2)
-              DO ifreq = 1, rfr_nloc
-                 DO im = 1, nbnd
-                    !
-                    ! For the QDET double-counting term, all states need to be within qp_bands
-                    !
-                    IF (l_QDET) THEN
-                      IF ( ALL(qp_bands(:) /= im) ) CYCLE
-                    ENDIF
-                    !
-                    reduce_c = 0._DP
-                    !$acc loop collapse(2) reduction(+:reduce_c)
-                    DO glob_jp = 1, n_pdep_eigen_to_use
-                       DO ip = 1, pert_nloc
-                          reduce_c = reduce_c+overlap(glob_jp,im)*overlap_loc(ip,im) &
-                          & *z_epsm1_rfr_trans(ip,glob_jp,ifreq)
+              IF(l_QDET) THEN
+                 !
+                 ! For the QDET double-counting term, all states need to be within qp_bands
+                 !
+                 !$acc parallel present(qp_bands,overlap,overlap_loc,z_epsm1_rfr_trans,ztemp2)
+                 !$acc loop collapse(2)
+                 DO ifreq = 1, rfr_nloc
+                    DO im_index = 1, n_bands
+                       im = qp_bands(im_index)
+                       reduce_c = 0._DP
+                       !$acc loop collapse(2) reduction(+:reduce_c)
+                       DO glob_jp = 1, n_pdep_eigen_to_use
+                          DO ip = 1, pert_nloc
+                             reduce_c = reduce_c+overlap(glob_jp,im)*overlap_loc(ip,im) &
+                             & *z_epsm1_rfr_trans(ip,glob_jp,ifreq)
+                          ENDDO
                        ENDDO
-                    ENDDO
-                    ztemp2(im,ifreq) = reduce_c
-                 ENDDO ! im
-              ENDDO ! ifreq
-              !$acc end parallel
+                       ztemp2(im,ifreq) = reduce_c
+                    ENDDO ! im_index
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ELSE
+                 !
+                 !$acc parallel present(overlap,overlap_loc,z_epsm1_rfr_trans,ztemp2)
+                 !$acc loop collapse(2)
+                 DO ifreq = 1, rfr_nloc
+                    DO im = 1, nbnd
+                       reduce_c = 0._DP
+                       !$acc loop collapse(2) reduction(+:reduce_c)
+                       DO glob_jp = 1, n_pdep_eigen_to_use
+                          DO ip = 1, pert_nloc
+                             reduce_c = reduce_c+overlap(glob_jp,im)*overlap_loc(ip,im) &
+                             & *z_epsm1_rfr_trans(ip,glob_jp,ifreq)
+                          ENDDO
+                       ENDDO
+                       ztemp2(im,ifreq) = reduce_c
+                    ENDDO ! im
+                 ENDDO ! ifreq
+                 !$acc end parallel
+                 !
+              ENDIF
            ENDIF
            !
            !$acc update host(ztemp2)
@@ -463,7 +501,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   CALL stop_bar_type( barra, 'coll_gw' )
   !
-  !$acc exit data delete(overlap,dtemp2,ztemp2,d_epsm1_ifr,d_epsm1_ifr_trans,z_epsm1_rfr_trans)
+  !$acc exit data delete(overlap,dtemp2,ztemp2,qp_bands,d_epsm1_ifr,d_epsm1_ifr_trans,z_epsm1_rfr_trans)
   DEALLOCATE( l2g )
   DEALLOCATE( overlap )
   DEALLOCATE( overlap_loc )

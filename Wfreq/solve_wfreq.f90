@@ -768,7 +768,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         ! Write final restart file
         !
-        IF( iks == k_grid%nps .AND. iv == nbndval ) l_write_restart = .TRUE.
+        IF( iks == k_grid%nps .AND. iv == nbndval .AND. .NOT. l_QDET ) l_write_restart = .TRUE.
         !
         ! But do not write here when using pool or band group
         !

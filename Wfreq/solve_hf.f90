@@ -65,7 +65,7 @@ SUBROUTINE solve_hf_gamma()
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2(sigma_exx)
+  CALL calc_exx2(sigma_exx, .FALSE.)
   !
   ! Get SIGMA X
   !

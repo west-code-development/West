@@ -108,6 +108,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   ! Set to zero
   !
   sigma_exx = 0._DP
+  IF (l_enable_off_diagonal) sigma_exx_full = 0._DP
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
@@ -218,6 +219,10 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
               DO ivloc = 1,vband%nloc
                  !
                  iv = vband%l2g(ivloc)
+                 ! for QDET double counting term, all states need to be within qp_bands
+                 IF (l_QDET) THEN
+                    IF ( ALL(qp_bands(:) /= iv) ) CYCLE
+                 ENDIF
                  !
                  IF(gamma_only) THEN
                     !$acc host_data use_device(pertr)

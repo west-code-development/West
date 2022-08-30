@@ -23,6 +23,9 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   USE mp_global,            ONLY : intra_bgrp_comm,me_bgrp
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE wfreq_db,             ONLY : qdet_db_write_eri
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
+#endif
   !
   IMPLICIT NONE
   !
@@ -37,13 +40,15 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: chi_body(:,:)
   !
-  ! TODO: check if G=0 component is double counted in any dot products
-  !
   ! Compute 4-center integrals of W (screened electron repulsion integrals, eri)
   ! (ij|W|kl) = int dx dx' f_i(x) f_j(x) W(r,r') f_k(x') f_l(x')
   ! f_i is the Fourier transform to direct space of westcom/proj_c_i
   !
   CALL io_push_title('ERI')
+  !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+#endif
   !
   ALLOCATE( chi_body( pert%nglob, pert%nloc ) )
   !
@@ -101,6 +106,10 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   CALL io_push_bar()
   !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+#endif
+  !
   DEALLOCATE( chi_body )
   DEALLOCATE( braket )
   DEALLOCATE( eri_vc )
@@ -132,29 +141,44 @@ SUBROUTINE compute_braket(braket)
   USE distribution_center,  ONLY : macropert
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : psic=>psic_d
+  USE west_gpu,             ONLY : memcpy_H2D
+#else
   USE wavefunctions,        ONLY : psic
+#endif
   !
   IMPLICIT NONE
   !
   REAL(DP),INTENT(OUT) :: braket(n_pairs,nspin,n_pdep_eigen_to_use)
   !
-  COMPLEX(DP),ALLOCATABLE :: phi(:), rho_r(:), rho_g(:)
+  COMPLEX(DP),ALLOCATABLE :: phi(:)
+  COMPLEX(DP),ALLOCATABLE :: rho_r(:), rho_g(:)
+  REAL(DP),ALLOCATABLE :: sqvc(:)
+  !$acc declare device_resident(rho_r,rho_g,sqvc)
   !
   INTEGER :: s, m, p1, i, j, ig, ir, mloc
+  INTEGER :: barra_load
+  INTEGER :: dffts_nnr
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   TYPE(bar_type) :: barra
-  INTEGER :: barra_load
-  !
-  REAL(DP),EXTERNAL :: DDOT
+  REAL(DP) :: reduce
   !
   CALL io_push_title('braket')
   !
-  ALLOCATE( phi(npwqx) )
-  ALLOCATE( rho_r(dffts%nnr) )
-  ALLOCATE( rho_g(npwqx) )
-  !
   CALL pot3D%init(fftdriver,.FALSE.,'default')
+  !
+  ALLOCATE( phi(npwqx) )
+  !$acc enter data create(phi)
+  ALLOCATE( rho_g(npwqx) )
+  ALLOCATE( rho_r(dffts%nnr) )
+#if defined(__CUDA)
+  ALLOCATE( sqvc(npwqx) )
+  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
+#endif
+  !
+  dffts_nnr = dffts%nnr
   !
   barra_load = 0
   DO mloc = 1, macropert%nloc
@@ -168,7 +192,6 @@ SUBROUTINE compute_braket(braket)
   braket = 0._DP
   !
   DO s = 1, nspin
-     !
      DO mloc = 1, macropert%nloc
         !
         m = macropert%l2g(mloc)
@@ -180,12 +203,19 @@ SUBROUTINE compute_braket(braket)
         CALL generate_pdep_fname( filepot, m )
         fname = TRIM( wstat_save_dir ) // '/'// filepot
         CALL pdep_read_G_and_distribute(fname,phi(:))
+        !$acc update device(phi)
         !
         ! Mulitply by V_c^0.5
         !
+        !$acc parallel loop present(phi,sqvc)
         DO ig = 1, npwq
+#if defined(__CUDA)
+           phi(ig) = sqvc(ig) * phi(ig)
+#else
            phi(ig) = pot3D%sqvc(ig) * phi(ig)
+#endif
         ENDDO
+        !$acc end parallel
         !
         ! Compute the braket for each pair of functions
         !
@@ -194,25 +224,43 @@ SUBROUTINE compute_braket(braket)
            i = pijmap(1,p1)
            j = pijmap(2,p1)
            !
+           !$acc host_data use_device(proj_c)
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s),proj_c(:,j,s),psic,'Wave')
+           !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(rho_r)
+           DO ir = 1, dffts_nnr
               rho_r(ir) = REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
+           !$acc end parallel
            !
+           !$acc host_data use_device(rho_r,rho_g)
            CALL single_fwfft_gamma(dffts,npwq,npwqx,rho_r,rho_g,TRIM(fftdriver))
+           !$acc end host_data
            !
-           ! assume Gamma-only case
+           ! Assume Gamma only
            !
-           braket(p1,s,m) = 2._DP * DDOT(2*npwq,rho_g,1,phi,1)
-           IF(gstart == 2) braket(p1,s,m) = braket(p1,s,m) - REAL(rho_g(1),KIND=DP)*REAL(phi(1),KIND=DP)
+           reduce = 0._DP
+           !$acc parallel loop reduction(+:reduce) present(rho_g,phi) copy(reduce)
+           DO ig = 1, npwq
+              reduce = reduce + REAL(rho_g(ig),KIND=DP)*REAL(phi(ig),KIND=DP) &
+              & + AIMAG(rho_g(ig))*AIMAG(phi(ig))
+           ENDDO
+           !$acc end parallel
+           !
+           IF(gstart == 2) THEN
+              !$acc serial present(rho_g,phi) copy(reduce)
+              reduce = reduce - 0.5_DP*REAL(rho_g(1),KIND=DP)*REAL(phi(1),KIND=DP)
+              !$acc end serial
+           ENDIF
+           !
+           braket(p1,s,m) = 2._DP*reduce
            !
         ENDDO
         !
         CALL update_bar_type( barra,'eri_brak', 1 )
         !
      ENDDO
-     !
   ENDDO
   !
   CALL mp_sum(braket, inter_image_comm)
@@ -220,9 +268,13 @@ SUBROUTINE compute_braket(braket)
   !
   CALL stop_bar_type( barra,'eri_brak' )
   !
+  !$acc exit data delete(phi)
   DEALLOCATE( phi )
   DEALLOCATE( rho_r )
   DEALLOCATE( rho_g )
+#if defined(__CUDA)
+  DEALLOCATE( sqvc )
+#endif
   !
 END SUBROUTINE
 !
@@ -243,20 +295,26 @@ SUBROUTINE compute_eri_vc(eri_vc)
   USE io_push,              ONLY : io_push_title
   USE gvect,                ONLY : gstart,ngm
   USE cell_base,            ONLY : omega
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : psic=>psic_d
+  USE west_gpu,             ONLY : memcpy_H2D
+#else
   USE wavefunctions,        ONLY : psic
+#endif
   !
   IMPLICIT NONE
   !
   REAL(DP),INTENT(OUT) :: eri_vc(n_pairs,n_pairs,nspin,nspin)
   !
   COMPLEX(DP),ALLOCATABLE :: rho_g1(:), rho_g2(:), rho_r(:)
+  REAL(DP),ALLOCATABLE :: sqvc(:)
+  !$acc declare device_resident(rho_g1,rho_g2,rho_r,sqvc)
   !
   INTEGER :: i, j, k, l, p1, p1loc, p2, s1, s2
   INTEGER :: ir, ig
+  INTEGER :: dffts_nnr
   TYPE(bar_type) :: barra
-  !
-  COMPLEX(DP),EXTERNAL :: ZDOTC
-  REAL(DP),EXTERNAL :: DDOT
+  REAL(DP) :: reduce
   !
   CALL io_push_title('pair density')
   !
@@ -269,6 +327,12 @@ SUBROUTINE compute_eri_vc(eri_vc)
   ALLOCATE( rho_r(dffts%nnr) )
   ALLOCATE( rho_g1(ngm) )
   ALLOCATE( rho_g2(ngm) )
+#if defined(__CUDA)
+  ALLOCATE( sqvc(ngm) )
+  CALL memcpy_H2D(sqvc,pot3D%sqvc,ngm)
+#endif
+  !
+  dffts_nnr = dffts%nnr
   !
   eri_vc(:,:,:,:) = 0._DP
   !
@@ -283,22 +347,40 @@ SUBROUTINE compute_eri_vc(eri_vc)
         i = pijmap(1,p1)
         j = pijmap(2,p1)
         !
+        !$acc host_data use_device(proj_c)
         CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s1),psic,'Wave')
+        !$acc end host_data
         !
-        DO ir = 1, dffts%nnr
+        !$acc parallel loop present(rho_r)
+        DO ir = 1, dffts_nnr
            rho_r(ir) = REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
         ENDDO
+        !$acc end parallel
         !
+        !$acc host_data use_device(rho_r,rho_g1)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
+        !$acc end host_data
         !
+        !$acc parallel loop present(rho_g1,sqvc)
         DO ig = 1, ngm
+#if defined(__CUDA)
+           rho_g1(ig) = sqvc(ig) * rho_g1(ig)
+#else
            rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
+#endif
         ENDDO
+        !$acc end parallel
         !
         ! (s1 = s2); (p2 = p1)
         !
-        eri_vc(p1,p1,s1,s1) = eri_vc(p1,p1,s1,s1) &
-        & + 2._DP * DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g1(gstart:ngm),1)/omega
+        reduce = 0._DP
+        !$acc parallel loop reduction(+:reduce) present(rho_g1) copy(reduce)
+        DO ig = gstart, ngm
+           reduce = reduce + REAL(rho_g1(ig),KIND=DP)**2 + AIMAG(rho_g1(ig))**2
+        ENDDO
+        !$acc end parallel
+        !
+        eri_vc(p1,p1,s1,s1) = eri_vc(p1,p1,s1,s1) + 2._DP*reduce/omega
         IF(i==j .AND. gstart==2) THEN
            eri_vc(p1,p1,s1,s1) = eri_vc(p1,p1,s1,s1) + pot3D%div
         ENDIF
@@ -310,20 +392,39 @@ SUBROUTINE compute_eri_vc(eri_vc)
            k = pijmap(1,p2)
            l = pijmap(2,p2)
            !
+           !$acc host_data use_device(proj_c)
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s1),proj_c(:,l,s1),psic,'Wave')
+           !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(rho_r)
+           DO ir = 1, dffts_nnr
               rho_r(ir) = REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
+           !$acc end parallel
            !
+           !$acc host_data use_device(rho_r,rho_g2)
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
+           !$acc end host_data
            !
+           !$acc parallel loop present(rho_g2,sqvc)
            DO ig = 1, ngm
+#if defined(__CUDA)
+              rho_g2(ig) = sqvc(ig) * rho_g2(ig)
+#else
               rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
+#endif
            ENDDO
+           !$acc end parallel
            !
-           eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) &
-           & + 2._DP * DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
+           reduce = 0._DP
+           !$acc parallel loop reduction(+:reduce) present(rho_g1,rho_g2) copy(reduce)
+           DO ig = gstart, ngm
+              reduce = reduce + REAL(rho_g1(ig),KIND=DP)*REAL(rho_g2(ig),KIND=DP) &
+              & + AIMAG(rho_g1(ig))*AIMAG(rho_g2(ig))
+           ENDDO
+           !$acc end parallel
+           !
+           eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + 2._DP*reduce/omega
            IF(i==j .AND. k==l .AND. gstart==2) THEN
               eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + pot3D%div
            ENDIF
@@ -356,17 +457,29 @@ SUBROUTINE compute_eri_vc(eri_vc)
         i = pijmap(1,p1)
         j = pijmap(2,p1)
         !
+        !$acc host_data use_device(proj_c)
         CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s2),psic,'Wave')
+        !$acc end host_data
         !
-        DO ir = 1, dffts%nnr
+        !$acc parallel loop present(rho_r)
+        DO ir = 1, dffts_nnr
            rho_r(ir) = REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
         ENDDO
+        !$acc end parallel
         !
+        !$acc host_data use_device(rho_r,rho_g1)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
+        !$acc end host_data
         !
+        !$acc parallel loop present(rho_g1,sqvc)
         DO ig = 1, ngm
+#if defined(__CUDA)
+           rho_g1(ig) = sqvc(ig) * rho_g1(ig)
+#else
            rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
+#endif
         ENDDO
+        !$acc end parallel
         !
         ! (s1 < s2)
         !
@@ -375,21 +488,40 @@ SUBROUTINE compute_eri_vc(eri_vc)
            k = pijmap(1,p2)
            l = pijmap(2,p2)
            !
+           !$acc host_data use_device(proj_c)
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s1),proj_c(:,l,s2),psic,'Wave')
+           !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(rho_r)
+           DO ir = 1, dffts_nnr
               rho_r(ir) = REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
+           !$acc end parallel
            !
+           !$acc host_data use_device(rho_r,rho_g2)
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
+           !$acc end host_data
            !
+           !$acc parallel loop present(rho_g2,sqvc)
            DO ig = 1, ngm
+#if defined(__CUDA)
+              rho_g2(ig) = sqvc(ig) * rho_g2(ig)
+#else
               rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
+#endif
            ENDDO
+           !$acc end parallel
            !
-           eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) &
-           & + 2._DP * DDOT(2*(ngm-gstart+1),rho_g1(gstart:ngm),1,rho_g2(gstart:ngm),1)/omega
-           IF( i==j .AND. k==l .AND. gstart==2 ) THEN
+           reduce = 0._DP
+           !$acc parallel loop reduction(+:reduce) present(rho_g1,rho_g2) copy(reduce)
+           DO ig = gstart, ngm
+              reduce = reduce + REAL(rho_g1(ig),KIND=DP)*REAL(rho_g2(ig),KIND=DP) &
+              & + AIMAG(rho_g1(ig))*AIMAG(rho_g2(ig))
+           ENDDO
+           !$acc end parallel
+           !
+           eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + 2._DP*reduce/omega
+           IF(i==j .AND. k==l .AND. gstart==2) THEN
               eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + pot3D%div
            ENDIF
            !
@@ -413,6 +545,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
   DEALLOCATE( rho_r )
   DEALLOCATE( rho_g1 )
   DEALLOCATE( rho_g2 )
+#if defined(__CUDA)
+  DEALLOCATE( sqvc )
+#endif
   !
 END SUBROUTINE
 !
@@ -452,7 +587,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   !
   CALL start_bar_type(barra, 'Wp', 1)
   !
-  CALL pot3D%init(fftdriver,.FALSE.,'default')
+  CALL pot3D%compute_divergence('default')
   !
   eri_wp(:,:,:,:) = 0._DP
   !
@@ -475,7 +610,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
                     !
                     eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) &
                     & + braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
-                    IF( i==j .AND. k==l ) THEN
+                    IF(i==j .AND. k==l) THEN
                        eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + chi_head*pot3D%div
                     ENDIF
                     !

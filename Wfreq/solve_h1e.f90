@@ -92,9 +92,9 @@ SUBROUTINE compute_hartree_double_counting(h1e_tmp)
   ! if nspin=1, a factor of 2 has to be applied to the occupation
   !
   IF (nspin == 1) THEN
-     prefactor = 2.0_DP
+     prefactor = 2._DP
   ELSE
-     prefactor = 1.0_DP
+     prefactor = 1._DP
   ENDIF
   !
   DO is1 = 1, nspin

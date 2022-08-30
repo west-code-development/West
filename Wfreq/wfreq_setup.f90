@@ -187,6 +187,8 @@ SUBROUTINE wfreq_setup
            !
         ENDDO
         !
+        !$acc enter data copyin(proj_c)
+        !
         EXIT
         !
      ENDIF

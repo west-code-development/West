@@ -385,7 +385,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      lbnd = nbnd_todo
      not_conv = 0
      !
-     !$acc serial copy(lbnd,not_conv) present(is_conv,rho)
+     !$acc serial present(is_conv,rho) copy(lbnd,not_conv)
      DO ibnd = m,1,-1
         IF(is_conv(ibnd)) CYCLE
         rho(ibnd) = rho(lbnd)
@@ -538,7 +538,7 @@ SUBROUTINE precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
   !
   nbnd_todo = 0
   !
-  !$acc serial copy(nbnd_todo) present(is_conv,ibnd_todo)
+  !$acc serial present(is_conv,ibnd_todo) copy(nbnd_todo)
   DO ibnd = 1, m
      IF(is_conv(ibnd)) CYCLE
      nbnd_todo = nbnd_todo+1

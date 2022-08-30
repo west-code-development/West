@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !----------------------------------------------------------------------------
-SUBROUTINE solve_hf ()
+SUBROUTINE solve_hf ( )
   !----------------------------------------------------------------------------
   !
   USE control_flags,   ONLY : gamma_only
@@ -19,7 +19,7 @@ SUBROUTINE solve_hf ()
   IMPLICIT NONE
   !
   IF( gamma_only ) THEN
-    CALL solve_hf_gamma()
+    CALL solve_hf_gamma( )
   ELSE
     CALL solve_hf_k( )
   ENDIF
@@ -27,7 +27,7 @@ SUBROUTINE solve_hf ()
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE solve_hf_gamma()
+SUBROUTINE solve_hf_gamma( )
   !-----------------------------------------------------------------------
   !
   ! ... This subroutine solves the DBS problem for GAMMA, at non-zero freqeuncies.
@@ -52,8 +52,6 @@ SUBROUTINE solve_hf_gamma()
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: ib, iks
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
-  INTEGER :: nbndval
-  REAL(DP),ALLOCATABLE :: sigma_exx_all_occupied(:,:)
   !
   CALL start_clock('solve_hf')
   !
@@ -127,8 +125,6 @@ SUBROUTINE solve_hf_k( )
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: ib, iks
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
-  INTEGER :: nbndval
-  REAL(DP),ALLOCATABLE :: sigma_exx_all_occupied(:,:)
   !
   CALL start_clock('solve_hf')
   !

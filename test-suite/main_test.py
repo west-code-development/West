@@ -10,7 +10,7 @@ from xml.etree import ElementTree as ET
 
 def check_files_exist_and_job_done(list_of_files):
     """
-    Check that every file in the list exists and contains the string JOB DONE
+    Check that every file in the list exists and contains the string 'JOB DONE'
     """
 
     for file in list_of_files:
@@ -21,7 +21,7 @@ def check_files_exist_and_job_done(list_of_files):
 
 def read_total_energy(fileName):
     """
-    Reads the PW total energy from file.
+    Reads the PW total energy from file
     """
 
     xmlData = ET.parse(fileName)

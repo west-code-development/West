@@ -14,7 +14,7 @@
 SUBROUTINE wfreq_setup
   !-----------------------------------------------------------------------
   !
-  USE mp_global,              ONLY : nbgrp, inter_image_comm, my_image_id, mp_bcast
+  USE mp_global,              ONLY : nbgrp,inter_image_comm,my_image_id,mp_bcast
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
                                    & wfreq_calculation,qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
@@ -25,14 +25,17 @@ SUBROUTINE wfreq_setup
                                    & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc
   USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
-  USE fft_at_gamma,           ONLY : single_invfft_gamma
-  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx,nspin
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
   USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
   USE io_global,              ONLY : stdout
+  USE ldaU,                   ONLY : lda_plus_u
+  USE bp,                     ONLY : lelfield
+  USE realus,                 ONLY : real_space
+  USE control_flags,          ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -159,8 +162,16 @@ SUBROUTINE wfreq_setup
   !
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'H') THEN
+        !
+        IF(nspin > 1) CALL errore('wfreq_setup','QDET with nspin > 1 not supported',1)
+        IF(real_space) CALL errore('wfreq_setup','QDET with real_space not supported',1)
+        IF(lda_plus_u) CALL errore('wfreq_setup','QDET with lda_plus_u not supported',1)
+        IF(lelfield) CALL errore('wfreq_setup','QDET with lelfield not supported',1)
+        IF(.NOT. gamma_only) CALL errore('wfreq_setup','QDET requires gamma_only',1)
+        !
         ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
-        DO iks = 1, k_grid%nps 
+        !
+        DO iks = 1, k_grid%nps
            !
            IF(kpt_pool%nloc > 1) THEN
               IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
@@ -172,9 +183,10 @@ SUBROUTINE wfreq_setup
               ib = qp_bands(ib_index)
               proj_c(:,ib_index,iks) = evc(:,ib)
               !
-           END DO
+           ENDDO
            !
-        END DO
+        ENDDO
+        !
         EXIT
         !
      ENDIF

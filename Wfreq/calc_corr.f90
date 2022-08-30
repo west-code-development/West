@@ -11,12 +11,12 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET)
+SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   !-----------------------------------------------------------------------
   !
   ! store in sigma_corr(n,iks) = < qp_bands(n),iks | S_c(energy(ib,iks)) | qp_bands(n),iks >     n = 1,n_bands
-  ! 
-  ! IF (l_enable_off_diagonal .AND. l_full) store in 
+  !
+  ! IF (l_enable_off_diagonal .AND. l_full) store in
   ! sigma_corr_full(ijpmap(m,n),iks) = < qp_bands(m),iks | 0.5 * ( S_c(energy(m,iks)) &
   ! & + S_c(energy(n,iks)) ) | qp_bands(n),iks >     n,m = 1,n_bands & m <= n
   !
@@ -147,8 +147,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET)
            DO ifreq = 1,ifr%nloc
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
-                 ! For double-counting term, all KS states in summation must be 
-                 ! within the active space.
+                 !
+                 ! for QDET double counting term, all states need to be within qp_bands
+                 !
                  IF (l_QDET) THEN
                     IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
                  ENDIF
@@ -168,8 +169,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET)
            !
            ! BODY 2nd part : Lanczos
            !
-           ! For QDET: The active space is formed by KS states, no summation over
-           ! infinite ammount of conduction orbitals.
+           ! QDET: The active space is formed by KS states, no summation over
+           ! infinite ammount of conduction orbitals
+           !
            IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               DO ifreq = 1,ifr%nloc
@@ -258,8 +260,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET)
            DO im = 1,aband%nloc
               !
               glob_im = aband%l2g(im)
-              ! For double-counting term, all KS states in summation must be 
-              ! within the active space.
+              !
+              ! for QDET double counting term, all states need to be within qp_bands
+              !
               IF (l_QDET) THEN
                  IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
               ENDIF
@@ -350,12 +353,12 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET)
                  !
                  glob_im = aband%l2g(im)
                  !
-                 ! For double-counting term, all KS states in summation must be 
-                 ! within the active space.
+                 ! for QDET double counting term, all states need to be within qp_bands
+                 !
                  IF (l_QDET) THEN
                     IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
-                 ENDIF  
-                 !               
+                 ENDIF
+                 !
                  this_is_a_pole=.FALSE.
                  !
                  IF (l_frac_occ) THEN

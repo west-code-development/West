@@ -209,15 +209,18 @@ MODULE wfreq_center
   ! off-diagonal entries mapping
   !
   INTEGER :: n_pairs
-  INTEGER,ALLOCATABLE :: ijpmap(:,:)
-  INTEGER,ALLOCATABLE :: pijmap(:,:)
+  INTEGER, ALLOCATABLE :: ijpmap(:,:)
+  INTEGER, ALLOCATABLE :: pijmap(:,:)
   !
   ! downfolded Hamiltonian
-  COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
-  REAL(DP),   ALLOCATABLE :: h1e(:,:)
+  COMPLEX(DP), ALLOCATABLE :: proj_c(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: proj_c
+#endif
+  REAL(DP),    ALLOCATABLE :: h1e(:,:)
   COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   !
-  ! gw_etot 
+  ! gw_etot
   !
   REAL(DP) :: dft_etot
   REAL(DP) :: dft_exc
@@ -230,6 +233,7 @@ MODULE wfreq_center
   REAL(DP),    ALLOCATABLE :: sigma_z(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_eqplin(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_eqpsec(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_exx(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcl(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcnl(:,:)
@@ -237,7 +241,6 @@ MODULE wfreq_center
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqpsec(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_spectralf(:,:,:)
   REAL(DP),    ALLOCATABLE :: sigma_freq(:)
   REAL(DP),    ALLOCATABLE :: sigma_exx_full(:,:)

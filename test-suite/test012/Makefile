@@ -31,5 +31,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule qdet test"
+	@echo "SiH4 molecule test QDET"
 	@echo

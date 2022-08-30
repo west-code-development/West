@@ -378,7 +378,7 @@ MODULE wstat_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,il3,l3_s,ig1
+      INTEGER :: il1,il2,il3,ig1
       INTEGER :: icycl,idx,nloc
       REAL(DP) :: reduce
 #if !defined(__CUDA)
@@ -419,18 +419,12 @@ MODULE wstat_tools
                   IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
                   !
 #if defined(__CUDA)
-                  IF(gstart == 1) THEN
-                     l3_s = 1
-                  ELSE
-                     l3_s = 2
-                  ENDIF
-                  !
                   !$acc parallel async present(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e))
                   !$acc loop
                   DO il2 = l2_s,l2_e
                      reduce = 0._DP
                      !$acc loop reduction(+:reduce)
-                     DO il3 = l3_s,npwq
+                     DO il3 = gstart,npwq
                         reduce = reduce+REAL(ag(il3,il1),KIND=DP)*REAL(bg(il3,il2),KIND=DP) &
                         & +AIMAG(ag(il3,il1))*AIMAG(bg(il3,il2))
                      ENDDO

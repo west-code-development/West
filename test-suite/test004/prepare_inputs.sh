@@ -60,7 +60,7 @@ wstat_control:
 wfreq_control:
   wfreq_calculation: XWGQ
   n_pdep_eigen_to_use: 10
-  qp_bandrange: [1,5]
+  qp_bandrange: [2,6]
   n_refreq: 300
   ecut_refreq: 2.0
   macropol_calculation: C

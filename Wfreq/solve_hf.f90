@@ -78,16 +78,16 @@ SUBROUTINE solve_hf_gamma()
   ! Output it per k-point
   !
   ALLOCATE(out_tab(n_bands,6))
-  DO iks=1,k_grid%nps
+  DO iks = 1, k_grid%nps
      DO ib = 1, n_bands
-        out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
-        out_tab( ib, 2) = et(qp_bands(ib),iks) * rytoev
-        out_tab( ib, 3) = sigma_exx(ib,iks) * rytoev
-        out_tab( ib, 4) = sigma_vxcl(ib,iks) * rytoev
-        out_tab( ib, 5) = sigma_vxcnl(ib,iks) * rytoev
-        out_tab( ib, 6) = ( et(qp_bands(ib),iks) + sigma_hf(ib,iks) ) * rytoev
+        out_tab(ib,1) = REAL(qp_bands(ib),KIND=DP)
+        out_tab(ib,2) = et(qp_bands(ib),iks) * rytoev
+        out_tab(ib,3) = sigma_exx(ib,iks) * rytoev
+        out_tab(ib,4) = sigma_vxcl(ib,iks) * rytoev
+        out_tab(ib,5) = sigma_vxcnl(ib,iks) * rytoev
+        out_tab(ib,6) = (et(qp_bands(ib),iks)+sigma_hf(ib,iks)) * rytoev
      ENDDO
-     WRITE(myglobk,'(i5.5)') iks
+     WRITE(myglobk,'(I5.5)') iks
      !
      CALL serial_table_output(mpime==root,'ehf_K'//myglobk,out_tab,n_bands,6,&
      & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))
@@ -151,16 +151,16 @@ SUBROUTINE solve_hf_k( )
   ! Output it per k-point
   !
   ALLOCATE(out_tab(n_bands,6))
-  DO iks=1,k_grid%nps
+  DO iks = 1, k_grid%nps
      DO ib = 1, n_bands
-        out_tab( ib, 1) = REAL( qp_bands(ib), KIND=DP)
-        out_tab( ib, 2) = et(ib,iks) * rytoev
-        out_tab( ib, 3) = sigma_exx(ib,iks) * rytoev
-        out_tab( ib, 4) = sigma_vxcl(ib,iks) * rytoev
-        out_tab( ib, 5) = sigma_vxcnl(ib,iks) * rytoev
-        out_tab( ib, 6) = ( et(ib,iks) + sigma_hf(ib,iks) ) * rytoev
+        out_tab(ib,1) = REAL(qp_bands(ib),KIND=DP)
+        out_tab(ib,2) = et(qp_bands(ib),iks) * rytoev
+        out_tab(ib,3) = sigma_exx(ib,iks) * rytoev
+        out_tab(ib,4) = sigma_vxcl(ib,iks) * rytoev
+        out_tab(ib,5) = sigma_vxcnl(ib,iks) * rytoev
+        out_tab(ib,6) = (et(qp_bands(ib),iks)+sigma_hf(ib,iks)) * rytoev
      ENDDO
-     WRITE(myglobk,'(i5.5)') iks
+     WRITE(myglobk,'(I5.5)') iks
      !
      CALL serial_table_output(mpime==root,'ehf_K'//myglobk,out_tab,n_bands,6,&
      & (/'      band','    E0[eV]','    Sx[eV]','  Vxcl[eV]',' Vxcnl[eV]','   EHF[eV]'/))

@@ -112,11 +112,18 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  IF (l_enable_off_diagonal) THEN
-      barra_load = kpt_pool%nloc*band_group%nloc*band_group%nglob
-  ELSE
-      barra_load = kpt_pool%nloc*band_group%nloc
-  ENDIF
+  barra_load = 0
+  DO ibloc = 1,band_group%nloc
+     ib_index = band_group%l2g(ibloc)
+     !
+     IF(l_enable_off_diagonal) THEN
+        barra_load = barra_load+n_bands-ib_index+1
+     ELSE
+        barra_load = barra_load+1
+     ENDIF
+  ENDDO
+  barra_load = barra_load*kpt_pool%nloc
+  !
   CALL start_bar_type(barra,'sigmax',barra_load)
   !
 #if defined(__CUDA)
@@ -323,9 +330,9 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
               !
            ENDDO ! iq
            !
+           CALL update_bar_type(barra,'sigmax',1)
+           !
         ENDDO ! jb
-        !
-        CALL update_bar_type(barra,'sigmax',n_bands)
         !
      ENDDO ! ibloc
      !

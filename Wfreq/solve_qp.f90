@@ -80,8 +80,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: ib,ibloc,iks,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq,iks_g,&
-           & ib_index,jb,jb_index,ipair
+  INTEGER :: ib,ibloc,ib_index,jb,jb_index,ipair,iks,iks_g
+  INTEGER :: ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
@@ -219,7 +219,17 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  barra_load = kpt_pool%nloc * band_group%nloc * band_group%nglob
+  barra_load = 0
+  DO ibloc = 1,band_group%nloc
+     ib_index = band_group%l2g(ibloc)
+     !
+     IF(l_enable_off_diagonal) THEN
+        barra_load = barra_load+n_bands-ib_index+1
+     ELSE
+        barra_load = barra_load+1
+     ENDIF
+  ENDDO
+  barra_load = barra_load*kpt_pool%nloc
   CALL start_bar_type( barra, 'coll_gw', barra_load )
   !
   ! LOOP
@@ -397,9 +407,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
               !
            ENDIF
            !
+           CALL update_bar_type( barra, 'coll_gw', 1 )
+           !
         ENDDO ! jbnd
-        !
-        CALL update_bar_type( barra, 'coll_gw', n_bands )
         !
      ENDDO ! ibnd
      !
@@ -653,7 +663,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot)
      ALLOCATE( sc(n_bands,k_grid%nps,1) )
      !
      DO glob_ifreq = 1, n_spectralf
-        sigma_freq(glob_ifreq) = (ecut_spectralf(2)-ecut_spectralf(1))/REAL(n_spectralf-1,KIND=DP)*REAL(glob_ifreq-1,KIND=DP) &
+        sigma_freq(glob_ifreq) = &
+        & (ecut_spectralf(2)-ecut_spectralf(1))/REAL(n_spectralf-1,KIND=DP)*REAL(glob_ifreq-1,KIND=DP) &
         & +ecut_spectralf(1)
      ENDDO
      !
@@ -735,8 +746,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: ib,ibloc,iks,ik,ikks,ikk,iq,ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq
-  INTEGER :: is,iss
+  INTEGER :: ib,ibloc,ib_index,iks,ik,ikks,ikk,iq,is,iss
+  INTEGER :: ifixed,ip,glob_ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq
   REAL(DP) :: g0(3)
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   CHARACTER(LEN=5) :: myglobk
@@ -869,7 +880,9 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      is = k_grid%is(iks)
      !
      DO ibloc = 1, band_group%nloc
-        ib = qp_bands(band_group%l2g(ibloc))
+        !
+        ib_index = band_group%l2g(ibloc)
+        ib = qp_bands(ib_index)
         !
         DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
            !
@@ -919,7 +932,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            DO ifreq = 1, ifr%nloc
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
-                 z_body1_ifr_q(im,ifreq,ib,iks,iq) = ztemp2(glob_im,ifreq)
+                 z_body1_ifr_q(im,ifreq,ib_index,iks,iq) = ztemp2(glob_im,ifreq)
               ENDDO
            ENDDO
            !
@@ -951,7 +964,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            DO ifreq = 1, rfr%nloc
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
-                 z_body_rfr_q(im,ifreq,ib,iks,iq) = ztemp2(glob_im,ifreq)
+                 z_body_rfr_q(im,ifreq,ib_index,iks,iq) = ztemp2(glob_im,ifreq)
               ENDDO
            ENDDO
            !
@@ -968,7 +981,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
               !
               DO ip = 1, pert%nloc
                  DO il = 1, n_lanczos
-                    d_diago_q(il,ip,ib,iks,iq) = diago(il,ip)
+                    d_diago_q(il,ip,ib_index,iks,iq) = diago(il,ip)
                  ENDDO
               ENDDO
               !
@@ -985,7 +998,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
 #if defined(__CUDA)
                        z_body2_ifr_q_tmp(il,ip,ifreq) = reduce
 #else
-                       z_body2_ifr_q(il,ip,ifreq,ib,iks,iq) = reduce
+                       z_body2_ifr_q(il,ip,ifreq,ib_index,iks,iq) = reduce
 #endif
                     ENDDO
                  ENDDO
@@ -993,7 +1006,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
               !$acc end parallel
               !
 #if defined(__CUDA)
-              CALL memcpy_D2H(z_body2_ifr_q(:,:,:,ib,iks,iq),z_body2_ifr_q_tmp,n_lanczos*pert%nloc*ifr%nloc)
+              CALL memcpy_D2H(z_body2_ifr_q(:,:,:,ib_index,iks,iq),z_body2_ifr_q_tmp,n_lanczos*pert%nloc*ifr%nloc)
 #endif
               !
            ENDIF
@@ -1054,21 +1067,16 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ALLOCATE( qp_energy (n_bands,k_grid%nps) )
      !
      ! 1st step of secant solver : E_KS - 0.5 * eshift
-     !
-     DO iks = 1, k_grid%nps
-        DO ib = 1, n_bands
-           en(ib,iks,1) = et(qp_bands(ib),iks) - eshift*0.5_DP
-        ENDDO
-     ENDDO
-     CALL calc_corr_k( sc(:,:,1), en(:,:,1), .TRUE.)
-     !
      ! 1st step of secant solver : E_KS + 0.5 * eshift
      !
      DO iks = 1, k_grid%nps
         DO ib = 1, n_bands
+           en(ib,iks,1) = et(qp_bands(ib),iks) - eshift*0.5_DP
            en(ib,iks,2) = et(qp_bands(ib),iks) + eshift*0.5_DP
         ENDDO
      ENDDO
+     !
+     CALL calc_corr_k( sc(:,:,1), en(:,:,1), .TRUE.)
      CALL calc_corr_k( sc(:,:,2), en(:,:,2), .TRUE.)
      !
      ! Stage sigma_corr_in
@@ -1117,8 +1125,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            DO ib = 1, n_bands
                IF( .NOT. l_conv(ib,iks) ) THEN
                   qp_energy(ib,iks) = en(ib,iks,2) + &
-                         & ( et(qp_bands(ib),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2) ) / &
-                         & ( 1._DP - REAL( sc(ib,iks,2) - sc(ib,iks,1), KIND=DP ) / ( en(ib,iks,2) - en(ib,iks,1) ) )
+                  & ( et(qp_bands(ib),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2) ) / &
+                  & ( 1._DP - REAL( sc(ib,iks,2) - sc(ib,iks,1), KIND=DP ) / ( en(ib,iks,2) - en(ib,iks,1) ) )
                ENDIF
            ENDDO
         ENDDO
@@ -1209,12 +1217,14 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ALLOCATE( sc(n_bands,k_grid%nps,1) )
      !
      DO glob_ifreq = 1, n_spectralf
-        sigma_freq(glob_ifreq) = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) &
-                               & + ecut_spectralf(1)
+        sigma_freq(glob_ifreq) = &
+        & (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) &
+        & + ecut_spectralf(1)
      ENDDO
      !
      DO glob_ifreq = 1, n_spectralf
-        en = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) + ecut_spectralf(1)
+        en = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) &
+        & + ecut_spectralf(1)
         CALL calc_corr_k( sc(:,:,1), en(:,:,1), .FALSE.)
         DO iks=1, k_grid%nps
            DO ib = 1, n_bands

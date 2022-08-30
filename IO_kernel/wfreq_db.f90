@@ -58,6 +58,7 @@ MODULE wfreq_db
       TYPE(json_file) :: json
       INTEGER :: iunit, i
       INTEGER,ALLOCATABLE :: ilist(:)
+      REAL(DP),ALLOCATABLE :: eks(:)
       LOGICAL :: l_generate_plot, l_optics
       !
       ! MPI BARRIER
@@ -86,7 +87,7 @@ MODULE wfreq_db
          DO ib = 1,n_bands
             ilist(ib) = qp_bands(ib)
          ENDDO
-         CALL json%add('output.Q.bandmap',ilist(1:n_bands))
+         CALL json%add('output.Q.bandmap',ilist)
          DEALLOCATE(ilist)
          !
          IF(l_enable_off_diagonal) THEN
@@ -107,11 +108,17 @@ MODULE wfreq_db
          !
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
+         ALLOCATE(eks(n_bands))
+         !
          DO iks = 1, k_grid%nps
+            !
+            DO ib = 1,n_bands
+               eks(ib) = et(qp_bands(ib),iks)
+            ENDDO
             !
             WRITE(my_label_k,'(i6.6)') iks
             !
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', et(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', eks*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(1:n_bands,iks))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(1:n_bands,iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(1:n_bands,iks)*rytoev)
@@ -158,7 +165,7 @@ MODULE wfreq_db
             !
             IF( l_generate_plot ) THEN
                DO ib = 1, n_bands
-                  WRITE(my_label_b,'(i6.6)') ib
+                  WRITE(my_label_b,'(i6.6)') qp_bands(ib)
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.re',&
                   &REAL(sigma_spectralf(1:n_spectralf,ib,iks),KIND=DP)*rytoev)
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.im',&
@@ -171,6 +178,8 @@ MODULE wfreq_db
             ENDIF
             !
          ENDDO
+         !
+         DEALLOCATE(eks)
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
          CALL json%print( iunit )

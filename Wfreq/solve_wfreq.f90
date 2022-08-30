@@ -134,8 +134,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   COMPLEX(DP),ALLOCATABLE :: zmatilda(:,:),zlambda(:,:)
   REAL(DP),ALLOCATABLE :: dmati(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr(:,:,:)
+  REAL(DP),ALLOCATABLE :: dmati_a(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatr_a(:,:,:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: dmatilda,dlambda,zmatilda,zlambda,dmati,zmatr
+  ATTRIBUTES(PINNED) :: dmatilda,dlambda,zmatilda,zlambda,dmati,zmatr,dmati_a,zmatr_a
 #endif
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
@@ -147,10 +149,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   REAL(DP),ALLOCATABLE :: et_loc(:)
   REAL(DP),ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(l2g,eprec_loc,et_loc,sqvc)
-  !
-  COMPLEX(DP),ALLOCATABLE :: evc_a(:,:)
-  REAL(DP),ALLOCATABLE :: dmati_a(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: zmatr_a(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: evc_save(:,:)
   !
   CALL io_push_title('(W)-Lanczos')
   !
@@ -177,10 +176,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ALLOCATE( dmati( mypara%nglob, mypara%nloc, ifr%nloc) )
   ALLOCATE( zmatr( mypara%nglob, mypara%nloc, rfr%nloc) )
   !
-  ALLOCATE( evc_a(npwx*npol, nbnd) )
   IF(l_QDET) THEN
-     ALLOCATE( dmati_a( mypara%nglob, mypara%nloc, ifr%nloc) )
-     ALLOCATE( zmatr_a( mypara%nglob, mypara%nloc, rfr%nloc) )
+     IF(kpt_pool%nloc == 1) ALLOCATE( evc_save(npwx*npol, nbnd ) )
+     ALLOCATE( dmati_a(mypara%nglob, mypara%nloc, ifr%nloc) )
+     ALLOCATE( zmatr_a(mypara%nglob, mypara%nloc, rfr%nloc) )
      dmati_a(:,:,:) = 0._DP
      zmatr_a(:,:,:) = 0._DP
   ENDIF
@@ -220,6 +219,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         barra_load = barra_load+1
      ENDDO
   ENDDO
+  IF(l_QDET) barra_load = kpt_pool%nloc*band_group%nloc
   !
   IF( barra_load == 0 ) THEN
      CALL start_bar_type ( barra, 'wlanczos', 1 )
@@ -289,7 +289,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      !
      ! Exit loop if no work to do
      !
-     IF(.NOT. l_QDET .AND. barra_load == 0) EXIT
+     IF(barra_load == 0) EXIT
      !
      IF(iks < bks%lastdone_ks) CYCLE
      !
@@ -344,8 +344,22 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      CALL reallocate_ps_gpu(n_bands,nbnd)
 #endif
      !
-     evc_a(:,:) = evc_work
-     IF(l_QDET) CALL apply_alpha_pa_to_m_wfcs(nbnd,evc_a,(1.0_DP,0.0_DP))
+     IF(l_QDET) THEN
+        !
+        ! Save wavefunctions
+        ! No need to save when kpt_pool%nloc > 1, as wavefunctions are read from file
+        !
+        IF(kpt_pool%nloc == 1) THEN
+#if defined(__CUDA)
+           evc_save(:,:) = evc_host
+#else
+           evc_save(:,:) = evc_work
+#endif
+        ENDIF
+        !
+        CALL apply_alpha_pa_to_m_wfcs(nbnd,evc_work,(1.0_DP,0.0_DP))
+        !
+     ENDIF
      !
      nbndval = nbnd_occ(iks)
      IF(l_frac_occ) THEN
@@ -387,14 +401,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
 #if defined(__CUDA)
            !$acc host_data use_device(phi_tmp)
-           CALL commut_Hx_psi_gpu(iks,1,1,evc_a(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,2,evc_a(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,3,evc_a(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi_gpu(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
            !$acc end host_data
 #else
-           CALL commut_Hx_psi(iks,1,1,evc_a(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi(iks,1,2,evc_a(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi(iks,1,3,evc_a(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
+           CALL commut_Hx_psi(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
 #endif
            !
            !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
@@ -408,7 +422,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            CALL apply_alpha_pc_to_m_wfcs(nbndval_full,3,phi,(1._DP,0._DP))
            !
            !$acc host_data use_device(eprec_loc)
-           CALL set_eprec(1,evc_a(:,iv),eprec_loc(1))
+           CALL set_eprec(1,evc_work(:,iv),eprec_loc(1))
            !$acc end host_data
            !
            !$acc parallel loop present(eprec_loc,et_loc)
@@ -497,7 +511,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         ! PSIC
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_a(:,iv),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,iv),psic,'Wave')
         !
         !$acc kernels present(dvpsi)
         dvpsi(:,:) = 0._DP
@@ -575,13 +589,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #if defined(__CUDA)
            CALL reallocate_ps_gpu(nbnd-nbndval_full,mypara%nloc)
            !$acc host_data use_device(dvpsi,ps_r)
-           CALL glbrak_gamma_gpu(evc_a(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
+           CALL glbrak_gamma_gpu(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
            & mypara%nloc,nbnd-nbndval_full,npol)
            !$acc end host_data
 #else
            IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
            ALLOCATE(ps_r(nbnd-nbndval_full,mypara%nloc))
-           CALL glbrak_gamma(evc_a(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
+           CALL glbrak_gamma(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
            & mypara%nloc,nbnd-nbndval_full,npol)
 #endif
            IF(nproc_bgrp > 1) THEN
@@ -682,7 +696,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
         ENDIF
         !
-        IF(l_QDET) CYCLE
+        IF(l_QDET) THEN
+           CALL update_bar_type( barra, 'wlanczos', 1 )
+           CYCLE
+        ENDIF
         !
         ! Apply Pc, to be sure
         !
@@ -768,7 +785,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         ! Write final restart file
         !
-        IF( iks == k_grid%nps .AND. iv == nbndval .AND. .NOT. l_QDET ) l_write_restart = .TRUE.
+        IF( iks == k_grid%nps .AND. iv == nbndval ) l_write_restart = .TRUE.
         !
         ! But do not write here when using pool or band group
         !
@@ -840,6 +857,17 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      CALL mp_sum(dmati_a,inter_pool_comm)
      CALL mp_sum(zmatr_a,inter_bgrp_comm)
      CALL mp_sum(zmatr_a,inter_pool_comm)
+  ENDIF
+  !
+  ! Restore wavefunctions changed by QDET
+  ! No need to restore when kpt_pool%nloc > 1, as wavefunctions are read from file
+  !
+  IF(l_QDET .AND. kpt_pool%nloc == 1) THEN
+#if defined(__CUDA)
+     evc_host(:,:) = evc_save
+#else
+     evc_work(:,:) = evc_save
+#endif
   ENDIF
   !
   CALL stop_bar_type( barra, 'wlanczos' )

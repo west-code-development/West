@@ -36,6 +36,9 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
   INTEGER, INTENT(IN) :: m
   COMPLEX(DP), INTENT(IN) :: alpha
   COMPLEX(DP), INTENT(INOUT) :: f(npwx*npol,m)
+#if defined(__CUDA)
+  ATTRIBUTES(DEVICE) :: f
+#endif
   !
   ! Workspace
   !
@@ -57,7 +60,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
      !
      alpha_r = REAL(alpha,KIND=DP)
      !
-     !$acc host_data use_device(proj_c,f,ps_r)
+     !$acc host_data use_device(proj_c,ps_r)
 #if defined(__CUDA)
      CALL glbrak_gamma_gpu( proj_c, f, ps_r, npw, npwx, n_bands, m, n_bands, npol )
 #else
@@ -78,7 +81,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
      !
   ELSE
      !
-     !$acc host_data use_device(proj_c,f,ps_c)
+     !$acc host_data use_device(proj_c,ps_c)
 #if defined(__CUDA)
      CALL glbrak_k_gpu( proj_c, f, ps_c, npw, npwx, n_bands, m, n_bands, npol )
 #else

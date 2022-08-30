@@ -175,19 +175,30 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   ALLOCATE( dmati( mypara%nglob, mypara%nloc, ifr%nloc) )
   ALLOCATE( zmatr( mypara%nglob, mypara%nloc, rfr%nloc) )
+  IF(.NOT. l_QDET) THEN
+     !$acc enter data create(dmati,zmatr)
+  ENDIF
   !
   IF(l_QDET) THEN
      IF(kpt_pool%nloc == 1) ALLOCATE( evc_save(npwx*npol, nbnd ) )
      ALLOCATE( dmati_a(mypara%nglob, mypara%nloc, ifr%nloc) )
      ALLOCATE( zmatr_a(mypara%nglob, mypara%nloc, rfr%nloc) )
+     !$acc enter data create(dmati_a,zmatr_a)
+     !$acc kernels present(dmati_a)
      dmati_a(:,:,:) = 0._DP
+     !$acc end kernels
+     !
+     !$acc kernels present(zmatr_a)
      zmatr_a(:,:,:) = 0._DP
+     !$acc end kernels
   ENDIF
-  !$acc enter data create(dmati,zmatr)
   !
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bks, dmati, zmatr, mypara%nglob, mypara%nloc )
-     !$acc update device(dmati,zmatr)
+     !
+     IF(.NOT. l_QDET) THEN
+        !$acc update device(dmati,zmatr)
+     ENDIF
   ELSE
      bks%lastdone_ks   = 0
      bks%lastdone_band = 0
@@ -340,8 +351,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         deeq_d(:,:,:,:) = deeq
         qq_at_d(:,:,:) = qq_at
      ENDIF
-     !
-     CALL reallocate_ps_gpu(n_bands,nbnd)
 #endif
      !
      IF(l_QDET) THEN
@@ -357,6 +366,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #endif
         ENDIF
         !
+#if defined(__CUDA)
+        CALL reallocate_ps_gpu(n_bands,nbnd)
+#endif
         CALL apply_alpha_pa_to_m_wfcs(nbnd,evc_work,(1.0_DP,0.0_DP))
         !
      ENDIF
@@ -572,10 +584,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         IF(l_macropol) DEALLOCATE(phi)
         !
+        IF(l_QDET) THEN
 #if defined(__CUDA)
-        CALL reallocate_ps_gpu(n_bands,mypara%nloc)
+           CALL reallocate_ps_gpu(n_bands,mypara%nloc)
 #endif
-        IF(l_QDET) CALL apply_alpha_pa_to_m_wfcs(mypara%nloc,dvpsi,(1._DP,0._DP))
+           !$acc host_data use_device(dvpsi)
+           CALL apply_alpha_pa_to_m_wfcs(mypara%nloc,dvpsi,(1._DP,0._DP))
+           !$acc end host_data
+        ENDIF
         !
 #if defined(__CUDA)
         CALL reallocate_ps_gpu(nbndval_full,mypara%nloc)
@@ -637,25 +653,35 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
               ecv = et(ic+nbndval_full,iks)-et(iv,iks)
               IF(l_frac_occ) docc = occupation(iv,iks)-occupation(ic+nbndval_full,iks)
               !
-              !$acc parallel loop collapse(3) present(imfreq_list,dmati,overlap)
-              DO ifreq = 1,ifr_nloc
-                 DO ip = 1,mypara_nloc
-                    DO glob_jp = 1,mypara_nglob
-                       frequency = imfreq_list(ifreq)
-                       dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
-                       IF(l_frac_occ) dfactor = dfactor*docc
-                       !
-                       IF(l_QDET) THEN
+              IF(l_QDET) THEN
+                 !$acc parallel loop collapse(3) present(imfreq_list,dmati_a,overlap)
+                 DO ifreq = 1,ifr_nloc
+                    DO ip = 1,mypara_nloc
+                       DO glob_jp = 1,mypara_nglob
+                          frequency = imfreq_list(ifreq)
+                          dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
+                          IF(l_frac_occ) dfactor = dfactor*docc
                           dmati_a(glob_jp,ip,ifreq) = dmati_a(glob_jp,ip,ifreq) &
                           & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
-                       ELSE
+                       ENDDO
+                    ENDDO
+                 ENDDO ! ifreq
+                 !$acc end parallel
+              ELSE
+                 !$acc parallel loop collapse(3) present(imfreq_list,dmati,overlap)
+                 DO ifreq = 1,ifr_nloc
+                    DO ip = 1,mypara_nloc
+                       DO glob_jp = 1,mypara_nglob
+                          frequency = imfreq_list(ifreq)
+                          dfactor = mwo*2._DP*ecv/(ecv**2+frequency**2)
+                          IF(l_frac_occ) dfactor = dfactor*docc
                           dmati(glob_jp,ip,ifreq) = dmati(glob_jp,ip,ifreq) &
                           & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*dfactor
-                       ENDIF
+                       ENDDO
                     ENDDO
-                 ENDDO
-              ENDDO ! ifreq
-              !$acc end parallel
+                 ENDDO ! ifreq
+                 !$acc end parallel
+              ENDIF
               !
            ENDDO ! ic
            !
@@ -670,27 +696,39 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
               ecv = et(ic+nbndval_full,iks)-et(iv,iks)
               IF(l_frac_occ) docc = occupation(iv,iks)-occupation(ic+nbndval_full,iks)
               !
-              !$acc parallel loop collapse(3) present(refreq_list,zmatr,overlap)
-              DO ifreq = 1,rfr_nloc
-                 DO ip = 1,mypara_nloc
-                    DO glob_jp = 1,mypara_nglob
-                       frequency = refreq_list(ifreq)
-                       zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
-                       zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
-                       zfactor = zmwo/zp+zmwo/zm
-                       IF(l_frac_occ) zfactor = zfactor*docc
-                       !
-                       IF(l_QDET) THEN
+              IF(l_QDET) THEN
+                 !$acc parallel loop collapse(3) present(refreq_list,zmatr_a,overlap)
+                 DO ifreq = 1,rfr_nloc
+                    DO ip = 1,mypara_nloc
+                       DO glob_jp = 1,mypara_nglob
+                          frequency = refreq_list(ifreq)
+                          zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
+                          zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
+                          zfactor = zmwo/zp+zmwo/zm
+                          IF(l_frac_occ) zfactor = zfactor*docc
                           zmatr_a(glob_jp,ip,ifreq) = zmatr_a(glob_jp,ip,ifreq) &
                           & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
-                       ELSE
+                       ENDDO
+                    ENDDO
+                 ENDDO ! ifreq
+                 !$acc end parallel
+              ELSE
+                 !$acc parallel loop collapse(3) present(refreq_list,zmatr,overlap)
+                 DO ifreq = 1,rfr_nloc
+                    DO ip = 1,mypara_nloc
+                       DO glob_jp = 1,mypara_nglob
+                          frequency = refreq_list(ifreq)
+                          zp = CMPLX(ecv+frequency,-wfreq_eta,KIND=DP)
+                          zm = CMPLX(ecv-frequency,-wfreq_eta,KIND=DP)
+                          zfactor = zmwo/zp+zmwo/zm
+                          IF(l_frac_occ) zfactor = zfactor*docc
                           zmatr(glob_jp,ip,ifreq) = zmatr(glob_jp,ip,ifreq) &
                           & +overlap(glob_jp,ic)*overlap(l2g(ip),ic)*zfactor
-                       ENDIF
+                       ENDDO
                     ENDDO
-                 ENDDO
-              ENDDO ! ifreq
-              !$acc end parallel
+                 ENDDO ! ifreq
+                 !$acc end parallel
+              ENDIF
               !
            ENDDO ! ic
            !
@@ -827,8 +865,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   CALL deallocate_gw_gpu()
 #endif
   !
-  !$acc update host(dmati,zmatr)
-  !$acc exit data delete(dmati,zmatr)
+  IF(l_QDET) THEN
+     !$acc update host(dmati_a,zmatr_a)
+     !$acc exit data delete(dmati_a,zmatr_a)
+  ELSE
+     !$acc update host(dmati,zmatr)
+     !$acc exit data delete(dmati,zmatr)
+  ENDIF
   !$acc exit data delete(bg,imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)

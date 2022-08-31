@@ -492,7 +492,10 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
      IF( qp_bands(1) /= 0 ) THEN
         DO i = 0, SIZE(qp_bands)-1 ! Python indices start at 0
-           IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands',1)
+           IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands<1',1)
+           IF( i /= SIZE(qp_bands)-1 ) THEN
+              IF( qp_bands(i+1) >= qp_bands(i+2) ) CALL errore('fetch_input','Err: qp_bands must be sorted in ascending order',1)
+           ENDIF
         ENDDO
      ENDIF
      IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)

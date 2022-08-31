@@ -14,6 +14,8 @@ Intro tutorials:
    tutorials/basic/basic_002.ipynb
    tutorials/basic/basic_003.ipynb
    tutorials/basic/basic_004.ipynb
+   tutorials/basic/basic_005.ipynb
+   tutorials/basic/basic_006.ipynb
 
 The following tutorials were used in 2017 for MICCoM's Computational Summer School:
 

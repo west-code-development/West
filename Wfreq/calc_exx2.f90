@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE calc_exx2(sigma_exx)
+SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !-----------------------------------------------------------------------
   !
   ! store in sigma_exx(n,iks) = < qp_bands(n),iks | V_exx | qp_bands(n),iks >     n = 1,n_bands
@@ -30,7 +30,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,occupation,qp_bands,n_bands,l_enable_off_diagonal,&
-                                 & sigma_exx_full,ijpmap,n_pairs
+                                 & sigma_exx_full,ijpmap
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -53,6 +53,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   ! I/O
   !
   REAL(DP), INTENT(OUT) :: sigma_exx(n_bands,k_grid%nps)
+  LOGICAL, INTENT(IN) :: l_QDET ! True if QDET double-counting term is calculated
   !
   ! Workspace
   !
@@ -106,6 +107,7 @@ SUBROUTINE calc_exx2(sigma_exx)
   ! Set to zero
   !
   sigma_exx = 0._DP
+  IF (l_enable_off_diagonal) sigma_exx_full = 0._DP
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
@@ -223,6 +225,12 @@ SUBROUTINE calc_exx2(sigma_exx)
               DO ivloc = 1,vband%nloc
                  !
                  iv = vband%l2g(ivloc)
+                 !
+                 ! for QDET double counting term, all states need to be within qp_bands
+                 !
+                 IF(l_QDET) THEN
+                    IF(ALL(qp_bands(:) /= iv)) CYCLE
+                 ENDIF
                  !
                  IF(gamma_only) THEN
                     !$acc host_data use_device(pertr)

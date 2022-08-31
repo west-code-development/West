@@ -10,7 +10,7 @@ from xml.etree import ElementTree as ET
 
 def check_files_exist_and_job_done(list_of_files):
     """
-    Check that every file in the list exists and contains the string JOB DONE
+    Check that every file in the list exists and contains the string 'JOB DONE'
     """
 
     for file in list_of_files:
@@ -21,7 +21,7 @@ def check_files_exist_and_job_done(list_of_files):
 
 def read_total_energy(fileName):
     """
-    Reads the PW total energy from file.
+    Reads the PW total energy from file
     """
 
     xmlData = ET.parse(fileName)
@@ -96,7 +96,8 @@ def read_wfreq_energies(fileName):
                 en[ik][key] = np.array(data['output']['Q'][kindex][key]['re'],dtype='c16')
                 en[ik][key] += 1j * np.array(data['output']['Q'][kindex][key]['im'],dtype='c16')
             else:
-                en[ik][key] = np.array(data['output']['Q'][kindex][key],dtype='f8')
+                if key != 'occupation':
+                    en[ik][key] = np.array(data['output']['Q'][kindex][key],dtype='f8')
 
     return en
 
@@ -138,26 +139,26 @@ def read_localization_and_ipr(FileName):
 #########
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012'])
 def test_output(testdir):
     check_files_exist_and_job_done([testdir+'/pw.out',testdir+'/wstat.out',testdir+'/wfreq.out'])
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009','test010','test011'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009','test010','test011','test012'])
 def test_totalEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_total_energies(testdir+'/test.save/data-file-schema.xml',testdir+'/ref/pw.xml',float(parameters['tolerance']['total_energy']))
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012'])
 def test_pdepEigen(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wstat_eigenvalues(testdir+'/test.wstat.save/wstat.json',testdir+'/ref/wstat.json',float(parameters['tolerance']['pdep_eigenvalue']))
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012'])
 def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)

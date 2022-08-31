@@ -49,6 +49,9 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr(:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_epsm1_ifr_a(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_a(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_a(:,:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: d_epsm1_ifr
 #endif
@@ -76,6 +79,8 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_body2_ifr_full(:,:,:,:,:)
   REAL(DP),    ALLOCATABLE :: d_diago_full(:,:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_head_ifr_a(:)
+  COMPLEX(DP), ALLOCATABLE :: z_head_rfr_a(:)
   !
   ! CORRELATION with q-points
   !
@@ -160,7 +165,7 @@ MODULE wfreq_center
   !
   ! INPUT FOR wfreq_control
   !
-  CHARACTER(LEN=8) :: wfreq_calculation
+  CHARACTER(LEN=9) :: wfreq_calculation
   INTEGER :: n_lanczos
   INTEGER :: n_pdep_eigen_to_use
   INTEGER :: n_imfreq
@@ -204,8 +209,16 @@ MODULE wfreq_center
   ! off-diagonal entries mapping
   !
   INTEGER :: n_pairs
-  INTEGER,ALLOCATABLE :: ijpmap(:,:)
-  INTEGER,ALLOCATABLE :: pijmap(:,:)
+  INTEGER, ALLOCATABLE :: ijpmap(:,:)
+  INTEGER, ALLOCATABLE :: pijmap(:,:)
+  !
+  ! downfolded Hamiltonian
+  COMPLEX(DP), ALLOCATABLE :: proj_c(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: proj_c
+#endif
+  REAL(DP),    ALLOCATABLE :: h1e(:,:)
+  COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   !
   ! gw_etot
   !

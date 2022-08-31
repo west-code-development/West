@@ -24,7 +24,7 @@ PROGRAM wfreq
   IMPLICIT NONE
   !
   CHARACTER(LEN=9) :: code = 'WFREQ'
-  LOGICAL :: lgate(8)
+  LOGICAL :: lgate(9)
   INTEGER :: i
   !
   ! *** START ***
@@ -44,7 +44,7 @@ PROGRAM wfreq
   CALL wfreq_setup( )
   !
   lgate = .FALSE.
-  DO i = 1, 8
+  DO i = 1, 9
      IF( wfreq_calculation(i:i) == 'X' ) lgate(1) = .TRUE.
      IF( wfreq_calculation(i:i) == 'W' ) lgate(2) = .TRUE.
      IF( wfreq_calculation(i:i) == 'w' ) lgate(3) = .TRUE.
@@ -53,18 +53,23 @@ PROGRAM wfreq
      IF( wfreq_calculation(i:i) == 'Q' ) lgate(6) = .TRUE.
      IF( wfreq_calculation(i:i) == 'O' ) lgate(7) = .TRUE.
      IF( wfreq_calculation(i:i) == 'P' ) lgate(8) = .TRUE.
+     IF( wfreq_calculation(i:i) == 'H' ) lgate(9) = .TRUE.
   ENDDO
   !
   IF( lgate(1) ) THEN
-     CALL solve_hf( )
+     CALL solve_hf()
   ENDIF
   !
   IF( lgate(2) ) THEN
-     CALL solve_wfreq( .FALSE., lgate(7) )
+     CALL solve_wfreq( .FALSE., lgate(7), .FALSE. )
   ENDIF
   !
   IF( lgate(3) ) THEN
-     CALL solve_wfreq( .TRUE., lgate(7) )
+     CALL solve_wfreq( .TRUE., lgate(7), .FALSE. )
+  ENDIF
+  !
+  IF( lgate(9) ) THEN
+     CALL solve_wfreq( .TRUE., lgate(7), .TRUE. )
   ENDIF
   !
   IF( lgate(4) ) THEN
@@ -76,7 +81,12 @@ PROGRAM wfreq
   ENDIF
   !
   IF( lgate(6) .OR. lgate(8) ) THEN
-     CALL solve_qp( lgate(6), lgate(8) )
+     CALL solve_qp( lgate(6), lgate(8), .FALSE. )
+  ENDIF
+  !
+  IF( lgate(9) ) THEN
+     CALL solve_eri( 1, .TRUE. )
+     CALL solve_h1e( )
   ENDIF
   !
   CALL exx_ungo( )

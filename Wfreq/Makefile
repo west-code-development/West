@@ -24,7 +24,9 @@ diago_lanczos.o \
 get_brak_hyper_parallel.o \
 set_freqlists.o \
 solve_deflated_lanczos_w_full_ortho.o \
+solve_eri.o \
 solve_gfreq.o \
+solve_h1e.o \
 solve_hf.o \
 solve_qp.o \
 solve_wfreq.o \

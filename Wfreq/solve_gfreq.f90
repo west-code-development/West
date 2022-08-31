@@ -180,8 +180,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
   !$acc enter data create(dvpsi)
-  ALLOCATE(sqvc(npwqx))
 #if defined(__CUDA)
+  ALLOCATE(sqvc(npwqx))
   CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
 #endif
   ALLOCATE(overlap(pert%nglob,nbnd))
@@ -525,7 +525,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
+#if defined(__CUDA)
   DEALLOCATE(sqvc)
+#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
@@ -725,7 +727,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
   !$acc enter data create(dvpsi)
+#if defined(__CUDA)
   ALLOCATE(sqvc(npwqx))
+#endif
   ALLOCATE(overlap(pert%nglob,nbnd))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
@@ -1066,7 +1070,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
+#if defined(__CUDA)
   DEALLOCATE(sqvc)
+#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)

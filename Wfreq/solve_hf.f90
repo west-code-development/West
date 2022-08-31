@@ -52,8 +52,6 @@ SUBROUTINE solve_hf_gamma( )
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: ib, iks
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
-  INTEGER :: nbndval
-  REAL(DP),ALLOCATABLE :: sigma_exx_all_occupied(:,:)
   !
   CALL start_clock('solve_hf')
   !
@@ -65,7 +63,7 @@ SUBROUTINE solve_hf_gamma( )
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2(sigma_exx)
+  CALL calc_exx2(sigma_exx, .FALSE.)
   !
   ! Get SIGMA X
   !
@@ -127,8 +125,6 @@ SUBROUTINE solve_hf_k( )
   CHARACTER(LEN=5) :: myglobk
   INTEGER :: ib, iks
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
-  INTEGER :: nbndval
-  REAL(DP),ALLOCATABLE :: sigma_exx_all_occupied(:,:)
   !
   CALL start_clock('solve_hf')
   !
@@ -140,7 +136,7 @@ SUBROUTINE solve_hf_k( )
   !
   ! Get SIGMA EXX
   !
-  CALL calc_exx2(sigma_exx)
+  CALL calc_exx2(sigma_exx,.FALSE.)
   !
   ! Get SIGMA X
   !

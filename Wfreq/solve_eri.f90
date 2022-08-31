@@ -14,8 +14,8 @@
 SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !-----------------------------------------------------------------------
   !
-  USE westcom,              ONLY : n_pdep_eigen_to_use,d_epsm1_ifr_a,z_epsm1_rfr_a,imfreq_list,&
-                                 & refreq_list,z_head_rfr_a,d_head_ifr_a,n_pairs,eri_w
+  USE westcom,              ONLY : n_pdep_eigen_to_use,l_macropol,d_epsm1_ifr_a,z_epsm1_rfr_a,&
+                                 & imfreq_list,refreq_list,z_head_rfr_a,d_head_ifr_a,n_pairs,eri_w
   USE distribution_center,  ONLY : pert,ifr,rfr
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
@@ -60,8 +60,8 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
      IF ( me_bgrp == who ) THEN
         !
         freq = refreq_list(iloc)
-        chi_head = z_head_rfr_a(iloc)
         chi_body(:,:) = z_epsm1_rfr_a(:,:,iloc)
+        IF ( l_macropol ) chi_head = z_head_rfr_a(iloc)
         !
      ENDIF
      !
@@ -71,16 +71,20 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
      IF ( me_bgrp == who ) THEN
         !
         freq = imfreq_list(iloc)
-        chi_head = CMPLX(d_head_ifr_a(ifreq),KIND=DP)
         chi_body(:,:) = CMPLX(d_epsm1_ifr_a(:,:,ifreq),KIND=DP)
+        IF ( l_macropol ) chi_head = CMPLX(d_head_ifr_a(ifreq),KIND=DP)
         !
      ENDIF
      !
   ENDIF
   !
   CALL mp_bcast( freq, who, intra_bgrp_comm )
-  CALL mp_bcast( chi_head, who, intra_bgrp_comm )
   CALL mp_bcast( chi_body, who, intra_bgrp_comm )
+  IF ( l_macropol ) THEN
+     CALL mp_bcast( chi_head, who, intra_bgrp_comm )
+  ELSE
+     chi_head = (0._DP,0._DP)
+  ENDIF
   !
   ! Compute ERI (Electron Repulsion Integrals)
   !
@@ -284,7 +288,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_pairs,pijmap,proj_c,npwq,npwqx
+  USE westcom,              ONLY : l_macropol,n_pairs,pijmap,proj_c,npwq,npwqx
   USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm
   USE distribution_center,  ONLY : bandpair
   USE fft_base,             ONLY : dffts
@@ -558,7 +562,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_pdep_eigen_to_use,fftdriver,n_pairs,pijmap
+  USE westcom,              ONLY : n_pdep_eigen_to_use,fftdriver,n_pairs,pijmap,l_macropol
   USE types_coulomb,        ONLY : pot3D
   USE mp_global,            ONLY : inter_image_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -587,7 +591,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   !
   CALL start_bar_type(barra, 'Wp', 1)
   !
-  CALL pot3D%compute_divergence('default')
+  IF (l_macropol) CALL pot3D%compute_divergence('default')
   !
   eri_wp(:,:,:,:) = 0._DP
   !
@@ -610,7 +614,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
                     !
                     eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) &
                     & + braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
-                    IF(i==j .AND. k==l) THEN
+                    IF(l_macropol .AND. i==j .AND. k==l) THEN
                        eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + chi_head*pot3D%div
                     ENDIF
                     !

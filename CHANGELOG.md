@@ -1,6 +1,15 @@
 Change Log
 ==========
 
+v5.2.0 (2022/xx/xx)
+-------------------
+
+- Release of Quantum Defect Embedding Theory (QDET, N. Sheng et al., JCTC 18 3512 (2022)), enabling the use of WEST to study strongly correlated states of defects in solids.
+- Improved the performance of the k-point case of `wfreq`.
+- Bug fix. Fixed the k-point case of `wfreq` when `qp_bands` is used or when `qp_bandrange` does not start from 1.
+- Updated CI/CD. Added tests to cover the new functionalities.
+- Updated documentation. Added more tutorials.
+
 v5.1.0 (2022/08/19)
 -------------------
 

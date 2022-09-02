@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v5.2.0 (2022/xx/xx)
+v5.2.0 (2022/09/02)
 -------------------
 
 - Release of Quantum Defect Embedding Theory (QDET, N. Sheng et al., JCTC 18 3512 (2022)), enabling the use of WEST to study strongly correlated states of defects in solids.

@@ -16,7 +16,8 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   USE westcom,              ONLY : n_pdep_eigen_to_use,l_macropol,d_epsm1_ifr_a,z_epsm1_rfr_a,&
                                  & imfreq_list,refreq_list,z_head_rfr_a,d_head_ifr_a,n_pairs,&
-                                 & eri_w, l_qdet_verbose
+                                 & eri_w, l_qdet_verbose, z_head_rfr, z_epsm1_rfr, &
+                                 & d_epsm1_ifr, d_head_ifr
   USE distribution_center,  ONLY : pert,ifr,rfr
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin

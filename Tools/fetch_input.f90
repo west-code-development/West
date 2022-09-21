@@ -129,7 +129,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
                              & westpp_epsinfty,westpp_box,document,main_input_file,logfile,&
-                             & l_enable_off_diagonal
+                             & l_enable_off_diagonal, l_qdet_verbose
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier

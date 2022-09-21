@@ -213,14 +213,14 @@ MODULE wfreq_db
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE qdet_db_write_eri(eri_vc,eri_w)
+    SUBROUTINE qdet_db_write_eri(eri_w,eri_vc,eri_w_full)
     !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,&
-                                       & logfile, l_qdet_verbose
+                                       & logfile
       USE pwcom,                ONLY : nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -228,8 +228,9 @@ MODULE wfreq_db
       !
       IMPLICIT NONE
       !
-      REAL(DP),INTENT(IN):: eri_vc(n_pairs,n_pairs,nspin,nspin)
       COMPLEX(DP),INTENT(IN):: eri_w(n_pairs,n_pairs,nspin,nspin)
+      REAL(DP),INTENT(IN), OPTIONAL:: eri_vc(n_pairs,n_pairs,nspin,nspin)
+      REAL(DP),INTENT(IN), OPTIONAL:: eri_w_full(n_pairs,n_pairs,nspin,nspin)
       !
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -266,8 +267,14 @@ MODULE wfreq_db
                      !
                      WRITE(my_label_ipair,'(i6.6)') ipair
                      !
-                     IF (l_qdet_verbose) THEN
+                     IF (PRESENT(eri_vc)) THEN
                        CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
+                       & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
+                       & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     ENDIF
+                     !
+                     IF (PRESENT(eri_w_full)) THEN
+                       CALL json%add('qdet.eri_w_ful.K'//TRIM(my_label_ik)//'.K'// &
                        & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
                        & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
                      ENDIF

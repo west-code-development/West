@@ -15,7 +15,8 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !-----------------------------------------------------------------------
   !
   USE westcom,              ONLY : n_pdep_eigen_to_use,l_macropol,d_epsm1_ifr_a,z_epsm1_rfr_a,&
-                                 & imfreq_list,refreq_list,z_head_rfr_a,d_head_ifr_a,n_pairs,eri_w
+                                 & imfreq_list,refreq_list,z_head_rfr_a,d_head_ifr_a,n_pairs,&
+                                 & eri_w, l_qdet_verbose
   USE distribution_center,  ONLY : pert,ifr,rfr
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
@@ -34,11 +35,11 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   INTEGER :: who, iloc
   REAL(DP) :: freq
-  COMPLEX(DP) :: chi_head
+  COMPLEX(DP) :: chi_head, chi_full_head
   !
   REAL(DP),ALLOCATABLE :: braket(:,:,:)
-  REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: chi_body(:,:)
+  REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:), eri_w_full(:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: chi_body(:,:), chi_full_body(:,:)
   !
   ! Compute 4-center integrals of W (screened electron repulsion integrals, eri)
   ! (ij|W|kl) = int dx dx' f_i(x) f_j(x) W(r,r') f_k(x') f_l(x')
@@ -51,6 +52,7 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
 #endif
   !
   ALLOCATE( chi_body( pert%nglob, pert%nloc ) )
+  ALLOCATE( chi_full_body( pert%nglob, pert%nloc ) )
   !
   ! Load chi at given frequency (index and logical from input)
   !
@@ -61,7 +63,13 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
         !
         freq = refreq_list(iloc)
         chi_body(:,:) = z_epsm1_rfr_a(:,:,iloc)
+        !
         IF ( l_macropol ) chi_head = z_head_rfr_a(iloc)
+        
+        IF (l_qdet_verbose) THEN
+          chi_full_body(:,:) = z_epsm1_rfr(:,:,iloc)
+          IF (l_macropol) chi_full_head = z_head_rfr(iloc)
+        ENDIF
         !
      ENDIF
      !
@@ -73,6 +81,11 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
         freq = imfreq_list(iloc)
         chi_body(:,:) = CMPLX(d_epsm1_ifr_a(:,:,ifreq),KIND=DP)
         IF ( l_macropol ) chi_head = CMPLX(d_head_ifr_a(ifreq),KIND=DP)
+        !
+        IF (l_qdet_verbose) THEN
+          chi_full_body(:,:) = CMPLX(d_epsm1_ifr(:,:,ifreq),KIND=DP)
+          IF ( l_macropol ) chi_full_head = CMPLX(d_head_ifr(ifreq),KIND=DP)
+        ENDIF
         !
      ENDIF
      !
@@ -86,14 +99,25 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
      chi_head = (0._DP,0._DP)
   ENDIF
   !
+  IF (l_qdet_verbose) THEN
+    CALL mp_bcast( chi_full_body, who, intra_bgrp_comm )
+    IF ( l_macropol ) THEN
+       CALL mp_bcast( chi_full_head, who, intra_bgrp_comm )
+    ELSE
+       chi_full_head = (0._DP,0._DP)
+    ENDIF
+  ENDIF
+  !
   ! Compute ERI (Electron Repulsion Integrals)
   !
-  ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
   ALLOCATE( eri_w(n_pairs,n_pairs,nspin,nspin) )
+  IF (l_qdet_verbose) THEN
+    ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
+    ALLOCATE( eri_w_full(n_pairs,n_pairs,nspin,nspin) )
+  ENDIF
   !
   ! 4-center integrals of Vc
   !
-  CALL compute_eri_vc(eri_vc)
   !
   ! 4-center integrals of Wp
   !
@@ -101,12 +125,21 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   CALL compute_braket(braket)
   CALL compute_eri_wp(braket, chi_head, chi_body, eri_w)
+  IF (l_qdet_verbose) THEN
+    CALL compute_eri_vc(eri_vc)
+    CALL compute_eri_wp(braket, chi_full_head, chi_full_body, eri_w_full)
+  END IF
   !
   ! 4-center integrals of W
   !
   eri_w(:,:,:,:) = eri_vc + eri_w
+  IF (l_qdet_verbose) eri_w_full = eri_vc + eri_w_full
   !
-  CALL qdet_db_write_eri(eri_vc,eri_w)
+  IF (l_qdet_verbose) THEN
+    CALL qdet_db_write_eri(eri_w, eri_vc, eri_w_full)
+  ELSE
+    CALL qdet_db_write_eri(eri_w)
+  ENDIF
   !
   CALL io_push_bar()
   !

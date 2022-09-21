@@ -219,7 +219,8 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,logfile
+      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,&
+                                       & logfile, l_qdet_verbose
       USE pwcom,                ONLY : nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -265,9 +266,11 @@ MODULE wfreq_db
                      !
                      WRITE(my_label_ipair,'(i6.6)') ipair
                      !
-                     CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
-                     & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                     & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     IF (l_qdet_verbose) THEN
+                       CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
+                       & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
+                       & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     ENDIF
                      !
                      CALL json%add('qdet.eri_w.K'//TRIM(my_label_ik)//'.K'// &
                      & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &

@@ -52,13 +52,13 @@ Suggested configuration options
 .. toctree::
    :maxdepth: 1
 
+   installations/theta.rst
    installations/bebop.rst
-   installations/cori.rst
-   installations/dgx.rst
+   installations/swing.rst
    installations/macos.rst
+   installations/cori.rst
+   installations/perlmutter.rst
+   installations/dgx.rst
+   installations/summit.rst
    installations/midway2.rst
    installations/midway3.rst
-   installations/perlmutter.rst
-   installations/summit.rst
-   installations/swing.rst
-   installations/theta.rst

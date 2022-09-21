@@ -9,7 +9,7 @@ Features:
 
    - GW self-energy (full-frequency)
    - GPU acceleration on NVIDIA devices
-   - Quantum embedding (QDET) 
+   - Quantum embedding (QDET)
    - Absorption spectra (BSE) in *beta-release*
    - Electron-phonon *under development*
 

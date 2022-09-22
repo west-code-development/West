@@ -150,7 +150,11 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   DEALLOCATE( chi_body )
   DEALLOCATE( braket )
-  DEALLOCATE( eri_vc )
+  IF (l_qdet_verbose) THEN
+    DEALLOCATE( eri_vc )
+    DEALLOCATE( eri_w_full )
+    DEALLOCATE( chi_full_body ) 
+  ENDIF
   !
 END SUBROUTINE
 !

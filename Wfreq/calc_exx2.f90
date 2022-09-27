@@ -116,7 +116,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
      ib_index = band_group%l2g(ibloc)
      !
      IF(l_enable_off_diagonal) THEN
-        barra_load = barra_load+n_bands-ib_index+1
+        barra_load = barra_load+ib_index
      ELSE
         barra_load = barra_load+1
      ENDIF

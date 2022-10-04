@@ -112,8 +112,8 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   ! Compute ERI (Electron Repulsion Integrals)
   !
   ALLOCATE( eri_w(n_pairs,n_pairs,nspin,nspin) )
+  ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
   IF (l_qdet_verbose) THEN
-    ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
     ALLOCATE( eri_w_full(n_pairs,n_pairs,nspin,nspin) )
   ENDIF
   !
@@ -126,8 +126,8 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   CALL compute_braket(braket)
   CALL compute_eri_wp(braket, chi_head, chi_body, eri_w)
+  CALL compute_eri_vc(eri_vc)
   IF (l_qdet_verbose) THEN
-    CALL compute_eri_vc(eri_vc)
     CALL compute_eri_wp(braket, chi_full_head, chi_full_body, eri_w_full)
   END IF
   !
@@ -150,8 +150,9 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !
   DEALLOCATE( chi_body )
   DEALLOCATE( braket )
+  DEALLOCATE( eri_vc )
+
   IF (l_qdet_verbose) THEN
-    DEALLOCATE( eri_vc )
     DEALLOCATE( eri_w_full )
     DEALLOCATE( chi_full_body ) 
   ENDIF

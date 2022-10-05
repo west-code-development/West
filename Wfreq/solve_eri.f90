@@ -39,7 +39,8 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   COMPLEX(DP) :: chi_head, chi_full_head
   !
   REAL(DP),ALLOCATABLE :: braket(:,:,:)
-  REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:), eri_w_full(:,:,:,:)
+  REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE ::eri_w_full(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: chi_body(:,:), chi_full_body(:,:)
   !
   ! Compute 4-center integrals of W (screened electron repulsion integrals, eri)

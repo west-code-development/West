@@ -230,7 +230,7 @@ MODULE wfreq_db
       !
       COMPLEX(DP),INTENT(IN):: eri_w(n_pairs,n_pairs,nspin,nspin)
       REAL(DP),INTENT(IN), OPTIONAL:: eri_vc(n_pairs,n_pairs,nspin,nspin)
-      REAL(DP),INTENT(IN), OPTIONAL:: eri_w_full(n_pairs,n_pairs,nspin,nspin)
+      COMPLEX(DP),INTENT(IN), OPTIONAL:: eri_w_full(n_pairs,n_pairs,nspin,nspin)
       !
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -274,7 +274,7 @@ MODULE wfreq_db
                      ENDIF
                      !
                      IF (PRESENT(eri_w_full)) THEN
-                       CALL json%add('qdet.eri_w_ful.K'//TRIM(my_label_ik)//'.K'// &
+                       CALL json%add('qdet.eri_w_full.K'//TRIM(my_label_ik)//'.K'// &
                        & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
                        & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
                      ENDIF

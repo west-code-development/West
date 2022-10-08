@@ -24,7 +24,9 @@ diago_lanczos.o \
 get_brak_hyper_parallel.o \
 set_freqlists.o \
 solve_deflated_lanczos_w_full_ortho.o \
+solve_eri.o \
 solve_gfreq.o \
+solve_h1e.o \
 solve_hf.o \
 solve_qp.o \
 solve_wfreq.o \
@@ -35,7 +37,7 @@ wfreq_setup.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
+QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
 ../IO_kernel/lib_io_kernel.a \

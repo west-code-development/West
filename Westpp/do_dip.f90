@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -27,6 +27,7 @@ SUBROUTINE do_dip()
   USE uspp_init,            ONLY : init_us_2
   USE io_push,              ONLY : io_push_title
   USE noncollin_module,     ONLY : npol
+  USE cell_base,            ONLY : bg
   USE buffers,              ONLY : get_buffer
   USE types_bz_grid,        ONLY : k_grid
   USE json_module,          ONLY : json_file,json_core,json_value
@@ -37,6 +38,7 @@ SUBROUTINE do_dip()
   !
   INTEGER :: iks
   INTEGER :: ipol
+  INTEGER :: icart
   INTEGER :: istate
   INTEGER :: jstate
   INTEGER :: nstate
@@ -44,8 +46,10 @@ SUBROUTINE do_dip()
   INTEGER :: iunit
   INTEGER :: trans(2)
   REAL(DP) :: aux_r(3)
-  REAL(DP), ALLOCATABLE :: dip_r(:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: dip_c(:,:,:)
+  REAL(DP), ALLOCATABLE :: dip_cryst_r(:,:,:)
+  REAL(DP), ALLOCATABLE :: dip_cart_r(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dip_cryst_c(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dip_cart_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: Hx_psi(:,:)
   CHARACTER(5) :: label_k
   CHARACTER(9) :: label_d
@@ -60,9 +64,11 @@ SUBROUTINE do_dip()
   !
   nstate = westpp_range(2)-westpp_range(1)+1
   IF(gamma_only) THEN
-     ALLOCATE(dip_r(nstate,nstate,3))
+     ALLOCATE(dip_cryst_r(nstate,nstate,3))
+     ALLOCATE(dip_cart_r(nstate,nstate,3))
   ELSE
-     ALLOCATE(dip_c(nstate,nstate,3))
+     ALLOCATE(dip_cryst_c(nstate,nstate,3))
+     ALLOCATE(dip_cart_c(nstate,nstate,3))
   ENDIF
   ALLOCATE(Hx_psi(npwx*npol,nstate))
   !
@@ -82,7 +88,7 @@ SUBROUTINE do_dip()
      current_k = iks
      npw = ngk(iks)
      IF(lsda) current_spin = isk(iks)
-     call g2_kin(iks)
+     CALL g2_kin(iks)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
@@ -95,23 +101,17 @@ SUBROUTINE do_dip()
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
-     IF(gamma_only) THEN
-        dip_r = 0._DP
-     ELSE
-        dip_c = (0._DP,0._DP)
-     ENDIF
-     !
      DO ipol = 1,3
         !
         CALL commut_Hx_psi(iks,nstate,ipol,evc(:,westpp_range(1):westpp_range(2)),Hx_psi,&
         & l_skip_nl_part_of_hcomr)
         !
         IF(gamma_only) THEN
-           CALL glbrak_gamma(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_r(:,:,ipol),npw,npwx,&
-           & nstate,nstate,nstate,npol)
+           CALL glbrak_gamma(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_cryst_r(:,:,ipol),&
+           & npw,npwx,nstate,nstate,nstate,npol)
         ELSE
-           CALL glbrak_k(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_c(:,:,ipol),npw,npwx,&
-           & nstate,nstate,nstate,npol)
+           CALL glbrak_k(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_cryst_c(:,:,ipol),npw,&
+           & npwx,nstate,nstate,nstate,npol)
         ENDIF
         !
         CALL update_bar_type(barra,'westpp',1)
@@ -119,9 +119,23 @@ SUBROUTINE do_dip()
      END DO
      !
      IF(gamma_only) THEN
-        CALL mp_sum(dip_r,intra_bgrp_comm)
+        CALL mp_sum(dip_cryst_r,intra_bgrp_comm)
+        !
+        dip_cart_r = 0._DP
+        DO icart = 1,3
+           DO ipol = 1,3
+              dip_cart_r(:,:,icart) = dip_cart_r(:,:,icart)+bg(icart,ipol)*dip_cryst_r(:,:,ipol)
+           ENDDO
+        ENDDO
      ELSE
-        CALL mp_sum(dip_c,intra_bgrp_comm)
+        CALL mp_sum(dip_cryst_c,intra_bgrp_comm)
+        !
+        dip_cart_c = (0._DP,0._DP)
+        DO icart = 1,3
+           DO ipol = 1,3
+              dip_cart_c(:,:,icart) = dip_cart_c(:,:,icart)+bg(icart,ipol)*dip_cryst_c(:,:,ipol)
+           ENDDO
+        ENDDO
      ENDIF
      !
      IF(mpime == root) THEN
@@ -145,14 +159,14 @@ SUBROUTINE do_dip()
               !
               CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').trans',trans)
               IF(gamma_only) THEN
-                 aux_r = dip_r(istate,jstate,:)
+                 aux_r = dip_cart_r(istate,jstate,:)
                  CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').re',aux_r)
                  aux_r = 0._DP
                  CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').im',aux_r)
               ELSE
-                 aux_r = REAL(dip_c(istate,jstate,:),KIND=DP)
+                 aux_r = REAL(dip_cart_c(istate,jstate,:),KIND=DP)
                  CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').re',aux_r)
-                 aux_r = AIMAG(dip_c(istate,jstate,:))
+                 aux_r = AIMAG(dip_cart_c(istate,jstate,:))
                  CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').im',aux_r)
               ENDIF
            ENDDO
@@ -165,9 +179,11 @@ SUBROUTINE do_dip()
   CALL stop_bar_type(barra,'westpp')
   !
   IF(gamma_only) THEN
-     DEALLOCATE(dip_r)
+     DEALLOCATE(dip_cryst_r)
+     DEALLOCATE(dip_cart_r)
   ELSE
-     DEALLOCATE(dip_c)
+     DEALLOCATE(dip_cryst_c)
+     DEALLOCATE(dip_cart_c)
   ENDIF
   DEALLOCATE(Hx_psi)
   !

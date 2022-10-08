@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -27,6 +27,7 @@ SUBROUTINE do_wfc2 ( )
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
   USE distribution_center,   ONLY : aband
+  USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE types_bz_grid,         ONLY : k_grid
   !
@@ -41,6 +42,9 @@ SUBROUTINE do_wfc2 ( )
   CHARACTER(LEN=6) :: labelb,labelk
   !
   CALL io_push_title('(W)avefunctions')
+  !
+  aband = idistribute()
+  CALL aband%init(westpp_range(2)-westpp_range(1)+1,'i','westpp_range',.TRUE.)
   !
   ALLOCATE(auxr(dffts%nnr))
   !
@@ -67,14 +71,13 @@ SUBROUTINE do_wfc2 ( )
         !
         ! local -> global
         !
-        global_ib = aband%l2g(local_ib)
-        IF( global_ib < westpp_range(1) .OR. global_ib > westpp_range(2) ) CYCLE
+        global_ib = aband%l2g(local_ib)+westpp_range(1)-1
         !
         auxr = 0._DP
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
         ENDIF
         IF( westpp_sign ) THEN
            DO ir = 1, dffts%nnr

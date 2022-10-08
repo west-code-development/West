@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -24,6 +24,7 @@ SUBROUTINE do_eigenpot2 ( )
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
   USE distribution_center,   ONLY : pert
+  USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE pdep_db,               ONLY : pdep_db_read
   USE types_bz_grid,         ONLY : q_grid
@@ -41,6 +42,9 @@ SUBROUTINE do_eigenpot2 ( )
   LOGICAL :: l_print_pdep_read
   !
   CALL io_push_title('(E)igenpotentials')
+  !
+  pert = idistribute()
+  CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !
   ALLOCATE(auxr(dffts%nnr))
   !
@@ -72,9 +76,9 @@ SUBROUTINE do_eigenpot2 ( )
         !
         auxr = 0._DP
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(1,local_j),psic,TRIM(fftdriver))
+           CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,local_j),psic,TRIM(fftdriver))
         ELSE
-           CALL single_invfft_k(dffts,npwq,npwqx,dvg(1,local_j),psic,'Wave',igq_q(1,iq))
+           CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,local_j),psic,'Wave',igq_q(:,iq))
         ENDIF
         IF( westpp_sign ) THEN
            DO ir = 1, dffts%nnr

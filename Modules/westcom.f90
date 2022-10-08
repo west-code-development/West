@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -33,10 +33,10 @@ MODULE scratch_area
   COMPLEX(DP),         ALLOCATABLE :: dng(:,:)
   COMPLEX(DP),         ALLOCATABLE :: dvg(:,:)
   LOGICAL,             ALLOCATABLE :: conv(:)
-  !
-  ! BANDS
-  !
-  INTEGER, ALLOCATABLE :: nbnd_occ(:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: dng
+  ATTRIBUTES(PINNED) :: dvg
+#endif
   !
   ! Q-POINTS
   !
@@ -49,11 +49,20 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr(:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_epsm1_ifr_a(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_a(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_a(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: d_epsm1_ifr
+#endif
   !
   ! EPSILON with q-points
   !
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:) ! EPSILON + iq (global in iq)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq (global in iq)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: z_epsm1_ifr_q
+#endif
   !
   ! CORRELATION
   !
@@ -66,6 +75,12 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_diago(:,:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_head_rfr(:)
   COMPLEX(DP), ALLOCATABLE :: z_body_rfr(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_body1_ifr_full(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_body2_ifr_full(:,:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_diago_full(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_body_rfr_full(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: d_head_ifr_a(:)
+  COMPLEX(DP), ALLOCATABLE :: z_head_rfr_a(:)
   !
   ! CORRELATION with q-points
   !
@@ -150,18 +165,20 @@ MODULE wfreq_center
   !
   ! INPUT FOR wfreq_control
   !
-  CHARACTER(LEN=8) :: wfreq_calculation
+  CHARACTER(LEN=9) :: wfreq_calculation
   INTEGER :: n_lanczos
   INTEGER :: n_pdep_eigen_to_use
   INTEGER :: n_imfreq
   INTEGER :: n_refreq
   INTEGER :: qp_bandrange(2)
+  INTEGER, ALLOCATABLE :: qp_bands(:)
   REAL(DP) :: ecut_imfreq
   REAL(DP) :: ecut_refreq
   REAL(DP) :: wfreq_eta
   INTEGER :: n_secant_maxiter
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
+  LOGICAL :: l_enable_off_diagonal
   CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
   REAL(DP) :: o_restart_time
@@ -185,6 +202,24 @@ MODULE wfreq_center
   REAL(DP), ALLOCATABLE :: imfreq_list_integrate(:,:)
   REAL(DP), PARAMETER :: frequency_list_power = 2._DP
   !
+  ! qp_bands
+  !
+  INTEGER :: n_bands
+  !
+  ! off-diagonal entries mapping
+  !
+  INTEGER :: n_pairs
+  INTEGER, ALLOCATABLE :: ijpmap(:,:)
+  INTEGER, ALLOCATABLE :: pijmap(:,:)
+  !
+  ! downfolded Hamiltonian
+  COMPLEX(DP), ALLOCATABLE :: proj_c(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: proj_c
+#endif
+  REAL(DP),    ALLOCATABLE :: h1e(:,:)
+  COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
+  !
   ! gw_etot
   !
   REAL(DP) :: dft_etot
@@ -195,19 +230,26 @@ MODULE wfreq_center
   !
   ! output
   !
+  REAL(DP),    ALLOCATABLE :: sigma_z(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_eqplin(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_eqpsec(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_exx(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcl(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcnl(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_hf(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_z(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_eqplin(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_eqpsec(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqpsec(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_spectralf(:,:,:)
   REAL(DP),    ALLOCATABLE :: sigma_freq(:)
+  REAL(DP),    ALLOCATABLE :: sigma_exx_full(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_vxcl_full(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_vxcnl_full(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_hf_full(:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks_full(:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin_full(:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_corr_full(:,:)
   !
 END MODULE
 !
@@ -218,7 +260,7 @@ MODULE westpp_center
   !
   IMPLICIT NONE
   !
-  ! INPUT FOR wfreq_control
+  ! INPUT FOR westpp_control
   !
   CHARACTER(LEN=8) :: westpp_calculation
   CHARACTER(LEN=7) :: westpp_format
@@ -226,6 +268,7 @@ MODULE westpp_center
   INTEGER :: westpp_range(2)
   LOGICAL :: westpp_sign
   REAL(DP) :: westpp_r0(3)
+  REAL(DP) :: westpp_box(6)
   INTEGER :: westpp_nr
   REAL(DP) :: westpp_rmax
   REAL(DP) :: westpp_epsinfty
@@ -405,6 +448,36 @@ MODULE wan_center
 END MODULE
 !
 !
+MODULE occ_center
+  !
+  USE kinds, ONLY : DP
+  !
+  IMPLICIT NONE
+  !
+  REAL(DP), ALLOCATABLE :: occupation(:,:)     ! Occupation of each band and k-point:
+                                               ! 0 <= occupation(ib,iks) <= 1
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  INTEGER,  ALLOCATABLE :: nbnd_occ(:)         ! max index of occupied bands per k-point:
+                                               ! occupation(ib,iks) > 0, forall ib <= nbnd_occ(iks)
+                                               ! occupation(ib,iks) = 0, forall ib  > nbnd_occ(iks)
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  INTEGER,  ALLOCATABLE :: nbnd_occ_full(:)    ! max index of contiguous and fully occupied bands per k-point:
+                                               ! occupation(ib,iks) = 1, forall ib <= nbnd_occ_full(iks)
+                                               ! occupation(ib,iks) < 1, forall ib  > nbnd_occ_full(iks)
+                                               ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
+  LOGICAL               :: l_frac_occ          ! If .true. then occupations may be fractional
+                                               ! nbnd_occ_full == nbnd_occ when l_frac_occ is .false.
+  REAL(DP)              :: docc_thr = 0.001_DP ! Threshold for comparing occupation numbers
+  REAL(DP)              :: de_thr = 0.001_DP   ! Threshold for comparing single-particle energies
+                                               ! When two orbitals' energies differ by less than this threshold,
+                                               ! they are considered degenerate. An error will be raised if two
+                                               ! orbitals with different occupation numbers are degenerate in
+                                               ! the fractional occupation case. See subroutine dfpt and
+                                               ! compute_pt1_dpsi for details.
+  !
+END MODULE
+!
+!
 MODULE io_unit_numbers
   !
   IMPLICIT NONE
@@ -424,6 +497,7 @@ MODULE westcom
   USE wfreq_center
   USE westpp_center
   USE wan_center
+  USE occ_center
   USE io_unit_numbers
   USE wbse_init_center
   USE wbse_center

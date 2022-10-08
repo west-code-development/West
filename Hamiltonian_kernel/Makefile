@@ -9,6 +9,7 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 HAMILTONIAN_KERNEL_OBJS = \
+apply_alpha_pa_to_m_wfcs.o \
 apply_alpha_pc_to_m_wfcs.o \
 apply_alpha_pv_to_m_wfcs.o \
 commut_Hx_psi.o \

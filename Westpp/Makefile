@@ -20,6 +20,7 @@ do_eigenpot2.o \
 do_rho.o \
 do_sxx.o \
 do_wfc2.o \
+do_loc.o \
 dump_r.o \
 westpp.o \
 westpp_readin.o \
@@ -29,7 +30,7 @@ write_wfc_spav.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
+QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
 ../DFPT_kernel/lib_dfpt_kernel.a \

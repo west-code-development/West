@@ -4,7 +4,7 @@
 macOS
 =====
 
-The following instructions have been tested on macOS 12.3.
+The following instructions have been tested on macOS 12.3 (with Intel chip).
 
 Requirements:
 

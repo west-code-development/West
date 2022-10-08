@@ -1,6 +1,26 @@
 Change Log
 ==========
 
+v5.2.0 (2022/09/02)
+-------------------
+
+- Release of Quantum Defect Embedding Theory (QDET, N. Sheng et al., JCTC 18 3512 (2022)), enabling the use of WEST to study strongly correlated states of defects in solids.
+- Improved the performance of the k-point case of `wfreq`.
+- Bug fix. Fixed the k-point case of `wfreq` when `qp_bands` is used or when `qp_bandrange` does not start from 1.
+- Updated CI/CD. Added tests to cover the new functionalities.
+- Updated documentation. Added more tutorials.
+
+v5.1.0 (2022/08/19)
+-------------------
+
+- Full release of GPU-accelerated full-frequency GW implementation (V. Yu and M. Govoni, JCTC 18 4690 (2022)), e.g., enabling the use of WEST at OLCF/Summit, NERSC/Perlmutter, ALCF/Polaris. GPU acceleration of `wstat` and `wfreq` is restricted to NVIDIA GPUs.
+- Introduced infrastructure changes to prepare for QDET release. Enabled calculation with fractional occupation, added the possibility to specify a set of bands, instead of a range in `wfreq`, enabled the computation of the off-diagonal matrix elements in G0W0.
+- Code updated for compatibility with Quantum ESPRESSO 7.1. QE must be compiled without CMake.
+- Added the calculation of inverse participation ratio and localization factor in `westpp`.
+- Bug fix. Fixed calculation of dipole matrix elements in `westpp`.
+- Updated CI/CD to use the pytest framework.
+- Updated documentation. Updated build instructions for ALCF/Theta, NERSC/Cori, and UChicago/RCC/Midway3. Added build instructions for NERSC/Perlmutter, OLCF/Summit, ANL/LCRC/Bebop, ANL/LCRC/Swing, and NVIDIA DGX A100. Added more tutorials.
+
 v5.0.0 (2022/05/13)
 -------------------
 
@@ -18,7 +38,7 @@ v5.0.0 (2022/05/13)
 - Bug fix. Fixed the `XwgQ` restart mode of `wfreq`, i.e., computing Q from previously completed W and G.
 - Bug fix. Avoid overflow in `IO_kernel/wfreqio.f90` in large-scale runs.
 - Bug fix. Check that the mandatory logicals `nosym` and `noinv` are set to true for systems with k-points.
-- To avoid overwriting json files when files with the same name already exist, a suffix is appended to the name of the new file.
+- To avoid overwriting JSON files when files with the same name already exist, a suffix is appended to the name of the new file.
 - Updated CI/CD. Adapted nightly tests to cover OpenMP and ScaLAPACK.
 - Updated CI/CD. Added tests of hybrid functionals.
 - Updated documentation.

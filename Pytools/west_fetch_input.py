@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (C) 2015-2021 M. Govoni
+# Copyright (C) 2015-2022 M. Govoni
 # This file is distributed under the terms of the
 # GNU General Public License. See the file `License'
 # in the root directory of the present distribution,
@@ -49,6 +49,7 @@ default["wfreq_control"] = {}
 default["wfreq_control"]["wfreq_calculation"] = "XWGQ"
 default["wfreq_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wfreq_control"]["qp_bandrange"] = [1, 2]
+default["wfreq_control"]["qp_bands"] = [0]
 default["wfreq_control"]["macropol_calculation"] = 'N'
 default["wfreq_control"]["n_lanczos"] = 30
 default["wfreq_control"]["n_imfreq"] = 128
@@ -59,6 +60,7 @@ default["wfreq_control"]["wfreq_eta"] = 0.05 / rytoev
 default["wfreq_control"]["n_secant_maxiter"] = 21
 default["wfreq_control"]["trev_secant"] = 0.05 / rytoev
 default["wfreq_control"]["l_enable_lanczos"] = True
+default["wfreq_control"]["l_enable_off_diagonal"] = False
 default["wfreq_control"]["o_restart_time"] = 0.
 default["wfreq_control"]["ecut_spectralf"] = [-2., 1.]
 default["wfreq_control"]["n_spectralf"] = 204
@@ -73,6 +75,7 @@ default["westpp_control"]["westpp_r0"] = [0., 0., 0.]
 default["westpp_control"]["westpp_nr"] = 100
 default["westpp_control"]["westpp_rmax"] = 1.
 default["westpp_control"]["westpp_epsinfty"] = 1.
+default["westpp_control"]["westpp_box"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # server_control
 default["server_control"] = {}
 default["server_control"]["document"] = "{}"

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -25,7 +25,7 @@ PROGRAM westpp
   !
   CHARACTER(LEN=9) :: code = 'WESTPP'
   INTEGER :: i
-  LOGICAL :: lgate(5)
+  LOGICAL :: lgate(6)
   !
   ! *** START ***
   !
@@ -50,6 +50,7 @@ PROGRAM westpp
      IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Eigenpotentials
      IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) lgate(4) = .TRUE. ! SXX
      IF( westpp_calculation(i:i) == 'd' .OR. westpp_calculation(i:i) == 'D' ) lgate(5) = .TRUE. ! Dipole matrix
+     IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(6) = .TRUE. ! Localization
   ENDDO
   !
   IF( lgate(1) ) CALL do_rho( )
@@ -57,6 +58,7 @@ PROGRAM westpp
   IF( lgate(3) ) CALL do_eigenpot2( )
   IF( lgate(4) ) CALL do_sxx( )
   IF( lgate(5) ) CALL do_dip( )
+  IF( lgate(6) ) CALL do_loc( )
   !
   CALL exx_ungo( )
   !

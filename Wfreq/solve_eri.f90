@@ -135,14 +135,14 @@ SUBROUTINE compute_braket(braket)
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : wstat_save_dir,npwq,npwqx,n_pdep_eigen_to_use,fftdriver,&
                                  & proj_c,n_pairs,pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm
+  USE mp_global,            ONLY : intra_bgrp_comm,inter_bgrp_comm,inter_image_comm
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,double_invfft_gamma
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE types_coulomb,        ONLY : pot3D
   USE io_push,              ONLY : io_push_title
-  USE distribution_center,  ONLY : macropert
+  USE distribution_center,  ONLY : macropert,bandpair
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
 #if defined(__CUDA)
@@ -161,7 +161,7 @@ SUBROUTINE compute_braket(braket)
   REAL(DP),ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(rho_r,rho_g,sqvc)
   !
-  INTEGER :: s, m, p1, i, j, ig, ir, mloc
+  INTEGER :: s, m, p1, p1loc, i, j, ig, ir, mloc
   INTEGER :: barra_load
   INTEGER :: dffts_nnr
   CHARACTER(LEN=25) :: filepot
@@ -170,6 +170,10 @@ SUBROUTINE compute_braket(braket)
   REAL(DP) :: reduce
   !
   CALL io_push_title('braket')
+  !
+  ! Distribute pairs over band groups
+  !
+  CALL bandpair%init(n_pairs,'b','n_pairs',.FALSE.)
   !
   CALL pot3D%init(fftdriver,.FALSE.,'default')
   !
@@ -223,8 +227,9 @@ SUBROUTINE compute_braket(braket)
         !
         ! Compute the braket for each pair of functions
         !
-        DO p1 = 1, n_pairs
+        DO p1loc = 1, bandpair%nloc
            !
+           p1 = bandpair%l2g(p1loc)
            i = pijmap(1,p1)
            j = pijmap(2,p1)
            !
@@ -267,8 +272,9 @@ SUBROUTINE compute_braket(braket)
      ENDDO
   ENDDO
   !
-  CALL mp_sum(braket, inter_image_comm)
   CALL mp_sum(braket, intra_bgrp_comm)
+  CALL mp_sum(braket, inter_bgrp_comm)
+  CALL mp_sum(braket, inter_image_comm)
   !
   CALL stop_bar_type( barra,'eri_brak' )
   !
@@ -560,11 +566,11 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE distribution_center,  ONLY : pert,macropert
+  USE distribution_center,  ONLY : pert,macropert,bandpair
   USE pwcom,                ONLY : nspin
   USE westcom,              ONLY : n_pdep_eigen_to_use,fftdriver,n_pairs,pijmap,l_macropol
   USE types_coulomb,        ONLY : pot3D
-  USE mp_global,            ONLY : inter_image_comm
+  USE mp_global,            ONLY : inter_bgrp_comm,inter_image_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE io_push,              ONLY : io_push_title
@@ -576,7 +582,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   COMPLEX(DP),INTENT(IN) :: chi_head, chi_body(pert%nglob,pert%nloc)
   COMPLEX(DP),INTENT(OUT) :: eri_wp(n_pairs,n_pairs,nspin,nspin)
   !
-  INTEGER :: s1, s2, p1, p2, i, j, k, l, m, n, nloc, nloc_max
+  INTEGER :: s1, s2, p1, p2, p2loc, i, j, k, l, m, n, nloc, nloc_max
   TYPE(bar_type) :: barra
   !
   CALL io_push_title('Wp Integrals (PDEP)')
@@ -586,6 +592,10 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
      IF (n > n_pdep_eigen_to_use) EXIT
      nloc_max = nloc
   ENDDO
+  !
+  ! Distribute pairs over band groups
+  !
+  CALL bandpair%init(n_pairs,'b','n_pairs',.FALSE.)
   !
   ! Workload too small for progress bar
   !
@@ -602,8 +612,9 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
      DO m = 1, n_pdep_eigen_to_use
         DO s2 = 1, nspin
            DO s1 = 1, nspin
-              DO p2 = 1, n_pairs
+              DO p2loc = 1, bandpair%nloc
                  !
+                 p2 = bandpair%l2g(p2loc)
                  k = pijmap(1,p2)
                  l = pijmap(2,p2)
                  !
@@ -626,6 +637,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
      !
   ENDDO ! iterate over m, n
   !
+  CALL mp_sum(eri_wp, inter_bgrp_comm)
   CALL mp_sum(eri_wp, inter_image_comm)
   !
   CALL update_bar_type(barra, 'Wp', 1)

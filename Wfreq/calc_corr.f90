@@ -93,7 +93,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
         ib_index = band_group%l2g(ibloc)
         !
         IF(l_enable_off_diagonal .AND. l_full) THEN
-           barra_load = barra_load+n_bands-ib_index+1
+           barra_load = barra_load+ib_index
         ELSE
            barra_load = barra_load+1
         ENDIF
@@ -614,7 +614,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
      WRITE(stdout,'(5x,"Residues along the RE axis...")')
      CALL io_push_bar
      !
-     barra_load = k_grid%nps*band_group%nloc
+     ! Same load as sigmac_i
+     !
      CALL start_bar_type( barra, 'sigmac_r', barra_load )
   ENDIF
   !

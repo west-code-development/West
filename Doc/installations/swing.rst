@@ -1,8 +1,8 @@
 .. _swing:
 
-=========
-Swing-ANL
-=========
+==============
+ANL-LCRC-Swing
+==============
 
 Swing is an HPC cluster maintained by the `Laboratory Computing Resource Center (LCRC) <https://www.lcrc.anl.gov/>`_ at Argonne National Laboratory.
 
@@ -13,28 +13,20 @@ Swing is an HPC cluster maintained by the `Laboratory Computing Resource Center 
 Building WEST
 ~~~~~~~~~~~~~
 
-To download and install NVIDIA HPC SDK, do:
-
-.. code-block:: bash
-
-   $ wget https://developer.download.nvidia.com/hpc-sdk/21.9/nvhpc_2021_219_Linux_x86_64_cuda_multi.tar.gz
-   $ tar xpzf nvhpc_2021_219_Linux_x86_64_cuda_multi.tar.gz
-   $ nvhpc_2021_219_Linux_x86_64_cuda_multi/install
-
-WEST executables can be compiled using the following script (tested on Aug 10, 2022):
+WEST executables can be compiled using the following script (tested on September 19, 2022):
 
 .. code-block:: bash
 
    $ cat build_west.sh
    #!/bin/bash
 
-   export LD_LIBRARY_PATH=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/compilers/lib:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/comm_libs/openmpi4/openmpi-4.0.5/lib:$LD_LIBRARY_PATH
-   export PATH=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/compilers/bin:$PATH
-   export PATH=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/comm_libs/openmpi4/openmpi-4.0.5/bin:$PATH
-   export SCALAPACK_LIBS=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/comm_libs/openmpi4/openmpi-4.0.5/lib/libscalapack.a
+   module load nvhpc/21.9-4pt64om
+   export NVHPC_HOME=/gpfs/fs1/soft/swing/spack-0.16.1/opt/spack/linux-ubuntu20.04-x86_64/gcc-9.3.0/nvhpc-21.9-4pt64om/Linux_x86_64/21.9
+   export LD_LIBRARY_PATH=$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/lib:$LD_LIBRARY_PATH
+   export PATH=$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/bin:$PATH
+   export SCALAPACK_LIBS=$$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/lib/libscalapack.a
 
-   ./configure --with-cuda=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/cuda/11.0 --with-cuda-cc=80 --with-cuda-runtime=11.0
+   ./configure --with-cuda=$$NVHPC_HOME/cuda/11.0 --with-cuda-cc=80 --with-cuda-runtime=11.0
 
    make -j 8 pw
 
@@ -65,9 +57,10 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --nodes=1
    #SBATCH --gres=gpu:8
 
-   export LD_LIBRARY_PATH=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/compilers/lib:$LD_LIBRARY_PATH
-   export LD_LIBRARY_PATH=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/comm_libs/openmpi4/openmpi-4.0.5/lib:$LD_LIBRARY_PATH
-   export PATH=/path/to/nvidia/hpc_sdk/Linux_x86_64/21.9/comm_libs/openmpi4/openmpi-4.0.5/bin:$PATH
+   module load nvhpc/21.9-4pt64om
+   export NVHPC_HOME=/gpfs/fs1/soft/swing/spack-0.16.1/opt/spack/linux-ubuntu20.04-x86_64/gcc-9.3.0/nvhpc-21.9-4pt64om/Linux_x86_64/21.9
+   export LD_LIBRARY_PATH=$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/lib:$LD_LIBRARY_PATH
+   export PATH=$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/bin:$PATH
 
    export OMP_NUM_THREADS=1
 

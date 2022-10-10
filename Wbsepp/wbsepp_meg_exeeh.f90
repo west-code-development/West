@@ -10,9 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0.D0, 0.D0 )
-#define ONE  ( 1.D0, 0.D0 )
-!
 SUBROUTINE wbsepp_meg ( )
   !
   USE kinds,                ONLY : DP
@@ -33,7 +30,7 @@ SUBROUTINE wbsepp_meg ( )
   USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_sum
   USE mp_global,            ONLY : inter_image_comm, intra_bgrp_comm
-  USE wavefunctions_module, ONLY : evc, psic
+  USE wavefunctions,        ONLY : evc, psic
   USE control_flags,        ONLY : gamma_only
   USE gvect,                ONLY : gstart
   USE bse_module,           ONLY : bseparal
@@ -105,7 +102,7 @@ SUBROUTINE wbsepp_meg ( )
            !
            ev_tmp = ev_exc( il ) - (ev_exc( jl ) + ev_exc( kl ))
            !
-           IF ( abs(ev_tmp) <= delta_e) THEN
+           IF ( ABS(ev_tmp) <= delta_e) THEN
               !
               index_i = index_i + 1
               !
@@ -189,7 +186,7 @@ SUBROUTINE wbsepp_meg ( )
                     !
                     IF (qg2 > 1.d-8) THEN
                        !
-                       phi_c(ig) = dvg(ig,alnd) * DSQRT(e2*fpi/(tpiba2*qg2))
+                       phi_c(ig) = dvg(ig,alnd) * SQRT(e2*fpi/(tpiba2*qg2))
                        !
                     ENDIF
                     !

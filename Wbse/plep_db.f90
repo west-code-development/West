@@ -33,7 +33,6 @@ MODULE plep_db
     SUBROUTINE plep_db_write( )
       !------------------------------------------------------------------------
       !
-      USE xml_io_base,          ONLY : create_directory
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp_global,            ONLY : my_image_id
@@ -42,8 +41,6 @@ MODULE plep_db
                                      & n_steps_write_restart,n_pdep_restart_from_itr,n_pdep_read_from_file,trev_pdep, &
                                      & tr2_dfpt,l_deflate,l_kinetic_only,ev,west_prefix,wbse_save_dir,trev_pdep_rel, &
                                      & l_minimize_exx_if_active,l_use_ecutrho, dvg_exc
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : dvg_exc
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert
@@ -172,8 +169,6 @@ MODULE plep_db
       USE pwcom,               ONLY : nks,npwx
       USE westcom,             ONLY : n_pdep_eigen,ev,west_prefix,wbse_save_dir,&
                                        dvg_exc,nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,             ONLY : dvg_exc,nbndval0x
       USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root

@@ -56,7 +56,7 @@ SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
   USE kinds,               ONLY : DP
   USE io_global,           ONLY : stdout
   USE noncollin_module,    ONLY : noncolin, npol
-  USE wavefunctions_module,ONLY : evc
+  USE wavefunctions       ,ONLY : evc
   USE mp_bands,            ONLY : intra_bgrp_comm
   USE mp,                  ONLY : mp_sum
   USE control_flags,       ONLY : gamma_only
@@ -148,7 +148,7 @@ SUBROUTINE bse_hqp_psi_nscf(iks, current_spin, nbvalloc, psi, dpsi)
   USE kinds,               ONLY : DP
   USE io_global,           ONLY : stdout
   USE noncollin_module,    ONLY : noncolin, npol
-  USE wavefunctions_module,ONLY : evc
+  USE wavefunctions,       ONLY : evc
   USE mp_bands,            ONLY : intra_bgrp_comm
   USE mp,                  ONLY : mp_sum
   USE control_flags,       ONLY : gamma_only

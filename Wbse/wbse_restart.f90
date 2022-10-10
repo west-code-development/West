@@ -43,8 +43,6 @@ MODULE wbse_restart
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,&
                                        dvg_exc,dng_exc, wbse_restart_dir
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : dvg_exc,dng_exc
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
@@ -246,8 +244,6 @@ MODULE wbse_restart
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix, &
                                        dvg_exc,dng_exc, wbse_restart_dir
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : dvg_exc,dng_exc
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
@@ -450,7 +446,7 @@ MODULE wbse_restart
       USE mp,                   ONLY : mp_barrier,mp_bcast
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,west_prefix
-      USE wrappers,             ONLY : f_rmdir
+      USE clib_wrappers,        ONLY : f_rmdir
       USE io_files,             ONLY : delete_if_present
       USE westcom,              ONLY : wbse_restart_dir
       !
@@ -912,10 +908,7 @@ MODULE wbse_restart
       !------------------------------------------------------------------------
       !
       USE pwcom,               ONLY : nks
-      USE westcom,             ONLY : npwqx, &
-                                      dvg_exc,dng_exc,nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,             ONLY : dvg_exc,dng_exc,nbndval0x
+      USE westcom,             ONLY : npwqx,dvg_exc,dng_exc,nbndval0x
       USE mp_global,           ONLY : my_image_id
       USE plep_io,             ONLY : plep_read_G_and_distribute
       USE distribution_center, ONLY : pert

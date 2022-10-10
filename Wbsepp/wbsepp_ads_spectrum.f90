@@ -13,7 +13,7 @@ SUBROUTINE wbsepp_ads_spectrum()
   ! Pls do not distribute it to avoid the copyright problem.
   ! Todo: write this code in Python to make it become our
   !
-  USE kinds,               ONLY : dp
+  USE kinds,               ONLY : DP
   USE constants,           ONLY : pi,rytoev,evtonm,rytonm
   USE io_files,            ONLY : tmp_dir, nd_nmbr
   USE global_version,      ONLY : version_number
@@ -29,7 +29,7 @@ SUBROUTINE wbsepp_ads_spectrum()
   !
   IMPLICIT NONE
   !
-  CHARACTER(len=256), EXTERNAL :: trimcheck
+  CHARACTER(LEN=256), EXTERNAL :: trimcheck
   !
   ! Constants
   !
@@ -41,47 +41,47 @@ SUBROUTINE wbsepp_ads_spectrum()
   !
   ! User controlled variables
   !
-  REAL(dp) :: omega(3)
-  REAL(kind=dp) :: omegmax,delta_omeg
-  CHARACTER(len=256):: filename
-  CHARACTER(len=256):: filename_plot
+  REAL(DP) :: omega(3)
+  REAL(DP) :: omegmax,delta_omeg
+  CHARACTER(LEN=256):: filename
+  CHARACTER(LEN=256):: filename_plot
   !
   ! General use variables & counters
   !
   INTEGER :: n_ipol, i,j, info, ip, ip2, counter, ios
-  REAL(dp) :: norm0(3), volume, &
+  REAL(DP) :: norm0(3), volume, &
             & alat, q1, q2, q3, modulus_q, nelec, &
             & average(3), av_amplitude(3), &
             & alpha_temp(3), scale, wl, &
             & omeg, z1,z2, degspin, integration_function, start_save, f_sum
   !
-  COMPLEX(kind=dp) :: omeg_c
-  REAL(dp), ALLOCATABLE, DIMENSION(:,:) :: beta_store, gamma_store
-  COMPLEX(dp), ALLOCATABLE, DIMENSION(:,:,:) :: zeta_store
-  COMPLEX(kind=dp) :: green(3,3), &  ! susceptibility chi
+  COMPLEX(DP) :: omeg_c
+  REAL(DP), ALLOCATABLE, DIMENSION(:,:) :: beta_store, gamma_store
+  COMPLEX(DP), ALLOCATABLE, DIMENSION(:,:,:) :: zeta_store
+  COMPLEX(DP) :: green(3,3), &  ! susceptibility chi
                       eps(3,3),   &  ! dielectric function
                       epsm1(3,3)     ! inverse dielectric function
-  COMPLEX(kind=dp), ALLOCATABLE :: a(:), b(:), c(:), r(:,:)
+  COMPLEX(DP), ALLOCATABLE :: a(:), b(:), c(:), r(:,:)
   LOGICAL :: skip, exst
   !
   ! For perceived color analysis
   !
-  REAL(dp),PARAMETER :: vis_start    = 0.116829041, &
-                      & vis_start_wl = 780
-  REAL(dp),PARAMETER :: vis_end      = 0.239806979, &
-                      & vis_end_wl   = 380
-  REAL(dp) :: perceived_red   = 0.0d0, &
-            & perceived_green = 0.0d0, &
-            & perceived_blue  = 0.0d0
-  REAL(dp) :: perceived_renorm
+  REAL(DP),PARAMETER :: vis_start    = 0.116829041_DP, &
+                      & vis_start_wl = 780_DP
+  REAL(DP),PARAMETER :: vis_end      = 0.239806979_DP, &
+                      & vis_end_wl   = 380_DP
+  REAL(DP) :: perceived_red   = 0._DP, &
+            & perceived_green = 0._DP, &
+            & perceived_blue  = 0._DP
+  REAL(DP) :: perceived_renorm
   INTEGER  :: perceived_itermax,perceived_iter
-  REAL(dp), ALLOCATABLE :: perceived_intensity(:), &
+  REAL(DP), ALLOCATABLE :: perceived_intensity(:), &
                          & perceived_evaluated(:)
   LOGICAL  :: do_perceived
   !
   ! Subroutines etc.
   !
-  COMPLEX(kind=dp), EXTERNAL :: zdotc
+  COMPLEX(DP), EXTERNAL :: zdotc
   !
   ! User controlled variable initialisation
   !
@@ -95,7 +95,7 @@ SUBROUTINE wbsepp_ads_spectrum()
   !
   IF (ionode) THEN
      !
-     IF (itermax0 < 151 .and. trim(extrapolation)/="no") THEN
+     IF (itermax0 < 151 .AND. TRIM(extrapolation)/="no") THEN
         WRITE(stdout,'(5x, "Itermax0 is less than 150, no extrapolation scheme can be used ")')
         extrapolation="no"
      ENDIF
@@ -109,7 +109,7 @@ SUBROUTINE wbsepp_ads_spectrum()
      !
      ! Polarization symmetry
      !
-     IF ( .not. sym_op == 0 ) THEN
+     IF ( .NOT. sym_op == 0 ) THEN
         !
         IF (sym_op == 1) THEN
            WRITE(stdout,'(5x,"All polarization axes will be considered to be equal.")')
@@ -123,7 +123,7 @@ SUBROUTINE wbsepp_ads_spectrum()
      !
      ! Terminator scheme
      !
-     IF (trim(extrapolation)=="no") THEN
+     IF (TRIM(extrapolation)=="no") THEN
         !
         itermax = itermax0
         !
@@ -131,9 +131,9 @@ SUBROUTINE wbsepp_ads_spectrum()
      !
      ! Check the units (Ry, eV, nm)
      !
-     IF (units < 0 .or. units >2) CALL errore("lr_calculate_spectrum","Unsupported unit system",1)
+     IF (units < 0 .OR. units >2) CALL errore("lr_calculate_spectrum","Unsupported unit system",1)
      !
-     IF ( units /= 0 .and. verbosity > 4) THEN
+     IF ( units /= 0 .AND. verbosity > 4) THEN
         WRITE(stdout,'(5x,"Such a high verbosity is not supported when &
                         & non-default units are used")')
         verbosity = 4
@@ -150,10 +150,10 @@ SUBROUTINE wbsepp_ads_spectrum()
      ALLOCATE(c(itermax-1))
      ALLOCATE(r(n_ipol,itermax))
      !
-     a(:) = (0.0d0,0.0d0)
-     b(:) = (0.0d0,0.0d0)
-     c(:) = (0.0d0,0.0d0)
-     r(:,:) = (0.0d0,0.0d0)
+     a(:) = (0._DP,0._DP)
+     b(:) = (0._DP,0._DP)
+     c(:) = (0._DP,0._DP)
+     r(:,:) = (0._DP,0._DP)
      !
      ! Read beta, gamma, and zeta coefficients
      !
@@ -168,8 +168,8 @@ SUBROUTINE wbsepp_ads_spectrum()
      WRITE (stdout,'(/5x,"Data ready, starting to calculate observables...")')
      WRITE (stdout,'(/5x,"Broadening = ",f15.8," Ry")') epsil
      !
-     filename = trim(qe_prefix) // ".plot_chi.dat"
-     filename_plot = trim(qe_prefix) // ".abs_spectrum.dat"
+     filename = TRIM(qe_prefix) // ".plot_chi.dat"
+     filename_plot = TRIM(qe_prefix) // ".abs_spectrum.dat"
      !
      WRITE (stdout,'(/5x,"Output file name: ",A20)') filename
      WRITE (stdout,'(/5x,"Output file name: ",A20)') filename_plot
@@ -204,16 +204,16 @@ SUBROUTINE wbsepp_ads_spectrum()
      !
      WRITE (stdout,'(/,5x,"Static dipole polarizability tensor:")')
      !
-     CALL calc_chi(0.0d0,epsil,green(:,:))
+     CALL calc_chi(0._DP,epsil,green(:,:))
      !
      DO ip=1,n_ipol
         DO ip2=1,n_ipol
            !
            IF (n_ipol == 3) WRITE(stdout,'(5x,"chi_",i1,"_",i1,"=",2x,e15.8," + i",e15.8)') &
-                                          & ip2, ip, dble(green(ip,ip2)), aimag(green(ip,ip2))
+                                          & ip2, ip, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            !
            IF (n_ipol == 1) WRITE(stdout,'(5x,"chi_",i1,"_",i1,"=",2x,e15.8," + i",e15.8)') &
-                                          & ipol, ipol, dble(green(ip,ip2)), aimag(green(ip,ip2))
+                                          & ipol, ipol, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            !
         ENDDO
      ENDDO
@@ -232,31 +232,31 @@ SUBROUTINE wbsepp_ads_spectrum()
      ! Let's see if the environment is suitable for perceived color analysis
      ! This is needed for optics, not for EELS.
      !
-     do_perceived = .false.
+     do_perceived = .FALSE.
      !
-     IF (units == 0 .and. start<vis_start .and. end>vis_end .and. n_ipol == 3) THEN
+     IF (units == 0 .AND. start<vis_start .AND. end>vis_end .AND. n_ipol == 3) THEN
         !
         WRITE (stdout,'(/,5x,"Will attempt to calculate perceived color")')
-        do_perceived=.true.
+        do_perceived=.TRUE.
         perceived_iter=1
-        perceived_itermax=int((vis_end-vis_start)/increment)
+        perceived_itermax=INT((vis_end-vis_start)/increment)
         ALLOCATE(perceived_intensity(perceived_itermax))
         ALLOCATE(perceived_evaluated(perceived_itermax))
-        perceived_intensity(:)=0.0d0
-        perceived_evaluated(:)=-1.0d0
-        perceived_renorm=-9999999.0d0
+        perceived_intensity(:)=0._DP
+        perceived_evaluated(:)=-1._DP
+        perceived_renorm=-9999999._DP
         !
-     ELSEIF (units == 2 .and. start<vis_end_wl .and. end>vis_start_wl .and. n_ipol == 3) THEN
+     ELSEIF (units == 2 .AND. start<vis_end_wl .AND. end>vis_start_wl .AND. n_ipol == 3) THEN
         !
         WRITE (stdout,'(/,5x,"Will attempt to calculate perceived color")')
-        do_perceived=.true.
+        do_perceived=.TRUE.
         perceived_iter=1
-        perceived_itermax=int((vis_start_wl-vis_end_wl)/increment)
+        perceived_itermax=INT((vis_start_wl-vis_end_wl)/increment)
         ALLOCATE(perceived_intensity(perceived_itermax))
         ALLOCATE(perceived_evaluated(perceived_itermax))
-        perceived_intensity(:)=0.0d0
-        perceived_evaluated(:)=-1.0d0
-        perceived_renorm=-9999999.0d0
+        perceived_intensity(:)=0._DP
+        perceived_evaluated(:)=-1._DP
+        perceived_renorm=-9999999._DP
         !
      ENDIF
      !
@@ -304,7 +304,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         !
         CALL calc_chi(omega(3),epsil,green(:,:))
         !
-        IF (units == 1 .or. units == 2) THEN
+        IF (units == 1 .OR. units == 2) THEN
            !
            green(:,:) = green(:,:)/rytoev
            !
@@ -314,14 +314,14 @@ SUBROUTINE wbsepp_ads_spectrum()
            DO ip2=1,n_ipol
               !
               WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-                  ip2, ip, start, dble(green(ip,ip2)), aimag(green(ip,ip2))
+                  ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
               !
            ENDDO
         ENDDO
         !
-        alpha_temp(3) = omega(3) * aimag(green(1,1)+green(2,2)+green(3,3))/(pi*3.d0)
+        alpha_temp(3) = omega(3) * AIMAG(green(1,1)+green(2,2)+green(3,3))/(pi*3._DP)
         !
-        IF (units == 1 .or. units == 2) THEN
+        IF (units == 1 .OR. units == 2) THEN
            alpha_temp(3) = alpha_temp(3)*rytoev
         ENDIF
         !
@@ -331,7 +331,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         !
         ! This is for the f-sum rule
         !
-        f_sum = increment*alpha_temp(3)/3.0d0
+        f_sum = increment*alpha_temp(3)/3._DP
         !
         start = start + increment
         !
@@ -360,7 +360,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         !
         CALL calc_chi(omega(3),epsil,green(:,:))
         !
-        IF (units == 1 .or. units == 2) THEN
+        IF (units == 1 .OR. units == 2) THEN
            !
            green(:,:) = green(:,:)/rytoev
            !
@@ -375,9 +375,9 @@ SUBROUTINE wbsepp_ads_spectrum()
               !eps(ip,ip2)=(1.d0,0.d0)-(32.d0*pi/omega)*green(ip,ip2)
               !
               IF (n_ipol == 3) WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-                           & ip2, ip, start, dble(green(ip,ip2)), aimag(green(ip,ip2))
+                           & ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
               IF (n_ipol == 1) WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-                           & ipol, ipol, start, dble(green(ip,ip2)), aimag(green(ip,ip2))
+                           & ipol, ipol, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
               !
            ENDDO
            !
@@ -389,9 +389,9 @@ SUBROUTINE wbsepp_ads_spectrum()
            !
            alpha_temp(1) = alpha_temp(2)
            alpha_temp(2) = alpha_temp(3)
-           alpha_temp(3) = omega(3) * aimag(green(1,1)+green(2,2)+green(3,3))/(pi*3.d0)
+           alpha_temp(3) = omega(3) * AIMAG(green(1,1)+green(2,2)+green(3,3))/(pi*3._DP)
            !
-           IF (units == 1 .or. units == 2) THEN
+           IF (units == 1 .OR. units == 2) THEN
               alpha_temp(3) = alpha_temp(3)*rytoev
            ENDIF
            !
@@ -409,7 +409,7 @@ SUBROUTINE wbsepp_ads_spectrum()
            !
            ! Perceived color analysis
            !
-           IF ( omega(3)<vis_end .and. omega(3)>vis_start .and. do_perceived ) THEN
+           IF ( omega(3)<vis_end .AND. omega(3)>vis_start .AND. do_perceived ) THEN
               !
               perceived_intensity(perceived_iter) = alpha_temp(3)
               perceived_evaluated(perceived_iter) = omega(3)
@@ -453,7 +453,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         !
         CALL calc_chi(omega(3),epsil,green(:,:))
         !
-        IF (units == 1 .or. units == 2) THEN
+        IF (units == 1 .OR. units == 2) THEN
            green(:,:) = green(:,:)/rytoev
         ENDIF
         !
@@ -461,16 +461,16 @@ SUBROUTINE wbsepp_ads_spectrum()
            DO ip2=1,n_ipol
               !
               WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-                  ip2, ip, start, dble(green(ip,ip2)), aimag(green(ip,ip2))
+                  ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
               !
            ENDDO
         ENDDO
         !
         ! Absorption coefficient
         !
-        alpha_temp(3) = omega(3) * aimag(green(1,1)+green(2,2)+green(3,3))/(pi*3.d0)
+        alpha_temp(3) = omega(3) * AIMAG(green(1,1)+green(2,2)+green(3,3))/(pi*3._DP)
         !
-        IF (units == 1 .or. units == 2) THEN
+        IF (units == 1 .OR. units == 2) THEN
            alpha_temp(3) = alpha_temp(3)*rytoev
         ENDIF
         !
@@ -480,7 +480,7 @@ SUBROUTINE wbsepp_ads_spectrum()
         !
         ! alpha is ready
         !
-        f_sum = f_sum + increment*alpha_temp(3)/3.0d0
+        f_sum = f_sum + increment*alpha_temp(3)/3._DP
         !
      ENDIF
      !
@@ -497,17 +497,17 @@ SUBROUTINE wbsepp_ads_spectrum()
      !                      Perceived color analysis                          !
      !------------------------------------------------------------------------!
      !
-     IF (allocated(perceived_intensity)) THEN
+     IF (ALLOCATED(perceived_intensity)) THEN
         !
         WRITE(stdout,'(5x,"Perceived color analysis is experimental")')
         perceived_intensity(:)=perceived_intensity(:)/perceived_renorm
-        perceived_intensity(:)=1.0d0-perceived_intensity(:) !inverse spectrum
+        perceived_intensity(:)=1._DP-perceived_intensity(:) !inverse spectrum
         !
-        DO j=1, int(perceived_itermax/8)
+        DO j=1, INT(perceived_itermax/8)
            !
            DO i=1,perceived_itermax
               !
-              wl=91.1266519/perceived_evaluated(i) !hc/hbar.omega=lambda (hbar.omega in rydberg units)
+              wl=91.1266519_DP/perceived_evaluated(i) !hc/hbar.omega=lambda (hbar.omega in rydberg units)
               !
               ! WARNING alpha_temp duty change: now contains R G and B
               !
@@ -516,12 +516,12 @@ SUBROUTINE wbsepp_ads_spectrum()
               ! Now the intensities
               ! First the degradation toward the end
               !
-              IF (wl >700) THEN
-                 scale=.3+.7* (780.-wl)/(780.-700.)
-              ELSEIF (wl<420.) THEN
-                 scale=.3+.7*(wl-380.)/(420.-380.)
+              IF (wl >700._DP) THEN
+                 scale=0.3_DP+0.7_DP* (780._DP-wl)/(780._DP-700._DP)
+              ELSEIF (wl<420._DP) THEN
+                 scale=0.3_DP+0.7_DP*(wl-380._DP)/(420._DP-380._DP)
               ELSE
-                 scale=1.
+                 scale=1._DP
               ENDIF
               !
               alpha_temp(:)=scale*alpha_temp(:)
@@ -538,18 +538,18 @@ SUBROUTINE wbsepp_ads_spectrum()
                  perceived_blue=perceived_blue+alpha_temp(3)
               ENDIF
               !
-              IF (alpha_temp(1)>1.0d0) PRINT *,alpha_temp(1)
+              IF (alpha_temp(1)>1._DP) PRINT *,alpha_temp(1)
               !
            ENDDO
            !
         ENDDO
         !
-        perceived_red  = perceived_red  /(1.0d0*perceived_itermax)
-        perceived_green= perceived_green/(1.0d0*perceived_itermax)
-        perceived_blue = perceived_blue /(1.0d0*perceived_itermax)
+        perceived_red  = perceived_red  /(1._DP*perceived_itermax)
+        perceived_green= perceived_green/(1._DP*perceived_itermax)
+        perceived_blue = perceived_blue /(1._DP*perceived_itermax)
         !
         WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') perceived_red,perceived_green,perceived_blue
-        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') perceived_red*255,perceived_green*255,perceived_blue*255
+        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') perceived_red*255_DP,perceived_green*255_DP,perceived_blue*255_DP
         !
      ENDIF
      !
@@ -559,8 +559,8 @@ SUBROUTINE wbsepp_ads_spectrum()
      !
      ! f-sum rule
      !
-     start = 0.0
-     f_sum = 0.0
+     start = 0._DP
+     f_sum = 0._DP
      !
      DO WHILE (start<end)
         !
@@ -569,19 +569,19 @@ SUBROUTINE wbsepp_ads_spectrum()
         !
      ENDDO
      !
-     f_sum = f_sum + increment*start/3.0d0
+     f_sum = f_sum + increment*start/3._DP
      !
      WRITE(stdout,'(5x,"Integral test:",F15.8,"  Actual: ",F15.8:)') &
-                                             f_sum, 0.5*start*start
+                                             f_sum, 0.5_DP*start*start
      !
      ! Deallocations
      !
-     IF (allocated(perceived_intensity)) DEALLOCATE(perceived_intensity)
-     IF (allocated(perceived_evaluated)) DEALLOCATE(perceived_evaluated)
+     IF (ALLOCATED(perceived_intensity)) DEALLOCATE(perceived_intensity)
+     IF (ALLOCATED(perceived_evaluated)) DEALLOCATE(perceived_evaluated)
      !
-     IF (allocated(beta_store))  DEALLOCATE(beta_store)
-     IF (allocated(gamma_store)) DEALLOCATE(gamma_store)
-     IF (allocated(zeta_store))  DEALLOCATE(zeta_store)
+     IF (ALLOCATED(beta_store))  DEALLOCATE(beta_store)
+     IF (ALLOCATED(gamma_store)) DEALLOCATE(gamma_store)
+     IF (ALLOCATED(zeta_store))  DEALLOCATE(zeta_store)
      !
      DEALLOCATE(a)
      DEALLOCATE(b)
@@ -608,19 +608,19 @@ LOGICAL FUNCTION is_peak(omeg,alpha)
   !
   IMPLICIT NONE
   !Input and output
-  REAL(kind=dp),INTENT(in) :: omeg, alpha !x and y
+  REAL(DP),INTENT(IN) :: omeg, alpha !x and y
   !
   ! Local variables
   !
-  REAL(kind=dp),SAVE :: omeg_save = 0.0d0, &
+  REAL(DP),SAVE :: omeg_save = 0._DP, &
                       & thm1, h2m1,&
-                      & first_der_save=9.0d99
-  REAL(kind=dp),SAVE :: alpha_save(3) = 0.0d0
+                      & first_der_save=9.E99_DP
+  REAL(DP),SAVE :: alpha_save(3) = 0._DP
   INTEGER, SAVE :: current_iter = 0
-  LOGICAL, SAVE :: trigger=.true.
-  REAL(kind=dp) :: first_der, second_der
+  LOGICAL, SAVE :: trigger=.TRUE.
+  REAL(DP) :: first_der, second_der
   !
-  is_peak = .false.
+  is_peak = .FALSE.
   ! counter
   ! Rotate the variables
   !
@@ -633,8 +633,8 @@ LOGICAL FUNCTION is_peak(omeg,alpha)
       IF (current_iter == 3) THEN
          current_iter = current_iter + 1
          thm1=(omeg-omeg_save)
-         h2m1=1.0d0/(thm1*thm1) !for second derivative
-         thm1=0.5d0/thm1        !for first derivative
+         h2m1=1._DP/(thm1*thm1) !for second derivative
+         thm1=0.5_DP/thm1        !for first derivative
          !thm1=0.083333333333333d0/thm1        !for first derivative
       ENDIF
       !alpha_save(1)=alpha_save(2) !t-2h
@@ -649,38 +649,29 @@ LOGICAL FUNCTION is_peak(omeg,alpha)
   !
   !The derivatives
   first_der = (alpha_save(3)-alpha_save(1))*thm1
-  second_der = (alpha_save(3)-2.0d0*alpha_save(2)+alpha_save(1))*h2m1
-  ! second derivative corresponds to t, 3 steps before
-  !first_der = (-alpha_save(5)+8.0d0*(alpha_save(4)-alpha_save(2))+alpha_save(1))*thm1
-  !first derivative corresponds to t, 3 steps before
-  !second_der = (alpha_save(4)-2.0d0*alpha_save(3)+alpha_save(2))*h2m1
-  ! second derivative corresponds to t, 3 steps before
-  !Decide
-  !print *,"w",omeg-0.25d0/thm1,"f=",abs(first_der),"s=",second_der
-  !print *,"w",omeg-0.5d0/thm1,"f=",abs(first_der),"s=",second_der
-  !if (abs(first_der) < 1.0d-8 .and. second_der < 0 ) is_peak=.true.
+  second_der = (alpha_save(3)-2._DP*alpha_save(2)+alpha_save(1))*h2m1
   !
   IF (second_der < 0) THEN
      IF (trigger) THEN
-        IF (abs(first_der) <abs(first_der_save)) THEN
+        IF (ABS(first_der) <ABS(first_der_save)) THEN
            first_der_save = first_der
            RETURN
         ELSE
-           is_peak=.true.
-           trigger=.false.
+           is_peak=.TRUE.
+           trigger=.FALSE.
            RETURN
         ENDIF
      ENDIF
   ELSE
-     first_der_save=9.0d99
-     trigger=.true.
+     first_der_save=9.E99_DP
+     trigger=.TRUE.
   ENDIF
   !
   RETURN
   !
 END FUNCTION is_peak
 
-REAL(kind=dp) FUNCTION integrator(dh,alpha)
+REAL(DP) FUNCTION integrator(dh,alpha)
   !------------------------------------------------------------------------
   !
   ! This function calculates an integral every
@@ -688,23 +679,23 @@ REAL(kind=dp) FUNCTION integrator(dh,alpha)
   !
   IMPLICIT NONE
   !Input and output
-  REAL(kind=dp),INTENT(in) :: dh, alpha !x and y
+  REAL(DP),INTENT(IN) :: dh, alpha !x and y
   !internal
-  LOGICAL,SAVE :: flag=.true.
+  LOGICAL,SAVE :: flag=.TRUE.
   !
   ! COMPOSITE SIMPSON INTEGRATOR, (precision level ~ float)
   ! \int a b f(x) dx = ~ h/3 (f(a) + \sum_odd-n 2*f(a+n*h) + \sum_even-n 4*f(a+n*h) +f(b))
   !
-  integrator = 0.0d0
+  integrator = 0._DP
   !
   IF (flag) THEN
      ! odd steps
-     integrator = (4.0d0/3.0d0)*dh*alpha
-     flag = .false.
+     integrator = (4._DP/3._DP)*dh*alpha
+     flag = .FALSE.
   ELSE
      ! even steps
-     integrator = (2.0d0/3.0d0)*dh*alpha
-     flag = .true.
+     integrator = (2._DP/3._DP)*dh*alpha
+     flag = .TRUE.
   ENDIF
   !
   RETURN
@@ -810,9 +801,9 @@ SUBROUTINE read_b_g_z_file_html()
      IF (nspin == 1) degspin  = 2
      IF (nspin == 2) degspin  = 1
      !
-     beta_store(:,itermax0+1:itermax)   = 0.d0
-     gamma_store(:,itermax0+1:itermax)  = 0.d0
-     zeta_store(:,:,itermax0+1:itermax) = (0.d0,0.d0)
+     beta_store(:,itermax0+1:itermax)   = 0._DP
+     gamma_store(:,itermax0+1:itermax)  = 0._DP
+     zeta_store(:,:,itermax0+1:itermax) = (0._DP,0._DP)
      !
   ENDIF
   !
@@ -830,12 +821,12 @@ SUBROUTINE extrapolate()
   !
   !  Terminatore
   !
-  skip = .false.
+  skip = .FALSE.
   !
-  IF (trim(extrapolation)/="no") THEN
+  IF (TRIM(extrapolation)/="no") THEN
    !
-   average = 0.d0
-   av_amplitude = 0.d0
+   average = 0._DP
+   av_amplitude = 0._DP
    !
    DO ip=1,n_ipol
      !
@@ -844,17 +835,16 @@ SUBROUTINE extrapolate()
      !
      DO i=151,itermax0
         !
-        IF (skip .eqv. .true.) THEN
-           skip=.false.
+        IF (skip) THEN
+           skip=.FALSE.
            CYCLE
         ENDIF
         !
-        IF (mod(i,2)==1) THEN
+        IF (MOD(i,2)==1) THEN
            !
-           IF ( i/=151 .and. abs( beta_store(ip,i)-average(ip)/counter ) > 2.d0 ) THEN
+           IF ( i/=151 .AND. ABS( beta_store(ip,i)-average(ip)/counter ) > 2._DP ) THEN
               !
-              !if ( i.ne.151 .and. counter == 0) counter = 1
-              skip=.true.
+              skip=.TRUE.
               !
            ELSE
               !
@@ -866,9 +856,9 @@ SUBROUTINE extrapolate()
            !
         ELSE
            !
-           IF ( i/=151 .and. abs( beta_store(ip,i)-average(ip)/counter ) > 2.d0 ) THEN
+           IF ( i/=151 .AND. ABS( beta_store(ip,i)-average(ip)/counter ) > 2._DP ) THEN
               !
-              skip=.true.
+              skip=.TRUE.
               !
            ELSE
               !
@@ -891,14 +881,14 @@ SUBROUTINE extrapolate()
      !
    ENDDO
    !
-   IF (trim(extrapolation)=="constant") av_amplitude=0
+   IF (TRIM(extrapolation)=="constant") av_amplitude=0
    !
    !
    DO ip=1,n_ipol
      !
      DO i=itermax0,itermax
         !
-        IF (mod(i,2)==1) THEN
+        IF (MOD(i,2)==1) THEN
            !
            beta_store(ip,i)=average(ip)+av_amplitude(ip)
            gamma_store(ip,i)=average(ip)+av_amplitude(ip)
@@ -927,11 +917,11 @@ SUBROUTINE calc_chi(freq,broad,chi)
   !
   IMPLICIT NONE
   !
-  REAL(kind=dp), INTENT(in) :: freq
-  REAL(kind=dp), INTENT(in) :: broad
-  COMPLEX(kind=dp), INTENT(out) :: chi(:,:)
+  REAL(DP), INTENT(IN) :: freq
+  REAL(DP), INTENT(IN) :: broad
+  COMPLEX(DP), INTENT(OUT) :: chi(:,:)
   !
-  omeg_c = cmplx(freq,broad,dp)
+  omeg_c = CMPLX(freq,broad,KIND=DP)
   !
   DO ip =1, n_ipol
      !
@@ -939,13 +929,13 @@ SUBROUTINE calc_chi(freq,broad,chi)
      !
      DO i = 1,itermax-1
         !
-        b(i) = cmplx(-beta_store(ip,i),0.0d0,dp)
-        c(i) = cmplx(-gamma_store(ip,i),0.0d0,dp)
+        b(i) = CMPLX(-beta_store(ip,i),KIND=DP)
+        c(i) = CMPLX(-gamma_store(ip,i),KIND=DP)
         !
      ENDDO
      !
-     r(ip,:) = (0.0d0,0.0d0)
-     r(ip,1) = (1.0d0,0.0d0)
+     r(ip,:) = (0._DP,0._DP)
+     r(ip,1) = (1._DP,0._DP)
      !
      ! |w_t|=(w-L) |1,0,0,...,0|
      !
@@ -966,7 +956,7 @@ SUBROUTINE calc_chi(freq,broad,chi)
          !
          ! Multiplication with a norm
          !
-         chi(ip,ip2) = chi(ip,ip2) * cmplx(norm0(ip),0.0d0,dp)
+         chi(ip,ip2) = chi(ip,ip2) * CMPLX(norm0(ip),KIND=DP)
          !
          ! The response charge density is defined as 2*evc0*q, see Eq. (43) in
          ! JCP 128, 154105 (2008).
@@ -975,7 +965,7 @@ SUBROUTINE calc_chi(freq,broad,chi)
          ! Optics: The minus sign accounts for the negative electron charge
          ! (perturbation is -e E x, rather than E x)
          !
-         chi(ip,ip2) = chi(ip,ip2) * cmplx(-2.d0*degspin, 0.d0, dp)
+         chi(ip,ip2) = chi(ip,ip2) * CMPLX(-2._DP*degspin,KIND=DP)
          !
      ENDDO
      !
@@ -993,43 +983,43 @@ SUBROUTINE wl_to_color(wavelength,red,green,blue)
   !
   IMPLICIT NONE
   !
-  REAL(kind=dp), INTENT(in) :: wavelength
-  REAL(kind=dp), INTENT(out) :: red,green,blue
+  REAL(DP), INTENT(IN) :: wavelength
+  REAL(DP), INTENT(OUT) :: red,green,blue
   !
-  IF ((wavelength>=380.).and.(wavelength<=440.)) THEN
-     red = -1.*(wavelength-440.)/(440.-380.)
-     green = 0.
-     blue = 1.
+  IF ((wavelength>=380._DP).AND.(wavelength<=440._DP)) THEN
+     red = -1._DP*(wavelength-440._DP)/(440._DP-380._DP)
+     green = 0._DP
+     blue = 1._DP
   ENDIF
   !
-  IF ((wavelength>=440.).and.(wavelength<=490.)) THEN
-     red = 0.
-     green = (wavelength-440.)/(490.-440.)
-     blue = 1.
+  IF ((wavelength>=440._DP).AND.(wavelength<=490._DP)) THEN
+     red = 0._DP
+     green = (wavelength-440._DP)/(490._DP-440._DP)
+     blue = 1._DP
   ENDIF
   !
-  IF ((wavelength>=490.).and.(wavelength<=510.)) THEN
-     red = 0.
-     green = 1.
-     blue = -1.*(wavelength-510.)/(510.-490.)
+  IF ((wavelength>=490._DP).AND.(wavelength<=510._DP)) THEN
+     red = 0._DP
+     green = 1._DP
+     blue = -1._DP*(wavelength-510._DP)/(510._DP-490._DP)
   ENDIF
   !
-  IF ((wavelength>=510.).and.(wavelength<=580.)) THEN
-     red = (wavelength-510.)/(580.-510.)
-     green = 1.
-     blue = 0.
+  IF ((wavelength>=510._DP).AND.(wavelength<=580._DP)) THEN
+     red = (wavelength-510._DP)/(580._DP-510._DP)
+     green = 1._DP
+     blue = 0._DP
   ENDIF
   !
-  IF ((wavelength>=580.).and.(wavelength<=645.)) THEN
-     red = 1.
-     green = -1.*(wavelength-645.)/(645.-580.)
-     blue = 0.
+  IF ((wavelength>=580._DP).AND.(wavelength<=645._DP)) THEN
+     red = 1._DP
+     green = -1._DP*(wavelength-645._DP)/(645._DP-580._DP)
+     blue = 0._DP
   ENDIF
   !
-  IF ((wavelength>=645.).and.(wavelength<=780.)) THEN
-     red = 1.
-     green = 0.
-     blue = 0.
+  IF ((wavelength>=645._DP).AND.(wavelength<=780._DP)) THEN
+     red = 1._DP
+     green = 0._DP
+     blue = 0._DP
   ENDIF
   !
   RETURN

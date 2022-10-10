@@ -10,9 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0.D0, 0.D0 )
-#define ONE  ( 1.D0, 0.D0 )
-!
 MODULE bse_module
   !
   USE kinds,                ONLY : DP

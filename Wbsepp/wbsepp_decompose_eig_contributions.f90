@@ -10,9 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0.D0, 0.D0 )
-#define ONE  ( 1.D0, 0.D0 )
-!
 SUBROUTINE wbsepp_decompose_eig_contributions ( )
   !
   ! ... This pp reads eig-values and -vectors from davidson diago
@@ -26,14 +23,12 @@ SUBROUTINE wbsepp_decompose_eig_contributions ( )
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE westcom,              ONLY : nbnd_occ,ev, &
                                    dvg_exc, d0psi, n_liouville_read_from_file
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : dvg_exc, d0psi, n_liouville_read_from_file
   USE pwcom,                ONLY : nks,npwx,npw
   USE plep_db,              ONLY : plep_db_read
   USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_sum
   USE mp_global,            ONLY : inter_image_comm, intra_bgrp_comm
-  USE wavefunctions_module, ONLY : evc
+  USE wavefunctions,        ONLY : evc
   USE control_flags,        ONLY : gamma_only
   USE wvfct,                ONLY : nbnd
   USE gvect,                ONLY : gstart

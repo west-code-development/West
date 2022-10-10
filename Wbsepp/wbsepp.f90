@@ -71,26 +71,19 @@ END PROGRAM
     SUBROUTINE wbsepp_setup
       !
       USE io_global,              ONLY : stdout
-      USE types_coulomb,         ONLY : pot3D
-      USE westcom,              ONLY : alphapv_dfpt,npwq,wstat_save_dir,west_prefix,nbnd_occ,&
+      USE types_coulomb,          ONLY : pot3D
+      USE westcom,                ONLY : alphapv_dfpt,npwq,wstat_save_dir,west_prefix,nbnd_occ,&
                                        & n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,nbndval0x
-
-      !USE westcom,                ONLY : alphapv_dfpt,npwq0,sqvc,wstat_save_dir,west_prefix,nbnd_occ,&
-      !                                 & n_pdep_basis,n_pdep_eigen,n_pdep_times,isz,l_use_ecutrho
-      !wbsecom combined into westcom
-      !USE wbsecom,                ONLY : nbndval0x
       USE mp,                     ONLY : mp_max
       USE mp_global,              ONLY : intra_bgrp_comm
       USE pwcom,                  ONLY : npw,npwx
       USE kinds,                  ONLY : DP
-      USE wavefunctions_module,   ONLY : evc
+      USE wavefunctions,          ONLY : evc
       USE gvect,                  ONLY : gstart,g,ig_l2g,ngm,ngmx
       USE constants,              ONLY : e2,fpi
       USE cell_base,              ONLY : tpiba2, alat
       USE io_files,               ONLY : tmp_dir
-      !USE qbox_interface,         ONLY : load_qbox_wfc
-      !USE qbox_interface,         ONLY : l_load_qbox_wfc, load_qbox_wfc, qbox_ks_wfc_filename
-      USE westcom,              ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
+      USE westcom,                ONLY : l_meg, l_eig_decomp, l_lz_spec, l_exc_plot, &
                                          l_exc_rho_res_plot, wbse_save_dir
       !
       IMPLICIT NONE

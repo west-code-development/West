@@ -396,7 +396,7 @@ MODULE fourier_interpolation
     !
     IF ( me_image == 0 ) THEN
        !
-       auxr(:) = CMPLX( fr(:), 0.0_DP )
+       auxr(:) = CMPLX( fr(:), 0.0_DP, KIND=DP )
        !
     ENDIF
     !

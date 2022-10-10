@@ -16,7 +16,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE klist,                ONLY : nks, xk, ngk, igk_k
   USE uspp,                 ONLY : vkb, nkb
   USE lsda_mod,             ONLY : nspin
-  USE wavefunctions_module, ONLY : psic, evc
+  USE wavefunctions,        ONLY : psic, evc
   USE pwcom,                ONLY : npw, current_k, current_spin, isk, lsda
   USE wvfct,                ONLY : nbnd, npwx, g2kin, et
   USE control_flags,        ONLY : gamma_only
@@ -28,15 +28,10 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,&
                                    double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : l_diag_term_only,scissor_ope,nbndval0x
-  !USE wbsecom,              ONLY : l_qp_correction
   USE bse_module,           ONLY : bse_calc,et_qp
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ, &
                                    l_diag_term_only,scissor_ope,nbndval0x,l_qp_correction,&
                                    l_bse_triplet, l_lanzcos, sigma_c_head, sigma_x_head
-
-  !USE wbsecom,              ONLY : l_bse_triplet, l_lanzcos, sigma_c_head, sigma_x_head
   USE distribution_center,  ONLY : aband
   !
   IMPLICIT NONE
@@ -126,7 +121,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            !
            DO ir=1,dffts%nnr
               !
-              psic(ir) = psic(ir) * CMPLX(DBLE(dvrs(ir,current_spin)), 0.0_DP)
+              psic(ir) = psic(ir) * CMPLX(REAL(dvrs(ir,current_spin),KIND=DP), KIND=DP)
               !
            ENDDO
            !
@@ -230,13 +225,12 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            !
            IF (bse_calc) THEN
               !
-              CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),0.0d0,DP), &
+              CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),KIND=DP), &
                          evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
            ELSE
               !
-              CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor),0.0d0,DP), &
-                         evc1(:,ibnd,iks),1,hevc1(:,il1),1)
+              CALL zaxpy(npw,CMPLX(-(et_qp(ibnd,iks) - scissor),KIND=DP), evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
            ENDIF
            !
@@ -250,13 +244,12 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            !
            IF (bse_calc) THEN
               !
-              CALL zaxpy(npw,CMPLX(-(et(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),0.0d0,DP), &
+              CALL zaxpy(npw,CMPLX(-(et(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),KIND=DP), &
                          evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
            ELSE
               !
-              CALL zaxpy(npw,CMPLX(-(et(ibnd,iks) - scissor),0.0d0,DP), &
-                         evc1(:,ibnd,iks),1,hevc1(:,il1),1)
+              CALL zaxpy(npw,CMPLX(-(et(ibnd,iks) - scissor),KIND=DP), evc1(:,ibnd,iks),1,hevc1(:,il1),1)
               !
            ENDIF
            !
@@ -298,7 +291,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         !
         IF (gstart==2) THEN
            !
-           evc1_new(1,:,iks) = CMPLX(DBLE(evc1_new(1,:,iks)),0.0_DP)
+           evc1_new(1,:,iks) = CMPLX(REAL(evc1_new(1,:,iks),KIND=DP),KIND=DP)
            !
         ENDIF
         !

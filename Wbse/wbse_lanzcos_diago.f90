@@ -21,11 +21,6 @@ SUBROUTINE wbse_lanzcos_diago ()
                                    d0psi,ipol_input,n_lanczos,&
                                    alpha_store,beta_store,&
                                    gamma_store,zeta_store, nbndval0x
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : wlz_calculation, &
-  !                                 d0psi,ipol_input,n_lanczos,&
-  !                                 alpha_store,beta_store,&
-  !                                 gamma_store,zeta_store
   USE lanzcos_db,           ONLY : lanzcos_d0psi_read,&
                                    lanzcos_d0psi_write,&
                                    lanzcos_evcs_write,&
@@ -33,15 +28,12 @@ SUBROUTINE wbse_lanzcos_diago ()
   USE lanzcos_restart,      ONLY : lanzcos_restart_write,&
                                    lanzcos_restart_read, &
                                    lanzcos_postpro_write
-  !
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
 
   USE io_files,             ONLY : tmp_dir
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : nbndval0x
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier
-  USE wavefunctions_module, ONLY : evc
+  USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
   USE distribution_center,  ONLY : aband, bseparal
   USE class_idistribute,    ONLY : idistribute
@@ -289,7 +281,7 @@ SUBROUTINE wbse_lanzcos_diago ()
         ! Calculation of zeta coefficients.
         ! See Eq.(35) in Malcioglu et al., Comput. Phys. Commun. 182, 1744 (2011).
         !
-        IF (mod(lz_iteration,2)==0) THEN
+        IF (MOD(lz_iteration,2)==0) THEN
            !
            DO iip = 1, n_ipol
               !
@@ -361,7 +353,7 @@ SUBROUTINE wbse_lanzcos_diago ()
         evc1(:,:,:) = (0.0_DP, 0.0_DP)
         evc1(:,:,:) = evc1_new(:,:,:)
         !
-        IF (mod(lz_iteration,100)==0) THEN
+        IF (MOD(lz_iteration,100)==0) THEN
            !
            IF (lz_iteration>5) THEN
               !
@@ -403,7 +395,7 @@ SUBROUTINE my_copy_lz(tmp_lz)
   USE io_global,            ONLY : stdout
   USE mp_world,             ONLY : root,mpime,world_comm
   USE mp,                   ONLY : mp_barrier,mp_bcast
-  USE wrappers,             ONLY : f_copy
+  USE clib_wrappers,        ONLY : f_copy
   USE westcom,              ONLY : wbse_save_dir
   !
   IMPLICIT NONE

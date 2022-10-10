@@ -19,8 +19,6 @@ MODULE plep_io
   USE mp_global,   ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
   USE mp,          ONLY : mp_max
   USE westcom,     ONLY : npwq,npwq_g,nbndval0x
-  !wbsecom combined into westcom
-  !USE wbsecom,     ONLY : nbndval0x
   USE pwcom,       ONLY : nks,npwx
   USE wvfct,       ONLY : npwx
   USE gvect,       ONLY : ig_l2g

@@ -86,8 +86,6 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ, nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       USE gvect,                ONLY : gstart
       !
       IMPLICIT NONE
@@ -183,8 +181,6 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ, nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -270,8 +266,6 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ, nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -438,8 +432,6 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ, nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -578,8 +570,6 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -718,8 +708,6 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -822,8 +810,6 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       !
       IMPLICIT NONE
       !
@@ -917,13 +903,11 @@ MODULE wbse_tools
       USE kinds,                ONLY : dp
       USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
       USE mp,                   ONLY : mp_bcast,mp_barrier,mp_max
-      USE wavefunctions_module, ONLY : evc
+      USE wavefunctions,        ONLY : evc
       USE distribution_center,  ONLY : pert
       USE buffers,              ONLY : get_buffer
       USE pwcom,                ONLY : nks,npwx
       USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc, nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       USE wvfct,                ONLY : g2kin,et
       !
       IMPLICIT NONE
@@ -1024,13 +1008,11 @@ MODULE wbse_tools
       USE kinds,                ONLY : dp
       USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
       USE mp,                   ONLY : mp_bcast,mp_barrier,mp_max
-      USE wavefunctions_module, ONLY : evc
+      USE wavefunctions,        ONLY : evc
       USE distribution_center,  ONLY : pert
       USE buffers,              ONLY : get_buffer
       USE pwcom,                ONLY : nks,npwx
       USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbndval0x
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : nbndval0x
       USE wvfct,                ONLY : g2kin,et
       !
       IMPLICIT NONE

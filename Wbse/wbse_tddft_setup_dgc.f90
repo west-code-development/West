@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-subroutine setup_dgc
+SUBROUTINE setup_dgc
   !-----------------------------------------------------------------------
   !
   ! Allocate and setup all variable needed in the gradient correction case
@@ -19,10 +19,9 @@ subroutine setup_dgc
   USE fft_base,             ONLY : dfftp
   USE fft_interfaces,       ONLY : fwfft
   USE gvect,                ONLY : ngm, g, nl
-  USE spin_orb,             ONLY : domag
   USE scf,                  ONLY : rho, rho_core, rhog_core
-  USE noncollin_module,     ONLY : noncolin, ux, nspin_gga, nspin_mag
-  USE wavefunctions_module, ONLY : psic
+  USE noncollin_module,     ONLY : noncolin, ux, nspin_gga, nspin_mag, domag
+  USE wavefunctions,        ONLY : psic
   USE kinds,                ONLY : DP
   USE funct,                ONLY : dft_is_gradient, gcxc, gcx_spin, &
                                    gcc_spin, dgcxc, dgcxc_spin
@@ -30,16 +29,16 @@ subroutine setup_dgc
   USE gc_lr,                ONLY : grho, gmag, dvxc_rr, dvxc_sr, &
                                    dvxc_ss, dvxc_s, vsgga, segni
 
-  implicit none
-  integer :: k, is, ipol, jpol, ir
-  real(DP) :: grho2 (2), rh, zeta, grh2, fac, sx, sc, &
+  IMPLICIT NONE
+  INTEGER :: k, is, ipol, jpol, ir
+  REAL(DP) :: grho2 (2), rh, zeta, grh2, fac, sx, sc, &
        v1x, v2x, v1c, v2c, vrrx, vsrx, vssx, vrrc, vsrc, vssc, v1xup, &
        v1xdw, v2xup, v2xdw, v1cup, v1cdw, vrrxup, vrrxdw, vrsxup, vrsxdw, &
        vssxup, vssxdw, vrrcup, vrrcdw, vrscup, vrscdw, vrzcup, vrzcdw,   &
        amag, seg, seg0
   COMPLEX(DP), ALLOCATABLE :: rhogout(:,:)
-  real(DP), allocatable :: rhoout(:,:)
-  real (DP), parameter :: epsr = 1.0d-6, epsg = 1.0d-10
+  REAL(DP), ALLOCATABLE :: rhoout(:,:)
+  REAL(DP), PARAMETER :: epsr = 1.E-6_DP, epsg = 1.E-10_DP
 
   IF ( .NOT. dft_is_gradient() ) RETURN
 
@@ -47,7 +46,7 @@ subroutine setup_dgc
      allocate (segni (dfftp%nnr))
      allocate (vsgga (dfftp%nnr))
      allocate (gmag (3, dfftp%nnr, nspin_mag))
-     gmag=0.0_dp
+     gmag=0._DP
   ENDIF
 
   IF(.NOT.ALLOCATED(dvxc_rr)) ALLOCATE (dvxc_rr(dfftp%nnr, nspin_gga , nspin_gga))
@@ -103,7 +102,7 @@ subroutine setup_dgc
   do k = 1, dfftp%nnr
      grho2 (1) = grho (1, k, 1) **2 + grho (2, k, 1) **2 + grho (3, k, 1) **2
      if (nspin_gga == 1) then
-        if (abs (rhoout (k, 1) ) > epsr .and. grho2 (1) > epsg) then
+        if (ABS (rhoout (k, 1) ) > epsr .and. grho2 (1) > epsg) then
            call gcxc (rhoout (k, 1), grho2(1), sx, sc, v1x, v2x, v1c, v2c)
            call dgcxc (rhoout (k, 1), grho2(1), vrrx, vsrx, vssx, vrrc, &
                 vsrc, vssc)

@@ -16,8 +16,6 @@ SUBROUTINE solve_e_psi ()
   USE uspp,                 ONLY : okvan
   USE gvect,                ONLY : gstart
   USE control_flags,        ONLY : gamma_only
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : d0psi,macropol_dfpt
   USE westcom,              ONLY : d0psi,macropol_dfpt
   !
   IMPLICIT NONE
@@ -52,7 +50,7 @@ SUBROUTINE solve_e_psi ()
   ENDIF
   !
   IF (gstart==2 .and. gamma_only) d0psi(1,:,:,:) = &
-                         & CMPLX(DBLE(d0psi(1,:,:,:)),0.0d0,dp)
+                         & CMPLX(REAL(d0psi(1,:,:,:),KIND=DP),KIND=DP)
   !
   CALL stop_clock ('solve_e_psi')
   !
@@ -74,11 +72,9 @@ SUBROUTINE compute_d0psi_rs( )
   USE wvfct,                ONLY : nbnd,npwx
   USE klist,                ONLY : nks
   USE control_flags,        ONLY : gamma_only
-  USE wavefunctions_module, ONLY : evc,psic
+  USE wavefunctions,        ONLY : evc,psic
   USE noncollin_module,     ONLY : noncolin,npol
   USE pwcom,                ONLY : isk,igk_k,ngk,lsda
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : d0psi
   USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc, d0psi
   !
   IMPLICIT NONE
@@ -103,9 +99,9 @@ SUBROUTINE compute_d0psi_rs( )
   !
   ! Calculate r
   !
-  inv_nr1 = 1.D0 / DBLE( dfftp%nr1 )
-  inv_nr2 = 1.D0 / DBLE( dfftp%nr2 )
-  inv_nr3 = 1.D0 / DBLE( dfftp%nr3 )
+  inv_nr1 = 1.D0 / REAL( dfftp%nr1, KIND=DP )
+  inv_nr2 = 1.D0 / REAL( dfftp%nr2, KIND=DP )
+  inv_nr3 = 1.D0 / REAL( dfftp%nr3, KIND=DP )
   !
 #if defined (__MPI)
   index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%npp(1:me_bgrp))
@@ -127,9 +123,9 @@ SUBROUTINE compute_d0psi_rs( )
      !
      DO ip = 1, n_ipol
         !
-        r(ir,ip) = DBLE( i )*inv_nr1*at(ip,1) + &
-                   DBLE( j )*inv_nr2*at(ip,2) + &
-                   DBLE( k )*inv_nr3*at(ip,3)
+        r(ir,ip) = REAL(i,KIND=DP)*inv_nr1*at(ip,1) + &
+                   REAL(j,KIND=DP)*inv_nr2*at(ip,2) + &
+                   REAL(k,KIND=DP)*inv_nr3*at(ip,3)
         !
      ENDDO
      !
@@ -200,7 +196,7 @@ SUBROUTINE compute_d0psi_rs( )
                  DO ip = 1, n_ipol
                     !
                     psic(:)  = (0.0_DP, 0.0_DP)
-                    psic(:) =  CMPLX(DBLE(aux_r(:)) * r(:,ip) * alat, 0.0_DP)
+                    psic(:) =  CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
                     !
                     CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),'Wave')
                     !
@@ -220,7 +216,7 @@ SUBROUTINE compute_d0psi_rs( )
                  DO ip = 1, n_ipol
                     !
                     psic(:)  = (0.0_DP, 0.0_DP)
-                    psic(:) =  CMPLX(DBLE(aux_r(:)) * r(:,ip) * alat, 0.0_DP)
+                    psic(:) =  CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
                     !
                     CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),'Wave')
                     !
@@ -398,15 +394,11 @@ SUBROUTINE compute_d0psi_dfpt( )
   USE wvfct,                ONLY : nbnd,npwx
   USE klist,                ONLY : nks
   USE control_flags,        ONLY : gamma_only
-  USE wavefunctions_module, ONLY : evc,psic
+  USE wavefunctions,        ONLY : evc,psic
   USE noncollin_module,     ONLY : noncolin,npol
   USE uspp,                 ONLY : vkb,nkb
   USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : d0psi, l_lanzcos
-  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,&
-                                   n_dfpt_maxiter, l_kinetic_only,&
-                                   d0psi, l_lanzcos
+  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,l_kinetic_only,d0psi,l_lanzcos
   USE distribution_center,  ONLY : aband
   !
   IMPLICIT NONE

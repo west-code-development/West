@@ -25,10 +25,8 @@ SUBROUTINE wbse_setup(code)
   USE constants,              ONLY : e2,fpi
   USE cell_base,              ONLY : tpiba2
   USE control_flags,          ONLY : gamma_only
-  !wbsecom combined into westcom
-  !USE wbsecom,                ONLY : l_davidson, l_lanzcos, nbndval0x
   USE bse_module,             ONLY : bse_calc
-  USE types_coulomb,      ONLY : pot3D
+  USE types_coulomb,          ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -97,10 +95,7 @@ SUBROUTINE wbse_input
                             trev_pdep_rel, &
                             wbse_calculation, n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
                             n_liouville_read_from_file,trev_liouville_rel,trev_liouville, l_bse_calculation,&
-                             l_use_localise_repr, overlap_thr
-  !wbsecom combined into westcom
-  !USE wbsecom
-  !
+                            l_use_localise_repr, overlap_thr
   !
   IMPLICIT NONE
   !

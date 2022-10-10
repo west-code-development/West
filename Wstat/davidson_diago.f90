@@ -10,8 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0._DP, 0._DP )
-#define ONE  ( 1._DP, 0._DP )
 #define MONE (-1._DP, 0._DP )
 !
 !----------------------------------------------------------------------------

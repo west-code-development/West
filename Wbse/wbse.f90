@@ -17,12 +17,10 @@ PROGRAM wbse
   ! This is the main program that calculates the static screening.
   !
   USE check_stop,           ONLY : check_stop_init
-  USE mp_global,            ONLY : mp_startup, mp_global_end
-  USE west_environment,     ONLY : west_environment_start, west_environment_end
+  USE mp_global,            ONLY : mp_startup,mp_global_end
+  USE west_environment,     ONLY : west_environment_start,west_environment_end
   USE mp,                   ONLY : mp_sum,mp_barrier
-  USE westcom,              ONLY : l_davidson, l_lanzcos
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : l_davidson, l_lanzcos
+  USE westcom,              ONLY : l_davidson,l_lanzcos
   !
   IMPLICIT NONE
   !

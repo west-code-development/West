@@ -10,9 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0.D0, 0.D0 )
-#define ONE  ( 1.D0, 0.D0 )
-!
 SUBROUTINE wbsepp_plot_exc()
   !
   ! ... This pp reads eig-values and -vectors from davidson diago
@@ -20,28 +17,25 @@ SUBROUTINE wbsepp_plot_exc()
   !
   USE kinds,                  ONLY : dp
   USE io_global,              ONLY : stdout
-  USE cell_base,              ONLY : omega, at, alat
+  USE cell_base,              ONLY : omega,at,alat
   USE fft_base,               ONLY : dffts,dfftp
   USE lsda_mod,               ONLY : nspin,lsda
-  USE wavefunctions_module,   ONLY : psic, evc
+  USE wavefunctions,          ONLY : psic,evc
   USE noncollin_module,       ONLY : npol
   USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk
   USE wvfct,                  ONLY : wg
   USE control_flags,          ONLY : gamma_only
-  USE mp,                     ONLY : mp_sum, mp_bcast, mp_min
-  USE mp_global,              ONLY : me_bgrp, inter_pool_comm, intra_bgrp_comm,&
-                                     inter_bgrp_comm, my_image_id, inter_image_comm
+  USE mp,                     ONLY : mp_sum,mp_bcast,mp_min
+  USE mp_global,              ONLY : me_bgrp,inter_pool_comm,intra_bgrp_comm,inter_bgrp_comm,&
+                                   & my_image_id,inter_image_comm
   USE buffers,                ONLY : get_buffer
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev
-  USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev,dvg_exc,n_liouville_read_from_file,&
+                                   & iexc_plot,r0_input,westpp_format
+  USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
-  !wbsecom combined into westcom
-  !USE wbsecom,                ONLY : dvg_exc, n_liouville_read_from_file
-  USE westcom,              ONLY : iexc_plot, r0_input
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute
-  USE westcom,                ONLY : westpp_format,dvg_exc, n_liouville_read_from_file
   USE ions_base,              ONLY : nat,tau
   !
   IMPLICIT NONE
@@ -101,9 +95,9 @@ SUBROUTINE wbsepp_plot_exc()
   !
   ! Calculate r
   !
-  inv_nr1 = 1.D0 / DBLE( dfftp%nr1 )
-  inv_nr2 = 1.D0 / DBLE( dfftp%nr2 )
-  inv_nr3 = 1.D0 / DBLE( dfftp%nr3 )
+  inv_nr1 = 1.D0 / REAL( dfftp%nr1, KIND=DP )
+  inv_nr2 = 1.D0 / REAL( dfftp%nr2, KIND=DP )
+  inv_nr3 = 1.D0 / REAL( dfftp%nr3, KIND=DP )
   !
 #if defined (__MPI)
   index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%npp(1:me_bgrp))
@@ -125,9 +119,9 @@ SUBROUTINE wbsepp_plot_exc()
      !
      DO ip = 1, n_ipol
         !
-        r(ir,ip) = DBLE( i )*inv_nr1*at(ip,1) + &
-                   DBLE( j )*inv_nr2*at(ip,2) + &
-                   DBLE( k )*inv_nr3*at(ip,3)
+        r(ir,ip) = REAL(i,KIND=DP)*inv_nr1*at(ip,1) + &
+                   REAL(j,KIND=DP)*inv_nr2*at(ip,2) + &
+                   REAL(k,KIND=DP)*inv_nr3*at(ip,3)
         !
      ENDDO
      !
@@ -137,9 +131,9 @@ SUBROUTINE wbsepp_plot_exc()
   !
   DO ir = 1, dffts%nnr
      !
-     dr(ir) = DSQRT((r(ir,1) - r0_input_aux(1))**2 + &
-                    (r(ir,2) - r0_input_aux(2))**2 + &
-                    (r(ir,3) - r0_input_aux(3))**2)
+     dr(ir) = SQRT((r(ir,1) - r0_input_aux(1))**2 + &
+                   (r(ir,2) - r0_input_aux(2))**2 + &
+                   (r(ir,3) - r0_input_aux(3))**2)
      !
   ENDDO
   !
@@ -187,7 +181,7 @@ SUBROUTINE wbsepp_plot_exc()
               !
               IF (dr(ir) == drmin_g) THEN
                  !
-                 rcoeff = DBLE( psic(ir) )
+                 rcoeff = REAL( psic(ir), KIND=DP )
                  !
               ENDIF
               !
@@ -197,7 +191,7 @@ SUBROUTINE wbsepp_plot_exc()
            !
            segno(:) = SIGN( 1.d0, AIMAG(psic(:)) )
            !
-           rho_aux(:, current_spin) = rho_aux(:, current_spin) + w1 * CMPLX(rcoeff*AIMAG(psic(:)), 0.0_DP)
+           rho_aux(:, current_spin) = rho_aux(:, current_spin) + w1 * CMPLX(rcoeff*AIMAG(psic(:)), KIND=DP)
            !
         ELSE
            !
@@ -231,7 +225,7 @@ SUBROUTINE wbsepp_plot_exc()
   ENDDO
   !
   rho_out(:,:) = 0.0_DP
-  rho_out(:, current_spin) = (DBLE(rho_aux(:, current_spin))**2 + AIMAG(rho_aux(:, current_spin))**2)/omega
+  rho_out(:, current_spin) = (REAL(rho_aux(:, current_spin),KIND=DP)**2 + AIMAG(rho_aux(:, current_spin))**2)/omega
   !
   summ0 = 0.0_DP
   DO ir = 1, dffts%nnr
@@ -275,12 +269,12 @@ SUBROUTINE wbsepp_plot_exc()
   DO ni = 1, n_point
      !
      ri1 = (ni-1)*dstep
-     ri0 =     ni*dstep
+     ri0 =  ni*dstep
      !
      vi1 = (4.0/3.0)*3.1415*ri1*ri1*ri1*alat*alat*alat
      vi0 = (4.0/3.0)*3.1415*ri0*ri0*ri0*alat*alat*alat
      !
-     summ  = 0.0_DP
+     summ = 0.0_DP
      summ0 = 0.0_DP
      DO ir = 1, dffts%nnr
         !
@@ -301,13 +295,13 @@ SUBROUTINE wbsepp_plot_exc()
         IF ((ri1 .lt. drr).and.(drr .le. ri0)) THEN
            !
            summ0 = summ0 + 1
-           summ  = summ + rho_out(ir,1)
+           summ = summ + rho_out(ir,1)
            !
         ENDIF
         !
      ENDDO
      !
-     CALL mp_sum(summ,  intra_bgrp_comm)
+     CALL mp_sum(summ, intra_bgrp_comm)
      CALL mp_sum(summ0, intra_bgrp_comm)
      !
      WRITE(stdout, "(i5, 5x, f12.6, 5x, f12.6, 5x, 2f12.6)") ni, ri1*alat, (vi0-vi1), summ0, summ

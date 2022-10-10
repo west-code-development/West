@@ -21,22 +21,19 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
   USE westcom,              ONLY : nbnd_occ,l_use_bisection_thr,wfc_from_qbox
-  USE wavefunctions_module, ONLY : evc,psic
-  USE plep_io,              ONLY : plep_merge_and_write_G, plep_read_G_and_distribute
+  USE wavefunctions,        ONLY : evc,psic
+  USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
   USE fft_base,             ONLY : dfftp,dffts
   USE fft_at_gamma,         ONLY : double_invfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k
-  USE pwcom,                ONLY : igk_k,omega,npw,npwx, &
-                                   current_k,ngk,nbnd
+  USE pwcom,                ONLY : igk_k,omega,npw,npwx,current_k,ngk,nbnd
   USE gvect,                ONLY : gstart
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE mp_global,            ONLY : inter_image_comm
   USE mp,                   ONLY : mp_sum
   USE bse_module,           ONLY : ovl_thr
   USE qbox_interface,       ONLY : load_qbox_wfc
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : l_use_bisection_thr
-  USE check_ovl_wfc,        ONLY : check_ovl_wannier, read_bisection_loc, check_ovl_bisection
+  USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection
   !
   IMPLICIT NONE
   !
@@ -101,7 +98,8 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
               !
               IF (gstart==2) THEN
                  !
-                 u_matrix(ibnd, jbnd) = u_matrix(ibnd, jbnd) - CMPLX(DBLE(evc(1,ibnd))*DBLE(evc_loc(1,jbnd)), 0.0_DP)
+                 u_matrix(ibnd, jbnd) = u_matrix(ibnd, jbnd) &
+                 & - CMPLX(REAL(evc(1,ibnd),KIND=DP)*REAL(evc_loc(1,jbnd),KIND=DP), KIND=DP)
                  !
               ENDIF
               !
@@ -163,7 +161,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
                  !
                  CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(1,ibnd),evc_loc(1,jbnd), psic,'Wave')
                  !
-                 CALL check_ovl_wannier (DBLE(psic(:)), AIMAG(psic(:)), ovl_value)
+                 CALL check_ovl_wannier (REAL(psic(:),KIND=DP), AIMAG(psic(:)), ovl_value)
                  !
               ELSE
                  !

@@ -10,9 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0.D0, 0.D0 )
-#define ONE  ( 1.D0, 0.D0 )
-!
 SUBROUTINE wbsepp_plot_charged_density_res_exc()
   !
   ! ... This pp reads eig-values and -vectors from davidson diago
@@ -23,7 +20,7 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   USE cell_base,              ONLY : omega, at, alat
   USE fft_base,               ONLY : dffts,dfftp
   USE lsda_mod,               ONLY : nspin,lsda
-  USE wavefunctions_module,   ONLY : psic, evc
+  USE wavefunctions,          ONLY : psic, evc
   USE noncollin_module,       ONLY : npol
   USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk
   USE wvfct,                  ONLY : wg
@@ -35,9 +32,7 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev
   USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
-  !wbsecom combined into westcom
-  !USE wbsecom,                ONLY : dvg_exc, n_liouville_read_from_file
-  USE westcom,              ONLY : iexc_plot, r0_input
+  USE westcom,                ONLY : iexc_plot, r0_input
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute

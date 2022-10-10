@@ -47,7 +47,7 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      !
      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
      !
-     IF (fixed_band_j .lt. fixed_band_i) THEN
+     IF (fixed_band_j < fixed_band_i) THEN
         !
         ! p_31 -> p_13
         !
@@ -63,14 +63,14 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
         !
      ENDIF
      !
-     write (my_labeli,'(i6.6)') band_i
-     write (my_labelj,'(i6.6)') band_j
-     write (my_spin,  '(i1)') ispin
+     WRITE (my_labeli,'(i6.6)') band_i
+     WRITE (my_labelj,'(i6.6)') band_j
+     WRITE (my_spin,  '(i1)') ispin
      !
      rhog = (0.0_DP, 0.0_DP)
      !
      file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-              "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
+              '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
      CALL pdep_read_G_and_distribute(file_base, rhog(:))
      !
      RETURN
@@ -150,7 +150,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      !
      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
      !
-     IF (fixed_band_j .lt. fixed_band_i) THEN
+     IF (fixed_band_j < fixed_band_i) THEN
         !
         ! p_31 -> p_13
         !
@@ -168,12 +168,12 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      !
      IF (bse_kernel_from_cp) THEN
         !
-        write (my_labeli,'(i6.6)') band_i
-        write (my_labelj,'(i6.6)') band_j
-        write (my_spin,  '(i1)') ispin
+        WRITE (my_labeli,'(i6.6)') band_i
+        WRITE (my_labelj,'(i6.6)') band_j
+        WRITE (my_spin,  '(i1)') ispin
         !
         file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//&
-                    '_'//TRIM(my_spin)//".dat"
+                    '_'//TRIM(my_spin)//'.dat'
         !
         CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
                    dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
@@ -182,14 +182,14 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      !
      IF (bse_kernel_from_pwscf) THEN
         !
-        write (my_labeli,'(i6.6)') band_i
-        write (my_labelj,'(i6.6)') band_j
-        write (my_spin,  '(i1)') ispin
+        WRITE (my_labeli,'(i6.6)') band_i
+        WRITE (my_labelj,'(i6.6)') band_j
+        WRITE (my_spin,  '(i1)') ispin
         !
         aux_g = (0.0_DP, 0.0_DP)
         !
         file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-                    "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
+                    '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
         CALL pdep_read_G_and_distribute(file_base, aux_g(:))
         !
         ! G -> R
@@ -206,13 +206,13 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            !
         ENDIF
         !
-        rhoaux1(:) = DBLE(aux_r(:))
+        rhoaux1(:) = REAL(aux_r(:),KIND=DP)
         !
      ENDIF
      !
-     if (.not. single_only) then
+     IF (.NOT. single_only) THEN
         !
-        if (fixed_band_j .lt. (fixed_band_i+1)) then
+        IF (fixed_band_j < (fixed_band_i+1)) THEN
            !
            ! p_21 -> p_12
            !
@@ -220,22 +220,22 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            !
            band_j = fixed_band_i+1
            !
-        else
+        ELSE
            !
            band_i = fixed_band_i+1
            !
            band_j = fixed_band_j
            !
-        endif
+        ENDIF
         !
         IF (bse_kernel_from_cp) THEN
            !
-           write (my_labeli,'(i6.6)')  band_i
-           write (my_labelj,'(i6.6)')  band_j
-           write (my_spin,  '(i1)') ispin
+           WRITE (my_labeli,'(i6.6)')  band_i
+           WRITE (my_labelj,'(i6.6)')  band_j
+           WRITE (my_spin,  '(i1)') ispin
            !
            file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)&
-                       //'_'//TRIM(my_spin)//".dat"
+                       //'_'//TRIM(my_spin)//'.dat'
            !
            CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
                    dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
@@ -244,14 +244,14 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         !
         IF (bse_kernel_from_pwscf) THEN
            !
-           write (my_labeli,'(i6.6)') band_i
-           write (my_labelj,'(i6.6)') band_j
-           write (my_spin,  '(i1)') ispin
+           WRITE (my_labeli,'(i6.6)') band_i
+           WRITE (my_labelj,'(i6.6)') band_j
+           WRITE (my_spin,  '(i1)') ispin
            !
            aux_g = (0.0_DP, 0.0_DP)
            !
            file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-                      "_"//TRIM(ADJUSTL(my_labelj))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
+                      '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
            CALL pdep_read_G_and_distribute(file_base,aux_g(:))
            !
            ! G -> R
@@ -268,17 +268,17 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
               !
            ENDIF
            !
-           rhoaux2(:) = DBLE(aux_r(:))
+           rhoaux2(:) = REAL(aux_r(:),KIND=DP)
            !
         ENDIF
         !
-     endif
+     ENDIF
      !
      ! total : rho(:) = [rho_ij, rho_i+1,j]
      !
      rho_all(:) = (0.0_DP, 0.0_DP)
      !
-     rho_all(:) = CMPLX (rhoaux1(:), rhoaux2(:))
+     rho_all(:) = CMPLX (rhoaux1(:), rhoaux2(:), KIND=DP)
      !
      DEALLOCATE (aux_g, aux_r)
      !
@@ -391,13 +391,13 @@ SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   !
   IMPLICIT NONE
   !
-  integer,           intent(in) :: num_wan,ispin
-  complex(DP),       intent(in) :: u_matrix(num_wan,num_wan)
-  real(DP),          intent(in) :: ovl_matrix(num_wan,num_wan)
+  INTEGER,           INTENT(IN) :: num_wan,ispin
+  COMPLEX(DP),       INTENT(IN) :: u_matrix(num_wan,num_wan)
+  REAL(DP),          INTENT(IN) :: ovl_matrix(num_wan,num_wan)
   !
   INTEGER            :: iw, jw, emptyunit
-  character(len=256) :: fileempty
-  character(len=4)   :: my_spin
+  CHARACTER(LEN=256) :: fileempty
+  CHARACTER(LEN=4)   :: my_spin
   !
   ! ... Subroutine Body
   !
@@ -527,12 +527,12 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   WRITE(my_spin,'(i1)') ispin
   !
-  filename =  TRIM(wbse_init_save_dir) // "/u_matrix.wan.occ." // TRIM(my_spin) // ".dat"
+  filename =  TRIM(wbse_init_save_dir) // '/u_matrix.wan.occ.' // TRIM(my_spin) // '.dat'
   !
   WRITE(stdout,'(5X,"Writing Omatrix & Umatrix to ", A256 )') TRIM(filename)
   !
-  IF(my_pool_id.NE.0) RETURN
-  IF(my_bgrp_id.NE.0) RETURN
+  IF(my_pool_id /= 0) RETURN
+  IF(my_bgrp_id /= 0) RETURN
   !
   ! Resume all components
   !
@@ -544,17 +544,17 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
      CALL iotk_free_unit(iunout,ierr)
      CALL iotk_open_write( iunout, FILE = TRIM(filename), BINARY = .False., IERR = ierr )
      !
-     CALL iotk_write_begin(iunout,"OUMATRIX_SIZE")
-     CALL iotk_write_dat(iunout,"oumat_dim",oumat_dim)
-     CALL iotk_write_end(iunout,"OUMATRIX_SIZE")
+     CALL iotk_write_begin(iunout,'OUMATRIX_SIZE')
+     CALL iotk_write_dat(iunout,'oumat_dim',oumat_dim)
+     CALL iotk_write_end(iunout,'OUMATRIX_SIZE')
      !
-     CALL iotk_write_begin(iunout, "UMATRIX_ELE")
-     CALL iotk_write_dat(iunout, "umat_ele", umatrix(:,:))
-     CALL iotk_write_end(iunout, "UMATRIX_ELE")
+     CALL iotk_write_begin(iunout, 'UMATRIX_ELE')
+     CALL iotk_write_dat(iunout, 'umat_ele', umatrix(:,:))
+     CALL iotk_write_end(iunout, 'UMATRIX_ELE')
      !
-     CALL iotk_write_begin(iunout, "OMATRIX_ELE")
-     CALL iotk_write_dat(iunout, "omat_ele", omatrix(:,:))
-     CALL iotk_write_end(iunout, "OMATRIX_ELE")
+     CALL iotk_write_begin(iunout, 'OMATRIX_ELE')
+     CALL iotk_write_dat(iunout, 'omat_ele', omatrix(:,:))
+     CALL iotk_write_end(iunout, 'OMATRIX_ELE')
      !
      CALL iotk_close_write(iunout)
      !
@@ -618,9 +618,9 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   IF ( ionode ) THEN
      !
-     CALL iotk_scan_begin(iunout, "OUMATRIX_SIZE" )
-     CALL iotk_scan_dat(  iunout, "oumat_dim", oumat_dim_tmp)
-     CALL iotk_scan_end(  iunout, "OUMATRIX_SIZE" )
+     CALL iotk_scan_begin(iunout, 'OUMATRIX_SIZE' )
+     CALL iotk_scan_dat(  iunout, 'oumat_dim', oumat_dim_tmp)
+     CALL iotk_scan_end(  iunout, 'OUMATRIX_SIZE' )
      !
   ENDIF
   !
@@ -631,17 +631,17 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   IF ( ionode ) THEN
      !
-     CALL iotk_scan_begin(iunout, "UMATRIX_ELE")
-     CALL iotk_scan_dat(  iunout, "umat_ele", umatrix_tmp(:,:))
-     CALL iotk_scan_end(  iunout, "UMATRIX_ELE")
+     CALL iotk_scan_begin(iunout, 'UMATRIX_ELE')
+     CALL iotk_scan_dat(  iunout, 'umat_ele', umatrix_tmp(:,:))
+     CALL iotk_scan_end(  iunout, 'UMATRIX_ELE')
      !
   ENDIF
   !
   IF ( ionode ) THEN
      !
-     CALL iotk_scan_begin(iunout, "OMATRIX_ELE")
-     CALL iotk_scan_dat(  iunout, "omat_ele", omatrix_tmp(:,:))
-     CALL iotk_scan_end(  iunout, "OMATRIX_ELE")
+     CALL iotk_scan_begin(iunout, 'OMATRIX_ELE')
+     CALL iotk_scan_dat(  iunout, 'omat_ele', omatrix_tmp(:,:))
+     CALL iotk_scan_end(  iunout, 'OMATRIX_ELE')
      !
   ENDIF
   !
@@ -748,7 +748,7 @@ SUBROUTINE read_pwscf_wannier_orbs ( ne, npw, c_emp, filename )
         IF (me_bgrp==root_bgrp) THEN
            !
            CALL iotk_scan_dat( iun, &
-                             "wfc" // iotk_index(i), ctmp(:))
+                             'wfc' // iotk_index(i), ctmp(:))
            !
         ENDIF
         !

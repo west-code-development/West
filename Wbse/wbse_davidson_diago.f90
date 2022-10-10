@@ -10,9 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define ZERO ( 0.D0, 0.D0 )
-#define ONE  ( 1.D0, 0.D0 )
-!
 !----------------------------------------------------------------------------
 SUBROUTINE wbse_davidson_diago ( )
   !----------------------------------------------------------------------------
@@ -26,14 +23,11 @@ SUBROUTINE wbse_davidson_diago ( )
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE pwcom,                ONLY : nks,npw,npwx
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : dvg_exc,dng_exc,nbndval0x
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
-                                   & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                   & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver, &
-                                   dvg_exc,dng_exc,nbndval0x,l_preconditioning,nbnd_occ,lrwfc,iuwfc
+                                 & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
+                                 & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver,&
+                                 & dvg_exc,dng_exc,nbndval0x,l_preconditioning,nbnd_occ,lrwfc,iuwfc
   USE plep_db,              ONLY : plep_db_write,plep_db_read
-  !USE write_xml,            ONLY : wstat_xml_dump
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
   USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm, my_image_id
@@ -41,13 +35,12 @@ SUBROUTINE wbse_davidson_diago ( )
   USE gvect,                ONLY : gstart
   USE wstat_tools,          ONLY : diagox,serial_diagox,symm_hr_distr,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
-                                   wbse_refresh_with_vr_distr,apply_preconditioning_dvg
-  !USE wbsecom,              ONLY : l_preconditioning
+                                 & wbse_refresh_with_vr_distr,apply_preconditioning_dvg
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
   USE distribution_center,  ONLY : bseparal
   USE types_coulomb,        ONLY : pot3D
   USE buffers,              ONLY : get_buffer
-  USE wavefunctions_module, ONLY : evc
+  USE wavefunctions,        ONLY : evc
   !
   IMPLICIT NONE
   !
@@ -599,8 +592,6 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   USE mp,                     ONLY : mp_sum,mp_barrier,mp_bcast
   USE pwcom,                  ONLY : nks,npw,npwx
   USE westcom,                ONLY : nbnd_occ,nbndval0x
-  !wbsecom combined into westcom
-  !USE wbsecom,                ONLY : nbndval0x
   USE control_flags,          ONLY : gamma_only
   USE io_push,                ONLY : io_push_title
   USE distribution_center,    ONLY : pert
@@ -860,13 +851,11 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
   USE pwcom,                ONLY : nks,npw,npwx
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ, dvg_exc,nbndval0x
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : dvg_exc,nbndval0x
   USE constants,            ONLY : tpi
   USE distribution_center,  ONLY : pert
   USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier,mp_max
-  USE wavefunctions_module, ONLY : evc
+  USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
   !
   IMPLICIT NONE

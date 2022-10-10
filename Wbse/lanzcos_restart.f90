@@ -42,10 +42,6 @@ MODULE lanzcos_restart
                                        ipol_input, n_lanczos, &
                                        alpha_store,beta_store,&
                                        gamma_store,zeta_store
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : ipol_input, n_lanczos, &
-      !                                 alpha_store,beta_store,&
-      !                                 gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       !
       IMPLICIT NONE
@@ -167,10 +163,6 @@ MODULE lanzcos_restart
                                       ipol_input, n_lanczos, &
                                       alpha_store,beta_store,&
                                       gamma_store,zeta_store
-      !wbsecom combined into westcom
-      !USE wbsecom,             ONLY : ipol_input, n_lanczos, &
-      !                                alpha_store,beta_store,&
-      !                                gamma_store,zeta_store
       USE mp_global,           ONLY : intra_image_comm
       !
       IMPLICIT NONE
@@ -324,10 +316,6 @@ MODULE lanzcos_restart
       USE westcom,              ONLY : n_lanczos, &
                                        alpha_store,beta_store,&
                                        gamma_store,zeta_store
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : n_lanczos, &
-      !                                 alpha_store,beta_store,&
-      !                                 gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       !
       IMPLICIT NONE

@@ -31,12 +31,9 @@ MODULE lanzcos_db
     SUBROUTINE lanzcos_d0psi_write ()
       !------------------------------------------------------------------------
       !
-      USE xml_io_base,          ONLY : create_directory
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : d0psi
       USE westcom,              ONLY : wbse_save_dir,  d0psi
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
@@ -97,8 +94,6 @@ MODULE lanzcos_db
       !------------------------------------------------------------------------
       !
       USE westcom,             ONLY : wbse_save_dir, d0psi
-      !wbsecom combined into westcom
-      !USE wbsecom,             ONLY : d0psi
       USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root
@@ -153,12 +148,9 @@ MODULE lanzcos_db
     SUBROUTINE lanzcos_evcs_write( evc1, evc1_old )
       !------------------------------------------------------------------------
       !
-      USE xml_io_base,          ONLY : create_directory
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      !wbsecom combined into westcom
-      !USE wbsecom,              ONLY : d0psi
       USE westcom,              ONLY : wbse_save_dir,d0psi
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
@@ -217,8 +209,6 @@ MODULE lanzcos_db
       !------------------------------------------------------------------------
       !
       USE westcom,             ONLY : wbse_save_dir, d0psi
-      !wbsecom combined into westcom
-      !USE wbsecom,             ONLY : d0psi
       USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root

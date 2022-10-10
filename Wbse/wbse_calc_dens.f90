@@ -17,18 +17,16 @@ SUBROUTINE wbse_calc_dens( devc, drho )
   USE cell_base,              ONLY : omega
   USE fft_base,               ONLY : dffts,dfftp
   USE lsda_mod,               ONLY : nspin,lsda
-  USE wavefunctions_module,   ONLY : psic, evc
+  USE wavefunctions,          ONLY : psic, evc
   USE noncollin_module,       ONLY : npol
   USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg
   USE control_flags,          ONLY : gamma_only
   USE mp,                     ONLY : mp_sum, mp_bcast
-  USE mp_global,              ONLY : inter_pool_comm, intra_bgrp_comm,&
-                                     inter_bgrp_comm, my_image_id, inter_image_comm
+  USE mp_global,              ONLY : inter_pool_comm,intra_bgrp_comm,inter_bgrp_comm,&
+                                   & my_image_id, inter_image_comm
   USE buffers,                ONLY : get_buffer
-  !wbsecom combined into westcom
-  !USE wbsecom,                ONLY : nbndval0x, l_lanzcos
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ, nbndval0x, l_lanzcos
-  USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,l_lanzcos
+  USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
   USE distribution_center,    ONLY : aband
   !

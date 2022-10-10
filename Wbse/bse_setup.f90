@@ -22,8 +22,6 @@ SUBROUTINE bse_init()
      USE pwcom,              ONLY : isk,nks
      USE westcom,            ONLY : nbnd_occ,n_pdep_eigen,fftdriver,&
                                     nbndval0x,sigma_c_head,sigma_x_head,epsinfty
-     !wbsecom combined into westcom
-     !USE wbsecom,            ONLY : nbndval0x,sigma_c_head,sigma_x_head,eps_macro,use_wstat_pdep
      USE control_flags,      ONLY : gamma_only
      USE lsda_mod,           ONLY : nspin
      USE mp,                 ONLY : mp_max

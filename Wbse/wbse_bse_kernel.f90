@@ -15,10 +15,7 @@ SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE pwcom,                ONLY : npwx,nks
-  !wbsecom combined into westcom
-  !USE wbsecom,              ONLY : nbndval0x
-  !USE wbsecom,              ONLY : l_davidson,l_lanzcos
-  USE westcom,                ONLY : nbndval0x, l_davidson,l_lanzcos
+  USE westcom,              ONLY : nbndval0x, l_davidson,l_lanzcos
   !
   IMPLICIT NONE
   !
@@ -63,11 +60,8 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
                                     double_invfft_gamma,double_fwfft_gamma
   USE mp_global,             ONLY : ibnd_start,ibnd_end,intra_bgrp_comm,&
                                     world_comm,inter_image_comm,inter_bgrp_comm
-  USE wavefunctions_module,  ONLY : psic
   USE pwcom,                 ONLY : npw,npwx,igk_k,nks,isk
   USE westcom,               ONLY : nbnd_occ, nbndval0x
-  !wbsecom combined into westcom
-  !USE wbsecom,               ONLY : nbndval0x
   USE bse_module,            ONLY : ovl_matrix,u_matrix,ovl_thr,&
                                     l_wannier_repr,index_matrix_lz,&
                                     size_index_matrix_lz
@@ -168,7 +162,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
               !
            ENDIF
            !
-           psic(:) = CMPLX(DBLE(psic(:))*DBLE(caux(:)),0.0_DP)
+           psic(:) = CMPLX(REAL(psic(:),KIND=DP)*REAL(caux(:),KIND=DP),KIND=DP)
            !
            ALLOCATE (gaux(npwx))
            !
@@ -253,7 +247,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
                     !
                  ENDIF
                  !
-                 raux1(:) = raux1(:) + DBLE(psic(:)) * AIMAG(psic(:))
+                 raux1(:) = raux1(:) + REAL(psic(:),KIND=DP) * AIMAG(psic(:))
                  !
               ENDIF
               !
@@ -273,7 +267,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
                     !
                  ENDIF
                  !
-                 raux2(:) = raux2(:) + DBLE(psic(:)) * AIMAG(psic(:))
+                 raux2(:) = raux2(:) + REAL(psic(:),KIND=DP) * AIMAG(psic(:))
                  !
               ENDIF
               !
@@ -284,11 +278,11 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
            psic(:) = (0.0_DP, 0.0_DP)
            IF (il1 < nbvalloc) THEN
               !
-              psic(:) = CMPLX(raux1(:), raux2(:))
+              psic(:) = CMPLX(raux1(:),raux2(:),KIND=DP)
               !
            ELSE
               !
-              psic(:) = CMPLX(raux1(:),0.0_DP)
+              psic(:) = CMPLX(raux1(:),KIND=DP)
               !
            ENDIF
            !

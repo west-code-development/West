@@ -1,7 +1,7 @@
 .. _perlmutter:
 
 ================
-Perlmutter-NERSC
+NERSC-Perlmutter
 ================
 
 Perlmutter (Phase I) is a GPU-accelerated supercomputer located at National Energy Research Scientific Computing Center (`NERSC <https://www.nersc.gov/>`_).

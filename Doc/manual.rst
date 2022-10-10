@@ -604,7 +604,7 @@ westpp_control
    * - **Default**
      - [1,2]
    * - **Description**
-     - Range for W, E, S, and D run.
+     - Range for W, E, S, D, and L run.
 
 
 .. data:: westpp_format

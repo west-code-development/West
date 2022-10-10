@@ -29,19 +29,23 @@ SUBROUTINE exx_go()
   USE westcom,                ONLY : l_minimize_exx_if_active
   USE mp_exx,                 ONLY : mp_start_exx
   USE mp_pools,               ONLY : intra_pool_comm
-  USE command_line_options,   ONLY : nband_,ntg_
+  USE command_line_options,   ONLY : nband_,ntg_,command_line
   !
   IMPLICIT NONE
   !
   ! Workspace
   !
   LOGICAL :: exst
+  LOGICAL :: is_westpp
+  LOGICAL, EXTERNAL :: matches
   !
   ! See PW/src/setup.f90: setup_exx
   !
   CALL mp_start_exx(nband_,ntg_,intra_pool_comm)
   !
-  IF(xclib_dft_is('hybrid')) THEN
+  is_westpp = matches('westpp.x',command_line)
+  !
+  IF(xclib_dft_is('hybrid') .AND. .NOT. is_westpp) THEN
      exxdiv_treatment = 'gb'
      erfc_scrlen = get_screening_parameter()
      gau_scrlen = get_gau_parameter()

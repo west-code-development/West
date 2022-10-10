@@ -1,8 +1,8 @@
 .. _theta:
 
-=================
-Theta-ALCF (XC40)
-=================
+==========
+ALCF-Theta
+==========
 
 Theta is a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF <https://www.alcf.anl.gov/>`_.
 

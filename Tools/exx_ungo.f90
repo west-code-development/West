@@ -16,10 +16,18 @@ SUBROUTINE exx_ungo()
   !
   USE exx,                    ONLY : deallocate_exx
   USE xc_lib,                 ONLY : xclib_dft_is,stop_exx
+  USE command_line_options,   ONLY : command_line
   !
   IMPLICIT NONE
   !
-  IF( xclib_dft_is('hybrid') ) THEN
+  ! Workspace
+  !
+  LOGICAL :: is_westpp
+  LOGICAL, EXTERNAL :: matches
+  !
+  is_westpp = matches('westpp.x',command_line)
+  !
+  IF(xclib_dft_is('hybrid') .AND. .NOT. is_westpp) THEN
      CALL stop_exx
      CALL deallocate_exx
   ENDIF

@@ -65,17 +65,17 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE chi_invert,           ONLY : chi_invert_real,chi_invert_complex
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
-  USE wavefunctions,        ONLY : evc_host=>evc
+  USE wavefunctions,        ONLY : evc
   USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic=>psic_d
   USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
                                  & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
                                  & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
 #else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
+  USE wavefunctions,        ONLY : evc,psic
   USE uspp,                 ONLY : vkb,nkb
 #endif
   !
@@ -149,7 +149,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   REAL(DP),ALLOCATABLE :: et_loc(:)
   REAL(DP),ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(l2g,eprec_loc,et_loc,sqvc)
-  COMPLEX(DP),ALLOCATABLE :: evc_save(:,:)
+  COMPLEX(DP),POINTER :: evc_work(:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(DEVICE) :: evc_work
+#endif
   !
   CALL io_push_title('(W)-Lanczos')
   !
@@ -180,7 +183,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ENDIF
   !
   IF(l_QDET) THEN
-     IF(kpt_pool%nloc == 1) ALLOCATE( evc_save(npwx*npol, nbnd ) )
+     ALLOCATE( evc_work(npwx*npol, nbnd ) )
      ALLOCATE( dmati_a(mypara%nglob, mypara%nloc, ifr%nloc) )
      ALLOCATE( zmatr_a(mypara%nglob, mypara%nloc, rfr%nloc) )
      !$acc enter data create(dmati_a,zmatr_a)
@@ -191,6 +194,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      !$acc kernels present(zmatr_a)
      zmatr_a(:,:,:) = 0._DP
      !$acc end kernels
+  ELSE
+     evc_work => evc
   ENDIF
   !
   IF(l_read_restart) THEN
@@ -327,13 +332,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      ! ... read in wavefunctions from the previous iteration
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
 #if defined(__CUDA)
@@ -355,16 +355,17 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      !
      IF(l_QDET) THEN
         !
-        ! Save wavefunctions
-        ! No need to save when kpt_pool%nloc > 1, as wavefunctions are read from file
-        !
-        IF(kpt_pool%nloc == 1) THEN
 #if defined(__CUDA)
-           evc_save(:,:) = evc_host
+        !$acc parallel loop collapse(2)
+        DO i1 = 1,nbnd
+           DO i3 = 1,npwx*npol
+              evc_work(i3,i1) = evc_d(i3,i1)
+           ENDDO
+        ENDDO
+        !$acc end parallel
 #else
-           evc_save(:,:) = evc_work
+        evc_work(:,:) = evc
 #endif
-        ENDIF
         !
 #if defined(__CUDA)
         CALL reallocate_ps_gpu(n_bands,nbnd)
@@ -455,9 +456,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            CALL linsolve_sternheimer_m_wfcts(nbndval_full,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
 #endif
            !
-           IF(ierr/=0) THEN
-              WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
-           ENDIF
+           IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
            !
 #if defined(__CUDA)
            CALL memcpy_D2H(phis(:,:,ivloc),phi_tmp,npwx*npol*3)
@@ -904,15 +903,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      CALL mp_sum(zmatr_a,inter_pool_comm)
   ENDIF
   !
-  ! Restore wavefunctions changed by QDET
-  ! No need to restore when kpt_pool%nloc > 1, as wavefunctions are read from file
-  !
-  IF(l_QDET .AND. kpt_pool%nloc == 1) THEN
-#if defined(__CUDA)
-     evc_host(:,:) = evc_save
-#else
-     evc_work(:,:) = evc_save
-#endif
+  IF(l_QDET) THEN
+     DEALLOCATE(evc_work)
+  ELSE
+     NULLIFY(evc_work)
   ENDIF
   !
   CALL stop_bar_type( barra, 'wlanczos' )
@@ -1519,9 +1513,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               CALL linsolve_sternheimer_m_wfcts(nbndval,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
 #endif
               !
-              IF(ierr/=0) THEN
-                 WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
-              ENDIF
+              IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
               !
 #if defined(__CUDA)
               CALL memcpy_D2H(phis(:,:,ivloc),phi_tmp,npwx*npol*3)
@@ -2085,7 +2077,7 @@ SUBROUTINE output_eps_head( )
   !
   IF(l_macropol) THEN
      !
-     CALL io_push_title("(O)ptics")
+     CALL io_push_title('(O)ptics')
      !
      CALL start_bar_type ( barra, 'optics', rfr%nloc )
      !
@@ -2131,16 +2123,16 @@ SUBROUTINE output_eps_head( )
         !
         CALL json%initialize()
         !
-        CALL json%add("e",out_tabella(:,1))
-        CALL json%add("eps1",out_tabella(:,2))
-        CALL json%add("eps2",out_tabella(:,3))
-        CALL json%add("EELF",out_tabella(:,4))
-        CALL json%add("n",out_tabella(:,5))
-        CALL json%add("k",out_tabella(:,6))
-        CALL json%add("refl",out_tabella(:,7))
-        CALL json%add("pol",out_tabella(:,8))
+        CALL json%add('e',out_tabella(:,1))
+        CALL json%add('eps1',out_tabella(:,2))
+        CALL json%add('eps2',out_tabella(:,3))
+        CALL json%add('EELF',out_tabella(:,4))
+        CALL json%add('n',out_tabella(:,5))
+        CALL json%add('k',out_tabella(:,6))
+        CALL json%add('refl',out_tabella(:,7))
+        CALL json%add('pol',out_tabella(:,8))
         !
-        OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//"/optics.json" )
+        OPEN( NEWUNIT=iunit, FILE=TRIM(wfreq_save_dir)//'/optics.json' )
         CALL json%print( iunit )
         CLOSE( iunit )
         !
@@ -2150,9 +2142,9 @@ SUBROUTINE output_eps_head( )
      !
      time_spent(2) = get_clock( 'optics' )
      !
-     WRITE(stdout,'(  5x," ")')
+     WRITE(stdout,'(5x," ")')
      CALL io_push_bar()
-     WRITE(stdout, "(5x, 'File ',a,' written in ',a20)") TRIM(wfreq_save_dir)//"/optics.json",&
+     WRITE(stdout,'(5x, "File ",a," written in ",a20)') TRIM(wfreq_save_dir)//'/optics.json',&
      & human_readable_time(time_spent(2)-time_spent(1))
      CALL io_push_bar()
      !

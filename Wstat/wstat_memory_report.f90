@@ -17,10 +17,6 @@ SUBROUTINE wstat_memory_report()
   USE kinds,               ONLY : DP
   USE io_global,           ONLY : stdout
   USE wvfct,               ONLY : npwx,nbnd
-  USE fft_base,            ONLY : dfftp
-  USE gvect,               ONLY : ngl
-  USE gvecs,               ONLY : ngms
-  USE uspp,                ONLY : nkb
   USE control_flags,       ONLY : gamma_only
   USE mp_bands,            ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
@@ -36,75 +32,31 @@ SUBROUTINE wstat_memory_report()
   INTEGER, PARAMETER :: Mb=1024*1024, complex_size=16, real_size=8
   REAL(DP) :: mem_tot, mem_partial
   !
-  WRITE(stdout,'(/,5x,"[MEM] ----------------------------------------------------------")')
-  WRITE(stdout,'(5x,"[MEM] **Memory** analysis: QE")')
-  WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
+  CALL pw_memory_report()
   !
   IF( mpime == root ) THEN
      !
      CALL json%initialize()
-     CALL json%load(filename=TRIM(logfile))
+     CALL json%load( filename=TRIM(logfile) )
      CALL json%add( 'memory.units', 'Mb' )
      !
   ENDIF
   !
-  ! the conversions to double prevent integer overflow in very large run
-  !
   mem_tot = 0.0_DP
-  WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
-  WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  !
-  mem_partial = (1.0_DP/Mb)*complex_size*nbnd*npwx
-  WRITE( stdout, '(5x,"[MEM] Kohn-Sham Wavefunctions ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx,nbnd
-  IF( mpime == root ) CALL json%add( 'memory.evc', mem_partial )
-  mem_tot = mem_tot + mem_partial
-  !
-  mem_partial = (1.0_DP/Mb)*complex_size*nkb*npwx
-  WRITE( stdout, '(5x,"[MEM] NL pseudopotentials     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx, nkb
-  IF( mpime == root ) CALL json%add( 'memory.nlpp', mem_partial )
-  mem_tot = mem_tot + mem_partial
-  !
-  mem_partial = (1.0_DP/Mb)*complex_size*dfftp%nnr
-  WRITE( stdout, '(5x,"[MEM] Each V/rho on FFT grid  ",f10.2," Mb", 5x,"(",i7,")")') &
-     mem_partial, dfftp%nnr
-  IF( mpime == root ) CALL json%add( 'memory.rhor', mem_partial )
-  mem_tot = mem_tot + mem_partial
-  !
-  mem_partial = (1.0_DP/Mb)*real_size*ngms
-  WRITE( stdout, '(5x,"[MEM] Each G-vector array     ",f10.2," Mb", 5x,"(",i7,")")') &
-     mem_partial, ngms
-  IF( mpime == root ) CALL json%add( 'memory.rhog', mem_partial )
-  mem_tot = mem_tot + mem_partial
-  !
-  mem_partial = (1.0_DP/Mb)*real_size*ngl
-  WRITE( stdout, '(5x,"[MEM] G-vector shells         ",f10.2," Mb", 5x,"(",i7,")")') &
-     mem_partial, ngl
-  IF( mpime == root ) CALL json%add( 'memory.gshells', mem_partial )
-  mem_tot = mem_tot + mem_partial
-  WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  WRITE( stdout, '(5x,"[MEM] TOT                     ",f10.2," Mb", 5x)') mem_tot
-  WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  WRITE(stdout,'(5x,"[MEM] ")')
-  !
-  !
-  !
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] **Memory** analysis: WSTAT global")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  mem_tot = 0.0_DP
   WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
   mem_partial = (1.0_DP/Mb)*complex_size*npwqx*pert%nlocx
-  WRITE( stdout, '(5x,"[MEM] dvg                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+  WRITE(stdout,'(5x,"[MEM] dvg                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, npwqx, pert%nlocx
   IF( mpime == root ) CALL json%add( 'memory.dvg', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
   mem_partial = (1.0_DP/Mb)*complex_size*npwqx*pert%nlocx
-  WRITE( stdout, '(5x,"[MEM] dng                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+  WRITE(stdout,'(5x,"[MEM] dng                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, npwqx, pert%nlocx
   IF( mpime == root ) CALL json%add( 'memory.dng', mem_partial )
   mem_tot = mem_tot + mem_partial
@@ -114,7 +66,7 @@ SUBROUTINE wstat_memory_report()
   ELSE
      mem_partial = (1.0_DP/Mb)*complex_size*n_pdep_basis*pert%nlocx
   ENDIF
-  WRITE( stdout, '(5x,"[MEM] hr_distr                ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+  WRITE(stdout,'(5x,"[MEM] hr_distr                ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, n_pdep_basis, pert%nlocx
   IF( mpime == root ) CALL json%add( 'memory.hr_distr', mem_partial )
   mem_tot = mem_tot + mem_partial
@@ -124,18 +76,16 @@ SUBROUTINE wstat_memory_report()
   ELSE
      mem_partial = (1.0_DP/Mb)*complex_size*n_pdep_basis*pert%nlocx
   ENDIF
-  WRITE( stdout, '(5x,"[MEM] vr_distr                ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+  WRITE(stdout,'(5x,"[MEM] vr_distr                ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, n_pdep_basis, pert%nlocx
   IF( mpime == root ) CALL json%add( 'memory.vr_distr', mem_partial )
   mem_tot = mem_tot + mem_partial
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  WRITE( stdout, '(5x,"[MEM] TOT                     ",f10.2," Mb", 5x)') mem_tot
+  WRITE(stdout,'(5x,"[MEM] TOT                     ",f10.2," Mb", 5x)') mem_tot
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] ")')
   !
-  !
   mem_tot = 0.0_DP
-  !
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] **Memory** analysis: WSTAT temporary")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
@@ -143,41 +93,33 @@ SUBROUTINE wstat_memory_report()
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
   mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)
-  WRITE( stdout, '(5x,"[MEM] dvpsi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+  WRITE(stdout,'(5x,"[MEM] dvpsi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)
   IF( mpime == root ) CALL json%add( 'memory.dvpsi', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
   mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)
-  WRITE( stdout, '(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+  WRITE(stdout,'(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)
   IF( mpime == root ) CALL json%add( 'memory.dpsi', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
-!  mem_partial = (1.0_DP/Mb)*complex_size*dffts%nnr
-!  WRITE( stdout, '(5x,"[MEM] aux_r                   ",f10.2," Mb", 5x,"(",i7,")")') &
-!     mem_partial, dffts%nnr
-!  mem_tot1 = mem_tot1 + mem_partial
-!  !
-!  mem_partial = (1.0_DP/Mb)*complex_size*npwx
-!  WRITE( stdout, '(5x,"[MEM] aux_g                   ",f10.2," Mb", 5x,"(",i7,")")') &
-!     mem_partial, npwx
-!  mem_tot1 = mem_tot1 + mem_partial
-!  !
-!  IF(.NOT.gamma_only) THEN
-!     mem_partial = (1.0_DP/Mb)*complex_size*npwx
-!     WRITE( stdout, '(5x,"[MEM] dpsic                   ",f10.2," Mb", 5x,"(",i7,")")') &
-!        mem_partial, dffts%nnr
-!     mem_tot1 = mem_tot1 + mem_partial
-!  ENDIF
-!  !
-!  mem_partial = (1.0_DP/Mb)*complex_size*npwx*pert%nlocx
-!  WRITE( stdout, '(5x,"[MEM] dhg                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-!     mem_partial, npwx, pert%nlocx
-!  mem_tot2 = mem_tot2 + mem_partial
+  IF( .NOT. gamma_only ) THEN
+     mem_partial = (1.0_DP/Mb)*complex_size*nbnd*npwx
+     WRITE(stdout,'(5x,"[MEM] evckmq                  ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+        mem_partial, npwx, nbnd
+     IF( mpime == root ) CALL json%add( 'memory.evckmq', mem_partial )
+     mem_tot = mem_tot + mem_partial
+  ENDIF
+  !
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)*4
+  WRITE(stdout,'(5x,"[MEM] Sternheimer workspace   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+     mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)*4
+  IF( mpime == root ) CALL json%add( 'memory.sternheimer', mem_partial )
+  mem_tot = mem_tot + mem_partial
   !
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  WRITE( stdout, '(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot
+  WRITE(stdout,'(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,*)
   !

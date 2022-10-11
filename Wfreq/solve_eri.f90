@@ -294,7 +294,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : l_macropol,n_pairs,pijmap,proj_c,npwq,npwqx
+  USE westcom,              ONLY : n_pairs,pijmap,proj_c,npwq,npwqx
   USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm
   USE distribution_center,  ONLY : bandpair
   USE fft_base,             ONLY : dffts
@@ -568,7 +568,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   USE kinds,                ONLY : DP
   USE distribution_center,  ONLY : pert,macropert,bandpair
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_pdep_eigen_to_use,fftdriver,n_pairs,pijmap,l_macropol
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_pairs,pijmap,l_macropol
   USE types_coulomb,        ONLY : pot3D
   USE mp_global,            ONLY : inter_bgrp_comm,inter_image_comm
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type

@@ -42,7 +42,7 @@ SUBROUTINE wbse_setup(code)
   !
   alphapv_dfpt = get_alpha_pv()
   !
-  l_use_ecutrho = .false.
+  l_use_ecutrho = .FALSE.
   !
   CALL set_npwq()
   !TODO: Dense?   store_sqvc(sqvc,ngm,2,isz)
@@ -55,7 +55,7 @@ SUBROUTINE wbse_setup(code)
   !
   CALL west_dv_setup(bse_calc)
   !
-  IF (TRIM(code) .eq. 'WBSE') THEN
+  IF (TRIM(code) == 'WBSE') THEN
       CALL my_mkdir(wbse_save_dir)
   ELSE
       CALL my_mkdir(wbse_init_save_dir)

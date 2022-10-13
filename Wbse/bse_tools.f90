@@ -41,11 +41,6 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      CHARACTER(LEN=6)    :: my_labelj
      CHARACTER(LEN=6)    :: my_spin
      CHARACTER(LEN=256)  :: file_base
-     CHARACTER(LEN=256)  :: which_bse_kernel
-     !
-     which_bse_kernel = 'PWSCF'
-     !
-     !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
      !
      IF (fixed_band_j < fixed_band_i) THEN
         !
@@ -75,7 +70,7 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
      !
      RETURN
      !
-END SUBROUTINE read_bse_pots_g2g
+END SUBROUTINE
 
 SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single_only)
      !
@@ -87,7 +82,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      USE control_flags,  ONLY : gamma_only
      USE fft_base,       ONLY : dfftp, dffts
      USE io_global,      ONLY : ionode, stdout
-     USE xml_io_base,    ONLY : read_rho_xml
+!     USE xml_io_base,    ONLY : read_rho_xml
      USE pdep_io,        ONLY : pdep_read_G_and_distribute
      USE gvect,          ONLY : ngm, ngmx
      USE fft_at_gamma,   ONLY : single_invfft_gamma
@@ -116,22 +111,22 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      CHARACTER(LEN=256) ::  which_bse_kernel
      !
      which_bse_kernel = 'PWSCF'
-     bse_kernel_from_cp   = .false.
-     bse_kernel_from_pwscf = .false.
-     bse_kernel_from_qbox = .false.
+     bse_kernel_from_cp   = .FALSE.
+     bse_kernel_from_pwscf = .FALSE.
+     bse_kernel_from_qbox = .FALSE.
      !
-     SELECT CASE( trim( which_bse_kernel ) )
+     SELECT CASE( TRIM( which_bse_kernel ) )
      CASE( 'CP' )
         !
-        bse_kernel_from_cp   = .true.
-        bse_kernel_from_pwscf = .false.
-        bse_kernel_from_qbox = .false.
+        bse_kernel_from_cp   = .TRUE.
+        bse_kernel_from_pwscf = .FALSE.
+        bse_kernel_from_qbox = .FALSE.
         !
      CASE( 'PWSCF' )
         !
-        bse_kernel_from_cp   = .false.
-        bse_kernel_from_pwscf = .true.
-        bse_kernel_from_qbox = .false.
+        bse_kernel_from_cp   = .FALSE.
+        bse_kernel_from_pwscf = .TRUE.
+        bse_kernel_from_qbox = .FALSE.
         !
      CASE( 'QBOX' )
         !
@@ -147,8 +142,6 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      !
      rhoaux1(:) = 0.0_DP
      rhoaux2(:) = 0.0_DP
-     !
-     !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
      !
      IF (fixed_band_j < fixed_band_i) THEN
         !
@@ -175,8 +168,8 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//&
                     '_'//TRIM(my_spin)//'.dat'
         !
-        CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
-                   dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
+!        CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
+!                   dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
         !
      ENDIF
      !
@@ -237,8 +230,8 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)&
                        //'_'//TRIM(my_spin)//'.dat'
            !
-           CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
-                   dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
+!           CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
+!                   dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
            !
         ENDIF
         !
@@ -284,7 +277,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      !
      RETURN
      !
-END SUBROUTINE read_bse_pots_g2r
+END SUBROUTINE
 !
 !
 SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
@@ -376,7 +369,7 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE
 !
 !
 !
@@ -489,7 +482,7 @@ SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE
 !
 !
 SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
@@ -779,4 +772,4 @@ SUBROUTINE read_pwscf_wannier_orbs ( ne, npw, c_emp, filename )
   !
   RETURN
   !
-END SUBROUTINE read_pwscf_wannier_orbs
+END SUBROUTINE

@@ -25,7 +25,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
   USE mp_global,              ONLY : inter_pool_comm,intra_bgrp_comm,inter_bgrp_comm,&
                                    & my_image_id, inter_image_comm
   USE buffers,                ONLY : get_buffer
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,l_lanzcos
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,l_lanczos
   USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
   USE distribution_center,    ONLY : aband
@@ -112,7 +112,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
            !
            DO ir=1, dffts%nnr
               !
-              drho(ir,current_spin) = drho(ir,current_spin) + w1 * DCONJG(psic(ir))* psic_aux(ir)
+              drho(ir,current_spin) = drho(ir,current_spin) + w1 * CONJG(psic(ir))* psic_aux(ir)
               !
            ENDDO
            !
@@ -132,7 +132,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
               !
               DO ir=1, dffts%nnr
                  !
-                 drho(ir,current_spin) = drho(ir,current_spin) + w1 * DCONJG(psic(ir))* psic_aux(ir)
+                 drho(ir,current_spin) = drho(ir,current_spin) + w1 * CONJG(psic(ir))* psic_aux(ir)
                  !
               ENDDO
               !
@@ -146,7 +146,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
      !
   ENDDO
   !
-  IF (l_lanzcos) THEN
+  IF (l_lanczos) THEN
      !
      CALL mp_sum (drho(:,:),inter_image_comm)
      !
@@ -156,4 +156,4 @@ SUBROUTINE wbse_calc_dens( devc, drho )
   !
   RETURN
   !
-ENDSUBROUTINE wbse_calc_dens
+END SUBROUTINE

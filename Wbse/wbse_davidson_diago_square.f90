@@ -373,9 +373,9 @@ SUBROUTINE wbse_davidson_diago_square ( )
      IF (l_preconditioning) THEN
         !
         IF (dav_iter < 4) THEN
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .false., epsilon_ref)
+           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .FALSE., epsilon_ref)
         ELSE
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .true., epsilon_ref )
+           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .TRUE., epsilon_ref )
         ENDIF
         !
      ENDIF
@@ -586,8 +586,6 @@ SUBROUTINE wbse_davidson_diago_square ( )
      CALL wbse_output_a_report(dav_iter)
      !
   END DO iterate
-  !
-! xxx  CALL wstat_xml_dump( )
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )

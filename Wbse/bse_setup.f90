@@ -216,7 +216,7 @@ SUBROUTINE bse_init()
      !
      RETURN
      !
-ENDSUBROUTINE
+END SUBROUTINE
 !
 !
 SUBROUTINE wbse_clear()
@@ -235,4 +235,4 @@ SUBROUTINE wbse_clear()
      IF (ALLOCATED(index_matrix_lz)) DEALLOCATE(index_matrix_lz)
      IF (ALLOCATED(size_index_matrix_lz)) DEALLOCATE(size_index_matrix_lz)
      !
-ENDSUBROUTINE
+END SUBROUTINE

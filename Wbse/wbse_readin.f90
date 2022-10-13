@@ -33,9 +33,7 @@ SUBROUTINE wbse_readin()
   !
   CALL start_clock('wbse_readin')
   !
-  !TODO: change to new vest fetch namelist
   CALL fetch_input_yml(3,(/1,6,7/),.TRUE.,.FALSE.)
-  !CALL wbse_fetch_namelist(3,(/1,2,3/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed
@@ -76,9 +74,7 @@ SUBROUTINE wbse_init_readin()
   !
   CALL start_clock('wbse_init_readin')
   !
-  !TODO: change to new west version of fech namelist
   CALL fetch_input_yml(3,(/1,5,6/),.TRUE.,.FALSE.)
-  !CALL wbse_fetch_namelist(3,(/1,2,4/))
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

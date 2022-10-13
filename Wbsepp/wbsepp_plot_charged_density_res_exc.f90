@@ -154,4 +154,4 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE

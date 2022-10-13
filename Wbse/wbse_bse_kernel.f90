@@ -15,7 +15,7 @@ SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE pwcom,                ONLY : npwx,nks
-  USE westcom,              ONLY : nbndval0x, l_davidson,l_lanzcos
+  USE westcom,              ONLY : nbndval0x, l_davidson,l_lanczos
   !
   IMPLICIT NONE
   !
@@ -27,13 +27,13 @@ SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
   !
   IF (gamma_only) THEN
      !
-     IF (l_lanzcos) THEN
+     IF (l_lanczos) THEN
         !
-        CALL bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, .true.)
+        CALL bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, .TRUE.)
         !
      ELSE
         !
-        CALL bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, .false.)
+        CALL bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, .FALSE.)
         !
      ENDIF
      !
@@ -45,7 +45,7 @@ SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
   !
   RETURN
   !
-ENDSUBROUTINE wbse_bse_kernel
+END SUBROUTINE
 !
 !
 !
@@ -97,7 +97,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
      !
      current_spin_ikq = isk(ikq)
      !
-     IF (current_spin_ikq .NE. current_spin) CYCLE
+     IF (current_spin_ikq /= current_spin) CYCLE
      !
      nbndval_q = nbnd_occ(ikq)
      !
@@ -124,7 +124,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
      ALLOCATE(aux_bse2(npwx,nbndval0x))
      aux_bse2 = (0.0_DP, 0.0_DP)
      !
-     IF (.not.lz_method) THEN
+     IF (.NOT.lz_method) THEN
         !
         ALLOCATE(kd1_ij(npwx,size_index_matrix))
         !
@@ -138,7 +138,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
         !
         ig1 = bseparal%l2g(il1) ! global index of n_total
         !
-        IF ((ig1 < 1) .or. (ig1 > size_index_matrix)) CYCLE
+        IF ((ig1 < 1) .OR. (ig1 > size_index_matrix)) CYCLE
         !
         ibnd_index = INT(index_matrix_lz(ig1,1,current_spin))
         jbnd_index = INT(index_matrix_lz(ig1,2,current_spin))
@@ -148,7 +148,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
            ! READ response at iq,ik,ispin
            !
            caux(:) = (0.0_DP,0.0_DP)
-           CALL read_bse_pots_g2r (caux(:), ibnd_index, jbnd_index, current_spin, .true.)
+           CALL read_bse_pots_g2r (caux(:), ibnd_index, jbnd_index, current_spin, .TRUE.)
            !
            psic(:) = (0.0_DP,0.0_DP)
            !
@@ -178,7 +178,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
            !
            ALLOCATE (gaux(npwx))
            !
-           CALL read_bse_pots_g2g(gaux, ibnd_index, jbnd_index, current_spin, .true.)
+           CALL read_bse_pots_g2g(gaux, ibnd_index, jbnd_index, current_spin, .TRUE.)
            !
            kd1_ij(:,ig1) = gaux(:)
            !
@@ -188,7 +188,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
         !
      ENDDO
      !
-     IF (.not.lz_method) THEN
+     IF (.NOT.lz_method) THEN
         !
         CALL mp_sum(kd1_ij(:,:), inter_image_comm)
         !
@@ -342,4 +342,4 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE

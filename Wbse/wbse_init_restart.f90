@@ -474,8 +474,8 @@ MODULE wbse_init_restart
       WRITE(my_label,'(i6.6)') image_id
       filename = TRIM( wbse_init_save_dir )//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
       !
-      IF(my_pool_id.NE.0) RETURN
-      IF(my_bgrp_id.NE.0) RETURN
+      IF(my_pool_id /= 0) RETURN
+      IF(my_bgrp_id /= 0) RETURN
       !
       ! Resume all components
       !
@@ -617,4 +617,4 @@ MODULE wbse_init_restart
       CALL mp_barrier(world_comm)
       !
     END SUBROUTINE
-END MODULE wbse_init_restart
+END MODULE

@@ -11,6 +11,7 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG)../IO_kernel \
            $(MOD_FLAG)../Libraries/Base64 \
            $(MOD_FLAG)../Libraries/Forpy \
+           $(MOD_FLAG)../Libraries/iotk \
            $(MOD_FLAG)../Libraries/Json \
            $(MOD_FLAG)../Modules \
            $(MOD_FLAG)../Para_kernel \
@@ -18,15 +19,15 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 WBSEPP_OBJS = \
-wbsepp_decompose_eig_contributions.o \
+wbsepp.o \
 wbsepp_ads_spectrum.o \
-wbsepp_plot_exc.o \
+wbsepp_decompose_eig_contributions.o \
 wbsepp_plot_charged_density_res_exc.o \
-wbsepp.o
+wbsepp_plot_exc.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
+QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
 ../Wstat/libwstat.a \

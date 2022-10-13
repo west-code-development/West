@@ -11,6 +11,7 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG)../IO_kernel \
            $(MOD_FLAG)../Libraries/Base64 \
            $(MOD_FLAG)../Libraries/Forpy \
+           $(MOD_FLAG)../Libraries/iotk \
            $(MOD_FLAG)../Libraries/Json \
            $(MOD_FLAG)../Modules \
            $(MOD_FLAG)../Para_kernel \
@@ -18,40 +19,39 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 WBSE_OBJS = \
-bse_module.o \
-wbse_setup.o \
-bse_setup.o \
-wbse_readin.o \
-plep_io.o \
-plep_db.o \
-wbse_restart.o  \
-wbse_memory_report.o \
-wbse_tools.o \
-wbse_davidson_diago.o \
-wbse_calc_dens.o \
-td_liouville_oper.o \
-west_dv_of_drho.o \
-west_dv_setup.o \
-wbse_bse_kernel.o \
-bse_tools.o \
 bse_hqp_psi.o \
-wbse_solve_e_psi.o \
-wbse_dot.o \
-lanzcos_db.o \
-lanzcos_restart.o \
-wbse_lanzcos_diago.o \
-wbse_lanzcos_diago.o \
-check_ovl_wfc.o \
 bse_localization.o\
-wbse_init_restart.o \
-wbse_init_pdep.o \
+bse_module.o \
+bse_setup.o \
+bse_tools.o \
+check_ovl_wfc.o \
+lanczos_db.o \
+lanczos_restart.o \
+plep_db.o \
+plep_io.o \
+td_liouville_oper.o \
+wbse_bse_kernel.o \
+wbse_calc_dens.o \
+wbse_davidson_diago.o \
 wbse_davidson_diago_square.o\
+wbse_dot.o \
+wbse_init_pdep.o \
 wbse_init_qboxcoupling.o \
-wbse_init_fock_energy.o
+wbse_init_restart.o \
+wbse_lanczos_diago.o \
+wbse_lanczos_diago.o \
+wbse_memory_report.o \
+wbse_readin.o \
+wbse_restart.o  \
+wbse_setup.o \
+wbse_solve_e_psi.o \
+wbse_tools.o \
+west_dv_of_drho.o \
+west_dv_setup.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = ../../KS_Solvers/libks_solvers.a $(BASEMODS)
+QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
 ../Wstat/libwstat.a \

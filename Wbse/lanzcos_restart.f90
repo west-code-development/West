@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-MODULE lanzcos_restart
+MODULE lanczos_restart
   !----------------------------------------------------------------------------
   !
   USE iotk_module
@@ -25,14 +25,14 @@ MODULE lanzcos_restart
   !
   INTEGER, PRIVATE :: iunout
   !
-  PUBLIC :: lanzcos_restart_write
-  PUBLIC :: lanzcos_restart_read
-  PUBLIC :: lanzcos_postpro_write
+  PUBLIC :: lanczos_restart_write
+  PUBLIC :: lanczos_restart_read
+  PUBLIC :: lanczos_postpro_write
   !
   CONTAINS
     !
     !------------------------------------------------------------------
-    SUBROUTINE lanzcos_restart_write (nipol_input, pliter_stop, lriter_stop)
+    SUBROUTINE lanczos_restart_write (nipol_input, pliter_stop, lriter_stop)
       !----------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
@@ -62,8 +62,8 @@ MODULE lanzcos_restart
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('wbse_lanzcos_restart')
-      time_spent(1)=get_clock('wbse_lanzcos_restart')
+      CALL start_clock('wbse_lanczos_restart')
+      time_spent(1)=get_clock('wbse_lanczos_restart')
       !
       ! CREATE THE SUMMARY FILE
       !
@@ -141,8 +141,8 @@ MODULE lanzcos_restart
       !
       CALL mp_barrier(world_comm)
       !
-      CALL stop_clock('wbse_lanzcos_restart')
-      time_spent(2)=get_clock('wbse_lanzcos_restart')
+      CALL stop_clock('wbse_lanczos_restart')
+      time_spent(2)=get_clock('wbse_lanczos_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout, "(5x, '[I/O] RESTART written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
@@ -153,7 +153,7 @@ MODULE lanzcos_restart
     !
     !
     !
-    SUBROUTINE lanzcos_restart_read (nipol_input, pliter_stop, lriter_stop)
+    SUBROUTINE lanczos_restart_read (nipol_input, pliter_stop, lriter_stop)
       !
       USE mp_global,           ONLY : world_comm
       USE mp_world,            ONLY : mpime,root,world_comm
@@ -187,8 +187,8 @@ MODULE lanzcos_restart
       !
       CALL mp_barrier( world_comm )
       !
-      CALL start_clock('wbse_lanzcos_restart')
-      time_spent(1)=get_clock('wbse_lanzcos_restart')
+      CALL start_clock('wbse_lanczos_restart')
+      time_spent(1)=get_clock('wbse_lanczos_restart')
       !
       dirname = TRIM( wbse_save_dir ) // '/' // TRIM( 'summary.xml' )
       IF ( mpime==root ) THEN
@@ -198,7 +198,7 @@ MODULE lanzcos_restart
       !
       CALL mp_bcast( ierr, root, world_comm )
       !
-      IF ( ierr /=0 ) CALL errore( 'wbse_lanzcos_restart', 'cannot open restart file for reading', ierr )
+      IF ( ierr /=0 ) CALL errore( 'wbse_lanczos_restart', 'cannot open restart file for reading', ierr )
       !
       IF ( mpime==root ) THEN
          !
@@ -218,20 +218,20 @@ MODULE lanzcos_restart
       CALL mp_bcast(pliter_stop, root, world_comm )
       CALL mp_bcast(lriter_stop, root, world_comm )
       !
-      IF (ipol_input_tmp .NE. ipol_input) THEN
-         CALL errore( 'wbse_lanzcos_restart', 'there is inconsistent between previous ipol and ipol in input para', 1)
+      IF (ipol_input_tmp /= ipol_input) THEN
+         CALL errore( 'wbse_lanczos_restart', 'there is inconsistent between previous ipol and ipol in input para', 1)
       ENDIF
       !
-      IF (n_lanczos_tmp .GT. n_lanczos) THEN
-         CALL errore( 'wbse_lanzcos_restart', 'last n_lanczos > n_lanczos', 1)
+      IF (n_lanczos_tmp > n_lanczos) THEN
+         CALL errore( 'wbse_lanczos_restart', 'last n_lanczos > n_lanczos', 1)
       ENDIF
       !
       IF (pliter_stop > nipol_input) THEN
-         CALL errore( 'wbse_lanzcos_restart', 'ipol stopped > nipol_input', 1)
+         CALL errore( 'wbse_lanczos_restart', 'ipol stopped > nipol_input', 1)
       ENDIF
       !
       IF (lriter_stop > n_lanczos) THEN
-         CALL errore( 'wbse_lanzcos_restart', ' lriter_stop > n_lanczos', 1)
+         CALL errore( 'wbse_lanczos_restart', ' lriter_stop > n_lanczos', 1)
       ENDIF
       !
       IF ((lriter_stop == n_lanczos).AND.(pliter_stop+1 <= nipol_input)) THEN
@@ -296,8 +296,8 @@ MODULE lanzcos_restart
       !
       CALL mp_barrier( world_comm )
       !
-      CALL stop_clock('wbse_lanzcos_restart')
-      time_spent(2)=get_clock('wbse_lanzcos_restart')
+      CALL stop_clock('wbse_lanczos_restart')
+      time_spent(2)=get_clock('wbse_lanczos_restart')
       !
       WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
@@ -307,7 +307,7 @@ MODULE lanzcos_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------
-    SUBROUTINE lanzcos_postpro_write (nipol_input, ipol_iter, ipol_label)
+    SUBROUTINE lanczos_postpro_write (nipol_input, ipol_iter, ipol_label)
       !----------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage

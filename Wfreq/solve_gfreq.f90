@@ -825,7 +825,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         !
 !       ! ... Needed for LDA+U
 !       !
-!       IF ( kpt_pool%nloc > 1 .AND. lda_plus_u .AND. (U_projection .NE. 'pseudo') ) &
+!       IF ( kpt_pool%nloc > 1 .AND. lda_plus_u .AND. (U_projection /= 'pseudo') ) &
 !            CALL get_buffer ( wfcU, nwordwfcU, iunhub, iks )
 !       !
 !       current_k = iks

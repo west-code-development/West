@@ -36,11 +36,11 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
       REAL(DP), EXTERNAL    :: DDOT
       COMPLEX(DP), EXTERNAL :: ZDOTC
       !
-      wbse_dot_out(:) = (0.0_DP,0.0_DP)
+      wbse_dot_out(:) = (0._DP,0._DP)
       !
       DO is = 1, nspin
          !
-         temp = (0.0_DP, 0.0_DP)
+         temp = (0._DP, 0._DP)
          !
          DO iks = 1, nks
             !
@@ -48,15 +48,15 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
             !
             current_spin = isk(iks)
             !
-            IF (current_spin .NE. is) CYCLE
+            IF (current_spin /= is) CYCLE
             !
             IF (gamma_only) THEN
                !
                DO ibnd=1, nbndval
                   !
-                  temp = temp + 2.D0*wg(ibnd,iks)*DDOT(2*ngk(iks),x(:,ibnd,iks),1,y(:,ibnd,iks),1)
+                  temp = temp + 2._DP*wg(ibnd,iks)*DDOT(2*ngk(iks),x(:,ibnd,iks),1,y(:,ibnd,iks),1)
                   !
-                  IF (gstart==2) temp = temp - wg(ibnd,iks)*DBLE(x(1,ibnd,iks))*DBLE(y(1,ibnd,iks))
+                  IF (gstart==2) temp = temp - wg(ibnd,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
                   !
                ENDDO
                !
@@ -75,10 +75,10 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
          CALL mp_sum(temp, inter_pool_comm)
          CALL mp_sum(temp, intra_bgrp_comm)
          !
-         wbse_dot_out(is) = temp*nspin/2.0
+         wbse_dot_out(is) = temp*nspin/2._DP
          !
       ENDDO
       !
       RETURN
       !
-ENDSUBROUTINE
+END SUBROUTINE

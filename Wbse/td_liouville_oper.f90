@@ -31,7 +31,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE bse_module,           ONLY : bse_calc,et_qp
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ, &
                                    l_diag_term_only,scissor_ope,nbndval0x,l_qp_correction,&
-                                   l_bse_triplet, l_lanzcos, sigma_c_head, sigma_x_head
+                                   l_bse_triplet, l_lanczos, sigma_c_head, sigma_x_head
   USE distribution_center,  ONLY : aband
   !
   IMPLICIT NONE
@@ -65,11 +65,11 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   !
   IF (bse_calc) THEN
      !
-     CALL west_dv_of_drho(dvrs, .true., .false.)
+     CALL west_dv_of_drho(dvrs, .TRUE., .FALSE.)
      !
   ELSE
      !
-     CALL west_dv_of_drho(dvrs, .false., .false.)
+     CALL west_dv_of_drho(dvrs, .FALSE., .FALSE.)
      !
   ENDIF
   !
@@ -267,7 +267,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      !
      DEALLOCATE(hevc1)
      !
-     IF (l_lanzcos) THEN
+     IF (l_lanczos) THEN
         !
         CALL mp_sum (evc1_new(:,:,iks),inter_image_comm)
         !
@@ -310,4 +310,4 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   !
   RETURN
   !
-ENDSUBROUTINE west_apply_liouvillian
+END SUBROUTINE

@@ -52,8 +52,6 @@ PROGRAM wbse_pp
   !
   CALL exx_ungo ( )
   !
-  !CALL wbse_clear ( )
-  !
   CALL clean_scratchfiles( )
   !
   CALL print_clock(' ')
@@ -95,43 +93,17 @@ END PROGRAM
       !
       CALL do_setup ( )
       !
-      l_use_ecutrho = .false.
+      l_use_ecutrho = .FALSE.
       !
       CALL set_npwq()
       !
       CALL pot3D%init('Dense',.FALSE.,'gb')
-      !old west use store_sqvc to compute coul potential
-      !
-      !ALLOCATE(pot3D%sqvc(ngm))
-      !
-      !CALL store_sqvc(pot3D%sqvc,ngm,2,isz)
       !
       CALL set_nbndocc()
       !
       nbndval0x = nbnd_occ(1)
       !
       wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
-!      IF (l_lz_spec) THEN
-!         !
-!         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.lanzcos.save'
-!         !
-!      ELSEIF (l_meg .or. l_eig_decomp .or. l_exc_plot .or. l_exc_rho_res_plot ) THEN
-!         !
-!         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.david.save'
-!         !
-!      ELSE
-!         !
-!         wbse_save_dir = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
-!         !
-!      ENDIF
-      !
-      ! if l_load_qbox_wfc == TRUE, overwrite evc by qbox wfc
-      !
-      !IF (l_load_qbox_wfc) THEN
-         !
-      !   CALL load_qbox_wfc(evc(:,1:nbndval0x), qbox_ks_wfc_filename)
-         !
-      !ENDIF
       !
     END SUBROUTINE
 
@@ -156,9 +128,7 @@ SUBROUTINE wbsepp_readin()
   !
   CALL start_clock('wbsepp_readin')
   !
-  !change to new version of fetch namelist
   CALL fetch_input_yml(2,(/1,8/),.TRUE.,.FALSE.)
-  !CALL wbsepp_fetch_namelist(2,(/1,2/))
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

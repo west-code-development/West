@@ -49,14 +49,14 @@ SUBROUTINE solve_e_psi ()
      !
   ENDIF
   !
-  IF (gstart==2 .and. gamma_only) d0psi(1,:,:,:) = &
+  IF (gstart==2 .AND. gamma_only) d0psi(1,:,:,:) = &
                          & CMPLX(REAL(d0psi(1,:,:,:),KIND=DP),KIND=DP)
   !
   CALL stop_clock ('solve_e_psi')
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE
 
 SUBROUTINE compute_d0psi_rs( )
   !
@@ -95,13 +95,13 @@ SUBROUTINE compute_d0psi_rs( )
   ALLOCATE(aux_r(dfftp%nnr))
   ALLOCATE(r(dfftp%nnr,n_ipol))
   !
-  r(:,:) = 0.0d0
+  r(:,:) = 0.0_DP
   !
   ! Calculate r
   !
-  inv_nr1 = 1.D0 / REAL( dfftp%nr1, KIND=DP )
-  inv_nr2 = 1.D0 / REAL( dfftp%nr2, KIND=DP )
-  inv_nr3 = 1.D0 / REAL( dfftp%nr3, KIND=DP )
+  inv_nr1 = 1._DP / REAL( dfftp%nr1, KIND=DP )
+  inv_nr2 = 1._DP / REAL( dfftp%nr2, KIND=DP )
+  inv_nr3 = 1._DP / REAL( dfftp%nr3, KIND=DP )
   !
 #if defined (__MPI)
   index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%npp(1:me_bgrp))
@@ -131,7 +131,7 @@ SUBROUTINE compute_d0psi_rs( )
      !
   ENDDO
   !
-  IF (.true.) CALL shift_d0psi(r,n_ipol)
+  CALL shift_d0psi(r,n_ipol)
   !
   ! Calculate the product r * psi(r)
   !
@@ -290,7 +290,7 @@ SUBROUTINE compute_d0psi_rs( )
   !
   RETURN
   !
-END SUBROUTINE compute_d0psi_rs
+END SUBROUTINE
 
 SUBROUTINE shift_d0psi( r, n_ipol )
   !
@@ -305,78 +305,78 @@ SUBROUTINE shift_d0psi( r, n_ipol )
   !
   IMPLICIT NONE
   !
-  integer,intent(in) :: n_ipol
-  real(dp),intent(inout) :: r(dfftp%nnr,n_ipol)
+  INTEGER,INTENT(IN) :: n_ipol
+  REAL(DP),INTENT(INOUT) :: r(dfftp%nnr,n_ipol)
   !
   ! local vars
   !
-  real(dp) :: mmin(3), mmax(3), center(3), origin(3), check_cell
-  integer  :: ip, iatm, ir, ip1, ip2
+  REAL(DP) :: mmin(3), mmax(3), center(3), origin(3), check_cell
+  INTEGER  :: ip, iatm, ir, ip1, ip2
   !
   WRITE(stdout,'(/,5X,"Dipole is shifted to the center of cell", &
                      & " for the calculation of d0psi. ")')
   !
-  check_cell = 0.d0
+  check_cell = 0._DP
   !
-  do ip1 = 1,3
+  DO ip1 = 1,3
      !
-     do ip2 = 1,3
+     DO ip2 = 1,3
         !
-        if(.not. ip1 .eq. ip2) check_cell = check_cell + at(ip1,ip2)**2
+        IF(ip1 /= ip2) check_cell = check_cell + at(ip1,ip2)**2
         !
-    enddo
+    ENDDO
     !
-  enddo
+  ENDDO
   !
   ! XG: I am not sure that this type of super cell is supported now.
   !
-  if (check_cell .gt. 1.d-5) call errore('shift_d0psi', &
+  IF (check_cell > 1.E-5_DP) CALL errore('shift_d0psi', &
         & "This type of the supercell is not supported",1)
   !
-  mmin(:) = 2000.d0
-  mmax(:)= -2000.d0
+  mmin(:) = 2000._DP
+  mmax(:)= -2000._DP
   !
-  do ip = 1, n_ipol
+  DO ip = 1, n_ipol
      !
-     do iatm = 1, nat
+     DO iatm = 1, nat
         !
-        mmin(ip) = min(mmin(ip), tau(ip,iatm))
+        mmin(ip) = MIN(mmin(ip), tau(ip,iatm))
         !
-        mmax(ip) = max(mmax(ip), tau(ip,iatm))
+        mmax(ip) = MAX(mmax(ip), tau(ip,iatm))
         !
-     enddo
+     ENDDO
      !
-  enddo
+  ENDDO
   !
-  center(:)= 0.5d0*(mmin(:)+mmax(:))
+  center(:)= 0.5_DP*(mmin(:)+mmax(:))
   !
-  do ip = 1, n_ipol
+  DO ip = 1, n_ipol
      !
-     origin(ip)= center(ip)-0.5d0*at(ip,ip)
+     origin(ip)= center(ip)-0.5_DP*at(ip,ip)
      !
-  enddo
+  ENDDO
   !
-  do ir = 1, dfftp%nnr
+  DO ir = 1, dfftp%nnr
      !
-     do ip = 1, n_ipol
+     DO ip = 1, n_ipol
         !
         r(ir,ip)= r(ir,ip) - origin(ip)
         !
-     enddo
+     ENDDO
      !
-     do ip = 1, n_ipol
+     DO ip = 1, n_ipol
         !
-        if(r(ir,ip) .lt. 0) r(ir,ip)=r(ir,ip)+at(ip,ip)
+        IF(r(ir,ip) < 0) r(ir,ip)=r(ir,ip)+at(ip,ip)
         !
-        if(r(ir,ip) .gt. at(ip,ip)) r(ir,ip)=r(ir,ip)-at(ip,ip)
+        IF(r(ir,ip) > at(ip,ip)) r(ir,ip)=r(ir,ip)-at(ip,ip)
         !
-     enddo
+     ENDDO
      !
-  enddo
+  ENDDO
   !
-  return
+  RETURN
   !
-ENDSUBROUTINE shift_d0psi
+END SUBROUTINE
 !
 !
 !
@@ -398,7 +398,7 @@ SUBROUTINE compute_d0psi_dfpt( )
   USE noncollin_module,     ONLY : noncolin,npol
   USE uspp,                 ONLY : vkb,nkb
   USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk
-  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,l_kinetic_only,d0psi,l_lanzcos
+  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,l_kinetic_only,d0psi,l_lanczos
   USE distribution_center,  ONLY : aband
   !
   IMPLICIT NONE
@@ -475,7 +475,7 @@ SUBROUTINE compute_d0psi_dfpt( )
         !
         tr2_dfpt = 1.d-12
         n_dfpt_maxiter = 250
-        l_kinetic_only = .false.
+        l_kinetic_only = .FALSE.
         !
         CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
         !
@@ -494,7 +494,7 @@ SUBROUTINE compute_d0psi_dfpt( )
         !
      ENDDO
      !
-     IF (l_lanzcos) THEN
+     IF (l_lanczos) THEN
         !
         CALL mp_sum (d0psi(:,:,iks,:),inter_image_comm)
         !

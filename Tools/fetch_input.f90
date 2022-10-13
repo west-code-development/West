@@ -225,7 +225,10 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & ipol_input,wbse_macropol_calculation,epsinfty,spin_excitation,&
                              & l_preconditioning,wbsepp_type,macropol_dfpt,r0_input,iexc_plot,&
                              & itermax,itermax0,ipol,sym_op,units,verbosity,extrapolation,start,&
-                             & end,increment,epsil,spin_channel
+                             & end,increment,epsil,spin_channel,l_use_localise_repr,&
+                             & l_use_bisection_thr,l_bse_calculation,l_davidson,l_lanczos,&
+                             & l_qp_correction,l_bse_triplet,l_meg,l_eig_decomp,l_lz_spec,&
+                             & l_exc_plot,l_exc_rho_res_plot,l_diag_term_only
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -918,7 +921,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CASE('D','d')
         l_davidson = .TRUE.
      CASE('L','l')
-        l_lanzcos  = .TRUE.
+        l_lanczos  = .TRUE.
      CASE DEFAULT
         CALL errore('fetch_input','Err: wbse_calculation /= D d L l',1)
      END SELECT
@@ -934,9 +937,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      SELECT CASE(spin_excitation)
      CASE('s', 'S', 'singlet')
-         l_bse_triplet = .false.
+         l_bse_triplet = .FALSE.
      CASE('t', 'T', 'triplet')
-         l_bse_triplet = .true.
+         l_bse_triplet = .TRUE.
      CASE DEFAULT
         CALL errore('fetch_input','Err: spin_excitation /= s or t',1)
      END SELECT
@@ -956,7 +959,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      !CALL mp_bcast(wlz_calculation,root,world_comm)
      CALL mp_bcast(l_davidson,root,world_comm)
-     CALL mp_bcast(l_lanzcos,root,world_comm)
+     CALL mp_bcast(l_lanczos,root,world_comm)
      CALL mp_bcast(l_bse_triplet,root,world_comm)
      CALL mp_bcast(l_qp_correction,root,world_comm)
      CALL mp_bcast(l_bse_calculation,root,world_comm)
@@ -1217,7 +1220,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
             !
         ENDIF
         !
-        IF (l_lanzcos) THEN
+        IF (l_lanczos) THEN
             !
             CALL io_push_value('wbse_calculation',wbse_calculation,numsp)
             CALL io_push_value('solver',solver,numsp)

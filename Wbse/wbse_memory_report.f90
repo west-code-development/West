@@ -87,7 +87,7 @@ SUBROUTINE wbse_init_memory_report()
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE
 !
 !
 !-----------------------------------------------------------------------
@@ -113,13 +113,10 @@ SUBROUTINE wbse_memory_report()
   INTEGER, PARAMETER :: Mb=1024*1024, complex_size=16, real_size=8
   REAL(DP) :: mem_tot, mem_partial
   !
+  mem_tot = 0._DP
   WRITE(stdout,'(/,5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] **Memory** analysis: QE")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  !
-  ! the conversions to double prevent integer overflow in very large run
-  !
-  mem_tot = 0._DP
   WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
@@ -152,12 +149,10 @@ SUBROUTINE wbse_memory_report()
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] ")')
   !
-  !
-  !
+  mem_tot = 0._DP
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] **Memory** analysis: WBSE global")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  mem_tot = 0._DP
   WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
@@ -193,9 +188,7 @@ SUBROUTINE wbse_memory_report()
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] ")')
   !
-  !
   mem_tot = 0._DP
-  !
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] **Memory** analysis: WBSE temporary")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
@@ -211,28 +204,6 @@ SUBROUTINE wbse_memory_report()
   WRITE( stdout, '(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
      mem_partial, npwx*npol, nbnd_occ(1)
   mem_tot = mem_tot + mem_partial
-  !
-!  mem_partial = DBLE(complex_size*dffts%nnr)/DBLE(Mb)
-!  WRITE( stdout, '(5x,"[MEM] aux_r                   ",f10.2," Mb", 5x,"(",i7,")")') &
-!     mem_partial, dffts%nnr
-!  mem_tot1 = mem_tot1 + mem_partial
-!  !
-!  mem_partial = DBLE(complex_size*npwx)/DBLE(Mb)
-!  WRITE( stdout, '(5x,"[MEM] aux_g                   ",f10.2," Mb", 5x,"(",i7,")")') &
-!     mem_partial, npwx
-!  mem_tot1 = mem_tot1 + mem_partial
-!  !
-!  IF(.NOT.gamma_only) THEN
-!     mem_partial = DBLE(complex_size*npwx)/DBLE(Mb)
-!     WRITE( stdout, '(5x,"[MEM] dpsic                   ",f10.2," Mb", 5x,"(",i7,")")') &
-!        mem_partial, dffts%nnr
-!     mem_tot1 = mem_tot1 + mem_partial
-!  ENDIF
-!  !
-!  mem_partial = DBLE(complex_size*npwx*pert%nlocx)/DBLE(Mb)
-!  WRITE( stdout, '(5x,"[MEM] dhg                     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-!     mem_partial, npwx, pert%nlocx
-!  mem_tot2 = mem_tot2 + mem_partial
   !
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE( stdout, '(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot

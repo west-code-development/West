@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-MODULE lanzcos_db
+MODULE lanczos_db
   !----------------------------------------------------------------------------
   !
   USE iotk_module
@@ -28,7 +28,7 @@ MODULE lanzcos_db
     ! *****************************
     !
     !------------------------------------------------------------------------
-    SUBROUTINE lanzcos_d0psi_write ()
+    SUBROUTINE lanczos_d0psi_write ()
       !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
@@ -54,8 +54,8 @@ MODULE lanzcos_db
       !
       ! TIMING
       !
-      CALL start_clock('lanzcos_d0psi_write')
-      time_spent(1)=get_clock('lanzcos_d0psi_write')
+      CALL start_clock('lanczos_d0psi_write')
+      time_spent(1)=get_clock('lanczos_d0psi_write')
       !
       ! 1) WRITE TO DISK THE D0PSI
       !
@@ -73,8 +73,8 @@ MODULE lanzcos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanzcos_d0psi_write')
-      time_spent(2)=get_clock('lanzcos_d0psi_write')
+      CALL stop_clock('lanczos_d0psi_write')
+      time_spent(2)=get_clock('lanczos_d0psi_write')
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
@@ -90,7 +90,7 @@ MODULE lanzcos_db
     ! *****************************
     !
     !------------------------------------------------------------------------
-    SUBROUTINE lanzcos_d0psi_read ()
+    SUBROUTINE lanczos_d0psi_read ()
       !------------------------------------------------------------------------
       !
       USE westcom,             ONLY : wbse_save_dir, d0psi
@@ -114,8 +114,8 @@ MODULE lanzcos_db
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('lanzcos_d0psi_read')
-      time_spent(1)=get_clock('lanzcos_d0psi_read')
+      CALL start_clock('lanczos_d0psi_read')
+      time_spent(1)=get_clock('lanczos_d0psi_read')
       !
       DO ipol = 1, n_ipol
          !
@@ -131,8 +131,8 @@ MODULE lanzcos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanzcos_d0psi_read')
-      time_spent(2)=get_clock('lanzcos_d0psi_read')
+      CALL stop_clock('lanczos_d0psi_read')
+      time_spent(2)=get_clock('lanczos_d0psi_read')
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
@@ -145,7 +145,7 @@ MODULE lanzcos_db
     !
     !
     !------------------------------------------------------------------------
-    SUBROUTINE lanzcos_evcs_write( evc1, evc1_old )
+    SUBROUTINE lanczos_evcs_write( evc1, evc1_old )
       !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
@@ -171,8 +171,8 @@ MODULE lanzcos_db
       !
       ! TIMING
       !
-      CALL start_clock('lanzcos_evcs_write')
-      time_spent(1)=get_clock('lanzcos_evcs_write')
+      CALL start_clock('lanczos_evcs_write')
+      time_spent(1)=get_clock('lanczos_evcs_write')
       !
       ! 1) WRITE TO DISK THE D0PSI
       !
@@ -188,8 +188,8 @@ MODULE lanzcos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanzcos_evcs_write')
-      time_spent(2)=get_clock('lanzcos_evcs_write')
+      CALL stop_clock('lanczos_evcs_write')
+      time_spent(2)=get_clock('lanczos_evcs_write')
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()
@@ -205,7 +205,7 @@ MODULE lanzcos_db
     ! *****************************
     !
     !------------------------------------------------------------------------
-    SUBROUTINE lanzcos_evcs_read(evc1, evc1_old)
+    SUBROUTINE lanczos_evcs_read(evc1, evc1_old)
       !------------------------------------------------------------------------
       !
       USE westcom,             ONLY : wbse_save_dir, d0psi
@@ -229,8 +229,8 @@ MODULE lanzcos_db
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('lanzcos_evcs_read')
-      time_spent(1)=get_clock('lanzcos_evcs_read')
+      CALL start_clock('lanczos_evcs_read')
+      time_spent(1)=get_clock('lanczos_evcs_read')
       !
       fname = TRIM( wbse_save_dir ) // "/EVC1.dat"
       CALL plep_read_G_and_distribute(fname,evc1)
@@ -243,8 +243,8 @@ MODULE lanzcos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanzcos_evcs_read')
-      time_spent(2)=get_clock('lanzcos_evcs_read')
+      CALL stop_clock('lanczos_evcs_read')
+      time_spent(2)=get_clock('lanczos_evcs_read')
       !
       WRITE(stdout,'(  5x," ")')
       CALL io_push_bar()

@@ -68,9 +68,9 @@ SUBROUTINE wbsepp_plot_exc()
   !
   DO ip = 1, n_ipol
      !
-     IF (r0_input_aux(ip) .LT. 0) r0_input_aux(ip) = r0_input_aux(ip) + at(ip,ip)
+     IF (r0_input_aux(ip) < 0) r0_input_aux(ip) = r0_input_aux(ip) + at(ip,ip)
      !
-     IF (r0_input_aux(ip) .GT. at(ip,ip)) r0_input_aux(ip) = r0_input_aux(ip) - at(ip,ip)
+     IF (r0_input_aux(ip) > at(ip,ip)) r0_input_aux(ip) = r0_input_aux(ip) - at(ip,ip)
      !
   ENDDO
   !
@@ -279,20 +279,20 @@ SUBROUTINE wbsepp_plot_exc()
      DO ir = 1, dffts%nnr
         !
         dx = r(ir,1) - r0_input_aux(1)
-        IF (dx .gt.  at(1,1) * 0.5) dx = dx - at(1,1)
-        IF (dx .le. -at(1,1) * 0.5) dx = dx + at(1,1)
+        IF (dx >  at(1,1) * 0.5) dx = dx - at(1,1)
+        IF (dx <= -at(1,1) * 0.5) dx = dx + at(1,1)
         !
         dy = r(ir,2) - r0_input_aux(2)
-        IF (dy .gt.  at(2,2) * 0.5) dy = dy - at(2,2)
-        IF (dy .le. -at(2,2) * 0.5) dy = dy + at(2,2)
+        IF (dy >  at(2,2) * 0.5) dy = dy - at(2,2)
+        IF (dy <= -at(2,2) * 0.5) dy = dy + at(2,2)
         !
         dz = r(ir,3) - r0_input_aux(3)
-        IF (dz .gt.  at(3,3) * 0.5) dz = dz - at(3,3)
-        IF (dz .le. -at(3,3) * 0.5) dz = dz + at(3,3)
+        IF (dz >  at(3,3) * 0.5) dz = dz - at(3,3)
+        IF (dz <= -at(3,3) * 0.5) dz = dz + at(3,3)
         !
         drr = SQRT(dx*dx + dy*dy + dz*dz)
         !
-        IF ((ri1 .lt. drr).and.(drr .le. ri0)) THEN
+        IF ((ri1 < drr).AND.(drr <= ri0)) THEN
            !
            summ0 = summ0 + 1
            summ = summ + rho_out(ir,1)
@@ -314,4 +314,4 @@ SUBROUTINE wbsepp_plot_exc()
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE

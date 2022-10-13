@@ -43,9 +43,9 @@ SUBROUTINE setup_dgc
   IF ( .NOT. dft_is_gradient() ) RETURN
 
   IF (noncolin.AND.domag) THEN
-     allocate (segni (dfftp%nnr))
-     allocate (vsgga (dfftp%nnr))
-     allocate (gmag (3, dfftp%nnr, nspin_mag))
+     ALLOCATE (segni (dfftp%nnr))
+     ALLOCATE (vsgga (dfftp%nnr))
+     ALLOCATE (gmag (3, dfftp%nnr, nspin_mag))
      gmag=0._DP
   ENDIF
 
@@ -56,21 +56,21 @@ SUBROUTINE setup_dgc
   IF(.NOT.ALLOCATED(grho))    ALLOCATE (grho   (  3    , dfftp%nnr, nspin_gga))
   IF(.NOT.ALLOCATED(rhoout))  ALLOCATE (rhoout ( dfftp%nnr, nspin_gga))
 
-  dvxc_rr(:,:,:) = 0.d0
-  dvxc_sr(:,:,:) = 0.d0
-  dvxc_ss(:,:,:) = 0.d0
-  dvxc_s (:,:,:) = 0.d0
-  grho   (:,:,:) = 0.d0
+  dvxc_rr(:,:,:) = 0._DP
+  dvxc_sr(:,:,:) = 0._DP
+  dvxc_ss(:,:,:) = 0._DP
+  dvxc_s (:,:,:) = 0._DP
+  grho   (:,:,:) = 0._DP
   !
   !    add rho_core
   !
-  fac = 1.d0 / DBLE (nspin_gga)
-  IF (noncolin.and.domag) THEN
-     allocate(rhogout(ngm,nspin_mag))
-     call compute_rho(rho%of_r,rhoout,segni,dfftp%nnr)
+  fac = 1._DP / REAL (nspin_gga,KIND=DP)
+  IF (noncolin.AND.domag) THEN
+     ALLOCATE(rhogout(ngm,nspin_mag))
+     CALL compute_rho(rho%of_r,rhoout,segni,dfftp%nnr)
      DO is = 1, nspin_gga
         !
-        if (nlcc_any) rhoout(:,is)  = fac * rho_core(:)  + rhoout(:,is)
+        IF (nlcc_any) rhoout(:,is)  = fac * rho_core(:)  + rhoout(:,is)
 
         psic(:) = rhoout(:,is)
         !
@@ -84,69 +84,69 @@ SUBROUTINE setup_dgc
      END DO
      DEALLOCATE(rhogout)
   ELSE
-     do is = 1, nspin_gga
+     DO is = 1, nspin_gga
         rhoout(:,is)  =  rho%of_r(:,is)
-     enddo
-     if (nlcc_any) then
-        do is = 1, nspin_gga
+     ENDDO
+     IF (nlcc_any) THEN
+        DO is = 1, nspin_gga
            rhoout(:,is)  = fac * rho_core(:)  + rho%of_r(:,is)
            rho%of_g(:,is) = fac * rhog_core(:) + rho%of_g(:,is)
-        enddo
-     endif
-     do is = 1, nspin_gga
-        call gradrho (dfftp%nnr, rho%of_g (1, is), ngm, g, nl, grho (1, 1, is) )
-     enddo
+        ENDDO
+     ENDIF
+     DO is = 1, nspin_gga
+        CALL gradrho (dfftp%nnr, rho%of_g (1, is), ngm, g, nl, grho (1, 1, is) )
+     ENDDO
   END IF
 
 
-  do k = 1, dfftp%nnr
+  DO k = 1, dfftp%nnr
      grho2 (1) = grho (1, k, 1) **2 + grho (2, k, 1) **2 + grho (3, k, 1) **2
-     if (nspin_gga == 1) then
-        if (ABS (rhoout (k, 1) ) > epsr .and. grho2 (1) > epsg) then
-           call gcxc (rhoout (k, 1), grho2(1), sx, sc, v1x, v2x, v1c, v2c)
-           call dgcxc (rhoout (k, 1), grho2(1), vrrx, vsrx, vssx, vrrc, &
+     IF (nspin_gga == 1) THEN
+        IF (ABS (rhoout (k, 1) ) > epsr .AND. grho2 (1) > epsg) THEN
+           CALL gcxc (rhoout (k, 1), grho2(1), sx, sc, v1x, v2x, v1c, v2c)
+           CALL dgcxc (rhoout (k, 1), grho2(1), vrrx, vsrx, vssx, vrrc, &
                 vsrc, vssc)
            dvxc_rr (k, 1, 1) = e2 * (vrrx + vrrc)
            dvxc_sr (k, 1, 1) = e2 * (vsrx + vsrc)
            dvxc_ss (k, 1, 1) = e2 * (vssx + vssc)
            dvxc_s (k, 1, 1) = e2 * (v2x + v2c)
-        endif
-     else
+        ENDIF
+     ELSE
         grho2 (2) = grho(1, k, 2) **2 + grho(2, k, 2) **2 + grho(3, k, 2) **2
         rh = rhoout (k, 1) + rhoout (k, 2)
 
         grh2 = (grho (1, k, 1) + grho (1, k, 2) ) **2 + (grho (2, k, 1) &
              + grho (2, k, 2) ) **2 + (grho (3, k, 1) + grho (3, k, 2) ) ** 2
 
-        call gcx_spin (rhoout (k, 1), rhoout (k, 2), grho2 (1), grho2 (2), &
+        CALL gcx_spin (rhoout (k, 1), rhoout (k, 2), grho2 (1), grho2 (2), &
              sx, v1xup, v1xdw, v2xup, v2xdw)
 
-        call dgcxc_spin (rhoout (k, 1), rhoout (k, 2), grho (1, k, 1), &
+        CALL dgcxc_spin (rhoout (k, 1), rhoout (k, 2), grho (1, k, 1), &
              grho (1, k, 2), vrrxup, vrrxdw, vrsxup, vrsxdw, vssxup, vssxdw, &
              vrrcup, vrrcdw, vrscup, vrscdw, vssc, vrzcup, vrzcdw)
-        if (rh > epsr) then
+        IF (rh > epsr) THEN
            zeta = (rhoout (k, 1) - rhoout (k, 2) ) / rh
-           call gcc_spin (rh, zeta, grh2, sc, v1cup, v1cdw, v2c)
+           CALL gcc_spin (rh, zeta, grh2, sc, v1cup, v1cdw, v2c)
            dvxc_rr (k, 1, 1) = e2 * (vrrxup + vrrcup + vrzcup * &
-                (1.d0 - zeta) / rh)
-           dvxc_rr (k, 1, 2) = e2 * (vrrcup - vrzcup * (1.d0 + zeta) / rh)
-           dvxc_rr (k, 2, 1) = e2 * (vrrcdw + vrzcdw * (1.d0 - zeta) / rh)
+                (1._DP - zeta) / rh)
+           dvxc_rr (k, 1, 2) = e2 * (vrrcup - vrzcup * (1._DP + zeta) / rh)
+           dvxc_rr (k, 2, 1) = e2 * (vrrcdw + vrzcdw * (1._DP - zeta) / rh)
            dvxc_rr (k, 2, 2) = e2 * (vrrxdw + vrrcdw - vrzcdw * &
-                (1.d0 + zeta) / rh)
+                (1._DP + zeta) / rh)
            dvxc_s (k, 1, 1) = e2 * (v2xup + v2c)
            dvxc_s (k, 1, 2) = e2 * v2c
            dvxc_s (k, 2, 1) = e2 * v2c
            dvxc_s (k, 2, 2) = e2 * (v2xdw + v2c)
-        else
-           dvxc_rr (k, 1, 1) = 0.d0
-           dvxc_rr (k, 1, 2) = 0.d0
-           dvxc_rr (k, 2, 1) = 0.d0
-           dvxc_rr (k, 2, 2) = 0.d0
-           dvxc_s (k, 1, 1) = 0.d0
-           dvxc_s (k, 1, 2) = 0.d0
-           dvxc_s (k, 2, 1) = 0.d0
-           dvxc_s (k, 2, 2) = 0.d0
-        endif
+        ELSE
+           dvxc_rr (k, 1, 1) = 0._DP
+           dvxc_rr (k, 1, 2) = 0._DP
+           dvxc_rr (k, 2, 1) = 0._DP
+           dvxc_rr (k, 2, 2) = 0._DP
+           dvxc_s (k, 1, 1) = 0._DP
+           dvxc_s (k, 1, 2) = 0._DP
+           dvxc_s (k, 2, 1) = 0._DP
+           dvxc_s (k, 2, 2) = 0._DP
+        ENDIF
         dvxc_sr (k, 1, 1) = e2 * (vrsxup + vrscup)
         dvxc_sr (k, 1, 2) = e2 * vrscup
         dvxc_sr (k, 2, 1) = e2 * vrscdw
@@ -155,20 +155,20 @@ SUBROUTINE setup_dgc
         dvxc_ss (k, 1, 2) = e2 * vssc
         dvxc_ss (k, 2, 1) = e2 * vssc
         dvxc_ss (k, 2, 2) = e2 * (vssxdw + vssc)
-     endif
-  enddo
-  if (noncolin.and.domag) then
-     call compute_vsgga(rhoout, grho, vsgga)
-  else
-     if (nlcc_any) then
-        do is = 1, nspin_gga
+     ENDIF
+  ENDDO
+  IF (noncolin.AND.domag) THEN
+     CALL compute_vsgga(rhoout, grho, vsgga)
+  ELSE
+     IF (nlcc_any) THEN
+        DO is = 1, nspin_gga
            rho%of_g(:,is) = rho%of_g(:,is) - fac * rhog_core(:)
-        enddo
-     endif
-  endif
+        ENDDO
+     ENDIF
+  ENDIF
 
   DEALLOCATE(rhoout)
 
   RETURN
 
-end subroutine setup_dgc
+END SUBROUTINE

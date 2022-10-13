@@ -111,7 +111,7 @@ MODULE bar
       !
       work_percent=REAL(b%counter*100,DP)/REAL(b%tot_load,DP)
       !
-      IF( INT(work_percent/5.0_DP) .GE. b%printing_number ) THEN
+      IF( INT(work_percent/5.0_DP) >= b%printing_number ) THEN
          !
          hashes_perc=""
          DO ihas=1,INT(work_percent/5.0_DP)

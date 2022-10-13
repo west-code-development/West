@@ -73,7 +73,7 @@ MODULE wbse_tools
        ! do nothing
 #endif
        RETURN
-    END SUBROUTINE mp_circular_shift_left_c4d
+    END SUBROUTINE
     !
     !------------------------------------------------------------------------
     SUBROUTINE build_hr_real( ag, bg, l2_s, l2_e, c_distr, g_s, g_e )
@@ -982,7 +982,7 @@ MODULE wbse_tools
                         temp =  g2kin(ig)
                      ENDIF
                      !
-                     IF(ABS(temp) .lt. minimum ) temp = SIGN(minimum,temp)
+                     IF(ABS(temp) < minimum ) temp = SIGN(minimum,temp)
                      ag(ig,ibnd,iks,il1) = ag(ig,ibnd,iks,il1)/temp
                      !
                   ENDDO
@@ -1087,7 +1087,7 @@ MODULE wbse_tools
                         temp = (g2kin(ig)-eps_ref)**2
                      ENDIF
                      !
-                     IF(ABS(temp) .lt. minimum**2 ) temp = SIGN(minimum,temp)
+                     IF(ABS(temp) < minimum**2 ) temp = SIGN(minimum,temp)
                      ag(ig,ibnd,iks,il1) = ag(ig,ibnd,iks,il1)/SQRT(temp)
                      !
                   ENDDO

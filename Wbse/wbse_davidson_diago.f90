@@ -356,9 +356,9 @@ write(stdout,*) n_pdep_read_from_file, nvec
      IF (l_preconditioning) THEN
         !
         IF (dav_iter < 4) THEN
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .false. )
+           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .FALSE. )
         ELSE
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .true. )
+           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .TRUE. )
         ENDIF
         !
      ENDIF
@@ -650,7 +650,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   ENDDO
   !
   j_local=1
-  unfinished=.true.
+  unfinished=.TRUE.
   !
   DO k_global=1,m_global_end
      !
@@ -741,7 +741,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
         !
         j_local=MAX(k_local+1,m_local_start)
         !
-        IF(j_local>m_local_end) unfinished=.false.
+        IF(j_local>m_local_end) unfinished=.FALSE.
         !
      ENDIF
      !

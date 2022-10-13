@@ -28,7 +28,7 @@ SUBROUTINE bse_hqp_psi(iks, current_spin, nbvalloc, psi, dpsi)
   COMPLEX(DP), INTENT(IN)    :: psi(npwx*npol,nbvalloc)
   COMPLEX(DP), INTENT(INOUT) :: dpsi(npwx*npol,nbvalloc)
   !
-  IF (.false.) THEN
+  IF (.FALSE.) THEN
      !
      CALL bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
      !
@@ -40,7 +40,7 @@ SUBROUTINE bse_hqp_psi(iks, current_spin, nbvalloc, psi, dpsi)
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE
 
 
 SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
@@ -136,7 +136,7 @@ SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
   !
   RETURN
   !
-ENDSUBROUTINE bse_hqp_psi_scf
+END SUBROUTINE
 !
 !
 !
@@ -213,7 +213,7 @@ SUBROUTINE bse_hqp_psi_nscf(iks, current_spin, nbvalloc, psi, dpsi)
   !
   RETURN
   !
-ENDSUBROUTINE bse_hqp_psi_nscf
+END SUBROUTINE
 !
 !
 !
@@ -236,9 +236,9 @@ SUBROUTINE read_qp_eigs()
   !
   ! read eigenvalues from file
   !
-  call mp_barrier(world_comm)
+  CALL mp_barrier(world_comm)
   !
-  allocate(et_qp(nbnd,nks))
+  ALLOCATE(et_qp(nbnd,nks))
   !
   IF ( lsda ) THEN
      !
@@ -254,48 +254,47 @@ SUBROUTINE read_qp_eigs()
      !
      WRITE(my_ik,'(i1)') ik
      !
-     file_qp = TRIM(qp_correction)// "." //TRIM(my_ik)
-     !file_qp = 'qp_eigs_'//TRIM(my_ik)//'.dat'
+     file_qp = TRIM(qp_correction)// '.' //TRIM(my_ik)
      !
-     if (ionode) then
+     IF (ionode) THEN
         !
-        open(unit = 99,file =TRIM(file_qp),form = 'formatted',status = 'old')
+        OPEN(UNIT = 99,FILE =TRIM(file_qp),FORM = 'FORMATTED',STATUS = 'OLD')
         !
-        read(99,*) nqp_eigs
+        READ(99,*) nqp_eigs
         !
-     endif
+     ENDIF
      !
-     call mp_bcast (nqp_eigs,ionode_id,world_comm )
+     CALL mp_bcast (nqp_eigs,ionode_id,world_comm )
      !
-     if (nqp_eigs .ne. nbnd) then
+     IF (nqp_eigs /= nbnd) THEN
         !
-        call errore ('read_qp_eigs', 'number qp eigenvalues not equal nbnd in pw.in', nqp_eigs)
+        CALL errore ('read_qp_eigs', 'number qp eigenvalues not equal nbnd in pw.in', nqp_eigs)
         !
-     endif
+     ENDIF
      !
-     if (ionode) then
+     IF (ionode) THEN
         !
-        do ibnd = 1, nqp_eigs
+        DO ibnd = 1, nqp_eigs
            !
            IF ( lsda ) THEN
-              read (99, * ) et_qp(ibnd,ik), et_qp(ibnd,ik+num_k_points)
+              READ (99, * ) et_qp(ibnd,ik), et_qp(ibnd,ik+num_k_points)
            ELSE
-              read (99, * ) et_qp(ibnd,ik)
+              READ (99, * ) et_qp(ibnd,ik)
            ENDIF
            !
-        enddo
+        ENDDO
         !
-        close (99)
+        CLOSE (99)
         !
-     endif
+     ENDIF
      !
   ENDDO
   !
-  call mp_bcast(et_qp,ionode_id,world_comm)
+  CALL mp_bcast(et_qp,ionode_id,world_comm)
   !
-  return
+  RETURN
   !
-ENDSUBROUTINE read_qp_eigs
+END SUBROUTINE
 !
 !
 !
@@ -310,7 +309,7 @@ SUBROUTINE read_ks_wfc()
   USE plep_io,       ONLY : plep_read_G_and_distribute_wfc
   !
   IMPLICIT NONE
-  !`
+  !
   INTEGER            :: iks
   CHARACTER(LEN=3)   :: my_ik
   CHARACTER(LEN=256) :: fname
@@ -325,11 +324,11 @@ SUBROUTINE read_ks_wfc()
      !
      WRITE(my_ik,'(i1)') iks
      !
-     fname = "./ks_wfc_tmp_"//TRIM( my_ik )//'.dat'
+     fname = './ks_wfc_tmp_'//TRIM( my_ik )//'.dat'
      CALL plep_read_G_and_distribute_wfc(fname,evc_ks(:,:,iks),nbnd)
      !
   ENDDO
   !
   RETURN
   !
-ENDSUBROUTINE read_ks_wfc
+END SUBROUTINE

@@ -65,8 +65,8 @@ MODULE plep_io
       INTEGER :: iun,ierr,ibnd
       !
       !
-      IF(my_pool_id.NE.0) RETURN
-      IF(my_bgrp_id.NE.0) RETURN
+      IF(my_pool_id /= 0) RETURN
+      IF(my_bgrp_id /= 0) RETURN
       !
       ! Resume all components
       !
@@ -242,8 +242,8 @@ MODULE plep_io
       npwx_g=MAXVAL(ig_l2g(1:npwx))
       CALL mp_max(npwx_g,intra_bgrp_comm)
       !
-      IF(my_pool_id.NE.0) RETURN
-      IF(my_bgrp_id.NE.0) RETURN
+      IF(my_pool_id /= 0) RETURN
+      IF(my_bgrp_id /= 0) RETURN
       !
       ! Resume all components
       !
@@ -430,8 +430,8 @@ MODULE plep_io
       INTEGER :: iun,ierr,ibnd
       !
       !
-      IF(my_pool_id.NE.0) RETURN
-      IF(my_bgrp_id.NE.0) RETURN
+      IF(my_pool_id /= 0) RETURN
+      IF(my_bgrp_id /= 0) RETURN
       !
       ! Resume all components
       !

@@ -669,7 +669,7 @@ LOGICAL FUNCTION is_peak(omeg,alpha)
   !
   RETURN
   !
-END FUNCTION is_peak
+END FUNCTION
 
 REAL(DP) FUNCTION integrator(dh,alpha)
   !------------------------------------------------------------------------
@@ -700,7 +700,7 @@ REAL(DP) FUNCTION integrator(dh,alpha)
   !
   RETURN
   !
-END FUNCTION integrator
+END FUNCTION
 
 SUBROUTINE read_b_g_z_file_html()
   !------------------------------------------------------------------------
@@ -809,7 +809,7 @@ SUBROUTINE read_b_g_z_file_html()
   !
   RETURN
   !
-END SUBROUTINE read_b_g_z_file_html
+END SUBROUTINE
 
 
 SUBROUTINE extrapolate()
@@ -908,7 +908,7 @@ SUBROUTINE extrapolate()
   !
   RETURN
   !
-END SUBROUTINE extrapolate
+END SUBROUTINE
 
 SUBROUTINE calc_chi(freq,broad,chi)
   !-----------------------------------------------------------------------------
@@ -973,7 +973,7 @@ SUBROUTINE calc_chi(freq,broad,chi)
   !
   RETURN
   !
-END SUBROUTINE calc_chi
+END SUBROUTINE
 
 SUBROUTINE wl_to_color(wavelength,red,green,blue)
   !----------------------------------------------------------------------------
@@ -1024,8 +1024,8 @@ SUBROUTINE wl_to_color(wavelength,red,green,blue)
   !
   RETURN
   !
-END SUBROUTINE wl_to_color
+END SUBROUTINE
 
   !
-END SUBROUTINE wbsepp_ads_spectrum
+END SUBROUTINE
 

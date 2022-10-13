@@ -93,17 +93,17 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   IF (chi_kernel == 'XC_CHI') THEN
      !
      kernel  = "CHI"
-     l_xcchi = .true.
+     l_xcchi = .TRUE.
      !
   ELSEIF (chi_kernel == 'XC_CHI_RPA') THEN
      !
      kernel  = "CHI_RPA"
-     l_xcchi = .true.
+     l_xcchi = .TRUE.
      !
   ELSE
      !
      kernel  = chi_kernel
-     l_xcchi = .false.
+     l_xcchi = .FALSE.
      !
   ENDIF
   !
@@ -144,7 +144,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   !
   do_index = 0
   !
-  IF (.not. l_restart_calc) THEN
+  IF (.NOT. l_restart_calc) THEN
      !
      DO ibnd = 1, nbndval
         !
@@ -229,7 +229,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
 
      ENDIF
      !
-     IF ((ig1 < 1).or.(ig1 > do_index)) GOTO 1111
+     IF ((ig1 < 1).OR.(ig1 > do_index)) GOTO 1111
      !
      ALLOCATE (rho_aux(dffts%nnr))
      ALLOCATE (dvg(ngmx))
@@ -317,7 +317,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      ! aux1_r = vc*aux1_r()
      !
-     CALL west_dv_of_drho(aux1_r, .true., .false.)
+     CALL west_dv_of_drho(aux1_r, .TRUE., .FALSE.)
      !
      aux_r(:) = aux1_r(:,current_spin)
      !
@@ -388,11 +388,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      IF (l_xcchi) THEN
      !
-         CALL west_dv_of_drho(aux1_r, .false., .false.)
+         CALL west_dv_of_drho(aux1_r, .FALSE., .FALSE.)
      !
      ELSE
      !
-         CALL west_dv_of_drho(aux1_r, .true., .false.)
+         CALL west_dv_of_drho(aux1_r, .TRUE., .FALSE.)
      !
      ENDIF
      !

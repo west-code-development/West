@@ -42,7 +42,6 @@ SUBROUTINE west_dv_setup (l_bse_calc)
      RETURN
      !
   ENDIF
-
   !
   ! 1) Set the nonlinear core correction
   !
@@ -58,7 +57,7 @@ SUBROUTINE west_dv_setup (l_bse_calc)
      !
      IF (noncolin .AND. domag) THEN
         IF (.NOT.ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
-        psic(:) = (0.0_dp, 0.0_dp)
+        psic(:) = (0.0_DP, 0.0_DP)
      ENDIF
      !
      CALL setup_dgc()
@@ -71,4 +70,4 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   !
   RETURN
   !
-END SUBROUTINE west_dv_setup
+END SUBROUTINE

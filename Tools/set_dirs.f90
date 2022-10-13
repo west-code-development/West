@@ -17,9 +17,8 @@ SUBROUTINE set_dirs( )
   USE io_files,               ONLY : tmp_dir
   USE westcom,                ONLY : west_prefix, wstat_save_dir, wstat_restart_dir, &
                                    & westpp_save_dir, wfreq_save_dir, wfreq_restart_dir, &
-                                   & l_lanzcos, l_davidson, wbse_init_save_dir, &
-                                   & wbse_save_dir, wbsepp_save_dir, wbse_init_restart_dir, &
-                                   & wbse_restart_dir
+                                   & wbse_init_save_dir, wbse_init_restart_dir, &
+                                   & wbse_save_dir, wbse_restart_dir, wbsepp_save_dir
   !
   IMPLICIT NONE
   !

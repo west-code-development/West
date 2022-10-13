@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbse_lanzcos_diago ()
+SUBROUTINE wbse_lanczos_diago ()
   !---------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -21,13 +21,13 @@ SUBROUTINE wbse_lanzcos_diago ()
                                    d0psi,ipol_input,n_lanczos,&
                                    alpha_store,beta_store,&
                                    gamma_store,zeta_store, nbndval0x
-  USE lanzcos_db,           ONLY : lanzcos_d0psi_read,&
-                                   lanzcos_d0psi_write,&
-                                   lanzcos_evcs_write,&
-                                   lanzcos_evcs_read
-  USE lanzcos_restart,      ONLY : lanzcos_restart_write,&
-                                   lanzcos_restart_read, &
-                                   lanzcos_postpro_write
+  USE lanczos_db,           ONLY : lanczos_d0psi_read,&
+                                   lanczos_d0psi_write,&
+                                   lanczos_evcs_write,&
+                                   lanczos_evcs_read
+  USE lanczos_restart,      ONLY : lanczos_restart_write,&
+                                   lanczos_restart_read, &
+                                   lanczos_postpro_write
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
 
   USE io_files,             ONLY : tmp_dir
@@ -62,7 +62,7 @@ SUBROUTINE wbse_lanzcos_diago ()
   !
   tmp_lz = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.tmp_lz'
   !
-  ! ... DISTRIBUTE lanzcos
+  ! ... DISTRIBUTE lanczos
   !
   aband = idistribute()
   !
@@ -85,7 +85,7 @@ SUBROUTINE wbse_lanzcos_diago ()
   !
   IF (n_lanczos == 0) THEN
      !
-     CALL errore('lanzcosdiago', ' n_lanczos shoudl be > 0 ', 1)
+     CALL errore('lanczosdiago', ' n_lanczos shoudl be > 0 ', 1)
      !
   ENDIF
   !
@@ -129,7 +129,7 @@ SUBROUTINE wbse_lanzcos_diago ()
       !
   CASE DEFAULT
       !
-      CALL errore('lanzcosdiago', 'Wrong ipol_input', 1)
+      CALL errore('lanczosdiago', 'Wrong ipol_input', 1)
       !
   END SELECT
   !
@@ -150,7 +150,7 @@ SUBROUTINE wbse_lanzcos_diago ()
       gamma_store(:,:,:) = 0.0_DP
       zeta_store(:,:,:,:)  = (0.0_DP,0.0_DP)
       !
-      CALL lanzcos_restart_read (nipol_input, pliter_stop, lriter_stop)
+      CALL lanczos_restart_read (nipol_input, pliter_stop, lriter_stop)
       !
       ! 1) read pliter_stopped
       ! 2) read lriter_stopped
@@ -161,10 +161,10 @@ SUBROUTINE wbse_lanzcos_diago ()
       !
       ! 4) read d0psi evc1, evc_old, saved on files
       !
-      CALL lanzcos_d0psi_read ()
-      CALL lanzcos_evcs_read (evc1, evc1_old)
+      CALL lanczos_d0psi_read ()
+      CALL lanczos_evcs_read (evc1, evc1_old)
       !
-      l_from_scratch = .false.
+      l_from_scratch = .FALSE.
       !
   CASE('L')
       !
@@ -172,7 +172,7 @@ SUBROUTINE wbse_lanzcos_diago ()
       !
       CALL solve_e_psi()
       !
-      CALL lanzcos_d0psi_write ()
+      CALL lanczos_d0psi_write ()
       !
       alpha_store(:,:,:) = 0.0_DP
       beta_store(:,:,:)  = 0.0_DP
@@ -182,11 +182,11 @@ SUBROUTINE wbse_lanzcos_diago ()
       lriter_restart = 1
       pliter_restart = 1
       !
-      l_from_scratch = .true.
+      l_from_scratch = .TRUE.
       !
   CASE DEFAULT
       !
-      CALL errore('lanzcosdiago', 'Wrong wlzcos_calculation',1)
+      CALL errore('lanczosdiago', 'Wrong wlzcos_calculation',1)
       !
   END SELECT
   !
@@ -362,17 +362,17 @@ SUBROUTINE wbse_lanzcos_diago ()
               !
            ENDIF
            !
-           CALL lanzcos_restart_write (nipol_input, ip, lz_iteration)
-           CALL lanzcos_evcs_write (evc1, evc1_old)
+           CALL lanczos_restart_write (nipol_input, ip, lz_iteration)
+           CALL lanczos_evcs_write (evc1, evc1_old)
            !
         ENDIF
         !
      ENDDO lancz_loop
      !
-     CALL lanzcos_postpro_write (nipol_input, ip, pol_label_input(ip))
+     CALL lanczos_postpro_write (nipol_input, ip, pol_label_input(ip))
      !
      lriter_restart = 1
-     l_from_scratch = .true.
+     l_from_scratch = .TRUE.
      !
   ENDDO polarization_loop
   !
@@ -387,7 +387,7 @@ SUBROUTINE wbse_lanzcos_diago ()
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE
 !
 !
 SUBROUTINE my_copy_lz(tmp_lz)
@@ -452,4 +452,4 @@ SUBROUTINE my_copy_lz(tmp_lz)
   WRITE(stdout, "(5x, 'Done tmp save in location : ',a)") TRIM( tmp_lz )
   WRITE(stdout,*) " "
   !
-ENDSUBROUTINE
+END SUBROUTINE

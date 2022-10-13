@@ -444,6 +444,6 @@ MODULE fourier_interpolation
       !
    ENDDO
    !
- ENDSUBROUTINE
+ END SUBROUTINE
  !
 END MODULE

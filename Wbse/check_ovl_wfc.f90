@@ -71,7 +71,7 @@ MODULE check_ovl_wfc
       !
       return
       !
-    ENDSUBROUTINE
+    END SUBROUTINE
     !
     SUBROUTINE check_ovl_bisection (orbital_i, orbital_j, ovl_value)
       !
@@ -93,7 +93,7 @@ MODULE check_ovl_wfc
       loc_i = orbital_i
       loc_j = orbital_j
       !
-      DO WHILE ( (loc_i .NE. 0) .and. (loc_j .NE. 0) )
+      DO WHILE ( (loc_i /= 0) .AND. (loc_j /= 0) )
          !
          ! get the weight of projections for each state
          !
@@ -145,7 +145,7 @@ MODULE check_ovl_wfc
       !
       RETURN
       !
-    ENDSUBROUTINE
+    END SUBROUTINE
     !
     SUBROUTINE check_ovl_wannier_real (orb_real_i, orb_real_j, ovl_value)
       !
@@ -193,7 +193,7 @@ MODULE check_ovl_wfc
       !
       RETURN
       !
-    ENDSUBROUTINE
+    END SUBROUTINE
     !
     SUBROUTINE check_ovl_wannier_cmplx (orb_cmpl_i, orb_cmpl_j, ovl_value)
       !
@@ -242,6 +242,6 @@ MODULE check_ovl_wfc
       !
       RETURN
       !
-    ENDSUBROUTINE
+    END SUBROUTINE
     !
 END MODULE

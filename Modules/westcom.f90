@@ -364,7 +364,7 @@ MODULE wbse_center
   ! FOR global variables
   !
   INTEGER :: nbndval0x                 !wbse  wbse_init
-  LOGICAL :: l_lanzcos     = .FALSE.   !wbse flag depend on wbse_calculation
+  LOGICAL :: l_lanczos     = .FALSE.   !wbse flag depend on wbse_calculation
   LOGICAL :: l_davidson    = .FALSE.   !wbse flag depend on wbse_calculation
   LOGICAL :: l_bse_triplet = .FALSE.   !wbse flag depend on spin_excitation
   REAL(DP):: sigma_c_head  = 0.0_DP
@@ -374,7 +374,7 @@ MODULE wbse_center
   !
   ! FOR INPUT Lanzcos diago
   !
-  !CHARACTER(LEN=1) :: wlz_calculation  !wbse lanzcos calculation (no bcast)
+  !CHARACTER(LEN=1) :: wlz_calculation  !wbse lanczos calculation (no bcast)
 
   !INTEGER          :: n_lzstep = 0     !wbse input
 

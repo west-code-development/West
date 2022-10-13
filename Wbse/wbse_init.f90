@@ -39,33 +39,13 @@ PROGRAM wbse_init
   !
   CALL wbse_init_readin ( )
   !
-  !IF (l_test_ovl) THEN
-     !
-  !   use_qbox = .False.
-     !
-  !ENDIF
-  !
   CALL wbse_setup ( )
   !
-  !IF ( use_qbox ) THEN
-     !
   CALL init_qbox()
-     !CALL init_qbox_interface()
-     !
+  !
   CALL wbse_init_methods()
-     !
+  !
   CALL finalize_qbox()
-     !CALL finalize_qbox_interface()
-     !
-  !ELSEIF (use_wstat_pdep) THEN
-     !
-  !   CALL wbse_init_methods (.False.)
-     !
-  !ELSE
-     !
-  !   CALL wbse_init_fock_energy()
-     !
-  !ENDIF
   !
   CALL exx_ungo ( )
   !
@@ -74,12 +54,9 @@ PROGRAM wbse_init
   CALL clean_scratchfiles( )
   !
   CALL west_print_clocks( )
-  !CALL print_clock(' ')
   !
   CALL west_environment_end( code )
   !
   CALL mp_global_end()
-  !
-!9000 FORMAT (/5x,'Program ',a12,' starts ...',/5x,'Today is ',a9,' at ',a9)
   !
 END PROGRAM

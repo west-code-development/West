@@ -143,4 +143,4 @@ SUBROUTINE wbse_init_methods ()
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE

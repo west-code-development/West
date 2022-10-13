@@ -13,12 +13,11 @@ MODULE qbox_interface
   !----------------------------------------------------------------------------
   !
   USE parallel_include
-  USE fft_base,       ONLY : dffts
   USE kinds,          ONLY : DP
   USE io_global,      ONLY : stdout
   USE mp,             ONLY : mp_barrier, mp_bcast, mp_sum
   USE mp_world,       ONLY : mpime, root
-  USE mp_global,      ONLY : my_image_id, me_image, intra_image_comm
+  USE mp_global,      ONLY : me_image, intra_image_comm
   USE io_files,       ONLY : delete_if_present
   USE fft_types,      ONLY : fft_type_descriptor
   USE scatter_mod,    ONLY : gather_grid, scatter_grid
@@ -37,14 +36,10 @@ MODULE qbox_interface
   PRIVATE
   SAVE
   !
-  PUBLIC :: load_qbox_wfc, init_qbox, finalize_qbox,sleep_and_wait_for_lock_to_be_removed
-  !, init_qbox_interface, finalize_qbox_interface, apply_kernel_by_qbox !, add_debug_log
+  PUBLIC :: load_qbox_wfc, init_qbox, finalize_qbox, sleep_and_wait_for_lock_to_be_removed
   !
-  ! parameters for doing qbox calculations
-  !
-  CHARACTER(LEN=256) :: ready_for_kernel = ''
+  CHARACTER(LEN=256)  :: ready_for_kernel = ''
   CHARACTER(LEN=8)    :: path                    ! path to qbox working dir, image dependent
-  !CHARACTER(LEN=256)  :: xml_file                ! xml file from qbox ground state calculation
   CHARACTER(LEN=256)  :: lock_file
   CHARACTER(LEN=256)  :: server_input_file
   CHARACTER(LEN=256)  :: server_output_file
@@ -63,24 +58,16 @@ MODULE qbox_interface
   !
   CHARACTER(len=10)   :: mype
   !
-  !
-  !INTERFACE init_qbox_interface
-  !MODULE PROCEDURE init_qbox, init_qbox_for_kernel
-  !END INTERFACE
-  !
   CONTAINS
   !
   !----------------------------------------------------------------------------
     SUBROUTINE load_qbox_wfc(evc, qbox_wfc_filename, current_spin, nbndval)
       !----------------------------------------------------------------------------
       !
-      USE pwcom,                  ONLY : nelec,npw,npwx,omega
-      USE westcom,                ONLY : fftdriver
+      USE pwcom,                  ONLY : npw,npwx
       USE iotk_module
-      USE fft_base,               ONLY : dffts
       USE fft_at_gamma,           ONLY : single_fwfft_gamma,single_invfft_gamma
       USE fourier_interpolation,  ONLY : ft_interpolate
-      USE mp_global,              ONLY : my_image_id,inter_image_comm
       !
       IMPLICIT NONE
       !
@@ -90,12 +77,11 @@ MODULE qbox_interface
       !
       INTEGER                         :: iwfc, nwfcs, nspin, ispin, is, ir
       INTEGER                         :: nx, ny, nz
-      INTEGER                         :: iunit, ierr
+      INTEGER                         :: iunit
       CHARACTER(iotk_attlenx)         :: attr
       CHARACTER( LEN = 20 )           :: namespin
       !
       REAL(DP), ALLOCATABLE           :: psir(:)
-      LOGICAL                         :: exst
       !
       CHARACTER(iotk_attlenx)         :: slen
       !
@@ -214,7 +200,7 @@ MODULE qbox_interface
     SUBROUTINE init_qbox()
       !----------------------------------------------------------------------------
       !
-      USE mp_global,       ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
+      USE mp_global,       ONLY : intra_image_comm,my_image_id,me_bgrp
       USE conversions,     ONLY : itoa
       !
       IMPLICIT NONE
@@ -238,6 +224,24 @@ MODULE qbox_interface
       CALL mp_barrier(intra_image_comm)
       !
     END SUBROUTINE
+    !
+    SUBROUTINE finalize_qbox()
+      !----------------------------------------------------------------------------
+      !
+      ! send quit command to qbox
+      !
+      USE mp_global,       ONLY : my_image_id,me_bgrp
+      USE conversions,     ONLY : itoa
+      !
+      IMPLICIT NONE
+      !
+      IF( me_bgrp == 0 ) THEN
+         OPEN(UNIT=iu, FILE="qb."//itoa(my_image_id)//".in")
+         WRITE(iu,'(A)') 'quit'
+         CLOSE(iu)
+         CALL delete_if_present( "qb."//itoa(my_image_id)//".in.lock" )
+      ENDIF
+    END SUBROUTINE
 
   SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile, consider_only)
     !
@@ -247,7 +251,7 @@ MODULE qbox_interface
     USE forpy_mod,  ONLY: dict, dict_create
     USE forpy_mod,  ONLY: list, list_create
     USE forpy_mod,  ONLY: object, cast
-    USE forpy_mod,  ONLY: exception_matches, KeyError, err_clear, err_print
+    USE forpy_mod,  ONLY: exception_matches, err_clear, err_print
     !
     IMPLICIT NONE
     !
@@ -257,7 +261,7 @@ MODULE qbox_interface
     !
     INTEGER :: IERR
     TYPE(tuple) :: args
-    TYPE(dict) :: kwargs, kwargs_copy
+    TYPE(dict) :: kwargs
     TYPE(module_py) :: pymod
     TYPE(object) :: return_obj
     INTEGER :: return_int

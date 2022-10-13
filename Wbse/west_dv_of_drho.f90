@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
+SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   !-----------------------------------------------------------------------
   !
   !  This routine computes the change of the self consistent potential
@@ -65,153 +65,153 @@ subroutine west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   !
   CALL start_clock ('wbse_dv_of_drho')
   !
-  if (add_nlcc .and. .not.present(drhoc)) &
+  IF (add_nlcc .AND. .NOT.PRESENT(drhoc)) &
      & CALL errore( 'wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1 )
   !
-  if (lrpa) then
+  IF (lrpa) THEN
      !
-     allocate(dvaux(1,1))
-     goto 111
+     ALLOCATE(dvaux(1,1))
+     GOTO 111
      !
-  else
+  ELSE
      !
-     allocate(dvaux(dfftp%nnr, nspin))
+     ALLOCATE(dvaux(dfftp%nnr, nspin))
      !
-  endif
+  ENDIF
   !
   ! 1) The exchange-correlation contribution is computed in real space
   !
-  fac = 1.d0 / DBLE (nspin)
+  fac = 1._DP / REAL (nspin,KIND=DP)
   !
-  if (nlcc_any.and.add_nlcc) then
+  IF (nlcc_any.AND.add_nlcc) THEN
      !
-     do is = 1, nspin
+     DO is = 1, nspin
         !
         rho%of_r(:, is) = rho%of_r(:, is) + fac * rho_core (:)
         !
         dvscf(:, is) = dvscf(:, is) + fac * drhoc (:)
         !
-     enddo
+     ENDDO
      !
-  endif
+  ENDIF
   !
-  dvaux (:,:) = (0.d0, 0.d0)
-  do is = 1, nspin
+  dvaux (:,:) = (0._DP, 0._DP)
+  DO is = 1, nspin
      !
-     do is1 = 1, nspin
+     DO is1 = 1, nspin
         !
         dvaux(:,is) = dvaux(:,is) + dmuxc(:,is,is1) * dvscf(:,is1)
         !
-     enddo
+     ENDDO
      !
-  enddo
+  ENDDO
   !
   ! Add gradient correction to the response XC potential.
   ! NB: If nlcc=.true. we need to add here its contribution.
   ! grho contains already the core charge
   !
-  if ( dft_is_gradient() ) then
+  IF ( dft_is_gradient() ) THEN
      !
-     call dgradcorr (rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
+     CALL dgradcorr (rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
             dvscf, dfftp%nnr, nspin, nspin_gga, nl, ngm, g, alat, dvaux )
      !
-  endif
+  ENDIF
   !
-  if (dft_is_nonlocc()) then
+  IF (dft_is_nonlocc()) THEN
      !
-     call dnonloccorr(rho%of_r, dvscf, xq, dvaux)
+     CALL dnonloccorr(rho%of_r, dvscf, xq, dvaux)
      !
-  endif
+  ENDIF
   !
-  if (nlcc_any.and.add_nlcc) then
+  IF (nlcc_any.AND.add_nlcc) THEN
      !
-     do is = 1, nspin
+     DO is = 1, nspin
         !
         rho%of_r(:, is) = rho%of_r(:, is) - fac * rho_core (:)
         dvscf(:, is) = dvscf(:, is) - fac * drhoc (:)
         !
-     enddo
+     ENDDO
      !
-  endif
+  ENDIF
   !
-111 continue
+111 CONTINUE
   !
   ! 2) Hartree contribution is computed in reciprocal space
   !
-  if (nspin == 2) then
+  IF (nspin == 2) THEN
      !
      dvscf(:,1) = dvscf(:,1) + dvscf(:,2)
      !
-  endif
+  ENDIF
   !
-  call fwfft ('Dense', dvscf(:,1), dfftp)
+  CALL fwfft ('Dense', dvscf(:,1), dfftp)
   !
-  allocate (dvhart(dfftp%nnr, nspin))
+  ALLOCATE (dvhart(dfftp%nnr, nspin))
   !
-  dvhart(:,:) = (0.d0,0.d0)
+  dvhart(:,:) = (0._DP,0._DP)
   !
-  do ig = 1, ngm
+  DO ig = 1, ngm
      !
      qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
      !
-     if (qg2 > 1.d-8) then
+     IF (qg2 > 1.d-8) THEN
         !
         dvhart(nl(ig),:) = e2 * fpi * dvscf(nl(ig),1) / (tpiba2 * qg2)
         !
-     endif
+     ENDIF
      !
-  enddo
+  ENDDO
   !
-  if (do_comp_mt) then
+  IF (do_comp_mt) THEN
      !
-     allocate(dvaux_mt(ngm))
+     ALLOCATE(dvaux_mt(ngm))
      !
-     call wg_corr_h (omega, ngm, dvscf(nl(:),1), dvaux_mt, eh_corr)
+     CALL wg_corr_h (omega, ngm, dvscf(nl(:),1), dvaux_mt, eh_corr)
      !
-     do ig = 1, ngm
+     DO ig = 1, ngm
         !
         dvhart(nl(ig),:) = dvhart(nl(ig),1) + dvaux_mt(ig)
         !
-     enddo
+     ENDDO
      !
-     deallocate(dvaux_mt)
+     DEALLOCATE(dvaux_mt)
      !
-  endif
+  ENDIF
   !
-  if (gamma_only) then
+  IF (gamma_only) THEN
      !
-     do ig = 1, ngm
+     DO ig = 1, ngm
         !
-        dvhart(nlm(ig),:) = conjg(dvhart(nl(ig),:))
+        dvhart(nlm(ig),:) = CONJG(dvhart(nl(ig),:))
         !
-     enddo
+     ENDDO
      !
-  endif
+  ENDIF
   !
   ! Transformed back to real space
   !
-  do is = 1, nspin
+  DO is = 1, nspin
      !
-     call invfft ('Dense', dvhart (:,is), dfftp)
+     CALL invfft ('Dense', dvhart (:,is), dfftp)
      !
-  enddo
+  ENDDO
   !
   dvscf(:,:) = (0.0_DP,0.0_DP)
   !
-  if (lrpa) then
+  IF (lrpa) THEN
      !
      dvscf(:,:) = dvhart(:,:)
      !
-  else
+  ELSE
      !
      dvscf(:,:) = dvaux(:,:) + dvhart(:,:)
      !
-  endif
+  ENDIF
   !
-  deallocate (dvaux)
+  DEALLOCATE (dvaux)
   !
   CALL stop_clock ('wbse_dv_of_drho')
   !
   RETURN
   !
-end subroutine west_dv_of_drho
+END SUBROUTINE

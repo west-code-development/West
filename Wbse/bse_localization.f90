@@ -58,8 +58,8 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   !
   IF (.NOT.gamma_only)       ALLOCATE(psic1(dffts%nnr))
   !
-  l_load_west_loc_wfc = .false.
-  l_load_qbox_loc_wfc = .true.
+  l_load_west_loc_wfc = .FALSE.
+  l_load_qbox_loc_wfc = .TRUE.
   !
   IF (.NOT.l_restart) THEN
      !
@@ -202,4 +202,4 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   !
   RETURN
   !
-ENDSUBROUTINE
+END SUBROUTINE

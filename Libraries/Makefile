@@ -2,7 +2,7 @@
 
 default: all
 
-all: title forpy_do json_do base64_do
+all: title forpy_do json_do base64_do iotk_do
 
 test: json_test_do
 
@@ -21,12 +21,17 @@ base64_do:
 	( cd Base64 ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
+iotk_do:
+	if test -d iotk ; then \
+	( cd iotk ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
+	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
+
 json_test_do:
 	if test -d Json-test ; then \
 	( cd Json-test ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-clean: forpy_undo json_undo base64_undo json_test_undo
+clean: forpy_undo json_undo base64_undo iotk_undo json_test_undo
 
 forpy_undo:
 	if test -d Forpy ; then \
@@ -41,6 +46,11 @@ json_undo:
 base64_undo:
 	if test -d Base64 ; then \
 	( cd Base64 ; if test "$(MAKE)" = "" ; then make clean ; \
+	else $(MAKE) clean ; fi ) ; fi
+
+iotk_undo:
+	if test -d iotk ; then \
+	( cd iotk ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
 json_test_undo:

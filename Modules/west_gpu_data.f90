@@ -405,34 +405,37 @@ MODULE west_gpu_data
    USE uspp_param,            ONLY : nhm
    USE wvfct,                 ONLY : npwx
    USE becmod_subs_gpum,      ONLY : allocate_bec_type_gpu
+   USE westcom,               ONLY : l_skip_nl_part_of_hcomr
    !
    IMPLICIT NONE
    !
    CALL allocate_linsolve_gpu(3)
    !
    ALLOCATE(gk(3,npwx))
-   ALLOCATE(dvkb(npwx,nkb))
-   ALLOCATE(work(npwx,nkb))
-   IF(noncolin) THEN
-      ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
-      ALLOCATE(psc(nkb,npol,1,2))
-   ELSE
-      ALLOCATE(deff(nhm,nhm,nat))
-      ALLOCATE(ps2(nkb,1,2))
-   ENDIF
-   !
-   CALL allocate_bec_type_gpu(nkb,1,becp1_d)
-   CALL allocate_bec_type_gpu(nkb,1,becp2_d)
-   !
-   IF(noncolin) THEN
-      becp1_d_nc_d => becp1_d%nc_d
-      becp2_d_nc_d => becp2_d%nc_d
-   ELSEIF(gamma_only) THEN
-      becp1_d_r_d => becp1_d%r_d
-      becp2_d_r_d => becp2_d%r_d
-   ELSE
-      becp1_d_k_d => becp1_d%k_d
-      becp2_d_k_d => becp2_d%k_d
+   IF(.NOT. l_skip_nl_part_of_hcomr .AND. nkb > 0) THEN
+      ALLOCATE(dvkb(npwx,nkb))
+      ALLOCATE(work(npwx,nkb))
+      IF(noncolin) THEN
+         ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
+         ALLOCATE(psc(nkb,npol,1,2))
+      ELSE
+         ALLOCATE(deff(nhm,nhm,nat))
+         ALLOCATE(ps2(nkb,1,2))
+      ENDIF
+      !
+      CALL allocate_bec_type_gpu(nkb,1,becp1_d)
+      CALL allocate_bec_type_gpu(nkb,1,becp2_d)
+      !
+      IF(noncolin) THEN
+         becp1_d_nc_d => becp1_d%nc_d
+         becp2_d_nc_d => becp2_d%nc_d
+      ELSEIF(gamma_only) THEN
+         becp1_d_r_d => becp1_d%r_d
+         becp2_d_r_d => becp2_d%r_d
+      ELSE
+         becp1_d_k_d => becp1_d%k_d
+         becp2_d_k_d => becp2_d%k_d
+      ENDIF
    ENDIF
    !
    END SUBROUTINE
@@ -442,6 +445,8 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE becmod_subs_gpum,      ONLY : deallocate_bec_type_gpu
+   USE uspp,                  ONLY : nkb
+   USE westcom,               ONLY : l_skip_nl_part_of_hcomr
 
    IMPLICIT NONE
    !
@@ -487,8 +492,10 @@ MODULE west_gpu_data
       NULLIFY(becp2_d_nc_d)
    ENDIF
    !
-   CALL deallocate_bec_type_gpu(becp1_d)
-   CALL deallocate_bec_type_gpu(becp2_d)
+   IF(.NOT. l_skip_nl_part_of_hcomr .AND. nkb > 0) THEN
+      CALL deallocate_bec_type_gpu(becp1_d)
+      CALL deallocate_bec_type_gpu(becp2_d)
+   ENDIF
    !
    END SUBROUTINE
    !

@@ -57,7 +57,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   TYPE(bec_type) :: becp2 ! dimensions ( nkb, m )
   REAL(DP),ALLOCATABLE :: gk(:,:)
   INTEGER :: ig, na, ibnd, ikb, jkb, nt, ih, jh, ijkb0, is, js, ijs
-  COMPLEX(DP),ALLOCATABLE :: ps2(:,:,:), dvkb (:,:), dvkb1 (:,:), work (:,:), psc(:,:,:,:), deff_nc(:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: ps2(:,:,:), dvkb (:,:), work (:,:), psc(:,:,:,:), deff_nc(:,:,:,:)
   REAL(DP),ALLOCATABLE :: deff(:,:,:)
   REAL(DP),PARAMETER :: tol = 1.E-10_DP
   !
@@ -112,14 +112,9 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      ELSE
         ALLOCATE( deff(nhm, nhm, nat) )
      ENDIF
-     ALLOCATE( dvkb(npwx,nkb), dvkb1(npwx, nkb) )
+     ALLOCATE( dvkb(npwx,nkb) )
      !
-     dvkb  = 0._DP
-     dvkb1 = 0._DP
-     work  = 0._DP
-     !
-     CALL gen_us_dj (ik, dvkb)
-     CALL gen_us_dy (ik, at (1, ipol), dvkb1)
+     work = 0._DP
      !
 !$OMP PARALLEL DEFAULT(none) SHARED(npw,g2kin,gk) PRIVATE(ig)
 !$OMP DO
@@ -137,6 +132,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
 !$OMP END DO
 !$OMP END PARALLEL
      !
+     CALL gen_us_dj (ik, dvkb)
+     !
      jkb = 0
      DO nt = 1, ntyp
         DO na = 1, nat
@@ -144,18 +141,34 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
               DO ikb = 1, nh (nt)
                  jkb = jkb + 1
                  DO ig = 1, npw
-                    work (ig,jkb) = dvkb1 (ig, jkb) + dvkb (ig, jkb) * &
-                         (at (1, ipol) * gk (1, ig) + &
-                          at (2, ipol) * gk (2, ig) + &
-                          at (3, ipol) * gk (3, ig) )
+                    work (ig, jkb) = dvkb (ig, jkb) * &
+                                    (at (1, ipol) * gk (1, ig) + &
+                                     at (2, ipol) * gk (2, ig) + &
+                                     at (3, ipol) * gk (3, ig) )
                  ENDDO
               ENDDO
            ENDIF
         ENDDO
      ENDDO
+     !
+     CALL gen_us_dy (ik, at (1, ipol), dvkb)
+     !
+     jkb = 0
+     DO nt = 1, ntyp
+        DO na = 1, nat
+           IF (nt == ityp (na)) THEN
+              DO ikb = 1, nh (nt)
+                 jkb = jkb + 1
+                 DO ig = 1, npw
+                    work (ig, jkb) = work (ig, jkb) + dvkb (ig, jkb)
+                 ENDDO
+              ENDDO
+           ENDIF
+        ENDDO
+     ENDDO
+     !
      DEALLOCATE( gk )
      DEALLOCATE( dvkb )
-     DEALLOCATE( dvkb1 )
      !
      ! In the case of gamma point systems becp2 is real
      ! so we have to include a factor of i before calling

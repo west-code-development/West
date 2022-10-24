@@ -22,19 +22,16 @@ SUBROUTINE wbse_davidson_diago_square ( )
   USE distribution_center,  ONLY : pert, aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE pwcom,                ONLY : nks,npw,npwx
+  USE pwcom,                ONLY : nks,npwx
   USE lsda_mod,             ONLY : nspin
-  USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
-                                 & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                 & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,dvg_exc,dng_exc,nbndval0x,&
-                                 & l_preconditioning
+  USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
+                                 & wstat_calculation,ev,conv,n_pdep_read_from_file,trev_pdep_rel,&
+                                 & l_is_wstat_converged,dvg_exc,dng_exc,nbndval0x,l_preconditioning
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
-  USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm
   USE mp,                   ONLY : mp_sum,mp_max
-  USE gvect,                ONLY : gstart
-  USE wstat_tools,          ONLY : diagox,serial_diagox,symm_hr_distr,redistribute_vr_distr
+  USE wstat_tools,          ONLY : diagox,serial_diagox,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
                                    wbse_refresh_with_vr_distr,apply_preconditioning_dvg
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
@@ -50,20 +47,20 @@ SUBROUTINE wbse_davidson_diago_square ( )
   INTEGER :: dav_iter, notcnv
     ! integer  number of iterations performed
     ! number of unconverged roots
-  INTEGER :: kter, nbase, np, n, m, ip
+  INTEGER :: kter, nbase, np, n, ip
     ! counter on iterations
     ! dimension of the reduced basis
     ! counter on the reduced basis vectors
     ! do-loop counters
     ! counter on the bands
-  INTEGER :: ierr,mloc,mstart,mend,max_mloc
+  INTEGER :: ierr,mloc,mstart,max_mloc
   INTEGER, ALLOCATABLE  :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
   COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp_tmp(:,:,:)
   !
-  INTEGER :: il1,il2,ig1,ig2,i
+  INTEGER :: il1,ig1
   INTEGER :: size_index_matrix
   REAL(DP) :: time_spent(2)
   REAL(DP) :: epsilon_ref, norm_tmp(nspin)
@@ -600,7 +597,5 @@ SUBROUTINE wbse_davidson_diago_square ( )
   DEALLOCATE( dvg_exc_tmp )
   !
   CALL stop_clock( 'chidiago' )
-  !
-  RETURN
   !
 END SUBROUTINE

@@ -12,18 +12,16 @@ SUBROUTINE wbse_calc_dens( devc, drho )
   ! from linear response orbitals and ground state orbitals.
   !
   !
-  USE kinds,                  ONLY : dp
-  USE io_global,              ONLY : stdout
+  USE kinds,                  ONLY : DP
   USE cell_base,              ONLY : omega
-  USE fft_base,               ONLY : dffts,dfftp
+  USE fft_base,               ONLY : dffts
   USE lsda_mod,               ONLY : nspin,lsda
-  USE wavefunctions,          ONLY : psic, evc
+  USE wavefunctions,          ONLY : psic,evc
   USE noncollin_module,       ONLY : npol
-  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg
+  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,nks,current_spin,isk,wg
   USE control_flags,          ONLY : gamma_only
-  USE mp,                     ONLY : mp_sum, mp_bcast
-  USE mp_global,              ONLY : inter_pool_comm,intra_bgrp_comm,inter_bgrp_comm,&
-                                   & my_image_id, inter_image_comm
+  USE mp,                     ONLY : mp_sum,mp_bcast
+  USE mp_global,              ONLY : my_image_id,inter_image_comm
   USE buffers,                ONLY : get_buffer
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,l_lanczos
   USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
@@ -32,15 +30,15 @@ SUBROUTINE wbse_calc_dens( devc, drho )
   !
   IMPLICIT NONE
   !
-  COMPLEX(dp), INTENT(IN) :: devc(npwx*npol, nbndval0x, nks)
-  COMPLEX(dp), INTENT(OUT):: drho(dffts%nnr, nspin)
+  COMPLEX(DP), INTENT(IN) :: devc(npwx*npol, nbndval0x, nks)
+  COMPLEX(DP), INTENT(OUT):: drho(dffts%nnr, nspin)
   !
   ! Local variables
   !
   INTEGER       :: ir, ibnd, iks, nbndval
   INTEGER       :: nbvalloc, il1
-  REAL(kind=dp) :: w1, prod
-  COMPLEX(dp), ALLOCATABLE :: psic_aux(:)
+  REAL(KIND=DP) :: w1, prod
+  COMPLEX(DP), ALLOCATABLE :: psic_aux(:)
   !
   CALL start_clock('wbse_calc_dens')
   !
@@ -82,7 +80,7 @@ SUBROUTINE wbse_calc_dens( devc, drho )
            !
            w1 = wg(ibnd, iks)/omega
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),devc(1,ibnd,iks),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),devc(:,ibnd,iks),psic,'Wave')
            !
            DO ir=1, dffts%nnr
               !
@@ -106,9 +104,9 @@ SUBROUTINE wbse_calc_dens( devc, drho )
            !
            w1 = wg(ibnd, iks)/omega
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !
-           CALL single_invfft_k(dffts,npw,npwx,devc(1,ibnd,iks),psic_aux,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,devc(:,ibnd,iks),psic_aux,'Wave',igk_k(:,current_k))
            !
            DO ir=1, dffts%nnr
               !
@@ -126,9 +124,9 @@ SUBROUTINE wbse_calc_dens( devc, drho )
               !
               w1 = wg(ibnd, iks)/omega
               !
-              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1,ibnd),psic,'Wave',igk_k(1,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
               !
-              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1,ibnd,iks),psic_aux,'Wave',igk_k(1,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,ibnd,iks),psic_aux,'Wave',igk_k(:,current_k))
               !
               DO ir=1, dffts%nnr
                  !
@@ -153,7 +151,5 @@ SUBROUTINE wbse_calc_dens( devc, drho )
   ENDIF
   !
   CALL stop_clock('wbse_calc_dens')
-  !
-  RETURN
   !
 END SUBROUTINE

@@ -21,16 +21,13 @@ SUBROUTINE wbsepp_decompose_eig_contributions ( )
   USE distribution_center,  ONLY : pert,aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE westcom,              ONLY : nbnd_occ,ev, &
-                                   dvg_exc, d0psi, n_liouville_read_from_file
-  USE pwcom,                ONLY : nks,npwx,npw
+  USE westcom,              ONLY : nbnd_occ,ev,dvg_exc,d0psi,n_liouville_read_from_file
+  USE pwcom,                ONLY : nks,npwx,npw,nbnd
   USE plep_db,              ONLY : plep_db_read
-  USE mp_world,             ONLY : mpime
   USE mp,                   ONLY : mp_sum
   USE mp_global,            ONLY : inter_image_comm, intra_bgrp_comm
   USE wavefunctions,        ONLY : evc
   USE control_flags,        ONLY : gamma_only
-  USE wvfct,                ONLY : nbnd
   USE gvect,                ONLY : gstart
   !
   IMPLICIT NONE
@@ -262,7 +259,5 @@ SUBROUTINE wbsepp_decompose_eig_contributions ( )
   DEALLOCATE( d0psi )
   !
   CALL stop_clock( 'eig_decompose')
-  !
-  RETURN
   !
 END SUBROUTINE

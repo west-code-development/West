@@ -15,23 +15,21 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   !----------------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE io_global,            ONLY : stdout
   USE io_push,              ONLY : io_push_title
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
-  USE westcom,              ONLY : nbnd_occ,l_use_bisection_thr,wfc_from_qbox
+  USE westcom,              ONLY : l_use_bisection_thr,wfc_from_qbox
   USE wavefunctions,        ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
-  USE fft_base,             ONLY : dfftp,dffts
+  USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : double_invfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k
-  USE pwcom,                ONLY : igk_k,omega,npw,npwx,current_k,ngk,nbnd
+  USE pwcom,                ONLY : igk_k,npw,npwx
   USE gvect,                ONLY : gstart
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE mp_global,            ONLY : inter_image_comm
   USE mp,                   ONLY : mp_sum
-  USE bse_module,           ONLY : ovl_thr
   USE qbox_interface,       ONLY : load_qbox_wfc
   USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection
   !
@@ -52,7 +50,7 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   CHARACTER(LEN=1)          :: my_spin
   LOGICAL :: l_load_west_loc_wfc
   LOGICAL :: l_load_qbox_loc_wfc
-  REAL(kind=dp), EXTERNAL   :: DDOT
+  REAL(KIND=DP), EXTERNAL   :: DDOT
   !
   CALL start_clock( 'bse_do_localization' )
   !
@@ -159,14 +157,14 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
               !
               IF (gamma_only) THEN
                  !
-                 CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(1,ibnd),evc_loc(1,jbnd), psic,'Wave')
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd), psic,'Wave')
                  !
                  CALL check_ovl_wannier (REAL(psic(:),KIND=DP), AIMAG(psic(:)), ovl_value)
                  !
               ELSE
                  !
-                 CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
-                 CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,jbnd),psic1,'Wave',igk_k(1,1)) !only 1 kpoint
+                 CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
+                 CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,jbnd),psic1,'Wave',igk_k(:,1)) ! only 1 kpoint
                  !
                  CALL check_ovl_wannier (psic(:), psic1(:), ovl_value)
                  !
@@ -199,7 +197,5 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   IF (ALLOCATED(psic1))   DEALLOCATE(psic1)
   !
   CALL stop_clock( 'bse_do_localization' )
-  !
-  RETURN
   !
 END SUBROUTINE

@@ -5,6 +5,7 @@ include ../../make.inc
 # location of needed modules
 MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG)../../PW/src \
+           $(MOD_FLAG)../../LR_Modules \
            $(MOD_FLAG)../Coulomb_kernel \
            $(MOD_FLAG)../DFPT_kernel \
            $(MOD_FLAG)../FFT_kernel \
@@ -16,6 +17,7 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG)../Modules \
            $(MOD_FLAG)../Para_kernel \
            $(MOD_FLAG)../Tools \
+           $(MOD_FLAG)../Wstat \
            $(MOD_FLAG).
 
 WBSE_OBJS = \
@@ -25,10 +27,7 @@ bse_module.o \
 bse_setup.o \
 bse_tools.o \
 check_ovl_wfc.o \
-lanczos_db.o \
 lanczos_restart.o \
-plep_db.o \
-plep_io.o \
 td_liouville_oper.o \
 wbse_bse_kernel.o \
 wbse_calc_dens.o \
@@ -51,7 +50,7 @@ west_dv_setup.o
 
 PWOBJS = ../../PW/src/libpw.a
 
-QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
+QEMODS = ../../LR_Modules/liblrmod.a ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
 ../Wstat/libwstat.a \
@@ -63,6 +62,7 @@ WESTLIBS = \
 ../FFT_kernel/lib_fft_kernel.a \
 ../Tools/libtools.a \
 ../Modules/libmodules.a \
+../Libraries/iotk/libiotk.a \
 ../Libraries/Forpy/libforpy.a \
 ../Libraries/Json/libjson.a \
 ../Libraries/Base64/libbase64.a
@@ -94,9 +94,9 @@ clean :
 
 title :
 	@echo
-	@echo "##############"
+	@echo "#############"
 	@echo "### Wbse ####"
-	@echo "##############"
+	@echo "#############"
 	@echo
 
 include make.depend

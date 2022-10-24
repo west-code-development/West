@@ -169,6 +169,4 @@ SUBROUTINE setup_dgc
 
   DEALLOCATE(rhoout)
 
-  RETURN
-
 END SUBROUTINE

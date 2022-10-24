@@ -35,12 +35,10 @@ MODULE plep_db
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp_global,            ONLY : my_image_id
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_maxiter,n_dfpt_maxiter, &
-                                     & n_steps_write_restart,n_pdep_restart_from_itr,n_pdep_read_from_file,trev_pdep, &
-                                     & tr2_dfpt,l_deflate,l_kinetic_only,ev,west_prefix,wbse_save_dir,trev_pdep_rel, &
-                                     & l_minimize_exx_if_active,l_use_ecutrho, dvg_exc
+      USE westcom,              ONLY : wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_maxiter,&
+                                     & n_pdep_read_from_file,trev_pdep,ev,wbse_save_dir,&
+                                     & trev_pdep_rel,dvg_exc
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert
@@ -167,12 +165,10 @@ MODULE plep_db
       !------------------------------------------------------------------------
       !
       USE pwcom,               ONLY : nks,npwx
-      USE westcom,             ONLY : n_pdep_eigen,ev,west_prefix,wbse_save_dir,&
-                                       dvg_exc,nbndval0x
+      USE westcom,             ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x
       USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root
-      USE mp_global,           ONLY : my_image_id
       USE plep_io,             ONLY : plep_read_G_and_distribute
       USE io_push,             ONLY : io_push_bar
       USE distribution_center, ONLY : pert
@@ -203,7 +199,6 @@ MODULE plep_db
       !
       ! ... the main db directory
       !
-      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.save'
       dirname = wbse_save_dir
       !
       ! 1)  READ THE INPUT FILE

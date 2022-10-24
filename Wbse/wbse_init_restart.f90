@@ -49,16 +49,16 @@ MODULE wbse_init_restart
     SUBROUTINE wbse_index_matrix_write3d (filename,size_list,size_column, index_matrix)
       !
       USE mp_world,             ONLY : root,world_comm
-      USE io_global,            ONLY : ionode, stdout
+      USE io_global,            ONLY : ionode
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      INTEGER,           INTENT(IN)   :: size_list,size_column
-      REAL(DP),          INTENT(IN)   :: index_matrix(size_list,size_column)
-      CHARACTER(LEN=256),INTENT(IN)   :: filename
+      INTEGER,           INTENT(IN) :: size_list,size_column
+      REAL(DP),          INTENT(IN) :: index_matrix(size_list,size_column)
+      CHARACTER(LEN=256),INTENT(IN) :: filename
       !
       ! Workspace
       !
@@ -106,7 +106,7 @@ MODULE wbse_init_restart
     !
     SUBROUTINE wbse_index_matrix_read3d (filename,size_list0,size_list1,size_column,index_matrix)
       !
-      USE io_global,            ONLY : stdout,ionode
+      USE io_global,            ONLY : ionode
       USE mp_world,             ONLY : world_comm,root
       USE mp,                   ONLY : mp_bcast
       USE mp_global,            ONLY : intra_image_comm
@@ -115,10 +115,10 @@ MODULE wbse_init_restart
       !
       ! I/O
       !
-      INTEGER,           INTENT(IN)   :: size_list0,size_column
-      INTEGER,           INTENT(OUT)  :: size_list1
-      REAL(DP),          INTENT(OUT)  :: index_matrix(size_list0,size_column)
-      CHARACTER(LEN=256),INTENT(IN)   :: filename
+      INTEGER,           INTENT(IN)  :: size_list0,size_column
+      INTEGER,           INTENT(OUT) :: size_list1
+      REAL(DP),          INTENT(OUT) :: index_matrix(size_list0,size_column)
+      CHARACTER(LEN=256),INTENT(IN)  :: filename
       !
       ! Workspace
       !
@@ -181,10 +181,10 @@ MODULE wbse_init_restart
       !
       ! I/O
       !
-      INTEGER,           INTENT(IN)   :: size_list
-      REAL(DP),          INTENT(IN)   :: alpha_ija_vx(size_list)
-      REAL(DP),          INTENT(IN)   :: alpha_ija_vc(size_list)
-      CHARACTER(LEN=256),INTENT(IN)   :: filename
+      INTEGER,           INTENT(IN) :: size_list
+      REAL(DP),          INTENT(IN) :: alpha_ija_vx(size_list)
+      REAL(DP),          INTENT(IN) :: alpha_ija_vc(size_list)
+      CHARACTER(LEN=256),INTENT(IN) :: filename
       !
       ! Workspace
       !
@@ -235,7 +235,7 @@ MODULE wbse_init_restart
     !
     SUBROUTINE wbse_pdep_coeffie_read3d (filename,size_list,alpha_ija_vx,alpha_ija_vc)
       !
-      USE io_global,            ONLY : stdout,ionode
+      USE io_global,            ONLY : ionode
       USE mp_world,             ONLY : world_comm,root
       USE mp,                   ONLY : mp_bcast
       USE mp_global,            ONLY : intra_image_comm
@@ -244,10 +244,10 @@ MODULE wbse_init_restart
       !
       ! I/O
       !
-      INTEGER,           INTENT(IN)   :: size_list
-      REAL(DP),          INTENT(OUT)  :: alpha_ija_vx(size_list)
-      REAL(DP),          INTENT(OUT)  :: alpha_ija_vc(size_list)
-      CHARACTER(LEN=256),INTENT(IN)   :: filename
+      INTEGER,           INTENT(IN)  :: size_list
+      REAL(DP),          INTENT(OUT) :: alpha_ija_vx(size_list)
+      REAL(DP),          INTENT(OUT) :: alpha_ija_vc(size_list)
+      CHARACTER(LEN=256),INTENT(IN)  :: filename
       !
       ! Workspace
       !
@@ -320,10 +320,10 @@ MODULE wbse_init_restart
       !
       ! I/O
       !
-      INTEGER,           INTENT(IN)   :: size_list
-      REAL(DP),          INTENT(IN)   :: restart_matrix(size_list)
-      CHARACTER(LEN=256),INTENT(IN)   :: filename
-      LOGICAL,           INTENT(IN)   :: done_calc
+      INTEGER,           INTENT(IN) :: size_list
+      REAL(DP),          INTENT(IN) :: restart_matrix(size_list)
+      CHARACTER(LEN=256),INTENT(IN) :: filename
+      LOGICAL,           INTENT(IN) :: done_calc
       !
       ! Workspace
       !
@@ -366,8 +366,6 @@ MODULE wbse_init_restart
          !
       ENDIF
       !
-      !IF (ionode)  CALL iotk_close_write( iunout )
-      !
       ! BARRIER
       !
       CALL mp_barrier(world_comm)
@@ -376,7 +374,7 @@ MODULE wbse_init_restart
     !
     SUBROUTINE wbse_stat_restart_read3d (filename,size_list,restart_matrix,done_calc)
       !
-      USE io_global,            ONLY : stdout,ionode
+      USE io_global,            ONLY : ionode
       USE mp_world,             ONLY : world_comm,root
       USE mp,                   ONLY : mp_bcast
       USE mp_global,            ONLY : intra_image_comm
@@ -385,10 +383,10 @@ MODULE wbse_init_restart
       !
       ! I/O
       !
-      INTEGER,           INTENT(IN)   :: size_list
-      REAL(DP),          INTENT(OUT)  :: restart_matrix(size_list)
-      CHARACTER(LEN=256),INTENT(IN)   :: filename
-      LOGICAL,           INTENT(OUT)  :: done_calc
+      INTEGER,           INTENT(IN)  :: size_list
+      REAL(DP),          INTENT(OUT) :: restart_matrix(size_list)
+      CHARACTER(LEN=256),INTENT(IN)  :: filename
+      LOGICAL,           INTENT(OUT) :: done_calc
       !
       ! Workspace
       !
@@ -444,21 +442,19 @@ MODULE wbse_init_restart
     !
     SUBROUTINE wbse_init_restart_para_write (size_list,alpha_ija_vx, alpha_ija_vc)
       !
-      USE mp_world,             ONLY : root,world_comm
-      USE io_global,            ONLY : ionode
+      USE mp_world,             ONLY : world_comm
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
-      USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
-                                       me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
+      USE mp_global,            ONLY : my_pool_id,my_bgrp_id,me_bgrp,root_bgrp
       USE distribution_center,  ONLY : bseparal
-      USE westcom,              ONLY : wbse_init_save_dir !wstat_save_dir
+      USE westcom,              ONLY : wbse_init_save_dir
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      INTEGER,           INTENT(IN)   :: size_list
-      REAL(DP),          INTENT(IN)   :: alpha_ija_vx(size_list)
-      REAL(DP),          INTENT(IN)   :: alpha_ija_vc(size_list)
+      INTEGER,           INTENT(IN) :: size_list
+      REAL(DP),          INTENT(IN) :: alpha_ija_vx(size_list)
+      REAL(DP),          INTENT(IN) :: alpha_ija_vc(size_list)
       !
       ! Workspace
       !
@@ -511,13 +507,12 @@ MODULE wbse_init_restart
     !
     SUBROUTINE wbse_init_restart_para_read (size_list,alpha_ija_vx, alpha_ija_vc)
       !
-      USE io_global,            ONLY : stdout,ionode
-      USE mp_world,             ONLY : world_comm,root
+      USE mp_world,             ONLY : world_comm
       USE mp,                   ONLY : mp_bcast,mp_barrier
-      USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
-                                       me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
+      USE mp_global,            ONLY : my_pool_id,my_bgrp_id,me_bgrp,root_bgrp,inter_bgrp_comm,&
+                                     & inter_pool_comm
       USE distribution_center,  ONLY : bseparal
-      USE westcom,              ONLY : wbse_init_save_dir !wstat_save_dir
+      USE westcom,              ONLY : wbse_init_save_dir
       !
       IMPLICIT NONE
       !

@@ -12,7 +12,6 @@ SUBROUTINE wbse_lanczos_diago ()
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE io_files,             ONLY : tmp_dir
-  USE control_flags,        ONLY : gamma_only
   USE wvfct,                ONLY : npwx
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : nks,isk,current_spin
@@ -46,7 +45,6 @@ SUBROUTINE wbse_lanczos_diago ()
   INTEGER     :: ip,iip,pol_index,nipol_input
   INTEGER     :: iteration, lz_iteration
   INTEGER     :: iks,is, nbndval
-  INTEGER     :: iter_restart, ipol_restart
   INTEGER     :: lriter_restart, pliter_restart
   INTEGER     :: pliter_stop, lriter_stop
   INTEGER     :: size_index_matrix
@@ -384,8 +382,6 @@ SUBROUTINE wbse_lanczos_diago ()
   DEALLOCATE(evc1,evc1_new,evc1_old)
   DEALLOCATE(alpha_store,beta_store)
   DEALLOCATE(gamma_store,zeta_store)
-  !
-  RETURN
   !
 END SUBROUTINE
 !

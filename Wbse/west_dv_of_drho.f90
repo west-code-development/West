@@ -18,11 +18,12 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   USE constants,         ONLY : e2, fpi
   USE fft_base,          ONLY : dfftp
   USE fft_interfaces,    ONLY : fwfft, invfft
-  USE gvect,             ONLY : nl, ngm, g,nlm, gstart
-  USE cell_base,         ONLY : alat, tpiba2, omega
+  USE gvect,             ONLY : ngm, g
+  USE cell_base,         ONLY : tpiba2, omega
   USE noncollin_module,  ONLY : nspin_gga
   USE lsda_mod,          ONLY : nspin
-  USE funct,             ONLY : dft_is_gradient, dft_is_nonlocc
+  USE xc_lib,            ONLY : xclib_dft_is
+  USE funct,             ONLY : dft_is_nonlocc
   USE scf,               ONLY : rho, rho_core
   USE uspp,              ONLY : nlcc_any
   USE control_flags,     ONLY : gamma_only
@@ -47,7 +48,7 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   ! input: response core charge density
   ! (needed only for PHonon when add_nlcc=.true.)
   !
-  INTEGER :: ir, is, is1, ig
+  INTEGER :: is, is1, ig
   ! counter on r vectors
   ! counter on spin polarizations
   ! counter on g vectors
@@ -110,10 +111,10 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   ! NB: If nlcc=.true. we need to add here its contribution.
   ! grho contains already the core charge
   !
-  IF ( dft_is_gradient() ) THEN
+  IF ( xclib_dft_is('gradient') ) THEN
      !
-     CALL dgradcorr (rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
-            dvscf, dfftp%nnr, nspin, nspin_gga, nl, ngm, g, alat, dvaux )
+     CALL dgradcorr (dfftp, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
+            dvscf, nspin, nspin_gga, g, dvaux)
      !
   ENDIF
   !
@@ -156,7 +157,7 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
      !
      IF (qg2 > 1.d-8) THEN
         !
-        dvhart(nl(ig),:) = e2 * fpi * dvscf(nl(ig),1) / (tpiba2 * qg2)
+        dvhart(dfftp%nl(ig),:) = e2 * fpi * dvscf(dfftp%nl(ig),1) / (tpiba2 * qg2)
         !
      ENDIF
      !
@@ -166,11 +167,11 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
      !
      ALLOCATE(dvaux_mt(ngm))
      !
-     CALL wg_corr_h (omega, ngm, dvscf(nl(:),1), dvaux_mt, eh_corr)
+     CALL wg_corr_h (omega, ngm, dvscf(dfftp%nl(:),1), dvaux_mt, eh_corr)
      !
      DO ig = 1, ngm
         !
-        dvhart(nl(ig),:) = dvhart(nl(ig),1) + dvaux_mt(ig)
+        dvhart(dfftp%nl(ig),:) = dvhart(dfftp%nl(ig),1) + dvaux_mt(ig)
         !
      ENDDO
      !
@@ -182,7 +183,7 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
      !
      DO ig = 1, ngm
         !
-        dvhart(nlm(ig),:) = CONJG(dvhart(nl(ig),:))
+        dvhart(dfftp%nlm(ig),:) = CONJG(dvhart(dfftp%nl(ig),:))
         !
      ENDDO
      !
@@ -211,7 +212,5 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   DEALLOCATE (dvaux)
   !
   CALL stop_clock ('wbse_dv_of_drho')
-  !
-  RETURN
   !
 END SUBROUTINE

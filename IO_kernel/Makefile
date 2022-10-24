@@ -18,10 +18,13 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 IO_KERNEL_OBJS = \
 cubefile.o \
 function3d.o \
+lanczos_db.o \
 mod_west_io.o \
 mpiio.o \
 pdep_db.o \
 pdep_io.o \
+plep_db.o \
+plep_io.o \
 qbox_interface.o \
 wfreq_db.o \
 wfreq_io.o

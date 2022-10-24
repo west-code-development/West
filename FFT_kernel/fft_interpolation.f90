@@ -309,12 +309,11 @@ MODULE fourier_interpolation
     !
     USE kinds,         ONLY : DP
     USE gvect,         ONLY : g
-    USE io_global,     ONLY : stdout
     USE control_flags, ONLY : gamma_only
-    USE cell_base,     ONLY : at, bg, tpiba
+    USE cell_base,     ONLY : at,bg,tpiba
     USE mp_images,     ONLY : me_image
     USE mp,            ONLY : mp_bcast
-    USE mp_images,     ONLY : my_image_id, me_image
+    USE mp_images,     ONLY : me_image
     !
     IMPLICIT NONE
     !
@@ -325,7 +324,6 @@ MODULE fourier_interpolation
     INTEGER, ALLOCATABLE :: nls(:)  ! mapping from [1, npw] to [1, n1*n2*n3]
     COMPLEX(DP), ALLOCATABLE :: auxr(:)
     !
-    INTEGER  :: ifxn, im
     INTEGER  :: ig, ng
     INTEGER  :: h, k, l, hmax, kmax, lmax, hidx, kidx, lidx
     REAL(DP) :: ecut, ecut1, ecut2, ecut3
@@ -347,8 +345,6 @@ MODULE fourier_interpolation
     ecut2 = 0.5_DP * kmax**2 * SUM( (bg(:,2)*tpiba)**2 )
     ecut3 = 0.5_DP * lmax**2 * SUM( (bg(:,3)*tpiba)**2 )
     ecut  = MIN(ecut1, ecut2, ecut3)
-    !
-    !WRITE(stdout,*) "    FT_Interpolate: ecut = ", 2 * ecut, "Ry"
     !
     ng = 0
     DO ig = 1, npw
@@ -411,7 +407,7 @@ MODULE fourier_interpolation
    !
    USE kinds,         ONLY : DP
    USE fft_scalar,    ONLY : cfft3d
-   USE mp_images,     ONLY : intra_image_comm, me_image, my_image_id
+   USE mp_images,     ONLY : intra_image_comm,me_image
    USE mp,            ONLY : mp_bcast
    !
    IMPLICIT NONE

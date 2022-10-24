@@ -23,7 +23,9 @@ wbsepp.o \
 wbsepp_ads_spectrum.o \
 wbsepp_decompose_eig_contributions.o \
 wbsepp_plot_charged_density_res_exc.o \
-wbsepp_plot_exc.o
+wbsepp_plot_exc.o \
+wbsepp_readin.o \
+wbsepp_setup.o
 
 PWOBJS = ../../PW/src/libpw.a
 
@@ -41,6 +43,7 @@ WESTLIBS = \
 ../FFT_kernel/lib_fft_kernel.a \
 ../Tools/libtools.a \
 ../Modules/libmodules.a \
+../Libraries/iotk/libiotk.a \
 ../Libraries/Forpy/libforpy.a \
 ../Libraries/Json/libjson.a \
 ../Libraries/Base64/libbase64.a
@@ -63,9 +66,9 @@ clean :
 
 title :
 	@echo
-	@echo "##############"
+	@echo "###############"
 	@echo "### Wbsepp ####"
-	@echo "##############"
+	@echo "###############"
 	@echo
 
 include make.depend

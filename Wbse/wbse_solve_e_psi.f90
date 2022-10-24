@@ -9,9 +9,7 @@
 SUBROUTINE solve_e_psi ()
   !-----------------------------------------------------------------------
   !
-  USE kinds,                ONLY : dp
-  USE io_global,            ONLY : stdout
-  USE mp_global,            ONLY : intra_bgrp_comm
+  USE kinds,                ONLY : DP
   USE mp,                   ONLY : mp_barrier
   USE uspp,                 ONLY : okvan
   USE gvect,                ONLY : gstart
@@ -20,19 +18,9 @@ SUBROUTINE solve_e_psi ()
   !
   IMPLICIT NONE
   !
-  LOGICAL :: exst
-  !
   INTEGER, PARAMETER :: n_ipol = 3
   !
-  IF (okvan) THEN
-     !
-     WRITE(stdout,'(10x,"Real space dipole + USPP is not supported",/)')
-#if defined(__MPI)
-     CALL mp_barrier(intra_bgrp_comm)
-#endif
-     STOP
-     !
-  ENDIF
+  IF (okvan) CALL errore('solve_e_psi','Real space dipole + USPP not supported',1)
   !
   CALL start_clock ('solve_e_psi')
   !
@@ -49,32 +37,28 @@ SUBROUTINE solve_e_psi ()
      !
   ENDIF
   !
-  IF (gstart==2 .AND. gamma_only) d0psi(1,:,:,:) = &
-                         & CMPLX(REAL(d0psi(1,:,:,:),KIND=DP),KIND=DP)
+  IF (gstart==2 .AND. gamma_only) &
+  & d0psi(1,:,:,:) = CMPLX(REAL(d0psi(1,:,:,:),KIND=DP),KIND=DP)
   !
   CALL stop_clock ('solve_e_psi')
-  !
-  RETURN
   !
 END SUBROUTINE
 
 SUBROUTINE compute_d0psi_rs( )
   !
   USE kinds,                ONLY : DP
-  USE cell_base,            ONLY : at, bg, alat, omega
+  USE cell_base,            ONLY : at,alat
   USE fft_base,             ONLY : dfftp,dffts
   USE io_global,            ONLY : stdout
-  USE mp_global,            ONLY : me_bgrp,my_image_id,inter_image_comm
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,me_bgrp
   USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE buffers,              ONLY : get_buffer
-  USE wvfct,                ONLY : nbnd,npwx
-  USE klist,                ONLY : nks
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : evc,psic
-  USE noncollin_module,     ONLY : noncolin,npol
-  USE pwcom,                ONLY : isk,igk_k,ngk,lsda
+  USE noncollin_module,     ONLY : npol
+  USE pwcom,                ONLY : isk,igk_k,ngk,lsda,nbnd,npwx,nks
   USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc, d0psi
   !
   IMPLICIT NONE
@@ -103,13 +87,8 @@ SUBROUTINE compute_d0psi_rs( )
   inv_nr2 = 1._DP / REAL( dfftp%nr2, KIND=DP )
   inv_nr3 = 1._DP / REAL( dfftp%nr3, KIND=DP )
   !
-#if defined (__MPI)
-  index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%npp(1:me_bgrp))
-  ir_end = MIN(dfftp%nnr,dfftp%nr1x*dfftp%nr2x*dfftp%npp(me_bgrp+1))
-#else
-  index0 = 0
-  ir_end = dfftp%nnr
-#endif
+  index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%nr3p(1:me_bgrp))
+  ir_end = MIN(dfftp%nnr,dfftp%nr1x*dfftp%nr2x*dfftp%nr3p(me_bgrp+1))
   !
   DO ir = 1, ir_end
      !
@@ -166,7 +145,7 @@ SUBROUTINE compute_d0psi_rs( )
               !
               ! G -> R
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd+1),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd+1),psic,'Wave')
               !
               ! R -> G
               !
@@ -178,7 +157,7 @@ SUBROUTINE compute_d0psi_rs( )
                  psic(:)  = (0.0_DP, 0.0_DP)
                  psic(:) =  aux_r(:) * r(:,ip) * alat
                  !
-                 CALL double_fwfft_gamma(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),d0psi(1,ibnd+1,iks,ip),'Wave')
+                 CALL double_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),d0psi(:,ibnd+1,iks,ip),'Wave')
                  !
               ENDDO
               !
@@ -188,7 +167,7 @@ SUBROUTINE compute_d0psi_rs( )
                  !
                  ! single band @ gamma
                  !
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),psic,'Wave')
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
                  !
                  aux_r(:) = (0.0_DP, 0.0_DP)
                  aux_r(:) = psic(:)
@@ -198,7 +177,7 @@ SUBROUTINE compute_d0psi_rs( )
                     psic(:)  = (0.0_DP, 0.0_DP)
                     psic(:) =  CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
                     !
-                    CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),'Wave')
+                    CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave')
                     !
                  ENDDO
                  !
@@ -208,7 +187,7 @@ SUBROUTINE compute_d0psi_rs( )
                  !
                  ! single band @ gamma
                  !
-                 CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd+1),psic,'Wave')
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd+1),psic,'Wave')
                  !
                  aux_r(:) = (0.0_DP, 0.0_DP)
                  aux_r(:) = psic(:)
@@ -218,7 +197,7 @@ SUBROUTINE compute_d0psi_rs( )
                     psic(:)  = (0.0_DP, 0.0_DP)
                     psic(:) =  CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
                     !
-                    CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),'Wave')
+                    CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave')
                     !
                  ENDDO
                  !
@@ -234,7 +213,7 @@ SUBROUTINE compute_d0psi_rs( )
         !
         DO ibnd=1,nbndval
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !
            aux_r(:) = (0.0_DP, 0.0_DP)
            aux_r(:) = psic(:)
@@ -244,7 +223,7 @@ SUBROUTINE compute_d0psi_rs( )
               psic(:)  = (0.0_DP, 0.0_DP)
               psic(:) =  aux_r(:) * r(:,ip) * alat
               !
-              CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(1,ibnd,iks,ip),'Wave',igk_k(1,current_k))
+              CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave',igk_k(:,current_k))
               !
            ENDDO
            !
@@ -254,7 +233,7 @@ SUBROUTINE compute_d0psi_rs( )
            !
            DO ibnd=1,nbndval
               !
-              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1,ibnd),psic,'Wave',igk_k(1,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
               !
               aux_r(:) = (0.0_DP, 0.0_DP)
               aux_r(:) = psic(:)
@@ -264,7 +243,7 @@ SUBROUTINE compute_d0psi_rs( )
                  psic(:)  = (0.0_DP, 0.0_DP)
                  psic(:) = aux_r(:) * r(:,ip) * alat
                  !
-                 CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(npwx+1,ibnd,iks,ip),'Wave',igk_k(1,current_k))
+                 CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(npwx+1:npwx*2,ibnd,iks,ip),'Wave',igk_k(:,current_k))
                  !
               ENDDO
               !
@@ -288,8 +267,6 @@ SUBROUTINE compute_d0psi_rs( )
   DEALLOCATE(aux_r)
   DEALLOCATE(r)
   !
-  RETURN
-  !
 END SUBROUTINE
 
 SUBROUTINE shift_d0psi( r, n_ipol )
@@ -298,10 +275,10 @@ SUBROUTINE shift_d0psi( r, n_ipol )
   ! for a proper calculation of d0psi in R-space.
   !
   USE fft_base,         ONLY : dfftp
-  use kinds,            only : dp
-  use ions_base,        only : nat,tau
+  USE kinds,            ONLY : DP
+  USE ions_base,        ONLY : nat,tau
   USE io_global,        ONLY : stdout
-  use cell_base,        only : alat,at
+  USE cell_base,        ONLY : at
   !
   IMPLICIT NONE
   !
@@ -314,7 +291,7 @@ SUBROUTINE shift_d0psi( r, n_ipol )
   INTEGER  :: ip, iatm, ir, ip1, ip2
   !
   WRITE(stdout,'(/,5X,"Dipole is shifted to the center of cell", &
-                     & " for the calculation of d0psi. ")')
+                     & " for the calculation of d0psi")')
   !
   check_cell = 0._DP
   !
@@ -328,10 +305,8 @@ SUBROUTINE shift_d0psi( r, n_ipol )
     !
   ENDDO
   !
-  ! XG: I am not sure that this type of super cell is supported now.
-  !
-  IF (check_cell > 1.E-5_DP) CALL errore('shift_d0psi', &
-        & "This type of the supercell is not supported",1)
+  IF (check_cell > 1.E-5_DP) &
+  & CALL errore('shift_d0psi','This type of the supercell is not supported',1)
   !
   mmin(:) = 2000._DP
   mmax(:)= -2000._DP
@@ -374,8 +349,6 @@ SUBROUTINE shift_d0psi( r, n_ipol )
      !
   ENDDO
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
@@ -383,31 +356,26 @@ END SUBROUTINE
 SUBROUTINE compute_d0psi_dfpt( )
   !
   USE kinds,                ONLY : DP
-  USE cell_base,            ONLY : at, bg, alat, omega
-  USE fft_base,             ONLY : dfftp,dffts
+  USE fft_base,             ONLY : dfftp
   USE io_global,            ONLY : stdout
-  USE mp_global,            ONLY : me_bgrp,my_image_id,inter_image_comm
+  USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
-  USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE buffers,              ONLY : get_buffer
-  USE wvfct,                ONLY : nbnd,npwx
-  USE klist,                ONLY : nks
-  USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : evc,psic
-  USE noncollin_module,     ONLY : noncolin,npol
+  USE noncollin_module,     ONLY : npol
   USE uspp,                 ONLY : vkb,nkb
-  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk
-  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,l_kinetic_only,d0psi,l_lanczos
+  USE pwcom,                ONLY : npwx,et,nks,current_spin,isk,xk,lsda,igk_k,current_k,ngk
+  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,l_kinetic_only,&
+                                 & d0psi,l_lanczos
   USE distribution_center,  ONLY : aband
+  USE uspp_init,            ONLY : init_us_2
   !
   IMPLICIT NONE
   !
   ! ... Local variables
   !
-  INTEGER  :: il1, i, j, k, iv, ip, ir, ir_end, index0
-  REAL(DP) :: inv_nr1, inv_nr2, inv_nr3
-  INTEGER  :: ibnd, nbndval
+  INTEGER  :: il1, iv, ip
+  INTEGER  :: nbndval
   INTEGER  :: iks, ierr
   INTEGER, PARAMETER :: n_ipol = 3
   LOGICAL, PARAMETER :: l_skip_nl_part_of_hcomr = .False.
@@ -511,7 +479,5 @@ SUBROUTINE compute_d0psi_dfpt( )
   ENDDO
   !
   IF (ALLOCATED(psic)) DEALLOCATE(psic)
-  !
-  RETURN
   !
 END SUBROUTINE

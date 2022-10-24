@@ -141,6 +141,4 @@ SUBROUTINE wbse_init_methods ()
      !
   ENDDO
   !
-  RETURN
-  !
 END SUBROUTINE

@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !
-SUBROUTINE bse_hqp_psi(iks, current_spin, nbvalloc, psi, dpsi)
+SUBROUTINE bse_hqp_psi(iks, nbvalloc, psi, dpsi)
   !
   ! evc is qp wfcs, et_qp is qp eigenvalues
   ! evc_ks is ks wfc, et is ks wfcs
@@ -17,33 +17,29 @@ SUBROUTINE bse_hqp_psi(iks, current_spin, nbvalloc, psi, dpsi)
   !
   !
   USE kinds,               ONLY : DP
-  USE io_global,           ONLY : stdout
   USE noncollin_module,    ONLY : npol
-  USE gvect,               ONLY : gstart
   USE pwcom,               ONLY : npwx
   !
   IMPLICIT NONE
   !
-  INTEGER,     INTENT(IN)    :: iks, current_spin, nbvalloc
+  INTEGER,     INTENT(IN)    :: iks, nbvalloc
   COMPLEX(DP), INTENT(IN)    :: psi(npwx*npol,nbvalloc)
   COMPLEX(DP), INTENT(INOUT) :: dpsi(npwx*npol,nbvalloc)
   !
   IF (.FALSE.) THEN
      !
-     CALL bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
+     CALL bse_hqp_psi_scf(iks, nbvalloc, psi, dpsi)
      !
   ELSE
      !
-     CALL bse_hqp_psi_nscf(iks, current_spin, nbvalloc, psi, dpsi)
+     CALL bse_hqp_psi_nscf(iks, nbvalloc, psi, dpsi)
      !
   ENDIF
-  !
-  RETURN
   !
 END SUBROUTINE
 
 
-SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
+SUBROUTINE bse_hqp_psi_scf(iks, nbvalloc, psi, dpsi)
   !
   ! evc is qp wfcs, et_qp is qp eigenvalues
   ! evc_ks is ks wfc, et is ks wfcs
@@ -54,19 +50,17 @@ SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
   !
   !
   USE kinds,               ONLY : DP
-  USE io_global,           ONLY : stdout
-  USE noncollin_module,    ONLY : noncolin, npol
-  USE wavefunctions       ,ONLY : evc
+  USE noncollin_module,    ONLY : npol
+  USE wavefunctions,       ONLY : evc
   USE mp_bands,            ONLY : intra_bgrp_comm
   USE mp,                  ONLY : mp_sum
   USE control_flags,       ONLY : gamma_only
-  USE gvect,               ONLY : gstart
   USE pwcom,               ONLY : npw, npwx, nbnd, et
   USE bse_module,          ONLY : et_qp, evc_ks
   !
   IMPLICIT NONE
   !
-  INTEGER,     INTENT(IN)    :: iks, current_spin, nbvalloc
+  INTEGER,     INTENT(IN)    :: iks, nbvalloc
   COMPLEX(DP), INTENT(IN)    :: psi(npwx*npol,nbvalloc)
   COMPLEX(DP), INTENT(INOUT) :: dpsi(npwx*npol,nbvalloc)
   !
@@ -134,31 +128,27 @@ SUBROUTINE bse_hqp_psi_scf(iks, current_spin, nbvalloc, psi, dpsi)
   DEALLOCATE( ps_c )
   DEALLOCATE( ps_c_ks )
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
 !
-SUBROUTINE bse_hqp_psi_nscf(iks, current_spin, nbvalloc, psi, dpsi)
+SUBROUTINE bse_hqp_psi_nscf(iks, nbvalloc, psi, dpsi)
   !
   ! This routine compute:
   ! dpsi = S|evc><evc|psi>*(et_qp - et - Delta) + Delta|psi>
   !
   USE kinds,               ONLY : DP
-  USE io_global,           ONLY : stdout
-  USE noncollin_module,    ONLY : noncolin, npol
+  USE noncollin_module,    ONLY : npol
   USE wavefunctions,       ONLY : evc
   USE mp_bands,            ONLY : intra_bgrp_comm
   USE mp,                  ONLY : mp_sum
   USE control_flags,       ONLY : gamma_only
-  USE gvect,               ONLY : gstart
   USE pwcom,               ONLY : npw, npwx, nbnd, et
   USE bse_module,          ONLY : et_qp
   !
   IMPLICIT NONE
   !
-  INTEGER,     INTENT(IN)    :: iks, current_spin, nbvalloc
+  INTEGER,     INTENT(IN)    :: iks, nbvalloc
   COMPLEX(DP), INTENT(IN)    :: psi(npwx*npol,nbvalloc)
   COMPLEX(DP), INTENT(INOUT) :: dpsi(npwx*npol,nbvalloc)
   !
@@ -211,19 +201,17 @@ SUBROUTINE bse_hqp_psi_nscf(iks, current_spin, nbvalloc, psi, dpsi)
   !
   DEALLOCATE( ps_c )
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
 !
 SUBROUTINE read_qp_eigs()
   !
-  USE io_global,     ONLY : stdout, ionode, ionode_id
+  USE io_global,     ONLY : ionode, ionode_id
   USE mp,            ONLY : mp_bcast, mp_barrier
   USE mp_world,      ONLY : world_comm
   USE bse_module,    ONLY : et_qp
-  USE pwcom,         ONLY : nks, nbnd, et
+  USE pwcom,         ONLY : nks, nbnd
   USE lsda_mod,      ONLY : lsda
   USE westcom,       ONLY : qp_correction
   !
@@ -292,20 +280,16 @@ SUBROUTINE read_qp_eigs()
   !
   CALL mp_bcast(et_qp,ionode_id,world_comm)
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
 !
 SUBROUTINE read_ks_wfc()
   !
-  USE io_global,     ONLY : stdout, ionode, ionode_id
   USE mp,            ONLY : mp_bcast, mp_barrier
   USE mp_world,      ONLY : world_comm
   USE bse_module,    ONLY : evc_ks
   USE pwcom,         ONLY : npwx,nks,nbnd
-  USE lsda_mod,      ONLY : lsda
   USE plep_io,       ONLY : plep_read_G_and_distribute_wfc
   !
   IMPLICIT NONE
@@ -328,7 +312,5 @@ SUBROUTINE read_ks_wfc()
      CALL plep_read_G_and_distribute_wfc(fname,evc_ks(:,:,iks),nbnd)
      !
   ENDDO
-  !
-  RETURN
   !
 END SUBROUTINE

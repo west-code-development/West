@@ -15,19 +15,16 @@ SUBROUTINE wbsepp_plot_exc()
   ! ... This pp reads eig-values and -vectors from davidson diago
   ! ... and project them on KS empty eig-vectors
   !
-  USE kinds,                  ONLY : dp
+  USE kinds,                  ONLY : DP
   USE io_global,              ONLY : stdout
   USE cell_base,              ONLY : omega,at,alat
   USE fft_base,               ONLY : dffts,dfftp
   USE lsda_mod,               ONLY : nspin,lsda
   USE wavefunctions,          ONLY : psic,evc
-  USE noncollin_module,       ONLY : npol
-  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk
-  USE wvfct,                  ONLY : wg
+  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg
   USE control_flags,          ONLY : gamma_only
   USE mp,                     ONLY : mp_sum,mp_bcast,mp_min
-  USE mp_global,              ONLY : me_bgrp,inter_pool_comm,intra_bgrp_comm,inter_bgrp_comm,&
-                                   & my_image_id,inter_image_comm
+  USE mp_global,              ONLY : me_bgrp,intra_bgrp_comm,my_image_id,inter_image_comm
   USE buffers,                ONLY : get_buffer
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev,dvg_exc,n_liouville_read_from_file,&
                                    & iexc_plot,r0_input,westpp_format
@@ -36,13 +33,12 @@ SUBROUTINE wbsepp_plot_exc()
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute
-  USE ions_base,              ONLY : nat,tau
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
-  INTEGER     :: ibnd, nbndval, nvec,count
+  INTEGER     :: ibnd, nbndval, nvec
   INTEGER     :: ir, i, j, k, ip, iks, index0, ir_end
   REAL(DP)    :: drmin_g
   REAL(DP)    :: rcoeff, w1
@@ -100,8 +96,8 @@ SUBROUTINE wbsepp_plot_exc()
   inv_nr3 = 1.D0 / REAL( dfftp%nr3, KIND=DP )
   !
 #if defined (__MPI)
-  index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%npp(1:me_bgrp))
-  ir_end = MIN(dfftp%nnr,dfftp%nr1x*dfftp%nr2x*dfftp%npp(me_bgrp+1))
+  index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%nr3p(1:me_bgrp))
+  ir_end = MIN(dfftp%nnr,dfftp%nr1x*dfftp%nr2x*dfftp%nr3p(me_bgrp+1))
 #else
   index0 = 0
   ir_end = dfftp%nnr
@@ -173,7 +169,7 @@ SUBROUTINE wbsepp_plot_exc()
         !
         IF (gamma_only) THEN
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dvg_exc(1,ibnd,iks,iexc),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),dvg_exc(:,ibnd,iks,iexc),psic,'Wave')
            !
            rcoeff = 0.0_DP
            !
@@ -197,8 +193,8 @@ SUBROUTINE wbsepp_plot_exc()
            !
            ALLOCATE (psic_aux(dffts%nnr))
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,dvg_exc(1,ibnd,iks,iexc),psic_aux,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,dvg_exc(:,ibnd,iks,iexc),psic_aux,'Wave',igk_k(:,current_k))
            !
            zcoeff = 0.0_DP
            !
@@ -311,7 +307,5 @@ SUBROUTINE wbsepp_plot_exc()
   DEALLOCATE( ev )
   DEALLOCATE( dvg_exc )
   DEALLOCATE( r,dr,rho_aux,segno,rho_out)
-  !
-  RETURN
   !
 END SUBROUTINE

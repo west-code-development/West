@@ -15,50 +15,39 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   ! ... This pp reads eig-values and -vectors from davidson diago
   ! ... and project them on KS empty eig-vectors
   !
-  USE kinds,                  ONLY : dp
+  USE kinds,                  ONLY : DP
   USE io_global,              ONLY : stdout
-  USE cell_base,              ONLY : omega, at, alat
+  USE cell_base,              ONLY : omega
   USE fft_base,               ONLY : dffts,dfftp
   USE lsda_mod,               ONLY : nspin,lsda
   USE wavefunctions,          ONLY : psic, evc
-  USE noncollin_module,       ONLY : npol
-  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk
-  USE wvfct,                  ONLY : wg
+  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg
   USE control_flags,          ONLY : gamma_only
   USE mp,                     ONLY : mp_sum, mp_bcast, mp_min
-  USE mp_global,              ONLY : me_bgrp, inter_pool_comm, intra_bgrp_comm,&
-                                     inter_bgrp_comm, my_image_id, inter_image_comm
+  USE mp_global,              ONLY : intra_bgrp_comm,my_image_id,inter_image_comm
   USE buffers,                ONLY : get_buffer
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev
-  USE fft_at_gamma,           ONLY : single_invfft_gamma, double_invfft_gamma
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev,iexc_plot,westpp_format,dvg_exc,&
+                                   & n_liouville_read_from_file
+  USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
-  USE westcom,                ONLY : iexc_plot, r0_input
   USE plep_db,                ONLY : plep_db_read
   USE distribution_center,    ONLY : pert
   USE class_idistribute,      ONLY : idistribute
-  USE westcom,                ONLY : westpp_format, dvg_exc, n_liouville_read_from_file
-  USE ions_base,              ONLY : nat,tau
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
-  INTEGER     :: ibnd, nbndval, nvec,count
-  INTEGER     :: ir, i, j, k, ip, iks, index0, ir_end
-  REAL(DP)    :: drmin_g
-  REAL(DP)    :: rcoeff, w1
-  REAL(DP)    :: inv_nr1,inv_nr2,inv_nr3
-  COMPLEX(DP) :: zcoeff
-  REAL(DP), ALLOCATABLE :: r(:,:),dr(:), rho_out(:,:), segno(:)
+  INTEGER :: ibnd, nbndval, nvec
+  INTEGER :: ir, iks
+  REAL(DP) :: w1
+  REAL(DP), ALLOCATABLE :: rho_out(:,:)
   COMPLEX(DP), ALLOCATABLE :: psic_aux(:)
   INTEGER, PARAMETER :: n_ipol = 3
-  CHARACTER(LEN=6)   :: my_label
+  CHARACTER(LEN=6) :: my_label
   CHARACTER(LEN=256) :: fname
-  !
-  INTEGER  :: iexc
-  !
-  INTEGER  :: n_point, ni
-  REAL(DP) :: dstep, ri1, ri0, dx,dy,dz, drr, summ, summ0, vi1, vi0
+  INTEGER :: iexc
+  REAL(DP) :: summ0
   !
   iexc = iexc_plot
   !
@@ -107,16 +96,16 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
         !
         IF (gamma_only) THEN
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),dvg_exc(1,ibnd,iks,iexc),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),dvg_exc(:,ibnd,iks,iexc),psic,'Wave')
            !
-           rho_out(:, current_spin) = rho_out(:, current_spin) + w1 * DBLE(psic(:))*AIMAG(psic(:))
+           rho_out(:, current_spin) = rho_out(:, current_spin) + w1 * REAL(psic(:),KIND=DP)*AIMAG(psic(:))
            !
         ELSE
            !
            ALLOCATE (psic_aux(dffts%nnr))
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,dvg_exc(1,ibnd,iks,iexc),psic_aux,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,dvg_exc(:,ibnd,iks,iexc),psic_aux,'Wave',igk_k(:,current_k))
            !
            rho_out(:, current_spin) = rho_out(:, current_spin) + w1 * CONJG(psic(:)) * psic_aux(:)
            !
@@ -151,7 +140,5 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   DEALLOCATE( ev )
   DEALLOCATE( dvg_exc )
   DEALLOCATE( rho_out )
-  !
-  RETURN
   !
 END SUBROUTINE

@@ -13,41 +13,31 @@
 SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_restart_calc)
   !
   USE kinds,                ONLY : DP
-  USE io_global,            ONLY : stdout
-  USE constants,            ONLY : e2, fpi
-  USE cell_base,            ONLY : alat, tpiba2, omega
-  USE gvect,                ONLY : nl,ngm,g,nlm,gstart
+  USE constants,            ONLY : e2,fpi
+  USE cell_base,            ONLY : omega
   USE io_push,              ONLY : io_push_title
   !sqvc not in westcom pot3D%sqvc  TODO: pot3d init
   USE types_coulomb,        ONLY : pot3D
-  USE westcom,              ONLY : wbse_init_save_dir,fftdriver, chi_kernel,l_xcchi,savedir
-  USE pwcom,                ONLY : omega
-  USE gvect,                ONLY : gstart,ngm,ngmx
+  USE westcom,              ONLY : wbse_init_save_dir,chi_kernel,l_xcchi
+  USE gvect,                ONLY : ngm,ngmx
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : evc,psic
-  USE fft_base,             ONLY : dfftp,dffts
-  USE fft_at_gamma,         ONLY : double_invfft_gamma
-  USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE pwcom,                ONLY : wk,nks,nelup,neldw,isk,g,igk_k,ngm,tpiba2,xk,omega,npw,npwx,lsda,nkstot,&
-                                 & current_k,ngk,nbnd,wg
-  USE mp_bands,             ONLY : intra_bgrp_comm
-  USE mp_global,            ONLY : inter_image_comm
-  USE mp,                   ONLY : mp_sum
+  USE fft_base,             ONLY : dffts
+  USE pwcom,                ONLY : igk_k,npw,npwx,lsda
   USE pdep_io,              ONLY : pdep_merge_and_write_G
-  USE bse_module,           ONLY : ovl_thr, l_wannier_repr
-  USE wbse_init_restart,    ONLY : wbse_stat_restart_read, wbse_stat_restart_write
-  USE wbse_init_restart,    ONLY : wbse_index_matrix_read, wbse_index_matrix_write
+  USE bse_module,           ONLY : ovl_thr,l_wannier_repr
+  USE wbse_init_restart,    ONLY : wbse_stat_restart_read,wbse_stat_restart_write,&
+                                 & wbse_index_matrix_read,wbse_index_matrix_write
   USE class_idistribute,    ONLY : idistribute
-  USE distribution_center,  ONLY : aband, bseparal
-  !
-  USE function3d,           ONLY : write_function3d, read_function3d
-  USE mp,                   ONLY : mp_barrier
+  USE distribution_center,  ONLY : aband,bseparal
+  USE function3d,           ONLY : write_function3d,read_function3d
+  USE mp,                   ONLY : mp_barrier,mp_sum
   USE lsda_mod,             ONLY : nspin
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
+                                 & double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE mp_global,            ONLY : intra_image_comm,inter_pool_comm,my_image_id,me_bgrp
+  USE mp_global,            ONLY : inter_image_comm,intra_image_comm,my_image_id,me_bgrp
   USE conversions,          ONLY : itoa
-  !
   USE qbox_interface,       ONLY : sleep_and_wait_for_lock_to_be_removed
   !
   IMPLICIT NONE
@@ -81,10 +71,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   !
   REAL(DP), EXTERNAL        :: get_clock
   CHARACTER(20),EXTERNAL    :: human_readable_time
-  REAL(DP)                  :: wtime(2)
   !
   LOGICAL                   :: calc_is_done
-  REAL(kind=dp), EXTERNAL   :: DDOT
+  REAL(KIND=DP), EXTERNAL   :: DDOT
   !
   CALL wbse_init_memory_report()
   !
@@ -238,11 +227,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
         !
         IF (l_wannier_repr) THEN
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(1,ibnd),evc_loc(1,jbnd), psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd), psic,'Wave')
            !
         ELSE
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,jbnd), psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd), psic,'Wave')
            !
         ENDIF
         !
@@ -252,13 +241,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
         !
         IF (l_wannier_repr) THEN
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
-           CALL single_invfft_k(dffts,npw,npwx,evc_loc(1,jbnd),psic_aux,'Wave',igk_k(1,1)) !only 1 kpoint
+           CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
+           CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
            !
         ELSE
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,1)) !only 1 kpoint
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,jbnd),psic_aux,'Wave',igk_k(1,1)) !only 1 kpoint
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
            !
         ENDIF
         !
@@ -447,9 +436,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      calc_is_done = .FALSE.
      filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
-     !filename = trim(lowercase_string(filename))
      CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
-     !
      !
      ! clean up
      !
@@ -476,7 +463,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   calc_is_done = .TRUE.
   filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
              TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
-  !filename = trim(lowercase_string(filename))
   CALL wbse_stat_restart_write (filename,do_index,restart_matrix,calc_is_done)
   !
 2222 CONTINUE
@@ -490,7 +476,5 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   IF (ALLOCATED(evc_loc)) DEALLOCATE(evc_loc)
   !
   CALL stop_clock( 'wbse_qbox_coupling' )
-  !
-  RETURN
   !
 END SUBROUTINE

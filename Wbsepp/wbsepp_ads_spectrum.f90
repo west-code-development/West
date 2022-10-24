@@ -15,17 +15,13 @@ SUBROUTINE wbsepp_ads_spectrum()
   !
   USE kinds,               ONLY : DP
   USE constants,           ONLY : pi,rytoev,evtonm,rytonm
-  USE io_files,            ONLY : tmp_dir, nd_nmbr
-  USE global_version,      ONLY : version_number
-  USE io_global,           ONLY : stdout, ionode, ionode_id
+  USE io_global,           ONLY : stdout,ionode
   USE environment,         ONLY : environment_start,environment_end
-  USE mp_global,           ONLY : mp_startup,mp_global_end, my_image_id
+  USE mp_global,           ONLY : mp_startup,mp_global_end
   USE mp_world,            ONLY : world_comm
-  USE mp,                  ONLY : mp_bcast, mp_barrier
-  USE westcom,             ONLY : qe_prefix
-  USE westcom,           ONLY : itermax, itermax0, extrapolation, &
-                                  start, end, increment, epsil, ipol, &
-                                  sym_op, verbosity, units, spin_channel
+  USE mp,                  ONLY : mp_bcast,mp_barrier
+  USE westcom,             ONLY : qe_prefix,itermax,itermax0,extrapolation,start,end,increment,&
+                                & epsil,ipol,sym_op,verbosity,units,spin_channel
   !
   IMPLICIT NONE
   !
@@ -42,27 +38,19 @@ SUBROUTINE wbsepp_ads_spectrum()
   ! User controlled variables
   !
   REAL(DP) :: omega(3)
-  REAL(DP) :: omegmax,delta_omeg
   CHARACTER(LEN=256):: filename
   CHARACTER(LEN=256):: filename_plot
   !
   ! General use variables & counters
   !
-  INTEGER :: n_ipol, i,j, info, ip, ip2, counter, ios
-  REAL(DP) :: norm0(3), volume, &
-            & alat, q1, q2, q3, modulus_q, nelec, &
-            & average(3), av_amplitude(3), &
-            & alpha_temp(3), scale, wl, &
-            & omeg, z1,z2, degspin, integration_function, start_save, f_sum
-  !
+  INTEGER :: n_ipol, i,j, info, ip, ip2, counter
+  REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), scale, wl, degspin, f_sum
   COMPLEX(DP) :: omeg_c
   REAL(DP), ALLOCATABLE, DIMENSION(:,:) :: beta_store, gamma_store
   COMPLEX(DP), ALLOCATABLE, DIMENSION(:,:,:) :: zeta_store
-  COMPLEX(DP) :: green(3,3), &  ! susceptibility chi
-                      eps(3,3),   &  ! dielectric function
-                      epsm1(3,3)     ! inverse dielectric function
+  COMPLEX(DP) :: green(3,3) ! susceptibility chi
   COMPLEX(DP), ALLOCATABLE :: a(:), b(:), c(:), r(:,:)
-  LOGICAL :: skip, exst
+  LOGICAL :: skip
   !
   ! For perceived color analysis
   !
@@ -593,8 +581,6 @@ SUBROUTINE wbsepp_ads_spectrum()
   CALL mp_barrier (world_comm)
   CALL mp_global_end ()
   !
-  RETURN
-  !
 CONTAINS
 
 LOGICAL FUNCTION is_peak(omeg,alpha)
@@ -667,8 +653,6 @@ LOGICAL FUNCTION is_peak(omeg,alpha)
      trigger=.TRUE.
   ENDIF
   !
-  RETURN
-  !
 END FUNCTION
 
 REAL(DP) FUNCTION integrator(dh,alpha)
@@ -697,8 +681,6 @@ REAL(DP) FUNCTION integrator(dh,alpha)
      integrator = (2._DP/3._DP)*dh*alpha
      flag = .TRUE.
   ENDIF
-  !
-  RETURN
   !
 END FUNCTION
 
@@ -807,8 +789,6 @@ SUBROUTINE read_b_g_z_file_html()
      !
   ENDIF
   !
-  RETURN
-  !
 END SUBROUTINE
 
 
@@ -906,8 +886,6 @@ SUBROUTINE extrapolate()
    !
   ENDIF
   !
-  RETURN
-  !
 END SUBROUTINE
 
 SUBROUTINE calc_chi(freq,broad,chi)
@@ -971,8 +949,6 @@ SUBROUTINE calc_chi(freq,broad,chi)
      !
   ENDDO
   !
-  RETURN
-  !
 END SUBROUTINE
 
 SUBROUTINE wl_to_color(wavelength,red,green,blue)
@@ -1021,8 +997,6 @@ SUBROUTINE wl_to_color(wavelength,red,green,blue)
      green = 0._DP
      blue = 0._DP
   ENDIF
-  !
-  RETURN
   !
 END SUBROUTINE
 

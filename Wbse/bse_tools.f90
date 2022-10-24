@@ -11,149 +11,202 @@
 ! Marco Govoni
 !
 SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_only)
+  !
+  ! ... this routine writes the pot-density in xml format
+  !     seems the path is wbse_init_save_dir
+  !
+  USE kinds,          ONLY : DP
+  USE pdep_io,        ONLY : pdep_read_G_and_distribute
+  USE fft_at_gamma,   ONLY : single_invfft_gamma
+  USE fft_at_k,       ONLY : single_invfft_k
+  USE westcom,        ONLY : wbse_init_save_dir
+  USE pwcom,          ONLY : npwx
+  !
+  IMPLICIT NONE
+  !
+  COMPLEX(DP), INTENT(INOUT) :: rhog(npwx)
+  INTEGER, INTENT(IN) :: fixed_band_i, fixed_band_j, ispin
+  LOGICAL, INTENT(IN) :: single_only
+  !
+  ! local variables
+  !
+  INTEGER             :: band_i, band_j
+  CHARACTER(LEN=6)    :: my_labeli
+  CHARACTER(LEN=6)    :: my_labelj
+  CHARACTER(LEN=6)    :: my_spin
+  CHARACTER(LEN=256)  :: file_base
+  !
+  IF (fixed_band_j < fixed_band_i) THEN
      !
-     ! ... this routine writes the pot-density in xml format
-     !     seems the path is wbse_init_save_dir
+     ! p_31 -> p_13
      !
-     USE kinds,          ONLY : DP
-     USE control_flags,  ONLY : gamma_only
-     USE fft_base,       ONLY : dfftp, dffts
-     USE io_global,      ONLY : ionode, stdout
-     USE pdep_io,        ONLY : pdep_read_G_and_distribute
-     USE fft_at_gamma,   ONLY : single_invfft_gamma
-     USE fft_at_k,       ONLY : single_invfft_k
-     USE westcom,        ONLY : wbse_init_save_dir
-     USE pwcom,          ONLY : npwx
+     band_i = fixed_band_j
      !
-     IMPLICIT NONE
+     band_j = fixed_band_i
      !
-     COMPLEX(DP), INTENT(INOUT) :: rhog(npwx)
-     INTEGER, INTENT(IN) :: fixed_band_i, fixed_band_j, ispin
-     LOGICAL, INTENT(IN) :: single_only
+  ELSE
      !
-     ! local variables
+     band_i = fixed_band_i
      !
-     LOGICAL :: bse_kernel_from_cp
-     LOGICAL :: bse_kernel_from_pwscf
-     LOGICAL :: bse_kernel_from_qbox
-     INTEGER             :: band_i, band_j
-     CHARACTER(LEN=6)    :: my_labeli
-     CHARACTER(LEN=6)    :: my_labelj
-     CHARACTER(LEN=6)    :: my_spin
-     CHARACTER(LEN=256)  :: file_base
+     band_j = fixed_band_j
      !
-     IF (fixed_band_j < fixed_band_i) THEN
-        !
-        ! p_31 -> p_13
-        !
-        band_i = fixed_band_j
-        !
-        band_j = fixed_band_i
-        !
-     ELSE
-        !
-        band_i = fixed_band_i
-        !
-        band_j = fixed_band_j
-        !
-     ENDIF
+  ENDIF
+  !
+  WRITE (my_labeli,'(i6.6)') band_i
+  WRITE (my_labelj,'(i6.6)') band_j
+  WRITE (my_spin,  '(i1)') ispin
+  !
+  rhog = (0.0_DP, 0.0_DP)
+  !
+  file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+           '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
+  CALL pdep_read_G_and_distribute(file_base, rhog(:))
+  !
+END SUBROUTINE
+
+SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single_only)
+  !
+  ! ... this routine writes the pot-density in xml format
+  !     call by wbse_bse_kernel -> wbse.x  but using wbse_init.x data
+  !     folder: wbse_init_save_dir
+  !
+  USE kinds,          ONLY : DP
+  USE control_flags,  ONLY : gamma_only
+  USE fft_base,       ONLY : dfftp, dffts
+!  USE xml_io_base,    ONLY : read_rho_xml
+  USE pdep_io,        ONLY : pdep_read_G_and_distribute
+  USE gvect,          ONLY : ngm, ngmx
+  USE fft_at_gamma,   ONLY : single_invfft_gamma
+  USE fft_at_k,       ONLY : single_invfft_k
+  USE westcom,        ONLY : wbse_init_save_dir
+  !
+  IMPLICIT NONE
+  !
+  COMPLEX(DP), INTENT(INOUT) :: rho_all(dfftp%nnr)
+  INTEGER, INTENT(IN) :: fixed_band_i, fixed_band_j, ispin
+  LOGICAL, INTENT(IN) :: single_only
+  !
+  ! local variables
+  !
+  LOGICAL :: bse_kernel_from_cp
+  LOGICAL :: bse_kernel_from_pwscf
+  LOGICAL :: bse_kernel_from_qbox
+  INTEGER             :: band_i, band_j
+  REAL(DP)            :: rhoaux1(dfftp%nnr)
+  REAL(DP)            :: rhoaux2(dfftp%nnr)
+  COMPLEX(DP), ALLOCATABLE :: aux_g(:), aux_r(:)
+  CHARACTER(LEN=6)    :: my_labeli
+  CHARACTER(LEN=6)    :: my_labelj
+  CHARACTER(LEN=6)    :: my_spin
+  CHARACTER(LEN=256)  :: file_base
+  CHARACTER(LEN=256) ::  which_bse_kernel
+  !
+  which_bse_kernel = 'PWSCF'
+  bse_kernel_from_cp   = .FALSE.
+  bse_kernel_from_pwscf = .FALSE.
+  bse_kernel_from_qbox = .FALSE.
+  !
+  SELECT CASE( TRIM( which_bse_kernel ) )
+  CASE( 'CP' )
+     !
+     bse_kernel_from_cp   = .TRUE.
+     bse_kernel_from_pwscf = .FALSE.
+     bse_kernel_from_qbox = .FALSE.
+     !
+  CASE( 'PWSCF' )
+     !
+     bse_kernel_from_cp   = .FALSE.
+     bse_kernel_from_pwscf = .TRUE.
+     bse_kernel_from_qbox = .FALSE.
+     !
+  CASE( 'QBOX' )
+     !
+     CALL errore (' iobse', 'qbox bse ketnel not supported', 1)
+     !
+  CASE DEFAULT
+     !
+     CALL errore ( 'iobse ', 'a index needs to be supported',1)
+     !
+  END SELECT
+  !
+  ALLOCATE (aux_g(ngmx), aux_r(dfftp%nnr))
+  !
+  rhoaux1(:) = 0.0_DP
+  rhoaux2(:) = 0.0_DP
+  !
+  IF (fixed_band_j < fixed_band_i) THEN
+     !
+     ! p_31 -> p_13
+     !
+     band_i = fixed_band_j
+     !
+     band_j = fixed_band_i
+     !
+  ELSE
+     !
+     band_i = fixed_band_i
+     !
+     band_j = fixed_band_j
+     !
+  ENDIF
+  !
+  IF (bse_kernel_from_cp) THEN
      !
      WRITE (my_labeli,'(i6.6)') band_i
      WRITE (my_labelj,'(i6.6)') band_j
      WRITE (my_spin,  '(i1)') ispin
      !
-     rhog = (0.0_DP, 0.0_DP)
+     file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//&
+                 '_'//TRIM(my_spin)//'.dat'
+     !
+!     CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
+!                dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
+     !
+  ENDIF
+  !
+  IF (bse_kernel_from_pwscf) THEN
+     !
+     WRITE (my_labeli,'(i6.6)') band_i
+     WRITE (my_labelj,'(i6.6)') band_j
+     WRITE (my_spin,  '(i1)') ispin
+     !
+     aux_g = (0.0_DP, 0.0_DP)
      !
      file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-              '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
-     CALL pdep_read_G_and_distribute(file_base, rhog(:))
+                 '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
+     CALL pdep_read_G_and_distribute(file_base, aux_g(:))
      !
-     RETURN
+     ! G -> R
      !
-END SUBROUTINE
-
-SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single_only)
+     aux_r = (0.0_DP, 0.0_DP)
      !
-     ! ... this routine writes the pot-density in xml format
-     !     call by wbse_bse_kernel -> wbse.x  but using wbse_init.x data
-     !     folder: wbse_init_save_dir
-     !
-     USE kinds,          ONLY : DP
-     USE control_flags,  ONLY : gamma_only
-     USE fft_base,       ONLY : dfftp, dffts
-     USE io_global,      ONLY : ionode, stdout
-!     USE xml_io_base,    ONLY : read_rho_xml
-     USE pdep_io,        ONLY : pdep_read_G_and_distribute
-     USE gvect,          ONLY : ngm, ngmx
-     USE fft_at_gamma,   ONLY : single_invfft_gamma
-     USE fft_at_k,       ONLY : single_invfft_k
-     USE westcom,        ONLY : wbse_init_save_dir
-     !
-     IMPLICIT NONE
-     !
-     COMPLEX(DP), INTENT(INOUT) :: rho_all(dfftp%nnr)
-     INTEGER, INTENT(IN) :: fixed_band_i, fixed_band_j, ispin
-     LOGICAL, INTENT(IN) :: single_only
-     !
-     ! local variables
-     !
-     LOGICAL :: bse_kernel_from_cp
-     LOGICAL :: bse_kernel_from_pwscf
-     LOGICAL :: bse_kernel_from_qbox
-     INTEGER             :: band_i, band_j
-     REAL(DP)            :: rhoaux1(dfftp%nnr)
-     REAL(DP)            :: rhoaux2(dfftp%nnr)
-     COMPLEX(DP), ALLOCATABLE :: aux_g(:), aux_r(:)
-     CHARACTER(LEN=6)    :: my_labeli
-     CHARACTER(LEN=6)    :: my_labelj
-     CHARACTER(LEN=6)    :: my_spin
-     CHARACTER(LEN=256)  :: file_base, dirname
-     CHARACTER(LEN=256) ::  which_bse_kernel
-     !
-     which_bse_kernel = 'PWSCF'
-     bse_kernel_from_cp   = .FALSE.
-     bse_kernel_from_pwscf = .FALSE.
-     bse_kernel_from_qbox = .FALSE.
-     !
-     SELECT CASE( TRIM( which_bse_kernel ) )
-     CASE( 'CP' )
+     IF (gamma_only) THEN
         !
-        bse_kernel_from_cp   = .TRUE.
-        bse_kernel_from_pwscf = .FALSE.
-        bse_kernel_from_qbox = .FALSE.
-        !
-     CASE( 'PWSCF' )
-        !
-        bse_kernel_from_cp   = .FALSE.
-        bse_kernel_from_pwscf = .TRUE.
-        bse_kernel_from_qbox = .FALSE.
-        !
-     CASE( 'QBOX' )
-        !
-        CALL errore (' iobse', 'qbox bse ketnel not supported', 1)
-        !
-     CASE DEFAULT
-        !
-        CALL errore ( 'iobse ', 'a index needs to be supported',1)
-        !
-     END SELECT
-     !
-     ALLOCATE (aux_g(ngmx), aux_r(dfftp%nnr))
-     !
-     rhoaux1(:) = 0.0_DP
-     rhoaux2(:) = 0.0_DP
-     !
-     IF (fixed_band_j < fixed_band_i) THEN
-        !
-        ! p_31 -> p_13
-        !
-        band_i = fixed_band_j
-        !
-        band_j = fixed_band_i
+        CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Dense')
         !
      ELSE
         !
-        band_i = fixed_band_i
+        CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Dense') ! no igk
+        !
+     ENDIF
+     !
+     rhoaux1(:) = REAL(aux_r(:),KIND=DP)
+     !
+  ENDIF
+  !
+  IF (.NOT. single_only) THEN
+     !
+     IF (fixed_band_j < (fixed_band_i+1)) THEN
+        !
+        ! p_21 -> p_12
+        !
+        band_i = fixed_band_j
+        !
+        band_j = fixed_band_i+1
+        !
+     ELSE
+        !
+        band_i = fixed_band_i+1
         !
         band_j = fixed_band_j
         !
@@ -161,15 +214,15 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      !
      IF (bse_kernel_from_cp) THEN
         !
-        WRITE (my_labeli,'(i6.6)') band_i
-        WRITE (my_labelj,'(i6.6)') band_j
+        WRITE (my_labeli,'(i6.6)')  band_i
+        WRITE (my_labelj,'(i6.6)')  band_j
         WRITE (my_spin,  '(i1)') ispin
         !
-        file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//&
-                    '_'//TRIM(my_spin)//'.dat'
+        file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)&
+                    //'_'//TRIM(my_spin)//'.dat'
         !
 !        CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
-!                   dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
+!                dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
         !
      ENDIF
      !
@@ -182,8 +235,8 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         aux_g = (0.0_DP, 0.0_DP)
         !
         file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-                    '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
-        CALL pdep_read_G_and_distribute(file_base, aux_g(:))
+                   '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
+        CALL pdep_read_G_and_distribute(file_base,aux_g(:))
         !
         ! G -> R
         !
@@ -199,84 +252,20 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
            !
         ENDIF
         !
-        rhoaux1(:) = REAL(aux_r(:),KIND=DP)
+        rhoaux2(:) = REAL(aux_r(:),KIND=DP)
         !
      ENDIF
      !
-     IF (.NOT. single_only) THEN
-        !
-        IF (fixed_band_j < (fixed_band_i+1)) THEN
-           !
-           ! p_21 -> p_12
-           !
-           band_i = fixed_band_j
-           !
-           band_j = fixed_band_i+1
-           !
-        ELSE
-           !
-           band_i = fixed_band_i+1
-           !
-           band_j = fixed_band_j
-           !
-        ENDIF
-        !
-        IF (bse_kernel_from_cp) THEN
-           !
-           WRITE (my_labeli,'(i6.6)')  band_i
-           WRITE (my_labelj,'(i6.6)')  band_j
-           WRITE (my_spin,  '(i1)') ispin
-           !
-           file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)&
-                       //'_'//TRIM(my_spin)//'.dat'
-           !
-!           CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
-!                   dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
-           !
-        ENDIF
-        !
-        IF (bse_kernel_from_pwscf) THEN
-           !
-           WRITE (my_labeli,'(i6.6)') band_i
-           WRITE (my_labelj,'(i6.6)') band_j
-           WRITE (my_spin,  '(i1)') ispin
-           !
-           aux_g = (0.0_DP, 0.0_DP)
-           !
-           file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-                      '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
-           CALL pdep_read_G_and_distribute(file_base,aux_g(:))
-           !
-           ! G -> R
-           !
-           aux_r = (0.0_DP, 0.0_DP)
-           !
-           IF (gamma_only) THEN
-              !
-              CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Dense')
-              !
-           ELSE
-              !
-              CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Dense') ! no igk
-              !
-           ENDIF
-           !
-           rhoaux2(:) = REAL(aux_r(:),KIND=DP)
-           !
-        ENDIF
-        !
-     ENDIF
-     !
-     ! total : rho(:) = [rho_ij, rho_i+1,j]
-     !
-     rho_all(:) = (0.0_DP, 0.0_DP)
-     !
-     rho_all(:) = CMPLX (rhoaux1(:), rhoaux2(:), KIND=DP)
-     !
-     DEALLOCATE (aux_g, aux_r)
-     !
-     RETURN
-     !
+  ENDIF
+  !
+  ! total : rho(:) = [rho_ij, rho_i+1,j]
+  !
+  rho_all(:) = (0.0_DP, 0.0_DP)
+  !
+  rho_all(:) = CMPLX (rhoaux1(:), rhoaux2(:), KIND=DP)
+  !
+  DEALLOCATE (aux_g, aux_r)
+  !
 END SUBROUTINE
 !
 !
@@ -285,14 +274,13 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
   !
   ! ...   This subroutine writes orbs to unit emptyunitc0
   !
-  USE kinds,              ONLY: DP
-  USE io_global,          ONLY: ionode, ionode_id, stdout
-  USE mp_images,          ONLY: intra_image_comm
-  USE io_files,           ONLY: tmp_dir
-  USE mp,                 ONLY: mp_bcast
-  USE lsda_mod,           ONLY: nspin
-  USE bse_module,         ONLY: u_matrix,ovl_matrix
-  USE westcom,            ONLY: wbse_save_dir
+  USE kinds,          ONLY : DP
+  USE io_global,      ONLY : ionode, ionode_id, stdout
+  USE mp_images,      ONLY : intra_image_comm
+  USE mp,             ONLY : mp_bcast
+  USE lsda_mod,       ONLY : nspin
+  USE bse_module,     ONLY : u_matrix,ovl_matrix
+  USE westcom,        ONLY : wbse_save_dir
   !
   IMPLICIT NONE
   !
@@ -304,8 +292,6 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
   CHARACTER(LEN=4)   :: my_spin
   !
   ! ... Subroutine Body
-  !
-  !dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
   !
   DO is = 1, nspin
      !
@@ -321,9 +307,9 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
      !
      IF ( ionode ) THEN
         !
-        INQUIRE( FILE = TRIM(fileempty), EXIST = EXST )
+        INQUIRE( FILE = TRIM(fileempty), EXIST = exst )
         !
-        IF ( EXST ) THEN
+        IF ( exst ) THEN
            !
            OPEN( UNIT=emptyunit, FILE=TRIM(fileempty), STATUS='OLD', FORM='UNFORMATTED' )
            !
@@ -349,9 +335,9 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
      !
      IF ( ionode ) THEN
         !
-        INQUIRE( FILE = TRIM(fileempty), EXIST = EXST )
+        INQUIRE( FILE = TRIM(fileempty), EXIST = exst )
         !
-        IF ( EXST ) THEN
+        IF ( exst ) THEN
            !
            OPEN( UNIT=emptyunit, FILE=TRIM(fileempty), STATUS='OLD', FORM='UNFORMATTED' )
            !
@@ -367,8 +353,6 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
      !
   ENDDO
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
@@ -377,10 +361,9 @@ SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   !
   ! ...   This subroutine writes orbs to unit emptyunitc0
   !
-  USE kinds,              ONLY: DP
-  USE io_global,          ONLY: ionode, stdout
-  USE io_files,           ONLY: tmp_dir
-  USE westcom,            ONLY : savedir
+  USE kinds,          ONLY : DP
+  USE io_global,      ONLY : ionode, stdout
+  USE westcom,        ONLY : savedir
   !
   IMPLICIT NONE
   !
@@ -393,8 +376,6 @@ SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   CHARACTER(LEN=4)   :: my_spin
   !
   ! ... Subroutine Body
-  !
-  !dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save/'
   !
   WRITE(my_spin,'(i1)') ispin
   fileempty = TRIM(savedir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
@@ -480,8 +461,6 @@ SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   !
   IF ( ionode ) CLOSE ( emptyunit )
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
@@ -489,15 +468,13 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   ! ...   This subroutine writes orbs to unit emptyunitc0
   !
-  USE kinds,                ONLY : DP
+  USE kinds,          ONLY : DP
   USE iotk_module
-  USE mp_world,             ONLY : world_comm
-  USE io_global,            ONLY : stdout
-  USE mp,                   ONLY : mp_barrier
-  USE mp_global,            ONLY : intra_image_comm,my_pool_id,my_bgrp_id,&
-                                   me_bgrp,root_bgrp,inter_bgrp_comm,inter_pool_comm
-  !USE distribution_center,  ONLY : bseparal
-  USE westcom,              ONLY : wbse_init_save_dir
+  USE mp_world,       ONLY : world_comm
+  USE io_global,      ONLY : stdout
+  USE mp,             ONLY : mp_barrier
+  USE mp_global,      ONLY : my_pool_id,my_bgrp_id,me_bgrp,root_bgrp
+  USE westcom,        ONLY : wbse_init_save_dir
   !
   IMPLICIT NONE
   !
@@ -557,19 +534,17 @@ SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   CALL mp_barrier(world_comm)
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
-  USE kinds,                ONLY : DP
+  USE kinds,          ONLY : DP
   USE iotk_module
-  USE io_global,            ONLY : stdout,ionode
-  USE mp_world,             ONLY : world_comm,root
-  USE mp,                   ONLY : mp_bcast,mp_barrier
-  USE mp_global,            ONLY : intra_image_comm
-  USE westcom,              ONLY : wbse_init_save_dir
+  USE io_global,      ONLY : stdout,ionode
+  USE mp_world,       ONLY : world_comm,root
+  USE mp,             ONLY : mp_bcast,mp_barrier
+  USE mp_global,      ONLY : intra_image_comm
+  USE westcom,        ONLY : wbse_init_save_dir
   !
   IMPLICIT NONE
   !
@@ -593,7 +568,6 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !
   CALL mp_barrier(world_comm)
   !
-  !dirname  = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.init.save'
   WRITE(my_spin,'(i1)') ispin
   filename = TRIM(wbse_init_save_dir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
   !
@@ -651,24 +625,22 @@ SUBROUTINE read_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   DEALLOCATE(umatrix_tmp)
   DEALLOCATE(omatrix_tmp)
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 SUBROUTINE read_pwscf_wannier_orbs ( ne, npw, c_emp, filename )
   !
   ! ... This subroutine reads wannier orbital from unit emptyunit
   !
-  USE kinds,              ONLY: DP
+  USE kinds,          ONLY : DP
   USE iotk_module
-  USE io_global,          ONLY: stdout
-  USE gvect,              ONLY: ig_l2g
-  USE mp_wave,            ONLY: splitwf
-  USE mp,                 ONLY: mp_get,mp_size,mp_rank,mp_bcast,mp_max
-  USE mp_global,          ONLY: me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm, &
-                                my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
-  USE klist,              ONLY: ngk, igk_k
-  USE wvfct,              ONLY: npwx
+  USE io_global,      ONLY : stdout
+  USE gvect,          ONLY : ig_l2g
+  USE mp_wave,        ONLY : splitwf
+  USE mp,             ONLY : mp_get,mp_size,mp_rank,mp_bcast,mp_max
+  USE mp_global,      ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm, &
+                           & my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
+  USE klist,          ONLY : ngk, igk_k
+  USE wvfct,          ONLY : npwx
   !
   IMPLICIT NONE
   !
@@ -676,9 +648,8 @@ SUBROUTINE read_pwscf_wannier_orbs ( ne, npw, c_emp, filename )
   COMPLEX(DP), INTENT(INOUT) :: c_emp(npw,ne)
   CHARACTER(LEN=*),INTENT(IN):: filename
   !
-  LOGICAL :: exst
-  INTEGER :: ierr, iun, ig, i, iss, is
-  INTEGER :: ngw_rd, ne_rd, ngw_l, ngw_g
+  INTEGER :: ierr, iun, ig, i
+  INTEGER :: ngw_l, ngw_g
   !
   CHARACTER(LEN=256)       :: fileempty
   COMPLEX(DP), ALLOCATABLE :: ctmp(:)
@@ -769,7 +740,5 @@ SUBROUTINE read_pwscf_wannier_orbs ( ne, npw, c_emp, filename )
   !
   CALL mp_bcast(c_emp,0,inter_bgrp_comm)
   CALL mp_bcast(c_emp,0,inter_pool_comm)
-  !
-  RETURN
   !
 END SUBROUTINE

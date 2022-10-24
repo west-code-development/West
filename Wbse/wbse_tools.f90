@@ -46,7 +46,7 @@ MODULE wbse_tools
        COMPLEX(DP) :: buf( :, :, :, : )
        INTEGER, INTENT(IN) :: itag
        INTEGER, INTENT(IN) :: gid
-       INTEGER :: nsiz, group, ierr, npe, sour, dest, mype
+       INTEGER :: group, ierr, npe, sour, dest, mype
 
 #if defined (__MPI)
 
@@ -68,11 +68,8 @@ MODULE wbse_tools
             dest, itag, sour, itag, group, istatus, ierr)
        !
        IF (ierr/=0) CALL mp_stop( 8102 )
-       !
-#else
-       ! do nothing
 #endif
-       RETURN
+       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
@@ -81,7 +78,7 @@ MODULE wbse_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
+      USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
@@ -103,7 +100,7 @@ MODULE wbse_tools
       REAL(DP),EXTERNAL :: DDOT
       REAL(DP):: norm
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl, ibnd, iks, nbndval
+      INTEGER :: il1, il2, ig1, icycl, ibnd, iks, nbndval
       !
       CALL mp_barrier(world_comm)
       !
@@ -176,7 +173,7 @@ MODULE wbse_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
+      USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
@@ -196,7 +193,7 @@ MODULE wbse_tools
       !
       COMPLEX(DP),EXTERNAL :: ZDOTC
       INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      INTEGER :: il1, il2, ig1, ig2, icycl, ibnd, iks, nbndval
+      INTEGER :: il1, il2, ig1, icycl, ibnd, iks, nbndval
       !
       CALL mp_barrier(world_comm)
       !
@@ -261,7 +258,7 @@ MODULE wbse_tools
     SUBROUTINE update_with_vr_distr_real( ag, bg, nselect, n, lda, vr_distr, ew )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
+      USE mp_global,            ONLY : inter_image_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
@@ -427,7 +424,7 @@ MODULE wbse_tools
     SUBROUTINE update_with_vr_distr_complex( ag, bg, nselect, n, lda, vr_distr, ew )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
+      USE mp_global,            ONLY : inter_image_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
@@ -565,7 +562,7 @@ MODULE wbse_tools
     SUBROUTINE update_with_vr_distr_complex_2nd( ag, bg, nselect, n, lda, vr_distr, ew, eps_ref )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
+      USE mp_global,            ONLY : inter_image_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
@@ -703,7 +700,7 @@ MODULE wbse_tools
     SUBROUTINE refresh_with_vr_distr_real( ag, nselect, n, lda, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
+      USE mp_global,            ONLY : inter_image_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
@@ -805,7 +802,7 @@ MODULE wbse_tools
     SUBROUTINE refresh_with_vr_distr_complex( ag, nselect, n, lda, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm,nimage,world_comm
+      USE mp_global,            ONLY : inter_image_comm,nimage,world_comm
       USE mp,                   ONLY : mp_sum,mp_circular_shift_left,mp_barrier
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
@@ -900,7 +897,7 @@ MODULE wbse_tools
     !
     SUBROUTINE preconditioner_complex( ag, nselect, n, lda, ew, turn_shift )
       !
-      USE kinds,                ONLY : dp
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
       USE mp,                   ONLY : mp_bcast,mp_barrier,mp_max
       USE wavefunctions,        ONLY : evc
@@ -922,10 +919,9 @@ MODULE wbse_tools
       ! Workspace
       !
       INTEGER :: il1, ig1, ig, ibnd, nbndval
-      INTEGER :: iks, current_k, current_spin
+      INTEGER :: iks, current_k
       INTEGER :: mloc, mstart, max_mloc
       REAL(DP):: temp, minimum
-      REAL(DP),ALLOCATABLE :: eprec(:)
       !
       minimum=0.001d0
       !
@@ -1005,7 +1001,7 @@ MODULE wbse_tools
     !
     SUBROUTINE preconditioner_complex_2nd( ag, nselect, n, lda, ew, turn_shift, eps_ref)
       !
-      USE kinds,                ONLY : dp
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
       USE mp,                   ONLY : mp_bcast,mp_barrier,mp_max
       USE wavefunctions,        ONLY : evc
@@ -1027,10 +1023,9 @@ MODULE wbse_tools
       ! Workspace
       !
       INTEGER :: il1, ig1, ig, ibnd, nbndval
-      INTEGER :: iks, current_k, current_spin
+      INTEGER :: iks, current_k
       INTEGER :: mloc, mstart, max_mloc
       REAL(DP):: temp, minimum
-      REAL(DP),ALLOCATABLE :: eprec(:)
       !
       minimum=0.001d0
       !

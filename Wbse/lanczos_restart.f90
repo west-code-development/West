@@ -35,13 +35,10 @@ MODULE lanczos_restart
     SUBROUTINE lanczos_restart_write (nipol_input, pliter_stop, lriter_stop)
       !----------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : west_prefix, wbse_save_dir,&
-                                       ipol_input, n_lanczos, &
-                                       alpha_store,beta_store,&
-                                       gamma_store,zeta_store
+      USE westcom,              ONLY : wbse_save_dir,ipol_input,n_lanczos,alpha_store,&
+                                     & beta_store,gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       !
       IMPLICIT NONE
@@ -53,7 +50,7 @@ MODULE lanczos_restart
       ! Workspace
       !
       INTEGER :: ierr, ipol, ipol2, is
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=256) :: dirname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -157,12 +154,10 @@ MODULE lanczos_restart
       !
       USE mp_global,           ONLY : world_comm
       USE mp_world,            ONLY : mpime,root,world_comm
-      USE mp,                  ONLY : mp_barrier, mp_bcast
+      USE mp,                  ONLY : mp_barrier,mp_bcast
       USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : west_prefix, wbse_save_dir, &
-                                      ipol_input, n_lanczos, &
-                                      alpha_store,beta_store,&
-                                      gamma_store,zeta_store
+      USE westcom,             ONLY : wbse_save_dir,ipol_input,n_lanczos,alpha_store,&
+                                    & beta_store,gamma_store,zeta_store
       USE mp_global,           ONLY : intra_image_comm
       !
       IMPLICIT NONE
@@ -310,12 +305,8 @@ MODULE lanczos_restart
     SUBROUTINE lanczos_postpro_write (nipol_input, ipol_iter, ipol_label)
       !----------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : n_lanczos, &
-                                       alpha_store,beta_store,&
-                                       gamma_store,zeta_store
+      USE westcom,              ONLY : n_lanczos,alpha_store,beta_store,gamma_store,zeta_store
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       !
       IMPLICIT NONE
@@ -327,7 +318,7 @@ MODULE lanczos_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr, ipol, ipol2,is
+      INTEGER :: ierr, ipol2,is
       CHARACTER(LEN=256) :: fname
       CHARACTER(LEN=4)   :: my_ip
       !

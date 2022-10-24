@@ -14,27 +14,22 @@ SUBROUTINE bse_init()
      !
      USE kinds,              ONLY : DP
      USE io_global,          ONLY : stdout
-     USE bse_module,         ONLY : u_matrix,ovl_matrix,&
-                                    l_wannier_repr,bse_calc, &
-                                    ngm_g_max, ovl_thr,&
-                                    size_index_matrix_lz,&
-                                    index_matrix_lz
+     USE bse_module,         ONLY : u_matrix,ovl_matrix,l_wannier_repr,ngm_g_max,ovl_thr,&
+                                    size_index_matrix_lz,index_matrix_lz
      USE pwcom,              ONLY : isk,nks
-     USE westcom,            ONLY : nbnd_occ,n_pdep_eigen,fftdriver,&
-                                    nbndval0x,sigma_c_head,sigma_x_head,epsinfty
-     USE control_flags,      ONLY : gamma_only
+     USE westcom,            ONLY : nbnd_occ,nbndval0x,sigma_c_head,sigma_x_head,epsinfty
      USE lsda_mod,           ONLY : nspin
      USE mp,                 ONLY : mp_max
      USE gvect,              ONLY : ngm,ig_l2g
      USE mp_global,          ONLY : intra_bgrp_comm
-     USE constants,          ONLY : e2, pi
+     USE constants,          ONLY : e2,pi
      USE cell_base,          ONLY : omega
      USE types_coulomb,      ONLY : pot3D
      !
      IMPLICIT NONE
      !
      INTEGER     :: do_index, nbndval, tmp_size, is
-     INTEGER     :: ibnd, jbnd, iks, current_spin,alnd
+     INTEGER     :: ibnd, jbnd, iks, current_spin
      REAL(DP)    :: ovl_value
      !
      ! compute the divergence term in Fock potential, using F-G method
@@ -213,8 +208,6 @@ SUBROUTINE bse_init()
         !
         !
      !ENDIF
-     !
-     RETURN
      !
 END SUBROUTINE
 !

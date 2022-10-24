@@ -422,12 +422,12 @@ MODULE wbsepp_center
   INTEGER :: spin_channel
   !
   CHARACTER(len=60) :: extrapolation
-  REAL(dp) :: start,end,increment
-  REAL(dp) :: epsil
+  REAL(DP) :: start,end,increment
+  REAL(DP) :: epsil
   !
   ! exc plot part
   !
-  REAL(dp) :: r0_input(3)
+  REAL(DP) :: r0_input(3)
   INTEGER  :: iexc_plot
   !
   CHARACTER(LEN=512) :: wbsepp_save_dir

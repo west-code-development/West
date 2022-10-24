@@ -275,6 +275,4 @@ SUBROUTINE wbsepp_meg ( )
   !
   CALL stop_clock( 'meg_calculation' )
   !
-  RETURN
-  !
 END SUBROUTINE

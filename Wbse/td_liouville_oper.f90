@@ -10,29 +10,25 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   ! Applies the linear response operator to response wavefunctions
   !
   USE kinds,                ONLY : DP
-  USE fft_base,             ONLY : dffts, dfftp
+  USE fft_base,             ONLY : dffts,dfftp
   USE gvect,                ONLY : gstart
-  USE io_global,            ONLY : stdout
-  USE klist,                ONLY : nks, xk, ngk, igk_k
-  USE uspp,                 ONLY : vkb, nkb
+  USE uspp,                 ONLY : vkb,nkb
   USE lsda_mod,             ONLY : nspin
-  USE wavefunctions,        ONLY : psic, evc
-  USE pwcom,                ONLY : npw, current_k, current_spin, isk, lsda
-  USE wvfct,                ONLY : nbnd, npwx, g2kin, et
+  USE wavefunctions,        ONLY : psic,evc
+  USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k
   USE control_flags,        ONLY : gamma_only
-  USE mp,                   ONLY : mp_sum, mp_barrier, mp_bcast
-  USE mp_global,            ONLY : intra_bgrp_comm,my_image_id,inter_image_comm,&
-                                   inter_bgrp_comm
+  USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,&
                                    double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE bse_module,           ONLY : bse_calc,et_qp
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ, &
-                                   l_diag_term_only,scissor_ope,nbndval0x,l_qp_correction,&
-                                   l_bse_triplet, l_lanczos, sigma_c_head, sigma_x_head
+  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,l_diag_term_only,scissor_ope,nbndval0x,&
+                                 & l_qp_correction,l_bse_triplet,l_lanczos,sigma_c_head,sigma_x_head
   USE distribution_center,  ONLY : aband
+  USE uspp_init,            ONLY : init_us_2
   !
   IMPLICIT NONE
   !
@@ -45,7 +41,6 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   INTEGER  :: nbvalloc, il1
   REAL(DP) :: scissor
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
-  COMPLEX(DP), ALLOCATABLE :: aux_r(:)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc1_aux(:,:)
   !
@@ -117,7 +112,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            ibnd   = aband%l2g(il1)
            ibnd_1 = aband%l2g(il1+1)
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),evc(1,ibnd_1),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd_1),psic,'Wave')
            !
            DO ir=1,dffts%nnr
               !
@@ -125,7 +120,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
               !
            ENDDO
            !
-           CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),evc1_new(1,ibnd_1,iks),'Wave')
+           CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),evc1_new(:,ibnd_1,iks),'Wave')
            !
         ENDDO
         !
@@ -135,7 +130,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            !
            ibnd=aband%l2g(nbvalloc)
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ibnd),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
            !
            DO ir=1,dffts%nnr
               !
@@ -143,7 +138,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
               !
            ENDDO
            !
-           CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),'Wave')
+           CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave')
            !
         ENDIF
         !
@@ -155,7 +150,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            !
            ibnd = aband%l2g(il1)
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,ibnd),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !
            DO ir=1, dffts%nnr
               !
@@ -163,7 +158,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
               !
            ENDDO
            !
-           CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(1,ibnd,iks),'Wave',igk_k(1,current_k))
+           CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave',igk_k(:,current_k))
            !
         ENDDO
         !
@@ -173,7 +168,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
               !
               ibnd = aband%l2g(il1)
               !
-              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1,ibnd),psic,'Wave',igk_k(1,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
               !
               DO ir=1, dffts%nnr
                  !
@@ -181,7 +176,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
                  !
               ENDDO
               !
-              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1,ibnd,iks),'Wave',igk_k(1,current_k))
+              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1:npwx*2,ibnd,iks),'Wave',igk_k(:,current_k))
               !
            ENDDO
            !
@@ -209,7 +204,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      !
      IF (l_qp_correction) THEN
         !
-        CALL bse_hqp_psi(iks, current_spin, nbvalloc, evc1_aux(:,:), hevc1(:,:))
+        CALL bse_hqp_psi(iks, nbvalloc, evc1_aux(:,:), hevc1(:,:))
         !
      ENDIF
      !
@@ -307,7 +302,5 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   IF (ALLOCATED(psic)) DEALLOCATE(psic)
   !
   CALL stop_clock('west_apply_liouvillian')
-  !
-  RETURN
   !
 END SUBROUTINE

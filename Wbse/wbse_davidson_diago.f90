@@ -22,23 +22,20 @@ SUBROUTINE wbse_davidson_diago ( )
   USE distribution_center,  ONLY : pert, aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE pwcom,                ONLY : nks,npw,npwx
-  USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,wstat_calculation,ev,conv,&
-                                 & n_pdep_restart_from_itr,n_pdep_read_from_file,n_steps_write_restart,n_pdep_times,&
-                                 & trev_pdep_rel,tr2_dfpt,l_is_wstat_converged,fftdriver,&
-                                 & dvg_exc,dng_exc,nbndval0x,l_preconditioning,nbnd_occ,lrwfc,iuwfc
+  USE pwcom,                ONLY : nks,npwx
+  USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
+                                 & wstat_calculation,ev,conv,n_pdep_read_from_file,trev_pdep_rel,&
+                                 & l_is_wstat_converged,dvg_exc,dng_exc,nbndval0x,&
+                                 & l_preconditioning,nbnd_occ,lrwfc,iuwfc
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
-  USE mp_world,             ONLY : mpime
   USE mp_global,            ONLY : inter_image_comm, my_image_id
   USE mp,                   ONLY : mp_sum,mp_max,mp_bcast
-  USE gvect,                ONLY : gstart
-  USE wstat_tools,          ONLY : diagox,serial_diagox,symm_hr_distr,redistribute_vr_distr
+  USE wstat_tools,          ONLY : diagox,serial_diagox,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
                                  & wbse_refresh_with_vr_distr,apply_preconditioning_dvg
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
   USE distribution_center,  ONLY : bseparal
-  USE types_coulomb,        ONLY : pot3D
   USE buffers,              ONLY : get_buffer
   USE wavefunctions,        ONLY : evc
   !
@@ -52,19 +49,19 @@ SUBROUTINE wbse_davidson_diago ( )
   INTEGER :: dav_iter, notcnv
     ! integer  number of iterations performed
     ! number of unconverged roots
-  INTEGER :: kter, nbase, np, n, m, ip
+  INTEGER :: kter, nbase, np, n, ip
     ! counter on iterations
     ! dimension of the reduced basis
     ! counter on the reduced basis vectors
     ! do-loop counters
     ! counter on the bands
-  INTEGER :: ierr,mloc,mstart,mend,max_mloc
+  INTEGER :: ierr,mloc,mstart,max_mloc
   INTEGER, ALLOCATABLE  :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
   COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
   !
-  INTEGER :: il1,il2,ig1,ig2,i
+  INTEGER :: il1,ig1
   INTEGER :: iks, nbndval
   INTEGER :: size_index_matrix
   REAL(DP) :: time_spent(2)
@@ -173,8 +170,6 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... Eventually randomize
      !
-!write(stdout,*) dvg_exc(1,1,1,1), n_pdep_read_from_file, nvec
-write(stdout,*) n_pdep_read_from_file, nvec
      IF(n_pdep_read_from_file<nvec) CALL wbse_do_randomize ( dvg_exc, n_pdep_read_from_file+1, nvec  )
      !
      ! ... MGS
@@ -458,8 +453,6 @@ write(stdout,*) n_pdep_read_from_file, nvec
      !
      nbase = nbase + notcnv
      !
-     CALL symm_hr_distr(hr_distr,nbase,nvecx)
-     !
      ! ... diagonalize the reduced Liouville hamiltonian
      !
      CALL diagox( nbase, nvec, hr_distr, nvecx, ew, vr_distr )
@@ -572,8 +565,6 @@ write(stdout,*) n_pdep_read_from_file, nvec
   !
   CALL stop_clock( 'chidiago' )
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -586,8 +577,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                  ONLY : DP
-  USE io_global,              ONLY : stdout
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,nimage,world_comm
+  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,world_comm
   USE gvect,                  ONLY : gstart
   USE mp,                     ONLY : mp_sum,mp_barrier,mp_bcast
   USE pwcom,                  ONLY : nks,npw,npwx
@@ -605,11 +595,10 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
   ! Workspace
   !
-  INTEGER :: ig, ip, j, ncol, ibnd, il1, iks
+  INTEGER :: ig, ip, ibnd, iks
   INTEGER :: k_global, k_local, j_local, k_id, nbndval
   REAL(DP) :: anorm
   REAL(DP),ALLOCATABLE :: braket(:)
-  REAL(DP) :: time_spent(2)
   COMPLEX(DP),ALLOCATABLE :: vec(:,:,:),zbraket(:)
   LOGICAL :: unfinished
   COMPLEX(DP) :: za, anormc
@@ -817,8 +806,6 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
            !
         ENDIF
         !
-        !ncol=m_local_end-j_local+1
-        !
         DO ip = j_local, m_local_end
            !
            amat(:,:,:,ip) = amat(:,:,:,ip) - vec(:,:,:)*zbraket(ip)
@@ -850,7 +837,7 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   USE random_numbers,       ONLY : randy
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
   USE pwcom,                ONLY : nks,npw,npwx
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ, dvg_exc,nbndval0x
+  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,nbndval0x
   USE constants,            ONLY : tpi
   USE distribution_center,  ONLY : pert
   USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
@@ -982,7 +969,7 @@ SUBROUTINE wbse_output_a_report(iteration)
    ELSE
       pref='converged'
    ENDIF
-   CALL serial_table_output(mpime==root,4000,'wbse.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
+   CALL serial_table_output(mpime==root,'wbse.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
    !
 END SUBROUTINE
 !

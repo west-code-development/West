@@ -41,8 +41,7 @@ MODULE wbse_restart
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix,&
-                                       dvg_exc,dng_exc, wbse_restart_dir
+      USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg_exc,dng_exc,wbse_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
@@ -74,7 +73,6 @@ MODULE wbse_restart
       !
       ! MKDIR
       !
-      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
       dirname = TRIM(wbse_restart_dir)
       CALL my_mkdir( dirname )
       !
@@ -242,8 +240,7 @@ MODULE wbse_restart
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,ev,conv,west_prefix, &
-                                       dvg_exc,dng_exc, wbse_restart_dir
+      USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg_exc,dng_exc,wbse_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
@@ -275,7 +272,6 @@ MODULE wbse_restart
       !
       ! MKDIR
       !
-      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
       dirname = trim(wbse_restart_dir)
       CALL my_mkdir( dirname )
       !
@@ -444,8 +440,7 @@ MODULE wbse_restart
       !
       USE mp_world,             ONLY : root,mpime,world_comm
       USE mp,                   ONLY : mp_barrier,mp_bcast
-      USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : n_pdep_basis,n_pdep_eigen,west_prefix
+      USE westcom,              ONLY : n_pdep_basis
       USE clib_wrappers,        ONLY : f_rmdir
       USE io_files,             ONLY : delete_if_present
       USE westcom,              ONLY : wbse_restart_dir
@@ -464,7 +459,6 @@ MODULE wbse_restart
       !
       ! ... clear the main restart directory
       !
-      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
       dirname = trim(wbse_restart_dir)
       !
       IF(mpime==root) THEN
@@ -496,11 +490,11 @@ MODULE wbse_restart
     SUBROUTINE wbse_restart_read_real( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,           ONLY : world_comm
-      USE mp,                  ONLY : mp_barrier
-      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis, wbse_restart_dir
-      USE io_global,           ONLY : stdout
-      USE distribution_center, ONLY : pert
+      USE mp_global,            ONLY : world_comm
+      USE mp,                   ONLY : mp_barrier
+      USE westcom,              ONLY : n_pdep_basis,wbse_restart_dir
+      USE io_global,            ONLY : stdout
+      USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
       !
@@ -517,7 +511,6 @@ MODULE wbse_restart
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: ierr
       !
       ! BARRIER
       !
@@ -526,7 +519,6 @@ MODULE wbse_restart
       CALL start_clock('wbse_restart')
       time_spent(1)=get_clock('wbse_restart')
       !
-      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
       dirname = TRIM( wbse_restart_dir )
       !
       CALL read_restart1_( dirname, dav_iter, notcnv, nbase )
@@ -555,11 +547,11 @@ MODULE wbse_restart
     SUBROUTINE wbse_restart_read_complex( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,           ONLY : world_comm
-      USE mp,                  ONLY : mp_barrier
-      USE westcom,             ONLY : n_pdep_eigen,west_prefix,n_pdep_basis, wbse_restart_dir
-      USE io_global,           ONLY : stdout
-      USE distribution_center, ONLY : pert
+      USE mp_global,            ONLY : world_comm
+      USE mp,                   ONLY : mp_barrier
+      USE westcom,              ONLY : n_pdep_basis,wbse_restart_dir
+      USE io_global,            ONLY : stdout
+      USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
       !
@@ -576,7 +568,6 @@ MODULE wbse_restart
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: ierr
       !
       ! BARRIER
       !
@@ -585,7 +576,6 @@ MODULE wbse_restart
       CALL start_clock('wbse_restart')
       time_spent(1)=get_clock('wbse_restart')
       !
-      !dirname = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.wbse.restart'
       dirname =TRIM(wbse_restart_dir)
       !
       CALL read_restart1_( dirname, dav_iter, notcnv, nbase )
@@ -615,9 +605,9 @@ MODULE wbse_restart
     SUBROUTINE read_restart1_( dirname, dav_iter, notcnv, nbase )
       !------------------------------------------------------------------------
       !
-      USE westcom,       ONLY : conv,n_pdep_eigen,n_pdep_basis
-      USE mp_world,      ONLY : world_comm,mpime,root
-      USE mp,            ONLY : mp_bcast
+      USE westcom,              ONLY : conv,n_pdep_eigen
+      USE mp_world,             ONLY : world_comm,mpime,root
+      USE mp,                   ONLY : mp_bcast
       !
       IMPLICIT NONE
       !
@@ -666,9 +656,9 @@ MODULE wbse_restart
     SUBROUTINE read_restart2_( dirname, ew )
       !------------------------------------------------------------------------
       !
-      USE westcom,       ONLY : ev,n_pdep_eigen,n_pdep_basis
-      USE mp_world,      ONLY : world_comm,mpime,root
-      USE mp,            ONLY : mp_bcast
+      USE westcom,              ONLY : ev,n_pdep_basis
+      USE mp_world,             ONLY : world_comm,mpime,root
+      USE mp,                   ONLY : mp_bcast
       !
       IMPLICIT NONE
       !
@@ -713,7 +703,7 @@ MODULE wbse_restart
     SUBROUTINE read_restart3d_( dirname, hr_distr, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : n_pdep_eigen,n_pdep_basis
+      USE westcom,              ONLY : n_pdep_basis
       USE mp_world,             ONLY : world_comm,mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
       USE distribution_center,  ONLY : pert
@@ -811,11 +801,11 @@ MODULE wbse_restart
     SUBROUTINE read_restart3z_( dirname, hr_distr, vr_distr )
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : n_pdep_eigen,n_pdep_basis
-      USE mp_world,            ONLY : world_comm,mpime,root
-      USE mp,                  ONLY : mp_bcast,mp_get
-      USE distribution_center, ONLY : pert
-      USE mp_global,           ONLY : nimage,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
+      USE westcom,              ONLY : n_pdep_basis
+      USE mp_world,             ONLY : world_comm,mpime,root
+      USE mp,                   ONLY : mp_bcast,mp_get
+      USE distribution_center,  ONLY : pert
+      USE mp_global,            ONLY : nimage,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
       !
       IMPLICIT NONE
       !
@@ -907,22 +897,19 @@ MODULE wbse_restart
     SUBROUTINE read_restart4_( dirname, nbase )
       !------------------------------------------------------------------------
       !
-      USE pwcom,               ONLY : nks
-      USE westcom,             ONLY : npwqx,dvg_exc,dng_exc,nbndval0x
-      USE mp_global,           ONLY : my_image_id
-      USE plep_io,             ONLY : plep_read_G_and_distribute
-      USE distribution_center, ONLY : pert
+      USE pwcom,                ONLY : nks
+      USE westcom,              ONLY : npwqx,dvg_exc,dng_exc,nbndval0x
+      USE plep_io,              ONLY : plep_read_G_and_distribute
+      USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
       !
       CHARACTER(LEN=*), INTENT(IN)  :: dirname
       INTEGER, INTENT(IN) :: nbase
       !
-      INTEGER :: global_j, local_j, group_j
-      INTEGER :: npw_g,ierr
+      INTEGER :: global_j, local_j
       CHARACTER(6) :: my_label
       CHARACTER(LEN=256) :: fname
-      INTEGER :: iun
       !
       IF(.NOT.ALLOCATED(dvg_exc)) ALLOCATE(dvg_exc(npwqx,nbndval0x,nks,pert%nlocx))
       IF(.NOT.ALLOCATED(dng_exc)) ALLOCATE(dng_exc(npwqx,nbndval0x,nks,pert%nlocx))

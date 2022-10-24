@@ -21,7 +21,7 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   USE uspp,                  ONLY : nlcc_any
   USE noncollin_module,      ONLY : noncolin,domag
   USE eqv,                   ONLY : dmuxc
-  USE funct,                 ONLY : dft_is_gradient,exx_is_active
+  USE xc_lib,                ONLY : xclib_dft_is
   USE wavefunctions,         ONLY : psic
   USE lsda_mod,              ONLY : nspin
   !
@@ -53,7 +53,7 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   !
   ! 3) Setup gradient correction
   !
-  IF (dft_is_gradient()) THEN
+  IF (xclib_dft_is('gradient')) THEN
      !
      IF (noncolin .AND. domag) THEN
         IF (.NOT.ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
@@ -67,7 +67,5 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   ENDIF
   !
   CALL stop_clock ('wbse_dv_setup')
-  !
-  RETURN
   !
 END SUBROUTINE

@@ -21,13 +21,9 @@ MODULE check_ovl_wfc
     !
     SUBROUTINE read_bisection_loc(current_spin, numband, bisec_loc)
       !
-      USE io_global,     ONLY : stdout, ionode, ionode_id
+      USE io_global,     ONLY : ionode, ionode_id
       USE mp,            ONLY : mp_bcast, mp_barrier
       USE mp_world,      ONLY : world_comm
-      USE bse_module,    ONLY : et_qp
-      USE wvfct,         ONLY : nbnd, et
-      USE pwcom,         ONLY : nks
-      USE lsda_mod,      ONLY : lsda
       USE westcom,       ONLY : bisection_info
       !
       IMPLICIT NONE
@@ -143,20 +139,15 @@ MODULE check_ovl_wfc
       !
       ovl_value = 1.0_DP
       !
-      RETURN
-      !
     END SUBROUTINE
     !
     SUBROUTINE check_ovl_wannier_real (orb_real_i, orb_real_j, ovl_value)
       !
       USE kinds,                ONLY : DP
-      USE control_flags,        ONLY : gamma_only
-      USE fft_base,             ONLY : dfftp,dffts
-      USE pwcom,                ONLY : omega
+      USE fft_base,             ONLY : dfftp
+      USE cell_base,            ONLY : omega
       USE mp_bands,             ONLY : intra_bgrp_comm
       USE mp,                   ONLY : mp_sum
-      USE mp_global,            ONLY : inter_image_comm
-      USE bse_module,           ONLY : ovl_thr
       !
       IMPLICIT NONE
       !
@@ -191,20 +182,15 @@ MODULE check_ovl_wfc
       !
       ovl_value = summ_ij/sqrt(summ_ib*summ_jb)
       !
-      RETURN
-      !
     END SUBROUTINE
     !
     SUBROUTINE check_ovl_wannier_cmplx (orb_cmpl_i, orb_cmpl_j, ovl_value)
       !
       USE kinds,                ONLY : DP
-      USE control_flags,        ONLY : gamma_only
-      USE fft_base,             ONLY : dfftp,dffts
-      USE pwcom,                ONLY : omega
+      USE fft_base,             ONLY : dfftp
+      USE cell_base,            ONLY : omega
       USE mp_bands,             ONLY : intra_bgrp_comm
       USE mp,                   ONLY : mp_sum
-      USE mp_global,            ONLY : inter_image_comm
-      USE bse_module,           ONLY : ovl_thr
       !
       IMPLICIT NONE
       !
@@ -239,8 +225,6 @@ MODULE check_ovl_wfc
       CALL mp_sum(summ_ij, intra_bgrp_comm)
       !
       ovl_value = summ_ij/sqrt(summ_ib*summ_jb)
-      !
-      RETURN
       !
     END SUBROUTINE
     !

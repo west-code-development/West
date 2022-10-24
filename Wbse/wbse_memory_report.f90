@@ -14,19 +14,14 @@
 SUBROUTINE wbse_init_memory_report()
   !----------------------------------------------------------------------------
   !
-  USE kinds,          ONLY : DP
-  USE io_global,      ONLY : stdout
-  USE wvfct,          ONLY : npwx, nbnd, nbndx
-  USE basis,          ONLY : natomwfc
-  USE fft_base,       ONLY : dfftp,dffts
-  USE gvect,          ONLY : ngl, ngm, ngm_g
-  USE gvecs,          ONLY : ngms_g, ngms
-  USE uspp,           ONLY : nkb
-  USE control_flags,  ONLY : isolve, nmix, gamma_only, lscf
-  USE mp_global,      ONLY : np_ortho
-  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwqx
-  USE distribution_center,  ONLY : pert
-  USE noncollin_module,     ONLY : noncolin,npol
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE wvfct,                ONLY : npwx,nbnd
+  USE fft_base,             ONLY : dfftp
+  USE gvect,                ONLY : ngl
+  USE gvecs,                ONLY : ngms
+  USE uspp,                 ONLY : nkb
+  USE westcom,              ONLY : nbnd_occ
   !
   IMPLICIT NONE
   !
@@ -85,8 +80,6 @@ SUBROUTINE wbse_init_memory_report()
      mem_partial, dfftp%nnr, nbnd_occ(1)
   mem_tot = mem_tot + mem_partial
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
@@ -94,19 +87,17 @@ END SUBROUTINE
 SUBROUTINE wbse_memory_report()
   !----------------------------------------------------------------------------
   !
-  USE kinds,          ONLY : DP
-  USE io_global,      ONLY : stdout
-  USE wvfct,          ONLY : npwx, nbnd, nbndx
-  USE basis,          ONLY : natomwfc
-  USE fft_base,       ONLY : dfftp,dffts
-  USE gvect,          ONLY : ngl, ngm, ngm_g
-  USE gvecs,          ONLY : ngms_g, ngms
-  USE uspp,           ONLY : nkb
-  USE control_flags,  ONLY : isolve, nmix, gamma_only, lscf
-  USE mp_global,      ONLY : np_ortho
-  USE westcom,        ONLY : nbnd_occ,n_pdep_basis,npwqx
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE wvfct,                ONLY : npwx,nbnd
+  USE fft_base,             ONLY : dfftp
+  USE gvect,                ONLY : ngl
+  USE gvecs,                ONLY : ngms
+  USE uspp,                 ONLY : nkb
+  USE control_flags,        ONLY : gamma_only
+  USE westcom,              ONLY : nbnd_occ,n_pdep_basis,npwqx
   USE distribution_center,  ONLY : pert
-  USE noncollin_module,      ONLY : noncolin,npol
+  USE noncollin_module,     ONLY : npol
   !
   IMPLICIT NONE
   !

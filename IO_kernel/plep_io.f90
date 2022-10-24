@@ -16,11 +16,11 @@ MODULE plep_io
   !
   USE iotk_module
   USE kinds,       ONLY : DP
-  USE mp_global,   ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,inter_bgrp_comm,inter_pool_comm
+  USE mp_global,   ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,&
+                        & inter_bgrp_comm,inter_pool_comm
   USE mp,          ONLY : mp_max
   USE westcom,     ONLY : npwq,npwq_g,nbndval0x
   USE pwcom,       ONLY : nks,npwx
-  USE wvfct,       ONLY : npwx
   USE gvect,       ONLY : ig_l2g
   !
   IMPLICIT NONE
@@ -63,7 +63,6 @@ MODULE plep_io
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr,ibnd
-      !
       !
       IF(my_pool_id /= 0) RETURN
       IF(my_bgrp_id /= 0) RETURN
@@ -135,7 +134,7 @@ MODULE plep_io
       ! Scratch
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
-      INTEGER :: iun,ierr,ig,ibnd
+      INTEGER :: iun,ierr,ibnd
       !
       ! Resume all components
       !
@@ -317,7 +316,7 @@ MODULE plep_io
       ! Scratch
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
-      INTEGER :: iun,ierr,ig,ibnd,ik,npwx_g
+      INTEGER :: iun,ierr,ibnd,ik,npwx_g
       !
       npwx_g=MAXVAL(ig_l2g(1:npwx))
       CALL mp_max(npwx_g,intra_bgrp_comm)
@@ -429,7 +428,6 @@ MODULE plep_io
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: iun,ierr,ibnd
       !
-      !
       IF(my_pool_id /= 0) RETURN
       IF(my_bgrp_id /= 0) RETURN
       !
@@ -485,7 +483,6 @@ MODULE plep_io
     !
     SUBROUTINE plep_read_G_and_distribute_wfc(fname,plepg,nbnd)
       !
-      USE io_global,            ONLY : stdout
       USE mp_wave,      ONLY : splitwf
       USE mp,           ONLY : mp_bcast
       USE mp_global,    ONLY : intra_bgrp_comm
@@ -501,7 +498,7 @@ MODULE plep_io
       ! Scratch
       !
       COMPLEX(DP), ALLOCATABLE :: tmp_vec(:)
-      INTEGER :: iun, ierr, ig, ibnd
+      INTEGER :: iun, ierr, ibnd
       INTEGER :: ngw_, nbnd_, ispin_, nspin_, igwx_, ik_, nk_
       REAL(DP):: scalef_
       CHARACTER(iotk_attlenx)  :: attr

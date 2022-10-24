@@ -32,9 +32,9 @@ MODULE lanczos_db
       !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wbse_save_dir,  d0psi
+      USE westcom,              ONLY : wbse_save_dir,d0psi
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
       !
@@ -93,17 +93,17 @@ MODULE lanczos_db
     SUBROUTINE lanczos_d0psi_read ()
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : wbse_save_dir, d0psi
+      USE westcom,             ONLY : wbse_save_dir,d0psi
       USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
-      USE mp_world,            ONLY : world_comm,mpime,root
+      USE mp_world,            ONLY : world_comm
       USE plep_io,             ONLY : plep_read_G_and_distribute
       USE io_push,             ONLY : io_push_bar
       !
       IMPLICIT NONE
       !
       INTEGER            :: ipol
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -149,9 +149,9 @@ MODULE lanczos_db
       !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wbse_save_dir,d0psi
+      USE westcom,              ONLY : wbse_save_dir
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
       !
@@ -208,10 +208,10 @@ MODULE lanczos_db
     SUBROUTINE lanczos_evcs_read(evc1, evc1_old)
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : wbse_save_dir, d0psi
+      USE westcom,             ONLY : wbse_save_dir
       USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
-      USE mp_world,            ONLY : world_comm,mpime,root
+      USE mp_world,            ONLY : world_comm
       USE plep_io,             ONLY : plep_read_G_and_distribute
       USE io_push,             ONLY : io_push_bar
       !

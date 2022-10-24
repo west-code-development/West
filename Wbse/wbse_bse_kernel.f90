@@ -15,7 +15,7 @@ SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE pwcom,                ONLY : npwx,nks
-  USE westcom,              ONLY : nbndval0x, l_davidson,l_lanczos
+  USE westcom,              ONLY : nbndval0x,l_lanczos
   !
   IMPLICIT NONE
   !
@@ -43,8 +43,6 @@ SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
      !
   ENDIF
   !
-  RETURN
-  !
 END SUBROUTINE
 !
 !
@@ -52,19 +50,15 @@ END SUBROUTINE
 SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, lz_method)
   !
   USE kinds,                 ONLY : DP
-  USE io_global,             ONLY : stdout
-  USE cell_base,             ONLY : omega
-  USE fft_base,              ONLY : dfftp,dffts
+  USE fft_base,              ONLY : dffts
+  USE wavefunctions,         ONLY : psic
   USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
   USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma,&
                                     double_invfft_gamma,double_fwfft_gamma
-  USE mp_global,             ONLY : ibnd_start,ibnd_end,intra_bgrp_comm,&
-                                    world_comm,inter_image_comm,inter_bgrp_comm
-  USE pwcom,                 ONLY : npw,npwx,igk_k,nks,isk
+  USE mp_global,             ONLY : inter_image_comm,inter_bgrp_comm
+  USE pwcom,                 ONLY : npw,npwx,nks,isk
   USE westcom,               ONLY : nbnd_occ, nbndval0x
-  USE bse_module,            ONLY : ovl_matrix,u_matrix,ovl_thr,&
-                                    l_wannier_repr,index_matrix_lz,&
-                                    size_index_matrix_lz
+  USE bse_module,            ONLY : u_matrix,l_wannier_repr,index_matrix_lz,size_index_matrix_lz
   USE distribution_center,   ONLY : aband,bseparal
   !
   IMPLICIT NONE
@@ -78,7 +72,7 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
   !
   ! local vars
   !
-  INTEGER  :: ibnd, jbnd, ibnd_1, ir, size_index_matrix, summ_index
+  INTEGER  :: ibnd, jbnd, ibnd_1, size_index_matrix, summ_index
   INTEGER  :: ibnd_index, jbnd_index, il1, ig1
   INTEGER  :: nbndval_q, current_spin_ikq, ikq
   INTEGER  :: nbvalloc
@@ -339,7 +333,5 @@ SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bs
      DEALLOCATE (aux_bse1)
      !
   ENDIF
-  !
-  RETURN
   !
 END SUBROUTINE

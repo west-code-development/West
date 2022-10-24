@@ -205,4 +205,6 @@ SUBROUTINE wfreq_setup
      sigma_freq = 0._DP
   ENDIF
   !
+  CALL wfreq_memory_report()
+  !
 END SUBROUTINE

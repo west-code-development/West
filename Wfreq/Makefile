@@ -31,6 +31,7 @@ solve_hf.o \
 solve_qp.o \
 solve_wfreq.o \
 wfreq.o \
+wfreq_memory_report.o \
 wfreq_readin.o \
 wfreq_restart.o \
 wfreq_setup.o

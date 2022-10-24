@@ -126,15 +126,16 @@ wfreq_do
 westpp: \
 pytools \
 wstat \
-wfreq \
 westpp_do
 
 wbse: \
 pytools \
+wstat \
 wbse_do
 
 wbsepp: \
 pytools \
+wstat \
 westpp \
 wbse_do \
 wbsepp_do
@@ -203,22 +204,22 @@ io_kernel_do: para_kernel_do tools_do fft_kernel_do modules_do libraries_do
 	( cd IO_kernel ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all; \
 	else $(MAKE) $(MFLAGS) all ; fi ) ; fi
 
-wstat_do: io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+wstat_do: io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wstat ; then \
 	( cd Wstat ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wfreq_do: io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+wfreq_do: io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wfreq ; then \
 	( cd Wfreq ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-westpp_do: io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+westpp_do: io_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Westpp ; then \
 	( cd Westpp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wbse_do: wstat_do io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+wbse_do: wstat_do io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d ../LR_Modules; then \
 	( cd ../LR_Modules ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
@@ -227,7 +228,7 @@ wbse_do: wstat_do io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_
 	( cd Wbse ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wbsepp_do: wbse_do westpp_do wstat_do io_kernel_do dfpt_kernel_do hamiltonian_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
+wbsepp_do: wbse_do westpp_do wstat_do io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
 	if test -d Wbsepp ; then \
 	( cd Wbsepp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi

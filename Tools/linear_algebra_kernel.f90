@@ -336,9 +336,8 @@ MODULE linear_algebra_kernel
       !
       INTEGER(i8b) :: n8
       INTEGER,EXTERNAL :: ilaenv
-      INTEGER :: nb, lwork, info, info_d, i1, i2, i3
+      INTEGER :: nb, lwork, info, info_d, i1, i2
       INTEGER,ALLOCATABLE :: ipiv(:)
-      COMPLEX(DP) :: tmp
       COMPLEX(DP),ALLOCATABLE :: work(:)
       !
 #if defined(__CUDA)
@@ -424,9 +423,8 @@ MODULE linear_algebra_kernel
       !
       INTEGER(i8b) :: n8
       INTEGER,EXTERNAL :: ilaenv
-      INTEGER :: nb, lwork, info, info_d, i1, i2, i3
+      INTEGER :: nb, lwork, info, info_d, i1, i2
       INTEGER,ALLOCATABLE :: ipiv(:)
-      REAL(DP) :: tmp
       REAL(DP),ALLOCATABLE :: work(:)
       !
 #if defined(__CUDA)

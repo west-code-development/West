@@ -16,7 +16,7 @@ MODULE linear_algebra_kernel
   !
   ! Serial linear algebra toolkit
   !
-  USE kinds, ONLY : DP
+  USE kinds, ONLY : DP,i8b
   !
   IMPLICIT NONE
   !
@@ -95,7 +95,7 @@ MODULE linear_algebra_kernel
       ! Diagonalization of a REAL(DP) SYMMETRIC MATRIX
       !
 #if defined(__CUDA)
-      USE west_gpu, ONLY : cusolver_h
+      USE west_gpu, ONLY : cusolv_h,cusolv_p
       USE cublas
       USE cusolverdn
 #endif
@@ -112,75 +112,88 @@ MODULE linear_algebra_kernel
       ! Workspace
       !
       INTEGER :: lwork, info, info_d
+#if defined(__CUDA)
+      INTEGER(i8b) :: n8, lh8, ld8
+      REAL(DP),ALLOCATABLE :: work_h(:)
+      INTEGER :: ev_mode
+#else
+      CHARACTER :: ev_mode
+#endif
       REAL(DP),ALLOCATABLE :: work(:)
       !$acc declare device_resident(work)
       REAL(DP),ALLOCATABLE :: m(:,:)
       !
 #if defined(__CUDA)
       IF(l_just_ev) THEN
-         !$acc data copyin(a) copyout(e,info_d)
-         !$acc host_data use_device(a,e,info_d)
-         info = cusolverDnDsyevd_bufferSize(cusolver_h,CUSOLVER_EIG_MODE_NOVECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
-         !
-         ALLOCATE(work(lwork))
-         !
-         info = cusolverDnDsyevd(cusolver_h,CUSOLVER_EIG_MODE_NOVECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
-         !$acc end host_data
-         !$acc end data
-         !
-         DEALLOCATE(work)
+         ev_mode = CUSOLVER_EIG_MODE_NOVECTOR
       ELSE
-         !$acc data copy(a) copyout(e,info_d)
-         !$acc host_data use_device(a,e,info_d)
-         info = cusolverDnDsyevd_bufferSize(cusolver_h,CUSOLVER_EIG_MODE_VECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
-         !
-         ALLOCATE(work(lwork))
-         !
-         info = cusolverDnDsyevd(cusolver_h,CUSOLVER_EIG_MODE_VECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
-         !$acc end host_data
-         !$acc end data
-         !
-         DEALLOCATE(work)
+         ev_mode = CUSOLVER_EIG_MODE_VECTOR
       ENDIF
+      !
+      !$acc data copyin(a) copyout(e,info_d)
+      !
+#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+      n8 = INT(n,KIND=i8b)
+      !
+      !$acc host_data use_device(a,e,info_d)
+      info = cusolverDnXsyevd_buffersize(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
+           & cudaDataType(CUDA_R_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_R_64F),&
+           & ld8,lh8)
+      !
+      ALLOCATE(work(ld8/8))
+      ALLOCATE(work_h(lh8/8))
+      !
+      info = cusolverDnXsyevd(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
+           & cudaDataType(CUDA_R_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_R_64F),&
+           & work,ld8,work_h,lh8,info_d)
+      !$acc end host_data
+      !
+      DEALLOCATE(work)
+      DEALLOCATE(work_h)
+#else
+      !$acc host_data use_device(a,e,info_d)
+      info = cusolverDnDsyevd_bufferSize(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
+      !$acc end host_data
+      !
+      ALLOCATE(work(lwork))
+      !
+      !$acc host_data use_device(a,e,work,info_d)
+      info = cusolverDnDsyevd(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
+      !$acc end host_data
+      !
+      DEALLOCATE(work)
+#endif
+      !
+      IF(.NOT. l_just_ev) THEN
+         !$acc update host(a)
+      ENDIF
+      !$acc end data
 #else
       IF(l_just_ev) THEN
-         !
          ALLOCATE(m(n,n))
-         m = a
+         m(:,:) = a
          !
-         ALLOCATE(work(1))
-         !
-         CALL DSYEV('N','U',n,m,n,e,work,-1,info)
-         !
-         lwork = CEILING(work(1))
-         !
-         DEALLOCATE(work)
-         ALLOCATE(work(lwork))
-         !
-         CALL DSYEV('N','U',n,m,n,e,work,lwork,info)
-         !
-         DEALLOCATE(work)
-         DEALLOCATE(m)
-         !
+         ev_mode = 'N'
       ELSE
-         !
-         ALLOCATE(work(1))
-         !
-         CALL DSYEV('V','U',n,a,n,e,work,-1,info)
-         !
-         lwork = CEILING(work(1))
-         !
-         DEALLOCATE(work)
-         ALLOCATE(work(lwork))
-         !
-         CALL DSYEV('V','U',n,a,n,e,work,lwork,info)
-         !
-         DEALLOCATE(work)
-         !
+         ev_mode = 'V'
+      ENDIF
+      !
+      ALLOCATE(work(1))
+      !
+      CALL DSYEV(ev_mode,'U',n,a,n,e,work,-1,info)
+      !
+      lwork = CEILING(work(1))
+      !
+      DEALLOCATE(work)
+      ALLOCATE(work(lwork))
+      !
+      CALL DSYEV(ev_mode,'U',n,a,n,e,work,lwork,info)
+      !
+      DEALLOCATE(work)
+      !
+      IF(l_just_ev) THEN
+         a(:,:) = m
+         DEALLOCATE(m)
       ENDIF
 #endif
       !
@@ -193,7 +206,7 @@ MODULE linear_algebra_kernel
       ! Diagonalization of a COMPLEX(DP) HERMITIAN MATRIX
       !
 #if defined(__CUDA)
-      USE west_gpu, ONLY : cusolver_h
+      USE west_gpu, ONLY : cusolv_h,cusolv_p
       USE cublas
       USE cusolverdn
 #endif
@@ -210,79 +223,91 @@ MODULE linear_algebra_kernel
       ! Workspace
       !
       INTEGER :: lwork, info, info_d
+#if defined(__CUDA)
+      INTEGER(i8b) :: n8, lh8, ld8
+      COMPLEX(DP),ALLOCATABLE :: work_h(:)
+      INTEGER :: ev_mode
+#else
+      CHARACTER :: ev_mode
+#endif
       REAL(DP),ALLOCATABLE :: rwork(:)
-      COMPLEX(DP),ALLOCATABLE :: m(:,:), work(:)
+      COMPLEX(DP),ALLOCATABLE :: work(:)
       !$acc declare device_resident(work)
+      COMPLEX(DP),ALLOCATABLE :: m(:,:)
       !
 #if defined(__CUDA)
       IF(l_just_ev) THEN
-         !$acc data copyin(a) copyout(e,info_d)
-         !$acc host_data use_device(a,e,info_d)
-         info = cusolverDnZheevd_bufferSize(cusolver_h,CUSOLVER_EIG_MODE_NOVECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
-         !
-         ALLOCATE(work(lwork))
-         !
-         info = cusolverDnZheevd(cusolver_h,CUSOLVER_EIG_MODE_NOVECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
-         !$acc end host_data
-         !$acc end data
-         !
-         DEALLOCATE(work)
+         ev_mode = CUSOLVER_EIG_MODE_NOVECTOR
       ELSE
-         !$acc data copy(a) copyout(e,info_d)
-         !$acc host_data use_device(a,e,info_d)
-         info = cusolverDnZheevd_bufferSize(cusolver_h,CUSOLVER_EIG_MODE_VECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
-         !
-         ALLOCATE(work(lwork))
-         !
-         info = cusolverDnZheevd(cusolver_h,CUSOLVER_EIG_MODE_VECTOR,&
-         & CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
-         !$acc end host_data
-         !$acc end data
-         !
-         DEALLOCATE(work)
+         ev_mode = CUSOLVER_EIG_MODE_VECTOR
       ENDIF
+      !
+      !$acc data copyin(a) copyout(e,info_d)
+      !
+#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+      n8 = INT(n,KIND=i8b)
+      !
+      !$acc host_data use_device(a,e,info_d)
+      info = cusolverDnXsyevd_buffersize(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
+           & cudaDataType(CUDA_C_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_C_64F),&
+           & ld8,lh8)
+      !
+      ALLOCATE(work(ld8/16))
+      ALLOCATE(work_h(lh8/16))
+      !
+      info = cusolverDnXsyevd(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
+           & cudaDataType(CUDA_C_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_C_64F),&
+           & work,ld8,work_h,lh8,info_d)
+      !$acc end host_data
+      !
+      DEALLOCATE(work)
+      DEALLOCATE(work_h)
+#else
+      !$acc host_data use_device(a,e,info_d)
+      info = cusolverDnZheevd_bufferSize(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
+      !$acc end host_data
+      !
+      ALLOCATE(work(lwork))
+      !
+      !$acc host_data use_device(a,e,work,info_d)
+      info = cusolverDnZheevd(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
+      !$acc end host_data
+      !
+      DEALLOCATE(work)
+#endif
+      !
+      IF(.NOT. l_just_ev) THEN
+         !$acc update host(a)
+      ENDIF
+      !$acc end data
 #else
       IF(l_just_ev) THEN
-         !
          ALLOCATE(m(n,n))
-         m = a
+         m(:,:) = a
          !
-         ALLOCATE(work(1))
-         ALLOCATE(rwork(3*n-2))
-         !
-         CALL ZHEEV('N','U',n,m,n,e,work,-1,rwork,info)
-         !
-         lwork = CEILING(REAL(work(1),DP))
-         !
-         DEALLOCATE(work)
-         ALLOCATE(work(lwork))
-         !
-         CALL ZHEEV('N','U',n,m,n,e,work,lwork,rwork,info)
-         !
-         DEALLOCATE(rwork)
-         DEALLOCATE(work)
-         DEALLOCATE(m)
-         !
+         ev_mode = 'N'
       ELSE
-         !
-         ALLOCATE(work(1))
-         ALLOCATE(rwork(3*n-2))
-         !
-         CALL ZHEEV('V','U',n,a,n,e,work,-1,rwork,info)
-         !
-         lwork = CEILING(REAL(work(1),DP))
-         !
-         DEALLOCATE(work)
-         ALLOCATE(work(lwork))
-         !
-         CALL ZHEEV('V','U',n,a,n,e,work,lwork,rwork,info)
-         !
-         DEALLOCATE(work)
-         DEALLOCATE(rwork)
-         !
+         ev_mode = 'V'
+      ENDIF
+      !
+      ALLOCATE(work(1))
+      ALLOCATE(rwork(3*n-2))
+      !
+      CALL ZHEEV(ev_mode,'U',n,a,n,e,work,-1,rwork,info)
+      !
+      lwork = CEILING(REAL(work(1),KIND=DP))
+      !
+      DEALLOCATE(work)
+      ALLOCATE(work(lwork))
+      !
+      CALL ZHEEV(ev_mode,'U',n,a,n,e,work,lwork,rwork,info)
+      !
+      DEALLOCATE(rwork)
+      DEALLOCATE(work)
+      !
+      IF(l_just_ev) THEN
+         a(:,:) = m
+         DEALLOCATE(m)
       ENDIF
 #endif
       !
@@ -295,7 +320,7 @@ MODULE linear_algebra_kernel
       ! Inversion of a COMPLEX(DP) GENERIC MATRIX
       !
 #if defined(__CUDA)
-      USE west_gpu, ONLY : cusolver_h,work_c,piv_d
+      USE west_gpu, ONLY : cusolv_h,cusolv_p,l_inv,l_inv_h,piv,work_c,work_c_h
       USE cublas
       USE cusolverdn
 #endif
@@ -309,34 +334,53 @@ MODULE linear_algebra_kernel
       !
       ! Workspace
       !
+      INTEGER(i8b) :: n8
       INTEGER,EXTERNAL :: ilaenv
-      INTEGER :: nb, lwork, info, info_d, i1, i2
+      INTEGER :: nb, lwork, info, info_d, i1, i2, i3
       INTEGER,ALLOCATABLE :: ipiv(:)
+      COMPLEX(DP) :: tmp
       COMPLEX(DP),ALLOCATABLE :: work(:)
       !
 #if defined(__CUDA)
-      !$acc data copyout(info_d)
-      !$acc host_data use_device(a,work_c,info_d)
-      info = cusolverDnZgetrf(cusolver_h,n,n,a,n,work_c,piv_d,info_d)
-      info = cusolverDnZtrtri(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,&
-      & n,a,n,work_c,SIZE(work_c),info_d)
+      n8 = INT(n,KIND=i8b)
+      !
+      !$acc data create(info_d)
+      !$acc host_data use_device(a,piv,work_c,info_d)
+#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+      info = cusolverDnXgetrf(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_C_64F),a,n8,piv,&
+           & cudaDataType(CUDA_C_64F),work_c,l_inv,work_c_h,l_inv_h,info_d)
+#else
+      info = cusolverDnZgetrf(cusolv_h,n,n,a,n,work_c,piv,info_d)
+#endif
+      !$acc end host_data
+      !
+      !$acc kernels present(work_c)
+      work_c(1:n**2) = (0._DP,0._DP)
+      !$acc end kernels
+      !
+      !$acc parallel loop present(work_c)
+      DO i1 = 1,n
+         work_c(i1+(i1-1)*n) = (1._DP,0._DP)
+      ENDDO
+      !$acc end parallel
+      !
+      !$acc host_data use_device(a,piv,work_c,info_d)
+#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+      info = cusolverDnXgetrs(cusolv_h,cusolv_p,CUBLAS_OP_N,n8,n8,cudaDataType(CUDA_C_64F),a,&
+           & n8,piv,cudaDataType(CUDA_C_64F),work_c(1:n**2),n8,info_d)
+#else
+      info = cusolverDnZgetrs(cusolv_h,CUBLAS_OP_N,n,n,a,n,piv,work_c(1:n**2),n,info_d)
+#endif
       !$acc end host_data
       !$acc end data
       !
       !$acc parallel loop collapse(2) present(a,work_c)
-      DO i2 = 1,n-1
-         DO i1 = 2,n
-            IF(i1 > i2) THEN
-               work_c(i1+(i2-1)*n) = a(i1,i2)
-               a(i1,i2) = (0._DP,0._DP)
-            ENDIF
+      DO i2 = 1,n
+         DO i1 = 1,n
+            a(i1,i2) = work_c(i1+(i2-1)*n)
          ENDDO
       ENDDO
       !$acc end parallel
-      !
-      !$acc host_data use_device(a,work_c)
-      CALL ZTRSM('R','L','N','U',n,n,(1._DP,0._DP),work_c,n,a,n)
-      !$acc end host_data
 #else
       !
       ! Calculate optimal size of workspace
@@ -364,7 +408,7 @@ MODULE linear_algebra_kernel
       ! Inversion of a REAL(DP) GENERIC MATRIX
       !
 #if defined(__CUDA)
-      USE west_gpu, ONLY : cusolver_h,work_r,piv_d
+      USE west_gpu, ONLY : cusolv_h,cusolv_p,l_inv,l_inv_h,piv,work_r,work_r_h
       USE cublas
       USE cusolverdn
 #endif
@@ -378,34 +422,53 @@ MODULE linear_algebra_kernel
       !
       ! Workspace
       !
+      INTEGER(i8b) :: n8
       INTEGER,EXTERNAL :: ilaenv
-      INTEGER :: nb, lwork, info, info_d, i1, i2
+      INTEGER :: nb, lwork, info, info_d, i1, i2, i3
       INTEGER,ALLOCATABLE :: ipiv(:)
+      REAL(DP) :: tmp
       REAL(DP),ALLOCATABLE :: work(:)
       !
 #if defined(__CUDA)
+      n8 = INT(n,KIND=i8b)
+      !
       !$acc data copyout(info_d)
-      !$acc host_data use_device(a,work_r,info_d)
-      info = cusolverDnDgetrf(cusolver_h,n,n,a,n,work_r,piv_d,info_d)
-      info = cusolverDnDtrtri(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,&
-      & n,a,n,work_r,SIZE(work_r),info_d)
+      !$acc host_data use_device(a,piv,work_r,info_d)
+#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+      info = cusolverDnXgetrf(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_R_64F),a,n8,piv,&
+           & cudaDataType(CUDA_R_64F),work_r,l_inv,work_r_h,l_inv_h,info_d)
+#else
+      info = cusolverDnDgetrf(cusolv_h,n,n,a,n,work_r,piv,info_d)
+#endif
+      !$acc end host_data
+      !
+      !$acc kernels present(work_r)
+      work_r(1:n**2) = 0._DP
+      !$acc end kernels
+      !
+      !$acc parallel loop present(work_r)
+      DO i1 = 1,n
+         work_r(i1+(i1-1)*n) = 1._DP
+      ENDDO
+      !$acc end parallel
+      !
+      !$acc host_data use_device(a,piv,work_r,info_d)
+#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+      info = cusolverDnXgetrs(cusolv_h,cusolv_p,CUBLAS_OP_N,n8,n8,cudaDataType(CUDA_R_64F),a,&
+           & n8,piv,cudaDataType(CUDA_R_64F),work_r(1:n**2),n8,info_d)
+#else
+      info = cusolverDnDgetrs(cusolv_h,CUBLAS_OP_N,n,n,a,n,piv,work_r(1:n**2),n,info_d)
+#endif
       !$acc end host_data
       !$acc end data
       !
       !$acc parallel loop collapse(2) present(a,work_r)
-      DO i2 = 1,n-1
-         DO i1 = 2,n
-            IF(i1 > i2) THEN
-               work_r(i1+(i2-1)*n) = a(i1,i2)
-               a(i1,i2) = 0._DP
-            ENDIF
+      DO i2 = 1,n
+         DO i1 = 1,n
+            a(i1,i2) = work_r(i1+(i2-1)*n)
          ENDDO
       ENDDO
       !$acc end parallel
-      !
-      !$acc host_data use_device(a,work_r)
-      CALL DTRSM('R','L','N','U',n,n,1._DP,work_r,n,a,n)
-      !$acc end host_data
 #else
       !
       ! Calculate optimal size of workspace

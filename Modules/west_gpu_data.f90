@@ -60,7 +60,7 @@ MODULE west_gpu_data
    !
    INTEGER(i8b) :: l_inv
    INTEGER(i8b) :: l_inv_h
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
    INTEGER(i8b), ALLOCATABLE :: piv(:)
 #else
    INTEGER, ALLOCATABLE :: piv(:)
@@ -526,7 +526,7 @@ MODULE west_gpu_data
          ALLOCATE(tempt_r(3,3))
       ENDIF
       !
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
       !
       !$acc host_data use_device(x_r)
@@ -558,7 +558,7 @@ MODULE west_gpu_data
          ALLOCATE(tempt_c(3,3))
       ENDIF
       !
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
       !
       !$acc host_data use_device(x_c)

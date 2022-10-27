@@ -36,8 +36,7 @@ SUBROUTINE wbse_setup(code)
   l_use_ecutrho = .FALSE.
   !
   CALL set_npwq()
-  !TODO: Dense?   store_sqvc(sqvc,ngm,2,isz)
-  CALL pot3D%init('Dense',.FALSE.,'gb')
+  CALL pot3D%init('Rho',.FALSE.,'gb')
   CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()

@@ -29,15 +29,16 @@ bse_tools.o \
 check_ovl_wfc.o \
 lanczos_restart.o \
 td_liouville_oper.o \
+wbse.o \
 wbse_bse_kernel.o \
 wbse_calc_dens.o \
 wbse_davidson_diago.o \
 wbse_davidson_diago_square.o\
 wbse_dot.o \
+wbse_init.o \
 wbse_init_pdep.o \
 wbse_init_qboxcoupling.o \
 wbse_init_restart.o \
-wbse_lanczos_diago.o \
 wbse_lanczos_diago.o \
 wbse_memory_report.o \
 wbse_readin.o \

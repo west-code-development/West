@@ -132,6 +132,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
      END IF
      !
      IF ( ANY(driver(:)==7)) THEN
+        !
         CALL json%add('input.wbse_control.wbse_calculation',TRIM( wbse_calculation ))
         CALL json%add('input.wbse_control.solver',TRIM( solver ))
         CALL json%add('input.wbse_control.qp_correction',TRIM( qp_correction ))
@@ -153,30 +154,13 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
         !CALL json%add('input.wbse_control.wbse_diag_method',TRIM(wbse_diag_method))
         !CALL json%add('input.wbse_control.macropol_dfpt',macropol_dfpt)
-     !
+        !
      END IF
-     !
-!     IF ( ANY(driver(:)==8)) THEN
-!        !
-!        CALL json%add('input.qbox_control.nrowmax',nrowmax)
-!        CALL json%add('input.qbox_control.xml_file',TRIM(xml_file))
-!        CALL json%add('input.qbox_control.xc',TRIM(xc))
-!        CALL json%add('input.qbox_control.alpha_pbe0',alpha_pbe0)
-!        CALL json%add('input.qbox_control.amplitude',amplitude)
-!        CALL json%add('input.qbox_control.wf_dyn',TRIM(wf_dyn))
-!        CALL json%add('input.qbox_control.btHF',btHF)
-!        CALL json%add('input.qbox_control.blHF', TRIM(blHF))
-!        CALL json%add('input.qbox_control.nitscf',nitscf)
-!        CALL json%add('input.qbox_control.nite',nite)
-!        !
-!     !
-!     END IF
      !
      IF (ANY(driver(:)==8)) THEN
         !
         CALL json%add('input.wbsepp_control.wbsepp_type',wbsepp_type)
-! Typo
-!        CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_liouville_read_from_file)
+        !CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_liouville_read_from_file)
         CALL json%add('input.wbsepp_control.n_liouville_read_from_file',n_liouville_read_from_file)
         CALL json%add('input.wbsepp_control.macropol_dfpt',macropol_dfpt)
         CALL json%add('input.wbsepp_control.r0_input', r0_input)
@@ -199,8 +183,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   ENDIF
   !
 END SUBROUTINE
-
-
+!
 SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512
@@ -480,7 +463,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      IF ( ANY(driver(:)==6) ) THEN
         !
-        !wbse_init gamma only qlist = [1]
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
         ALLOCATE(qlist(1))
         qlist = (/1/)
@@ -518,6 +500,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ENDIF
      !
      IF ( ANY(driver(:)==7) ) THEN
+        !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
         IERR = args%setitem(1, "wbse_control" )
@@ -560,37 +543,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-!     IF ( ANY(driver(:)==8) ) THEN
-!        IERR = tuple_create(args, 3)
-!        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-!        IERR = args%setitem(1, "qbox_control" )
-!        IERR = args%setitem(2, verbose )
-!        IERR = dict_create(kwargs)
-!        !
-!        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
-!        IERR = cast(return_dict, return_obj)
-!        !
-!        CALL args%destroy
-!        CALL kwargs%destroy
-!        CALL return_obj%destroy
-!        !
-!        IERR = return_dict%getitem(nrowmax, "nrowmax")
-!        IERR = return_dict%getitem(cvalue, "xml_file");xml_file = TRIM(ADJUSTL(cvalue))
-!        IERR = return_dict%getitem(cvalue, "xc");xc = TRIM(ADJUSTL(cvalue))
-!        IERR = return_dict%getitem(alpha_pbe0, "alpha_pbe0")
-!        IERR = return_dict%getitem(amplitude, "amplitude")
-!        IERR = return_dict%getitem(cvalue, "wf_dyn");wf_dyn = TRIM(ADJUSTL(cvalue))
-!        IERR = return_dict%getitem(btHF, "btHF")
-!        IERR = return_dict%getitem(cvalue, "blHF");blHF = TRIM(ADJUSTL(cvalue))
-!        IERR = return_dict%getitem(nitscf, "nitscf")
-!        IERR = return_dict%getitem(nite, "nite")
-!        !
-!        CALL return_dict%destroy
-!        !
-!     ENDIF
-     !
      IF ( ANY(driver(:)==8) ) THEN
-        !wbsepp gamma only qlist = [1]
+        !
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
         ALLOCATE(qlist(1))
         qlist = (/1/)
@@ -817,7 +771,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   ENDIF
   !
   IF ( ANY(driver(:)==6) ) THEN
-     !GAMMA ONLY qlist init for wbse_init
+     !
      IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
      IF(mpime /= root) THEN
@@ -837,7 +791,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(localization,root,world_comm)
      CALL mp_bcast(wfc_from_qbox,root,world_comm)
      CALL mp_bcast(bisection_info,root,world_comm)
-
+     !
      SELECT CASE(TRIM(localization))
      CASE('N','n')
      l_use_localise_repr = .FALSE.
@@ -897,7 +851,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      ! CHECKS
      !
-     !TODO: QUESTION, macropol_dfpt depend on wbse_macropol_calculation?
      SELECT CASE(wbse_macropol_calculation)
      CASE('N','n')
         macropol_dfpt = .FALSE.
@@ -915,8 +868,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CASE DEFAULT
         CALL errore('fetch_input','Err: solver /= BSE or TDDFT',1)
      END SELECT
-
-
+     !
      SELECT CASE(wbse_calculation)
      CASE('D','d')
         l_davidson = .TRUE.
@@ -931,9 +883,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      ELSE
         l_qp_correction = .TRUE.
      ENDIF
-
      !
-     !wlz_calculation = wbse_calculation
+     !
      !
      SELECT CASE(spin_excitation)
      CASE('s', 'S', 'singlet')
@@ -957,7 +908,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         ENDIF
      ENDIF
      !
-     !CALL mp_bcast(wlz_calculation,root,world_comm)
      CALL mp_bcast(l_davidson,root,world_comm)
      CALL mp_bcast(l_lanczos,root,world_comm)
      CALL mp_bcast(l_bse_triplet,root,world_comm)
@@ -967,23 +917,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
   ENDIF
   !
-!  IF ( ANY(driver(:)==8) ) THEN
-!     !
-!     CALL mp_bcast(nrowmax,root,world_comm)
-!     CALL mp_bcast(xml_file,root,world_comm)
-!     CALL mp_bcast(xc,root,world_comm)
-!     CALL mp_bcast(amplitude,root,world_comm)
-!     CALL mp_bcast(alpha_pbe0,root,world_comm)
-!     CALL mp_bcast(wf_dyn,root,world_comm)
-!     CALL mp_bcast(blHF,root,world_comm)
-!     CALL mp_bcast(btHF,root,world_comm)
-!     CALL mp_bcast(nitscf,root,world_comm)
-!     CALL mp_bcast(nite,root,world_comm)
-!     !
-!  ENDIF
-  !
   IF ( ANY(driver(:)==8) ) THEN
-     !GAMMA ONLY qlist init for wbsepp
+     !
      IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
      IF(mpime /= root) THEN
@@ -1010,20 +945,19 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(epsil,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
      !
-     !
-     l_meg        = .FALSE.
+     l_meg = .FALSE.
      l_eig_decomp = .FALSE.
-     l_lz_spec    = .FALSE.
-     l_exc_plot   = .FALSE.
+     l_lz_spec = .FALSE.
+     l_exc_plot = .FALSE.
      l_exc_rho_res_plot = .FALSE.
      !
      SELECT CASE(wbsepp_type)
      CASE( 1 )
          l_eig_decomp = .TRUE.
      CASE( 2 )
-         l_lz_spec  = .TRUE.
+         l_lz_spec = .TRUE.
      CASE( 3 )
-         l_meg      = .TRUE.
+         l_meg = .TRUE.
      CASE( 4 )
          l_exc_plot = .TRUE.
      CASE( 5 )
@@ -1043,7 +977,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(l_exc_rho_res_plot,root,world_comm)
      !
   ENDIF
-
   !
   CALL mp_barrier(world_comm)
   !
@@ -1241,28 +1174,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
          !
     ENDIF
     !
-!    IF ( ANY(driver(:)==8) ) THEN
-!        !
-!        ! REPORT
-!        !
-!        CALL io_push_title('I/O Summary : qbox_control')
-!        !
-!        numsp=23
-!        IF ( nrowmax /=0 ) CALL io_push_value('nrowmax',nrowmax,numsp)
-!        CALL io_push_value('xml_file',xml_file,numsp)
-!        CALL io_push_value('xc',xc,numsp)
-!        IF ( TRIM(xc) == 'PBE0' ) CALL io_push_value('alpha_pbe0',alpha_pbe0,numsp)
-!        CALL io_push_value('wf_dyn',wf_dyn,numsp)
-!        CALL io_push_value('blHF',blHF,numsp)
-!        CALL io_push_value('btHF',btHF,numsp)
-!        CALL io_push_value('amplitude',amplitude,numsp)
-!        CALL io_push_value('nitscf',nitscf,numsp)
-!        CALL io_push_value('nite',nite,numsp)
-!        !
-!        CALL io_push_bar()
-!        !
-!    ENDIF
-    !
     IF ( ANY(driver(:)==8) ) THEN
         !
         ! REPORT
@@ -1331,7 +1242,6 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL json%print( iunit )
      CLOSE( iunit )
      CALL json%destroy()
-     !
      !
   ENDIF
   !

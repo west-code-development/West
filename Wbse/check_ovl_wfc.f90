@@ -44,7 +44,6 @@ MODULE check_ovl_wfc
       WRITE(my_spin,'(i1)') current_spin
       !
       file_bisection =  TRIM(bisection_info)//'.'//TRIM(my_spin)
-      !file_bisection = 'bisection_localization_'//TRIM(my_spin)//'.dat'
       !
       if (ionode) then
          !

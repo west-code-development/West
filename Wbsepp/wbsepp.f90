@@ -44,8 +44,6 @@ PROGRAM wbsepp
   IF (l_eig_decomp) CALL wbsepp_decompose_eig_contributions ( )
   IF (l_exc_plot)   CALL wbsepp_plot_exc ()
   IF (l_exc_rho_res_plot) CALL wbsepp_plot_charged_density_res_exc ()
-  !TODO: several version of wbsepp_meg()
-  !IF (l_meg) CALL wbsepp_meg ()
   IF (l_lz_spec) CALL wbsepp_ads_spectrum ()
   !
   CALL exx_ungo ( )

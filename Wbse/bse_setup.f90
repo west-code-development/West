@@ -34,7 +34,7 @@ SUBROUTINE bse_init()
      !
      ! compute the divergence term in Fock potential, using F-G method
      !
-     CALL pot3D%init('Dense',.FALSE.,'gb')
+     CALL pot3D%init('Rho',.FALSE.,'gb')
      CALL pot3D%print_divergence()
      sigma_x_head = pot3D%div
      !
@@ -210,7 +210,6 @@ SUBROUTINE bse_init()
      !ENDIF
      !
 END SUBROUTINE
-!
 !
 SUBROUTINE wbse_clear()
      !

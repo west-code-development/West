@@ -28,11 +28,11 @@ MODULE scratch_area
   !
   ! DBS
   !
-  REAL(DP),            ALLOCATABLE :: ev(:)
-  REAL(DP),            ALLOCATABLE :: ev_distr(:)
-  COMPLEX(DP),         ALLOCATABLE :: dng(:,:)
-  COMPLEX(DP),         ALLOCATABLE :: dvg(:,:)
-  LOGICAL,             ALLOCATABLE :: conv(:)
+  REAL(DP),    ALLOCATABLE :: ev(:)
+  REAL(DP),    ALLOCATABLE :: ev_distr(:)
+  COMPLEX(DP), ALLOCATABLE :: dng(:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvg(:,:)
+  LOGICAL,     ALLOCATABLE :: conv(:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dng
   ATTRIBUTES(PINNED) :: dvg
@@ -150,7 +150,7 @@ MODULE server_center
   !
   IMPLICIT NONE
   !
-  ! INPUT for server_control
+  ! INPUT FOR server_control
   !
   CHARACTER(LEN=:), ALLOCATABLE :: document
   !
@@ -288,37 +288,18 @@ MODULE wbse_init_center
   !
   ! INPUT FOR wbse_init
   !
-  CHARACTER(LEN=1)   :: wbse_init_calculation
+  CHARACTER(LEN=1) :: wbse_init_calculation
   CHARACTER(LEN=256) :: localization
   CHARACTER(LEN=256) :: chi_kernel
   CHARACTER(LEN=256) :: wfc_from_qbox
-  CHARACTER(LEN=256) :: bisection_info      ! bisection info file name, the extension is spin channel. e.g. bisection_info='info.bis', default file = 'info.bis.1'
-  !CHARACTER(LEN=256) :: qbox_bisec_wfc_filename
-  INTEGER  :: which_spin_channel   ! when nspin>1,which_spin_channel determine the spin channel for func wbse_init_qboxcoupling_single_q
-
-  REAL(DP) :: overlap_thr !overlap threshold for index_matrix calculation from wbse_init_qboxcoupling.f90(ovl_thr)
-  !INTEGER :: n_pdep_eigen
-  LOGICAL  :: l_use_localise_repr = .FALSE.   !flag  depend on localization
-  LOGICAL  :: l_use_bisection_thr = .FALSE.   !flag  depend on localization
+  CHARACTER(LEN=256) :: bisection_info ! bisection info file name, the extension is spin channel. e.g. bisection_info='info.bis', default file = 'info.bis.1'
+  INTEGER :: which_spin_channel ! when nspin>1, which_spin_channel determines the spin channel for func wbse_init_qboxcoupling_single_q
+  REAL(DP) :: overlap_thr ! overlap threshold for index_matrix calculation from wbse_init_qboxcoupling.f90
+  LOGICAL :: l_use_localise_repr = .FALSE.
+  LOGICAL :: l_use_bisection_thr = .FALSE.
+  LOGICAL :: l_xcchi = .FALSE. ! control XC CHI flow in wbse_init_qboxcoupling
   !
-  !LOGICAL  :: use_qbox            = .FALSE.   !control flow in wbse_init
-  !LOGICAL  :: l_test_ovl          = .FALSE.   !control flow in wbse_init
-  !LOGICAL  :: use_wstat_pdep      = .FALSE.   !control flow in wbse_init
-  !
-  LOGICAL :: l_xcchi       = .FALSE.   ! control XC CHI flow in wbse_init_qboxcoupling
-  !
-  ! FOR qbox_control
-  !
-!  INTEGER :: nrowmax
-!  CHARACTER(LEN=256)  :: xml_file             ! xml file from qbox ground state calculation
-!  CHARACTER(LEN=256) ::  xc                   ! xc functional
-!  REAL(DP) ::            alpha_pbe0           ! alpha for PBE0 calculation
-!  REAL(DP) ::            amplitude            ! amplitude for vext
-!  CHARACTER(LEN=256) ::  wf_dyn               ! wavefunction update algorithm
-!  REAL(DP) ::            btHF                 ! bisection threshold for HF exchange computation
-!  CHARACTER(LEN=256) ::  blHF                 ! bisection levels for HF exchange computation
-!  INTEGER :: nitscf
-!  INTEGER :: nite
+  ! Common workspace
   !
   CHARACTER(LEN=512) :: wbse_init_save_dir
   CHARACTER(LEN=512) :: wbse_init_restart_dir
@@ -334,67 +315,52 @@ MODULE wbse_center
   !
   ! INPUT FOR wbse_control
   !
-  CHARACTER(LEN=1)   :: wbse_calculation !  wbse input
-  CHARACTER(LEN=256) :: solver           !  wbse input
-  CHARACTER(LEN=256) :: qp_correction    !  wbse input filename qp_correction
-  REAL(DP) :: scissor_ope          !  wbse input
-
-  INTEGER  :: n_liouville_times          !  wbse input
-  INTEGER  :: n_liouville_eigen          !  wbse input
-  INTEGER  :: n_liouville_maxiter        !  wbse input
-  INTEGER  :: n_liouville_read_from_file !  wbse input
-
-  REAL(DP) :: trev_liouville            !  wbse input
-  REAL(DP) :: trev_liouville_rel        !  wbse input
-
-  CHARACTER(LEN=3) :: ipol_input       !wbse input
-  CHARACTER(LEN=1)   :: wbse_macropol_calculation !  wbse input
-  !
-  LOGICAL  :: l_qp_correction             !depend on qp_correction
-  LOGICAL  :: l_bse_calculation           !depend on solver if BSE True if TDDFT False
-  LOGICAL  :: l_diag_term_only  = .FALSE. !flag nolonger read from wbse.in, always FALSE. affect td_liouville_oper.f90
-  LOGICAL  :: l_preconditioning           !flag read from wbse.in
-  !
-  REAL(DP) :: epsinfty              !  wbse input
-  !REAL(DP) :: eps_macro            !  wbse input
-  !
-  !CHARACTER(LEN=256) :: wbse_diag_method !  wbse input
-  CHARACTER(LEN=256) :: spin_excitation  !  wbse input
+  CHARACTER(LEN=1) :: wbse_calculation
+  CHARACTER(LEN=256) :: solver
+  CHARACTER(LEN=256) :: qp_correction
+  REAL(DP) :: scissor_ope
+  INTEGER :: n_liouville_times
+  INTEGER :: n_liouville_eigen
+  INTEGER :: n_liouville_maxiter
+  INTEGER :: n_liouville_read_from_file
+  REAL(DP) :: trev_liouville
+  REAL(DP) :: trev_liouville_rel
+  CHARACTER(LEN=3) :: ipol_input
+  CHARACTER(LEN=1) :: wbse_macropol_calculation
+  LOGICAL :: l_qp_correction
+  LOGICAL :: l_bse_calculation ! BSE True, TDDFT False
+  LOGICAL :: l_diag_term_only = .FALSE.
+  LOGICAL :: l_preconditioning
+  REAL(DP) :: epsinfty
+  CHARACTER(LEN=256) :: spin_excitation
   !
   ! FOR global variables
   !
-  INTEGER :: nbndval0x                 !wbse  wbse_init
-  LOGICAL :: l_lanczos     = .FALSE.   !wbse flag depend on wbse_calculation
-  LOGICAL :: l_davidson    = .FALSE.   !wbse flag depend on wbse_calculation
-  LOGICAL :: l_bse_triplet = .FALSE.   !wbse flag depend on spin_excitation
-  REAL(DP):: sigma_c_head  = 0.0_DP
-  REAL(DP):: sigma_x_head  = 0.0_DP
-
-  LOGICAL          :: macropol_dfpt  !TODO: QUESTION  depend on wbse_macropol_calculation? macropol_calculation=N macropol_dfpt=False? affect wbse_solve_e_psi.f90
-  !
-  ! FOR INPUT Lanzcos diago
-  !
-  !CHARACTER(LEN=1) :: wlz_calculation  !wbse lanczos calculation (no bcast)
-
-  !INTEGER          :: n_lzstep = 0     !wbse input
-
+  INTEGER :: nbndval0x
+  LOGICAL :: l_lanczos     = .FALSE.
+  LOGICAL :: l_davidson    = .FALSE.
+  LOGICAL :: l_bse_triplet = .FALSE.
+  REAL(DP) :: sigma_c_head = 0._DP
+  REAL(DP) :: sigma_x_head = 0._DP
+  LOGICAL :: macropol_dfpt
   !
   ! FOR global Lanzcos diago vars
   !
-  COMPLEX(DP),ALLOCATABLE :: d0psi(:,:,:,:)
-  REAL(DP),ALLOCATABLE    :: alpha_store(:,:,:)
-  REAL(DP),ALLOCATABLE    :: beta_store(:,:,:)
-  REAL(DP),ALLOCATABLE    :: gamma_store(:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: zeta_store(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: d0psi(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: alpha_store(:,:,:)
+  REAL(DP),    ALLOCATABLE :: beta_store(:,:,:)
+  REAL(DP),    ALLOCATABLE :: gamma_store(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: zeta_store(:,:,:,:)
   !
   ! FOR Davidson method
   !
-  COMPLEX(DP),ALLOCATABLE :: dng_exc(:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: dvg_exc(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dng_exc(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvg_exc(:,:,:,:)
+  !
+  ! Common workspace
   !
   CHARACTER(LEN=512) :: wbse_save_dir
   CHARACTER(LEN=512) :: wbse_restart_dir
-  !
   !
 END MODULE
 !
@@ -407,28 +373,34 @@ MODULE wbsepp_center
   !
   ! INPUT FOR wbsepp_control
   !
-  LOGICAL :: l_meg                 = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
-  LOGICAL :: l_eig_decomp          = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
-  LOGICAL :: l_lz_spec             = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
-  LOGICAL :: l_exc_plot            = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
-  LOGICAL :: l_exc_rho_res_plot    = .FALSE.       ! local flag of wbsepp determained by wbsepp_type
-  !
-  !
+  LOGICAL :: l_meg              = .FALSE.
+  LOGICAL :: l_eig_decomp       = .FALSE.
+  LOGICAL :: l_lz_spec          = .FALSE.
+  LOGICAL :: l_exc_plot         = .FALSE.
+  LOGICAL :: l_exc_rho_res_plot = .FALSE.
   INTEGER :: wbsepp_type
   !
   ! lzc part
   !
-  INTEGER :: itermax, itermax0, ipol, sym_op, units, verbosity
+  INTEGER :: itermax
+  INTEGER :: itermax0
+  INTEGER :: ipol
+  INTEGER :: sym_op
+  INTEGER :: units
+  INTEGER :: verbosity
   INTEGER :: spin_channel
-  !
-  CHARACTER(len=60) :: extrapolation
-  REAL(DP) :: start,end,increment
+  CHARACTER(LEN=60) :: extrapolation
+  REAL(DP) :: start
+  REAL(DP) :: end
+  REAL(DP) :: increment
   REAL(DP) :: epsil
   !
   ! exc plot part
   !
   REAL(DP) :: r0_input(3)
-  INTEGER  :: iexc_plot
+  INTEGER :: iexc_plot
+  !
+  ! Common workspace
   !
   CHARACTER(LEN=512) :: wbsepp_save_dir
   !

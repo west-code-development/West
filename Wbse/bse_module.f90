@@ -16,31 +16,29 @@ MODULE bse_module
   !
   IMPLICIT NONE
   !
-  ! general vars
-  !
-  LOGICAL,     PUBLIC :: bse_calc = .FALSE.
-  LOGICAL,     PUBLIC :: l_wannier_repr   = .FALSE.
-  INTEGER,     PUBLIC :: ngm_g_max
-  REAL(DP),    PUBLIC :: ovl_thr
-  REAL(DP),    PUBLIC, ALLOCATABLE :: et_qp(:,:) !qp correction
-  COMPLEX(DP), PUBLIC, ALLOCATABLE :: evc_ks(:,:,:)
-  COMPLEX(DP), PUBLIC, ALLOCATABLE :: u_matrix(:,:,:)
-  REAL(DP),    PUBLIC, ALLOCATABLE :: ovl_matrix(:,:,:)
+  LOGICAL                  :: bse_calc = .FALSE.
+  LOGICAL                  :: l_wannier_repr   = .FALSE.
+  INTEGER                  :: ngm_g_max
+  REAL(DP)                 :: ovl_thr
+  REAL(DP),    ALLOCATABLE :: et_qp(:,:)
+  COMPLEX(DP), ALLOCATABLE :: evc_ks(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
+  REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
   !
   ! pdep method
   !
-  COMPLEX(DP), PUBLIC, ALLOCATABLE :: kernel_kd1(:,:,:)
-  COMPLEX(DP), PUBLIC, ALLOCATABLE :: kernel_kd2(:,:,:)
-  COMPLEX(DP), PUBLIC, ALLOCATABLE :: fock_term_g(:,:,:)
-  REAL(DP),    PUBLIC, ALLOCATABLE :: ev_loc(:)
-  LOGICAL,     PUBLIC :: epsilon_rpa = .TRUE.
-  LOGICAL,     PUBLIC :: wstat_epsilon_rpa = .TRUE.
-  LOGICAL,     PUBLIC :: wstat_use_ecutrho = .FALSE.
-  INTEGER,     PUBLIC :: wstat_n_pdep_eigen = 10
+  COMPLEX(DP), ALLOCATABLE :: kernel_kd1(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: kernel_kd2(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: fock_term_g(:,:,:)
+  REAL(DP),    ALLOCATABLE :: ev_loc(:)
+  LOGICAL                  :: epsilon_rpa = .TRUE.
+  LOGICAL                  :: wstat_epsilon_rpa = .TRUE.
+  LOGICAL                  :: wstat_use_ecutrho = .FALSE.
+  INTEGER                  :: wstat_n_pdep_eigen = 10
   !
   ! bse parallel
   !
-  INTEGER, ALLOCATABLE    :: size_index_matrix_lz(:)
-  REAL(DP),ALLOCATABLE    :: index_matrix_lz(:,:,:)
+  INTEGER,     ALLOCATABLE :: size_index_matrix_lz(:)
+  REAL(DP),    ALLOCATABLE :: index_matrix_lz(:,:,:)
   !
 END MODULE

@@ -27,29 +27,29 @@ PROGRAM wbse_init
   !
   ! *** START ***
   !
-  CALL check_stop_init ()
+  CALL check_stop_init( )
   !
   ! Initialize MPI, clocks, print initial messages
   !
 #if defined(__MPI)
-  CALL mp_startup ( start_images = .TRUE. )
+  CALL mp_startup( start_images = .TRUE. )
 #endif
   !
-  CALL west_environment_start ( code )
+  CALL west_environment_start( code )
   !
-  CALL wbse_init_readin ( )
+  CALL wbse_init_readin( )
   !
-  CALL wbse_setup ( )
+  CALL wbse_setup( code )
   !
-  CALL init_qbox()
+  CALL init_qbox( )
   !
-  CALL wbse_init_methods()
+  CALL wbse_init_methods( )
   !
-  CALL finalize_qbox()
+  CALL finalize_qbox( )
   !
-  CALL exx_ungo ( )
+  CALL exx_ungo( )
   !
-  CALL wbse_clear ( )
+  CALL wbse_clear( )
   !
   CALL clean_scratchfiles( )
   !
@@ -57,6 +57,6 @@ PROGRAM wbse_init
   !
   CALL west_environment_end( code )
   !
-  CALL mp_global_end()
+  CALL mp_global_end( )
   !
 END PROGRAM

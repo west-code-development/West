@@ -612,4 +612,5 @@ MODULE wbse_init_restart
       CALL mp_barrier(world_comm)
       !
     END SUBROUTINE
+    !
 END MODULE

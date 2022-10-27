@@ -63,7 +63,7 @@ SUBROUTINE read_bse_pots_g2g( rhog, fixed_band_i, fixed_band_j, ispin, single_on
   CALL pdep_read_G_and_distribute(file_base, rhog(:))
   !
 END SUBROUTINE
-
+!
 SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single_only)
   !
   ! ... this routine writes the pot-density in xml format
@@ -73,7 +73,6 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
   USE kinds,          ONLY : DP
   USE control_flags,  ONLY : gamma_only
   USE fft_base,       ONLY : dfftp, dffts
-!  USE xml_io_base,    ONLY : read_rho_xml
   USE pdep_io,        ONLY : pdep_read_G_and_distribute
   USE gvect,          ONLY : ngm, ngmx
   USE fft_at_gamma,   ONLY : single_invfft_gamma
@@ -88,9 +87,6 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
   !
   ! local variables
   !
-  LOGICAL :: bse_kernel_from_cp
-  LOGICAL :: bse_kernel_from_pwscf
-  LOGICAL :: bse_kernel_from_qbox
   INTEGER             :: band_i, band_j
   REAL(DP)            :: rhoaux1(dfftp%nnr)
   REAL(DP)            :: rhoaux2(dfftp%nnr)
@@ -99,35 +95,6 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
   CHARACTER(LEN=6)    :: my_labelj
   CHARACTER(LEN=6)    :: my_spin
   CHARACTER(LEN=256)  :: file_base
-  CHARACTER(LEN=256) ::  which_bse_kernel
-  !
-  which_bse_kernel = 'PWSCF'
-  bse_kernel_from_cp   = .FALSE.
-  bse_kernel_from_pwscf = .FALSE.
-  bse_kernel_from_qbox = .FALSE.
-  !
-  SELECT CASE( TRIM( which_bse_kernel ) )
-  CASE( 'CP' )
-     !
-     bse_kernel_from_cp   = .TRUE.
-     bse_kernel_from_pwscf = .FALSE.
-     bse_kernel_from_qbox = .FALSE.
-     !
-  CASE( 'PWSCF' )
-     !
-     bse_kernel_from_cp   = .FALSE.
-     bse_kernel_from_pwscf = .TRUE.
-     bse_kernel_from_qbox = .FALSE.
-     !
-  CASE( 'QBOX' )
-     !
-     CALL errore (' iobse', 'qbox bse ketnel not supported', 1)
-     !
-  CASE DEFAULT
-     !
-     CALL errore ( 'iobse ', 'a index needs to be supported',1)
-     !
-  END SELECT
   !
   ALLOCATE (aux_g(ngmx), aux_r(dfftp%nnr))
   !
@@ -150,49 +117,31 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
      !
   ENDIF
   !
-  IF (bse_kernel_from_cp) THEN
+  WRITE (my_labeli,'(i6.6)') band_i
+  WRITE (my_labelj,'(i6.6)') band_j
+  WRITE (my_spin,  '(i1)') ispin
+  !
+  aux_g = (0.0_DP, 0.0_DP)
+  !
+  file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+              '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
+  CALL pdep_read_G_and_distribute(file_base, aux_g(:))
+  !
+  ! G -> R
+  !
+  aux_r = (0.0_DP, 0.0_DP)
+  !
+  IF (gamma_only) THEN
      !
-     WRITE (my_labeli,'(i6.6)') band_i
-     WRITE (my_labelj,'(i6.6)') band_j
-     WRITE (my_spin,  '(i1)') ispin
+     CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Rho')
      !
-     file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)//&
-                 '_'//TRIM(my_spin)//'.dat'
+  ELSE
      !
-!     CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
-!                dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux1(:) )
+     CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Rho') ! no igk
      !
   ENDIF
   !
-  IF (bse_kernel_from_pwscf) THEN
-     !
-     WRITE (my_labeli,'(i6.6)') band_i
-     WRITE (my_labelj,'(i6.6)') band_j
-     WRITE (my_spin,  '(i1)') ispin
-     !
-     aux_g = (0.0_DP, 0.0_DP)
-     !
-     file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-                 '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
-     CALL pdep_read_G_and_distribute(file_base, aux_g(:))
-     !
-     ! G -> R
-     !
-     aux_r = (0.0_DP, 0.0_DP)
-     !
-     IF (gamma_only) THEN
-        !
-        CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Dense')
-        !
-     ELSE
-        !
-        CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Dense') ! no igk
-        !
-     ENDIF
-     !
-     rhoaux1(:) = REAL(aux_r(:),KIND=DP)
-     !
-  ENDIF
+  rhoaux1(:) = REAL(aux_r(:),KIND=DP)
   !
   IF (.NOT. single_only) THEN
      !
@@ -212,49 +161,31 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
         !
      ENDIF
      !
-     IF (bse_kernel_from_cp) THEN
+     WRITE (my_labeli,'(i6.6)') band_i
+     WRITE (my_labelj,'(i6.6)') band_j
+     WRITE (my_spin,  '(i1)') ispin
+     !
+     aux_g = (0.0_DP, 0.0_DP)
+     !
+     file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
+                '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
+     CALL pdep_read_G_and_distribute(file_base,aux_g(:))
+     !
+     ! G -> R
+     !
+     aux_r = (0.0_DP, 0.0_DP)
+     !
+     IF (gamma_only) THEN
         !
-        WRITE (my_labeli,'(i6.6)')  band_i
-        WRITE (my_labelj,'(i6.6)')  band_j
-        WRITE (my_spin,  '(i1)') ispin
+        CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Rho')
         !
-        file_base = TRIM(wbse_init_save_dir)//'/CP'//TRIM(my_labeli)//'_'//TRIM(my_labelj)&
-                    //'_'//TRIM(my_spin)//'.dat'
+     ELSE
         !
-!        CALL read_rho_xml ( file_base, dfftp%nr1, dfftp%nr2, dfftp%nr3, &
-!                dfftp%nr1x, dfftp%nr2x, dfftp%ipp, dfftp%npp, rhoaux2(:) )
+        CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Rho') ! no igk
         !
      ENDIF
      !
-     IF (bse_kernel_from_pwscf) THEN
-        !
-        WRITE (my_labeli,'(i6.6)') band_i
-        WRITE (my_labelj,'(i6.6)') band_j
-        WRITE (my_spin,  '(i1)') ispin
-        !
-        aux_g = (0.0_DP, 0.0_DP)
-        !
-        file_base = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
-                   '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
-        CALL pdep_read_G_and_distribute(file_base,aux_g(:))
-        !
-        ! G -> R
-        !
-        aux_r = (0.0_DP, 0.0_DP)
-        !
-        IF (gamma_only) THEN
-           !
-           CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Dense')
-           !
-        ELSE
-           !
-           CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Dense') ! no igk
-           !
-        ENDIF
-        !
-        rhoaux2(:) = REAL(aux_r(:),KIND=DP)
-        !
-     ENDIF
+     rhoaux2(:) = REAL(aux_r(:),KIND=DP)
      !
   ENDIF
   !
@@ -268,9 +199,7 @@ SUBROUTINE read_bse_pots_g2r( rho_all, fixed_band_i, fixed_band_j, ispin, single
   !
 END SUBROUTINE
 !
-!
 SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
-  !
   !
   ! ...   This subroutine writes orbs to unit emptyunitc0
   !
@@ -354,8 +283,6 @@ SUBROUTINE read_umatrix_and_ovl_matrix(num_wan)
   ENDDO
   !
 END SUBROUTINE
-!
-!
 !
 SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   !
@@ -462,7 +389,6 @@ SUBROUTINE write_matrix (num_wan,ispin,u_matrix,ovl_matrix)
   IF ( ionode ) CLOSE ( emptyunit )
   !
 END SUBROUTINE
-!
 !
 SUBROUTINE write_umatrix_and_omatrix (oumat_dim,ispin,umatrix,omatrix)
   !

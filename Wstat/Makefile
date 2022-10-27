@@ -40,6 +40,7 @@ WESTLIBS = \
 ../FFT_kernel/lib_fft_kernel.a \
 ../Tools/libtools.a \
 ../Modules/libmodules.a \
+../Libraries/iotk/libiotk.a \
 ../Libraries/Forpy/libforpy.a \
 ../Libraries/Json/libjson.a \
 ../Libraries/Base64/libbase64.a

@@ -39,13 +39,11 @@ SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
      !
   ELSE
      !
-     STOP
+     CALL errore('wbse_bse_kernel','Only Gamma is supported',1)
      !
   ENDIF
   !
 END SUBROUTINE
-!
-!
 !
 SUBROUTINE bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, lz_method)
   !

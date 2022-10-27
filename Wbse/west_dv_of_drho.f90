@@ -145,7 +145,7 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
      !
   ENDIF
   !
-  CALL fwfft ('Dense', dvscf(:,1), dfftp)
+  CALL fwfft ('Rho', dvscf(:,1), dfftp)
   !
   ALLOCATE (dvhart(dfftp%nnr, nspin))
   !
@@ -193,7 +193,7 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   !
   DO is = 1, nspin
      !
-     CALL invfft ('Dense', dvhart (:,is), dfftp)
+     CALL invfft ('Rho', dvhart (:,is), dfftp)
      !
   ENDDO
   !

@@ -15,20 +15,13 @@ SUBROUTINE wbse_lanczos_diago ()
   USE wvfct,                ONLY : npwx
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : nks,isk,current_spin
-  USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ, &
-                                   wbse_calculation, &
-                                   d0psi,ipol_input,n_lanczos,&
-                                   alpha_store,beta_store,&
-                                   gamma_store,zeta_store, nbndval0x
-  USE lanczos_db,           ONLY : lanczos_d0psi_read,&
-                                   lanczos_d0psi_write,&
-                                   lanczos_evcs_write,&
-                                   lanczos_evcs_read
-  USE lanczos_restart,      ONLY : lanczos_restart_write,&
-                                   lanczos_restart_read, &
-                                   lanczos_postpro_write
+  USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ,wbse_calculation,&
+                                 & d0psi,ipol_input,n_lanczos,alpha_store,beta_store,gamma_store,&
+                                 & zeta_store, nbndval0x
+  USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
+                                 & lanczos_evcs_read
+  USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
   USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
-
   USE io_files,             ONLY : tmp_dir
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier
@@ -41,22 +34,21 @@ SUBROUTINE wbse_lanczos_diago ()
   !
   ! Local variables
   !
-  LOGICAL     :: l_from_scratch
-  INTEGER     :: ip,iip,pol_index,nipol_input
-  INTEGER     :: iteration, lz_iteration
-  INTEGER     :: iks,is, nbndval
-  INTEGER     :: lriter_restart, pliter_restart
-  INTEGER     :: pliter_stop, lriter_stop
-  INTEGER     :: size_index_matrix
-  INTEGER, PARAMETER   :: n_ipol = 3
+  LOGICAL :: l_from_scratch
+  INTEGER :: ip,iip,pol_index,nipol_input
+  INTEGER :: iteration, lz_iteration
+  INTEGER :: iks,is, nbndval
+  INTEGER :: lriter_restart, pliter_restart
+  INTEGER :: pliter_stop, lriter_stop
+  INTEGER :: size_index_matrix
+  INTEGER, PARAMETER :: n_ipol = 3
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
-  REAL(DP)    :: alpha(nspin),beta(nspin),gamma(nspin)
+  REAL(DP) :: alpha(nspin),beta(nspin),gamma(nspin)
   COMPLEX(DP) :: zeta(nspin), wbse_dot_out(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: evc1_old(:,:,:), evc1_new(:,:,:)
-  !
-  CHARACTER(LEN=256)       :: tmp_lz
+  CHARACTER(LEN=256) :: tmp_lz
   !
   tmp_lz = TRIM( tmp_dir ) // TRIM( west_prefix ) // '.tmp_lz'
   !
@@ -384,7 +376,6 @@ SUBROUTINE wbse_lanczos_diago ()
   DEALLOCATE(gamma_store,zeta_store)
   !
 END SUBROUTINE
-!
 !
 SUBROUTINE my_copy_lz(tmp_lz)
   !

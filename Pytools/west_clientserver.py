@@ -185,7 +185,7 @@ def sleep_and_wait(*args, **kwargs):
 def test() :
     with open("I.1.lock","w") as f :
        f.write("I.1_P.1.xml")
-    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2,document='{"response": {"approximation" : "IPA", "amplitude": 0}, "script" : ["set xc PBE"]}',consider_only='["response"]')
+    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2,document='{"response": {"amplitude": 0, "nitscf": 20, "nite": 0}}',consider_only='["response"]')
 
 if __name__ == "__main__":
     # execute only if run as a script

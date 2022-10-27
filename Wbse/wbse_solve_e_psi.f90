@@ -268,7 +268,7 @@ SUBROUTINE compute_d0psi_rs( )
   DEALLOCATE(r)
   !
 END SUBROUTINE
-
+!
 SUBROUTINE shift_d0psi( r, n_ipol )
   !
   ! Shift a position operator r to the center of the molecule
@@ -350,8 +350,6 @@ SUBROUTINE shift_d0psi( r, n_ipol )
   ENDDO
   !
 END SUBROUTINE
-!
-!
 !
 SUBROUTINE compute_d0psi_dfpt( )
   !

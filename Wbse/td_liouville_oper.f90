@@ -22,7 +22,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,&
-                                   double_fwfft_gamma,double_invfft_gamma
+                                 & double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE bse_module,           ONLY : bse_calc,et_qp
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,l_diag_term_only,scissor_ope,nbndval0x,&

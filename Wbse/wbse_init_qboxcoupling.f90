@@ -16,7 +16,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   USE constants,            ONLY : e2,fpi
   USE cell_base,            ONLY : omega
   USE io_push,              ONLY : io_push_title
-  !sqvc not in westcom pot3D%sqvc  TODO: pot3d init
   USE types_coulomb,        ONLY : pot3D
   USE westcom,              ONLY : wbse_init_save_dir,chi_kernel,l_xcchi
   USE gvect,                ONLY : ngm,ngmx
@@ -42,38 +41,37 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   !
   IMPLICIT NONE
   !
-  INTEGER,     INTENT(IN) :: iks,ikq,current_spin,nbndval
-  REAL(DP),    INTENT(IN) :: xq(3)
-  LOGICAL,     INTENT(IN) :: l_restart_calc
+  INTEGER, INTENT(IN) :: iks,ikq,current_spin,nbndval
+  REAL(DP), INTENT(IN) :: xq(3)
+  LOGICAL, INTENT(IN) :: l_restart_calc
   !
   INTEGER :: ibnd, jbnd, tmp_size
   INTEGER :: il1, ig1, ir, do_index
   REAL(DP):: ovl_value
-  REAL(DP),    ALLOCATABLE  :: rho_aux(:)
-  REAL(DP),    ALLOCATABLE  :: ovl_matrix(:,:)
-  REAL(DP),    ALLOCATABLE  :: restart_matrix(:)
-  REAL(DP),    ALLOCATABLE  :: index_matrix(:,:)
-  COMPLEX(DP), ALLOCATABLE  :: evc_loc(:,:)
-  COMPLEX(DP), ALLOCATABLE  :: dvg(:), psic_aux(:)
+  REAL(DP), ALLOCATABLE :: rho_aux(:)
+  REAL(DP), ALLOCATABLE :: ovl_matrix(:,:)
+  REAL(DP), ALLOCATABLE :: restart_matrix(:)
+  REAL(DP), ALLOCATABLE :: index_matrix(:,:)
+  COMPLEX(DP), ALLOCATABLE :: evc_loc(:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvg(:), psic_aux(:)
   !
   INTEGER :: iu, ig, stat
-  CHARACTER(LEN=:),ALLOCATABLE :: lockfile
-  REAL(DP),   ALLOCATABLE :: aux_rr(:)
-  COMPLEX(DP),ALLOCATABLE :: aux_r(:),aux1_r(:,:),aux1_g(:)
-  REAL(DP), ALLOCATABLE           ::  frspin(:,:)
+  CHARACTER(LEN=:), ALLOCATABLE :: lockfile
+  CHARACTER(LEN=:), ALLOCATABLE :: filename
+  REAL(DP), ALLOCATABLE :: aux_rr(:)
+  COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux1_r(:,:),aux1_g(:)
+  REAL(DP), ALLOCATABLE :: frspin(:,:)
   !
+  CHARACTER(LEN=1) :: my_spin
+  CHARACTER(LEN=6) :: my_labeliq, my_labelik
+  CHARACTER(LEN=6) :: my_label1, my_label2
+  CHARACTER(LEN=256) :: kernel, driver
   !
-  CHARACTER(LEN=1)          :: my_spin
-  CHARACTER(LEN=6)          :: my_labeliq, my_labelik
-  CHARACTER(LEN=6)          :: my_label1, my_label2
-  CHARACTER(LEN=256)        :: kernel, driver
-  CHARACTER(LEN=256)        :: filename
+  REAL(DP), EXTERNAL :: get_clock
+  CHARACTER(20),EXTERNAL :: human_readable_time
   !
-  REAL(DP), EXTERNAL        :: get_clock
-  CHARACTER(20),EXTERNAL    :: human_readable_time
-  !
-  LOGICAL                   :: calc_is_done
-  REAL(KIND=DP), EXTERNAL   :: DDOT
+  LOGICAL :: calc_is_done
+  REAL(DP), EXTERNAL :: DDOT
   !
   CALL wbse_init_memory_report()
   !
@@ -145,7 +143,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
               !
               IF (gamma_only) THEN
                  !
-                 IF (jbnd >= ibnd)  THEN
+                 IF (jbnd >= ibnd) THEN
                     !
                     do_index = do_index + 1
                     !
@@ -189,7 +187,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   IF (l_restart_calc) THEN
       !
       filename = TRIM( wbse_init_save_dir )//"/restart_matrix_iq"//TRIM(ADJUSTL(my_labeliq))//"_ik"//&
-                  TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
+                 TRIM(ADJUSTL(my_labelik))//"_spin"//TRIM(ADJUSTL(my_spin))//".dat"
       CALL wbse_stat_restart_read (filename,do_index,restart_matrix,calc_is_done)
       !
   ENDIF
@@ -270,11 +268,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      IF (gamma_only) THEN
      !
-        CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
+        CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
      !
      ELSE
      !
-        CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
+        CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
      !
      ENDIF
      !
@@ -293,11 +291,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      IF (gamma_only) THEN
      !
-        CALL single_invfft_gamma(dffts,ngm,ngmx,aux1_g,aux_r,'Dense')
+        CALL single_invfft_gamma(dffts,ngm,ngmx,aux1_g,aux_r,'Rho')
      !
      ELSE
      !
-        CALL single_invfft_k(dffts,ngm,ngmx,aux1_g,aux_r,'Dense')
+        CALL single_invfft_k(dffts,ngm,ngmx,aux1_g,aux_r,'Rho')
      !
      ENDIF
      !
@@ -314,7 +312,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      aux_rr(:) = REAL(aux_r(:),KIND=DP)/SQRT(omega) ! scale down pert.
      !
-     aux_rr = 0.5_DP * aux_rr  ! change from rydberg to hartree
+     aux_rr = 0.5_DP * aux_rr ! change from rydberg to hartree
      !
      ! Write aux_rr --> filename.xml
      !
@@ -336,7 +334,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
           CLOSE(iu)
           !
           ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
-          CALL sleep_and_wait_for_lock_to_be_removed(lockfile, "["  // '"'//"response"//'"' //"]")
+          CALL sleep_and_wait_for_lock_to_be_removed(lockfile, '["response"]')
           !
      ENDIF
      !
@@ -393,11 +391,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      !
      IF (gamma_only) THEN
      !
-         CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
+         CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
      !
      ELSE
      !
-         CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Dense')
+         CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
      !
      ENDIF
      !
@@ -412,14 +410,14 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
      WRITE(my_spin,'(i1)') current_spin
      !
      filename = TRIM( wbse_init_save_dir )//"/E"//TRIM(ADJUSTL(my_label1))//"_"//&
-             TRIM(ADJUSTL(my_label2))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
+                TRIM(ADJUSTL(my_label2))//"_"//TRIM(ADJUSTL(my_spin))//".dat"
      CALL pdep_merge_and_write_G(filename,dvg(:))
      !
      DEALLOCATE(rho_aux, dvg)
      DEALLOCATE (aux1_g)
      DEALLOCATE (aux_r, aux1_r, aux_rr)
      !
-     restart_matrix(ig1)  = 1.0
+     restart_matrix(ig1) = 1.0
      !
 1111 CONTINUE
      !
@@ -468,7 +466,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
 2222 CONTINUE
   !
   DEALLOCATE (index_matrix)
-  IF (ALLOCATED(restart_matrix))   DEALLOCATE (restart_matrix)
+  IF (ALLOCATED(restart_matrix)) DEALLOCATE (restart_matrix)
   DEALLOCATE (ovl_matrix)
   !
   IF (ALLOCATED(psic))    DEALLOCATE(psic)

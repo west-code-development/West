@@ -28,7 +28,7 @@ SUBROUTINE wbsepp_setup
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Dense',.FALSE.,'gb')
+  CALL pot3D%init('Rho',.FALSE.,'gb')
   !
   CALL set_nbndocc()
   !

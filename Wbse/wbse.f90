@@ -19,7 +19,6 @@ PROGRAM wbse
   USE check_stop,           ONLY : check_stop_init
   USE mp_global,            ONLY : mp_startup,mp_global_end
   USE west_environment,     ONLY : west_environment_start,west_environment_end
-  USE mp,                   ONLY : mp_sum,mp_barrier
   USE westcom,              ONLY : l_davidson,l_lanczos
   !
   IMPLICIT NONE
@@ -28,29 +27,29 @@ PROGRAM wbse
   !
   ! *** START ***
   !
-  CALL check_stop_init ()
+  CALL check_stop_init( )
   !
   ! Initialize MPI, clocks, print initial messages
   !
 #if defined(__MPI)
-  CALL mp_startup ( start_images = .TRUE. )
+  CALL mp_startup( start_images = .TRUE. )
 #endif
   !
-  CALL west_environment_start ( code )
+  CALL west_environment_start( code )
   !
-  CALL wbse_readin ( )
+  CALL wbse_readin( )
   !
-  CALL wbse_setup ( code )
+  CALL wbse_setup( code )
   !
   IF (l_davidson) THEN
-     CALL wbse_davidson_diago ( )
+     CALL wbse_davidson_diago( )
   ENDIF
   !
   IF (l_lanczos) THEN
-     CALL wbse_lanczos_diago ( )
+     CALL wbse_lanczos_diago( )
   ENDIF
   !
-  CALL exx_ungo ( )
+  CALL exx_ungo( )
   !
   CALL clean_scratchfiles( )
   !
@@ -58,6 +57,6 @@ PROGRAM wbse
   !
   CALL west_environment_end( code )
   !
-  CALL mp_global_end()
+  CALL mp_global_end( )
   !
 END PROGRAM

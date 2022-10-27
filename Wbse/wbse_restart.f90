@@ -432,8 +432,6 @@ MODULE wbse_restart
       !
     END SUBROUTINE
     !
-    !
-    !
     !------------------------------------------------------------------------
     SUBROUTINE wbse_restart_clear( )
       !------------------------------------------------------------------------
@@ -600,7 +598,6 @@ MODULE wbse_restart
       !
     END SUBROUTINE
     !
-    !
     !------------------------------------------------------------------------
     SUBROUTINE read_restart1_( dirname, dav_iter, notcnv, nbase )
       !------------------------------------------------------------------------
@@ -651,7 +648,6 @@ MODULE wbse_restart
       !
     END SUBROUTINE
     !
-    !
     !------------------------------------------------------------------------
     SUBROUTINE read_restart2_( dirname, ew )
       !------------------------------------------------------------------------
@@ -697,7 +693,6 @@ MODULE wbse_restart
       CALL mp_bcast( ew, root, world_comm )
       !
     END SUBROUTINE
-    !
     !
     !------------------------------------------------------------------------
     SUBROUTINE read_restart3d_( dirname, hr_distr, vr_distr )
@@ -796,7 +791,6 @@ MODULE wbse_restart
       !
     END SUBROUTINE
     !
-    !
     !------------------------------------------------------------------------
     SUBROUTINE read_restart3z_( dirname, hr_distr, vr_distr )
       !------------------------------------------------------------------------
@@ -891,7 +885,6 @@ MODULE wbse_restart
       CALL mp_bcast( vr_distr, 0, intra_image_comm )
       !
     END SUBROUTINE
-    !
     !
     !------------------------------------------------------------------------
     SUBROUTINE read_restart4_( dirname, nbase )

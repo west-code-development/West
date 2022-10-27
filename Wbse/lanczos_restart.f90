@@ -148,8 +148,6 @@ MODULE lanczos_restart
       !
     END SUBROUTINE
     !
-    !
-    !
     SUBROUTINE lanczos_restart_read (nipol_input, pliter_stop, lriter_stop)
       !
       USE mp_global,           ONLY : world_comm

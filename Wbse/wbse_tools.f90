@@ -165,8 +165,6 @@ MODULE wbse_tools
       !
     END SUBROUTINE
     !
-    !
-    !
     !------------------------------------------------------------------------
     SUBROUTINE build_hr_complex( ag, bg, l2_s, l2_e, c_distr, g_s, g_e )
       !------------------------------------------------------------------------
@@ -251,8 +249,6 @@ MODULE wbse_tools
       CALL stop_clock( "build_hr" )
       !
     END SUBROUTINE
-    !
-    !
     !
     !------------------------------------------------------------------------
     SUBROUTINE update_with_vr_distr_real( ag, bg, nselect, n, lda, vr_distr, ew )
@@ -796,8 +792,6 @@ MODULE wbse_tools
       !
     END SUBROUTINE
     !
-    !
-    !
     !------------------------------------------------------------------------
     SUBROUTINE refresh_with_vr_distr_complex( ag, nselect, n, lda, vr_distr )
       !------------------------------------------------------------------------
@@ -1102,4 +1096,5 @@ MODULE wbse_tools
       CALL stop_clock( "precd_ag" )
       !
     END SUBROUTINE
+    !
 END MODULE

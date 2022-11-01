@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -62,6 +62,7 @@ SUBROUTINE wbse_setup(code)
   IF (bse_calc) THEN
      CALL bse_init()
   ENDIF
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------

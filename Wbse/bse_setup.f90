@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -14,14 +14,11 @@ SUBROUTINE bse_init()
      !
      USE kinds,              ONLY : DP
      USE io_global,          ONLY : stdout
-     USE bse_module,         ONLY : u_matrix,ovl_matrix,l_wannier_repr,ngm_g_max,ovl_thr,&
-                                    size_index_matrix_lz,index_matrix_lz
+     USE bse_module,         ONLY : u_matrix,ovl_matrix,l_wannier_repr,ovl_thr,&
+                                  & size_index_matrix_lz,index_matrix_lz
      USE pwcom,              ONLY : isk,nks
      USE westcom,            ONLY : nbnd_occ,nbndval0x,sigma_c_head,sigma_x_head,epsinfty
      USE lsda_mod,           ONLY : nspin
-     USE mp,                 ONLY : mp_max
-     USE gvect,              ONLY : ngm,ig_l2g
-     USE mp_global,          ONLY : intra_bgrp_comm
      USE constants,          ONLY : e2,pi
      USE cell_base,          ONLY : omega
      USE types_coulomb,      ONLY : pot3D
@@ -45,11 +42,6 @@ SUBROUTINE bse_init()
                     ((6.0_DP*pi*pi/omega)**(1.0_DP/3.0_DP))
      !
      WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:", f9.5)') sigma_c_head
-     !
-     ! set max ngm_g for reading pot file
-     !
-     ngm_g_max = MAXVAL(ig_l2g(1:ngm))
-     CALL mp_max(ngm_g_max,intra_bgrp_comm)
      !
      ! allocate and read unitary matrix and overlap matrix, if any
      !

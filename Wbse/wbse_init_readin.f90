@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbse_readin()
+SUBROUTINE wbse_init_readin()
   !-----------------------------------------------------------------------
   !
   USE gvecs,            ONLY : doublegrid
@@ -24,9 +24,9 @@ SUBROUTINE wbse_readin()
   !
   LOGICAL :: needwf
   !
-  CALL start_clock('wbse_readin')
+  CALL start_clock('wbse_init_readin')
   !
-  CALL fetch_input_yml(3,(/1,6,7/),.TRUE.,.FALSE.)
+  CALL fetch_input_yml(3,(/1,5,6/),.TRUE.,.FALSE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed
@@ -40,6 +40,6 @@ SUBROUTINE wbse_readin()
   IF (okvan) CALL errore('wbse_readin','ultrasoft pseudopotential not implemented',1)
   IF (doublegrid) CALL errore('wbse_readin', 'double grid not implemented',1)
   !
-  CALL stop_clock('wbse_readin')
+  CALL stop_clock('wbse_init_readin')
   !
 END SUBROUTINE

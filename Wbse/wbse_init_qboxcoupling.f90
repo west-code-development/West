@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -13,7 +13,6 @@
 SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_restart_calc)
   !
   USE kinds,                ONLY : DP
-  USE constants,            ONLY : e2,fpi
   USE cell_base,            ONLY : omega
   USE io_push,              ONLY : io_push_title
   USE types_coulomb,        ONLY : pot3D
@@ -32,8 +31,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   USE function3d,           ONLY : write_function3d,read_function3d
   USE mp,                   ONLY : mp_barrier,mp_sum
   USE lsda_mod,             ONLY : nspin
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
-                                 & double_invfft_gamma
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE mp_global,            ONLY : inter_image_comm,intra_image_comm,my_image_id,me_bgrp
   USE conversions,          ONLY : itoa
@@ -68,7 +66,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q (iks,ikq,xq,current_spin,nbndval,l_re
   CHARACTER(LEN=256) :: kernel, driver
   !
   REAL(DP), EXTERNAL :: get_clock
-  CHARACTER(20),EXTERNAL :: human_readable_time
+  CHARACTER(20), EXTERNAL :: human_readable_time
   !
   LOGICAL :: calc_is_done
   REAL(DP), EXTERNAL :: DDOT

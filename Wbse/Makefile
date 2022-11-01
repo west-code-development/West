@@ -36,8 +36,9 @@ wbse_davidson_diago.o \
 wbse_davidson_diago_square.o\
 wbse_dot.o \
 wbse_init.o \
-wbse_init_pdep.o \
+wbse_init_methods.o \
 wbse_init_qboxcoupling.o \
+wbse_init_readin.o \
 wbse_init_restart.o \
 wbse_lanczos_diago.o \
 wbse_memory_report.o \

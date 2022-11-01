@@ -81,9 +81,9 @@ SUBROUTINE wstat_memory_report()
   IF( mpime == root ) CALL json%add( 'memory.vr_distr', mem_partial )
   mem_tot = mem_tot + mem_partial
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  WRITE(stdout,'(5x,"[MEM] TOT                     ",f10.2," Mb", 5x)') mem_tot
+  WRITE(stdout,'(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  WRITE(stdout,'(5x,"[MEM] ")')
+  WRITE(stdout,'(5x,"[MEM]")')
   !
   mem_tot = 0.0_DP
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')

@@ -14,6 +14,7 @@
 SUBROUTINE wbse_setup(code)
   !-----------------------------------------------------------------------
   !
+  USE io_global,        ONLY : stdout
   USE bse_module,       ONLY : bse_calc
   USE westcom,          ONLY : alphapv_dfpt,n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,&
                              & wbse_init_save_dir,wbse_save_dir,nbndval0x,l_qp_correction,nbnd_occ

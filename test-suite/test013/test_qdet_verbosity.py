@@ -37,8 +37,8 @@ def test_indexmap():
     Test length and content of indexmap
     """
 
-    ref_map = read_indexmap_from_json('./test012/ref/wfreq.json')
-    test_map = read_indexmap_from_json('./test012/test.wfreq.save/wfreq.json')
+    ref_map = read_indexmap_from_json('./test013/ref/wfreq.json')
+    test_map = read_indexmap_from_json('./test013/test.wfreq.save/wfreq.json')
 
     np.testing.assert_array_equal(ref_map, test_map)
 
@@ -52,8 +52,8 @@ def test_eri():
 
     for keyword in ['eri_w', 'eri_w_full', 'eri_vc']:
 
-      ref_eri = read_eri_from_json(keyword, './test012/ref/wfreq.json')
-      test_eri = read_eri_from_json(keyword, './test012/test.wfreq.save/wfreq.json')
+      ref_eri = read_eri_from_json(keyword, './test013/ref/wfreq.json')
+      test_eri = read_eri_from_json(keyword, './test013/test.wfreq.save/wfreq.json')
 
       np.testing.assert_almost_equal(ref_eri, test_eri,
               decimal=np.log10(float(parameters['tolerance']['pdep_eigenvalue'])))

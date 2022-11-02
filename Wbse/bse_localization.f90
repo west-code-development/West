@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !----------------------------------------------------------------------------
-SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_restart)
+SUBROUTINE bse_do_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart)
   !----------------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -34,88 +34,86 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
   !
   IMPLICIT NONE
   !
-  INTEGER,     INTENT(IN)     :: current_spin, nbndval
-  REAL(DP),    INTENT(INOUT)  :: ovl_matrix(nbndval, nbndval)
-  COMPLEX(DP), INTENT(INOUT)  :: evc_loc(npwx, nbndval)
-  LOGICAL,     INTENT(IN)     :: l_restart
+  INTEGER, INTENT(IN) :: current_spin, nbndval
+  REAL(DP),INTENT(INOUT) :: ovl_matrix(nbndval,nbndval)
+  COMPLEX(DP), INTENT(INOUT) :: evc_loc(npwx,nbndval)
+  LOGICAL, INTENT(IN) :: l_restart
   !
   INTEGER :: ibnd, jbnd
   INTEGER :: il1, bisec_i, bisec_j
   INTEGER, ALLOCATABLE :: bisec_loc(:)
   REAL(DP):: ovl_value
-  COMPLEX(DP), ALLOCATABLE  :: psic1(:)
-  COMPLEX(DP), ALLOCATABLE  :: u_matrix(:,:)
-  CHARACTER(LEN=256)        :: fname
-  CHARACTER(LEN=1)          :: my_spin
+  COMPLEX(DP), ALLOCATABLE :: psic1(:)
+  COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:)
+  CHARACTER(LEN=256) :: fname
+  CHARACTER(LEN=1) :: my_spin
   LOGICAL :: l_load_west_loc_wfc
   LOGICAL :: l_load_qbox_loc_wfc
-  REAL(KIND=DP), EXTERNAL   :: DDOT
+  REAL(KIND=DP), EXTERNAL :: DDOT
   !
-  CALL start_clock( 'bse_do_localization' )
+  CALL start_clock('bse_do_localization')
   !
-  IF (.NOT.gamma_only) ALLOCATE(psic1(dffts%nnr))
+  IF(.NOT. gamma_only) ALLOCATE(psic1(dffts%nnr))
   !
   l_load_west_loc_wfc = .FALSE.
   l_load_qbox_loc_wfc = .TRUE.
   !
-  IF (.NOT.l_restart) THEN
+  IF(.NOT. l_restart) THEN
      !
-     ALLOCATE (u_matrix(nbndval,nbndval))
+     ALLOCATE(u_matrix(nbndval,nbndval))
      !
      ! Use wannier as representation
      !
-     IF (l_load_qbox_loc_wfc) CALL load_qbox_wfc(evc_loc, wfc_from_qbox, current_spin, nbndval)
-     IF (l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs(nbndval, npwx, evc_loc, wfc_from_qbox)
+     IF(l_load_qbox_loc_wfc) CALL load_qbox_wfc(evc_loc, wfc_from_qbox, current_spin, nbndval)
+     IF(l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs(nbndval, npwx, evc_loc, wfc_from_qbox)
      !
      WRITE(my_spin,'(i1)') current_spin
-     fname = "./localized_wfc_tmp_"//TRIM( my_spin )//'.dat'
-     CALL plep_merge_and_write_G(fname,evc_loc(:,:),nbndval)
+     fname = './localized_wfc_tmp_'//TRIM( my_spin )//'.dat'
+     CALL plep_merge_and_write_G(fname,evc_loc,nbndval)
      !
      ! Compute unitary rotation matrix
      !
-     u_matrix(:,:) = (0.0_DP, 0.0_DP)
+     u_matrix(:,:) = (0._DP,0._DP)
      !
      DO ibnd = 1, nbndval
         DO jbnd = 1, nbndval
-           IF (gamma_only) THEN
-              u_matrix(ibnd, jbnd) = 2.0_DP*DDOT(2*npwx,evc(:,ibnd),1,evc_loc(:,jbnd),1)
+           IF(gamma_only) THEN
+              u_matrix(ibnd,jbnd) = 2.0_DP*DDOT(2*npwx,evc(:,ibnd),1,evc_loc(:,jbnd),1)
               !
-              IF (gstart==2) THEN
-                 u_matrix(ibnd, jbnd) = u_matrix(ibnd, jbnd) &
-                 & - CMPLX(REAL(evc(1,ibnd),KIND=DP)*REAL(evc_loc(1,jbnd),KIND=DP), KIND=DP)
+              IF(gstart == 2) THEN
+                 u_matrix(ibnd,jbnd) = u_matrix(ibnd,jbnd) &
+                 & - CMPLX(REAL(evc(1,ibnd),KIND=DP)*REAL(evc_loc(1,jbnd),KIND=DP),KIND=DP)
               ENDIF
            ELSE
-              u_matrix(ibnd, jbnd) = DDOT(2*npwx,evc(:,ibnd),1,evc_loc(:,jbnd),1)
+              u_matrix(ibnd,jbnd) = DDOT(2*npwx,evc(:,ibnd),1,evc_loc(:,jbnd),1)
            ENDIF
         ENDDO
      ENDDO
      !
-     CALL mp_sum(u_matrix(:,:),intra_bgrp_comm)
+     CALL mp_sum(u_matrix,intra_bgrp_comm)
      !
      ! Compute overlap matrix
      !
-     ovl_matrix(:,:) = 0.0_DP
+     ovl_matrix(:,:) = 0._DP
      !
-     IF (l_use_bisection_thr) THEN
+     IF(l_use_bisection_thr) THEN
         !
-        ALLOCATE (bisec_loc(nbndval))
+        ALLOCATE(bisec_loc(nbndval))
         !
         ! read bisection localization from file
         !
-        CALL read_bisection_loc (current_spin, nbndval, bisec_loc)
+        CALL read_bisection_loc(current_spin, nbndval, bisec_loc)
         !
         ! compute orbital overlap matrix, using besection indication
         !
         DO ibnd = 1, nbndval
            DO jbnd = 1, nbndval
-              !
               bisec_i = bisec_loc(ibnd)
               bisec_j = bisec_loc(jbnd)
               !
-              CALL check_ovl_bisection (bisec_i, bisec_j, ovl_value)
+              CALL check_ovl_bisection(bisec_i, bisec_j, ovl_value)
               !
               ovl_matrix(ibnd,jbnd) = ovl_value
-              !
            ENDDO
         ENDDO
         !
@@ -131,13 +129,13 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
            !
            DO jbnd = 1, nbndval
               !
-              IF (gamma_only) THEN
-                 CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd), psic,'Wave')
-                 CALL check_ovl_wannier (REAL(psic(:),KIND=DP), AIMAG(psic(:)), ovl_value)
+              IF(gamma_only) THEN
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
+                 CALL check_ovl_wannier(REAL(psic,KIND=DP),AIMAG(psic),ovl_value)
               ELSE
                  CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
                  CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,jbnd),psic1,'Wave',igk_k(:,1)) ! only 1 kpoint
-                 CALL check_ovl_wannier (psic(:), psic1(:), ovl_value)
+                 CALL check_ovl_wannier(psic,psic1,ovl_value)
               ENDIF
               !
               ovl_matrix(ibnd,jbnd) = ovl_value
@@ -146,26 +144,26 @@ SUBROUTINE bse_do_localization (current_spin, nbndval, evc_loc, ovl_matrix, l_re
            !
         ENDDO
         !
-        CALL mp_sum (ovl_matrix(:,:),inter_image_comm)
+        CALL mp_sum(ovl_matrix,inter_image_comm)
         !
      ENDIF
      !
      ! Save u_matrix and ovl_matrix to file
      !
-     CALL write_umatrix_and_omatrix (nbndval, current_spin, u_matrix, ovl_matrix)
+     CALL write_umatrix_and_omatrix(nbndval, current_spin, u_matrix, ovl_matrix)
      !
-     DEALLOCATE (u_matrix)
+     DEALLOCATE(u_matrix)
      !
   ELSE
      !
      WRITE(my_spin,'(i1)') current_spin
-     fname = "./localized_wfc_tmp_"//TRIM( my_spin )//'.dat'
-     CALL plep_read_G_and_distribute(fname,evc_loc(:,:),nbndval)
+     fname = './localized_wfc_tmp_'//TRIM(my_spin)//'.dat'
+     CALL plep_read_G_and_distribute(fname,evc_loc,nbndval)
      !
   ENDIF
   !
-  IF (ALLOCATED(psic1)) DEALLOCATE(psic1)
+  IF(ALLOCATED(psic1)) DEALLOCATE(psic1)
   !
-  CALL stop_clock( 'bse_do_localization' )
+  CALL stop_clock('bse_do_localization')
   !
 END SUBROUTINE

@@ -46,8 +46,8 @@ SUBROUTINE wbsepp_ads_spectrum()
   INTEGER :: n_ipol, i,j, info, ip, ip2, counter
   REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), scale, wl, degspin, f_sum
   COMPLEX(DP) :: omeg_c
-  REAL(DP), ALLOCATABLE, DIMENSION(:,:) :: beta_store, gamma_store
-  COMPLEX(DP), ALLOCATABLE, DIMENSION(:,:,:) :: zeta_store
+  REAL(DP), ALLOCATABLE :: beta_store(:,:), gamma_store(:,:)
+  COMPLEX(DP), ALLOCATABLE :: zeta_store(:,:,:)
   COMPLEX(DP) :: green(3,3) ! susceptibility chi
   COMPLEX(DP), ALLOCATABLE :: a(:), b(:), c(:), r(:,:)
   LOGICAL :: skip
@@ -538,15 +538,15 @@ CONTAINS
     !
     IMPLICIT NONE
     !
-    REAL(DP),INTENT(IN) :: omeg, alpha !x and y
+    REAL(DP), INTENT(IN) :: omeg, alpha !x and y
     !
     ! Local variables
     !
-    REAL(DP),SAVE :: omeg_save = 0._DP
-    REAL(DP),SAVE :: thm1
-    REAL(DP),SAVE :: h2m1
-    REAL(DP),SAVE :: first_der_save = 9.E99_DP
-    REAL(DP),SAVE :: alpha_save(3) = 0._DP
+    REAL(DP), SAVE :: omeg_save = 0._DP
+    REAL(DP), SAVE :: thm1
+    REAL(DP), SAVE :: h2m1
+    REAL(DP), SAVE :: first_der_save = 9.E99_DP
+    REAL(DP), SAVE :: alpha_save(3) = 0._DP
     INTEGER, SAVE :: current_iter = 0
     LOGICAL, SAVE :: trigger = .TRUE.
     REAL(DP) :: first_der, second_der
@@ -603,8 +603,10 @@ CONTAINS
     ! three points, using the Simpson's rule.
     !
     IMPLICIT NONE
-    REAL(DP),INTENT(IN) :: dh, alpha !x and y
-    LOGICAL,SAVE :: flag = .TRUE.
+    !
+    REAL(DP), INTENT(IN) :: dh, alpha !x and y
+    !
+    LOGICAL, SAVE :: flag = .TRUE.
     !
     ! COMPOSITE SIMPSON INTEGRATOR, (precision level ~ float)
     ! \int a b f(x) dx = ~ h/3 (f(a) + \sum_odd-n 2*f(a+n*h) + \sum_even-n 4*f(a+n*h) +f(b))

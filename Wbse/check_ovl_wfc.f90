@@ -10,9 +10,7 @@ MODULE check_ovl_wfc
   IMPLICIT NONE
   !
   INTERFACE check_ovl_wannier
-     !
      MODULE PROCEDURE check_ovl_wannier_real, check_ovl_wannier_cmplx
-     !
   ENDINTERFACE
   !
   PUBLIC :: check_ovl_bisection, read_bisection_loc
@@ -28,7 +26,7 @@ MODULE check_ovl_wfc
       !
       IMPLICIT NONE
       !
-      INTEGER, INTENT(IN)    :: current_spin, numband
+      INTEGER, INTENT(IN) :: current_spin, numband
       INTEGER, INTENT(INOUT) :: bisec_loc(numband)
       !
       INTEGER :: ibnd, num_localized_orb,iunit
@@ -43,32 +41,26 @@ MODULE check_ovl_wfc
       !
       WRITE(my_spin,'(i1)') current_spin
       !
-      file_bisection =  TRIM(bisection_info)//'.'//TRIM(my_spin)
+      file_bisection = TRIM(bisection_info)//'.'//TRIM(my_spin)
       !
-      if (ionode) then
+      IF(ionode) THEN
+         OPEN(NEWUNIT=iunit, FILE=TRIM(file_bisection), FORM='FORMATTED', STATUS='OLD')
          !
-         open(NEWUNIT=iunit, file =TRIM(file_bisection),form = 'formatted',status = 'old')
+         READ(iunit,*) num_localized_orb
          !
-         read(iunit,*) num_localized_orb
+         DO ibnd = 1, num_localized_orb
+            READ(iunit,*) bisec_loc(ibnd)
+         ENDDO
          !
-         do ibnd = 1, num_localized_orb
-            !
-            read (iunit, * ) bisec_loc(ibnd)
-            !
-         enddo
-         !
-         close (iunit)
-         !
-      endif
+         CLOSE(iunit)
+      ENDIF
       !
-      call mp_bcast (num_localized_orb,ionode_id,world_comm )
-      call mp_bcast (bisec_loc,ionode_id,world_comm)
-      !
-      return
+      CALL mp_bcast(num_localized_orb,ionode_id,world_comm)
+      CALL mp_bcast(bisec_loc,ionode_id,world_comm)
       !
     END SUBROUTINE
     !
-    SUBROUTINE check_ovl_bisection (orbital_i, orbital_j, ovl_value)
+    SUBROUTINE check_ovl_bisection(orbital_i, orbital_j, ovl_value)
       !
       ! input is the bitwise number of orb_i and orb_j
       !
@@ -81,14 +73,13 @@ MODULE check_ovl_wfc
       REAL(DP), INTENT(OUT):: ovl_value
       !
       INTEGER :: loc_i, loc_j
-      !
       LOGICAL :: l_p_left_i, l_p_left_j, l_p_right_i, l_p_right_j
       INTEGER :: int_p_left_i, int_p_left_j, int_p_right_i, int_p_right_j
       !
       loc_i = orbital_i
       loc_j = orbital_j
       !
-      DO WHILE ( (loc_i /= 0) .AND. (loc_j /= 0) )
+      DO WHILE(loc_i /= 0 .AND. loc_j /= 0)
          !
          ! get the weight of projections for each state
          !
@@ -97,25 +88,25 @@ MODULE check_ovl_wfc
          int_p_right_j = AND(loc_j, 1)
          int_p_left_j  = AND(loc_j, 2)
          !
-         IF (int_p_right_i == 0) THEN
+         IF(int_p_right_i == 0) THEN
             l_p_right_i = .FALSE.
          ELSE
             l_p_right_i = .TRUE.
          ENDIF
          !
-         IF (int_p_left_i == 0) THEN
+         IF(int_p_left_i == 0) THEN
             l_p_left_i = .FALSE.
          ELSE
             l_p_left_i = .TRUE.
          ENDIF
          !
-         IF (int_p_right_j == 0) THEN
+         IF(int_p_right_j == 0) THEN
             l_p_right_j = .FALSE.
          ELSE
             l_p_right_j = .TRUE.
          ENDIF
          !
-         IF (int_p_left_j == 0) THEN
+         IF(int_p_left_j == 0) THEN
             l_p_left_j = .FALSE.
          ELSE
             l_p_left_j = .TRUE.
@@ -123,9 +114,9 @@ MODULE check_ovl_wfc
          !
          ! return false as soon as the states are found to be separated
          !
-         IF ( .NOT.( ( l_p_right_i .AND. l_p_right_j ) .OR. ( l_p_left_i .AND. l_p_left_j ) ) ) THEN
+         IF(.NOT. ((l_p_right_i .AND. l_p_right_j) .OR. (l_p_left_i .AND. l_p_left_j))) THEN
             !
-            ovl_value = -1.0_DP
+            ovl_value = -1._DP
             !
             RETURN
             !
@@ -136,11 +127,11 @@ MODULE check_ovl_wfc
          !
       ENDDO
       !
-      ovl_value = 1.0_DP
+      ovl_value = 1._DP
       !
     END SUBROUTINE
     !
-    SUBROUTINE check_ovl_wannier_real (orb_real_i, orb_real_j, ovl_value)
+    SUBROUTINE check_ovl_wannier_real(orb_real_i, orb_real_j, ovl_value)
       !
       USE kinds,                ONLY : DP
       USE fft_base,             ONLY : dfftp
@@ -150,25 +141,22 @@ MODULE check_ovl_wfc
       !
       IMPLICIT NONE
       !
-      REAL(DP), INTENT(IN)  :: orb_real_i(dfftp%nnr)
-      REAL(DP), INTENT(IN)  :: orb_real_j(dfftp%nnr)
+      REAL(DP), INTENT(IN) :: orb_real_i(dfftp%nnr)
+      REAL(DP), INTENT(IN) :: orb_real_j(dfftp%nnr)
       REAL(DP), INTENT(OUT) :: ovl_value
       !
-      INTEGER   :: ir
+      INTEGER :: ir
+      REAL(DP) :: summ_ib, summ_jb, summ_ij
       !
-      REAL (DP) :: summ_ib, summ_jb, summ_ij
-      !
-      ovl_value = 0.0_DP
-      summ_ib   = 0.0_DP
-      summ_jb   = 0.0_DP
-      summ_ij   = 0.0_DP
+      ovl_value = 0._DP
+      summ_ib = 0._DP
+      summ_jb = 0._DP
+      summ_ij = 0._DP
       !
       DO ir = 1, dfftp%nnr
-         !
-         summ_ib = summ_ib +  orb_real_i(ir)**4
-         summ_jb = summ_jb +  orb_real_j(ir)**4
-         summ_ij = summ_ij +  orb_real_i(ir)**2 * orb_real_j(ir)**2
-         !
+         summ_ib = summ_ib + orb_real_i(ir)**4
+         summ_jb = summ_jb + orb_real_j(ir)**4
+         summ_ij = summ_ij + orb_real_i(ir)**2 * orb_real_j(ir)**2
       ENDDO
       !
       summ_ib = summ_ib * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
@@ -179,11 +167,11 @@ MODULE check_ovl_wfc
       CALL mp_sum(summ_jb, intra_bgrp_comm)
       CALL mp_sum(summ_ij, intra_bgrp_comm)
       !
-      ovl_value = summ_ij/sqrt(summ_ib*summ_jb)
+      ovl_value = summ_ij/SQRT(summ_ib*summ_jb)
       !
     END SUBROUTINE
     !
-    SUBROUTINE check_ovl_wannier_cmplx (orb_cmpl_i, orb_cmpl_j, ovl_value)
+    SUBROUTINE check_ovl_wannier_cmplx(orb_cmpl_i, orb_cmpl_j, ovl_value)
       !
       USE kinds,                ONLY : DP
       USE fft_base,             ONLY : dfftp
@@ -193,26 +181,23 @@ MODULE check_ovl_wfc
       !
       IMPLICIT NONE
       !
-      COMPLEX(DP), INTENT(IN)  :: orb_cmpl_i(dfftp%nnr)
-      COMPLEX(DP), INTENT(IN)  :: orb_cmpl_j(dfftp%nnr)
-      REAL(DP),    INTENT(OUT) :: ovl_value
+      COMPLEX(DP), INTENT(IN) :: orb_cmpl_i(dfftp%nnr)
+      COMPLEX(DP), INTENT(IN) :: orb_cmpl_j(dfftp%nnr)
+      REAL(DP), INTENT(OUT) :: ovl_value
       !
-      INTEGER   :: ir
+      INTEGER :: ir
+      REAL(DP) :: summ_ib, summ_jb, summ_ij
       !
-      REAL (DP) :: summ_ib, summ_jb, summ_ij
-      !
-      ovl_value = 0.0_DP
-      summ_ib = 0.0_DP
-      summ_jb = 0.0_DP
-      summ_ij = 0.0_DP
+      ovl_value = 0._DP
+      summ_ib = 0._DP
+      summ_jb = 0._DP
+      summ_ij = 0._DP
       !
       DO ir = 1, dfftp%nnr
-         !
-         summ_ib = summ_ib + ((DBLE(orb_cmpl_i(ir)))**4 + (AIMAG(orb_cmpl_i(ir)))**4)
-         summ_jb = summ_jb + ((DBLE(orb_cmpl_j(ir)))**4 + (AIMAG(orb_cmpl_j(ir)))**4)
-         summ_ij = summ_ij + (((DBLE(orb_cmpl_i(ir)))**2 + (AIMAG(orb_cmpl_i(ir)))**2) &
-                           *  ((DBLE(orb_cmpl_j(ir)))**2 + (AIMAG(orb_cmpl_j(ir)))**2))
-         !
+         summ_ib = summ_ib + ((REAL(orb_cmpl_i(ir),KIND=DP))**4 + (AIMAG(orb_cmpl_i(ir)))**4)
+         summ_jb = summ_jb + ((REAL(orb_cmpl_j(ir),KIND=DP))**4 + (AIMAG(orb_cmpl_j(ir)))**4)
+         summ_ij = summ_ij + (((REAL(orb_cmpl_i(ir),KIND=DP))**2 + (AIMAG(orb_cmpl_i(ir)))**2) &
+                           * ((REAL(orb_cmpl_j(ir),KIND=DP))**2 + (AIMAG(orb_cmpl_j(ir)))**2))
       ENDDO
       !
       summ_ib = summ_ib * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
@@ -223,7 +208,7 @@ MODULE check_ovl_wfc
       CALL mp_sum(summ_jb, intra_bgrp_comm)
       CALL mp_sum(summ_ij, intra_bgrp_comm)
       !
-      ovl_value = summ_ij/sqrt(summ_ib*summ_jb)
+      ovl_value = summ_ij/SQRT(summ_ib*summ_jb)
       !
     END SUBROUTINE
     !

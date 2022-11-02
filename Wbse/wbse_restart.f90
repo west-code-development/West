@@ -20,8 +20,6 @@ MODULE wbse_restart
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   INTEGER, PRIVATE :: iunout
   !
   INTERFACE wbse_restart_write

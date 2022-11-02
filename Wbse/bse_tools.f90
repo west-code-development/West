@@ -30,10 +30,10 @@ SUBROUTINE read_bse_pots_g2g(rhog, fixed_band_i, fixed_band_j, ispin, single_onl
   !
   ! local variables
   !
-  INTEGER            :: band_i, band_j
-  CHARACTER(LEN=6)   :: my_labeli
-  CHARACTER(LEN=6)   :: my_labelj
-  CHARACTER(LEN=6)   :: my_spin
+  INTEGER :: band_i, band_j
+  CHARACTER(LEN=6) :: my_labeli
+  CHARACTER(LEN=6) :: my_labelj
+  CHARACTER(LEN=6) :: my_spin
   CHARACTER(LEN=256) :: file_base
   !
   IF(fixed_band_j < fixed_band_i) THEN
@@ -215,7 +215,7 @@ SUBROUTINE write_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
   !
   filename = TRIM(wbse_init_save_dir) // '/u_matrix.wan.occ.' // TRIM(my_spin) // '.dat'
   !
-  WRITE(stdout,'(5X,"Writing Omatrix & Umatrix to ", A)') TRIM(filename)
+  WRITE(stdout,'(5X,"Writing Omatrix & Umatrix to ",A)') TRIM(filename)
   !
   IF(my_pool_id /= 0) RETURN
   IF(my_bgrp_id /= 0) RETURN
@@ -285,7 +285,7 @@ SUBROUTINE read_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
   WRITE(my_spin,'(i1)') ispin
   filename = TRIM(wbse_init_save_dir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
   !
-  WRITE(stdout,'(/,5X,"Reading Omatrix & Umatrix from ", A)') TRIM(filename)
+  WRITE(stdout,'(/,5X,"Reading Omatrix & Umatrix from ",A)') TRIM(filename)
   !
   ierr = 0
   IF(ionode) THEN
@@ -358,7 +358,6 @@ SUBROUTINE read_pwscf_wannier_orbs(ne, npw, c_emp, filename)
   !
   INTEGER :: ierr, iun, ig, i
   INTEGER :: ngw_l, ngw_g
-  !
   COMPLEX(DP), ALLOCATABLE :: ctmp(:)
   INTEGER, ALLOCATABLE :: igk_l2g(:)
   !
@@ -373,7 +372,7 @@ SUBROUTINE read_pwscf_wannier_orbs(ne, npw, c_emp, filename)
      igk_l2g(ig) = ig_l2g(igk_k(ig,1))
   ENDDO
   !
-  WRITE(stdout,'(/,5X,"Reading pwscf wannier orbs from ", A)') TRIM(filename)
+  WRITE(stdout,'(/,5X,"Reading pwscf wannier orbs from ",A)') TRIM(filename)
   !
   ngw_l = npw
   ngw_g = MAXVAL(igk_l2g(:))

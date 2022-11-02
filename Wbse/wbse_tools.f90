@@ -20,8 +20,6 @@ MODULE wbse_tools
   !
   IMPLICIT NONE
   !
-  SAVE
-  !
   INTERFACE wbse_build_hr
      MODULE PROCEDURE build_hr_real, build_hr_complex
   END INTERFACE

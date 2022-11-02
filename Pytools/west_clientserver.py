@@ -172,7 +172,6 @@ def sleep_and_wait(*args, **kwargs):
         #replace document
         document = temp_document
     #
-    print(document)
     server = QboxServer(client_lockfile,maxsec,sleepsec,document)
     return_int = server.start()
     #

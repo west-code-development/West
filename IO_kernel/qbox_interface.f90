@@ -215,7 +215,7 @@ MODULE qbox_interface
     ! send quit command to qbox
     !
     USE mp_global,              ONLY : my_image_id,me_bgrp
-    USE io_files,               ONLY : delete_if_present
+    USE west_io,                ONLY : remove_if_present
     USE conversions,            ONLY : itoa
     !
     IMPLICIT NONE
@@ -224,7 +224,7 @@ MODULE qbox_interface
        OPEN(UNIT=iu, FILE='qb.'//itoa(my_image_id)//'.in')
        WRITE(iu,'(A)') 'quit'
        CLOSE(iu)
-       CALL delete_if_present( 'qb.'//itoa(my_image_id)//'.in.lock' )
+       CALL remove_if_present( 'qb.'//itoa(my_image_id)//'.in.lock' )
     ENDIF
     !
   END SUBROUTINE

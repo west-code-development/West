@@ -440,7 +440,7 @@ MODULE wbse_restart
       USE mp,                   ONLY : mp_barrier,mp_bcast
       USE westcom,              ONLY : n_pdep_basis
       USE clib_wrappers,        ONLY : f_rmdir
-      USE io_files,             ONLY : delete_if_present
+      USE west_io,              ONLY : remove_if_present
       USE westcom,              ONLY : wbse_restart_dir
       !
       IMPLICIT NONE
@@ -460,16 +460,16 @@ MODULE wbse_restart
       dirname = trim(wbse_restart_dir)
       !
       IF(mpime==root) THEN
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'summary.xml' ) )
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'eig.xml' ) )
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'hr.dat' ) )
-         CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( 'vr.dat' ) )
+         CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( 'summary.xml' ) )
+         CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( 'eig.xml' ) )
+         CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( 'hr.dat' ) )
+         CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( 'vr.dat' ) )
          DO ip=1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
             fname="V"//TRIM(ADJUSTL(my_label))//".dat"
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
             fname="N"//TRIM(ADJUSTL(my_label))//".dat"
-            CALL delete_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
+            CALL remove_if_present( TRIM( dirname ) // '/' // TRIM( fname ) )
          ENDDO
          ierr =  f_rmdir( TRIM( dirname ) )
       ENDIF

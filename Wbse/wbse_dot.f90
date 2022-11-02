@@ -10,7 +10,7 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
+SUBROUTINE wbse_dot(x,y,npwx,nbnd,nks,wbse_dot_out)
   !
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
@@ -25,21 +25,21 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
   !
   IMPLICIT NONE
   !
-  INTEGER, INTENT (IN)     :: npwx,nbnd,nks
-  COMPLEX(DP), INTENT (IN) :: x(npwx,nbnd,nks)
-  COMPLEX(DP), INTENT (IN) :: y(npwx,nbnd,nks)
-  COMPLEX(DP), INTENT (OUT):: wbse_dot_out(nspin)
+  INTEGER, INTENT(IN) :: npwx,nbnd,nks
+  COMPLEX(DP), INTENT(IN) :: x(npwx,nbnd,nks)
+  COMPLEX(DP), INTENT(IN) :: y(npwx,nbnd,nks)
+  COMPLEX(DP), INTENT(OUT) :: wbse_dot_out(nspin)
   !
-  INTEGER     :: ibnd, iks, is, current_spin, nbndval
+  INTEGER :: ibnd, iks, is, current_spin, nbndval
   COMPLEX(DP) :: temp
-  REAL(DP), EXTERNAL    :: DDOT
+  REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
   !
   wbse_dot_out(:) = (0._DP,0._DP)
   !
   DO is = 1, nspin
      !
-     temp = (0._DP, 0._DP)
+     temp = (0._DP,0._DP)
      !
      DO iks = 1, nks
         !
@@ -47,26 +47,17 @@ SUBROUTINE wbse_dot (x,y,npwx,nbnd,nks,wbse_dot_out)
         !
         current_spin = isk(iks)
         !
-        IF (current_spin /= is) CYCLE
+        IF(current_spin /= is) CYCLE
         !
-        IF (gamma_only) THEN
-           !
-           DO ibnd=1, nbndval
-              !
+        IF(gamma_only) THEN
+           DO ibnd = 1, nbndval
               temp = temp + 2._DP*wg(ibnd,iks)*DDOT(2*ngk(iks),x(:,ibnd,iks),1,y(:,ibnd,iks),1)
-              !
-              IF (gstart==2) temp = temp - wg(ibnd,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
-              !
+              IF(gstart == 2) temp = temp - wg(ibnd,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
            ENDDO
-           !
         ELSE
-           !
-           DO ibnd=1, nbndval
-              !
+           DO ibnd = 1, nbndval
               temp = temp + wg(ibnd,iks) * ZDOTC(ngk(iks),x(:,ibnd,iks),1,y(:,ibnd,iks),1)
-              !
            ENDDO
-           !
         ENDIF
         !
      ENDDO

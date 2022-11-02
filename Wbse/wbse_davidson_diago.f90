@@ -118,7 +118,7 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   ALLOCATE( dng_exc_tmp( npwx, nbndval0x, nks ), STAT=ierr )
   IF( ierr /= 0 ) &
-     CALL errore( 'chidiago',' cannot allocate dvg ', ABS(ierr) )
+     CALL errore( 'chidiago',' cannot allocate dng ', ABS(ierr) )
   !
   ALLOCATE( hr_distr( nvecx, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -338,9 +338,9 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            ew(nbase+np) = ev(n)
            !
-        END IF
+        ENDIF
         !
-     END DO
+     ENDDO
      !
      ! ... expand the basis set with new basis vectors ( H - e*S )|psi> ...
      !
@@ -548,8 +548,6 @@ SUBROUTINE wbse_davidson_diago ( )
      CALL wbse_output_a_report(dav_iter)
      !
   END DO iterate
-  !
-! xxx  CALL wstat_xml_dump( )
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )

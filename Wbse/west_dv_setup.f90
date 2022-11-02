@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-SUBROUTINE west_dv_setup (l_bse_calc)
+SUBROUTINE west_dv_setup(l_bse_calc)
   !-----------------------------------------------------------------------
   !
   !  This subroutine prepares some variables which are needed for derivatives
@@ -29,23 +29,21 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   !
   LOGICAL, INTENT(IN) :: l_bse_calc
   !
-  CALL start_clock ('wbse_dv_setup')
+  CALL start_clock('wbse_dv_setup')
   !
   ! 0) allocate dmuxc
   !
-  ALLOCATE(dmuxc (dfftp%nnr, nspin, nspin))
+  ALLOCATE(dmuxc(dfftp%nnr, nspin, nspin))
   !
-  IF (l_bse_calc) THEN ! BSE
-     !
-     dmuxc = (0.0_DP, 0.0_DP)
+  IF(l_bse_calc) THEN
+     dmuxc = (0._DP, 0._DP)
      !
      RETURN
-     !
   ENDIF
   !
   ! 1) Set the nonlinear core correction
   !
-  nlcc_any = ANY ( upf(1:ntyp)%nlcc )
+  nlcc_any = ANY(upf(1:ntyp)%nlcc)
   !
   ! 2) Compute the derivative of the XC potential
   !
@@ -53,19 +51,19 @@ SUBROUTINE west_dv_setup (l_bse_calc)
   !
   ! 3) Setup gradient correction
   !
-  IF (xclib_dft_is('gradient')) THEN
+  IF(xclib_dft_is('gradient')) THEN
      !
-     IF (noncolin .AND. domag) THEN
-        IF (.NOT.ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
-        psic(:) = (0.0_DP, 0.0_DP)
+     IF(noncolin .AND. domag) THEN
+        IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
+        psic(:) = (0._DP,0._DP)
      ENDIF
      !
      CALL setup_dgc()
      !
-     IF (ALLOCATED(psic)) DEALLOCATE(psic)
+     IF(ALLOCATED(psic)) DEALLOCATE(psic)
      !
   ENDIF
   !
-  CALL stop_clock ('wbse_dv_setup')
+  CALL stop_clock('wbse_dv_setup')
   !
 END SUBROUTINE

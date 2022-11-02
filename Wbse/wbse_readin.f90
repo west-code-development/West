@@ -38,7 +38,7 @@ SUBROUTINE wbse_readin()
   !
   IF (domag) CALL errore('wbse_readin','domag version not available',1)
   IF (okvan) CALL errore('wbse_readin','ultrasoft pseudopotential not implemented',1)
-  IF (doublegrid) CALL errore('wbse_readin', 'double grid not implemented',1)
+  IF (doublegrid) CALL errore('wbse_readin','double grid not implemented',1)
   !
   CALL stop_clock('wbse_readin')
   !

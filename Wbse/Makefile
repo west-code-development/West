@@ -33,7 +33,6 @@ wbse.o \
 wbse_bse_kernel.o \
 wbse_calc_dens.o \
 wbse_davidson_diago.o \
-wbse_davidson_diago_square.o\
 wbse_dot.o \
 wbse_init.o \
 wbse_init_methods.o \

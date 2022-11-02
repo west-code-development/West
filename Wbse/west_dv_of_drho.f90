@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
+SUBROUTINE west_dv_of_drho(dvscf, lrpa, add_nlcc, drhoc)
   !-----------------------------------------------------------------------
   !
   !  This routine computes the change of the self consistent potential
@@ -64,90 +64,67 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
   ! dvhart: response Hartree potential
   ! dvaux_mt: auxiliary array for Martyna-Tuckerman correction
   !
-  CALL start_clock ('wbse_dv_of_drho')
+  CALL start_clock('wbse_dv_of_drho')
   !
-  IF (add_nlcc .AND. .NOT.PRESENT(drhoc)) &
-     & CALL errore( 'wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1 )
+  IF(add_nlcc .AND. .NOT. PRESENT(drhoc)) &
+     & CALL errore('wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1)
   !
-  IF (lrpa) THEN
-     !
+  IF(lrpa) THEN
      ALLOCATE(dvaux(1,1))
      GOTO 111
-     !
   ELSE
-     !
      ALLOCATE(dvaux(dfftp%nnr, nspin))
-     !
   ENDIF
   !
   ! 1) The exchange-correlation contribution is computed in real space
   !
-  fac = 1._DP / REAL (nspin,KIND=DP)
+  fac = 1._DP / REAL(nspin,KIND=DP)
   !
-  IF (nlcc_any.AND.add_nlcc) THEN
-     !
+  IF(nlcc_any .AND. add_nlcc) THEN
      DO is = 1, nspin
-        !
-        rho%of_r(:, is) = rho%of_r(:, is) + fac * rho_core (:)
-        !
-        dvscf(:, is) = dvscf(:, is) + fac * drhoc (:)
-        !
+        rho%of_r(:,is) = rho%of_r(:,is) + fac * rho_core(:)
+        dvscf(:,is) = dvscf(:,is) + fac * drhoc(:)
      ENDDO
-     !
   ENDIF
   !
-  dvaux (:,:) = (0._DP, 0._DP)
+  dvaux(:,:) = (0._DP,0._DP)
   DO is = 1, nspin
-     !
      DO is1 = 1, nspin
-        !
         dvaux(:,is) = dvaux(:,is) + dmuxc(:,is,is1) * dvscf(:,is1)
-        !
      ENDDO
-     !
   ENDDO
   !
   ! Add gradient correction to the response XC potential.
   ! NB: If nlcc=.true. we need to add here its contribution.
   ! grho contains already the core charge
   !
-  IF ( xclib_dft_is('gradient') ) THEN
-     !
-     CALL dgradcorr (dfftp, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
-            dvscf, nspin, nspin_gga, g, dvaux)
-     !
+  IF(xclib_dft_is('gradient')) THEN
+     CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
+          & dvscf, nspin, nspin_gga, g, dvaux)
   ENDIF
   !
-  IF (dft_is_nonlocc()) THEN
-     !
+  IF(dft_is_nonlocc()) THEN
      CALL dnonloccorr(rho%of_r, dvscf, xq, dvaux)
-     !
   ENDIF
   !
-  IF (nlcc_any.AND.add_nlcc) THEN
-     !
+  IF(nlcc_any .AND. add_nlcc) THEN
      DO is = 1, nspin
-        !
-        rho%of_r(:, is) = rho%of_r(:, is) - fac * rho_core (:)
-        dvscf(:, is) = dvscf(:, is) - fac * drhoc (:)
-        !
+        rho%of_r(:,is) = rho%of_r(:,is) - fac * rho_core(:)
+        dvscf(:,is) = dvscf(:,is) - fac * drhoc(:)
      ENDDO
-     !
   ENDIF
   !
 111 CONTINUE
   !
   ! 2) Hartree contribution is computed in reciprocal space
   !
-  IF (nspin == 2) THEN
-     !
+  IF(nspin == 2) THEN
      dvscf(:,1) = dvscf(:,1) + dvscf(:,2)
-     !
   ENDIF
   !
-  CALL fwfft ('Rho', dvscf(:,1), dfftp)
+  CALL fwfft('Rho', dvscf(:,1), dfftp)
   !
-  ALLOCATE (dvhart(dfftp%nnr, nspin))
+  ALLOCATE(dvhart(dfftp%nnr, nspin))
   !
   dvhart(:,:) = (0._DP,0._DP)
   !
@@ -155,62 +132,48 @@ SUBROUTINE west_dv_of_drho (dvscf, lrpa, add_nlcc, drhoc)
      !
      qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
      !
-     IF (qg2 > 1.d-8) THEN
-        !
+     IF (qg2 > 1.E-8_DP) THEN
         dvhart(dfftp%nl(ig),:) = e2 * fpi * dvscf(dfftp%nl(ig),1) / (tpiba2 * qg2)
-        !
      ENDIF
      !
   ENDDO
   !
-  IF (do_comp_mt) THEN
+  IF(do_comp_mt) THEN
      !
      ALLOCATE(dvaux_mt(ngm))
      !
-     CALL wg_corr_h (omega, ngm, dvscf(dfftp%nl(:),1), dvaux_mt, eh_corr)
+     CALL wg_corr_h(omega, ngm, dvscf(dfftp%nl(:),1), dvaux_mt, eh_corr)
      !
      DO ig = 1, ngm
-        !
         dvhart(dfftp%nl(ig),:) = dvhart(dfftp%nl(ig),1) + dvaux_mt(ig)
-        !
      ENDDO
      !
      DEALLOCATE(dvaux_mt)
      !
   ENDIF
   !
-  IF (gamma_only) THEN
-     !
+  IF(gamma_only) THEN
      DO ig = 1, ngm
-        !
         dvhart(dfftp%nlm(ig),:) = CONJG(dvhart(dfftp%nl(ig),:))
-        !
      ENDDO
-     !
   ENDIF
   !
   ! Transformed back to real space
   !
   DO is = 1, nspin
-     !
      CALL invfft ('Rho', dvhart (:,is), dfftp)
-     !
   ENDDO
   !
-  dvscf(:,:) = (0.0_DP,0.0_DP)
+  dvscf(:,:) = (0._DP,0._DP)
   !
-  IF (lrpa) THEN
-     !
-     dvscf(:,:) = dvhart(:,:)
-     !
+  IF(lrpa) THEN
+     dvscf(:,:) = dvhart
   ELSE
-     !
-     dvscf(:,:) = dvaux(:,:) + dvhart(:,:)
-     !
+     dvscf(:,:) = dvaux + dvhart
   ENDIF
   !
-  DEALLOCATE (dvaux)
+  DEALLOCATE(dvaux)
   !
-  CALL stop_clock ('wbse_dv_of_drho')
+  CALL stop_clock('wbse_dv_of_drho')
   !
 END SUBROUTINE

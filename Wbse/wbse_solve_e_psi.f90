@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-------------------------------------------------------------------------
-SUBROUTINE solve_e_psi ()
+SUBROUTINE solve_e_psi()
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -20,31 +20,27 @@ SUBROUTINE solve_e_psi ()
   !
   INTEGER, PARAMETER :: n_ipol = 3
   !
-  IF (okvan) CALL errore('solve_e_psi','Real space dipole + USPP not supported',1)
+  IF(okvan) CALL errore('solve_e_psi','Real space dipole + USPP not supported',1)
   !
-  CALL start_clock ('solve_e_psi')
+  CALL start_clock('solve_e_psi')
   !
   ! Compute dipole in the R space. This option can be used
   ! only for finite systems (e.g. molecules).
   !
-  IF (macropol_dfpt) THEN
-     !
+  IF(macropol_dfpt) THEN
      CALL compute_d0psi_dfpt()
-     !
   ELSE
-     !
      CALL compute_d0psi_rs()
-     !
   ENDIF
   !
-  IF (gstart==2 .AND. gamma_only) &
+  IF(gstart == 2 .AND. gamma_only) &
   & d0psi(1,:,:,:) = CMPLX(REAL(d0psi(1,:,:,:),KIND=DP),KIND=DP)
   !
-  CALL stop_clock ('solve_e_psi')
+  CALL stop_clock('solve_e_psi')
   !
 END SUBROUTINE
 
-SUBROUTINE compute_d0psi_rs( )
+SUBROUTINE compute_d0psi_rs()
   !
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : at,alat
@@ -59,33 +55,33 @@ SUBROUTINE compute_d0psi_rs( )
   USE wavefunctions,        ONLY : evc,psic
   USE noncollin_module,     ONLY : npol
   USE pwcom,                ONLY : isk,igk_k,ngk,lsda,nbnd,npwx,nks
-  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc, d0psi
+  USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,d0psi
   !
   IMPLICIT NONE
   !
   ! ... Local variables
   !
-  INTEGER  :: i, j, k, ip, ir, ir_end, index0
+  INTEGER :: i, j, k, ip, ir, ir_end, index0
   REAL(DP) :: inv_nr1, inv_nr2, inv_nr3
-  INTEGER  :: ibnd, nbndval
-  INTEGER  :: npw, iks, current_k, current_spin
+  INTEGER :: ibnd, nbndval
+  INTEGER :: npw, iks, current_k, current_spin
   INTEGER, PARAMETER :: n_ipol = 3
-  REAL(DP),    ALLOCATABLE :: r(:,:)
+  REAL(DP), ALLOCATABLE :: r(:,:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:)
   !
   WRITE(stdout,'(/,5X,"Calculation of the dipole in real space")')
   !
-  IF (.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
+  IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
   ALLOCATE(aux_r(dfftp%nnr))
   ALLOCATE(r(dfftp%nnr,n_ipol))
   !
-  r(:,:) = 0.0_DP
+  r(:,:) = 0._DP
   !
   ! Calculate r
   !
-  inv_nr1 = 1._DP / REAL( dfftp%nr1, KIND=DP )
-  inv_nr2 = 1._DP / REAL( dfftp%nr2, KIND=DP )
-  inv_nr3 = 1._DP / REAL( dfftp%nr3, KIND=DP )
+  inv_nr1 = 1._DP / REAL(dfftp%nr1,KIND=DP)
+  inv_nr2 = 1._DP / REAL(dfftp%nr2,KIND=DP)
+  inv_nr3 = 1._DP / REAL(dfftp%nr3,KIND=DP)
   !
   index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%nr3p(1:me_bgrp))
   ir_end = MIN(dfftp%nnr,dfftp%nr1x*dfftp%nr2x*dfftp%nr3p(me_bgrp+1))
@@ -101,11 +97,9 @@ SUBROUTINE compute_d0psi_rs( )
      i = i - dfftp%nr1x*j
      !
      DO ip = 1, n_ipol
-        !
         r(ir,ip) = REAL(i,KIND=DP)*inv_nr1*at(ip,1) + &
                    REAL(j,KIND=DP)*inv_nr2*at(ip,2) + &
                    REAL(k,KIND=DP)*inv_nr3*at(ip,3)
-        !
      ENDDO
      !
   ENDDO
@@ -120,26 +114,24 @@ SUBROUTINE compute_d0psi_rs( )
      !
      current_k = iks
      !
-     IF ( lsda ) current_spin = isk(iks)
+     IF(lsda) current_spin = isk(iks)
      !
      npw = ngk(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF (nks>1) THEN
-        !
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+     IF(nks > 1) THEN
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-        !
      ENDIF
      !
      nbndval = nbnd_occ(iks)
      !
-     IF (gamma_only) THEN
+     IF(gamma_only) THEN
         !
-        DO ibnd=1,nbndval,2
+        DO ibnd = 1,nbndval,2
            !
-           IF (ibnd<nbndval) THEN
+           IF(ibnd < nbndval) THEN
               !
               ! double bands @ gamma
               !
@@ -149,13 +141,11 @@ SUBROUTINE compute_d0psi_rs( )
               !
               ! R -> G
               !
-              aux_r(:) = (0.0_DP, 0.0_DP)
-              aux_r(:) = psic(:)
+              aux_r(:) = psic
               !
               DO ip = 1, n_ipol
                  !
-                 psic(:)  = (0.0_DP, 0.0_DP)
-                 psic(:) =  aux_r(:) * r(:,ip) * alat
+                 psic(:) = aux_r(:) * r(:,ip) * alat
                  !
                  CALL double_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),d0psi(:,ibnd+1,iks,ip),'Wave')
                  !
@@ -163,19 +153,17 @@ SUBROUTINE compute_d0psi_rs( )
               !
            ELSE
               !
-              IF (nbndval == nbnd) THEN
+              IF(nbndval == nbnd) THEN
                  !
                  ! single band @ gamma
                  !
                  CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
                  !
-                 aux_r(:) = (0.0_DP, 0.0_DP)
-                 aux_r(:) = psic(:)
+                 aux_r(:) = psic
                  !
                  DO ip = 1, n_ipol
                     !
-                    psic(:)  = (0.0_DP, 0.0_DP)
-                    psic(:) =  CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
+                    psic(:) = CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
                     !
                     CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave')
                     !
@@ -183,19 +171,17 @@ SUBROUTINE compute_d0psi_rs( )
                  !
               ENDIF
               !
-              IF (nbndval < nbnd) THEN
+              IF(nbndval < nbnd) THEN
                  !
                  ! single band @ gamma
                  !
                  CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd+1),psic,'Wave')
                  !
-                 aux_r(:) = (0.0_DP, 0.0_DP)
                  aux_r(:) = psic(:)
                  !
                  DO ip = 1, n_ipol
                     !
-                    psic(:)  = (0.0_DP, 0.0_DP)
-                    psic(:) =  CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
+                    psic(:) = CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
                     !
                     CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave')
                     !
@@ -211,17 +197,15 @@ SUBROUTINE compute_d0psi_rs( )
         !
         ! only single bands
         !
-        DO ibnd=1,nbndval
+        DO ibnd = 1,nbndval
            !
            CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !
-           aux_r(:) = (0.0_DP, 0.0_DP)
-           aux_r(:) = psic(:)
+           aux_r(:) = psic
            !
            DO ip = 1, n_ipol
               !
-              psic(:)  = (0.0_DP, 0.0_DP)
-              psic(:) =  aux_r(:) * r(:,ip) * alat
+              psic(:) = aux_r(:) * r(:,ip) * alat
               !
               CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave',igk_k(:,current_k))
               !
@@ -229,18 +213,16 @@ SUBROUTINE compute_d0psi_rs( )
            !
         ENDDO
         !
-        IF (npol==2) THEN
+        IF(npol == 2) THEN
            !
-           DO ibnd=1,nbndval
+           DO ibnd = 1,nbndval
               !
               CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
               !
-              aux_r(:) = (0.0_DP, 0.0_DP)
-              aux_r(:) = psic(:)
+              aux_r(:) = psic
               !
               DO ip = 1, n_ipol
                  !
-                 psic(:)  = (0.0_DP, 0.0_DP)
                  psic(:) = aux_r(:) * r(:,ip) * alat
                  !
                  CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(npwx+1:npwx*2,ibnd,iks,ip),'Wave',igk_k(:,current_k))
@@ -256,20 +238,18 @@ SUBROUTINE compute_d0psi_rs( )
      ! P_c|d0psi>
      !
      DO ip = 1, n_ipol
-        !
         CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,d0psi(1,1,iks,ip),(1._DP,0._DP))
-        !
      ENDDO
      !
   ENDDO
   !
-  IF (ALLOCATED(psic)) DEALLOCATE(psic)
+  IF(ALLOCATED(psic)) DEALLOCATE(psic)
   DEALLOCATE(aux_r)
   DEALLOCATE(r)
   !
 END SUBROUTINE
 !
-SUBROUTINE shift_d0psi( r, n_ipol )
+SUBROUTINE shift_d0psi(r, n_ipol)
   !
   ! Shift a position operator r to the center of the molecule
   ! for a proper calculation of d0psi in R-space.
@@ -282,76 +262,58 @@ SUBROUTINE shift_d0psi( r, n_ipol )
   !
   IMPLICIT NONE
   !
-  INTEGER,INTENT(IN) :: n_ipol
-  REAL(DP),INTENT(INOUT) :: r(dfftp%nnr,n_ipol)
+  INTEGER, INTENT(IN) :: n_ipol
+  REAL(DP), INTENT(INOUT) :: r(dfftp%nnr,n_ipol)
   !
   ! local vars
   !
   REAL(DP) :: mmin(3), mmax(3), center(3), origin(3), check_cell
-  INTEGER  :: ip, iatm, ir, ip1, ip2
+  INTEGER :: ip, iatm, ir, ip1, ip2
   !
-  WRITE(stdout,'(/,5X,"Dipole is shifted to the center of cell", &
-                     & " for the calculation of d0psi")')
+  WRITE(stdout,'(/,5X,"Dipole is shifted to the center of cell for the calculation of d0psi")')
   !
   check_cell = 0._DP
   !
   DO ip1 = 1,3
-     !
      DO ip2 = 1,3
-        !
         IF(ip1 /= ip2) check_cell = check_cell + at(ip1,ip2)**2
-        !
-    ENDDO
-    !
+     ENDDO
   ENDDO
   !
-  IF (check_cell > 1.E-5_DP) &
-  & CALL errore('shift_d0psi','This type of the supercell is not supported',1)
+  IF(check_cell > 1.E-5_DP) CALL errore('shift_d0psi','This type of the supercell is not supported',1)
   !
   mmin(:) = 2000._DP
-  mmax(:)= -2000._DP
+  mmax(:) = -2000._DP
   !
   DO ip = 1, n_ipol
-     !
      DO iatm = 1, nat
-        !
         mmin(ip) = MIN(mmin(ip), tau(ip,iatm))
-        !
         mmax(ip) = MAX(mmax(ip), tau(ip,iatm))
-        !
      ENDDO
-     !
   ENDDO
   !
-  center(:)= 0.5_DP*(mmin(:)+mmax(:))
+  center(:) = 0.5_DP*(mmin(:)+mmax(:))
   !
   DO ip = 1, n_ipol
-     !
      origin(ip)= center(ip)-0.5_DP*at(ip,ip)
-     !
   ENDDO
   !
   DO ir = 1, dfftp%nnr
      !
      DO ip = 1, n_ipol
-        !
         r(ir,ip)= r(ir,ip) - origin(ip)
-        !
      ENDDO
      !
      DO ip = 1, n_ipol
-        !
         IF(r(ir,ip) < 0) r(ir,ip)=r(ir,ip)+at(ip,ip)
-        !
         IF(r(ir,ip) > at(ip,ip)) r(ir,ip)=r(ir,ip)-at(ip,ip)
-        !
      ENDDO
      !
   ENDDO
   !
 END SUBROUTINE
 !
-SUBROUTINE compute_d0psi_dfpt( )
+SUBROUTINE compute_d0psi_dfpt()
   !
   USE kinds,                ONLY : DP
   USE fft_base,             ONLY : dfftp
@@ -372,15 +334,15 @@ SUBROUTINE compute_d0psi_dfpt( )
   !
   ! ... Local variables
   !
-  INTEGER  :: il1, iv, ip
-  INTEGER  :: nbndval
-  INTEGER  :: iks, ierr
+  INTEGER :: il1, iv, ip
+  INTEGER :: nbndval
+  INTEGER :: iks, ierr
   INTEGER, PARAMETER :: n_ipol = 3
-  LOGICAL, PARAMETER :: l_skip_nl_part_of_hcomr = .False.
-  REAL(DP),    ALLOCATABLE :: eprec(:), e(:)
+  LOGICAL, PARAMETER :: l_skip_nl_part_of_hcomr = .FALSE.
+  REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
   !
-  IF (.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
+  IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
   !
   WRITE(stdout,'(/,5X,"Calculation of the dipole using DFPT method")')
   !
@@ -390,28 +352,26 @@ SUBROUTINE compute_d0psi_dfpt( )
      !
      current_k = iks
      !
-     IF ( lsda ) current_spin = isk(iks)
+     IF(lsda) current_spin = isk(iks)
      !
-     CALL g2_kin( iks )
+     CALL g2_kin(iks)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF ( nkb > 0 ) CALL init_us_2( ngk(iks), igk_k(1,iks), xk(1,iks), vkb )
+     IF(nkb > 0) CALL init_us_2(ngk(iks), igk_k(1,iks), xk(1,iks), vkb)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF (nks>1) THEN
-        !
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+     IF(nks > 1) THEN
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-        !
      ENDIF
      !
      nbndval = nbnd_occ(iks)
      !
      ! LOOP over band states
      !
-     d0psi(:,:,iks,:) = (0.0_DP,0.0_DP)
+     d0psi(:,:,iks,:) = (0._DP,0._DP)
      !
      DO il1 = 1, aband%nloc
         !
@@ -420,16 +380,16 @@ SUBROUTINE compute_d0psi_dfpt( )
         ALLOCATE(phi(npwx*npol,3))
         ALLOCATE(phi_tmp(npwx*npol,3))
         !
-        CALL commut_Hx_psi (iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi (iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi (iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
+        CALL commut_Hx_psi(iks, 1, 1, evc(1,iv), phi_tmp(1,1), l_skip_nl_part_of_hcomr)
+        CALL commut_Hx_psi(iks, 1, 2, evc(1,iv), phi_tmp(1,2), l_skip_nl_part_of_hcomr)
+        CALL commut_Hx_psi(iks, 1, 3, evc(1,iv), phi_tmp(1,3), l_skip_nl_part_of_hcomr)
         !
         CALL apply_alpha_pc_to_m_wfcs(nbndval,3,phi_tmp,(1._DP,0._DP))
         !
-        ALLOCATE( eprec(3) )
-        ALLOCATE( e(3) )
+        ALLOCATE(eprec(3))
+        ALLOCATE(e(3))
         !
-        CALL set_eprec( 1, evc(1,iv), eprec(1))
+        CALL set_eprec(1, evc(1,iv), eprec(1))
         eprec(2) = eprec(1)
         eprec(3) = eprec(1)
         !
@@ -437,45 +397,37 @@ SUBROUTINE compute_d0psi_dfpt( )
         e(2) = et(iv,iks)
         e(3) = et(iv,iks)
         !
-        CALL precondition_m_wfcts( 3, phi_tmp, phi, eprec )
+        CALL precondition_m_wfcts(3, phi_tmp, phi, eprec)
         !
-        tr2_dfpt = 1.d-12
+        tr2_dfpt = 1.E-12_DP
         n_dfpt_maxiter = 250
         l_kinetic_only = .FALSE.
         !
-        CALL linsolve_sternheimer_m_wfcts (nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr )
+        CALL linsolve_sternheimer_m_wfcts(nbndval, 3, phi_tmp, phi, e, eprec, tr2_dfpt, ierr)
         !
-        IF (ierr/=0) THEN
-           !
-           WRITE(stdout, '(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
-           !
-        ENDIF
+        IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
         !
-        d0psi(:,iv,iks,:) = phi(:,:)
+        d0psi(:,iv,iks,:) = phi
         !
-        DEALLOCATE( eprec )
-        DEALLOCATE( e )
-        DEALLOCATE( phi_tmp )
-        DEALLOCATE( phi )
+        DEALLOCATE(eprec)
+        DEALLOCATE(e)
+        DEALLOCATE(phi_tmp)
+        DEALLOCATE(phi)
         !
      ENDDO
      !
-     IF (l_lanczos) THEN
-        !
-        CALL mp_sum (d0psi(:,:,iks,:),inter_image_comm)
-        !
+     IF(l_lanczos) THEN
+        CALL mp_sum(d0psi(:,:,iks,:),inter_image_comm)
      ENDIF
      !
      ! P_c|d0psi>
      !
      DO ip = 1, n_ipol
-        !
         CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,d0psi(1,1,iks,ip),(1._DP,0._DP))
-        !
      ENDDO
      !
   ENDDO
   !
-  IF (ALLOCATED(psic)) DEALLOCATE(psic)
+  IF(ALLOCATED(psic)) DEALLOCATE(psic)
   !
 END SUBROUTINE

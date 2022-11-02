@@ -108,7 +108,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
   ALLOCATE(index_matrix(tmp_size,2))
   ALLOCATE(ovl_matrix(nbndval,nbndval))
   !
-  ovl_matrix(:,:)   = 0.0_DP
+  ovl_matrix(:,:) = 0.0_DP
   index_matrix(:,:) = 0.0_DP
   !
   IF(l_wannier_repr) THEN
@@ -303,7 +303,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      ENDIF
      !
      DO ir = 1, dffts%nnr
-        aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega), 0._DP, KIND=DP) ! rescale response
+        aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega), 0.0_DP, KIND=DP) ! rescale response
      ENDDO
      !
      aux1_r(:,:) = (0.0_DP,0.0_DP)

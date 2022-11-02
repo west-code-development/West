@@ -82,14 +82,14 @@ MODULE wbse_init_restart
       CALL errore('wbse_index_matrix_write', 'cannot open restart file for writing', ierr)
       !
       IF(ionode) THEN
-         CALL iotk_write_begin(iunout, "WBSE_INDEX_SIZE")
-         CALL iotk_write_dat(iunout, "size_list", size_list)
-         CALL iotk_write_dat(iunout, "size_column", size_column)
-         CALL iotk_write_end(iunout, "WBSE_INDEX_SIZE")
+         CALL iotk_write_begin(iunout, 'WBSE_INDEX_SIZE')
+         CALL iotk_write_dat(iunout, 'size_list', size_list)
+         CALL iotk_write_dat(iunout, 'size_column', size_column)
+         CALL iotk_write_end(iunout, 'WBSE_INDEX_SIZE')
          !
-         CALL iotk_write_begin(iunout, "WBSE_INIT_INDEX")
-         CALL iotk_write_dat(iunout, "index_matrix", index_matrix(:,1:size_column))
-         CALL iotk_write_end(iunout, "WBSE_INIT_INDEX")
+         CALL iotk_write_begin(iunout, 'WBSE_INIT_INDEX')
+         CALL iotk_write_dat(iunout, 'index_matrix', index_matrix(:,1:size_column))
+         CALL iotk_write_end(iunout, 'WBSE_INIT_INDEX')
       ENDIF
       !
       IF(ionode) CALL iotk_close_write(iunout)
@@ -133,10 +133,10 @@ MODULE wbse_init_restart
       IF(ierr /=0) CALL errore('wbse_index_matrix_read', 'cannot open restart file for reading', ierr)
       !
       IF(ionode) THEN
-         CALL iotk_scan_begin(iunout, "WBSE_INDEX_SIZE")
-         CALL iotk_scan_dat(iunout, "size_list", size_list_tmp)
-         CALL iotk_scan_dat(iunout, "size_column", size_column_tmp)
-         CALL iotk_scan_end(iunout, "WBSE_INDEX_SIZE")
+         CALL iotk_scan_begin(iunout, 'WBSE_INDEX_SIZE')
+         CALL iotk_scan_dat(iunout, 'size_list', size_list_tmp)
+         CALL iotk_scan_dat(iunout, 'size_column', size_column_tmp)
+         CALL iotk_scan_end(iunout, 'WBSE_INDEX_SIZE')
       ENDIF
       !
       CALL mp_bcast(size_list_tmp, 0, intra_image_comm)
@@ -145,9 +145,9 @@ MODULE wbse_init_restart
       ALLOCATE(index_matrix_tmp(size_list_tmp, size_column_tmp))
       !
       IF(ionode) THEN
-         CALL iotk_scan_begin(iunout, "WBSE_INIT_INDEX")
-         CALL iotk_scan_dat(iunout, "index_matrix", index_matrix_tmp(1:size_list_tmp,1:size_column_tmp))
-         CALL iotk_scan_end(iunout, "WBSE_INIT_INDEX")
+         CALL iotk_scan_begin(iunout, 'WBSE_INIT_INDEX')
+         CALL iotk_scan_dat(iunout, 'index_matrix', index_matrix_tmp(1:size_list_tmp,1:size_column_tmp))
+         CALL iotk_scan_end(iunout, 'WBSE_INIT_INDEX')
          CALL iotk_close_read(iunout)
       ENDIF
       !
@@ -200,17 +200,17 @@ MODULE wbse_init_restart
       CALL errore('wbse_pdep_coeffie_write', 'cannot open restart file for writing', ierr)
       !
       IF(ionode) THEN
-         CALL iotk_write_begin(iunout,"WBSE_PDEP_COEFFS_SIZE")
-         CALL iotk_write_dat(iunout,"size_list", size_list)
-         CALL iotk_write_end(iunout,"WBSE_PDEP_COEFFS_SIZE")
+         CALL iotk_write_begin(iunout, 'WBSE_PDEP_COEFFS_SIZE')
+         CALL iotk_write_dat(iunout, 'size_list', size_list)
+         CALL iotk_write_end(iunout, 'WBSE_PDEP_COEFFS_SIZE')
          !
-         CALL iotk_write_begin(iunout, "WBSE_PDEP_COEFFS_VX")
-         CALL iotk_write_dat(iunout, "coeff_matrix", alpha_ija_vx(:))
-         CALL iotk_write_end(iunout, "WBSE_PDEP_COEFFS_VX")
+         CALL iotk_write_begin(iunout, 'WBSE_PDEP_COEFFS_VX')
+         CALL iotk_write_dat(iunout, 'coeff_matrix', alpha_ija_vx(:))
+         CALL iotk_write_end(iunout, 'WBSE_PDEP_COEFFS_VX')
          !
-         CALL iotk_write_begin(iunout, "WBSE_PDEP_COEFFS_VC")
-         CALL iotk_write_dat(iunout, "coeff_matrix", alpha_ija_vc(:))
-         CALL iotk_write_end(iunout, "WBSE_PDEP_COEFFS_VC")
+         CALL iotk_write_begin(iunout, 'WBSE_PDEP_COEFFS_VC')
+         CALL iotk_write_dat(iunout, 'coeff_matrix', alpha_ija_vc(:))
+         CALL iotk_write_end(iunout, 'WBSE_PDEP_COEFFS_VC')
       ENDIF
       !
       IF(ionode) CALL iotk_close_write(iunout)
@@ -255,9 +255,9 @@ MODULE wbse_init_restart
       IF(ierr /=0) CALL errore('wbse_pdep_coeffie_read', 'cannot open restart file for reading', ierr)
       !
       IF(ionode) THEN
-         CALL iotk_scan_begin(iunout, "WBSE_PDEP_COEFFS_SIZE")
-         CALL iotk_scan_dat(iunout, "size_list", size_list_tmp)
-         CALL iotk_scan_end(iunout, "WBSE_PDEP_COEFFS_SIZE")
+         CALL iotk_scan_begin(iunout, 'WBSE_PDEP_COEFFS_SIZE')
+         CALL iotk_scan_dat(iunout, 'size_list', size_list_tmp)
+         CALL iotk_scan_end(iunout, 'WBSE_PDEP_COEFFS_SIZE')
       ENDIF
       !
       CALL mp_bcast(size_list_tmp, 0, intra_image_comm)
@@ -266,15 +266,15 @@ MODULE wbse_init_restart
       ALLOCATE(tmp_distr_vc(size_list_tmp))
       !
       IF(ionode) THEN
-         CALL iotk_scan_begin(iunout, "WBSE_PDEP_COEFFS_VX")
-         CALL iotk_scan_dat(iunout, "coeff_matrix", tmp_distr_vx(:))
-         CALL iotk_scan_end(iunout, "WBSE_PDEP_COEFFS_VX")
+         CALL iotk_scan_begin(iunout, 'WBSE_PDEP_COEFFS_VX')
+         CALL iotk_scan_dat(iunout, 'coeff_matrix', tmp_distr_vx(:))
+         CALL iotk_scan_end(iunout, 'WBSE_PDEP_COEFFS_VX')
       ENDIF
       !
       IF(ionode) THEN
-         CALL iotk_scan_begin(iunout, "WBSE_PDEP_COEFFS_VC")
-         CALL iotk_scan_dat(iunout, "coeff_matrix", tmp_distr_vc(:))
-         CALL iotk_scan_end(iunout, "WBSE_PDEP_COEFFS_VC")
+         CALL iotk_scan_begin(iunout, 'WBSE_PDEP_COEFFS_VC')
+         CALL iotk_scan_dat(iunout, 'coeff_matrix', tmp_distr_vc(:))
+         CALL iotk_scan_end(iunout, 'WBSE_PDEP_COEFFS_VC')
       ENDIF
       !
       IF(ionode) CALL iotk_close_read(iunout)
@@ -331,17 +331,17 @@ MODULE wbse_init_restart
       CALL errore('wbse_stat_restart_write', 'cannot open restart file for writing', ierr)
       !
       IF(ionode) THEN
-         CALL iotk_write_begin(iunout, "STATUS_OF_CALCULATION")
-         CALL iotk_write_dat(iunout, "status", done_calc)
-         CALL iotk_write_end(iunout, "STATUS_OF_CALCULATION")
+         CALL iotk_write_begin(iunout, 'STATUS_OF_CALCULATION')
+         CALL iotk_write_dat(iunout, 'status', done_calc)
+         CALL iotk_write_end(iunout, 'STATUS_OF_CALCULATION')
          !
-         CALL iotk_write_begin(iunout, "WBSE_INIT_SIZE")
-         CALL iotk_write_dat(iunout, "size_list", size_list)
-         CALL iotk_write_end(iunout, "WBSE_INIT_SIZE")
+         CALL iotk_write_begin(iunout, 'WBSE_INIT_SIZE')
+         CALL iotk_write_dat(iunout, 'size_list', size_list)
+         CALL iotk_write_end(iunout, 'WBSE_INIT_SIZE')
          !
-         CALL iotk_write_begin(iunout, "WBSE_INIT_RESTART")
-         CALL iotk_write_dat(iunout, "restart_matrix", restart_matrix(:))
-         CALL iotk_write_end(iunout, "WBSE_INIT_RESTART")
+         CALL iotk_write_begin(iunout, 'WBSE_INIT_RESTART')
+         CALL iotk_write_dat(iunout, 'restart_matrix', restart_matrix(:))
+         CALL iotk_write_end(iunout, 'WBSE_INIT_RESTART')
          !
          CALL iotk_close_write(iunout)
       ENDIF
@@ -385,13 +385,13 @@ MODULE wbse_init_restart
       IF(ierr /=0) CALL errore('wbse_stat_restart_read', 'cannot open restart file for reading', ierr)
       !
       IF(ionode) THEN
-         CALL iotk_scan_begin(iunout, "STATUS_OF_CALCULATION")
-         CALL iotk_scan_dat(iunout, "status", done_calc)
-         CALL iotk_scan_end(iunout, "STATUS_OF_CALCULATION")
+         CALL iotk_scan_begin(iunout, 'STATUS_OF_CALCULATION')
+         CALL iotk_scan_dat(iunout, 'status', done_calc)
+         CALL iotk_scan_end(iunout, 'STATUS_OF_CALCULATION')
          !
-         CALL iotk_scan_begin(iunout, "WBSE_INIT_SIZE")
-         CALL iotk_scan_dat(iunout, "size_list", size_list_tmp)
-         CALL iotk_scan_end(iunout, "WBSE_INIT_SIZE")
+         CALL iotk_scan_begin(iunout, 'WBSE_INIT_SIZE')
+         CALL iotk_scan_dat(iunout, 'size_list', size_list_tmp)
+         CALL iotk_scan_end(iunout, 'WBSE_INIT_SIZE')
       ENDIF
       !
       CALL mp_bcast(done_calc, 0, intra_image_comm)
@@ -400,9 +400,9 @@ MODULE wbse_init_restart
       ALLOCATE(restart_matrix_tmp(size_list_tmp))
       !
       IF(ionode) THEN
-         CALL iotk_scan_begin(iunout, "WBSE_INIT_RESTART")
-         CALL iotk_scan_dat(iunout, "restart_matrix", restart_matrix_tmp(:))
-         CALL iotk_scan_end(iunout, "WBSE_INIT_RESTART")
+         CALL iotk_scan_begin(iunout, 'WBSE_INIT_RESTART')
+         CALL iotk_scan_dat(iunout, 'restart_matrix', restart_matrix_tmp(:))
+         CALL iotk_scan_end(iunout, 'WBSE_INIT_RESTART')
          !
          CALL iotk_close_read(iunout)
       ENDIF
@@ -444,7 +444,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM(wbse_init_save_dir)//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM(wbse_init_save_dir)//'aux_imageid_'//TRIM(ADJUSTL(my_label))//'.dat'
       !
       IF(my_pool_id /= 0) RETURN
       IF(my_bgrp_id /= 0) RETURN
@@ -458,17 +458,17 @@ MODULE wbse_init_restart
          CALL iotk_free_unit(iunout, ierr)
          CALL iotk_open_write(iunout, FILE=TRIM(filename), BINARY=.FALSE.)
          !
-         CALL iotk_write_begin(iunout, "WBSE_PDEP_COEFFS_SIZE")
-         CALL iotk_write_dat(iunout, "size_list", size_list)
-         CALL iotk_write_end(iunout, "WBSE_PDEP_COEFFS_SIZE")
+         CALL iotk_write_begin(iunout, 'WBSE_PDEP_COEFFS_SIZE')
+         CALL iotk_write_dat(iunout, 'size_list', size_list)
+         CALL iotk_write_end(iunout, 'WBSE_PDEP_COEFFS_SIZE')
          !
-         CALL iotk_write_begin(iunout, "WBSE_PDEP_COEFFS_VX")
-         CALL iotk_write_dat(iunout, "coeff_matrix", alpha_ija_vx(:))
-         CALL iotk_write_end(iunout, "WBSE_PDEP_COEFFS_VX")
+         CALL iotk_write_begin(iunout, 'WBSE_PDEP_COEFFS_VX')
+         CALL iotk_write_dat(iunout, 'coeff_matrix', alpha_ija_vx(:))
+         CALL iotk_write_end(iunout, 'WBSE_PDEP_COEFFS_VX')
          !
-         CALL iotk_write_begin(iunout, "WBSE_PDEP_COEFFS_VC")
-         CALL iotk_write_dat(iunout, "coeff_matrix", alpha_ija_vc(:))
-         CALL iotk_write_end(iunout, "WBSE_PDEP_COEFFS_VC")
+         CALL iotk_write_begin(iunout, 'WBSE_PDEP_COEFFS_VC')
+         CALL iotk_write_dat(iunout, 'coeff_matrix', alpha_ija_vc(:))
+         CALL iotk_write_end(iunout, 'WBSE_PDEP_COEFFS_VC')
          !
          CALL iotk_close_write(iunout)
          !
@@ -510,7 +510,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM(wbse_init_save_dir)//"aux_imageid_"//TRIM(ADJUSTL(my_label))//".dat"
+      filename = TRIM(wbse_init_save_dir)//'aux_imageid_'//TRIM(ADJUSTL(my_label))//'.dat'
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
@@ -536,9 +536,9 @@ MODULE wbse_init_restart
          ! ONLY ROOT W/IN BGRP READS
          !
          IF(me_bgrp == root_bgrp) THEN
-            CALL iotk_scan_begin(iunout, "WBSE_PDEP_COEFFS_SIZE")
-            CALL iotk_scan_dat(iunout, "size_list", size_list_tmp)
-            CALL iotk_scan_end(iunout, "WBSE_PDEP_COEFFS_SIZE")
+            CALL iotk_scan_begin(iunout, 'WBSE_PDEP_COEFFS_SIZE')
+            CALL iotk_scan_dat(iunout, 'size_list', size_list_tmp)
+            CALL iotk_scan_end(iunout, 'WBSE_PDEP_COEFFS_SIZE')
          ENDIF
          !
       ENDIF
@@ -553,13 +553,13 @@ MODULE wbse_init_restart
          ! ONLY ROOT W/IN BGRP READS
          !
          IF(me_bgrp == root_bgrp) THEN
-            CALL iotk_scan_begin(iunout, "WBSE_PDEP_COEFFS_VX")
-            CALL iotk_scan_dat(iunout, "coeff_matrix", alpha_ija_vx_tmp(:))
-            CALL iotk_scan_end(iunout, "WBSE_PDEP_COEFFS_VX")
+            CALL iotk_scan_begin(iunout, 'WBSE_PDEP_COEFFS_VX')
+            CALL iotk_scan_dat(iunout, 'coeff_matrix', alpha_ija_vx_tmp(:))
+            CALL iotk_scan_end(iunout, 'WBSE_PDEP_COEFFS_VX')
             !
-            CALL iotk_scan_begin(iunout, "WBSE_PDEP_COEFFS_VC")
-            CALL iotk_scan_dat(iunout, "coeff_matrix", alpha_ija_vc_tmp(:))
-            CALL iotk_scan_end(iunout, "WBSE_PDEP_COEFFS_VC")
+            CALL iotk_scan_begin(iunout, 'WBSE_PDEP_COEFFS_VC')
+            CALL iotk_scan_dat(iunout, 'coeff_matrix', alpha_ija_vc_tmp(:))
+            CALL iotk_scan_end(iunout, 'WBSE_PDEP_COEFFS_VC')
             !
             CALL iotk_close_read(iunout)
          ENDIF

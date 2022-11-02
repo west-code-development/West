@@ -69,7 +69,7 @@ SUBROUTINE wbse_lanczos_diago()
   !
   ! Main Lanzcos program
   !
-  IF(n_lanczos == 0) CALL errore('lanczosdiago', ' n_lanczos must be > 0', 1)
+  IF(n_lanczos < 1) CALL errore('wbse_lanczos_diago', 'n_lanczos must be > 0', 1)
   !
   SELECT CASE(ipol_input)
   CASE('XX', 'xx')
@@ -101,12 +101,17 @@ SUBROUTINE wbse_lanczos_diago()
       pol_index_input(3) = 3
       pol_label_input(3) = 'ZZ'
   CASE DEFAULT
-      CALL errore('lanczosdiago', 'Wrong ipol_input', 1)
+      CALL errore('wbse_lanczos_diago', 'wrong ipol_input', 1)
   END SELECT
   !
   ALLOCATE(d0psi(npwx,nbndval0x,nks,n_ipol))
   ALLOCATE(alpha_store(nipol_input,n_lanczos,nspin),beta_store(nipol_input,n_lanczos,nspin))
   ALLOCATE(gamma_store(nipol_input,n_lanczos,nspin),zeta_store(nipol_input,n_ipol,n_lanczos,nspin))
+  !
+  alpha_store(:,:,:) = 0._DP
+  beta_store(:,:,:) = 0._DP
+  gamma_store(:,:,:) = 0._DP
+  zeta_store(:,:,:,:) = (0._DP,0._DP)
   !
   ALLOCATE(evc1(npwx,nbndval0x,nks),evc1_old(npwx,nbndval0x,nks),evc1_new(npwx,nbndval0x,nks))
   !
@@ -114,11 +119,6 @@ SUBROUTINE wbse_lanczos_diago()
   CASE('l')
       !
       ! RESTART
-      !
-      alpha_store(:,:,:) = 0._DP
-      beta_store(:,:,:) = 0._DP
-      gamma_store(:,:,:) = 0._DP
-      zeta_store(:,:,:,:) = (0._DP,0._DP)
       !
       CALL lanczos_restart_read(nipol_input, pliter_stop, lriter_stop)
       !
@@ -144,18 +144,13 @@ SUBROUTINE wbse_lanczos_diago()
       !
       CALL lanczos_d0psi_write()
       !
-      alpha_store(:,:,:) = 0._DP
-      beta_store(:,:,:) = 0._DP
-      gamma_store(:,:,:) = 0._DP
-      zeta_store(:,:,:,:) = (0._DP,0._DP)
-      !
       lriter_restart = 1
       pliter_restart = 1
       !
       l_from_scratch = .TRUE.
       !
   CASE DEFAULT
-      CALL errore('lanczosdiago', 'Wrong wlzcos_calculation', 1)
+      CALL errore('wbse_lanczos_diago', 'wrong wlzcos_calculation', 1)
   END SELECT
   !
   WRITE(stdout,'(/,5X,"LANCZOS LINEAR-RESPONSE ADSORPTION SPECTRUM CALCULATION")')
@@ -207,7 +202,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         DO is = 1, nspin
            IF(beta(is) < 0._DP) THEN
-              CALL errore('lanczosdiago', 'Negative beta', 1)
+              CALL errore('wbse_lanczos_diago', 'negative beta', 1)
            ELSE
               beta(is) = SQRT(beta(is))
               gamma(is) = beta(is)

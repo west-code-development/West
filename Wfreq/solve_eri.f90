@@ -36,9 +36,6 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   REAL(DP) :: freq
   COMPLEX(DP) :: chi_head
   !
-  COMPLEX(DP) :: chi_head
-  COMPLEX(DP),ALLOCATABLE :: chi_body(:,:)
-  
   REAL(DP),ALLOCATABLE :: braket(:,:,:)
   REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:)
   COMPLEX(DP),ALLOCATABLE :: chi_body(:,:)

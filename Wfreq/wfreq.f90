@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -57,15 +57,19 @@ PROGRAM wfreq
   ENDDO
   !
   IF( lgate(1) ) THEN
-     CALL solve_hf( .FALSE. )
+     CALL solve_hf()
   ENDIF
   !
   IF( lgate(2) ) THEN
      CALL solve_wfreq( .FALSE., lgate(7), .FALSE. )
   ENDIF
   !
-  IF( lgate(3) .OR. lgate(9) ) THEN
-     CALL solve_wfreq( .TRUE., lgate(7), lgate(9) )
+  IF( lgate(3) ) THEN
+     CALL solve_wfreq( .TRUE., lgate(7), .FALSE. )
+  ENDIF
+  !
+  IF( lgate(9) ) THEN
+     CALL solve_wfreq( .TRUE., lgate(7), .TRUE. )
   ENDIF
   !
   IF( lgate(4) ) THEN

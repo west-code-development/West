@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -68,23 +68,21 @@ MODULE wfreq_io
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
     IF (l_enable_off_diagonal) THEN
-      myoffset_i8b = 1_i8b*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
-      CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
-      !
-      myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
-      CALL mp_write_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
     ELSE
-      myoffset_i8b = 1_i8b*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-      CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
-      !
-      myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-      CALL mp_write_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
     ENDIF
+    CALL mp_write_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
+    !
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    IF (l_enable_off_diagonal) THEN
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
+    ELSE
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    ENDIF
+    CALL mp_write_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     !
     CALL stop_clock('write_gfreq')
     !
@@ -219,21 +217,21 @@ MODULE wfreq_io
     WRITE(c_glob_iks,'(i5.5)') glob_iks
     WRITE(c_glob_ib,'(i5.5)') glob_ib
     !
+    myoffset_i8b = 1_i8b*n_lanczos*myoffset
     IF (l_enable_off_diagonal) THEN
-      myoffset_i8b = 1_i8b*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
-      CALL mp_read_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
-      myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
-      CALL mp_read_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
     ELSE
-      myoffset_i8b = 1_i8b*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-      CALL mp_read_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
-      myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
-      fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
-      CALL mp_read_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
+       fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
     ENDIF
+    CALL mp_read_dmsg_at(fname,diago,n_lanczos*nloc,myoffset_i8b)
+    !
+    myoffset_i8b = 1_i8b*nglob*n_lanczos*myoffset
+    IF (l_enable_off_diagonal) THEN
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'_full.dat'
+    ELSE
+       fname = TRIM(wfreq_save_dir)//'/g_brak_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
+    ENDIF
+    CALL mp_read_dmsg_at(fname,braket,nglob*n_lanczos*nloc,myoffset_i8b)
     !
     CALL stop_clock('read_gfreq')
     !

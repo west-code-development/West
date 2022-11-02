@@ -9,12 +9,12 @@
 *.dSYM
 *.a
 *.out
-doc/_build/
+Doc/_build/
 Modules/west_version.f90
 west_make.inc
 make.depend
 __pycache__
-.ipynb_checkpoints
 Pytools/WEST.egg-info/
 Pytools/dist/
 Pytools/files.txt
+.ipynb_checkpoints/

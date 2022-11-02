@@ -29,5 +29,5 @@ title:
 
 description:
 	@echo
-	@echo "MgO gamma_only"
+	@echo "MgO gamma_only test localization"
 	@echo

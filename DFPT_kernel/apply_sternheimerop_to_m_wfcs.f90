@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -36,14 +36,16 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !
   ! Workspace
   !
-  INTEGER :: ibnd
+  INTEGER :: ibnd,ig
   COMPLEX(DP) :: za
   !
-  CALL start_clock ('stern')
+#if defined(__CUDA)
+  CALL start_clock_gpu('stern')
+#else
+  CALL start_clock('stern')
+#endif
   !
   ! compute the product of the hamiltonian with the h vector
-  !
-  hpsi=(0.0_DP,0.0_DP)
   !
   IF(l_kinetic_only) THEN
      CALL k_psi( npwx, npw, m, psi, hpsi )
@@ -52,24 +54,44 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
      ! use h_psi_, i.e. h_psi without band parallelization, as wstat
      ! handles band parallelization separately in dfpt_module
      !
+#if defined(__CUDA)
+     !$acc host_data use_device(psi,hpsi)
+     CALL h_psi__gpu( npwx, npw, m, psi, hpsi )
+     !$acc end host_data
+#else
      CALL h_psi_( npwx, npw, m, psi, hpsi )
+#endif
   ENDIF
   !
   ! then we compute the operator H-epsilon S
   !
-  DO ibnd=1,m
-     za = CMPLX( -e(ibnd), 0._DP, KIND=DP )
-     CALL ZAXPY(npw,za,psi(1,ibnd),1,hpsi(1,ibnd),1)
-  ENDDO
-  IF(noncolin) THEN
-     DO ibnd=1,m
-        za = CMPLX( -e(ibnd), 0._DP, KIND=DP )
-        CALL ZAXPY(npw,za,psi(npwx+1,ibnd),1,hpsi(npwx+1,ibnd),1)
+#if defined(__CUDA)
+  !$acc parallel loop collapse(2) present(hpsi,e,psi)
+  DO ibnd = 1,m
+     DO ig = 1,npw
+        hpsi(ig,ibnd) = hpsi(ig,ibnd)-e(ibnd)*psi(ig,ibnd)
+        IF(noncolin) THEN
+           hpsi(npwx+ig,ibnd) = hpsi(npwx+ig,ibnd)-e(ibnd)*psi(npwx+ig,ibnd)
+        ENDIF
      ENDDO
-  ENDIF
+  ENDDO
+  !$acc end parallel
+#else
+  DO ibnd = 1,m
+     za = -e(ibnd)
+     CALL ZAXPY(npw,za,psi(1,ibnd),1,hpsi(1,ibnd),1)
+     IF(noncolin) THEN
+        CALL ZAXPY(npw,za,psi(npwx+1,ibnd),1,hpsi(npwx+1,ibnd),1)
+     ENDIF
+  ENDDO
+#endif
   !
   CALL apply_alpha_pv_to_m_wfcs(nbndval,m,psi,hpsi,alpha)
   !
-  CALL stop_clock ('stern')
+#if defined(__CUDA)
+  CALL stop_clock_gpu('stern')
+#else
+  CALL stop_clock('stern')
+#endif
   !
 END SUBROUTINE

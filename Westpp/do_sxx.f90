@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -116,12 +116,12 @@ SUBROUTINE do_sxx ( )
         IF( ib < westpp_range(1) .OR. ib > westpp_range(2) ) CYCLE
         !
         IF(gamma_only) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ib),psic,'Wave')
         ELSEIF(noncolin) THEN
-           CALL single_invfft_k(dffts,npw,npwx,evc(1     ,ib),psic_nc(1,1),'Wave',igk_k(1,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx,ib),psic_nc(1,2),'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(1:npwx,ib),psic_nc(:,1),'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx:npwx*2,ib),psic_nc(:,2),'Wave',igk_k(:,current_k))
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,ib),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ib),psic,'Wave',igk_k(:,current_k))
         ENDIF
         !
         DO iq = 1, q_grid%np
@@ -161,20 +161,20 @@ SUBROUTINE do_sxx ( )
               !
               ! Bring it to R-space
               IF(gamma_only) THEN
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc(1,iv),pertr,'Wave')
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc(:,iv),pertr,'Wave')
                  DO ir=1,dffts%nnr
                     pertr(ir)=psic(ir)*pertr(ir)
                  ENDDO
                  CALL single_fwfft_gamma(dffts,npwq,npwqx,pertr,pertg,TRIM(fftdriver))
               ELSEIF(noncolin) THEN
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1     ,iv),pertr_nc(1,1),'Wave',igk_k(1,ikqs))
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx,iv),pertr_nc(1,2),'Wave',igk_k(1,ikqs))
+                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,iv),pertr_nc(:,1),'Wave',igk_k(:,ikqs))
+                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx:npwx*2,iv),pertr_nc(:,2),'Wave',igk_k(:,ikqs))
                  DO ir=1,dffts%nnr
                     pertr_nc(ir,1)=CONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+CONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
-                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(1,1),pertg,'Rho') ! no igk
+                 CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(:,1),pertg,'Rho') ! no igk
               ELSE
-                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1,iv),pertr,'Wave',igk_k(1,ikqs))
+                 CALL single_invfft_k(dffts,npwkq,npwx,evckmq(:,iv),pertr,'Wave',igk_k(:,ikqs))
                  DO ir=1,dffts%nnr
                     pertr(ir)=CONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO

@@ -10,7 +10,7 @@ from xml.etree import ElementTree as ET
 
 def check_files_exist_and_job_done(list_of_files):
     """
-    Check that every file in the list exists and contains the string JOB DONE
+    Check that every file in the list exists and contains the string 'JOB DONE'
     """
 
     for file in list_of_files:
@@ -21,7 +21,7 @@ def check_files_exist_and_job_done(list_of_files):
 
 def read_total_energy(fileName):
     """
-    Reads the PW total energy from file.
+    Reads the PW total energy from file
     """
 
     xmlData = ET.parse(fileName)
@@ -39,7 +39,7 @@ def read_and_test_total_energies(fileA,fileB,tol):
     ref_energy = read_total_energy(fileB)
 
     maxDiff = np.amax(np.abs(test_energy-ref_energy))
-    print(f'Tot energy max diff: {maxDiff}')
+    print(f'Total energy (pwscf) max diff: {maxDiff}')
 
     assert np.allclose(test_energy,ref_energy,rtol=0,atol=tol),'Total energies changed'
 
@@ -73,7 +73,7 @@ def read_and_test_wstat_eigenvalues(fileA,fileB,tol):
     maxDiff = 0.0
     for iq in test_pdep_eig:
         maxDiff = max(maxDiff,np.amax(np.abs(test_pdep_eig[iq]-ref_pdep_eig[iq])))
-    print(f'Pdep eigenvalues (wstat) max diff: {maxDiff}')
+    print(f'PDEP eigenvalues (wstat) max diff: {maxDiff}')
 
     for iq in test_pdep_eig:
         assert np.allclose(test_pdep_eig[iq],ref_pdep_eig[iq],rtol=0,atol=tol),f'PDEP eigenvalues changed, iq {iq}'
@@ -121,32 +121,57 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
             assert np.allclose(np.abs(test_en[ik][key]),np.abs(ref_en[ik][key]),rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
 
 
-########
-# TEST #
-########
+def read_localization_and_ipr(FileName):
+    """
+    Reads localization factor and inverse participation ratio (IPR)
+    """
+
+    with open(FileName,'r') as f:
+        data = json.load(f)
+        localization = data['localization']
+        ipr = data['ipr']
+
+    return localization,ipr
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011'])
+#########
+# TESTS #
+#########
+
+
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012'])
 def test_output(testdir):
     check_files_exist_and_job_done([testdir+'/pw.out',testdir+'/wstat.out',testdir+'/wfreq.out'])
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009','test010','test011'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009','test010','test011','test012'])
 def test_totalEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_total_energies(testdir+'/test.save/data-file-schema.xml',testdir+'/ref/pw.xml',float(parameters['tolerance']['total_energy']))
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012'])
 def test_pdepEigen(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wstat_eigenvalues(testdir+'/test.wstat.save/wstat.json',testdir+'/ref/wstat.json',float(parameters['tolerance']['pdep_eigenvalue']))
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012'])
 def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))
+
+
+@pytest.mark.parametrize('testdir',['test008'])
+def test_localization_and_ipr(testdir):
+    with open('parameters.json','r') as f:
+        parameters = json.load(f)
+
+    testLoc,testIPR = read_localization_and_ipr(testdir+'/test.westpp.save/localization.json')
+    refLoc,refIPR = read_localization_and_ipr(testdir+'/ref/localization.json')
+
+    assert np.allclose(testLoc,refLoc,rtol=0.0,atol=float(parameters['tolerance']['localization']))
+    assert np.allclose(testIPR,refIPR,rtol=0.0,atol=float(parameters['tolerance']['localization']))

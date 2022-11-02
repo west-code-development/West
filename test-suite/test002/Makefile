@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "CH4 molecule gamma_only test n_read_from_file"
+	@echo "CH4 molecule gamma_only test JSON input"
 	@echo

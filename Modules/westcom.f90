@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -33,6 +33,10 @@ MODULE scratch_area
   COMPLEX(DP),         ALLOCATABLE :: dng(:,:)
   COMPLEX(DP),         ALLOCATABLE :: dvg(:,:)
   LOGICAL,             ALLOCATABLE :: conv(:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: dng
+  ATTRIBUTES(PINNED) :: dvg
+#endif
   !
   ! Q-POINTS
   !
@@ -48,13 +52,20 @@ MODULE scratch_area
   REAL(DP),    ALLOCATABLE :: d_epsm1_ifr_a(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_a(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_a(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: d_epsm1_ifr
+#endif
   !
   ! EPSILON with q-points
   !
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_q(:,:,:,:) ! EPSILON + iq (global in iq)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_q(:,:,:,:) ! EPSILON + iq (global in iq)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: z_epsm1_ifr_q
+#endif
   !
   ! CORRELATION
+  !
   REAL(DP),    ALLOCATABLE :: d_head_ifr(:)
   COMPLEX(DP), ALLOCATABLE :: z_head_ifr(:)
   REAL(DP),    ALLOCATABLE :: d_body1_ifr(:,:,:,:)
@@ -192,21 +203,24 @@ MODULE wfreq_center
   REAL(DP), PARAMETER :: frequency_list_power = 2._DP
   !
   ! qp_bands
-  !  
+  !
   INTEGER :: n_bands
   !
   ! off-diagonal entries mapping
   !
   INTEGER :: n_pairs
-  INTEGER,    ALLOCATABLE :: ijpmap(:,:)
-  INTEGER,    ALLOCATABLE :: pijmap(:,:)
+  INTEGER, ALLOCATABLE :: ijpmap(:,:)
+  INTEGER, ALLOCATABLE :: pijmap(:,:)
   !
   ! downfolded Hamiltonian
-  COMPLEX(DP),ALLOCATABLE :: proj_c(:,:,:)
-  REAL(DP),   ALLOCATABLE :: h1e(:,:)
+  COMPLEX(DP), ALLOCATABLE :: proj_c(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: proj_c
+#endif
+  REAL(DP),    ALLOCATABLE :: h1e(:,:)
   COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   !
-  ! gw_etot 
+  ! gw_etot
   !
   REAL(DP) :: dft_etot
   REAL(DP) :: dft_exc
@@ -216,26 +230,26 @@ MODULE wfreq_center
   !
   ! output
   !
+  REAL(DP),    ALLOCATABLE :: sigma_z(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_eqplin(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_eqpsec(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_exx(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcl(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_vxcnl(:,:)
   REAL(DP),    ALLOCATABLE :: sigma_hf(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_z(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_eqplin(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_eqpsec(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqpsec(:,:)
-  REAL(DP),    ALLOCATABLE :: sigma_diff(:,:)
   COMPLEX(DP), ALLOCATABLE :: sigma_spectralf(:,:,:)
   REAL(DP),    ALLOCATABLE :: sigma_freq(:)
-  REAL(DP),    ALLOCATABLE :: sigma_exx_full  (:,:) 
-  REAL(DP),    ALLOCATABLE :: sigma_vxcl_full (:,:) 
-  REAL(DP),    ALLOCATABLE :: sigma_vxcnl_full(:,:) 
-  REAL(DP),    ALLOCATABLE :: sigma_hf_full   (:,:)
-  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks_full (:,:)
-  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin_full (:,:)
-  COMPLEX(DP), ALLOCATABLE :: sigma_corr_full (:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_exx_full(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_vxcl_full(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_vxcnl_full(:,:)
+  REAL(DP),    ALLOCATABLE :: sigma_hf_full(:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eks_full(:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_sc_eqplin_full(:,:)
+  COMPLEX(DP), ALLOCATABLE :: sigma_corr_full(:,:)
   !
 END MODULE
 !

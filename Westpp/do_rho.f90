@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -74,12 +74,12 @@ SUBROUTINE do_rho ( )
         IF( global_ib > nbnd_occ(iks) ) CYCLE
         !
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(1,global_ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
            DO ir = 1, dffts%nnr
               auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * k_grid%weight(iks)
            ENDDO
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(1,global_ib),psic,'Wave',igk_k(1,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
            DO ir = 1, dffts%nnr
               auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * k_grid%weight(iks)
            ENDDO

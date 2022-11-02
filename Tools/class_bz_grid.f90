@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `LICENSE'
 ! in the root directory of the present distribution,
@@ -158,7 +158,7 @@ MODULE class_bz_grid
       ALLOCATE( this%l_pIsGamma(this%np) )
       this%l_pIsGamma(:) = .FALSE.
       DO ip = 1, this%np
-         this%l_pIsGamma(ip) = ( ALL( ABS ( this%p_cryst(:,ip) ) .LT. eps8 ) )
+         this%l_pIsGamma(ip) = ( ALL( ABS ( this%p_cryst(:,ip) ) < eps8 ) )
       ENDDO
       !
    END SUBROUTINE
@@ -200,7 +200,7 @@ MODULE class_bz_grid
       ip = 0
       DO i = 1, this%np
          deltap(:) = p(:) - this%p_cryst(:,i) - NINT( p(:) - this%p_cryst(:,i) )
-         IF ( ALL ( ABS ( deltap ) .LT. eps8 ) ) THEN
+         IF ( ALL ( ABS ( deltap ) < eps8 ) ) THEN
             g0(:) = p(:) - this%p_cryst(:,i)
             ip = i
             EXIT

@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file License
 ! in the root directory of the present distribution,
@@ -25,7 +25,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
                              & westpp_epsinfty,westpp_box,document,l_enable_off_diagonal
-  USE mp_world,         ONLY : mpime, root
+  USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
   !
@@ -60,7 +60,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
         CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
-        CALL json%add('input.wstat_control.qlist', qlist)
+        CALL json%add('input.wstat_control.qlist',qlist)
         !
      ENDIF
      !
@@ -115,12 +115,9 @@ END SUBROUTINE
 
 SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
-  USE io_push,          ONLY : io_push_title, io_push_value, io_push_bar, io_push_es0, io_push_c512
-  USE forpy_mod,        ONLY : call_py, import_py, module_py
-  USE forpy_mod,        ONLY : tuple, tuple_create
-  USE forpy_mod,        ONLY : dict, dict_create
-  USE forpy_mod,        ONLY : list, list_create
-  USE forpy_mod,        ONLY : object, cast
+  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512
+  USE forpy_mod,        ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,dict_create,&
+                             & list,object,cast
   USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
                              & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,l_kinetic_only,&
@@ -133,12 +130,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & westpp_epsinfty,westpp_box,document,main_input_file,logfile,&
                              & l_enable_off_diagonal
   USE kinds,            ONLY : DP
-  USE io_files,         ONLY : tmp_dir, prefix
-  USE mp,               ONLY : mp_bcast, mp_barrier
-  USE mp_world,         ONLY : mpime, root, world_comm
+  USE io_files,         ONLY : tmp_dir,prefix
+  USE mp,               ONLY : mp_bcast,mp_barrier
+  USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
   USE gvect,            ONLY : ecutrho
-  USE start_k,          ONLY : nk1, nk2, nk3
+  USE start_k,          ONLY : nk1,nk2,nk3
   USE control_flags,    ONLY : gamma_only
   USE json_module,      ONLY : json_file
   USE pwcom,            ONLY : nelec
@@ -156,7 +153,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   TYPE(tuple) :: args
   TYPE(dict) :: kwargs
   TYPE(module_py) :: pymod
-  TYPE(object) :: return_obj, tmp_obj
+  TYPE(object) :: return_obj,tmp_obj
   TYPE(dict) :: return_dict
   TYPE(list) :: tmp_list
   INTEGER :: list_len
@@ -493,11 +490,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( qp_bandrange(1) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
      IF( qp_bandrange(2) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
      IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
-     IF (qp_bands(1) == 0) THEN
-        CONTINUE
-     ELSE 
+     IF( qp_bands(1) /= 0 ) THEN
         DO i = 0, SIZE(qp_bands)-1 ! Python indices start at 0
-           IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands',1)
+           IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands<1',1)
+           IF( i /= SIZE(qp_bands)-1 ) THEN
+              IF( qp_bands(i+1) >= qp_bands(i+2) ) CALL errore('fetch_input','Err: qp_bands must be sorted in ascending order',1)
+           ENDIF
         ENDDO
      ENDIF
      IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
@@ -506,14 +504,13 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( wfreq_eta<=0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
      IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1)
      IF( trev_secant<=0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
+     IF( l_enable_off_diagonal .AND. .NOT. gamma_only ) CALL errore('fetch_input','Err: off-diagonal implemented for gamma only',1)
      IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
      IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
      IF( n_imfreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_imfreq',1)
      IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_refreq',1)
      IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_secant_maxiter',1)
      IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_spectralf',1)
-     IF (l_enable_off_diagonal .and. .not. gamma_only) CALL errore("wfreq_setup", "off-diagonal self-energy only &
-     & implemented for gamma-only case", 1)
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
      CASE DEFAULT
@@ -546,6 +543,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( westpp_epsinfty < 1._DP ) CALL errore('fetch_input','Err: westpp_epsinfty<1.',1)
      IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_n_pdep_eigen_to_use',1)
      IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_nr',1)
+     IF( westpp_box(1) > westpp_box(2) .OR. westpp_box(3) > westpp_box(4) .OR. westpp_box(5) > westpp_box(6) ) &
+     & CALL errore('fetch_input','Err: invalid westpp_box',1)
      !
   ENDIF
   !
@@ -618,9 +617,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
         CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
-        IF (qp_bands(1) == 0) THEN
-           CONTINUE
-        ELSE 
+        IF ( qp_bands(1) > 0 ) THEN
            DO i = 0, list_len-1 ! Python indices start at 0
               CALL io_push_value('qp_bands',qp_bands(i),numsp)
            ENDDO

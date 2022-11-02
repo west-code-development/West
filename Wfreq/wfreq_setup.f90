@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -17,30 +17,30 @@ SUBROUTINE wfreq_setup
   USE mp_global,              ONLY : nbgrp,inter_image_comm,my_image_id,mp_bcast
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
-                                   & qp_bands,n_bands,wfreq_calculation,sigma_exx,sigma_vxcl,&
-                                   & sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,&
-                                   & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
-                                   & sigma_spectralf,sigma_freq,n_spectralf,&
-                                   & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,&
-                                   & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,&
-                                   & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,&
-                                   & iuwfc,lrwfc,proj_c,npwq,npwqx,fftdriver
-  USE wavefunctions,          ONLY : evc,psic
-  USE fft_base,               ONLY : dffts
+                                   & wfreq_calculation,qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
+                                   & sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
+                                   & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
+                                   & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,sigma_exx_full,&
+                                   & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
+                                   & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc
+  USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
-  USE fft_at_gamma,           ONLY : single_invfft_gamma
-  USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx,nspin
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
   USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
   USE io_global,              ONLY : stdout
+  USE ldaU,                   ONLY : lda_plus_u
+  USE bp,                     ONLY : lelfield
+  USE realus,                 ONLY : real_space
+  USE control_flags,          ONLY : gamma_only
   !
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: i,ib,jb,iks,ib_index,ipair
+  INTEGER :: i,ib,jb,ipair,iks,ib_index
   LOGICAL :: l_generate_plot
   !
   CALL do_setup()
@@ -52,7 +52,7 @@ SUBROUTINE wfreq_setup
   CALL set_npwq()
   !
   IF(qp_bands(1) == 0) THEN
-     WRITE(stdout,'(7X,"** WARNING : qp_bands is set automatically according to qp_bandrange")') 
+     WRITE(stdout,'(7X,"** WARNING : qp_bands is set automatically according to qp_bandrange")')
      IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
      ALLOCATE(qp_bands(qp_bandrange(2)-qp_bandrange(1)+1))
      DO i = 1, SIZE(qp_bands)
@@ -106,22 +106,22 @@ SUBROUTINE wfreq_setup
   !
   ! Allocate for output
   !
-  ALLOCATE( sigma_exx       (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_vxcl      (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_vxcnl     (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_hf        (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_z         (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_eqplin    (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_eqpsec    (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_diff      (n_bands,k_grid%nps) )
-  sigma_exx = 0._DP      
+  ALLOCATE( sigma_exx    (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_vxcl   (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_vxcnl  (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_hf     (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_z      (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_eqplin (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_eqpsec (n_bands,k_grid%nps) )
+  ALLOCATE( sigma_diff   (n_bands,k_grid%nps) )
+  sigma_exx = 0._DP
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
   sigma_hf = 0._DP
   sigma_z = 0._DP
   sigma_eqplin = 0._DP
   sigma_eqpsec = 0._DP
-  sigma_diff = 0._DP  
+  sigma_diff = 0._DP
   !
   IF ( .NOT. l_enable_off_diagonal ) THEN
      ALLOCATE( sigma_sc_eks    (n_bands,k_grid%nps) )
@@ -142,15 +142,15 @@ SUBROUTINE wfreq_setup
            pijmap(1,ipair) = ib
            pijmap(2,ipair) = jb
            ipair = ipair + 1
-        ENDDO 
+        ENDDO
      ENDDO
-     ALLOCATE( sigma_exx_full (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_vxcl_full (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_vxcnl_full (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_hf_full (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_sc_eks_full (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_exx_full       (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_vxcl_full      (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_vxcnl_full     (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_hf_full        (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_sc_eks_full    (n_pairs,k_grid%nps) )
      ALLOCATE( sigma_sc_eqplin_full (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_corr_full (n_pairs,k_grid%nps) )
+     ALLOCATE( sigma_corr_full      (n_pairs,k_grid%nps) )
      sigma_exx_full = 0._DP
      sigma_vxcl_full = 0._DP
      sigma_vxcnl_full = 0._DP
@@ -162,8 +162,16 @@ SUBROUTINE wfreq_setup
   !
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'H') THEN
+        !
+        IF(nspin > 1) CALL errore('wfreq_setup','QDET with nspin > 1 not supported',1)
+        IF(real_space) CALL errore('wfreq_setup','QDET with real_space not supported',1)
+        IF(lda_plus_u) CALL errore('wfreq_setup','QDET with lda_plus_u not supported',1)
+        IF(lelfield) CALL errore('wfreq_setup','QDET with lelfield not supported',1)
+        IF(.NOT. gamma_only) CALL errore('wfreq_setup','QDET requires gamma_only',1)
+        !
         ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
-        DO iks = 1, k_grid%nps 
+        !
+        DO iks = 1, k_grid%nps
            !
            IF(kpt_pool%nloc > 1) THEN
               IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
@@ -175,9 +183,12 @@ SUBROUTINE wfreq_setup
               ib = qp_bands(ib_index)
               proj_c(:,ib_index,iks) = evc(:,ib)
               !
-           END DO
+           ENDDO
            !
-        END DO
+        ENDDO
+        !
+        !$acc enter data copyin(proj_c)
+        !
         EXIT
         !
      ENDIF

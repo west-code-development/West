@@ -297,6 +297,8 @@ wfreq_control
        - "XWGQ" : Compute the QP corrections.
        - "XwGQ" : Compute the QP corrections, restart from an interrupted / just read W run.
        - "XwgQ" : Compute the QP corrections, restart from an interrupted / just read G run.
+       - "XWGQH" : Compute the QP corrections and parameters of QDET effective Hamiltonian. Only available for Gamma-point sampling.
+       - "XwGQH" : Compute the QP corrections and parameters of QDET effective Hamiltonian, restart from interrupted / just read W run. Only available for Gamma-point sampling.
        - "X" : Compute the HF corrections.
        - "XWO" : Compute the optical properties.
        - "XWGQP" : Compute the QP corrections, and plot spectral functions.
@@ -328,8 +330,7 @@ wfreq_control
    * - **Default**
      - [1,2]
    * - **Description**
-     - Compute the QP corrections from band qp_bandrange[0] to band qp_bandrange[1].
-     - Used only when qp_bands is not set. If qp_bands is set, the value of qp_bandrange is discarded.
+     - Compute the QP corrections from band qp_bandrange[0] to band qp_bandrange[1]. Used only when qp_bands is not set. If qp_bands is set, the value of qp_bandrange is discarded.
 
 
 .. data:: qp_bands
@@ -343,8 +344,7 @@ wfreq_control
    * - **Default**
      - [0]
    * - **Description**
-     - List of bands to compute the QP corrections.
-     - If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
+     - List of bands to compute the QP corrections. If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
 
 
 .. data:: macropol_calculation
@@ -501,8 +501,9 @@ wfreq_control
    * - **Default**
      - False
    * - **Description**
-     - If (False) then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band). 
-     - If (True) then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
+     -
+       - If (False) then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band).
+       - If (True) then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
 
 
 .. data:: l_enable_gwetot
@@ -589,8 +590,7 @@ westpp_control
        - "E" : Output the eigenpotentials.
        - "S" : Output the screened exchange constant.
        - "D" : Output the dipole matrix elements.
-       - "L" : Output the localization factor and the inverse participation
-         ratio.
+       - "L" : Output the localization factor and the inverse participation ratio.
 
 
 .. data:: westpp_range
@@ -710,6 +710,7 @@ westpp_control
    * - **Description**
      - Macroscopic relative dielectric constant. Used in the "S" runlevel.
 
+
 .. data:: westpp_box
 
 .. list-table::
@@ -721,9 +722,8 @@ westpp_control
    * - **Default**
      - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
    * - **Description**
-     - Size of box [x_0, x_1, y_0, y_1, z_0, z_1] used for calculation of the
-       localization factor. The box parameters are given in atomic units. Used
-       in the "L" runlevel.
+     - Box [x_0, x_1, y_0, y_1, z_0, z_1] (in a.u.) within which the localization factor is computed (the "L" runlevel).
+
 |
 
 --------------

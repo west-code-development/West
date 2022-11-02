@@ -1,7 +1,7 @@
 #!/bin/bash
 
-${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Si_ONCV_PBE-1.1.upf
 ${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/H_ONCV_PBE-1.0.upf
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Si_ONCV_PBE-1.1.upf
 
 cat > pw.in << EOF
 &control
@@ -61,8 +61,7 @@ wstat_control:
 
 wfreq_control:
   wfreq_calculation: XWGQH
-  macropol_calculation: C
-  l_enable_off_diagonal: true
+  l_enable_off_diagonal: True
   n_pdep_eigen_to_use: 50
   qp_bands: [8,9,10]
   n_refreq: 300

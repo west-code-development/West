@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -15,7 +15,11 @@ SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
+#if defined(__CUDA)
+  USE wvfct_gpum,            ONLY : g2kin=>g2kin_d
+#else
   USE wvfct,                 ONLY : g2kin
+#endif
   USE noncollin_module,      ONLY : noncolin,npol
   USE pwcom,                 ONLY : npw,npwx
   !
@@ -32,23 +36,30 @@ SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
   !
   INTEGER :: ibnd, ig
   !
-  pf = 0._DP
-  !
-  DO ibnd=1,m
-     !
-!$OMP PARALLEL DO
-     DO ig=1,npw
-        pf(ig,ibnd) = f(ig,ibnd) / MAX(1._DP,g2kin(ig)/eprec(ibnd))
+#if defined(__CUDA)
+  !$acc parallel loop collapse(2) present(pf,f,eprec)
+#else
+  !$OMP PARALLEL DO COLLAPSE(2)
+#endif
+  DO ibnd = 1,m
+     DO ig = 1,npwx
+        IF(ig <= npw) THEN
+           pf(ig,ibnd) = f(ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
+           IF(noncolin) THEN
+              pf(npwx+ig,ibnd) = f(npwx+ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
+           ENDIF
+        ELSE
+           pf(ig,ibnd) = 0._DP
+           IF(noncolin) THEN
+              pf(npwx+ig,ibnd) = 0._DP
+           ENDIF
+        ENDIF
      ENDDO
-!$OMP END PARALLEL DO
-     IF( noncolin ) THEN
-!$OMP PARALLEL DO
-        DO ig=1,npw
-           pf(npwx+ig,ibnd) = f(npwx+ig,ibnd) / MAX(1._DP,g2kin(ig)/eprec(ibnd))
-        ENDDO
-!$OMP END PARALLEL DO
-     ENDIF
-     !
   ENDDO
+#if defined(__CUDA)
+  !$acc end parallel
+#else
+  !$OMP END PARALLEL DO
+#endif
   !
 END SUBROUTINE

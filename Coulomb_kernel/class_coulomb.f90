@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -149,14 +149,14 @@ MODULE class_coulomb
          !
       ENDDO
       !
-      IF ( q_grid%l_pIsGamma(this%iq) ) this%div = this%compute_divergence()
+      IF ( q_grid%l_pIsGamma(this%iq) ) CALL this%compute_divergence()
       !
       CALL stop_clock('sqvc_init')
       !
    END SUBROUTINE
    !
    !
-   FUNCTION compute_divergence( this ) RESULT( div )
+   SUBROUTINE compute_divergence( this, singularity_removal_mode )
       !
       USE constants,            ONLY : pi, tpi, fpi, e2, eps8
       USE cell_base,            ONLY : omega, at, bg, tpiba2
@@ -174,9 +174,11 @@ MODULE class_coulomb
       ! I/O
       !
       CLASS(coulomb) :: this
+      CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: singularity_removal_mode
       !
       ! Workspace
       !
+      CHARACTER(LEN=7) :: singularity_removal_mode_use
       REAL(DP) :: div
       LOGICAL :: try_ort_div=.TRUE., i_am_ort, on_double_grid
       REAL(DP) :: qg(3), qgnorm2, alpha, peso
@@ -184,9 +186,15 @@ MODULE class_coulomb
       INTEGER :: i1, i2, i3, iq, ig, ipol
       REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp, intcounter, x
       !
+      IF ( PRESENT(singularity_removal_mode) ) THEN
+         singularity_removal_mode_use = singularity_removal_mode
+      ELSE
+         singularity_removal_mode_use = this%singularity_removal_mode
+      ENDIF
+      !
       div = 0._DP
       !
-      SELECT CASE( this%singularity_removal_mode )
+      SELECT CASE( singularity_removal_mode_use )
       !
       CASE("default")
          !
@@ -303,7 +311,9 @@ MODULE class_coulomb
          !
       END SELECT
       !
-   END FUNCTION
+      this%div = div
+      !
+   END SUBROUTINE
    !
    !
    SUBROUTINE print_divergence( this )

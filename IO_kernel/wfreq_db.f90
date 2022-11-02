@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -39,7 +39,7 @@ MODULE wfreq_db
                                      & sigma_freq,sigma_spectralf,l_enable_off_diagonal,pijmap,n_pairs,&
                                      & sigma_vxcl_full,sigma_vxcnl_full,sigma_exx_full,sigma_hf_full,&
                                      & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,occupation
-      USE pwcom,                ONLY : et, nspin
+      USE pwcom,                ONLY : et,nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
       USE constants,            ONLY : rytoev
@@ -50,7 +50,7 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, ib, ipair, band_index
+      INTEGER :: iks, ib, ipair, ib_index
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       CHARACTER(LEN=10) :: ccounter
       INTEGER :: counter
@@ -58,7 +58,8 @@ MODULE wfreq_db
       TYPE(json_file) :: json
       INTEGER :: iunit, i
       INTEGER,ALLOCATABLE :: ilist(:)
-      REAL(DP), ALLOCATABLE :: occ_(:,:)
+      REAL(DP),ALLOCATABLE :: eks(:)
+      REAL(DP),ALLOCATABLE :: occ(:)
       LOGICAL :: l_generate_plot, l_optics
       !
       ! MPI BARRIER
@@ -87,17 +88,8 @@ MODULE wfreq_db
          DO ib = 1,n_bands
             ilist(ib) = qp_bands(ib)
          ENDDO
-         CALL json%add('output.Q.bandmap',ilist(1:n_bands))
+         CALL json%add('output.Q.bandmap',ilist)
          DEALLOCATE(ilist)
-         ! generate occupations and write to JSON
-         ALLOCATE(occ_(n_bands, k_grid%nps))
-         DO iks = 1, k_grid%nps
-          DO ib = 1, n_bands
-            band_index = qp_bands(ib)
-            occ_(ib, iks) = occupation(band_index, iks) 
-          ENDDO
-         ENDDO
-         IF (nspin == 1) occ_(:,:) = 2.0_DP * occ_(:,:)
          !
          IF(l_enable_off_diagonal) THEN
             counter = 0
@@ -117,16 +109,26 @@ MODULE wfreq_db
          !
          IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
+         ALLOCATE(eks(n_bands))
+         ALLOCATE(occ(n_bands))
+         !
          DO iks = 1, k_grid%nps
+            !
+            DO ib = 1,n_bands
+               eks(ib) = et(qp_bands(ib),iks)
+               occ(ib) = occupation(qp_bands(ib),iks)
+            ENDDO
+            !
+            IF(nspin == 1) occ(:) = 2._DP*occ
             !
             WRITE(my_label_k,'(i6.6)') iks
             !
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', et(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', eks*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(1:n_bands,iks))
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(1:n_bands,iks)*rytoev)
             CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(1:n_bands,iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(1:n_bands,iks)*rytoev)            
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.occupation', occ_(1:n_bands,iks))            
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.occupation', occ)
             IF ( .NOT. l_enable_off_diagonal ) THEN
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(1:n_bands,iks)*rytoev)
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(1:n_bands,iks)*rytoev)
@@ -144,7 +146,7 @@ MODULE wfreq_db
                & REAL(sigma_sc_eqpsec(1:n_bands,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
                & AIMAG(sigma_sc_eqpsec(1:n_bands,iks)*rytoev))
-            ELSE            
+            ELSE
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', &
                & sigma_exx_full(1:n_pairs,iks)*rytoev)
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', &
@@ -162,14 +164,14 @@ MODULE wfreq_db
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.im', &
                & AIMAG(sigma_sc_eqplin_full(1:n_pairs,iks)*rytoev))
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.re', &
-               & DBLE(sigma_corr_full(1:n_pairs,iks)*rytoev))
+               & REAL(sigma_corr_full(1:n_pairs,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
                & AIMAG(sigma_corr_full(1:n_pairs,iks)*rytoev))
             ENDIF
             !
             IF( l_generate_plot ) THEN
                DO ib = 1, n_bands
-                  WRITE(my_label_b,'(i6.6)') ib
+                  WRITE(my_label_b,'(i6.6)') qp_bands(ib)
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.re',&
                   &REAL(sigma_spectralf(1:n_spectralf,ib,iks),KIND=DP)*rytoev)
                   CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.im',&
@@ -182,6 +184,9 @@ MODULE wfreq_db
             ENDIF
             !
          ENDDO
+         !
+         DEALLOCATE(eks)
+         DEALLOCATE(occ)
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
          CALL json%print( iunit )
@@ -214,13 +219,11 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,&
-                                     & l_enable_off_diagonal,n_pairs,logfile
-      USE pwcom,                ONLY : et,nspin
+      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,logfile
+      USE pwcom,                ONLY : nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
       USE constants,            ONLY : rytoev
-      USE types_bz_grid,        ONLY : k_grid
       !
       IMPLICIT NONE
       !
@@ -230,12 +233,11 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, jks, ib
-      CHARACTER(LEN=6) :: my_label_ik, my_label_jk, my_label_b, my_label_ipair
+      INTEGER :: iks, jks
+      CHARACTER(LEN=6) :: my_label_ik, my_label_jk, my_label_ipair
       !
       TYPE(json_file) :: json
-      INTEGER :: iunit, i, ipair
-      INTEGER,ALLOCATABLE :: ilist(:)
+      INTEGER :: iunit, ipair
       !
       ! MPI BARRIER
       !
@@ -253,11 +255,9 @@ MODULE wfreq_db
          CALL json%load(filename=TRIM(logfile))
          !
          DO iks = 1, nspin
-            !
             DO jks = 1, nspin
                !
                WRITE(my_label_ik,'(i6.6)') iks
-               !
                WRITE(my_label_jk,'(i6.6)') jks
                !
                IF(l_enable_off_diagonal) THEN
@@ -269,8 +269,7 @@ MODULE wfreq_db
                      & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
                      & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
                      !
-                     ! CHANGE TO KEY TO: eri_w
-                     CALL json%add('qdet.eri.K'//TRIM(my_label_ik)//'.K'// &
+                     CALL json%add('qdet.eri_w.K'//TRIM(my_label_ik)//'.K'// &
                      & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
                      & REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
                      !
@@ -278,7 +277,6 @@ MODULE wfreq_db
                ENDIF
                !
             ENDDO
-            !
          ENDDO
          !
          OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
@@ -312,13 +310,11 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,&
-                                     & l_enable_off_diagonal,n_pairs,logfile
-      USE pwcom,                ONLY : et,nspin
+      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,logfile
+      USE pwcom,                ONLY : nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
       USE constants,            ONLY : rytoev
-      USE types_bz_grid,        ONLY : k_grid
       !
       IMPLICIT NONE
       !
@@ -331,8 +327,7 @@ MODULE wfreq_db
       CHARACTER(LEN=6) :: my_label_ik
       !
       TYPE(json_file) :: json
-      INTEGER :: iunit, i, ipair
-      INTEGER,ALLOCATABLE :: ilist(:)
+      INTEGER :: iunit
       !
       ! MPI BARRIER
       !

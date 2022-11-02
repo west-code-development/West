@@ -79,7 +79,7 @@ stages:
 #    - .template_bot_start
 #    - .template_build
 
-#gcc1030_0001:
+#gcc1040_0001:
 #  extends:
 #    - .template_bot_start
 #    - .template_build
@@ -129,7 +129,7 @@ gcc1130_0002_t:
     - .template_test
   image: miccomcenter/bot:gcc1130_0002
 
-gcc1030_0001_t:
+gcc1040_0001_t:
   variables:
     CI_NP: 8
     CI_NI: 1
@@ -141,9 +141,9 @@ gcc1030_0001_t:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc1030_0001
+  image: miccomcenter/bot:gcc1040_0001
 
-gcc1030_0002_t:
+gcc1040_0002_t:
   variables:
     CI_NP: 8
     CI_NI: 2
@@ -155,7 +155,7 @@ gcc1030_0002_t:
   extends:
     - .template_bot_start
     - .template_test
-  image: miccomcenter/bot:gcc1030_0002
+  image: miccomcenter/bot:gcc1040_0002
 
 
 # Doc
@@ -175,6 +175,7 @@ west_doc_build:
     - pip install -q nbsphinx
     - pip install -q sphinx_rtd_theme
     - pip install -q ipython
+    - pip install -q ipykernel
   script:
     - rm -rf West
     - git clone -b $CI_COMMIT_REF_NAME $CI_REPOSITORY_URL West

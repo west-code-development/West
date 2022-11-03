@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -38,7 +38,7 @@ SUBROUTINE wbsepp_readin()
   !
   IF (domag) CALL errore('wbse_readin','domag version not available',1)
   IF (okvan) CALL errore('wbse_readin','ultrasoft pseudopotential not implemented',1)
-  IF (doublegrid) CALL errore('wbse_readin', 'double grid not implemented',1)
+  IF (doublegrid) CALL errore('wbse_readin','double grid not implemented',1)
   !
   CALL stop_clock('wbsepp_readin')
   !

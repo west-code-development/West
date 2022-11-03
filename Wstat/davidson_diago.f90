@@ -43,13 +43,13 @@ SUBROUTINE davidson_diago_gamma ( )
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
-                                   & wstat_calculation,ev,conv,n_pdep_read_from_file,&
-                                   & n_steps_write_restart,npwqx,trev_pdep_rel,tr2_dfpt,&
-                                   & l_is_wstat_converged,fftdriver,nbnd_occ
+                                 & wstat_calculation,ev,conv,n_pdep_read_from_file,&
+                                 & n_steps_write_restart,npwqx,trev_pdep_rel,tr2_dfpt,&
+                                 & l_is_wstat_converged,fftdriver,nbnd_occ
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
-                                   & refresh_with_vr_distr
+                                 & refresh_with_vr_distr
   USE types_coulomb,        ONLY : pot3D
   !
   IMPLICIT NONE
@@ -460,12 +460,13 @@ SUBROUTINE davidson_diago_k ( )
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
-                                   & wstat_calculation,ev,conv,n_pdep_read_from_file,&
-                                   & n_steps_write_restart,trev_pdep_rel,tr2_dfpt,&
-                                   & l_is_wstat_converged,ngq,npwq,npwqx,nbnd_occ
+                                 & wstat_calculation,ev,conv,n_pdep_read_from_file,&
+                                 & n_steps_write_restart,trev_pdep_rel,tr2_dfpt,&
+                                 & l_is_wstat_converged,ngq,npwq,npwqx,nbnd_occ
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
   USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
-  USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,refresh_with_vr_distr
+  USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
+                                 & refresh_with_vr_distr
   USE types_bz_grid,        ONLY : q_grid
   USE types_coulomb,        ONLY : pot3D
   !

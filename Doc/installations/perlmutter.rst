@@ -13,17 +13,7 @@ Perlmutter (Phase I) is a GPU-accelerated supercomputer located at National Ener
 Building WEST
 ~~~~~~~~~~~~~
 
-**Important**: Perlmutter is not yet a production resource and therefore it is subject to unannounced and unexpected outages, reconfigurations, and periods of restricted access.
-
-The NVIDIA cuSOLVER library in CUDA Toolkit 11.0.3 must be installed manually. This is to work around an [issue](https://forums.developer.nvidia.com/t/cuda-11-7-undefined-reference-to-cusolverdndtrtri/221708) in recent versions of CUDA. The issue will be resolved in future CUDA releases.
-
-.. code-block:: bash
-
-   $ wget https://developer.download.nvidia.com/compute/cuda/11.0.3/local_installers/cuda_11.0.3_450.51.06_linux.run
-   $ sh cuda_11.0.3_450.51.06_linux.run --toolkit --silent --override --installpath=/path/to/install/cuda/11.0.3
-   # For more installation options, do "sh cuda_11.0.3_450.51.06_linux.run --override" instead
-
-WEST executables can be compiled using the following script (tested on August 19, 2022):
+WEST executables can be compiled using the following script (tested on October 29, 2022):
 
 .. code-block:: bash
 
@@ -48,8 +38,6 @@ WEST executables can be compiled using the following script (tested on August 19
    # LD = ftn
    # BLAS_LIBS = # leave blank
    # LAPACK_LIBS = # leave blank
-   # MY_CUSOLVER = /path/to/install/cuda/11.0.3/lib64/libcusolver.so.10.6.0.245
-   # CUDA_LIBS = $(MY_CUSOLVER) -cudalib=cufft,cublas,curand $(TOPDIR)/external/devxlib/src/libdevXlib.a
 
    make -j 8 pw
 
@@ -68,6 +56,12 @@ Running WEST Jobs
 ~~~~~~~~~~~~~~~~~
 
 The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Perlmutter with 4 MPI ranks and 4 GPUs per node. The <project_name> must be replaced with an active project allocation.
+
+**Important**: The following environment variable is needed to work around a bug in ROMIO, Cray MPICH.
+
+.. code-block:: bash
+
+   export ROMIO_FSTYPE_FORCE="ufs:"
 
 .. code-block:: bash
 
@@ -94,8 +88,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
    export MPICH_MPIIO_HINTS=*:romio_cb_write=enable:romio_ds_write=disable
-
-   export LD_PRELOAD=/path/to/install/cuda/11.0.3/lib64/libcusolver.so.10.6.0.245
+   export ROMIO_FSTYPE_FORCE="ufs:"
 
    srun -N 2 -n 8 -c 32 -G 8 ./wstat.x -i wstat.in &> wstat.out
 

@@ -132,7 +132,7 @@ MODULE linear_algebra_kernel
       !
       !$acc data copyin(a) copyout(e,info_d)
       !
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n,KIND=i8b)
       !
       !$acc host_data use_device(a,e,info_d)
@@ -244,7 +244,7 @@ MODULE linear_algebra_kernel
       !
       !$acc data copyin(a) copyout(e,info_d)
       !
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n,KIND=i8b)
       !
       !$acc host_data use_device(a,e,info_d)
@@ -345,7 +345,7 @@ MODULE linear_algebra_kernel
       !
       !$acc data create(info_d)
       !$acc host_data use_device(a,piv,work_c,info_d)
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrf(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_C_64F),a,n8,piv,&
            & cudaDataType(CUDA_C_64F),work_c,l_inv,work_c_h,l_inv_h,info_d)
 #else
@@ -364,7 +364,7 @@ MODULE linear_algebra_kernel
       !$acc end parallel
       !
       !$acc host_data use_device(a,piv,work_c,info_d)
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrs(cusolv_h,cusolv_p,CUBLAS_OP_N,n8,n8,cudaDataType(CUDA_C_64F),a,&
            & n8,piv,cudaDataType(CUDA_C_64F),work_c(1:n**2),n8,info_d)
 #else
@@ -432,7 +432,7 @@ MODULE linear_algebra_kernel
       !
       !$acc data copyout(info_d)
       !$acc host_data use_device(a,piv,work_r,info_d)
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrf(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_R_64F),a,n8,piv,&
            & cudaDataType(CUDA_R_64F),work_r,l_inv,work_r_h,l_inv_h,info_d)
 #else
@@ -451,7 +451,7 @@ MODULE linear_algebra_kernel
       !$acc end parallel
       !
       !$acc host_data use_device(a,piv,work_r,info_d)
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrs(cusolv_h,cusolv_p,CUBLAS_OP_N,n8,n8,cudaDataType(CUDA_R_64F),a,&
            & n8,piv,cudaDataType(CUDA_R_64F),work_r(1:n**2),n8,info_d)
 #else

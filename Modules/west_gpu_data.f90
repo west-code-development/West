@@ -60,7 +60,7 @@ MODULE west_gpu_data
    !
    INTEGER(i8b) :: l_inv
    INTEGER(i8b) :: l_inv_h
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
    INTEGER(i8b), ALLOCATABLE :: piv(:)
 #else
    INTEGER, ALLOCATABLE :: piv(:)
@@ -68,24 +68,22 @@ MODULE west_gpu_data
    !$acc declare device_resident(piv)
    REAL(DP), ALLOCATABLE :: work_r_h(:)
    REAL(DP), ALLOCATABLE :: work_r(:)
-   REAL(DP), ALLOCATABLE :: body_r(:,:)
    REAL(DP), ALLOCATABLE :: x_r(:,:)
    REAL(DP), ALLOCATABLE :: wh_r(:,:)
    REAL(DP), ALLOCATABLE :: wl_r(:,:)
    REAL(DP), ALLOCATABLE :: temph_r(:,:)
    REAL(DP), ALLOCATABLE :: templ_r(:,:)
    REAL(DP), ALLOCATABLE :: tempt_r(:,:)
-   !$acc declare device_resident(work_r,body_r,x_r,wh_r,wl_r,temph_r,templ_r,tempt_r)
+   !$acc declare device_resident(work_r,x_r,wh_r,wl_r,temph_r,templ_r,tempt_r)
    COMPLEX(DP), ALLOCATABLE :: work_c_h(:)
    COMPLEX(DP), ALLOCATABLE :: work_c(:)
-   COMPLEX(DP), ALLOCATABLE :: body_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: x_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: wh_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: wl_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: temph_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: templ_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: tempt_c(:,:)
-   !$acc declare device_resident(work_c,body_c,x_c,wh_c,wl_c,temph_c,templ_c,tempt_c)
+   !$acc declare device_resident(work_c,x_c,wh_c,wl_c,temph_c,templ_c,tempt_c)
    !
    ! Lanczos
    !
@@ -519,7 +517,6 @@ MODULE west_gpu_data
    !
    ALLOCATE(piv(n_pdep_eigen_to_use))
    IF(l_real) THEN
-      ALLOCATE(body_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       ALLOCATE(x_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
          ALLOCATE(wh_r(n_pdep_eigen_to_use,3))
@@ -529,7 +526,7 @@ MODULE west_gpu_data
          ALLOCATE(tempt_r(3,3))
       ENDIF
       !
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
       !
       !$acc host_data use_device(x_r)
@@ -552,7 +549,6 @@ MODULE west_gpu_data
       ALLOCATE(work_r(lwork))
 #endif
    ELSE
-      ALLOCATE(body_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       ALLOCATE(x_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
          ALLOCATE(wh_c(n_pdep_eigen_to_use,3))
@@ -562,7 +558,7 @@ MODULE west_gpu_data
          ALLOCATE(tempt_c(3,3))
       ENDIF
       !
-#if defined(__PGI) && (__PGIC__ > 22 || (__PGIC__ == 22 && __PGIC_MINOR__ > 7))
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
       !
       !$acc host_data use_device(x_c)
@@ -597,9 +593,6 @@ MODULE west_gpu_data
    IF(ALLOCATED(piv)) THEN
       DEALLOCATE(piv)
    ENDIF
-   IF(ALLOCATED(body_r)) THEN
-      DEALLOCATE(body_r)
-   ENDIF
    IF(ALLOCATED(x_r)) THEN
       DEALLOCATE(x_r)
    ENDIF
@@ -623,9 +616,6 @@ MODULE west_gpu_data
    ENDIF
    IF(ALLOCATED(work_r)) THEN
       DEALLOCATE(work_r)
-   ENDIF
-   IF(ALLOCATED(body_c)) THEN
-      DEALLOCATE(body_c)
    ENDIF
    IF(ALLOCATED(x_c)) THEN
       DEALLOCATE(x_c)

@@ -60,19 +60,19 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   !
   ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !
-  CALL plep_db_read( n_liouville_read_from_file )
+  CALL plep_db_read(n_liouville_read_from_file)
   !
   ALLOCATE(rho_out(dfftp%nnr,nspin))
   !
-  rho_out(:,:) = 0.0_DP
+  rho_out(:,:) = 0._DP
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
      current_k = iks
-     IF ( lsda ) current_spin = isk(iks)
-     call g2_kin( iks )
+     IF(lsda) current_spin = isk(iks)
+     call g2_kin(iks)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
@@ -80,21 +80,18 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF (nks>1) THEN
-        !
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        !
+     IF(nks > 1) THEN
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-        !
      ENDIF
      !
      nbndval = nbnd_occ(iks)
      !
      DO ibnd = 1, nbndval
         !
-        w1 = wg(ibnd, iks)/omega
+        w1 = wg(ibnd,iks)/omega
         !
-        IF (gamma_only) THEN
+        IF(gamma_only) THEN
            !
            CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),dvg_exc(:,ibnd,iks,iexc),psic,'Wave')
            !
@@ -102,14 +99,14 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
            !
         ELSE
            !
-           ALLOCATE (psic_aux(dffts%nnr))
+           ALLOCATE(psic_aux(dffts%nnr))
            !
            CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
            CALL single_invfft_k(dffts,npw,npwx,dvg_exc(:,ibnd,iks,iexc),psic_aux,'Wave',igk_k(:,current_k))
            !
-           rho_out(:, current_spin) = rho_out(:, current_spin) + w1 * CONJG(psic(:)) * psic_aux(:)
+           rho_out(:,current_spin) = rho_out(:,current_spin) + w1 * CONJG(psic(:)) * psic_aux(:)
            !
-           DEALLOCATE (psic_aux)
+           DEALLOCATE(psic_aux)
            !
         ENDIF
         !
@@ -117,7 +114,7 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
      !
   ENDDO
   !
-  summ0 = 0.0_DP
+  summ0 = 0._DP
   DO ir = 1, dffts%nnr
      summ0 = summ0 + rho_out(ir,1)
   ENDDO
@@ -126,19 +123,18 @@ SUBROUTINE wbsepp_plot_charged_density_res_exc()
   !
   CALL mp_sum(summ0, intra_bgrp_comm)
   !
-  !
-  WRITE (stdout,*) "Plot of charge density response of the exciton states (Ry unit): ", iexc, ev(iexc)
-  WRITE (stdout,*) "summ0", summ0
+  WRITE(stdout,*) "Plot of charge density response of the exciton states (Ry unit): ", iexc, ev(iexc)
+  WRITE(stdout,*) "summ0", summ0
   !
   westpp_format = 'C'
   !
-  WRITE (my_label,'(i6.6)') iexc
+  WRITE(my_label,'(i6.6)') iexc
   fname = './file_plot_exc_'//TRIM(my_label)
-  WRITE (stdout,*) "Write to file : ", fname
-  IF(my_image_id==0) CALL dump_r( rho_out(:,1), fname)
+  WRITE(stdout,*) "Write to file : ", fname
+  IF(my_image_id == 0) CALL dump_r(rho_out(:,1), fname)
   !
-  DEALLOCATE( ev )
-  DEALLOCATE( dvg_exc )
-  DEALLOCATE( rho_out )
+  DEALLOCATE(ev)
+  DEALLOCATE(dvg_exc)
+  DEALLOCATE(rho_out)
   !
 END SUBROUTINE

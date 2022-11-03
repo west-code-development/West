@@ -1,5 +1,5 @@
 !
-! Copyright (C) 2015-2021 M. Govoni
+! Copyright (C) 2015-2022 M. Govoni
 ! This file is distributed under the terms of the
 ! GNU General Public License. See the file `License'
 ! in the root directory of the present distribution,
@@ -14,7 +14,7 @@
 PROGRAM wbsepp
   !-----------------------------------------------------------------------
   !
-  ! This is the main program that calculates the static screening.
+  ! This is the main program that generates post-processing data for Wbse.
   !
   USE check_stop,           ONLY : check_stop_init
   USE mp_global,            ONLY : mp_startup, mp_global_end
@@ -23,37 +23,37 @@ PROGRAM wbsepp
   !
   IMPLICIT NONE
   !
-  CHARACTER(LEN=9) :: code = 'Wbsepp'
+  CHARACTER(LEN=9) :: code = 'WBSEPP'
   !
   ! *** START ***
   !
-  CALL check_stop_init ()
+  CALL check_stop_init( )
   !
   ! Initialize MPI, clocks, print initial messages
   !
 #if defined(__MPI)
-  CALL mp_startup ( start_images = .TRUE. )
+  CALL mp_startup( start_images = .TRUE. )
 #endif
   !
-  CALL west_environment_start ( code )
+  CALL west_environment_start( code )
   !
-  CALL wbsepp_readin ( )
+  CALL wbsepp_readin( )
   !
-  CALL wbsepp_setup ( )
+  CALL wbsepp_setup( )
   !
-  IF (l_eig_decomp) CALL wbsepp_decompose_eig_contributions ( )
-  IF (l_exc_plot)   CALL wbsepp_plot_exc ()
-  IF (l_exc_rho_res_plot) CALL wbsepp_plot_charged_density_res_exc ()
-  IF (l_lz_spec) CALL wbsepp_ads_spectrum ()
+  IF(l_eig_decomp) CALL wbsepp_decompose_eig_contributions( )
+  IF(l_exc_plot) CALL wbsepp_plot_exc( )
+  IF(l_exc_rho_res_plot) CALL wbsepp_plot_charged_density_res_exc( )
+  IF(l_lz_spec) CALL wbsepp_ads_spectrum( )
   !
-  CALL exx_ungo ( )
+  CALL exx_ungo( )
   !
   CALL clean_scratchfiles( )
   !
-  CALL print_clock(' ')
+  CALL west_print_clocks( )
   !
   CALL west_environment_end( code )
   !
-  CALL mp_global_end()
+  CALL mp_global_end( )
   !
 END PROGRAM

@@ -77,7 +77,7 @@ SUBROUTINE wbsepp_ads_spectrum()
   IF(ionode) THEN
      !
      IF(itermax0 < 151 .AND. TRIM(extrapolation) /= 'no') THEN
-        WRITE(stdout,'(5x, "Itermax0 is less than 150, no extrapolation scheme can be used ")')
+        WRITE(stdout,'(5x,"Itermax0 is less than 150, no extrapolation scheme can be used")')
         extrapolation = 'no'
      ENDIF
      !
@@ -93,7 +93,7 @@ SUBROUTINE wbsepp_ads_spectrum()
      IF(.NOT. sym_op == 0) THEN
         !
         IF(sym_op == 1) THEN
-           WRITE(stdout,'(5x,"All polarization axes will be considered to be equal.")')
+           WRITE(stdout,'(5x,"All polarization axes will be considered to be equal")')
            n_ipol = 3
            ipol = 1
         ELSE

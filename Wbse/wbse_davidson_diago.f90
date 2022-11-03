@@ -283,7 +283,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, 1, nvec )
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec )
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -351,9 +351,9 @@ SUBROUTINE wbse_davidson_diago ( )
      IF (l_preconditioning) THEN
         !
         IF (dav_iter < 4) THEN
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .FALSE. )
+           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, .FALSE. )
         ELSE
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, nvecx, ew, .TRUE. )
+           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, .TRUE. )
         ENDIF
         !
      ENDIF
@@ -449,7 +449,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+1, nbase+notcnv )
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
      !
      nbase = nbase + notcnv
      !

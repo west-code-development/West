@@ -42,8 +42,8 @@ MODULE wbse_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,nimage
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -62,9 +62,9 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,icycl,ibnd,iks,nbndval
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
-      REAL(DP):: norm
+      INTEGER :: il1,il2,ig1,ibnd,iks,nbndval
+      INTEGER :: icycl,idx,nloc
+      REAL(DP):: reduce
       REAL(DP),EXTERNAL :: DDOT
       !
       CALL start_clock('build_hr')
@@ -73,51 +73,45 @@ MODULE wbse_tools
       !
       c_distr(:,l2_s:l2_e) = 0._DP
       !
-      ALLOCATE(tmp_l2g(1:pert%nlocx))
-      !
-      tmp_l2g = 0
-      DO il1 = 1,pert%nloc
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            IF(ig1 == 0 .OR. ig1 > g_e) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
             !
             DO il2 = l2_s,l2_e
                !
-               norm = 0._DP
+               reduce = 0._DP
                !
-               DO iks=1,nks
+               DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
                   !
                   DO ibnd = 1,nbndval
-                     norm = norm + 2._DP * DDOT(2*npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
-                     IF(gstart == 2) norm = norm -  REAL(ag(1,ibnd,iks,il1),KIND=DP)*REAL(bg(1,ibnd,iks,il2),KIND=DP)
+                     reduce = reduce + 2._DP * DDOT(2*npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
+                     IF(gstart == 2) reduce = reduce - REAL(ag(1,ibnd,iks,il1),KIND=DP)*REAL(bg(1,ibnd,iks,il2),KIND=DP)
                   ENDDO
                   !
                ENDDO
                !
-               c_distr(ig1,il2) = norm
+               c_distr(ig1,il2) = reduce
                !
             ENDDO
             !
          ENDDO
          !
-         ! Cycle the ag array
+         ! Cycle ag
          !
          CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
       CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
-      !
-      DEALLOCATE(tmp_l2g)
       !
       CALL stop_clock('build_hr')
       !
@@ -129,8 +123,8 @@ MODULE wbse_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm,nimage
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -148,8 +142,8 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,icycl,ibnd,iks,nbndval
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
+      INTEGER :: il1,il2,ig1,ibnd,iks,nbndval
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP),EXTERNAL :: ZDOTC
       !
       CALL start_clock('build_hr')
@@ -158,23 +152,19 @@ MODULE wbse_tools
       !
       c_distr(:,l2_s:l2_e) = 0._DP
       !
-      ALLOCATE(tmp_l2g(1:pert%nlocx))
-      !
-      tmp_l2g = 0
-      DO il1 = 1,pert%nloc
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
-      !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            IF(ig1 == 0 .OR. ig1 > g_e) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
             !
             DO il2 = l2_s,l2_e
-               !
-               DO iks  = 1,nks
+               DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
                   !
@@ -183,21 +173,17 @@ MODULE wbse_tools
                   ENDDO
                   !
                ENDDO
-               !
             ENDDO
             !
          ENDDO
          !
-         ! Cycle the ag array
+         ! Cycle ag
          !
          CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
       CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
-      !
-      DEALLOCATE(tmp_l2g)
       !
       CALL stop_clock('build_hr')
       !
@@ -207,8 +193,7 @@ MODULE wbse_tools
     SUBROUTINE update_with_vr_distr_real(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -226,30 +211,26 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,ig2,icycl,ibnd,iks,nbndval
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
+      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
       !
       CALL start_clock('update_vr')
       !
       ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg = 0._DP
-      !
-      ALLOCATE(tmp_l2g(1:pert%nlocx))
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1,pert%nloc
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
+      hg(:,:,:,:) = 0._DP
       !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            IF(ig1 == 0 .OR. ig1 > n) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > n) CYCLE
             !
             DO il2 = 1,pert%nloc
                !
@@ -269,45 +250,46 @@ MODULE wbse_tools
                ENDDO
                !
             ENDDO
+            !
          ENDDO
          !
-         ! Cycle the amat array
+         ! Cycle ag
          !
          CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
       DO il2 = 1,pert%nloc
          !
          ig2 = pert%l2g(il2)
-         !
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
          DO iks = 1,nks
             nbndval = nbnd_occ(iks)
             !
             DO ibnd = 1,nbndval
-               ag(:,ibnd,iks,il2) = ew(ig2) * hg(:,ibnd,iks,il2)
+               ag(:,ibnd,iks,il2) = -ew(ig2) * hg(:,ibnd,iks,il2)
             ENDDO
          ENDDO
          !
       ENDDO
       !
-      hg = 0._DP
+      hg(:,:,:,:) = 0._DP
       !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            !
-            IF(ig1 == 0 .OR. ig1 > n) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > n) CYCLE
             !
             DO il2 = 1,pert%nloc
                !
                ig2 = pert%l2g(il2)
-               !
                IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
                !
                zconst = CMPLX(vr_distr(ig1,il2),KIND=DP)
@@ -326,14 +308,14 @@ MODULE wbse_tools
             !
          ENDDO
          !
-         ! Cycle the bmat array
+         ! Cycle bg
          !
          CALL mp_circular_shift_left_c16_4d(bg,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
       DO il2 = 1,pert%nloc
+         !
          ig2 = pert%l2g(il2)
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
@@ -344,9 +326,9 @@ MODULE wbse_tools
                ag(:,ibnd,iks,il2) = ag(:,ibnd,iks,il2) + hg(:,ibnd,iks,il2)
             ENDDO
          ENDDO
+         !
       ENDDO
       !
-      DEALLOCATE(tmp_l2g)
       DEALLOCATE(hg)
       !
       CALL stop_clock('update_vr')
@@ -357,8 +339,7 @@ MODULE wbse_tools
     SUBROUTINE update_with_vr_distr_complex(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -376,29 +357,25 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,ig2,icycl,ibnd,iks,nbndval
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
+      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
       !
       CALL start_clock('update_vr')
       !
       ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg = 0._DP
-      !
-      ALLOCATE(tmp_l2g(1:pert%nlocx))
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1,pert%nloc
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
+      hg(:,:,:,:) = 0._DP
       !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            IF(ig1 == 0 .OR. ig1 > n) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > n) CYCLE
             !
             DO il2 = 1,pert%nloc
                !
@@ -419,10 +396,9 @@ MODULE wbse_tools
             !
          ENDDO
          !
-         ! Cycle the amat array
+         ! Cycle ag
          !
          CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
@@ -432,7 +408,6 @@ MODULE wbse_tools
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
          DO iks = 1,nks
-            !
             nbndval = nbnd_occ(iks)
             !
             DO ibnd = 1,nbndval
@@ -442,14 +417,18 @@ MODULE wbse_tools
          !
       ENDDO
       !
-      hg = 0._DP
+      hg(:,:,:,:) = 0._DP
       !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            IF(ig1 == 0 .OR. ig1 > n) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > n) CYCLE
             !
             DO il2 = 1,pert%nloc
                !
@@ -457,35 +436,40 @@ MODULE wbse_tools
                IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
                !
                DO iks = 1,nks
+                  !
                   nbndval = nbnd_occ(iks)
+                  !
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,vr_distr(ig1,il2),bg(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
                   ENDDO
+                  !
                ENDDO
                !
             ENDDO
+            !
          ENDDO
          !
-         ! Cycle the bmat array
+         ! Cycle bg
          !
          CALL mp_circular_shift_left_c16_4d(bg,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
       DO il2 = 1,pert%nloc
+         !
          ig2 = pert%l2g(il2)
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
          DO iks = 1,nks
             nbndval = nbnd_occ(iks)
+            !
             DO ibnd = 1,nbndval
                ag(:,ibnd,iks,il2) = ag(:,ibnd,iks,il2) + hg(:,ibnd,iks,il2)
             ENDDO
          ENDDO
+         !
       ENDDO
       !
-      DEALLOCATE(tmp_l2g)
       DEALLOCATE(hg)
       !
       CALL stop_clock('update_vr')
@@ -496,8 +480,7 @@ MODULE wbse_tools
     SUBROUTINE refresh_with_vr_distr_real(ag,nselect,n,lda,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -513,29 +496,26 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,ig2,icycl,ibnd,iks,nbndval
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
+      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
       !
       CALL start_clock('refresh_vr')
       !
       ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg = 0._DP
-      ALLOCATE(tmp_l2g(1:pert%nlocx))
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1,pert%nloc
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
+      hg(:,:,:,:) = 0._DP
       !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            IF(ig1 == 0 .OR. ig1 > n) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > n) CYCLE
             !
             DO il2 = 1,pert%nloc
                !
@@ -552,16 +532,17 @@ MODULE wbse_tools
                ENDDO
                !
             ENDDO
+            !
          ENDDO
          !
-         ! Cycle the amat array
+         ! Cycle ag
          !
          CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
       DO il2 = 1,pert%nloc
+         !
          ig2 = pert%l2g(il2)
          !
          IF(ig2 > nselect) THEN
@@ -579,10 +560,10 @@ MODULE wbse_tools
                ENDDO
             ENDDO
          ENDIF
+         !
       ENDDO
       !
       DEALLOCATE(hg)
-      DEALLOCATE(tmp_l2g)
       !
       CALL stop_clock('refresh_vr')
       !
@@ -592,8 +573,7 @@ MODULE wbse_tools
     SUBROUTINE refresh_with_vr_distr_complex(ag,nselect,n,lda,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage
-      USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -609,35 +589,32 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,ig2,icycl,ibnd,iks,nbndval
-      INTEGER,ALLOCATABLE :: tmp_l2g(:)
+      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
+      INTEGER :: icycl,idx,nloc
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
       !
       CALL start_clock('refresh_vr')
       !
       ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg = 0._DP
-      ALLOCATE(tmp_l2g(1:pert%nlocx))
-      !
-      tmp_l2g = 0
-      !
-      DO il1 = 1,pert%nloc
-         tmp_l2g(il1) = pert%l2g(il1)
-      ENDDO
+      hg(:,:,:,:) = 0._DP
       !
       DO icycl = 0,nimage-1
          !
-         DO il1 = 1,pert%nlocx
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         DO il1 = 1,nloc
             !
-            ig1 = tmp_l2g(il1)
-            IF(ig1 == 0 .OR. ig1 > n) CYCLE
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 < 1 .OR. ig1 > n) CYCLE
             !
             DO il2 = 1,pert%nloc
                !
                ig2 = pert%l2g(il2)
                IF(ig2 > nselect) CYCLE
                !
-               DO iks  = 1,nks
+               DO iks = 1,nks
                   nbndval = nbnd_occ(iks)
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,vr_distr(ig1,il2),ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
@@ -647,15 +624,16 @@ MODULE wbse_tools
             ENDDO
          ENDDO
          !
-         ! Cycle the amat array
+         ! Cycle ag
          !
          CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         CALL mp_circular_shift_left(tmp_l2g,icycl+nimage,inter_image_comm)
          !
       ENDDO
       !
       DO il2 = 1,pert%nloc
+         !
          ig2 = pert%l2g(il2)
+         !
          IF(ig2 > nselect) THEN
            DO iks = 1,nks
               nbndval = nbnd_occ(iks)
@@ -664,17 +642,17 @@ MODULE wbse_tools
               ENDDO
            ENDDO
          ELSE
-           DO iks  = 1,nks
+           DO iks = 1,nks
               nbndval = nbnd_occ(iks)
               DO ibnd = 1,nbndval
                  ag(:,ibnd,iks,il2) = hg(:,ibnd,iks,il2)
               ENDDO
            ENDDO
          ENDIF
+         !
       ENDDO
       !
       DEALLOCATE(hg)
-      DEALLOCATE(tmp_l2g)
       !
       CALL stop_clock('refresh_vr')
       !

@@ -68,7 +68,7 @@ SUBROUTINE bse_do_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_res
      IF(l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs(nbndval, npwx, evc_loc, wfc_from_qbox)
      !
      WRITE(my_spin,'(i1)') current_spin
-     fname = './localized_wfc_tmp_'//TRIM( my_spin )//'.dat'
+     fname = './localized_wfc_tmp_'//TRIM(my_spin)//'.dat'
      CALL plep_merge_and_write_G(fname,evc_loc,nbndval)
      !
      ! Compute unitary rotation matrix

@@ -20,24 +20,6 @@ MODULE qbox_interface
   !
   PUBLIC :: load_qbox_wfc, init_qbox, finalize_qbox, sleep_and_wait_for_lock_to_be_removed
   !
-  CHARACTER(LEN=256)  :: ready_for_kernel = ''
-  CHARACTER(LEN=8)    :: path            ! path to qbox working dir, image dependent
-  CHARACTER(LEN=256)  :: lock_file
-  CHARACTER(LEN=256)  :: server_input_file
-  CHARACTER(LEN=256)  :: server_output_file
-  CHARACTER(LEN=256)  :: vext_file
-  CHARACTER(LEN=256)  :: resp_file
-  CHARACTER(LEN=256)  :: resp_command
-  !
-  INTEGER             :: np              ! global size of vextr and drhor array
-  INTEGER             :: nploc           ! size of vextr and drhor array on current processor
-  INTEGER,ALLOCATABLE :: nplocs(:)       ! and other processors, determined by dffts
-  INTEGER             :: lastproc        ! index of last processor to have FFT grid
-  INTEGER             :: nsec_max = 7200 ! maximum waiting time for one qbox response calculation
-  INTEGER             :: iu = 100        ! iu for all serial I/O
-  !
-  CHARACTER(len=10)   :: mype
-  !
   CONTAINS
   !
   !----------------------------------------------------------------------------
@@ -74,86 +56,76 @@ MODULE qbox_interface
     ! root of first image read qbox xml file, fourier interpolate to evc of whole image,
     ! then first image bcast evc to other images
     !
-    evc(:,:) = (0._DP,0.0_DP)
+    evc(:,:) = (0._DP,0._DP)
     !
-    IF ( me_image == 0 ) THEN
+    IF(me_image == 0) THEN
        !
-       WRITE(stdout,*)  '    QboxInterface: reading from file ', TRIM(qbox_wfc_filename)
+       WRITE(stdout,'(5X,2A)')  'QboxInterface: reading from file ', TRIM(qbox_wfc_filename)
        !
-       CALL iotk_free_unit( iunit )
-       CALL iotk_open_read( iunit, FILE = TRIM(qbox_wfc_filename) )
+       CALL iotk_free_unit(iunit)
+       CALL iotk_open_read(iunit, FILE=TRIM(qbox_wfc_filename))
        !
-       CALL iotk_scan_begin( iunit, 'wavefunction',  attr )
-       CALL iotk_scan_attr( attr, 'nspin', nspin )
+       CALL iotk_scan_begin(iunit, 'wavefunction', attr)
+       CALL iotk_scan_attr(attr, 'nspin', nspin)
        !
        ! read grid size
        !
-       CALL iotk_scan_empty( iunit, 'grid', attr )
-       CALL iotk_scan_attr( attr, 'nx', nx )
-       CALL iotk_scan_attr( attr, 'ny', ny )
-       CALL iotk_scan_attr( attr, 'nz', nz )
+       CALL iotk_scan_empty(iunit, 'grid', attr)
+       CALL iotk_scan_attr(attr, 'nx', nx)
+       CALL iotk_scan_attr(attr, 'ny', ny)
+       CALL iotk_scan_attr(attr, 'nz', nz)
        !
-       WRITE(stdout,*)  '    QboxInterface: grid size: ', nx, ny, nz
+       WRITE(stdout,'(5X,A,3I5)')  'QboxInterface: grid size: ', nx, ny, nz
        !
-       ALLOCATE( psir(nx*ny*nz) )
+       ALLOCATE(psir(nx*ny*nz))
        !
     ENDIF
     !
-    CALL mp_bcast( nx, 0, intra_image_comm )
-    CALL mp_bcast( ny, 0, intra_image_comm )
-    CALL mp_bcast( nz, 0, intra_image_comm )
-    CALL mp_bcast( nspin, 0, intra_image_comm )
+    CALL mp_bcast(nx, 0, intra_image_comm)
+    CALL mp_bcast(ny, 0, intra_image_comm)
+    CALL mp_bcast(nz, 0, intra_image_comm)
+    CALL mp_bcast(nspin, 0, intra_image_comm)
     !
     ! read KS orbitals
     !
-    WRITE(stdout,*) '    QboxInterface: loading KS orbitals'
+    WRITE(stdout,'(5X,A)') 'QboxInterface: loading KS orbitals'
     !
-    DO is = 1, nspin
+    DO is = 1,nspin
        !
-       IF (nspin > 1) THEN
-          !
-          IF ( me_image == 0 ) THEN
-             !
-             CALL iotk_scan_begin( iunit, 'slater_determinant', attr )
-             CALL iotk_scan_attr( attr, 'spin', namespin )
-             CALL iotk_scan_attr( attr, 'size', nwfcs )
-             !
+       IF(nspin > 1) THEN
+          IF(me_image == 0) THEN
+             CALL iotk_scan_begin(iunit, 'slater_determinant', attr)
+             CALL iotk_scan_attr(attr, 'spin', namespin)
+             CALL iotk_scan_attr(attr, 'size', nwfcs)
           ENDIF
           !
-          CALL mp_bcast( namespin, 0, intra_image_comm )
-          CALL mp_bcast( nwfcs, 0, intra_image_comm )
+          CALL mp_bcast(namespin, 0, intra_image_comm)
+          CALL mp_bcast(nwfcs, 0, intra_image_comm)
           !
-          IF (namespin == 'up' )   ispin = 1
-          IF (namespin == 'down' ) ispin = 2
-          !
+          IF(namespin == 'up') ispin = 1
+          IF(namespin == 'down') ispin = 2
        ELSE
-          !
-          IF ( me_image == 0 ) THEN
-             !
-             CALL iotk_scan_begin( iunit, 'slater_determinant', attr )
-             CALL iotk_scan_attr( attr, 'size', nwfcs )
-             !
+          IF(me_image == 0) THEN
+             CALL iotk_scan_begin(iunit, 'slater_determinant', attr)
+             CALL iotk_scan_attr(attr, 'size', nwfcs)
           ENDIF
           !
-          CALL mp_bcast( nwfcs, 0, intra_image_comm )
+          CALL mp_bcast(nwfcs, 0, intra_image_comm)
           !
           namespin = 'none'
           ispin = 1
-          !
        ENDIF
        !
-       IF (ispin == current_spin) THEN
+       IF(ispin == current_spin) THEN
           !
-          WRITE(stdout,*)  '          ',  namespin, nwfcs, nspin, ispin
+          WRITE(stdout,'(10X,A,I5,2I3)')  namespin, nwfcs, nspin, ispin
           !
-          DO iwfc=1, nwfcs
+          DO iwfc = 1,nwfcs
              !
-             IF ( me_image == 0 ) THEN
-                !
+             IF(me_image == 0) THEN
                 CALL iotk_scan_begin(iunit, 'grid_function', slen)
-                READ(iunit,*) ( psir(ir), ir = 1, nx*ny*nz )
+                READ(iunit,*) (psir(ir), ir = 1, nx*ny*nz)
                 CALL iotk_scan_end(iunit, 'grid_function')
-                !
              ENDIF
              !
              CALL ft_interpolate(psir, nx, ny, nz, nwfcs, evc(:,iwfc), npw, npwx)
@@ -162,19 +134,16 @@ MODULE qbox_interface
           !
        ENDIF
        !
-       IF ( me_image == 0 ) CALL iotk_scan_end( iunit, 'slater_determinant' )
+       IF(me_image == 0) CALL iotk_scan_end(iunit, 'slater_determinant')
        !
     ENDDO
     !
-    IF ( me_image == 0 ) THEN
-       !
-       CALL iotk_scan_end( iunit, 'wavefunction' )
-       !
-       CALL iotk_close_read( iunit )
-       !
+    IF(me_image == 0) THEN
+       CALL iotk_scan_end(iunit, 'wavefunction')
+       CALL iotk_close_read(iunit)
     ENDIF
     !
-    IF ( me_image == 0 ) DEALLOCATE(psir)
+    IF(me_image == 0) DEALLOCATE(psir)
     !
   END SUBROUTINE
   !
@@ -193,15 +162,14 @@ MODULE qbox_interface
     !
     ! DUMP A LOCK FILE
     !
-    IF( me_bgrp == 0 ) THEN
-         lockfile = 'I.'//itoa(my_image_id)//'.lock'
-         OPEN(NEWUNIT=iu,FILE=lockfile)
-         CLOSE(iu)
-         !
-         ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
-         !
-         CALL sleep_and_wait_for_lock_to_be_removed(lockfile, '["script"]')
-         !
+    IF(me_bgrp == 0) THEN
+       lockfile = 'I.'//itoa(my_image_id)//'.lock'
+       OPEN(NEWUNIT=iu, FILE=lockfile)
+       CLOSE(iu)
+       !
+       ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
+       !
+       CALL sleep_and_wait_for_lock_to_be_removed(lockfile, '["script"]')
     ENDIF
     !
     CALL mp_barrier(intra_image_comm)
@@ -220,11 +188,13 @@ MODULE qbox_interface
     !
     IMPLICIT NONE
     !
-    IF( me_bgrp == 0 ) THEN
-       OPEN(UNIT=iu, FILE='qb.'//itoa(my_image_id)//'.in')
-       WRITE(iu,'(A)') 'quit'
+    INTEGER :: iu
+    !
+    IF(me_bgrp == 0) THEN
+       OPEN(NEWUNIT=iu, FILE='qb.'//itoa(my_image_id)//'.in')
+       WRITE(iu, '(A)') 'quit'
        CLOSE(iu)
-       CALL remove_if_present( 'qb.'//itoa(my_image_id)//'.in.lock' )
+       CALL remove_if_present('qb.'//itoa(my_image_id)//'.in.lock')
     ENDIF
     !
   END SUBROUTINE
@@ -252,9 +222,9 @@ MODULE qbox_interface
     IERR = import_py(pymod, 'west_clientserver')
     !
     IERR = tuple_create(args, 1)
-    IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)) )
+    IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)))
     IERR = dict_create(kwargs)
-    IERR = kwargs%setitem('document',document)
+    IERR = kwargs%setitem('document', document)
     !
     IF(PRESENT(consider_only)) THEN
        IERR = kwargs%setitem('consider_only', consider_only)
@@ -264,7 +234,7 @@ MODULE qbox_interface
     !
     IERR = cast(return_int, return_obj)
     !
-    IF( return_int /= 0 ) CALL errore('sleep','Did not wake well',return_int)
+    IF(return_int /= 0) CALL errore('sleep', 'Did not wake well', return_int)
     !
     CALL kwargs%destroy
     CALL args%destroy

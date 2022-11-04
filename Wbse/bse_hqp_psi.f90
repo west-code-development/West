@@ -20,7 +20,7 @@ SUBROUTINE bse_hqp_psi(iks, nbvalloc, psi, dpsi)
   USE mp,                  ONLY : mp_sum
   USE control_flags,       ONLY : gamma_only
   USE pwcom,               ONLY : npw,npwx,nbnd,et
-  USE bse_module,          ONLY : et_qp
+  USE westcom,             ONLY : et_qp
   !
   IMPLICIT NONE
   !
@@ -74,10 +74,9 @@ SUBROUTINE read_qp_eigs()
   USE io_global,     ONLY : ionode,ionode_id
   USE mp,            ONLY : mp_bcast,mp_barrier
   USE mp_world,      ONLY : world_comm
-  USE bse_module,    ONLY : et_qp
+  USE westcom,       ONLY : et_qp,qp_correction
   USE pwcom,         ONLY : nks,nbnd
   USE lsda_mod,      ONLY : lsda
-  USE westcom,       ONLY : qp_correction
   !
   IMPLICIT NONE
   !
@@ -139,7 +138,7 @@ SUBROUTINE read_ks_wfc()
   !
   USE mp,            ONLY : mp_bcast,mp_barrier
   USE mp_world,      ONLY : world_comm
-  USE bse_module,    ONLY : evc_ks
+  USE westcom,       ONLY : evc_ks
   USE pwcom,         ONLY : npwx,nks,nbnd
   USE plep_io,       ONLY : plep_read_G_and_distribute_wfc
   !

@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbsepp_ads_spectrum()
+SUBROUTINE do_spectrum()
   !---------------------------------------------------------------------
   !
   ! This routine is modified from the TDDFT code.

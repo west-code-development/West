@@ -16,14 +16,14 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
   USE cell_base,            ONLY : omega
   USE io_push,              ONLY : io_push_title
   USE types_coulomb,        ONLY : pot3D
-  USE westcom,              ONLY : wbse_init_save_dir,chi_kernel,l_xcchi
+  USE westcom,              ONLY : wbse_init_save_dir,chi_kernel,l_xcchi,l_use_localise_repr,&
+                                 & overlap_thr
   USE gvect,                ONLY : ngm,ngmx
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : evc,psic
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : igk_k,npw,npwx,lsda
   USE pdep_io,              ONLY : pdep_merge_and_write_G
-  USE bse_module,           ONLY : ovl_thr,l_wannier_repr
   USE wbse_init_restart,    ONLY : wbse_stat_restart_read,wbse_stat_restart_write,&
                                  & wbse_index_matrix_read,wbse_index_matrix_write
   USE class_idistribute,    ONLY : idistribute
@@ -111,7 +111,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
   ovl_matrix(:,:) = 0.0_DP
   index_matrix(:,:) = 0.0_DP
   !
-  IF(l_wannier_repr) THEN
+  IF(l_use_localise_repr) THEN
      ALLOCATE(evc_loc(npwx,nbndval))
      CALL bse_do_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart_calc)
   ENDIF
@@ -126,7 +126,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
            !
            ovl_value = ovl_matrix(ibnd,jbnd)
            !
-           IF(ovl_value >= ovl_thr) THEN
+           IF(ovl_value >= overlap_thr) THEN
               IF(gamma_only) THEN
                  IF(jbnd >= ibnd) THEN
                     do_index = do_index + 1
@@ -197,15 +197,15 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      ALLOCATE(dvg(ngmx))
      !
      IF(gamma_only) THEN
-        IF(l_wannier_repr) THEN
+        IF(l_use_localise_repr) THEN
            CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd), psic,'Wave')
         ELSE
            CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd), psic,'Wave')
         ENDIF
         !
-        rho_aux(:) = REAL(psic(:),KIND=DP) * AIMAG(psic(:))
+        rho_aux(:) = REAL(psic,KIND=DP) * AIMAG(psic)
      ELSE
-        IF(l_wannier_repr) THEN
+        IF(l_use_localise_repr) THEN
            CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
            CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
         ELSE
@@ -213,17 +213,17 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
            CALL single_invfft_k(dffts,npw,npwx,evc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
         ENDIF
         !
-        rho_aux(:) = REAL(CONJG(psic(:)) * psic_aux(:), KIND=DP)
+        rho_aux(:) = REAL(CONJG(psic)*psic_aux,KIND=DP)
      ENDIF
      !
-     rho_aux(:) = rho_aux(:)/omega
+     rho_aux(:) = rho_aux/omega
      !
      ALLOCATE(aux1_g(ngmx))
      ALLOCATE(aux_r(dffts%nnr))
      ALLOCATE(aux1_r(dffts%nnr,nspin))
      ALLOCATE(aux_rr(dffts%nnr))
      !
-     aux_r(:) = CMPLX(rho_aux(:), KIND=DP)
+     aux_r(:) = CMPLX(rho_aux,KIND=DP)
      !
      ! aux_r -> aux1_g
      !
@@ -235,7 +235,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      !
      ! vc in fock like term
      !
-     dvg(:) = (0.0_DP, 0.0_DP)
+     dvg(:) = (0.0_DP,0.0_DP)
      DO ig = 1, ngm
         dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
      ENDDO
@@ -251,7 +251,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      ENDIF
      !
      aux1_r(:,:) = (0.0_DP,0.0_DP)
-     aux1_r(:,current_spin) = aux_r(:)
+     aux1_r(:,current_spin) = aux_r
      !
      ! aux1_r = vc*aux1_r()
      !
@@ -261,7 +261,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      !
      ! Send data to Qbox to compute X|vc rho>
      !
-     aux_rr(:) = REAL(aux_r(:),KIND=DP)/SQRT(omega) ! scale down pert.
+     aux_rr(:) = REAL(aux_r,KIND=DP)/SQRT(omega) ! scale down pert.
      aux_rr(:) = 0.5_DP * aux_rr ! change from rydberg to hartree
      !
      ! Write aux_rr --> filename.xml
@@ -303,11 +303,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      ENDIF
      !
      DO ir = 1, dffts%nnr
-        aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega), 0.0_DP, KIND=DP) ! rescale response
+        aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega), KIND=DP) ! rescale response
      ENDDO
      !
      aux1_r(:,:) = (0.0_DP,0.0_DP)
-     aux1_r(:,current_spin) = aux_r(:)
+     aux1_r(:,current_spin) = aux_r
      !
      ! aux1_r = vc*aux1_r()
      !
@@ -331,7 +331,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      !
      ! vc + vc/fxc X vc
      !
-     dvg(:) = dvg(:) + aux1_g(:)
+     dvg(:) = dvg + aux1_g
      !
      ! write dvg vc_rho + vc_rho X vc_rho to disk
      !
@@ -341,13 +341,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      !
      filename = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_label1))//'_'//&
                 & TRIM(ADJUSTL(my_label2))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
-     CALL pdep_merge_and_write_G(filename,dvg(:))
+     CALL pdep_merge_and_write_G(filename,dvg)
      !
      DEALLOCATE(rho_aux, dvg)
      DEALLOCATE(aux1_g)
      DEALLOCATE(aux_r, aux1_r, aux_rr)
      !
-     restart_matrix(ig1) = 1.0
+     restart_matrix(ig1) = 1.0_DP
      !
 1111 CONTINUE
      !
@@ -356,7 +356,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      CALL mp_sum(restart_matrix(1:do_index), inter_image_comm)
      !
      DO ir = 1, do_index
-        IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1.0
+        IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1.0_DP
      ENDDO
      !
      calc_is_done = .FALSE.

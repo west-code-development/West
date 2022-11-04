@@ -22,18 +22,17 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
                              & wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
-                             & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
-                             & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
-                             & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,document,&
-                             & l_enable_off_diagonal,wbse_init_calculation,localization,chi_kernel,&
-                             & which_spin_channel,overlap_thr,wfc_from_qbox,wbse_calculation,&
-                             & solver,qp_correction,scissor_ope,n_liouville_eigen,&
-                             & n_liouville_times,n_liouville_maxiter,n_liouville_read_from_file,&
-                             & trev_liouville,trev_liouville_rel,ipol_input,&
-                             & wbse_macropol_calculation,epsinfty,spin_excitation,&
-                             & l_preconditioning,wbsepp_type,macropol_dfpt,r0_input,iexc_plot,&
-                             & itermax,itermax0,ipol,sym_op,units,verbosity,extrapolation,start,&
-                             & end,increment,epsil,spin_channel
+                             & l_enable_off_diagonal,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,westpp_box,document,wbse_init_calculation,&
+                             & localization,wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,&
+                             & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
+                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
+                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
+                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,&
+                             & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
+                             & units,verbosity,extrapolation,start,end,increment,epsil
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -104,10 +103,10 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.westpp_control.westpp_sign',westpp_sign)
         CALL json%add('input.westpp_control.westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use)
         CALL json%add('input.westpp_control.westpp_r0',westpp_r0)
-        CALL json%add('input.westpp_control.westpp_box',westpp_box)
         CALL json%add('input.westpp_control.westpp_nr',westpp_nr)
         CALL json%add('input.westpp_control.westpp_rmax',westpp_rmax)
         CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
+        CALL json%add('input.westpp_control.westpp_box',westpp_box)
         !
      ENDIF
      !
@@ -117,53 +116,45 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==6)) THEN
+     IF ( ANY(driver(:)==6) ) THEN
         !
-        CALL json%add('input.wbse_init_control.wbse_init_calculation',TRIM( wbse_init_calculation ))
-        !CALL json%add('input.wbse_init_control.n_pdep_eigen',n_pdep_eigen)
+        CALL json%add('input.wbse_init_control.wbse_init_calculation',TRIM(wbse_init_calculation))
         CALL json%add('input.wbse_init_control.localization',TRIM(localization))
-        CALL json%add('input.wbse_init_control.chi_kernel',TRIM( chi_kernel ))
-        CALL json%add('input.wbse_init_control.which_spin_channel',which_spin_channel)
-        CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
-        !CALL json%add('input.wbse_init_control.l_use_localise_repr',l_use_localise_repr)
-        !CALL json%add('input.wbse_init_control.l_use_bisection_thr',l_use_bisection_thr)
         CALL json%add('input.wbse_init_control.wfc_from_qbox',TRIM(wfc_from_qbox))
+        CALL json%add('input.wbse_init_control.bisection_info',TRIM(bisection_info))
+        CALL json%add('input.wbse_init_control.chi_kernel',TRIM(chi_kernel))
+        CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
+        CALL json%add('input.wbse_init_control.spin_channel',spin_channel)
         !
      END IF
      !
-     IF ( ANY(driver(:)==7)) THEN
+     IF ( ANY(driver(:)==7) ) THEN
         !
-        CALL json%add('input.wbse_control.wbse_calculation',TRIM( wbse_calculation ))
-        CALL json%add('input.wbse_control.solver',TRIM( solver ))
-        CALL json%add('input.wbse_control.qp_correction',TRIM( qp_correction ))
+        CALL json%add('input.wbse_control.wbse_calculation',TRIM(wbse_calculation))
+        CALL json%add('input.wbse_control.solver',TRIM(solver))
+        CALL json%add('input.wbse_control.qp_correction',TRIM(qp_correction))
         CALL json%add('input.wbse_control.scissor_ope',scissor_ope)
         CALL json%add('input.wbse_control.n_liouville_eigen',n_liouville_eigen)
         CALL json%add('input.wbse_control.n_liouville_times',n_liouville_times)
         CALL json%add('input.wbse_control.n_liouville_maxiter',n_liouville_maxiter)
         CALL json%add('input.wbse_control.n_liouville_read_from_file',n_liouville_read_from_file)
-        CALL json%add('input.wbse_control.trev_plep',trev_liouville)
-        CALL json%add('input.wbse_control.trev_plep_rel',trev_liouville_rel)
+        CALL json%add('input.wbse_control.trev_liouville',trev_liouville)
+        CALL json%add('input.wbse_control.trev_liouville_rel',trev_liouville_rel)
         CALL json%add('input.wbse_control.n_lanczos',n_lanczos)
-        CALL json%add('input.wbse_control.ipol_input', TRIM(ipol_input))
-        CALL json%add('input.wbse_control.macropol_calculation', TRIM(wbse_macropol_calculation))
+        CALL json%add('input.wbse_control.ipol_input',TRIM(ipol_input))
+        CALL json%add('input.wbse_control.macropol_calculation',TRIM(macropol_calculation))
         CALL json%add('input.wbse_control.epsinfty',epsinfty)
         CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
-        !CALL json%add('input.wbse_control.l_bse_calculation',l_bse_calculation)
-        !CALL json%add('input.wbse_control.l_qp_correction',l_qp_correction)
-        !CALL json%add('input.wbse_control.l_diag_term_only',l_diag_term_only)
         CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
-        !CALL json%add('input.wbse_control.wbse_diag_method',TRIM(wbse_diag_method))
-        !CALL json%add('input.wbse_control.macropol_dfpt',macropol_dfpt)
         !
      END IF
      !
-     IF (ANY(driver(:)==8)) THEN
+     IF ( ANY(driver(:)==8) ) THEN
         !
-        CALL json%add('input.wbsepp_control.wbsepp_type',wbsepp_type)
-        !CALL json%add('input.wbsepp_control.n_plep_read_from_file',n_liouville_read_from_file)
+        CALL json%add('input.wbsepp_control.wbsepp_calculation',TRIM(wbsepp_calculation))
         CALL json%add('input.wbsepp_control.n_liouville_read_from_file',n_liouville_read_from_file)
-        CALL json%add('input.wbsepp_control.macropol_dfpt',macropol_dfpt)
-        CALL json%add('input.wbsepp_control.r0_input', r0_input)
+        CALL json%add('input.wbsepp_control.macropol_calculation',macropol_calculation)
+        CALL json%add('input.wbsepp_control.r0_input',r0_input)
         CALL json%add('input.wbsepp_control.iexc_plot',iexc_plot)
         CALL json%add('input.wbsepp_control.itermax',itermax)
         CALL json%add('input.wbsepp_control.itermax0',itermax0)
@@ -195,23 +186,19 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
                              & l_kinetic_only,l_minimize_exx_if_active,l_use_ecutrho,qlist,&
                              & wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
-                             & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,&
-                             & l_enable_lanczos,o_restart_time,ecut_spectralf,n_spectralf,&
+                             & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
+                             & l_enable_off_diagonal,o_restart_time,ecut_spectralf,n_spectralf,&
                              & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,westpp_box,document,main_input_file,logfile,&
-                             & l_enable_off_diagonal,wbse_init_calculation,localization,&
-                             & bisection_info,chi_kernel,which_spin_channel,overlap_thr,&
-                             & wfc_from_qbox,wbse_calculation,solver,qp_correction,scissor_ope,&
+                             & westpp_epsinfty,westpp_box,document,wbse_init_calculation,&
+                             & localization,wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,&
+                             & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
                              & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & ipol_input,wbse_macropol_calculation,epsinfty,spin_excitation,&
-                             & l_preconditioning,wbsepp_type,macropol_dfpt,r0_input,iexc_plot,&
-                             & itermax,itermax0,ipol,sym_op,units,verbosity,extrapolation,start,&
-                             & end,increment,epsil,spin_channel,l_use_localise_repr,&
-                             & l_use_bisection_thr,l_bse_calculation,l_davidson,l_lanczos,&
-                             & l_qp_correction,l_bse_triplet,l_meg,l_eig_decomp,l_lz_spec,&
-                             & l_exc_plot,l_exc_rho_res_plot,l_diag_term_only
+                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,&
+                             & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
+                             & units,verbosity,extrapolation,start,end,increment,epsil,&
+                             & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -252,28 +239,28 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   CALL start_clock('fetch_input')
   !
-  IF ( mpime==root ) THEN
+  IF ( mpime == root ) THEN
      !
-     IERR = import_py(pymod, "west_fetch_input")
+     IERR = import_py(pymod, 'west_fetch_input')
      !
      IF ( ANY(driver(:)==1) ) THEN
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "input_west" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'input_west')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(cvalue, "qe_prefix"); qe_prefix = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "west_prefix"); west_prefix = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "outdir"); outdir = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'qe_prefix'); qe_prefix = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'west_prefix'); west_prefix = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'outdir'); outdir = TRIM(ADJUSTL(cvalue))
         !
         CALL return_dict%destroy
         !
@@ -288,34 +275,34 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         ENDIF
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "wstat_control" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'wstat_control')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
-        IERR = kwargs%setitem("nq",nq)
-        IERR = kwargs%setitem("nelec",nelec)
+        IERR = kwargs%setitem('nq',nq)
+        IERR = kwargs%setitem('nelec',nelec)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(cvalue, "wstat_calculation"); wstat_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%get(n_pdep_eigen, "n_pdep_eigen", DUMMY_DEFAULT)
-        IERR = return_dict%get(n_pdep_times, "n_pdep_times", DUMMY_DEFAULT)
-        IERR = return_dict%get(n_pdep_maxiter, "n_pdep_maxiter", DUMMY_DEFAULT)
-        IERR = return_dict%get(n_dfpt_maxiter, "n_dfpt_maxiter", DUMMY_DEFAULT)
-        IERR = return_dict%get(n_pdep_read_from_file, "n_pdep_read_from_file", DUMMY_DEFAULT)
-        IERR = return_dict%get(n_steps_write_restart, "n_steps_write_restart", DUMMY_DEFAULT)
-        IERR = return_dict%getitem(trev_pdep, "trev_pdep")
-        IERR = return_dict%getitem(trev_pdep_rel, "trev_pdep_rel")
-        IERR = return_dict%getitem(tr2_dfpt, "tr2_dfpt")
-        IERR = return_dict%getitem(l_kinetic_only, "l_kinetic_only")
-        IERR = return_dict%getitem(l_minimize_exx_if_active, "l_minimize_exx_if_active")
-        IERR = return_dict%getitem(l_use_ecutrho, "l_use_ecutrho")
-        IERR = return_dict%getitem(tmp_obj, "qlist")
+        IERR = return_dict%getitem(cvalue, 'wstat_calculation'); wstat_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%get(n_pdep_eigen, 'n_pdep_eigen', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_pdep_times, 'n_pdep_times', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_pdep_maxiter, 'n_pdep_maxiter', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_dfpt_maxiter, 'n_dfpt_maxiter', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_pdep_read_from_file, 'n_pdep_read_from_file', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_steps_write_restart, 'n_steps_write_restart', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(trev_pdep, 'trev_pdep')
+        IERR = return_dict%getitem(trev_pdep_rel, 'trev_pdep_rel')
+        IERR = return_dict%getitem(tr2_dfpt, 'tr2_dfpt')
+        IERR = return_dict%getitem(l_kinetic_only, 'l_kinetic_only')
+        IERR = return_dict%getitem(l_minimize_exx_if_active, 'l_minimize_exx_if_active')
+        IERR = return_dict%getitem(l_use_ecutrho, 'l_use_ecutrho')
+        IERR = return_dict%getitem(tmp_obj, 'qlist')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
@@ -333,30 +320,30 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF ( ANY(driver(:)==3) ) THEN
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "wfreq_control" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'wfreq_control')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
-        IERR = kwargs%setitem("nelec",nelec)
-        IERR = kwargs%setitem("ecutrho",ecutrho)
+        IERR = kwargs%setitem('nelec',nelec)
+        IERR = kwargs%setitem('ecutrho',ecutrho)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(cvalue, "wfreq_calculation"); wfreq_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%get(n_pdep_eigen_to_use, "n_pdep_eigen_to_use", DUMMY_DEFAULT)
-        IERR = return_dict%getitem(tmp_obj, "qp_bandrange")
+        IERR = return_dict%getitem(cvalue, 'wfreq_calculation'); wfreq_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%get(n_pdep_eigen_to_use, 'n_pdep_eigen_to_use', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(tmp_obj, 'qp_bandrange')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
         IERR = tmp_list%getitem(qp_bandrange(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(qp_bandrange(2), 1) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
-        IERR = return_dict%getitem(tmp_obj, "qp_bands")
+        IERR = return_dict%getitem(tmp_obj, 'qp_bands')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
         IF( ALLOCATED(qp_bands) ) DEALLOCATE(qp_bands)
@@ -366,25 +353,25 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         ENDDO
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
-        IERR = return_dict%getitem(cvalue, "macropol_calculation"); macropol_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%get(n_lanczos, "n_lanczos", DUMMY_DEFAULT)
-        IERR = return_dict%get(n_imfreq, "n_imfreq", DUMMY_DEFAULT)
-        IERR = return_dict%get(n_refreq, "n_refreq", DUMMY_DEFAULT)
-        IERR = return_dict%getitem(ecut_imfreq, "ecut_imfreq")
-        IERR = return_dict%getitem(ecut_refreq, "ecut_refreq")
-        IERR = return_dict%getitem(wfreq_eta, "wfreq_eta")
-        IERR = return_dict%get(n_secant_maxiter, "n_secant_maxiter", DUMMY_DEFAULT)
-        IERR = return_dict%getitem(trev_secant, "trev_secant")
-        IERR = return_dict%getitem(l_enable_lanczos, "l_enable_lanczos")
-        IERR = return_dict%getitem(l_enable_off_diagonal, "l_enable_off_diagonal")
-        IERR = return_dict%getitem(o_restart_time, "o_restart_time")
-        IERR = return_dict%getitem(tmp_obj, "ecut_spectralf")
+        IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%get(n_lanczos, 'n_lanczos', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_imfreq, 'n_imfreq', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_refreq, 'n_refreq', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(ecut_imfreq, 'ecut_imfreq')
+        IERR = return_dict%getitem(ecut_refreq, 'ecut_refreq')
+        IERR = return_dict%getitem(wfreq_eta, 'wfreq_eta')
+        IERR = return_dict%get(n_secant_maxiter, 'n_secant_maxiter', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(trev_secant, 'trev_secant')
+        IERR = return_dict%getitem(l_enable_lanczos, 'l_enable_lanczos')
+        IERR = return_dict%getitem(l_enable_off_diagonal, 'l_enable_off_diagonal')
+        IERR = return_dict%getitem(o_restart_time, 'o_restart_time')
+        IERR = return_dict%getitem(tmp_obj, 'ecut_spectralf')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%getitem(ecut_spectralf(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(ecut_spectralf(2), 1) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
-        IERR = return_dict%get(n_spectralf, "n_spectralf", DUMMY_DEFAULT)
+        IERR = return_dict%get(n_spectralf, 'n_spectralf', DUMMY_DEFAULT)
         !
         CALL return_dict%destroy
         !
@@ -393,39 +380,39 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF ( ANY(driver(:)==4) ) THEN
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "westpp_control" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'westpp_control')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(cvalue, "westpp_calculation"); westpp_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(tmp_obj, "westpp_range")
+        IERR = return_dict%getitem(cvalue, 'westpp_calculation'); westpp_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(tmp_obj, 'westpp_range')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%getitem(westpp_range(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(westpp_range(2), 1) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
-        IERR = return_dict%getitem(cvalue, "westpp_format"); westpp_format = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(westpp_sign, "westpp_sign")
-        IERR = return_dict%get(westpp_n_pdep_eigen_to_use, "westpp_n_pdep_eigen_to_use", DUMMY_DEFAULT)
-        IERR = return_dict%getitem(tmp_obj, "westpp_r0")
+        IERR = return_dict%getitem(cvalue, 'westpp_format'); westpp_format = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(westpp_sign, 'westpp_sign')
+        IERR = return_dict%get(westpp_n_pdep_eigen_to_use, 'westpp_n_pdep_eigen_to_use', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(tmp_obj, 'westpp_r0')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%getitem(westpp_r0(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(westpp_r0(2), 1) ! Fortran indices start at 1
         IERR = tmp_list%getitem(westpp_r0(3), 2) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
-        IERR = return_dict%get(westpp_nr, "westpp_nr", DUMMY_DEFAULT)
-        IERR = return_dict%getitem(westpp_rmax, "westpp_rmax")
-        IERR = return_dict%getitem(westpp_epsinfty, "westpp_epsinfty")
-        IERR = return_dict%getitem(tmp_obj, "westpp_box")
+        IERR = return_dict%get(westpp_nr, 'westpp_nr', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(westpp_rmax, 'westpp_rmax')
+        IERR = return_dict%getitem(westpp_epsinfty, 'westpp_epsinfty')
+        IERR = return_dict%getitem(tmp_obj, 'westpp_box')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%getitem(westpp_box(1), 0)
         IERR = tmp_list%getitem(westpp_box(2), 1)
@@ -443,19 +430,19 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF ( ANY(driver(:)==5) ) THEN
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "server_control" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'server_control')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(cvalue, "document"); document = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'document'); document = TRIM(ADJUSTL(cvalue))
         !
         CALL return_dict%destroy
         !
@@ -468,32 +455,25 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         qlist = (/1/)
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "wbse_init_control" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'wbse_init_control')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(cvalue, "wbse_init_calculation"); wbse_init_calculation = TRIM(&
-               ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "localization"); localization = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "bisection_info"); bisection_info = TRIM(ADJUSTL(cvalue))
-        !IERR = return_dict%getitem(cvalue, "which_bse_method"); which_bse_method = TRIM(&
-        !       ADJUSTL(cvalue))
-        !IERR = return_dict%getitem(n_pdep_eigen, "n_pdep_eigen")
-        IERR = return_dict%getitem(cvalue, "chi_kernel"); chi_kernel = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(which_spin_channel, "which_spin_channel")
-        IERR = return_dict%getitem(overlap_thr, "overlap_thr")
-        !IERR = return_dict%getitem(l_use_localise_repr, "l_use_localise_repr")
-        !IERR = return_dict%getitem(l_use_bisection_thr, "l_use_bisection_thr")
-        IERR = return_dict%getitem(cvalue, "wfc_from_qbox"); wfc_from_qbox = TRIM(&
-               ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'wbse_init_calculation'); wbse_init_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'localization'); localization = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'wfc_from_qbox'); wfc_from_qbox = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'bisection_info'); bisection_info = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'chi_kernel'); chi_kernel = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(overlap_thr, 'overlap_thr')
+        IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
         !
         CALL return_dict%destroy
         !
@@ -502,42 +482,34 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF ( ANY(driver(:)==7) ) THEN
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "wbse_control" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'wbse_control')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(cvalue, "wbse_calculation");wbse_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "solver");solver = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "qp_correction"); qp_correction = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(scissor_ope, "scissor_ope")
-        IERR = return_dict%getitem(n_liouville_eigen, "n_liouville_eigen")
-        IERR = return_dict%getitem(n_liouville_times, "n_liouville_times")
-        IERR = return_dict%getitem(n_liouville_maxiter, "n_liouville_maxiter")
-        IERR = return_dict%getitem(n_liouville_read_from_file, "n_liouville_read_from_file")
-        IERR = return_dict%getitem(trev_liouville, "trev_liouville")
-        IERR = return_dict%getitem(trev_liouville_rel, "trev_liouville_rel")
-        IERR = return_dict%getitem(n_lanczos,"n_lanczos")
-        !IERR = return_dict%getitem(n_lzstep, "n_lzstep")
-        IERR = return_dict%getitem(cvalue, "ipol_input");ipol_input = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, "macropol_calculation"); wbse_macropol_calculation =  TRIM(ADJUSTL(cvalue))
-        !IERR = return_dict%getitem(eps_macro, "eps_macro")
-        IERR = return_dict%getitem(epsinfty,"epsinfty")
-        IERR = return_dict%getitem(cvalue, "spin_excitation");spin_excitation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(l_preconditioning, "l_preconditioning")
-        !
-        !IERR = return_dict%getitem(l_bse_calculation, "l_bse_calculation")
-        !IERR = return_dict%getitem(l_qp_correction, "l_qp_correction")
-        !IERR = return_dict%getitem(l_diag_term_only, "l_diag_term_only")
-        !IERR = return_dict%getitem(cvalue, "wbse_diag_method");wbse_diag_method = TRIM(ADJUSTL(cvalue))
-        !IERR = return_dict%getitem(macropol_dfpt, "macropol_dfpt")
+        IERR = return_dict%getitem(cvalue, 'wbse_calculation'); wbse_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'solver'); solver = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'qp_correction'); qp_correction = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(scissor_ope, 'scissor_ope')
+        IERR = return_dict%get(n_liouville_eigen, 'n_liouville_eigen', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_liouville_times, 'n_liouville_times', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_liouville_maxiter, 'n_liouville_maxiter', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_liouville_read_from_file, 'n_liouville_read_from_file', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(trev_liouville, 'trev_liouville')
+        IERR = return_dict%getitem(trev_liouville_rel, 'trev_liouville_rel')
+        IERR = return_dict%get(n_lanczos,'n_lanczos', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(cvalue, 'ipol_input'); ipol_input = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(epsinfty, 'epsinfty')
+        IERR = return_dict%getitem(cvalue, 'spin_excitation'); spin_excitation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(l_preconditioning, 'l_preconditioning')
         !
         CALL return_dict%destroy
         !
@@ -550,22 +522,22 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         qlist = (/1/)
         !
         IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)) )
-        IERR = args%setitem(1, "wbsepp_control" )
-        IERR = args%setitem(2, verbose )
+        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
+        IERR = args%setitem(1, 'wbsepp_control')
+        IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
         !
-        IERR = call_py(return_obj, pymod, "read_keyword_from_file", args, kwargs)
+        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
         !
         CALL args%destroy
         CALL kwargs%destroy
         CALL return_obj%destroy
         !
-        IERR = return_dict%getitem(wbsepp_type, "wbsepp_type")
-        IERR = return_dict%getitem(n_liouville_read_from_file, "n_liouville_read_from_file")
-        IERR = return_dict%getitem(macropol_dfpt, "macropol_dfpt")
-        IERR = return_dict%getitem(tmp_obj, "r0_input")
+        IERR = return_dict%getitem(cvalue, 'wbsepp_calculation'); wbsepp_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%get(n_liouville_read_from_file, 'n_liouville_read_from_file', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(tmp_obj, 'r0_input')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
         IERR = tmp_list%getitem(r0_input(1), 0) ! Fortran indices start at 1
@@ -573,19 +545,19 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = tmp_list%getitem(r0_input(3), 2) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
-        IERR = return_dict%getitem(iexc_plot, "iexc_plot")
-        IERR = return_dict%getitem(itermax, "itermax")
-        IERR = return_dict%getitem(itermax0, "itermax0")
-        IERR = return_dict%getitem(ipol, "ipol")
-        IERR = return_dict%getitem(sym_op, "sym_op")
-        IERR = return_dict%getitem(units, "units")
-        IERR = return_dict%getitem(verbosity, "verbosity")
-        IERR = return_dict%getitem(cvalue, "extrapolation");extrapolation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(start, "start")
-        IERR = return_dict%getitem(end, "end")
-        IERR = return_dict%getitem(increment, "increment")
-        IERR = return_dict%getitem(epsil, "epsil")
-        IERR = return_dict%getitem(spin_channel, "spin_channel")
+        IERR = return_dict%get(iexc_plot, 'iexc_plot', DUMMY_DEFAULT)
+        IERR = return_dict%get(itermax, 'itermax', DUMMY_DEFAULT)
+        IERR = return_dict%get(itermax0, 'itermax0', DUMMY_DEFAULT)
+        IERR = return_dict%get(ipol, 'ipol', DUMMY_DEFAULT)
+        IERR = return_dict%get(sym_op, 'sym_op', DUMMY_DEFAULT)
+        IERR = return_dict%get(units, 'units', DUMMY_DEFAULT)
+        IERR = return_dict%get(verbosity, 'verbosity', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(cvalue, 'extrapolation'); extrapolation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(start, 'start')
+        IERR = return_dict%getitem(end, 'end')
+        IERR = return_dict%getitem(increment, 'increment')
+        IERR = return_dict%getitem(epsil, 'epsil')
+        IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
         !
         CALL return_dict%destroy
         !
@@ -593,14 +565,13 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      CALL pymod%destroy
      !
-     !
   ENDIF
   !
   ! BCAST & CHECKS
   !
   IF ( ANY(driver(:)==1) ) THEN
      !
-     CALL mp_bcast(qe_prefix,root,world_comm); prefix=qe_prefix
+     CALL mp_bcast(qe_prefix,root,world_comm); prefix = qe_prefix
      CALL mp_bcast(west_prefix,root,world_comm)
      CALL mp_bcast(outdir,root,world_comm); tmp_dir = trimcheck (outdir)
      !
@@ -638,9 +609,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( n_dfpt_maxiter < 1 ) CALL errore('fetch_input','Err: n_dfpt_maxiter<1',1)
      IF( n_pdep_read_from_file < 0 ) CALL errore('fetch_input','Err: n_pdep_read_from_file<0',1)
      IF( n_pdep_read_from_file > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_read_from_file>n_pdep_eigen',1)
-     IF(tr2_dfpt<=0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
-     IF(trev_pdep<=0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
-     IF(trev_pdep_rel<=0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
+     IF( tr2_dfpt <= 0._DP ) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
+     IF( trev_pdep <= 0._DP ) CALL errore('fetch_input','Err: trev_pdep<0.',1)
+     IF( trev_pdep_rel <= 0._DP ) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
      IF( n_pdep_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen',1)
      IF( n_pdep_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_times',1)
      IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_maxiter',1)
@@ -660,9 +631,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(wfreq_calculation,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(qp_bandrange,root,world_comm)
-     IF(mpime == root) n_qp_bands = SIZE(qp_bands)
+     IF( mpime == root ) n_qp_bands = SIZE(qp_bands)
      CALL mp_bcast(n_qp_bands,root,world_comm)
-     IF(mpime /= root) THEN
+     IF( mpime /= root ) THEN
         IF( ALLOCATED(qp_bands) ) DEALLOCATE(qp_bands)
         ALLOCATE(qp_bands(n_qp_bands))
      ENDIF
@@ -711,12 +682,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
            ENDIF
         ENDDO
      ENDIF
-     IF( ecut_imfreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
-     IF( ecut_refreq<=0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
-     IF( ecut_spectralf(2)<ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
-     IF( wfreq_eta<=0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
+     IF( ecut_imfreq <= 0._DP ) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
+     IF( ecut_refreq <= 0._DP ) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
+     IF( ecut_spectralf(2) < ecut_spectralf(1) ) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
+     IF( wfreq_eta <= 0._DP ) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
      IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1)
-     IF( trev_secant<=0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
+     IF( trev_secant <= 0._DP ) CALL errore('fetch_input','Err: trev_secant<0.',1)
      IF( l_enable_off_diagonal .AND. .NOT. gamma_only ) CALL errore('fetch_input','Err: off-diagonal implemented for gamma only',1)
      IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
      IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
@@ -724,6 +695,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_refreq',1)
      IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_secant_maxiter',1)
      IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_spectralf',1)
+     !
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
      CASE DEFAULT
@@ -765,45 +737,40 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      lenc = LEN(document)
      CALL mp_bcast(lenc,root,world_comm)
-     IF(mpime/=root) ALLOCATE(CHARACTER(LEN=lenc) :: document)
+     IF( mpime /= root ) ALLOCATE(CHARACTER(LEN=lenc) :: document)
      CALL mp_bcast(document,root,world_comm)
      !
   ENDIF
   !
   IF ( ANY(driver(:)==6) ) THEN
      !
-     IF(mpime == root) nq = SIZE(qlist)
+     IF( mpime == root ) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
-     IF(mpime /= root) THEN
+     IF( mpime /= root ) THEN
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
         ALLOCATE(qlist(nq))
      ENDIF
      CALL mp_bcast(qlist,root,world_comm)
      !
      CALL mp_bcast(wbse_init_calculation,root,world_comm)
-     !CALL mp_bcast(which_bse_method,root,world_comm)
-     !CALL mp_bcast(l_use_bisection_thr,root,world_comm)
-     CALL mp_bcast(overlap_thr,root,world_comm)
-     CALL mp_bcast(chi_kernel,root,world_comm)
-     !CALL mp_bcast(n_pdep_eigen,root,world_comm)
-     CALL mp_bcast(which_spin_channel,root,world_comm)
-     !CALL mp_bcast(l_use_localise_repr,root,world_comm)
      CALL mp_bcast(localization,root,world_comm)
      CALL mp_bcast(wfc_from_qbox,root,world_comm)
      CALL mp_bcast(bisection_info,root,world_comm)
+     CALL mp_bcast(chi_kernel,root,world_comm)
+     CALL mp_bcast(overlap_thr,root,world_comm)
+     CALL mp_bcast(spin_channel,root,world_comm)
+     !
+     IF( spin_channel == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
      !
      SELECT CASE(TRIM(localization))
-     CASE('N','n')
-     l_use_localise_repr = .FALSE.
-     l_use_bisection_thr = .FALSE.
-     CASE('B','b')
-     l_use_localise_repr = .TRUE.
-     l_use_bisection_thr = .TRUE.
+     CASE('N','n','B','b')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: localization != N/B', 1)
+        CALL errore('fetch_input','Err: localization /= (N,B)',1)
      END SELECT
-     CALL mp_bcast(l_use_localise_repr,root,world_comm)
-     CALL mp_bcast(l_use_bisection_thr,root,world_comm)
+     !
+     IF (spin_channel < 1 .OR. spin_channel > 2) THEN
+        CALL errore('fetch_input','Err: spin_channel/= 1,2',spin_channel)
+     ENDIF
      !
      !use_qbox = .FALSE.
      !use_wstat_pdep = .FALSE.
@@ -815,12 +782,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !CASE DEFAULT
      !   CALL errore('fetch_input','Err: which_bse_method != FF/PDEP', 1)
      !END SELECT
-     !l_test_ovl = .FALSE.
-     !IF (wbse_init_calculation == 'I') l_test_ovl = .TRUE.
      !
      !CALL mp_bcast(use_qbox,root,world_comm)
      !CALL mp_bcast(use_wstat_pdep,root,world_comm)
-     !CALL mp_bcast(l_test_ovl,root,world_comm)
      !
   ENDIF
   !
@@ -838,98 +802,69 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(trev_liouville_rel,root,world_comm)
      CALL mp_bcast(n_lanczos,root,world_comm)
      CALL mp_bcast(ipol_input,root,world_comm)
-     CALL mp_bcast(wbse_macropol_calculation,root,world_comm)
+     CALL mp_bcast(macropol_calculation,root,world_comm)
      CALL mp_bcast(epsinfty,root,world_comm)
      CALL mp_bcast(spin_excitation,root,world_comm)
      CALL mp_bcast(l_preconditioning,root,world_comm)
-     !CALL mp_bcast(l_bse_calculation,root,world_comm)
-     !CALL mp_bcast(l_diag_term_only,root,world_comm)
-     !CALL mp_bcast(wbse_diag_method,root,world_comm)
-     !CALL mp_bcast(l_qp_correction,root,world_comm)
-     !CALL mp_bcast(n_lzstep,root,world_comm)
-     !CALL mp_bcast(macropol_dfpt,root,world_comm)
      !
      ! CHECKS
      !
-     SELECT CASE(wbse_macropol_calculation)
-     CASE('N','n')
-        macropol_dfpt = .FALSE.
-     CASE('C','c')
-        macropol_dfpt = .TRUE.
+     IF( n_liouville_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_eigen',1)
+     IF( n_liouville_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_times',1)
+     IF( n_liouville_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_maxiter',1)
+     IF( n_liouville_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
+     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
+     !
+     SELECT CASE(macropol_calculation)
+     CASE('N','n','C','c')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: wbse_macropol_calculation /= N or C',1)
+        CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
      END SELECT
      !
      SELECT CASE(TRIM(solver))
-     CASE('BSE','bse')
-        l_bse_calculation = .TRUE.
-     CASE('TDDFT','tddft')
-        l_bse_calculation = .FALSE.
+     CASE('BSE','bse','TDDFT','tddft')
      CASE DEFAULT
         CALL errore('fetch_input','Err: solver /= BSE or TDDFT',1)
      END SELECT
      !
      SELECT CASE(wbse_calculation)
-     CASE('D','d')
-        l_davidson = .TRUE.
-     CASE('L','l')
-        l_lanczos  = .TRUE.
+     CASE('D','d','L','l')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: wbse_calculation /= D d L l',1)
+        CALL errore('fetch_input','Err: wbse_calculation /= (D,L)',1)
      END SELECT
-
-     IF ( TRIM(qp_correction) == "" ) THEN
-        l_qp_correction = .FALSE.
-     ELSE
-        l_qp_correction = .TRUE.
-     ENDIF
-     !
-     !
      !
      SELECT CASE(spin_excitation)
-     CASE('s', 'S', 'singlet')
-         l_bse_triplet = .FALSE.
-     CASE('t', 'T', 'triplet')
-         l_bse_triplet = .TRUE.
+     CASE('s','S','singlet','t','T','triplet')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: spin_excitation /= s or t',1)
+        CALL errore('fetch_input','Err: spin_excitation /= (S,T)',1)
      END SELECT
      !
-     IF (l_davidson) THEN
+     IF( wbse_calculation == 'D' .OR. wbse_calculation == 'd' ) THEN
         IF( n_liouville_times < 2 ) CALL errore('fetch_input','Err: n_liouville_times<2',1)
         IF( n_liouville_eigen < 1 ) CALL errore('fetch_input','Err: n_liouville_eigen<1',1)
-        IF( n_liouville_eigen*n_liouville_times < nimage ) THEN
-           CALL errore('fetch_input','Err: n_liouville_eigen*n_liouville_times<nimage',1)
-        ENDIF
+        IF( n_liouville_eigen*n_liouville_times < nimage ) &
+        & CALL errore('fetch_input','Err: n_liouville_eigen*n_liouville_times<nimage',1)
         IF( n_liouville_maxiter < 1 ) CALL errore('fetch_input','Err: n_liouville_maxiter<1',1)
         IF( n_liouville_read_from_file < 0 ) CALL errore('fetch_input','Err: n_liouville_read_from_file<0',1)
-        IF( n_liouville_read_from_file > n_liouville_eigen ) THEN
-            CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
-        ENDIF
+        IF( n_liouville_read_from_file > n_liouville_eigen ) &
+        & CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
      ENDIF
-     !
-     CALL mp_bcast(l_davidson,root,world_comm)
-     CALL mp_bcast(l_lanczos,root,world_comm)
-     CALL mp_bcast(l_bse_triplet,root,world_comm)
-     CALL mp_bcast(l_qp_correction,root,world_comm)
-     CALL mp_bcast(l_bse_calculation,root,world_comm)
-     CALL mp_bcast(macropol_dfpt,root,world_comm)
      !
   ENDIF
   !
   IF ( ANY(driver(:)==8) ) THEN
      !
-     IF(mpime == root) nq = SIZE(qlist)
+     IF( mpime == root ) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
-     IF(mpime /= root) THEN
+     IF( mpime /= root ) THEN
         IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
         ALLOCATE(qlist(nq))
      ENDIF
      CALL mp_bcast(qlist,root,world_comm)
      !
-     CALL mp_bcast(wbsepp_type,root,world_comm)
+     CALL mp_bcast(wbsepp_calculation,root,world_comm)
      CALL mp_bcast(n_liouville_read_from_file,root,world_comm)
-     CALL mp_bcast(macropol_dfpt,root,world_comm)
+     CALL mp_bcast(macropol_calculation,root,world_comm)
      CALL mp_bcast(r0_input,root,world_comm)
      CALL mp_bcast(iexc_plot,root,world_comm)
      CALL mp_bcast(itermax,root,world_comm)
@@ -945,36 +880,25 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(epsil,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
      !
-     l_meg = .FALSE.
-     l_eig_decomp = .FALSE.
-     l_lz_spec = .FALSE.
-     l_exc_plot = .FALSE.
-     l_exc_rho_res_plot = .FALSE.
+     ! CHECKS
      !
-     SELECT CASE(wbsepp_type)
-     CASE( 1 )
-         l_eig_decomp = .TRUE.
-     CASE( 2 )
-         l_lz_spec = .TRUE.
-     CASE( 3 )
-         l_meg = .TRUE.
-     CASE( 4 )
-         l_exc_plot = .TRUE.
-     CASE( 5 )
-         l_exc_rho_res_plot = .TRUE.
+     IF( n_liouville_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
+     IF( iexc_plot == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch iexc_plot',1)
+     IF( itermax == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch itermax',1)
+     IF( itermax0 == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch itermax0',1)
+     IF( ipol == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch ipol',1)
+     IF( sym_op == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch sym_op',1)
+     IF( units == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch units',1)
+     IF( verbosity == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch verbosity',1)
+     IF( spin_channel == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
+     !
+     SELECT CASE(macropol_calculation)
+     CASE('N','n','C','c')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: wbsepp_type /= 1,2,3', wbsepp_type)
+        CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
      END SELECT
      !
-     IF ((spin_channel < 1) .OR. (spin_channel > 2)) THEN
-        CALL errore('fetch_input','Err: spin_channel/= 1,2', spin_channel)
-     ENDIF
-     !
-     CALL mp_bcast(l_meg,root,world_comm)
-     CALL mp_bcast(l_eig_decomp,root,world_comm)
-     CALL mp_bcast(l_lz_spec,root,world_comm)
-     CALL mp_bcast(l_exc_plot,root,world_comm)
-     CALL mp_bcast(l_exc_rho_res_plot,root,world_comm)
+     IF (spin_channel < 1 .OR. spin_channel > 2) CALL errore('fetch_input','Err: spin_channel/= 1,2',spin_channel)
      !
   ENDIF
   !
@@ -988,7 +912,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         ! REPORT
         !
-        CALL io_push_title("I/O Summary : input_west")
+        CALL io_push_title('I/O Summary : input_west')
         !
         numsp = 14
         CALL io_push_c512('qe_prefix',qe_prefix,numsp)
@@ -1082,6 +1006,12 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('westpp_nr',westpp_nr,numsp)
         CALL io_push_value('westpp_rmax',westpp_rmax,numsp)
         CALL io_push_value('westpp_epsinfty',westpp_epsinfty,numsp)
+        CALL io_push_value('westpp_box(1)',westpp_box(1),numsp)
+        CALL io_push_value('westpp_box(2)',westpp_box(2),numsp)
+        CALL io_push_value('westpp_box(3)',westpp_box(3),numsp)
+        CALL io_push_value('westpp_box(4)',westpp_box(4),numsp)
+        CALL io_push_value('westpp_box(5)',westpp_box(5),numsp)
+        CALL io_push_value('westpp_box(6)',westpp_box(6),numsp)
         !
         CALL io_push_bar()
         !
@@ -1104,131 +1034,80 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
         ! REPORT
         !
-        CALL io_push_title("I/O Summary : wbse_init")
+        CALL io_push_title('I/O Summary : wbse_init')
         !
         numsp = 23
         CALL io_push_value('wbse_init_calculation',wbse_init_calculation,numsp)
-        !CALL io_push_value('which_bse_method', which_bse_method,numsp)
-        !CALL io_push_value('n_pdep_eigen',n_pdep_eigen,numsp)
-        CALL io_push_value('chi_kernel',chi_kernel,numsp)
-        CALL io_push_value('which_spin_channel',which_spin_channel,numsp)
-        !CALL io_push_value('l_use_localise_repr',l_use_localise_repr,numsp)
-        CALL io_push_value('overlap_thr',overlap_thr,numsp)
-        !CALL io_push_value('l_use_bisection_thr',l_use_bisection_thr,numsp)
         CALL io_push_value('localization',localization,numsp)
-        CALL io_push_value('bisection_info',bisection_info,numsp)
         CALL io_push_value('wfc_from_qbox',wfc_from_qbox,numsp)
+        CALL io_push_value('bisection_info',bisection_info,numsp)
+        CALL io_push_value('chi_kernel',chi_kernel,numsp)
+        CALL io_push_value('overlap_thr',overlap_thr,numsp)
+        CALL io_push_value('spin_channel',spin_channel,numsp)
         !
         CALL io_push_bar()
         !
-    ENDIF
-    !
-    IF ( ANY(driver(:)==7) ) THEN
+     ENDIF
+     !
+     IF ( ANY(driver(:)==7) ) THEN
         !
         ! REPORT
         !
-        CALL io_push_title("I/O Summary : wbse_control")
+        CALL io_push_title('I/O Summary : wbse_control')
         !
+        numsp = 23
+        CALL io_push_value('wbse_calculation',wbse_calculation,numsp)
+        CALL io_push_value('solver',solver,numsp)
+        CALL io_push_value('qp_correction',qp_correction,numsp)
+        CALL io_push_value('scissor_ope',scissor_ope,numsp)
+        CALL io_push_value('n_liouville_eigen',n_liouville_eigen,numsp)
+        CALL io_push_value('n_liouville_times',n_liouville_times,numsp)
+        CALL io_push_value('n_liouville_maxiter',n_liouville_maxiter,numsp)
+        CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
+        CALL io_push_value('trev_liouville',trev_liouville,numsp)
+        CALL io_push_value('trev_liouville_rel',trev_liouville_rel,numsp)
+        CALL io_push_value('n_lanczos',n_lanczos,numsp)
+        CALL io_push_value('ipol_input',ipol_input,numsp)
+        CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
+        CALL io_push_value('epsinfty',epsinfty,numsp)
+        CALL io_push_value('spin_excitation',spin_excitation,numsp)
+        CALL io_push_value('l_preconditioning',l_preconditioning,numsp)
         !
-        numsp=23
+        CALL io_push_bar()
         !
-        IF (l_davidson) THEN
-            !
-            CALL io_push_value('wbse_calculation',wbse_calculation,numsp)
-            CALL io_push_value('solver',solver,numsp)
-            CALL io_push_value('qp_correction',qp_correction,numsp)
-            CALL io_push_value('n_liouville_eigen',n_liouville_eigen,numsp)
-            CALL io_push_value('n_liouville_times',n_liouville_times,numsp)
-            CALL io_push_value('n_liouville_maxiter',n_liouville_maxiter,numsp)
-            CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
-            CALL io_push_value('l_bse_calculation',l_bse_calculation,numsp)
-            !CALL io_push_value('l_diag_term_only',l_diag_term_only,numsp)
-            CALL io_push_value('l_preconditioning',l_preconditioning,numsp)
-            !CALL io_push_value('l_qp_correction',l_qp_correction,numsp)
-            CALL io_push_value('spin_excitation', spin_excitation,numsp)
-            CALL io_push_value('trev_liouville',trev_liouville,numsp)
-            CALL io_push_value('trev_liouville_rel',trev_liouville_rel,numsp)
-            CALL io_push_value('scissor_ope',scissor_ope,numsp)
-            CALL io_push_value('epsinfty',epsinfty,numsp)
-            !
-        ENDIF
-        !
-        IF (l_lanczos) THEN
-            !
-            CALL io_push_value('wbse_calculation',wbse_calculation,numsp)
-            CALL io_push_value('solver',solver,numsp)
-            CALL io_push_value('qp_correction',qp_correction,numsp)
-            CALL io_push_value('ipol_input',ipol_input,numsp)
-            CALL io_push_value('n_lanczos',n_lanczos,numsp)
-            CALL io_push_value('l_bse_calculation',l_bse_calculation,numsp)
-            CALL io_push_value('l_diag_term_only',l_diag_term_only,numsp)
-            !CALL io_push_value('l_qp_correction',l_qp_correction,numsp)
-            CALL io_push_value('spin_excitation', spin_excitation,numsp)
-            CALL io_push_value('scissor_ope',scissor_ope,numsp)
-            CALL io_push_value('epsinfty',epsinfty,numsp)
-            CALL io_push_value('macropol_dfpt',macropol_dfpt,numsp)
-            !
-         ENDIF
-         !
-         CALL io_push_bar()
-         !
-    ENDIF
-    !
-    IF ( ANY(driver(:)==8) ) THEN
+     ENDIF
+     !
+     IF ( ANY(driver(:)==8) ) THEN
         !
         ! REPORT
         !
         CALL io_push_title('I/O Summary : wbsepp_input')
         !
-        numsp=30
-        !
-        IF (l_eig_decomp) THEN
-           !
-           CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
-           CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
-           CALL io_push_value('macropol_dfpt',macropol_dfpt,numsp)
-           !
-        ENDIF
-        !
-        IF (l_exc_rho_res_plot) THEN
-           !
-           CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
-           CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
-           CALL io_push_value('iexc_plot',iexc_plot,numsp)
-           !
-        ENDIF
-        !
-        IF (l_exc_plot ) THEN
-           !
-           CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
-           CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
-           CALL io_push_value('r0_input(1) [alat]',r0_input(1),numsp)
-           CALL io_push_value('r0_input(2) [alat]',r0_input(2),numsp)
-           CALL io_push_value('r0_input(3) [alat]',r0_input(3),numsp)
-           CALL io_push_value('iexc_plot',iexc_plot,numsp)
-           !
-        ENDIF
-        !
-        IF (l_lz_spec) THEN
-           !
-           CALL io_push_value('wbsepp_type',wbsepp_type,numsp)
-           CALL io_push_value('lziter_max', itermax,numsp)
-           CALL io_push_value('lziter_cal', itermax0,numsp)
-           CALL io_push_value('l_extrapolation', extrapolation,numsp)
-           CALL io_push_value('w_start', start,numsp)
-           CALL io_push_value('w_stop', end,numsp)
-           CALL io_push_value('w_delta', increment,numsp)
-           CALL io_push_value('w_unit', units,numsp)
-           CALL io_push_value('ipol_index',ipol,numsp)
-           CALL io_push_value('sym_opt',sym_op,numsp)
-           CALL io_push_value('spin_channel',spin_channel,numsp)
-           !
-         ENDIF
+        numsp = 30
+        CALL io_push_value('wbsepp_calculation',wbsepp_calculation,numsp)
+        CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
+        CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
+        CALL io_push_value('r0_input(1) [alat]',r0_input(1),numsp)
+        CALL io_push_value('r0_input(2) [alat]',r0_input(2),numsp)
+        CALL io_push_value('r0_input(3) [alat]',r0_input(3),numsp)
+        CALL io_push_value('iexc_plot',iexc_plot,numsp)
+        CALL io_push_value('itermax',itermax,numsp)
+        CALL io_push_value('itermax0',itermax0,numsp)
+        CALL io_push_value('ipol',ipol,numsp)
+        CALL io_push_value('sym_op',sym_op,numsp)
+        CALL io_push_value('units',units,numsp)
+        CALL io_push_value('verbosity',verbosity,numsp)
+        CALL io_push_value('extrapolation',extrapolation,numsp)
+        CALL io_push_value('start',start,numsp)
+        CALL io_push_value('end',end,numsp)
+        CALL io_push_value('increment',increment,numsp)
+        CALL io_push_value('epsil',epsil,numsp)
+        CALL io_push_value('spin_channel',spin_channel,numsp)
         !
         CALL io_push_bar()
         !
      ENDIF
-    !
+     !
   ENDIF
   !
   IF ( verbose .AND. mpime == root ) THEN

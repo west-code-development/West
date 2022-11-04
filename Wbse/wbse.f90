@@ -39,13 +39,13 @@ PROGRAM wbse
   !
   CALL wbse_readin( )
   !
-  CALL wbse_setup( code )
+  CALL wbse_setup( )
   !
-  IF (l_davidson) THEN
+  IF( l_davidson ) THEN
      CALL wbse_davidson_diago( )
   ENDIF
   !
-  IF (l_lanczos) THEN
+  IF( l_lanczos ) THEN
      CALL wbse_lanczos_diago( )
   ENDIF
   !

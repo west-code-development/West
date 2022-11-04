@@ -10,10 +10,7 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-SUBROUTINE wbsepp_plot_exc()
-  !
-  ! ... This pp reads eig-values and -vectors from davidson diago
-  ! ... and project them on KS empty eig-vectors
+SUBROUTINE do_exc()
   !
   USE kinds,                  ONLY : DP
   USE constants,              ONLY : pi

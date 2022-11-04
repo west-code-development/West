@@ -292,12 +292,13 @@ MODULE wbse_init_center
   CHARACTER(LEN=256) :: localization
   CHARACTER(LEN=256) :: chi_kernel
   CHARACTER(LEN=256) :: wfc_from_qbox
-  CHARACTER(LEN=256) :: bisection_info ! bisection info file name, the extension is spin channel. e.g. bisection_info='info.bis', default file = 'info.bis.1'
-  INTEGER :: which_spin_channel ! when nspin>1, which_spin_channel determines the spin channel for func wbse_init_qboxcoupling_single_q
-  REAL(DP) :: overlap_thr ! overlap threshold for index_matrix calculation from wbse_init_qboxcoupling.f90
+  CHARACTER(LEN=256) :: bisection_info ! bisection info file name, extension is spin channel
+                                       ! bisection_info = 'info.bis', default file = 'info.bis.1'
+  REAL(DP) :: overlap_thr              ! overlap threshold for index_matrix calculation in wbse_init_qboxcoupling
+  INTEGER :: spin_channel
   LOGICAL :: l_use_localise_repr = .FALSE.
   LOGICAL :: l_use_bisection_thr = .FALSE.
-  LOGICAL :: l_xcchi = .FALSE. ! control XC CHI flow in wbse_init_qboxcoupling
+  LOGICAL :: l_xcchi = .FALSE.         ! XC CHI in wbse_init_qboxcoupling
   !
   ! Common workspace
   !
@@ -326,7 +327,6 @@ MODULE wbse_center
   REAL(DP) :: trev_liouville
   REAL(DP) :: trev_liouville_rel
   CHARACTER(LEN=3) :: ipol_input
-  CHARACTER(LEN=1) :: wbse_macropol_calculation
   LOGICAL :: l_qp_correction
   LOGICAL :: l_bse_calculation ! BSE True, TDDFT False
   LOGICAL :: l_diag_term_only = .FALSE.
@@ -342,7 +342,6 @@ MODULE wbse_center
   LOGICAL :: l_bse_triplet = .FALSE.
   REAL(DP) :: sigma_c_head = 0._DP
   REAL(DP) :: sigma_x_head = 0._DP
-  LOGICAL :: macropol_dfpt
   !
   ! FOR global Lanzcos diago vars
   !
@@ -356,6 +355,13 @@ MODULE wbse_center
   !
   COMPLEX(DP), ALLOCATABLE :: dng_exc(:,:,:,:)
   COMPLEX(DP), ALLOCATABLE :: dvg_exc(:,:,:,:)
+  !
+  REAL(DP),    ALLOCATABLE :: et_qp(:,:)
+  COMPLEX(DP), ALLOCATABLE :: evc_ks(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
+  REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
+  INTEGER,     ALLOCATABLE :: size_index_matrix_lz(:)
+  REAL(DP),    ALLOCATABLE :: index_matrix_lz(:,:,:)
   !
   ! Common workspace
   !
@@ -373,14 +379,7 @@ MODULE wbsepp_center
   !
   ! INPUT FOR wbsepp_control
   !
-  LOGICAL :: l_meg              = .FALSE.
-  LOGICAL :: l_eig_decomp       = .FALSE.
-  LOGICAL :: l_lz_spec          = .FALSE.
-  LOGICAL :: l_exc_plot         = .FALSE.
-  LOGICAL :: l_exc_rho_res_plot = .FALSE.
-  INTEGER :: wbsepp_type
-  !
-  ! lzc part
+  CHARACTER(LEN=4) :: wbsepp_calculation
   !
   INTEGER :: itermax
   INTEGER :: itermax0
@@ -388,15 +387,11 @@ MODULE wbsepp_center
   INTEGER :: sym_op
   INTEGER :: units
   INTEGER :: verbosity
-  INTEGER :: spin_channel
   CHARACTER(LEN=60) :: extrapolation
   REAL(DP) :: start
   REAL(DP) :: end
   REAL(DP) :: increment
   REAL(DP) :: epsil
-  !
-  ! exc plot part
-  !
   REAL(DP) :: r0_input(3)
   INTEGER :: iexc_plot
   !

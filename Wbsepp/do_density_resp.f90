@@ -10,10 +10,7 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-SUBROUTINE wbsepp_plot_charged_density_res_exc()
-  !
-  ! ... This pp reads eig-values and -vectors from davidson diago
-  ! ... and project them on KS empty eig-vectors
+SUBROUTINE do_density_resp()
   !
   USE kinds,                  ONLY : DP
   USE io_global,              ONLY : stdout

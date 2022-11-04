@@ -39,7 +39,7 @@ PROGRAM wbse_init
   !
   CALL wbse_init_readin( )
   !
-  CALL wbse_setup( code )
+  CALL wbse_init_setup( )
   !
   CALL init_qbox( )
   !
@@ -48,8 +48,6 @@ PROGRAM wbse_init
   CALL finalize_qbox( )
   !
   CALL exx_ungo( )
-  !
-  CALL wbse_clear( )
   !
   CALL clean_scratchfiles( )
   !

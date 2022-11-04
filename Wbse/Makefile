@@ -23,8 +23,7 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 WBSE_OBJS = \
 bse_hqp_psi.o \
 bse_localization.o\
-bse_module.o \
-bse_setup.o \
+bse_start.o \
 bse_tools.o \
 check_ovl_wfc.o \
 lanczos_restart.o \
@@ -39,6 +38,7 @@ wbse_init_methods.o \
 wbse_init_qboxcoupling.o \
 wbse_init_readin.o \
 wbse_init_restart.o \
+wbse_init_setup.o \
 wbse_lanczos_diago.o \
 wbse_memory_report.o \
 wbse_readin.o \

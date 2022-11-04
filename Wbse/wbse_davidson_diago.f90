@@ -26,7 +26,8 @@ SUBROUTINE wbse_davidson_diago ( )
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
                                  & wstat_calculation,ev,conv,n_pdep_read_from_file,trev_pdep_rel,&
                                  & l_is_wstat_converged,dvg_exc,dng_exc,nbndval0x,&
-                                 & l_preconditioning,nbnd_occ,lrwfc,iuwfc
+                                 & l_preconditioning,nbnd_occ,lrwfc,iuwfc,l_bse_calculation,&
+                                 & size_index_matrix_lz
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
   USE mp_global,            ONLY : inter_image_comm, my_image_id
@@ -34,7 +35,6 @@ SUBROUTINE wbse_davidson_diago ( )
   USE wstat_tools,          ONLY : diagox,serial_diagox,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
                                  & wbse_refresh_with_vr_distr,apply_preconditioning_dvg
-  USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
   USE distribution_center,  ONLY : bseparal
   USE buffers,              ONLY : get_buffer
   USE wavefunctions,        ONLY : evc
@@ -91,11 +91,9 @@ SUBROUTINE wbse_davidson_diago ( )
   ! ... DISTRIBUTE bse_kernel
   !
   size_index_matrix = MAXVAL(size_index_matrix_lz(:))
-  IF (bse_calc) THEN
-     !
-     bseparal  = idistribute()
+  IF (l_bse_calculation) THEN
+     bseparal = idistribute()
      CALL bseparal%init(size_index_matrix,'i','bse_kernel',.TRUE.)
-     !
   ENDIF
   !
   CALL wbse_memory_report() ! Before allocating I report the memory required.

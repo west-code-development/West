@@ -11,73 +11,67 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbse_setup(code)
+SUBROUTINE wbse_setup()
   !-----------------------------------------------------------------------
   !
-  USE io_global,        ONLY : stdout
-  USE bse_module,       ONLY : bse_calc
-  USE westcom,          ONLY : alphapv_dfpt,n_pdep_basis,n_pdep_eigen,n_pdep_times,l_use_ecutrho,&
-                             & wbse_init_save_dir,wbse_save_dir,nbndval0x,l_qp_correction,nbnd_occ
+  USE westcom,          ONLY : localization,l_use_localise_repr,l_use_bisection_thr,&
+                             & macropol_calculation,l_macropol,solver,l_bse_calculation,&
+                             & wbse_calculation,l_davidson,l_lanczos,qp_correction,l_qp_correction,&
+                             & spin_excitation,l_bse_triplet,wstat_calculation,n_pdep_times,&
+                             & n_pdep_eigen,n_pdep_basis,n_pdep_maxiter,n_pdep_read_from_file,&
+                             & trev_pdep_rel,trev_pdep,n_liouville_times,n_liouville_eigen,&
+                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville_rel,&
+                             & trev_liouville,alphapv_dfpt,l_use_ecutrho,nbndval0x,nbnd_occ,&
+                             & wbse_save_dir
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
   !
   IMPLICIT NONE
   !
-  CHARACTER(LEN=9), INTENT(IN):: code
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   CALL do_setup()
   !
-  CALL wbse_input()
+  SELECT CASE(TRIM(localization))
+  CASE('N','n')
+     l_use_localise_repr = .FALSE.
+     l_use_bisection_thr = .FALSE.
+  CASE('B','b')
+     l_use_localise_repr = .TRUE.
+     l_use_bisection_thr = .TRUE.
+  END SELECT
   !
-  ! Calculate ALPHA_PV
+  SELECT CASE(macropol_calculation)
+  CASE('c','C')
+     l_macropol = .TRUE.
+  END SELECT
   !
-  alphapv_dfpt = get_alpha_pv()
+  SELECT CASE(TRIM(solver))
+  CASE('BSE','bse')
+     l_bse_calculation = .TRUE.
+  CASE('TDDFT','tddft')
+     l_bse_calculation = .FALSE.
+  END SELECT
   !
-  l_use_ecutrho = .FALSE.
+  SELECT CASE(wbse_calculation)
+  CASE('D','d')
+     l_davidson = .TRUE.
+  CASE('L','l')
+     l_lanczos  = .TRUE.
+  END SELECT
   !
-  CALL set_npwq()
-  CALL pot3D%init('Rho',.FALSE.,'gb')
-  CALL pot3D%print_divergence()
-  !
-  CALL set_nbndocc()
-  !
-  nbndval0x = MAXVAL(nbnd_occ(:))
-  !
-  CALL west_dv_setup(bse_calc)
-  !
-  IF (TRIM(code) == 'WBSE') THEN
-     CALL my_mkdir(wbse_save_dir)
+  IF (TRIM(qp_correction) == '') THEN
+     l_qp_correction = .FALSE.
   ELSE
-     CALL my_mkdir(wbse_init_save_dir)
+     l_qp_correction = .TRUE.
   ENDIF
   !
-  n_pdep_basis = n_pdep_eigen * n_pdep_times
-  !
-  IF (l_qp_correction) THEN
-     CALL read_qp_eigs()
-  ENDIF
-  !
-  ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
-  !
-  IF (bse_calc) THEN
-     CALL bse_init()
-  ENDIF
-  !
-END SUBROUTINE
-!
-!-----------------------------------------------------------------------
-SUBROUTINE wbse_input
-  !-----------------------------------------------------------------------
-  !
-  USE bse_module,       ONLY : bse_calc,l_wannier_repr,ovl_thr
-  USE westcom,          ONLY : wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_maxiter,&
-                             & n_pdep_read_from_file,trev_pdep,trev_pdep_rel,wbse_calculation,&
-                             & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
-                             & l_bse_calculation,l_use_localise_repr,overlap_thr
-  !
-  IMPLICIT NONE
+  SELECT CASE(spin_excitation)
+  CASE('S','s','singlet')
+     l_bse_triplet = .FALSE.
+  CASE('T','t','triplet')
+     l_bse_triplet = .TRUE.
+  END SELECT
   !
   SELECT CASE(wbse_calculation)
   CASE('l','d','r','R')
@@ -90,12 +84,38 @@ SUBROUTINE wbse_input
   !
   n_pdep_times = n_liouville_times
   n_pdep_eigen = n_liouville_eigen
+  n_pdep_basis = n_pdep_eigen * n_pdep_times
   n_pdep_maxiter = n_liouville_maxiter
   n_pdep_read_from_file = n_liouville_read_from_file
   trev_pdep_rel = trev_liouville_rel
   trev_pdep = trev_liouville
-  bse_calc = l_bse_calculation
-  l_wannier_repr = l_use_localise_repr
-  ovl_thr = overlap_thr
+  !
+  ! Calculate ALPHA_PV
+  !
+  alphapv_dfpt = get_alpha_pv()
+  !
+  l_use_ecutrho = .FALSE.
+  !
+  CALL set_npwq()
+  !
+  CALL pot3D%init('Rho',.FALSE.,'gb')
+  !
+  CALL set_nbndocc()
+  !
+  nbndval0x = MAXVAL(nbnd_occ(:))
+  !
+  CALL west_dv_setup(l_bse_calculation)
+  !
+  CALL my_mkdir(wbse_save_dir)
+  !
+  IF (l_qp_correction) THEN
+     CALL read_qp_eigs()
+  ENDIF
+  !
+  ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
+  !
+  IF (l_bse_calculation) THEN
+     CALL bse_start()
+  ENDIF
   !
 END SUBROUTINE

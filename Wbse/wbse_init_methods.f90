@@ -16,7 +16,7 @@ SUBROUTINE wbse_init_methods()
   USE pwcom,                ONLY : isk,nks,npw,ngk
   USE wavefunctions,        ONLY : evc
   USE westcom,              ONLY : lrwfc,iuwfc,ev,dvg,n_pdep_eigen,npwqx,nbnd_occ,&
-                                 & wbse_init_calculation,which_spin_channel
+                                 & wbse_init_calculation,spin_channel
   USE lsda_mod,             ONLY : nspin
   USE pdep_db,              ONLY : pdep_db_read
   USE mp,                   ONLY : mp_bcast
@@ -63,7 +63,7 @@ SUBROUTINE wbse_init_methods()
   ALLOCATE(dvg(npwqx,pert%nlocx))
   ALLOCATE(ev(n_pdep_eigen))
   !
-  spin_resolve = (which_spin_channel > 0) .AND. (nspin > 1)
+  spin_resolve = spin_channel > 0 .AND. nspin > 1
   !
   nkq = 1
   !
@@ -98,7 +98,7 @@ SUBROUTINE wbse_init_methods()
            ENDIF
            !
            IF(spin_resolve) THEN
-              IF(current_spin == which_spin_channel) THEN
+              IF(current_spin == spin_channel) THEN
                  !IF(ff_activate) THEN
                     CALL wbse_init_qboxcoupling_single_q(iks,iq,xq,current_spin,nbnd_occ(iks),l_restart_calc)
                  !ELSE

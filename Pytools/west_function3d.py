@@ -28,8 +28,8 @@ def function3D_to_base64(*args, **kwargs):
     #
     root = ET.parse(fileName)
     grid_function = root.find("grid_function")
-    data["grid_function"] = grid_function.text.replace('\n','')
-    assert( grid_function.attrib["type"] in ['double','complex'] )
+    data["grid_function"] = grid_function.text.replace("\n","")
+    assert( grid_function.attrib["type"] in ["double","complex"] )
     data["dtype"] = grid_function.attrib["type"]
     grid = root.find("grid")
     data["grid"] = [ int(grid.attrib["nx"]), int(grid.attrib["ny"]), int(grid.attrib["nz"])]
@@ -47,7 +47,7 @@ def base64_to_function3D(*args, **kwargs):
     attrib["name"] = kwargs["name"]
     attrib["xmlns:xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
     attrib["xsi:schemaLocation"] = "http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0 function3d.xsd"
-    root = ET.Element('{http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0}function3d',attrib=attrib)
+    root = ET.Element("{http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0}function3d",attrib=attrib)
     # domain
     data=jsonString2data(kwargs["domain"])
     attrib={}
@@ -63,7 +63,7 @@ def base64_to_function3D(*args, **kwargs):
     ET.SubElement(root, "grid", attrib=attrib)
     # grid_function
     attrib={}
-    assert( kwargs["dtype"] in ['double','complex'] )
+    assert( kwargs["dtype"] in ["double","complex"] )
     attrib["type"] = kwargs["dtype"]
     attrib["nx"] = f"{data[0]}"
     attrib["ny"] = f"{data[1]}"
@@ -71,14 +71,14 @@ def base64_to_function3D(*args, **kwargs):
     attrib["encoding"] = "base64"
     ET.SubElement(root, "grid_function", attrib=attrib).text = kwargs["grid_function"]
     # write
-    ET.ElementTree(root).write(fileName,encoding='UTF-8',xml_declaration=True)
+    ET.ElementTree(root).write(fileName,encoding="UTF-8",xml_declaration=True)
     #
     return 0
 
 def test() :
     #
-    base64_to_function3D('vext.xml',name='delta_v',domain='{"a":[1,0,0],"b":[0,1,0],"c":[0,0,1]}',grid='[2,3,3]',grid_function='encoded\nfunction\ngoes\nhere\n',dtype="double")
-    print(function3D_to_base64('vext.xml'))
+    base64_to_function3D("vext.xml",name="delta_v",domain='{"a":[1,0,0],"b":[0,1,0],"c":[0,0,1]}',grid="[2,3,3]",grid_function="encoded\nfunction\ngoes\nhere\n",dtype="double")
+    print(function3D_to_base64("vext.xml"))
 
 if __name__ == "__main__":
     # execute only if run as a script

@@ -17,11 +17,10 @@ SUBROUTINE wbse_lanczos_diago()
   USE pwcom,                ONLY : nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ,wbse_calculation,&
                                  & d0psi,ipol_input,n_lanczos,alpha_store,beta_store,gamma_store,&
-                                 & zeta_store,nbndval0x
+                                 & zeta_store,nbndval0x,l_bse_calculation,size_index_matrix_lz
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
-  USE bse_module,           ONLY : bse_calc,size_index_matrix_lz
   USE io_files,             ONLY : tmp_dir
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier
@@ -62,7 +61,7 @@ SUBROUTINE wbse_lanczos_diago()
   !
   size_index_matrix = MAXVAL(size_index_matrix_lz)
   !
-  IF(bse_calc) THEN
+  IF(l_bse_calculation) THEN
      bseparal = idistribute()
      CALL bseparal%init(size_index_matrix,'i','bse_kernel',.TRUE.)
   ENDIF

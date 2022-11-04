@@ -11,22 +11,28 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbsepp_setup
+SUBROUTINE wbse_init_setup(code)
   !-----------------------------------------------------------------------
   !
-  USE types_coulomb,          ONLY : pot3D
-  USE westcom,                ONLY : macropol_calculation,l_macropol,west_prefix,nbnd_occ,&
-                                   & l_use_ecutrho,nbndval0x
-  USE io_files,               ONLY : tmp_dir
-  USE westcom,                ONLY : wbse_save_dir
+  USE westcom,          ONLY : localization,l_use_localise_repr,l_use_bisection_thr,&
+                             & l_use_ecutrho,nbnd_occ,wbse_save_dir,wbse_init_save_dir
+  USE kinds,            ONLY : DP
+  USE types_coulomb,    ONLY : pot3D
   !
   IMPLICIT NONE
   !
+  CHARACTER(LEN=9), INTENT(IN):: code
+  COMPLEX(DP), EXTERNAL :: get_alpha_pv
+  !
   CALL do_setup()
   !
-  SELECT CASE(macropol_calculation)
-  CASE('c','C')
-     l_macropol = .TRUE.
+  SELECT CASE(TRIM(localization))
+  CASE('N','n')
+     l_use_localise_repr = .FALSE.
+     l_use_bisection_thr = .FALSE.
+  CASE('B','b')
+     l_use_localise_repr = .TRUE.
+     l_use_bisection_thr = .TRUE.
   END SELECT
   !
   l_use_ecutrho = .FALSE.
@@ -37,8 +43,6 @@ SUBROUTINE wbsepp_setup
   !
   CALL set_nbndocc()
   !
-  nbndval0x = nbnd_occ(1)
-  !
-  wbse_save_dir = TRIM(tmp_dir) // TRIM(west_prefix) // '.wbse.save'
+  CALL my_mkdir(wbse_init_save_dir)
   !
 END SUBROUTINE

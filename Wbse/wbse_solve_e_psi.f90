@@ -14,7 +14,7 @@ SUBROUTINE solve_e_psi()
   USE uspp,                 ONLY : okvan
   USE gvect,                ONLY : gstart
   USE control_flags,        ONLY : gamma_only
-  USE westcom,              ONLY : d0psi,macropol_dfpt
+  USE westcom,              ONLY : d0psi,l_macropol
   !
   IMPLICIT NONE
   !
@@ -27,7 +27,7 @@ SUBROUTINE solve_e_psi()
   ! Compute dipole in the R space. This option can be used
   ! only for finite systems (e.g. molecules).
   !
-  IF(macropol_dfpt) THEN
+  IF(l_macropol) THEN
      CALL compute_d0psi_dfpt()
   ELSE
      CALL compute_d0psi_rs()

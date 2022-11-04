@@ -97,7 +97,7 @@ class QboxServer(ClientServer) :
           if "nitscf" in response :
              command_suffix += f'{response["nitscf"]} '
           else :
-             command_suffix += '100 '
+             command_suffix += "100 "
           if "nite" in response :
              command_suffix += f'{response["nite"]}'
           #

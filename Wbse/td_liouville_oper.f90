@@ -24,9 +24,9 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,&
                                  & double_fwfft_gamma,double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE bse_module,           ONLY : bse_calc,et_qp
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,l_diag_term_only,scissor_ope,nbndval0x,&
-                                 & l_qp_correction,l_bse_triplet,l_lanczos,sigma_c_head,sigma_x_head
+                                 & l_bse_calculation,l_qp_correction,l_bse_triplet,l_lanczos,&
+                                 & sigma_c_head,sigma_x_head,et_qp
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
   !
@@ -58,7 +58,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   dvrs(:,:) = (0._DP,0._DP)
   CALL wbse_calc_dens(evc1, dvrs)
   !
-  IF(bse_calc) THEN
+  IF(l_bse_calculation) THEN
      CALL west_dv_of_drho(dvrs, .TRUE., .FALSE.)
   ELSE
      CALL west_dv_of_drho(dvrs, .FALSE., .FALSE.)
@@ -186,7 +186,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         DO il1 = 1, nbvalloc
            ibnd = aband%l2g(il1)
            !
-           IF(bse_calc) THEN
+           IF(l_bse_calculation) THEN
               CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),KIND=DP), &
                    & evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ELSE
@@ -198,7 +198,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         DO il1 = 1, nbvalloc
            ibnd = aband%l2g(il1)
            !
-           IF(bse_calc) THEN
+           IF(l_bse_calculation) THEN
               CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),KIND=DP), &
                    & evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ELSE
@@ -222,7 +222,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      !
      IF(l_diag_term_only) GOTO 113
      !
-     IF(bse_calc) THEN
+     IF(l_bse_calculation) THEN
         CALL wbse_bse_kernel(iks, current_spin, nbndval, evc1, evc1_new(:,:,iks))
      ENDIF
      !

@@ -19,11 +19,11 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 WBSEPP_OBJS = \
+do_density_resp.o \
+do_eig_decomp.o \
+do_exc.o \
+do_spectrum.o \
 wbsepp.o \
-wbsepp_ads_spectrum.o \
-wbsepp_decompose_eig_contributions.o \
-wbsepp_plot_charged_density_res_exc.o \
-wbsepp_plot_exc.o \
 wbsepp_readin.o \
 wbsepp_setup.o
 

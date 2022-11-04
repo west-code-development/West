@@ -19,11 +19,13 @@ PROGRAM wbsepp
   USE check_stop,           ONLY : check_stop_init
   USE mp_global,            ONLY : mp_startup, mp_global_end
   USE west_environment,     ONLY : west_environment_start, west_environment_end
-  USE westcom,              ONLY : l_eig_decomp, l_lz_spec, l_exc_plot, l_exc_rho_res_plot
+  USE westcom,              ONLY : wbsepp_calculation
   !
   IMPLICIT NONE
   !
   CHARACTER(LEN=9) :: code = 'WBSEPP'
+  INTEGER :: i
+  LOGICAL :: lgate(4)
   !
   ! *** START ***
   !
@@ -41,10 +43,18 @@ PROGRAM wbsepp
   !
   CALL wbsepp_setup( )
   !
-  IF(l_eig_decomp) CALL wbsepp_decompose_eig_contributions( )
-  IF(l_exc_plot) CALL wbsepp_plot_exc( )
-  IF(l_exc_rho_res_plot) CALL wbsepp_plot_charged_density_res_exc( )
-  IF(l_lz_spec) CALL wbsepp_ads_spectrum( )
+  lgate = .FALSE.
+  DO i = 1, 4
+     IF( wbsepp_calculation(i:i) == 's' .OR. wbsepp_calculation(i:i) == 'S' ) lgate(1) = .TRUE. ! Spectrum
+     IF( wbsepp_calculation(i:i) == 'p' .OR. wbsepp_calculation(i:i) == 'P' ) lgate(2) = .TRUE. ! Eig decomposition
+     IF( wbsepp_calculation(i:i) == 'e' .OR. wbsepp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Exciton states
+     IF( wbsepp_calculation(i:i) == 'd' .OR. wbsepp_calculation(i:i) == 'D' ) lgate(4) = .TRUE. ! Density response
+  ENDDO
+  !
+  IF( lgate(1) ) CALL do_spectrum( )
+  IF( lgate(2) ) CALL do_eig_decomp( )
+  IF( lgate(3) ) CALL do_exc( )
+  IF( lgate(4) ) CALL do_density_resp( )
   !
   CALL exx_ungo( )
   !

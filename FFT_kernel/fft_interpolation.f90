@@ -17,7 +17,7 @@ MODULE fourier_interpolation
   !
   CONTAINS
   !
-  SUBROUTINE ft_interpolate (fr, n1, n2, n3, nfxn, fg, npw, npwx)
+  SUBROUTINE ft_interpolate (fr, n1, n2, n3, fg, npw, npwx)
     !
     ! Fourier transform a set of functions f from R space (fr) to G space (fg)
     ! fr can be defined on arbitrary R space grid (n1, n2, n3), as long as it is smoother than dffts
@@ -41,7 +41,7 @@ MODULE fourier_interpolation
     !
     IMPLICIT NONE
     !
-    INTEGER, INTENT(IN) :: n1, n2, n3, nfxn, npw, npwx
+    INTEGER, INTENT(IN) :: n1, n2, n3, npw, npwx
     REAL(DP), INTENT(IN) :: fr(n1*n2*n3)
     COMPLEX(DP), INTENT(OUT) :: fg(npwx)
     !

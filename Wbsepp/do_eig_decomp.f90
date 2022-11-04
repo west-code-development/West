@@ -10,7 +10,7 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-SUBROUTINE wbsepp_decompose_eig_contributions()
+SUBROUTINE do_eig_decomp()
   !
   ! ... This pp reads eig-values and -vectors from davidson diago
   ! ... and project them on KS empty eig-vectors
@@ -52,12 +52,6 @@ SUBROUTINE wbsepp_decompose_eig_contributions()
   nbndx_occ = MAXVAL(nbnd_occ)
   nbndx_emp = nbnd - nbndx_occ
   !
-  ! CHECK IF KS EMPTY STATES WERE COMPUTED
-  !
-  IF(nbndx_emp < 1) THEN
-     CALL errore('chidiago', 'This eigenvectors decompositions needs KS empty stats, rerun pwscf with nbnd>nbnd_occ',1)
-  ENDIF
-  !
   CALL start_clock('eig_decompose')
   !
   ! ... DISTRIBUTE nvec
@@ -79,7 +73,7 @@ SUBROUTINE wbsepp_decompose_eig_contributions()
   ! CHECK IF KS EMPTY STATES WERE COMPUTED
   !
   IF(nbnd <= nbndx_occ) THEN
-     CALL errore('eig_decompose', 'This eigenvectors decompositions needs empty stats',1)
+     CALL errore('eig_decompose', 'needs empty states', 1)
   ENDIF
   !
   ALLOCATE(d0psi(npwx,nbndx_occ,nks,3))

@@ -50,7 +50,7 @@ default["wfreq_control"]["wfreq_calculation"] = "XWGQ"
 default["wfreq_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wfreq_control"]["qp_bandrange"] = [1, 2]
 default["wfreq_control"]["qp_bands"] = [0]
-default["wfreq_control"]["macropol_calculation"] = 'N'
+default["wfreq_control"]["macropol_calculation"] = "N"
 default["wfreq_control"]["n_lanczos"] = 30
 default["wfreq_control"]["n_imfreq"] = 128
 default["wfreq_control"]["n_refreq"] = 272
@@ -87,14 +87,13 @@ default["wbse_init_control"]["wfc_from_qbox"] = "qb.xml"
 default["wbse_init_control"]["bisection_info"] = "info.bis"
 default["wbse_init_control"]["chi_kernel"] = "CHI"
 default["wbse_init_control"]["overlap_thr"] = 0.0
-default["wbse_init_control"]["which_spin_channel"] = 0
-#default["wbse_init_control"]["n_pdep_eigen"] = 1
+default["wbse_init_control"]["spin_channel"] = 0
 # #wbse_control
 default["wbse_control"] = {}
 default["wbse_control"]["wbse_calculation"] = "D"
 default["wbse_control"]["solver"] =  "BSE"
 default["wbse_control"]["qp_correction"] = ""
-default["wbse_control"]["scissor_operator"] = 0.0
+default["wbse_control"]["scissor_ope"] = 0.0
 default["wbse_control"]["n_liouville_eigen"] = 1
 default["wbse_control"]["n_liouville_times"] = 4
 default["wbse_control"]["n_liouville_maxiter"] = 100
@@ -107,13 +106,11 @@ default["wbse_control"]["macropol_calculation"] = "N"
 default["wbse_control"]["epsinfty"] = 1.0
 default["wbse_control"]["spin_excitation"] = "S"
 default["wbse_control"]["l_preconditioning"] = False
-#default["wbse_control"]["l_diag_term_only"] = False
 # #wbsepp control
 default["wbsepp_control"] = {}
-default["wbsepp_control"]["wbsepp_type"] =  0    #0:eig_decomposion, 1:meg, 2:ads_spect
-#default["wbsepp_control"]["n_plep_read_from_file"] = 0
+default["wbsepp_control"]["wbsepp_calculation"] = "S"
 default["wbsepp_control"]["n_liouville_read_from_file"] = 0
-default["wbsepp_control"]["macropol_dfpt"] = False
+default["wbsepp_control"]["macropol_calculation"] = "N"
 default["wbsepp_control"]["r0_input"] = [0., 0., 0.]
 default["wbsepp_control"]["iexc_plot"] = 1
 default["wbsepp_control"]["itermax"] = 1000
@@ -171,7 +168,7 @@ def open_and_parse_file(fileName="west.in") :
     """
     data = {}
     try :
-       with open(fileName, 'r') as stream:
+       with open(fileName, "r") as stream:
            try:
               data = yaml.load(stream,Loader=yaml.SafeLoader)
            except:

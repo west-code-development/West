@@ -128,7 +128,7 @@ MODULE qbox_interface
                 CALL iotk_scan_end(iunit, 'grid_function')
              ENDIF
              !
-             CALL ft_interpolate(psir, nx, ny, nz, nwfcs, evc(:,iwfc), npw, npwx)
+             CALL ft_interpolate(psir, nx, ny, nz, evc(:,iwfc), npw, npwx)
              !
           ENDDO
           !

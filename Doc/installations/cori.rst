@@ -85,7 +85,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    NTASKS=$(($SLURM_NTASKS_PER_NODE * $SLURM_JOB_NUM_NODES))
 
-   srun -N $SLURM_JOB_NUM_NODES -n $SLURM_NTASKS_PER_NODE -c $SLURM_CPUS_PER_TASK ./wstat.x -i wstat.in &> wstat.out
+   srun -N $SLURM_JOB_NUM_NODES -n $NTASKS -c $SLURM_CPUS_PER_TASK ./wstat.x -i wstat.in &> wstat.out
 
 Job submission is done with the following:
 

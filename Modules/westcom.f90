@@ -219,6 +219,7 @@ MODULE wfreq_center
 #endif
   REAL(DP),    ALLOCATABLE :: h1e(:,:)
   COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
+  LOGICAL :: l_qdet_verbose
   !
   ! gw_etot
   !

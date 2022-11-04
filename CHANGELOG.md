@@ -1,6 +1,16 @@
 Change Log
 ==========
 
+v5.x.x (2022/11/xx)
+-------------------
+
+- Added support for cuSOLVER 64-bit API.
+- Reduced memory usage in `wfreq`.
+- Reduced memory usage in `westpp` when using hybrid functionals.
+- Added memory estimate for `wfreq`.
+- Bug fix. Fixed a bug and improved the performance of QDET on GPU.
+- Updated documentation. Updated build instructions for ANL/LCRC/Bebop, ANL/LCRC/Swing, NERSC/Cori, and NERSC/Perlmutter. Added more tutorials.
+
 v5.2.0 (2022/09/02)
 -------------------
 

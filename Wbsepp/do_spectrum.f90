@@ -44,6 +44,7 @@ SUBROUTINE do_spectrum()
   ! General use variables & counters
   !
   INTEGER :: n_ipol, i,j, info, ip, ip2, counter
+  INTEGER :: iun1, iun2
   REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), scale, wl, degspin, f_sum
   COMPLEX(DP) :: omeg_c
   REAL(DP), ALLOCATABLE :: beta_store(:,:), gamma_store(:,:)
@@ -188,8 +189,8 @@ SUBROUTINE do_spectrum()
      !
      ! Open the output file
      !
-     OPEN(17,file=filename,status='unknown')
-     OPEN(18,file=filename_plot,status='unknown')
+     OPEN(NEWUNIT=iun1,FILE=filename)
+     OPEN(NEWUNIT=iun2,FILE=filename_plot)
      !
      !-----------------------------------------------------------------------------!
      !                          PERCEIVED COLOR ANALYSIS                           !
@@ -223,15 +224,15 @@ SUBROUTINE do_spectrum()
      ! Header of the output plot file
      !
      IF(units == 0) THEN
-        WRITE(17,'("#Chi is reported as CHI_(i)_(j) \hbar \omega (Ry) Re(chi) (e^2*a_0^2/Ry) Im(chi) (e^2*a_0^2/Ry)")')
+        WRITE(iun1,'("#Chi is reported as CHI_(i)_(j) \hbar \omega (Ry) Re(chi) (e^2*a_0^2/Ry) Im(chi) (e^2*a_0^2/Ry)")')
      ELSEIF(units == 1) THEN
-        WRITE(17,'("#Chi is reported as CHI_(i)_(j) \hbar \omega (eV) Re(chi) (e^2*a_0^2/eV) Im(chi) (e^2*a_0^2/eV)")')
+        WRITE(iun1,'("#Chi is reported as CHI_(i)_(j) \hbar \omega (eV) Re(chi) (e^2*a_0^2/eV) Im(chi) (e^2*a_0^2/eV)")')
      ELSEIF(units == 2) THEN
-        WRITE(17,'("#Chi is reported as CHI_(i)_(j) wavelength (nm) Re(chi) (e^2*a_0^2/eV) Im(chi) (e^2*a_0^2/eV)")')
+        WRITE(iun1,'("#Chi is reported as CHI_(i)_(j) wavelength (nm) Re(chi) (e^2*a_0^2/eV) Im(chi) (e^2*a_0^2/eV)")')
      ENDIF
      !
      IF(n_ipol == 3) THEN
-        WRITE(18,'("# Trchi(w) satisfies the sum rule")')
+        WRITE(iun2,'("# Trchi(w) satisfies the sum rule")')
      ENDIF
      !
      ! Start a loop on frequency
@@ -267,7 +268,7 @@ SUBROUTINE do_spectrum()
         !
         DO ip = 1,n_ipol
            DO ip2 = 1,n_ipol
-              WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
+              WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
               & ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            ENDDO
         ENDDO
@@ -280,7 +281,7 @@ SUBROUTINE do_spectrum()
         !
         ! alpha is ready
         !
-        WRITE(18,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
+        WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
         !
         ! This is for the f-sum rule
         !
@@ -321,9 +322,9 @@ SUBROUTINE do_spectrum()
         !
         DO ip = 1,n_ipol
            DO ip2 = 1,n_ipol
-              IF(n_ipol == 3) WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
+              IF(n_ipol == 3) WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
                               & ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
-              IF(n_ipol == 1) WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
+              IF(n_ipol == 1) WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
                               & ipol, ipol, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            ENDDO
         ENDDO
@@ -342,7 +343,7 @@ SUBROUTINE do_spectrum()
            !
            ! alpha is ready
            !
-           WRITE(18,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
+           WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
            !
            IF(is_peak(omega(3),alpha_temp(3))) &
                WRITE(stdout,'(5x,"Possible peak at ",F15.8," Ry; Intensity=",E11.2)') omega(1),alpha_temp(1)
@@ -403,7 +404,7 @@ SUBROUTINE do_spectrum()
         !
         DO ip = 1,n_ipol
            DO ip2 = 1,n_ipol
-              WRITE(17,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
+              WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
               & ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            ENDDO
         ENDDO
@@ -418,7 +419,7 @@ SUBROUTINE do_spectrum()
         !
         ! alpha is ready
         !
-        WRITE(18,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
+        WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
         !
         ! alpha is ready
         !
@@ -426,7 +427,7 @@ SUBROUTINE do_spectrum()
         !
      ENDIF
      !
-     CLOSE(17)
+     CLOSE(iun1)
      !
      IF(n_ipol == 3) THEN
         WRITE(stdout,'(5x,"Integral of absorbtion coefficient ",F15.8)') f_sum

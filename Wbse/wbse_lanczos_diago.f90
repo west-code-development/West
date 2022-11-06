@@ -68,95 +68,99 @@ SUBROUTINE wbse_lanczos_diago()
   !
   ! Main Lanzcos program
   !
-  IF(n_lanczos < 1) CALL errore('wbse_lanczos_diago', 'n_lanczos must be > 0', 1)
+  IF(n_lanczos < 1) CALL errore('wbse_lanczos_diago','n_lanczos must be > 0',1)
   !
   SELECT CASE(ipol_input)
-  CASE('XX', 'xx')
-      nipol_input = 1
-      ALLOCATE(pol_index_input(1))
-      ALLOCATE(pol_label_input(1))
-      pol_index_input(1) = 1
-      pol_label_input(1) = 'XX'
-  CASE('YY', 'yy')
-      nipol_input = 1
-      ALLOCATE(pol_index_input(1))
-      ALLOCATE(pol_label_input(1))
-      pol_index_input(1) = 2
-      pol_label_input(1) = 'YY'
-  CASE('ZZ', 'zz')
-      nipol_input = 1
-      ALLOCATE(pol_index_input(1))
-      ALLOCATE(pol_label_input(1))
-      pol_index_input(1) = 3
-      pol_label_input(1) = 'ZZ'
-  CASE('XYZ', 'xyz')
-      nipol_input = 3
-      ALLOCATE(pol_index_input(3))
-      ALLOCATE(pol_label_input(3))
-      pol_index_input(1) = 1
-      pol_label_input(1) = 'XX'
-      pol_index_input(2) = 2
-      pol_label_input(2) = 'YY'
-      pol_index_input(3) = 3
-      pol_label_input(3) = 'ZZ'
+  CASE('XX','xx')
+     nipol_input = 1
+     ALLOCATE(pol_index_input(1))
+     ALLOCATE(pol_label_input(1))
+     pol_index_input(1) = 1
+     pol_label_input(1) = 'XX'
+  CASE('YY','yy')
+     nipol_input = 1
+     ALLOCATE(pol_index_input(1))
+     ALLOCATE(pol_label_input(1))
+     pol_index_input(1) = 2
+     pol_label_input(1) = 'YY'
+  CASE('ZZ','zz')
+     nipol_input = 1
+     ALLOCATE(pol_index_input(1))
+     ALLOCATE(pol_label_input(1))
+     pol_index_input(1) = 3
+     pol_label_input(1) = 'ZZ'
+  CASE('XYZ','xyz')
+     nipol_input = 3
+     ALLOCATE(pol_index_input(3))
+     ALLOCATE(pol_label_input(3))
+     pol_index_input(1) = 1
+     pol_label_input(1) = 'XX'
+     pol_index_input(2) = 2
+     pol_label_input(2) = 'YY'
+     pol_index_input(3) = 3
+     pol_label_input(3) = 'ZZ'
   CASE DEFAULT
-      CALL errore('wbse_lanczos_diago', 'wrong ipol_input', 1)
+     CALL errore('wbse_lanczos_diago','wrong ipol_input',1)
   END SELECT
   !
   ALLOCATE(d0psi(npwx,nbndval0x,nks,n_ipol))
-  ALLOCATE(alpha_store(nipol_input,n_lanczos,nspin),beta_store(nipol_input,n_lanczos,nspin))
-  ALLOCATE(gamma_store(nipol_input,n_lanczos,nspin),zeta_store(nipol_input,n_ipol,n_lanczos,nspin))
+  ALLOCATE(alpha_store(nipol_input,n_lanczos,nspin))
+  ALLOCATE(beta_store(nipol_input,n_lanczos,nspin))
+  ALLOCATE(gamma_store(nipol_input,n_lanczos,nspin))
+  ALLOCATE(zeta_store(nipol_input,n_ipol,n_lanczos,nspin))
   !
   alpha_store(:,:,:) = 0._DP
   beta_store(:,:,:) = 0._DP
   gamma_store(:,:,:) = 0._DP
   zeta_store(:,:,:,:) = (0._DP,0._DP)
   !
-  ALLOCATE(evc1(npwx,nbndval0x,nks),evc1_old(npwx,nbndval0x,nks),evc1_new(npwx,nbndval0x,nks))
+  ALLOCATE(evc1(npwx,nbndval0x,nks))
+  ALLOCATE(evc1_old(npwx,nbndval0x,nks))
+  ALLOCATE(evc1_new(npwx,nbndval0x,nks))
   !
   SELECT CASE(wbse_calculation)
   CASE('l')
-      !
-      ! RESTART
-      !
-      CALL lanczos_restart_read(nipol_input, pliter_stop, lriter_stop)
-      !
-      ! 1) read pliter_stopped
-      ! 2) read lriter_stopped
-      ! 3) read store_alpha, store_beta, store_gamma
-      !
-      pliter_restart = pliter_stop
-      lriter_restart = lriter_stop+1
-      !
-      ! 4) read d0psi evc1, evc_old, saved on files
-      !
-      CALL lanczos_d0psi_read()
-      CALL lanczos_evcs_read(evc1, evc1_old)
-      !
-      l_from_scratch = .FALSE.
-      !
+     !
+     ! RESTART
+     !
+     CALL lanczos_restart_read(nipol_input,pliter_stop,lriter_stop)
+     !
+     ! 1) read pliter_stopped
+     ! 2) read lriter_stopped
+     ! 3) read store_alpha, store_beta, store_gamma
+     !
+     pliter_restart = pliter_stop
+     lriter_restart = lriter_stop+1
+     !
+     ! 4) read d0psi evc1, evc_old, saved on files
+     !
+     CALL lanczos_d0psi_read()
+     CALL lanczos_evcs_read(evc1,evc1_old)
+     !
+     l_from_scratch = .FALSE.
+     !
   CASE('L')
-      !
-      ! FROM SCRATCH
-      !
-      CALL solve_e_psi()
-      !
-      CALL lanczos_d0psi_write()
-      !
-      lriter_restart = 1
-      pliter_restart = 1
-      !
-      l_from_scratch = .TRUE.
-      !
+     !
+     ! FROM SCRATCH
+     !
+     CALL solve_e_psi()
+     !
+     CALL lanczos_d0psi_write()
+     !
+     lriter_restart = 1
+     pliter_restart = 1
+     !
+     l_from_scratch = .TRUE.
+     !
   CASE DEFAULT
-      CALL errore('wbse_lanczos_diago', 'wrong wlzcos_calculation', 1)
+     CALL errore('wbse_lanczos_diago','wrong wlzcos_calculation',1)
   END SELECT
   !
   WRITE(stdout,'(/,5X,"LANCZOS LINEAR-RESPONSE ADSORPTION SPECTRUM CALCULATION")')
   WRITE(stdout,'(/,10X,"USING TAMM-DANCOFF LIOUVILLIAN OPERATOR")')
   WRITE(stdout,'(/,5x,"Number of Lanczos iterations = ",i6)') n_lanczos
   !
-  polarization_loop : DO ip = pliter_restart, nipol_input
+  polarization_loop : DO ip = pliter_restart,nipol_input
      !
      pol_index = pol_index_input(ip)
      !
@@ -172,24 +176,23 @@ SUBROUTINE wbse_lanczos_diago()
      !
      ! Loop on the Lanczos iterations
      !
-     lancz_loop : DO iteration = lriter_restart, n_lanczos
+     lancz_loop : DO iteration = lriter_restart,n_lanczos
         !
         lz_iteration = iteration
         !
-        WRITE(stdout,'(/5x,"**Lanczos iteration: ",i6,3x,"at Polar:",i5,a8)') lz_iteration, pol_index
+        WRITE(stdout,'(/5x,"**Lanczos iteration: ",i6,3x,"at Polar:",i5,a8)') lz_iteration,pol_index
         !
         ! Application of the Liouvillian superoperator
         !
-        CALL west_apply_liouvillian(evc1, evc1_new)
+        CALL west_apply_liouvillian(evc1,evc1_new)
         !
         ! By construction <p|Lq>=0 should be 0, forcing this both conserves
         ! resources and increases stability.
         !
         alpha = 0._DP
-        !
         alpha_store(ip,lz_iteration,:) = alpha
         !
-        WRITE(stdout,'(5X,"^-^alpha(",i8.8,")=",f10.6)') lz_iteration, alpha
+        WRITE(stdout,'(5X,"^-^alpha(",i8.8,")=",f10.6)') lz_iteration,alpha
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
@@ -199,9 +202,9 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! beta<0 is a serious error for the pseudo-Hermitian algorithm
         !
-        DO is = 1, nspin
+        DO is = 1,nspin
            IF(beta(is) < 0._DP) THEN
-              CALL errore('wbse_lanczos_diago', 'negative beta', 1)
+              CALL errore('wbse_lanczos_diago','negative beta',1)
            ELSE
               beta(is) = SQRT(beta(is))
               gamma(is) = beta(is)
@@ -211,14 +214,14 @@ SUBROUTINE wbse_lanczos_diago()
         beta_store(ip,lz_iteration,:) = beta
         gamma_store(ip,lz_iteration,:) = gamma
         !
-        DO is = 1, nspin
+        DO is = 1,nspin
            WRITE(stdout,'(5X,"ispin:",i2,5X,"beta (",i8.8,")=",f12.6)') is,lz_iteration,beta(is)
            WRITE(stdout,'(5X,"ispin:",i2,5X,"gamma(",i8.8,")=",f12.6)') is,lz_iteration,gamma(is)
         ENDDO
         !
         ! Renormalize q(i) and Lq(i)
         !
-        DO iks = 1, nks
+        DO iks = 1,nks
            current_spin = isk(iks)
            evc1(:,:,iks) = (1._DP/beta(current_spin))*evc1(:,:,iks)
            evc1_new(:,:,iks) = (1._DP/beta(current_spin))*evc1_new(:,:,iks)
@@ -228,51 +231,51 @@ SUBROUTINE wbse_lanczos_diago()
         ! See Eq.(35) in Malcioglu et al., Comput. Phys. Commun. 182, 1744 (2011).
         !
         IF(MOD(lz_iteration,2) == 0) THEN
-           DO iip = 1, n_ipol
+           DO iip = 1,n_ipol
               CALL wbse_dot(d0psi(:,:,:,iip),evc1,npwx,nbndval0x,nks,wbse_dot_out)
               !
               zeta(:) = wbse_dot_out
               zeta_store(ip,iip,lz_iteration,:) = zeta
               !
-              DO is = 1, nspin
+              DO is = 1,nspin
                  WRITE(stdout,'(5X,"ispin:",i2,5X,"zeta = ",i3,i3,2(1x,f18.13))') &
                  & is,ip,iip,REAL(zeta(is),KIND=DP),AIMAG(zeta(is))
               ENDDO
            ENDDO
         ELSE
-           DO iip = 1, n_ipol
+           DO iip = 1,n_ipol
               zeta(:) = (0._DP,0._DP)
               zeta_store(ip,iip,lz_iteration,:) = zeta
               !
-              DO is = 1, nspin
-                 WRITE(stdout,'(5X, "ispin:",i2,5X,"zeta = ",i3,i3,2(1x,f18.13))') &
+              DO is = 1,nspin
+                 WRITE(stdout,'(5X,"ispin:",i2,5X,"zeta = ",i3,i3,2(1x,f18.13))') &
                  & is,ip,iip,REAL(zeta(is),KIND=DP),AIMAG(zeta(is))
               ENDDO
            ENDDO
         ENDIF
         !
-        DO iks = 1, nks
+        DO iks = 1,nks
            current_spin = isk(iks)
            evc1_new(:,:,iks) = evc1_new(:,:,iks) - gamma(current_spin)*evc1_old(:,:,iks)
         ENDDO
         !
         ! Apply P_c|evc1_new>
         !
-        DO iks = 1, nks
+        DO iks = 1,nks
            !
            nbndval = nbnd_occ(iks)
            !
            ! ... read in GS wavefunctions iks
            !
            IF(nks > 1) THEN
-              IF(my_image_id == 0) CALL get_buffer(evc, lrwfc, iuwfc, iks)
+              IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
               CALL mp_bcast(evc,0,inter_image_comm)
            ENDIF
            !
            CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,evc1_new(1,1,iks),(1._DP,0._DP))
         ENDDO
         !
-        ! Throw away q(i-1), and make q(i+1) to be the current vector,
+        ! Throw away q(i-1),and make q(i+1) to be the current vector,
         ! be ready for the next iteration. evc1_new will be free again after this step
         !
         evc1_old(:,:,:) = (0._DP,0._DP)
@@ -286,13 +289,13 @@ SUBROUTINE wbse_lanczos_diago()
               CALL my_copy_lz(tmp_lz)
            ENDIF
            !
-           CALL lanczos_restart_write(nipol_input, ip, lz_iteration)
-           CALL lanczos_evcs_write(evc1, evc1_old)
+           CALL lanczos_restart_write(nipol_input,ip,lz_iteration)
+           CALL lanczos_evcs_write(evc1,evc1_old)
         ENDIF
         !
      ENDDO lancz_loop
      !
-     CALL lanczos_postpro_write(nipol_input, ip, pol_label_input(ip))
+     CALL lanczos_postpro_write(nipol_input,ip,pol_label_input(ip))
      !
      lriter_restart = 1
      l_from_scratch = .TRUE.
@@ -326,7 +329,7 @@ SUBROUTINE my_copy_lz(tmp_lz)
   !
   ! Workspace
   !
-  CHARACTER(LEN=320) :: cp_source, cp_dest
+  CHARACTER(LEN=320) :: cp_source,cp_dest
   INTEGER :: cp_status
   !
   ! BARRIER
@@ -338,29 +341,29 @@ SUBROUTINE my_copy_lz(tmp_lz)
   IF(mpime == root) THEN
     cp_source = TRIM(wbse_save_dir)//'/EVC1.dat'
     cp_dest   = TRIM(tmp_lz)//'/EVC1.dat'
-    cp_status = f_copy(cp_source, cp_dest)
+    cp_status = f_copy(cp_source,cp_dest)
   ENDIF
   !
-  CALL mp_bcast(cp_status, root, world_comm)
-  CALL errore('my_copy_lz', 'cannot copy evc1', cp_status)
+  CALL mp_bcast(cp_status,root,world_comm)
+  CALL errore('my_copy_lz','cannot copy evc1',cp_status)
   !
   IF(mpime == root) THEN
     cp_source = TRIM(wbse_save_dir)//'/EVC1_OLD.dat'
     cp_dest   = TRIM(tmp_lz)//'/EVC1_OLD.dat'
-    cp_status = f_copy(cp_source, cp_dest)
+    cp_status = f_copy(cp_source,cp_dest)
   ENDIF
   !
-  CALL mp_bcast(cp_status, root, world_comm)
-  CALL errore('my_copy_lz', 'cannot copy evc1_old', cp_status)
+  CALL mp_bcast(cp_status,root,world_comm)
+  CALL errore('my_copy_lz','cannot copy evc1_old',cp_status)
   !
   IF(mpime == root) THEN
     cp_source = TRIM(wbse_save_dir)//'/summary.xml'
     cp_dest   = TRIM(tmp_lz)//'/summary.xml'
-    cp_status = f_copy(cp_source, cp_dest)
+    cp_status = f_copy(cp_source,cp_dest)
   ENDIF
   !
-  CALL mp_bcast(cp_status, root, world_comm)
-  CALL errore('my_copy_lz', 'cannot copy summary', cp_status)
+  CALL mp_bcast(cp_status,root,world_comm)
+  CALL errore('my_copy_lz','cannot copy summary',cp_status)
   !
   WRITE(stdout,*)
   WRITE(stdout,"(5x,'Done tmp save in location : ',a)") TRIM(tmp_lz)

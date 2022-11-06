@@ -39,7 +39,7 @@ SUBROUTINE solve_e_psi()
   CALL stop_clock('solve_e_psi')
   !
 END SUBROUTINE
-
+!
 SUBROUTINE compute_d0psi_rs()
   !
   USE kinds,                ONLY : DP
@@ -97,9 +97,9 @@ SUBROUTINE compute_d0psi_rs()
      i = i - dfftp%nr1x*j
      !
      DO ip = 1, n_ipol
-        r(ir,ip) = REAL(i,KIND=DP)*inv_nr1*at(ip,1) + &
-                   REAL(j,KIND=DP)*inv_nr2*at(ip,2) + &
-                   REAL(k,KIND=DP)*inv_nr3*at(ip,3)
+        r(ir,ip) = REAL(i,KIND=DP)*inv_nr1*at(ip,1) &
+               & + REAL(j,KIND=DP)*inv_nr2*at(ip,2) &
+               & + REAL(k,KIND=DP)*inv_nr3*at(ip,3)
      ENDDO
      !
   ENDDO
@@ -135,11 +135,7 @@ SUBROUTINE compute_d0psi_rs()
               !
               ! double bands @ gamma
               !
-              ! G -> R
-              !
               CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd+1),psic,'Wave')
-              !
-              ! R -> G
               !
               aux_r(:) = psic
               !
@@ -153,41 +149,19 @@ SUBROUTINE compute_d0psi_rs()
               !
            ELSE
               !
-              IF(nbndval == nbnd) THEN
-                 !
-                 ! single band @ gamma
-                 !
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
-                 !
-                 aux_r(:) = psic
-                 !
-                 DO ip = 1, n_ipol
-                    !
-                    psic(:) = CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
-                    !
-                    CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave')
-                    !
-                 ENDDO
-                 !
-              ENDIF
+              ! single band @ gamma
               !
-              IF(nbndval < nbnd) THEN
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
+              !
+              aux_r(:) = psic
+              !
+              DO ip = 1, n_ipol
                  !
-                 ! single band @ gamma
+                 psic(:) = CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
                  !
-                 CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd+1),psic,'Wave')
+                 CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave')
                  !
-                 aux_r(:) = psic(:)
-                 !
-                 DO ip = 1, n_ipol
-                    !
-                    psic(:) = CMPLX(REAL(aux_r(:),KIND=DP) * r(:,ip) * alat, KIND=DP)
-                    !
-                    CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,ibnd,iks,ip),'Wave')
-                    !
-                 ENDDO
-                 !
-              ENDIF
+              ENDDO
               !
            ENDIF
            !
@@ -238,7 +212,7 @@ SUBROUTINE compute_d0psi_rs()
      ! P_c|d0psi>
      !
      DO ip = 1, n_ipol
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,d0psi(1,1,iks,ip),(1._DP,0._DP))
+        CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,d0psi(:,:,iks,ip),(1._DP,0._DP))
      ENDDO
      !
   ENDDO
@@ -305,8 +279,8 @@ SUBROUTINE shift_d0psi(r, n_ipol)
      ENDDO
      !
      DO ip = 1, n_ipol
-        IF(r(ir,ip) < 0) r(ir,ip)=r(ir,ip)+at(ip,ip)
-        IF(r(ir,ip) > at(ip,ip)) r(ir,ip)=r(ir,ip)-at(ip,ip)
+        IF(r(ir,ip) < 0) r(ir,ip) = r(ir,ip)+at(ip,ip)
+        IF(r(ir,ip) > at(ip,ip)) r(ir,ip) = r(ir,ip)-at(ip,ip)
      ENDDO
      !
   ENDDO

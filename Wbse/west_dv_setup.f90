@@ -33,10 +33,10 @@ SUBROUTINE west_dv_setup(l_bse_calc)
   !
   ! 0) allocate dmuxc
   !
-  ALLOCATE(dmuxc(dfftp%nnr, nspin, nspin))
+  ALLOCATE(dmuxc(dfftp%nnr,nspin,nspin))
   !
   IF(l_bse_calc) THEN
-     dmuxc = (0._DP, 0._DP)
+     dmuxc = (0._DP,0._DP)
      !
      RETURN
   ENDIF

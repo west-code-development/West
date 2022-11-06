@@ -38,8 +38,7 @@ SUBROUTINE bse_start()
   ! compute macroscopic term, it needs macroscopic dielectric constant
   ! from input.
   !
-  sigma_c_head = ((1.0_DP/epsinfty) - 1.0_DP) * (2.0_DP*e2/pi) &
-               & * ((6.0_DP*pi*pi/omega)**(1.0_DP/3.0_DP))
+  sigma_c_head = ((1._DP/epsinfty) - 1._DP) * (2._DP*e2/pi) * ((6._DP*pi*pi/omega)**(1._DP/3._DP))
   !
   WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:",f9.5)') sigma_c_head
   !
@@ -47,10 +46,10 @@ SUBROUTINE bse_start()
   !
   IF(l_use_localise_repr) THEN
      !
-     ALLOCATE(u_matrix(nbndval0x, nbndval0x, nspin))
-     ALLOCATE(ovl_matrix(nbndval0x, nbndval0x, nspin))
+     ALLOCATE(u_matrix(nbndval0x,nbndval0x,nspin))
+     ALLOCATE(ovl_matrix(nbndval0x,nbndval0x,nspin))
      !
-     DO is = 1, nspin
+     DO is = 1,nspin
         CALL read_umatrix_and_omatrix(nbndval0x,is,u_matrix(:,:,is),ovl_matrix(:,:,is))
      ENDDO
      !
@@ -58,11 +57,11 @@ SUBROUTINE bse_start()
   !
   !IF(.NOT. use_wstat_pdep) THEN
      !
-     ! Using Coupling approach, single k and q
+     ! Using coupling approach, single k and q
      ! define an index_matrix_lz, for bse_kernel paralel
      !
      tmp_size = nbndval0x*nbndval0x
-     ALLOCATE(index_matrix_lz(tmp_size, 2, nspin))
+     ALLOCATE(index_matrix_lz(tmp_size,2,nspin))
      !
      index_matrix_lz(:,:,:) = 0._DP
      !
@@ -70,14 +69,14 @@ SUBROUTINE bse_start()
      !
      size_index_matrix_lz(:) = 0
      !
-     DO iks = 1, nks
+     DO iks = 1,nks
         !
         nbndval = nbnd_occ(iks)
         current_spin = isk(iks)
         do_index = 0
         !
-        DO ibnd = 1, nbndval, 1
-           DO jbnd = 1, nbndval, 1
+        DO ibnd = 1,nbndval
+           DO jbnd = 1,nbndval
               IF(l_use_localise_repr) THEN
                  ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
               ELSE
@@ -104,11 +103,11 @@ SUBROUTINE bse_start()
      !
 !  ELSE
 !     !
-!     ! Using Coupling approach, single k and q
+!     ! Using coupling approach, single k and q
 !     ! define an index_matrix_lz, for bse_kernel paralel
 !     !
 !     tmp_size = nbndval0x*nbndval0x*n_pdep_eigen
-!     ALLOCATE(index_matrix_lz(tmp_size, 3, nspin))
+!     ALLOCATE(index_matrix_lz(tmp_size,3,nspin))
 !     !
 !     index_matrix_lz(:,:,:) = 0._DP
 !     !
@@ -116,15 +115,15 @@ SUBROUTINE bse_start()
 !     !
 !     size_index_matrix_lz(:) = 0
 !     !
-!     DO iks = 1, nks
+!     DO iks = 1,nks
 !        !
 !        nbndval = nbnd_occ(iks)
 !        current_spin = isk(iks)
 !        do_index = 0
 !        !
-!        DO alnd = 1, n_pdep_eigen
-!           DO ibnd = 1, nbndval
-!              DO jbnd = 1, nbndval
+!        DO alnd = 1,n_pdep_eigen
+!           DO ibnd = 1,nbndval
+!              DO jbnd = 1,nbndval
 !                 IF(l_use_localise_repr) THEN
 !                    ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
 !                 ELSE

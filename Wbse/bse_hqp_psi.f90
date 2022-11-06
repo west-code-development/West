@@ -80,6 +80,7 @@ SUBROUTINE read_qp_eigs()
   !
   IMPLICIT NONE
   !
+  INTEGER :: iun
   INTEGER :: ibnd, nqp_eigs
   INTEGER :: num_k_points,ik
   CHARACTER(LEN=3) :: my_ik
@@ -92,39 +93,37 @@ SUBROUTINE read_qp_eigs()
   ALLOCATE(et_qp(nbnd,nks))
   !
   IF(lsda) THEN
-     num_k_points = nks / 2
+     num_k_points = nks/2
   ELSE
      num_k_points = nks
   ENDIF
   !
-  DO ik = 1, num_k_points
+  DO ik = 1,num_k_points
      !
      WRITE(my_ik,'(i1)') ik
      !
      file_qp = TRIM(qp_correction)//'.'//TRIM(my_ik)
      !
      IF(ionode) THEN
-        OPEN(UNIT=99,FILE=TRIM(file_qp),FORM='FORMATTED',STATUS='OLD')
-        READ(99,*) nqp_eigs
+        OPEN(NEWUNIT=iun,FILE=TRIM(file_qp),FORM='FORMATTED',STATUS='OLD')
+        READ(iun,*) nqp_eigs
      ENDIF
      !
      CALL mp_bcast(nqp_eigs,ionode_id,world_comm)
      !
-     IF(nqp_eigs /= nbnd) THEN
-        CALL errore ('read_qp_eigs', 'number qp eigenvalues not equal nbnd in pw.in', nqp_eigs)
-     ENDIF
+     IF(nqp_eigs /= nbnd) CALL errore ('read_qp_eigs', 'nqp_eigs /= nbnd', 1)
      !
      IF(ionode) THEN
         !
-        DO ibnd = 1, nqp_eigs
+        DO ibnd = 1,nqp_eigs
            IF(lsda) THEN
-              READ(99,*) et_qp(ibnd,ik), et_qp(ibnd,ik+num_k_points)
+              READ(iun,*) et_qp(ibnd,ik),et_qp(ibnd,ik+num_k_points)
            ELSE
-              READ(99,*) et_qp(ibnd,ik)
+              READ(iun,*) et_qp(ibnd,ik)
            ENDIF
         ENDDO
         !
-        CLOSE(99)
+        CLOSE(iun)
         !
      ENDIF
      !

@@ -54,7 +54,7 @@ SUBROUTINE compute_d0psi_rs()
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : evc,psic
   USE noncollin_module,     ONLY : npol
-  USE pwcom,                ONLY : isk,igk_k,ngk,lsda,nbnd,npwx,nks
+  USE pwcom,                ONLY : isk,igk_k,ngk,lsda,npw,npwx,nks
   USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,d0psi
   !
   IMPLICIT NONE
@@ -64,7 +64,7 @@ SUBROUTINE compute_d0psi_rs()
   INTEGER :: i, j, k, ip, ir, ir_end, index0
   REAL(DP) :: inv_nr1, inv_nr2, inv_nr3
   INTEGER :: ibnd, nbndval
-  INTEGER :: npw, iks, current_k, current_spin
+  INTEGER :: iks, current_k, current_spin
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: r(:,:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:)
@@ -298,7 +298,7 @@ SUBROUTINE compute_d0psi_dfpt()
   USE wavefunctions,        ONLY : evc,psic
   USE noncollin_module,     ONLY : npol
   USE uspp,                 ONLY : vkb,nkb
-  USE pwcom,                ONLY : npwx,et,nks,current_spin,isk,xk,lsda,igk_k,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,lsda,igk_k,current_k,ngk
   USE westcom,              ONLY : nbnd_occ,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,l_kinetic_only,&
                                  & d0psi,l_lanczos
   USE distribution_center,  ONLY : aband
@@ -327,6 +327,8 @@ SUBROUTINE compute_d0psi_dfpt()
      current_k = iks
      !
      IF(lsda) current_spin = isk(iks)
+     !
+     npw = ngk(iks)
      !
      CALL g2_kin(iks)
      !

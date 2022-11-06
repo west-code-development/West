@@ -572,7 +572,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,world_comm
   USE gvect,                  ONLY : gstart
   USE mp,                     ONLY : mp_sum,mp_barrier,mp_bcast
-  USE pwcom,                  ONLY : nks,npw,npwx
+  USE pwcom,                  ONLY : nks,npw,npwx,ngk
   USE westcom,                ONLY : nbnd_occ,nbndval0x
   USE control_flags,          ONLY : gamma_only
   USE io_push,                ONLY : io_push_title
@@ -652,6 +652,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
              DO iks  = 1, nks
                 !
                 nbndval = nbnd_occ(iks)
+                npw = ngk(iks)
                 !
                 DO ibnd = 1, nbndval
                    !
@@ -675,6 +676,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
              DO iks  = 1, nks
                 !
                 nbndval = nbnd_occ(iks)
+                npw = ngk(iks)
                 !
                 DO ibnd = 1, nbndval
                    !
@@ -694,7 +696,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
            !
            DO iks  = 1, nks
               !
-              nbndval = nbnd_occ(iks)
+              npw = ngk(iks)
               !
               DO ibnd = 1, nbndval
                  !
@@ -709,8 +711,6 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
         ! 5) Copy the current vector into V
         !
         DO iks  = 1, nks
-           !
-           nbndval = nbnd_occ(iks)
            !
            DO ibnd = 1, nbndval
               !
@@ -745,6 +745,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               DO iks  = 1, nks
                  !
                  nbndval = nbnd_occ(iks)
+                 npw = ngk(iks)
                  !
                  DO ibnd = 1, nbndval
                     !
@@ -781,6 +782,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               DO iks  = 1, nks
                  !
                  nbndval = nbnd_occ(iks)
+                 npw = ngk(iks)
                  !
                  DO ibnd = 1, nbndval
                     !
@@ -824,7 +826,7 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   USE kinds,                ONLY : DP
   USE random_numbers,       ONLY : randy
   USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
-  USE pwcom,                ONLY : nks,npw,npwx
+  USE pwcom,                ONLY : nks,npw,npwx,ngk
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,nbndval0x
   USE constants,            ONLY : tpi
   USE distribution_center,  ONLY : pert
@@ -879,6 +881,7 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
      DO iks  = 1, nks
         !
         nbndval = nbnd_occ(iks)
+        npw = ngk(iks)
         !
         DO ibnd = 1, nbndval
            !

@@ -45,7 +45,7 @@ MODULE wbse_tools
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
       USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw
+      USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
       USE gvect,                ONLY : gstart
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
@@ -91,6 +91,7 @@ MODULE wbse_tools
                DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
                   !
                   DO ibnd = 1,nbndval
                      reduce = reduce + 2._DP * DDOT(2*npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
@@ -126,7 +127,7 @@ MODULE wbse_tools
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
       USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw
+      USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
@@ -167,6 +168,7 @@ MODULE wbse_tools
                DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
                   !
                   DO ibnd = 1,nbndval
                      c_distr(ig1,il2) = c_distr(ig1,il2) + ZDOTC(npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
@@ -195,7 +197,7 @@ MODULE wbse_tools
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw
+      USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
@@ -242,6 +244,7 @@ MODULE wbse_tools
                DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
                   !
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,zconst,ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
@@ -265,11 +268,13 @@ MODULE wbse_tools
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
          DO iks = 1,nks
+            !
             nbndval = nbnd_occ(iks)
             !
             DO ibnd = 1,nbndval
                ag(:,ibnd,iks,il2) = -ew(ig2) * hg(:,ibnd,iks,il2)
             ENDDO
+            !
          ENDDO
          !
       ENDDO
@@ -297,6 +302,7 @@ MODULE wbse_tools
                DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
                   !
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,zconst,bg(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
@@ -320,11 +326,13 @@ MODULE wbse_tools
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
          DO iks = 1,nks
+            !
             nbndval = nbnd_occ(iks)
             !
             DO ibnd = 1,nbndval
                ag(:,ibnd,iks,il2) = ag(:,ibnd,iks,il2) + hg(:,ibnd,iks,il2)
             ENDDO
+            !
          ENDDO
          !
       ENDDO
@@ -341,7 +349,7 @@ MODULE wbse_tools
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw
+      USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
@@ -385,6 +393,7 @@ MODULE wbse_tools
                DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
                   !
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,vr_distr(ig1,il2),ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
@@ -408,11 +417,13 @@ MODULE wbse_tools
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
          DO iks = 1,nks
+            !
             nbndval = nbnd_occ(iks)
             !
             DO ibnd = 1,nbndval
                ag(:,ibnd,iks,il2) = -ew(ig2) * hg(:,ibnd,iks,il2)
             ENDDO
+            !
          ENDDO
          !
       ENDDO
@@ -438,6 +449,7 @@ MODULE wbse_tools
                DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
                   !
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,vr_distr(ig1,il2),bg(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
@@ -461,11 +473,13 @@ MODULE wbse_tools
          IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
          !
          DO iks = 1,nks
+            !
             nbndval = nbnd_occ(iks)
             !
             DO ibnd = 1,nbndval
                ag(:,ibnd,iks,il2) = ag(:,ibnd,iks,il2) + hg(:,ibnd,iks,il2)
             ENDDO
+            !
          ENDDO
          !
       ENDDO
@@ -482,7 +496,7 @@ MODULE wbse_tools
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw
+      USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
@@ -525,10 +539,14 @@ MODULE wbse_tools
                zconst = CMPLX(vr_distr(ig1,il2),KIND=DP)
                !
                DO iks = 1,nks
+                  !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
+                  !
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,zconst,ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
                   ENDDO
+                  !
                ENDDO
                !
             ENDDO
@@ -547,17 +565,23 @@ MODULE wbse_tools
          !
          IF(ig2 > nselect) THEN
             DO iks = 1,nks
+               !
                nbndval = nbnd_occ(iks)
+               !
                DO ibnd = 1,nbndval
                   ag(:,ibnd,iks,il2) = 0._DP
                ENDDO
+               !
             ENDDO
          ELSE
             DO iks  = 1,nks
+               !
                nbndval = nbnd_occ(iks)
+               !
                DO ibnd = 1,nbndval
                   ag(:,ibnd,iks,il2) = hg(:,ibnd,iks,il2)
                ENDDO
+               !
             ENDDO
          ENDIF
          !
@@ -575,7 +599,7 @@ MODULE wbse_tools
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
       USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw
+      USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
@@ -615,10 +639,14 @@ MODULE wbse_tools
                IF(ig2 > nselect) CYCLE
                !
                DO iks = 1,nks
+                  !
                   nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
+                  !
                   DO ibnd = 1,nbndval
                      CALL ZAXPY(npw,vr_distr(ig1,il2),ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
                   ENDDO
+                  !
                ENDDO
                !
             ENDDO
@@ -636,17 +664,23 @@ MODULE wbse_tools
          !
          IF(ig2 > nselect) THEN
            DO iks = 1,nks
+              !
               nbndval = nbnd_occ(iks)
+              !
               DO ibnd = 1,nbndval
                  ag(:,ibnd,iks,il2) = 0._DP
               ENDDO
+              !
            ENDDO
          ELSE
            DO iks = 1,nks
+              !
               nbndval = nbnd_occ(iks)
+              !
               DO ibnd = 1,nbndval
                  ag(:,ibnd,iks,il2) = hg(:,ibnd,iks,il2)
               ENDDO
+              !
            ENDDO
          ENDIF
          !
@@ -711,7 +745,6 @@ MODULE wbse_tools
          DO iks = 1,nks
             !
             nbndval = nbnd_occ(iks)
-            !
             current_k = iks
             !
             CALL g2_kin(iks)

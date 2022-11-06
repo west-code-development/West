@@ -18,7 +18,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   USE lsda_mod,               ONLY : nspin,lsda
   USE wavefunctions,          ONLY : psic,evc
   USE noncollin_module,       ONLY : npol
-  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,nks,current_spin,isk,wg
+  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,nks,current_spin,isk,wg,ngk
   USE control_flags,          ONLY : gamma_only
   USE mp,                     ONLY : mp_sum,mp_bcast
   USE mp_global,              ONLY : my_image_id,inter_image_comm
@@ -61,7 +61,11 @@ SUBROUTINE wbse_calc_dens(devc, drho)
      !
      IF(lsda) current_spin = isk(iks)
      !
-     ! ... read in GS wavefunctions from the dir
+     ! ... Number of G vectors for PW expansion of wfs at k
+     !
+     npw = ngk(iks)
+     !
+     ! ... read GS wavefunctions
      !
      IF(nks > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)

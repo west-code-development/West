@@ -46,7 +46,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   !
   scissor = scissor_ope
   !
-  CALL start_clock('west_apply_liouvillian')
+  CALL start_clock('apply_lv')
   !
   evc1_new(:,:,:) = (0._DP,0._DP)
   !
@@ -86,6 +86,10 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      !
      IF(nkb > 0) CALL init_us_2(ngk(iks), igk_k(1,iks), xk(1,iks), vkb)
      !
+     ! ... Number of G vectors for PW expansion of wfs at k
+     !
+     npw = ngk(iks)
+     !
      ! ... read in GS wavefunctions iks
      !
      IF(nks > 1) THEN
@@ -107,7 +111,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd_1),psic,'Wave')
            !
            DO ir = 1,dffts%nnr
-              psic(ir) = psic(ir) * CMPLX(REAL(dvrs(ir,current_spin),KIND=DP), KIND=DP)
+              psic(ir) = psic(ir) * CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
            ENDDO
            !
            CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),evc1_new(:,ibnd_1,iks),'Wave')
@@ -121,7 +125,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
            !
            DO ir = 1,dffts%nnr
-              psic(ir) = CMPLX(REAL(psic(ir),KIND=DP) * REAL(dvrs(ir,current_spin),KIND=DP), KIND=DP)
+              psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
            ENDDO
            !
            CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave')
@@ -161,11 +165,11 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      !
 112  CONTINUE
      !
-     ALLOCATE(hevc1(npwx*npol, nbvalloc))
-     ALLOCATE(evc1_aux(npwx*npol, nbvalloc))
+     ALLOCATE(hevc1(npwx*npol,nbvalloc))
+     ALLOCATE(evc1_aux(npwx*npol,nbvalloc))
      !
-     hevc1(:,:)    = (0._DP, 0._DP)
-     evc1_aux(:,:) = (0._DP, 0._DP)
+     hevc1(:,:) = (0._DP,0._DP)
+     evc1_aux(:,:) = (0._DP,0._DP)
      !
      DO il1 = 1, nbvalloc
         ibnd = aband%l2g(il1)
@@ -187,10 +191,10 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            ibnd = aband%l2g(il1)
            !
            IF(l_bse_calculation) THEN
-              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),KIND=DP), &
+              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks)-scissor+sigma_x_head+sigma_c_head),KIND=DP), &
                    & evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ELSE
-              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks) - scissor),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
+              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks)-scissor),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
               !
            ENDIF
         ENDDO
@@ -199,10 +203,10 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            ibnd = aband%l2g(il1)
            !
            IF(l_bse_calculation) THEN
-              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks) - scissor + sigma_x_head + sigma_c_head),KIND=DP), &
+              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks)-scissor+sigma_x_head+sigma_c_head),KIND=DP), &
                    & evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ELSE
-              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks) - scissor),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
+              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks)-scissor),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ENDIF
         ENDDO
      ENDIF
@@ -243,6 +247,6 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   DEALLOCATE(dvrs)
   IF(ALLOCATED(psic)) DEALLOCATE(psic)
   !
-  CALL stop_clock('west_apply_liouvillian')
+  CALL stop_clock('apply_lv')
   !
 END SUBROUTINE

@@ -12,9 +12,8 @@ SUBROUTINE wbse_lanczos_diago()
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE io_files,             ONLY : tmp_dir
-  USE wvfct,                ONLY : npwx
   USE lsda_mod,             ONLY : nspin
-  USE pwcom,                ONLY : nks,isk,current_spin
+  USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ,wbse_calculation,&
                                  & d0psi,ipol_input,n_lanczos,alpha_store,beta_store,gamma_store,&
                                  & zeta_store,nbndval0x,l_bse_calculation,size_index_matrix_lz
@@ -35,7 +34,7 @@ SUBROUTINE wbse_lanczos_diago()
   !
   LOGICAL :: l_from_scratch
   INTEGER :: ip,iip,pol_index,nipol_input
-  INTEGER :: iteration,lz_iteration
+  INTEGER :: iter
   INTEGER :: iks,is,nbndval
   INTEGER :: lriter_restart,pliter_restart
   INTEGER :: pliter_stop,lriter_stop
@@ -176,11 +175,9 @@ SUBROUTINE wbse_lanczos_diago()
      !
      ! Loop on the Lanczos iterations
      !
-     lancz_loop : DO iteration = lriter_restart,n_lanczos
+     lancz_loop : DO iter = lriter_restart,n_lanczos
         !
-        lz_iteration = iteration
-        !
-        WRITE(stdout,'(/5x,"**Lanczos iteration: ",i6,3x,"at Polar:",i5,a8)') lz_iteration,pol_index
+        WRITE(stdout,'(/5x,"**Lanczos iteration: ",i6,3x,"at Polar:",i5,a8)') iter,pol_index
         !
         ! Application of the Liouvillian superoperator
         !
@@ -190,9 +187,9 @@ SUBROUTINE wbse_lanczos_diago()
         ! resources and increases stability.
         !
         alpha = 0._DP
-        alpha_store(ip,lz_iteration,:) = alpha
+        alpha_store(ip,iter,:) = alpha
         !
-        WRITE(stdout,'(5X,"^-^alpha(",i8.8,")=",f10.6)') lz_iteration,alpha
+        WRITE(stdout,'(5X,"^-^alpha(",i8.8,")=",f10.6)') iter,alpha
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
@@ -211,12 +208,12 @@ SUBROUTINE wbse_lanczos_diago()
            ENDIF
         ENDDO
         !
-        beta_store(ip,lz_iteration,:) = beta
-        gamma_store(ip,lz_iteration,:) = gamma
+        beta_store(ip,iter,:) = beta
+        gamma_store(ip,iter,:) = gamma
         !
         DO is = 1,nspin
-           WRITE(stdout,'(5X,"ispin:",i2,5X,"beta (",i8.8,")=",f12.6)') is,lz_iteration,beta(is)
-           WRITE(stdout,'(5X,"ispin:",i2,5X,"gamma(",i8.8,")=",f12.6)') is,lz_iteration,gamma(is)
+           WRITE(stdout,'(5X,"ispin:",i2,5X,"beta (",i8.8,")=",f12.6)') is,iter,beta(is)
+           WRITE(stdout,'(5X,"ispin:",i2,5X,"gamma(",i8.8,")=",f12.6)') is,iter,gamma(is)
         ENDDO
         !
         ! Renormalize q(i) and Lq(i)
@@ -230,12 +227,12 @@ SUBROUTINE wbse_lanczos_diago()
         ! Calculation of zeta coefficients.
         ! See Eq.(35) in Malcioglu et al., Comput. Phys. Commun. 182, 1744 (2011).
         !
-        IF(MOD(lz_iteration,2) == 0) THEN
+        IF(MOD(iter,2) == 0) THEN
            DO iip = 1,n_ipol
               CALL wbse_dot(d0psi(:,:,:,iip),evc1,npwx,nbndval0x,nks,wbse_dot_out)
               !
               zeta(:) = wbse_dot_out
-              zeta_store(ip,iip,lz_iteration,:) = zeta
+              zeta_store(ip,iip,iter,:) = zeta
               !
               DO is = 1,nspin
                  WRITE(stdout,'(5X,"ispin:",i2,5X,"zeta = ",i3,i3,2(1x,f18.13))') &
@@ -245,7 +242,7 @@ SUBROUTINE wbse_lanczos_diago()
         ELSE
            DO iip = 1,n_ipol
               zeta(:) = (0._DP,0._DP)
-              zeta_store(ip,iip,lz_iteration,:) = zeta
+              zeta_store(ip,iip,iter,:) = zeta
               !
               DO is = 1,nspin
                  WRITE(stdout,'(5X,"ispin:",i2,5X,"zeta = ",i3,i3,2(1x,f18.13))') &
@@ -265,7 +262,11 @@ SUBROUTINE wbse_lanczos_diago()
            !
            nbndval = nbnd_occ(iks)
            !
-           ! ... read in GS wavefunctions iks
+           ! ... Number of G vectors for PW expansion of wfs at k
+           !
+           npw = ngk(iks)
+           !
+           ! ... Read GS wavefunctions
            !
            IF(nks > 1) THEN
               IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
@@ -278,18 +279,16 @@ SUBROUTINE wbse_lanczos_diago()
         ! Throw away q(i-1),and make q(i+1) to be the current vector,
         ! be ready for the next iteration. evc1_new will be free again after this step
         !
-        evc1_old(:,:,:) = (0._DP,0._DP)
         evc1_old(:,:,:) = evc1
-        evc1(:,:,:) = (0._DP,0._DP)
         evc1(:,:,:) = evc1_new
         !
-        IF(MOD(lz_iteration,100) == 0) THEN
-           IF(lz_iteration > 5) THEN
+        IF(MOD(iter,100) == 0) THEN
+           IF(iter > 5) THEN
               CALL my_mkdir(tmp_lz)
               CALL my_copy_lz(tmp_lz)
            ENDIF
            !
-           CALL lanczos_restart_write(nipol_input,ip,lz_iteration)
+           CALL lanczos_restart_write(nipol_input,ip,iter)
            CALL lanczos_evcs_write(evc1,evc1_old)
         ENDIF
         !

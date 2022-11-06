@@ -46,7 +46,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
   USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma,&
                                     double_invfft_gamma,double_fwfft_gamma
   USE mp_global,             ONLY : inter_image_comm,inter_bgrp_comm
-  USE pwcom,                 ONLY : npw,npwx,nks,isk
+  USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
   USE westcom,               ONLY : nbnd_occ,nbndval0x,l_use_localise_repr,u_matrix,&
                                   & index_matrix_lz,size_index_matrix_lz
   USE distribution_center,   ONLY : aband,bseparal
@@ -82,6 +82,8 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
      IF(current_spin_ikq /= current_spin) CYCLE
      !
      nbndval_q = nbnd_occ(ikq)
+     !
+     npw = ngk(ikq)
      !
      IF(l_use_localise_repr) THEN
         aux_bse1(:,:) = (0._DP,0._DP)

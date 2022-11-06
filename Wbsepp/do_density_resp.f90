@@ -71,8 +71,6 @@ SUBROUTINE do_density_resp()
      IF(lsda) current_spin = isk(iks)
      call g2_kin(iks)
      !
-     ! ... More stuff needed by the hamiltonian: nonlocal projectors
-     !
      npw = ngk(iks)
      !
      ! ... read in wavefunctions from the previous iteration

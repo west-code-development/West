@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !----------------------------------------------------------------------------
-SUBROUTINE bse_do_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart)
+SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart)
   !----------------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -51,7 +51,7 @@ SUBROUTINE bse_do_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_res
   LOGICAL :: l_load_qbox_loc_wfc
   REAL(KIND=DP), EXTERNAL :: DDOT
   !
-  CALL start_clock('bse_do_localization')
+  CALL start_clock('local')
   !
   IF(.NOT. gamma_only) ALLOCATE(psic1(dffts%nnr))
   !
@@ -164,6 +164,6 @@ SUBROUTINE bse_do_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_res
   !
   IF(ALLOCATED(psic1)) DEALLOCATE(psic1)
   !
-  CALL stop_clock('bse_do_localization')
+  CALL stop_clock('local')
   !
 END SUBROUTINE

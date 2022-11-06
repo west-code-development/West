@@ -59,9 +59,9 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   CALL wbse_calc_dens(evc1, dvrs)
   !
   IF(l_bse_calculation) THEN
-     CALL west_dv_of_drho(dvrs, .TRUE., .FALSE.)
+     CALL wbse_dv_of_drho(dvrs, .TRUE., .FALSE.)
   ELSE
-     CALL west_dv_of_drho(dvrs, .FALSE., .FALSE.)
+     CALL wbse_dv_of_drho(dvrs, .FALSE., .FALSE.)
   ENDIF
   !
   DO iks = 1, nks

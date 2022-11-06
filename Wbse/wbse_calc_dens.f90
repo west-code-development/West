@@ -40,7 +40,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   REAL(DP) :: w1, prod
   COMPLEX(DP), ALLOCATABLE :: psic_aux(:)
   !
-  CALL start_clock('wbse_calc_dens')
+  CALL start_clock('calc_dens')
   !
   drho(:,:) = (0._DP,0._DP)
   !
@@ -141,6 +141,6 @@ SUBROUTINE wbse_calc_dens(devc, drho)
      CALL mp_sum(drho,inter_image_comm)
   ENDIF
   !
-  CALL stop_clock('wbse_calc_dens')
+  CALL stop_clock('calc_dens')
   !
 END SUBROUTINE

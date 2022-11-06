@@ -51,8 +51,8 @@ MODULE lanczos_db
       !
       ! TIMING
       !
-      CALL start_clock('lanczos_d0psi_write')
-      time_spent(1) = get_clock('lanczos_d0psi_write')
+      CALL start_clock('lan_d0psi_write')
+      time_spent(1) = get_clock('lan_d0psi_write')
       !
       ! 1) WRITE TO DISK THE D0PSI
       !
@@ -68,8 +68,8 @@ MODULE lanczos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanczos_d0psi_write')
-      time_spent(2) = get_clock('lanczos_d0psi_write')
+      CALL stop_clock('lan_d0psi_write')
+      time_spent(2) = get_clock('lan_d0psi_write')
       !
       WRITE(stdout,*)
       CALL io_push_bar()
@@ -108,8 +108,8 @@ MODULE lanczos_db
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('lanczos_d0psi_read')
-      time_spent(1) = get_clock('lanczos_d0psi_read')
+      CALL start_clock('lan_d0psi_read')
+      time_spent(1) = get_clock('lan_d0psi_read')
       !
       DO ipol = 1, n_ipol
          WRITE(my_label,'(i6.6)') ipol
@@ -123,8 +123,8 @@ MODULE lanczos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanczos_d0psi_read')
-      time_spent(2) = get_clock('lanczos_d0psi_read')
+      CALL stop_clock('lan_d0psi_read')
+      time_spent(2) = get_clock('lan_d0psi_read')
       !
       WRITE(stdout,*)
       CALL io_push_bar()
@@ -161,8 +161,8 @@ MODULE lanczos_db
       !
       ! TIMING
       !
-      CALL start_clock('lanczos_evcs_write')
-      time_spent(1) = get_clock('lanczos_evcs_write')
+      CALL start_clock('lan_evc_write')
+      time_spent(1) = get_clock('lan_evc_write')
       !
       ! 1) WRITE TO DISK THE D0PSI
       !
@@ -178,8 +178,8 @@ MODULE lanczos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanczos_evcs_write')
-      time_spent(2) = get_clock('lanczos_evcs_write')
+      CALL stop_clock('lan_evc_write')
+      time_spent(2) = get_clock('lan_evc_write')
       !
       WRITE(stdout,*)
       CALL io_push_bar()
@@ -218,8 +218,8 @@ MODULE lanczos_db
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('lanczos_evcs_read')
-      time_spent(1) = get_clock('lanczos_evcs_read')
+      CALL start_clock('lan_evc_read')
+      time_spent(1) = get_clock('lan_evc_read')
       !
       fname = TRIM(wbse_save_dir)//'/EVC1.dat'
       CALL plep_read_G_and_distribute(fname,evc1)
@@ -232,8 +232,8 @@ MODULE lanczos_db
       !
       ! TIMING
       !
-      CALL stop_clock('lanczos_evcs_read')
-      time_spent(2) = get_clock('lanczos_evcs_read')
+      CALL stop_clock('lan_evc_read')
+      time_spent(2) = get_clock('lan_evc_read')
       !
       WRITE(stdout,*)
       CALL io_push_bar()

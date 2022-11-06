@@ -6,7 +6,7 @@
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
 !-----------------------------------------------------------------------
-SUBROUTINE west_dv_of_drho(dvscf, lrpa, add_nlcc, drhoc)
+SUBROUTINE wbse_dv_of_drho(dvscf, lrpa, add_nlcc, drhoc)
   !-----------------------------------------------------------------------
   !
   !  This routine computes the change of the self consistent potential
@@ -64,7 +64,7 @@ SUBROUTINE west_dv_of_drho(dvscf, lrpa, add_nlcc, drhoc)
   ! dvhart: response Hartree potential
   ! dvaux_mt: auxiliary array for Martyna-Tuckerman correction
   !
-  CALL start_clock('wbse_dv_of_drho')
+  CALL start_clock('dv_of_drho')
   !
   IF(add_nlcc .AND. .NOT. PRESENT(drhoc)) &
      & CALL errore('wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1)
@@ -174,6 +174,6 @@ SUBROUTINE west_dv_of_drho(dvscf, lrpa, add_nlcc, drhoc)
   !
   DEALLOCATE(dvaux)
   !
-  CALL stop_clock('wbse_dv_of_drho')
+  CALL stop_clock('dv_of_drho')
   !
 END SUBROUTINE

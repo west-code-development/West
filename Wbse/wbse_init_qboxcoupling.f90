@@ -10,7 +10,7 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_restart_calc)
+SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : omega
@@ -41,7 +41,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
   IMPLICIT NONE
   !
   INTEGER, INTENT(IN) :: iks,ikq,current_spin,nbndval
-  REAL(DP), INTENT(IN) :: xq(3)
   LOGICAL, INTENT(IN) :: l_restart_calc
   !
   INTEGER :: ibnd, jbnd, tmp_size
@@ -113,7 +112,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
   !
   IF(l_use_localise_repr) THEN
      ALLOCATE(evc_loc(npwx,nbndval))
-     CALL bse_do_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart_calc)
+     CALL wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart_calc)
   ENDIF
   !
   ! compute index_matrix
@@ -255,7 +254,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      !
      ! aux1_r = vc*aux1_r()
      !
-     CALL west_dv_of_drho(aux1_r, .TRUE., .FALSE.)
+     CALL wbse_dv_of_drho(aux1_r, .TRUE., .FALSE.)
      !
      aux_r(:) = aux1_r(:,current_spin)
      !
@@ -312,9 +311,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,xq,current_spin,nbndval,l_res
      ! aux1_r = vc*aux1_r()
      !
      IF(l_xcchi) THEN
-        CALL west_dv_of_drho(aux1_r, .FALSE., .FALSE.)
+        CALL wbse_dv_of_drho(aux1_r, .FALSE., .FALSE.)
      ELSE
-        CALL west_dv_of_drho(aux1_r, .TRUE., .FALSE.)
+        CALL wbse_dv_of_drho(aux1_r, .TRUE., .FALSE.)
      ENDIF
      !
      aux_r(:) = aux1_r(:,current_spin)

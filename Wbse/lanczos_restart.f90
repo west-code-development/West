@@ -57,8 +57,8 @@ MODULE lanczos_restart
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('wbse_lanczos_restart')
-      time_spent(1) = get_clock('wbse_lanczos_restart')
+      CALL start_clock('lan_restart')
+      time_spent(1) = get_clock('lan_restart')
       !
       ! CREATE THE SUMMARY FILE
       !
@@ -130,8 +130,8 @@ MODULE lanczos_restart
       !
       CALL mp_barrier(world_comm)
       !
-      CALL stop_clock('wbse_lanczos_restart')
-      time_spent(2) = get_clock('wbse_lanczos_restart')
+      CALL stop_clock('lan_restart')
+      time_spent(2) = get_clock('lan_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
@@ -171,8 +171,8 @@ MODULE lanczos_restart
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('wbse_lanczos_restart')
-      time_spent(1) = get_clock('wbse_lanczos_restart')
+      CALL start_clock('lan_restart')
+      time_spent(1) = get_clock('lan_restart')
       !
       fname = TRIM(wbse_save_dir)//'/summary.xml'
       IF(mpime == root) THEN
@@ -276,8 +276,8 @@ MODULE lanczos_restart
       !
       CALL mp_barrier(world_comm)
       !
-      CALL stop_clock('wbse_lanczos_restart')
-      time_spent(2) = get_clock('wbse_lanczos_restart')
+      CALL stop_clock('lan_restart')
+      time_spent(2) = get_clock('lan_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))

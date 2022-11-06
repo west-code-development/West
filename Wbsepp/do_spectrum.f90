@@ -98,7 +98,7 @@ SUBROUTINE do_spectrum()
            n_ipol = 3
            ipol = 1
         ELSE
-           CALL errore('lr_calculate_spectrum','Unsupported symmetry operation',1)
+           CALL errore('do_spectrum','Unsupported symmetry operation',1)
         ENDIF
         !
      ENDIF
@@ -111,7 +111,7 @@ SUBROUTINE do_spectrum()
      !
      ! Check the units (Ry, eV, nm)
      !
-     IF(units < 0 .OR. units > 2) CALL errore('lr_calculate_spectrum','Unsupported unit system',1)
+     IF(units < 0 .OR. units > 2) CALL errore('do_spectrum','Unsupported unit system',1)
      !
      IF(units /= 0 .AND. verbosity > 4) THEN
         verbosity = 4
@@ -809,7 +809,7 @@ CONTAINS
   SUBROUTINE calc_chi(freq,broad,chi)
     !-----------------------------------------------------------------------------
     !
-    ! This subroutine Calculates the susceptibility.
+    ! This subroutine calculates the susceptibility.
     !
     IMPLICIT NONE
     !

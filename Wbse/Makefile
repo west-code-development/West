@@ -21,10 +21,6 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 WBSE_OBJS = \
-bse_hqp_psi.o \
-bse_localization.o\
-bse_start.o \
-bse_tools.o \
 check_ovl_wfc.o \
 lanczos_restart.o \
 td_liouville_oper.o \
@@ -33,6 +29,9 @@ wbse_bse_kernel.o \
 wbse_calc_dens.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
+wbse_dv_of_drho.o \
+wbse_dv_setup.o \
+wbse_hqp_psi.o \
 wbse_init.o \
 wbse_init_methods.o \
 wbse_init_qboxcoupling.o \
@@ -40,14 +39,13 @@ wbse_init_readin.o \
 wbse_init_restart.o \
 wbse_init_setup.o \
 wbse_lanczos_diago.o \
+wbse_localization.o\
 wbse_memory_report.o \
 wbse_readin.o \
 wbse_restart.o  \
 wbse_setup.o \
 wbse_solve_e_psi.o \
-wbse_tools.o \
-west_dv_of_drho.o \
-west_dv_setup.o
+wbse_tools.o
 
 PWOBJS = ../../PW/src/libpw.a
 

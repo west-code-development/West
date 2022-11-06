@@ -31,7 +31,6 @@ SUBROUTINE wbse_init_methods()
   !
   INTEGER :: iks, current_spin
   INTEGER :: iq, nkq, ikq
-  REAL(DP):: xq(3)
   LOGICAL :: l_restart_calc, spin_resolve
   !
   SELECT CASE(wbse_init_calculation)
@@ -69,8 +68,6 @@ SUBROUTINE wbse_init_methods()
   !
   DO iq = 1, nkq
      !
-     xq(:) = 0._DP
-     !
      !IF(.NOT. ff_activate) THEN
      !   CALL pdep_db_read(n_pdep_eigen)
      !ENDIF
@@ -100,14 +97,14 @@ SUBROUTINE wbse_init_methods()
            IF(spin_resolve) THEN
               IF(current_spin == spin_channel) THEN
                  !IF(ff_activate) THEN
-                    CALL wbse_init_qboxcoupling_single_q(iks,iq,xq,current_spin,nbnd_occ(iks),l_restart_calc)
+                    CALL wbse_init_qboxcoupling_single_q(iks,iq,current_spin,nbnd_occ(iks),l_restart_calc)
                  !ELSE
                  !   CALL wbse_init_pdep_single_q(iks,iq,xq,current_spin,nbnd_occ(iks),n_pdep_eigen,dvg,ev,l_restart_calc)
                  !ENDIF
               ENDIF
            ELSE
               !IF(ff_activate) THEN
-                 CALL wbse_init_qboxcoupling_single_q(iks,iq,xq,current_spin,nbnd_occ(iks),l_restart_calc)
+                 CALL wbse_init_qboxcoupling_single_q(iks,iq,current_spin,nbnd_occ(iks),l_restart_calc)
               !ELSE
               !   CALL wbse_init_pdep_single_q(iks,iq,xq,current_spin,nbnd_occ(iks),n_pdep_eigen,dvg,ev,l_restart_calc)
               !ENDIF

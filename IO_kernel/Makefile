@@ -26,6 +26,7 @@ pdep_io.o \
 plep_db.o \
 plep_io.o \
 qbox_interface.o \
+wbse_io.o \
 wfreq_db.o \
 wfreq_io.o
 

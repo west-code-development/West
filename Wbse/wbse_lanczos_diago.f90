@@ -16,17 +16,19 @@ SUBROUTINE wbse_lanczos_diago()
   USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ,wbse_calculation,&
                                  & d0psi,ipol_input,n_lanczos,alpha_store,beta_store,gamma_store,&
-                                 & zeta_store,nbndval0x,l_bse_calculation,size_index_matrix_lz
+                                 & zeta_store,nbndval0x,l_bse_calculation,size_index_matrix_lz,&
+                                 & n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
-  USE io_files,             ONLY : tmp_dir
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_bcast,mp_barrier
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
   USE distribution_center,  ONLY : aband,bseparal
   USE class_idistribute,    ONLY : idistribute
+  USE io_push,              ONLY : io_push_title
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   !
   IMPLICIT NONE
   !
@@ -36,19 +38,18 @@ SUBROUTINE wbse_lanczos_diago()
   INTEGER :: ip,iip,pol_index,nipol_input
   INTEGER :: iter
   INTEGER :: iks,is,nbndval
-  INTEGER :: lriter_restart,pliter_restart
-  INTEGER :: pliter_stop,lriter_stop
+  INTEGER :: ilan_restart,ilan_stopped,ipol_restart,ipol_stopped
   INTEGER :: size_index_matrix
   INTEGER, PARAMETER :: n_ipol = 3
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
   REAL(DP) :: alpha(nspin),beta(nspin),gamma(nspin)
   COMPLEX(DP) :: zeta(nspin),wbse_dot_out(nspin)
-  COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: evc1_old(:,:,:),evc1_new(:,:,:)
-  CHARACTER(LEN=256) :: tmp_lz
+  COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
+  CHARACTER(LEN=256) :: tmp_dir_lan
+  TYPE(bar_type) :: barra
   !
-  tmp_lz = TRIM(tmp_dir)//TRIM(west_prefix)//'.tmp_lz'
+  tmp_dir_lan = TRIM(tmp_dir)//TRIM(west_prefix)//'.tmp_lan'
   !
   ! ... DISTRIBUTE lanczos
   !
@@ -122,14 +123,14 @@ SUBROUTINE wbse_lanczos_diago()
      !
      ! RESTART
      !
-     CALL lanczos_restart_read(nipol_input,pliter_stop,lriter_stop)
+     CALL lanczos_restart_read(nipol_input,ipol_stopped,ilan_stopped)
      !
-     ! 1) read pliter_stopped
-     ! 2) read lriter_stopped
+     ! 1) read ipol_stopped
+     ! 2) read ilan_stopped
      ! 3) read store_alpha, store_beta, store_gamma
      !
-     pliter_restart = pliter_stop
-     lriter_restart = lriter_stop+1
+     ipol_restart = ipol_stopped
+     ilan_restart = ilan_stopped+1
      !
      ! 4) read d0psi evc1, evc_old, saved on files
      !
@@ -146,8 +147,8 @@ SUBROUTINE wbse_lanczos_diago()
      !
      CALL lanczos_d0psi_write()
      !
-     lriter_restart = 1
-     pliter_restart = 1
+     ipol_restart = 1
+     ilan_restart = 1
      !
      l_from_scratch = .TRUE.
      !
@@ -155,29 +156,29 @@ SUBROUTINE wbse_lanczos_diago()
      CALL errore('wbse_lanczos_diago','wrong wlzcos_calculation',1)
   END SELECT
   !
-  WRITE(stdout,'(/,5X,"LANCZOS LINEAR-RESPONSE ADSORPTION SPECTRUM CALCULATION")')
-  WRITE(stdout,'(/,10X,"USING TAMM-DANCOFF LIOUVILLIAN OPERATOR")')
-  WRITE(stdout,'(/,5x,"Number of Lanczos iterations = ",i6)') n_lanczos
+  WRITE(stdout,'(/,5x,"Lanczos linear-response absorption spectrum calculation")')
+  WRITE(stdout,'(/,5x,"using Tamm-Dancoff Liouvillian operator")')
+  WRITE(stdout,'(/,5x,"number of Lanczos iterations = ",i6)') n_lanczos
   !
-  polarization_loop : DO ip = pliter_restart,nipol_input
+  polarization_loop : DO ip = ipol_restart,nipol_input
      !
      pol_index = pol_index_input(ip)
      !
      IF(l_from_scratch) THEN
-        WRITE(stdout,'(/5x,"***Starting new Lanczos loop at ipol: ",a8)') pol_label_input(ip)
+        CALL io_push_title('Starting new Lanczos loop at ipol: '//TRIM(pol_label_input(ip)))
         !
         evc1_old(:,:,:) = (0._DP,0._DP)
         evc1_new(:,:,:) = (0._DP,0._DP)
         evc1(:,:,:) = d0psi(:,:,:,pol_index)
      ELSE
-        WRITE(stdout,'(/5x,"***Restarting a Lanczos loop at ipol: ",a8)') pol_label_input(ip)
+        CALL io_push_title('Retarting Lanczos loop at ipol: '//TRIM(pol_label_input(ip)))
      ENDIF
+     !
+     CALL start_bar_type(barra,'lan_diago',n_lanczos-ilan_restart+1)
      !
      ! Loop on the Lanczos iterations
      !
-     lancz_loop : DO iter = lriter_restart,n_lanczos
-        !
-        WRITE(stdout,'(/5x,"**Lanczos iteration: ",i6,3x,"at Polar:",i5,a8)') iter,pol_index
+     lancz_loop : DO iter = ilan_restart,n_lanczos
         !
         ! Application of the Liouvillian superoperator
         !
@@ -188,8 +189,6 @@ SUBROUTINE wbse_lanczos_diago()
         !
         alpha = 0._DP
         alpha_store(ip,iter,:) = alpha
-        !
-        WRITE(stdout,'(5X,"^-^alpha(",i8.8,")=",f10.6)') iter,alpha
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
@@ -211,11 +210,6 @@ SUBROUTINE wbse_lanczos_diago()
         beta_store(ip,iter,:) = beta
         gamma_store(ip,iter,:) = gamma
         !
-        DO is = 1,nspin
-           WRITE(stdout,'(5X,"ispin:",i2,5X,"beta (",i8.8,")=",f12.6)') is,iter,beta(is)
-           WRITE(stdout,'(5X,"ispin:",i2,5X,"gamma(",i8.8,")=",f12.6)') is,iter,gamma(is)
-        ENDDO
-        !
         ! Renormalize q(i) and Lq(i)
         !
         DO iks = 1,nks
@@ -233,21 +227,11 @@ SUBROUTINE wbse_lanczos_diago()
               !
               zeta(:) = wbse_dot_out
               zeta_store(ip,iip,iter,:) = zeta
-              !
-              DO is = 1,nspin
-                 WRITE(stdout,'(5X,"ispin:",i2,5X,"zeta = ",i3,i3,2(1x,f18.13))') &
-                 & is,ip,iip,REAL(zeta(is),KIND=DP),AIMAG(zeta(is))
-              ENDDO
            ENDDO
         ELSE
            DO iip = 1,n_ipol
               zeta(:) = (0._DP,0._DP)
               zeta_store(ip,iip,iter,:) = zeta
-              !
-              DO is = 1,nspin
-                 WRITE(stdout,'(5X,"ispin:",i2,5X,"zeta = ",i3,i3,2(1x,f18.13))') &
-                 & is,ip,iip,REAL(zeta(is),KIND=DP),AIMAG(zeta(is))
-              ENDDO
            ENDDO
         ENDIF
         !
@@ -282,26 +266,26 @@ SUBROUTINE wbse_lanczos_diago()
         evc1_old(:,:,:) = evc1
         evc1(:,:,:) = evc1_new
         !
-        IF(MOD(iter,100) == 0) THEN
-           IF(iter > 5) THEN
-              CALL my_mkdir(tmp_lz)
-              CALL my_copy_lz(tmp_lz)
-           ENDIF
+        IF(n_steps_write_restart > 0 .AND. MOD(iter,n_steps_write_restart) == 0) THEN
+           CALL my_mkdir(tmp_dir_lan)
+           CALL copy_lan(tmp_dir_lan)
            !
            CALL lanczos_restart_write(nipol_input,ip,iter)
            CALL lanczos_evcs_write(evc1,evc1_old)
         ENDIF
         !
+        CALL update_bar_type(barra,'lan_diago',1)
+        !
      ENDDO lancz_loop
      !
      CALL lanczos_postpro_write(nipol_input,ip,pol_label_input(ip))
      !
-     lriter_restart = 1
+     ilan_restart = 1
      l_from_scratch = .TRUE.
      !
+     CALL stop_bar_type(barra,'lan_diago')
+     !
   ENDDO polarization_loop
-  !
-  WRITE(stdout,'(5x,"End of Lanczos diagonalization")')
   !
   DEALLOCATE(pol_index_input)
   DEALLOCATE(pol_label_input)
@@ -312,7 +296,7 @@ SUBROUTINE wbse_lanczos_diago()
   !
 END SUBROUTINE
 !
-SUBROUTINE my_copy_lz(tmp_lz)
+SUBROUTINE copy_lan(dir)
   !
   USE io_global,            ONLY : stdout
   USE mp_world,             ONLY : root,mpime,world_comm
@@ -324,7 +308,7 @@ SUBROUTINE my_copy_lz(tmp_lz)
   !
   ! I/O
   !
-  CHARACTER(LEN=256), INTENT(IN) :: tmp_lz
+  CHARACTER(LEN=*), INTENT(IN) :: dir
   !
   ! Workspace
   !
@@ -339,33 +323,33 @@ SUBROUTINE my_copy_lz(tmp_lz)
   !
   IF(mpime == root) THEN
     cp_source = TRIM(wbse_save_dir)//'/EVC1.dat'
-    cp_dest   = TRIM(tmp_lz)//'/EVC1.dat'
+    cp_dest   = TRIM(dir)//'/EVC1.dat'
     cp_status = f_copy(cp_source,cp_dest)
   ENDIF
   !
   CALL mp_bcast(cp_status,root,world_comm)
-  CALL errore('my_copy_lz','cannot copy evc1',cp_status)
+  CALL errore('copy_lan','cannot copy evc1',cp_status)
   !
   IF(mpime == root) THEN
     cp_source = TRIM(wbse_save_dir)//'/EVC1_OLD.dat'
-    cp_dest   = TRIM(tmp_lz)//'/EVC1_OLD.dat'
+    cp_dest   = TRIM(dir)//'/EVC1_OLD.dat'
     cp_status = f_copy(cp_source,cp_dest)
   ENDIF
   !
   CALL mp_bcast(cp_status,root,world_comm)
-  CALL errore('my_copy_lz','cannot copy evc1_old',cp_status)
+  CALL errore('copy_lan','cannot copy evc1_old',cp_status)
   !
   IF(mpime == root) THEN
     cp_source = TRIM(wbse_save_dir)//'/summary.xml'
-    cp_dest   = TRIM(tmp_lz)//'/summary.xml'
+    cp_dest   = TRIM(dir)//'/summary.xml'
     cp_status = f_copy(cp_source,cp_dest)
   ENDIF
   !
   CALL mp_bcast(cp_status,root,world_comm)
-  CALL errore('my_copy_lz','cannot copy summary',cp_status)
+  CALL errore('copy_lan','cannot copy summary',cp_status)
   !
   WRITE(stdout,*)
-  WRITE(stdout,"(5x,'Done tmp save in location : ',a)") TRIM(tmp_lz)
+  WRITE(stdout,"(5x,'Done tmp save in location : ',a)") TRIM(dir)
   WRITE(stdout,*)
   !
 END SUBROUTINE

@@ -149,8 +149,8 @@ SUBROUTINE do_spectrum()
      filename = TRIM(qe_prefix) // '.plot_chi.dat'
      filename_plot = TRIM(qe_prefix) // '.abs_spectrum.dat'
      !
-     WRITE(stdout,'(/5x,"Output file name: ",A20)') filename
-     WRITE(stdout,'(/5x,"Output file name: ",A20)') filename_plot
+     WRITE(stdout,'(/5x,"Output file name: ",a)') TRIM(filename)
+     WRITE(stdout,'(/5x,"Output file name: ",a)') TRIM(filename_plot)
      !
      WRITE(stdout,'(/,5x,"chi_i_j: dipole polarizability tensor in units of e^2*a_0^2/energy")')
      !
@@ -164,11 +164,11 @@ SUBROUTINE do_spectrum()
      !
      ! Units
      !
-     IF(units == 0) THEN     ! Ry
+     IF(units == 0) THEN
         WRITE(stdout,'(/,5x,"Functions are reported in \hbar.\omega Energy unit is (Ry)")')
-     ELSEIF(units == 1) THEN ! eV
+     ELSEIF(units == 1) THEN
         WRITE(stdout,'(/,5x,"Functions are reported in \hbar.\omega Energy unit is (eV)")')
-     ELSEIF(units == 2) THEN ! nm
+     ELSEIF(units == 2) THEN
         WRITE(stdout,'(/,5x,"Functions are reported in (nm), Energy unit is (eV)")')
      ENDIF
      !
@@ -484,8 +484,10 @@ SUBROUTINE do_spectrum()
         perceived_green = perceived_green/(1._DP*perceived_itermax)
         perceived_blue = perceived_blue/(1._DP*perceived_itermax)
         !
-        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') perceived_red,perceived_green,perceived_blue
-        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') perceived_red*255_DP,perceived_green*255_DP,perceived_blue*255_DP
+        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') &
+        & perceived_red,perceived_green,perceived_blue
+        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') &
+        & perceived_red*255._DP,perceived_green*255._DP,perceived_blue*255._DP
         !
      ENDIF
      !
@@ -658,15 +660,15 @@ CONTAINS
           WRITE(my_ip,'(i1)')ip
           file_ip = 'summary.'//TRIM(my_ip)//'.xml'
           !
-          CALL iotk_free_unit( iun, ierr )
-          CALL iotk_open_read( iun, FILE=TRIM(file_ip), IERR=ierr )
+          CALL iotk_free_unit(iun, ierr)
+          CALL iotk_open_read(iun, FILE=TRIM(file_ip), IERR=ierr)
           !
-          CALL iotk_scan_begin( iun, 'SUMMARY')
-          CALL iotk_scan_dat( iun, 'nspin', nspin )
-          CALL iotk_scan_dat( iun, 'nipol_input', nipol_input_tmp )
-          CALL iotk_scan_dat( iun, 'ipol_label', ipol_label_tmp )
-          CALL iotk_scan_dat( iun, 'n_lanczos', n_lzstep_tmp )
-          CALL iotk_scan_end( iun, 'SUMMARY' )
+          CALL iotk_scan_begin(iun, 'SUMMARY')
+          CALL iotk_scan_dat(iun, 'nspin', nspin)
+          CALL iotk_scan_dat(iun, 'nipol_input', nipol_input_tmp)
+          CALL iotk_scan_dat(iun, 'ipol_label', ipol_label_tmp)
+          CALL iotk_scan_dat(iun, 'n_lanczos', n_lzstep_tmp)
+          CALL iotk_scan_end(iun, 'SUMMARY')
           !
           WRITE(stdout,*)
           WRITE(stdout,'(5x,a)') 'Reading alpha beta zeta of the polarzation ' &
@@ -676,34 +678,34 @@ CONTAINS
              CALL errore('read_b_g_z_file', 'Error in lriter_stop < itermax0, reduce itermax0',1)
           ENDIF
           !
-          ALLOCATE(beta_store_tmp (n_lzstep_tmp,nspin))
+          ALLOCATE(beta_store_tmp(n_lzstep_tmp,nspin))
           ALLOCATE(gamma_store_tmp(n_lzstep_tmp,nspin))
           !
-          CALL iotk_scan_begin( iun, 'BETA_STORE' )
+          CALL iotk_scan_begin(iun, 'BETA_STORE')
           DO is = 1,nspin
-             CALL iotk_scan_dat( iun, 'beta_store_k', beta_store_tmp(1:n_lzstep_tmp,is) )
+             CALL iotk_scan_dat(iun, 'beta_store_k', beta_store_tmp(1:n_lzstep_tmp,is))
           ENDDO
-          CALL iotk_scan_end( iun, 'BETA_STORE' )
+          CALL iotk_scan_end(iun, 'BETA_STORE')
           !
-          CALL iotk_scan_begin( iun, 'GAMMA_STORE' )
+          CALL iotk_scan_begin(iun, 'GAMMA_STORE')
           DO is = 1,nspin
-             CALL iotk_scan_dat( iun, 'gamma_store_k', gamma_store_tmp(1:n_lzstep_tmp,is) )
+             CALL iotk_scan_dat(iun, 'gamma_store_k', gamma_store_tmp(1:n_lzstep_tmp,is))
           ENDDO
-          CALL iotk_scan_end( iun, 'GAMMA_STORE' )
+          CALL iotk_scan_end(iun, 'GAMMA_STORE')
           !
-          ALLOCATE(zeta_store_tmp (3,n_lzstep_tmp,nspin))
+          ALLOCATE(zeta_store_tmp(3,n_lzstep_tmp,nspin))
           !
-          CALL iotk_scan_begin( iun, 'ZETA_STORE' )
+          CALL iotk_scan_begin(iun, 'ZETA_STORE')
           !
           DO ip2 = 1,3
-             CALL iotk_scan_dat( iun, 'zeta_store_ipol_j', ip2 )
+             CALL iotk_scan_dat(iun, 'zeta_store_ipol_j', ip2)
              DO is = 1,nspin
-                CALL iotk_scan_dat( iun, 'zeta_store_k', zeta_store_tmp(ip2,1:n_lzstep_tmp,is) )
+                CALL iotk_scan_dat(iun, 'zeta_store_k', zeta_store_tmp(ip2,1:n_lzstep_tmp,is))
              ENDDO
           ENDDO
-          CALL iotk_scan_end( iun, 'ZETA_STORE' )
+          CALL iotk_scan_end(iun, 'ZETA_STORE')
           !
-          CALL iotk_close_read( iun )
+          CALL iotk_close_read(iun)
           !
           IF(nspin == 1) spin_channel = 1
           !

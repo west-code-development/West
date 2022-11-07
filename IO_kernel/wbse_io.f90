@@ -62,7 +62,7 @@ SUBROUTINE read_bse_pots_g2r(rho_all, fixed_band_i, fixed_band_j, ispin, single_
   USE control_flags,  ONLY : gamma_only
   USE fft_base,       ONLY : dffts
   USE pdep_io,        ONLY : pdep_read_G_and_distribute
-  USE gvect,          ONLY : ngm, ngmx
+  USE pwcom,          ONLY : npw,npwx
   USE fft_at_gamma,   ONLY : single_invfft_gamma
   USE fft_at_k,       ONLY : single_invfft_k
   USE westcom,        ONLY : wbse_init_save_dir
@@ -83,7 +83,7 @@ SUBROUTINE read_bse_pots_g2r(rho_all, fixed_band_i, fixed_band_j, ispin, single_
   REAL(DP), ALLOCATABLE :: rhoaux1(:), rhoaux2(:)
   COMPLEX(DP), ALLOCATABLE :: aux_g(:), aux_r(:)
   !
-  ALLOCATE(aux_g(ngmx))
+  ALLOCATE(aux_g(npwx))
   ALLOCATE(aux_r(dffts%nnr))
   !
   IF(fixed_band_j < fixed_band_i) THEN
@@ -104,8 +104,6 @@ SUBROUTINE read_bse_pots_g2r(rho_all, fixed_band_i, fixed_band_j, ispin, single_
   WRITE(my_labelj,'(i6.6)') band_j
   WRITE(my_spin,  '(i1)') ispin
   !
-  aux_g = (0._DP,0._DP)
-  !
   fname = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
           & '_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
   CALL pdep_read_G_and_distribute(fname, aux_g)
@@ -113,9 +111,9 @@ SUBROUTINE read_bse_pots_g2r(rho_all, fixed_band_i, fixed_band_j, ispin, single_
   ! G -> R
   !
   IF(gamma_only) THEN
-     CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Rho')
+     CALL single_invfft_gamma(dffts,npw,npwx,aux_g,aux_r,'Wave')
   ELSE
-     CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Rho') ! no igk
+     CALL single_invfft_k(dffts,npw,npwx,aux_g,aux_r,'Wave') ! no igk
   ENDIF
   !
   IF(single_only) THEN
@@ -147,8 +145,6 @@ SUBROUTINE read_bse_pots_g2r(rho_all, fixed_band_i, fixed_band_j, ispin, single_
      WRITE(my_labelj,'(i6.6)') band_j
      WRITE(my_spin,  '(i1)') ispin
      !
-     aux_g = (0._DP,0._DP)
-     !
      fname = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_labeli))//&
              &'_'//TRIM(ADJUSTL(my_labelj))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
      CALL pdep_read_G_and_distribute(fname,aux_g)
@@ -156,9 +152,9 @@ SUBROUTINE read_bse_pots_g2r(rho_all, fixed_band_i, fixed_band_j, ispin, single_
      ! G -> R
      !
      IF(gamma_only) THEN
-        CALL single_invfft_gamma(dffts,ngm,ngmx,aux_g,aux_r,'Rho')
+        CALL single_invfft_gamma(dffts,npw,npwx,aux_g,aux_r,'Wave')
      ELSE
-        CALL single_invfft_k(dffts,ngm,ngmx,aux_g,aux_r,'Rho') ! no igk
+        CALL single_invfft_k(dffts,npw,npwx,aux_g,aux_r,'Wave') ! no igk
      ENDIF
      !
      rhoaux2(:) = REAL(aux_r(:),KIND=DP)

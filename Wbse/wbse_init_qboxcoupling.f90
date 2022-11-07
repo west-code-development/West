@@ -18,7 +18,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   USE types_coulomb,        ONLY : pot3D
   USE westcom,              ONLY : wbse_init_save_dir,chi_kernel,l_xcchi,l_use_localise_repr,&
                                  & overlap_thr
-  USE gvect,                ONLY : ngm,ngmx
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : evc,psic
   USE fft_base,             ONLY : dffts
@@ -193,13 +192,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      IF((ig1 < 1) .OR. (ig1 > do_index)) GOTO 1111
      !
      ALLOCATE(rho_aux(dffts%nnr))
-     ALLOCATE(dvg(ngmx))
+     ALLOCATE(dvg(npwx))
      !
      IF(gamma_only) THEN
         IF(l_use_localise_repr) THEN
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd), psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
         ELSE
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd), psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
         ENDIF
         !
         rho_aux(:) = REAL(psic,KIND=DP) * AIMAG(psic)
@@ -217,7 +216,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
      rho_aux(:) = rho_aux/omega
      !
-     ALLOCATE(aux1_g(ngmx))
+     ALLOCATE(aux1_g(npwx))
      ALLOCATE(aux_r(dffts%nnr))
      ALLOCATE(aux1_r(dffts%nnr,nspin))
      ALLOCATE(aux_rr(dffts%nnr))
@@ -227,15 +226,15 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      ! aux_r -> aux1_g
      !
      IF(gamma_only) THEN
-        CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
+        CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
      ELSE
-        CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
+        CALL single_fwfft_k(dffts,npw,npwx,aux_r,aux1_g,'Wave')
      ENDIF
      !
      ! vc in fock like term
      !
      dvg(:) = (0.0_DP,0.0_DP)
-     DO ig = 1, ngm
+     DO ig = 1, npw
         dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
      ENDDO
      !
@@ -244,9 +243,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      ! aux1_g -> aux_r
      !
      IF(gamma_only) THEN
-        CALL single_invfft_gamma(dffts,ngm,ngmx,aux1_g,aux_r,'Rho')
+        CALL single_invfft_gamma(dffts,npw,npwx,aux1_g,aux_r,'Wave')
      ELSE
-        CALL single_invfft_k(dffts,ngm,ngmx,aux1_g,aux_r,'Rho')
+        CALL single_invfft_k(dffts,npw,npwx,aux1_g,aux_r,'Wave')
      ENDIF
      !
      aux1_r(:,:) = (0.0_DP,0.0_DP)
@@ -323,9 +322,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      aux1_g(:) = (0.0_DP, 0.0_DP)
      !
      IF(gamma_only) THEN
-        CALL single_fwfft_gamma(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
+        CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
      ELSE
-        CALL single_fwfft_k(dffts,ngm,ngmx,aux_r,aux1_g,'Rho')
+        CALL single_fwfft_k(dffts,npw,npwx,aux_r,aux1_g,'Wave')
      ENDIF
      !
      ! vc + vc/fxc X vc

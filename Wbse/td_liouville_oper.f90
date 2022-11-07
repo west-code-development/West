@@ -227,7 +227,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      IF(l_diag_term_only) GOTO 113
      !
      IF(l_bse_calculation) THEN
-        CALL wbse_bse_kernel(iks, current_spin, nbndval, evc1, evc1_new(:,:,iks))
+        CALL wbse_bse_kernel(current_spin, nbndval, evc1, evc1_new(:,:,iks))
      ENDIF
      !
 113  CONTINUE

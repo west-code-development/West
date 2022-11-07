@@ -10,44 +10,40 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-SUBROUTINE wbse_bse_kernel(iks, current_spin, nbndval_k, evc1, bse_kd1)
+SUBROUTINE wbse_bse_kernel(current_spin, nbndval_k, evc1, bse_kd1)
   !
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE pwcom,                ONLY : npwx,nks
-  USE westcom,              ONLY : nbndval0x,l_lanczos
+  USE westcom,              ONLY : nbndval0x
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: iks, current_spin, nbndval_k
+  INTEGER, INTENT(IN) :: current_spin, nbndval_k
   COMPLEX(DP), INTENT(IN) :: evc1(npwx,nbndval0x,nks)
   COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,nbndval0x)
   !
   IF(gamma_only) THEN
-     IF(l_lanczos) THEN
-        CALL bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, .TRUE.)
-     ELSE
-        CALL bse_kernel_finite_field_gamma (iks, current_spin, nbndval_k, evc1, bse_kd1, .FALSE.)
-     ENDIF
+     CALL bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   ELSE
      CALL errore('wbse_bse_kernel','Only Gamma is supported',1)
   ENDIF
   !
 END SUBROUTINE
 !
-SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse_kd1, lz_method)
+SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   !
   USE kinds,                 ONLY : DP
   USE fft_base,              ONLY : dffts
   USE wavefunctions,         ONLY : psic
   USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
-  USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma,&
-                                    double_invfft_gamma,double_fwfft_gamma
+  USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma,double_invfft_gamma,&
+                                  & double_fwfft_gamma
   USE mp_global,             ONLY : inter_image_comm,inter_bgrp_comm
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
-  USE westcom,               ONLY : nbnd_occ,nbndval0x,l_use_localise_repr,u_matrix,&
+  USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,l_use_localise_repr,u_matrix,&
                                   & index_matrix_lz,size_index_matrix_lz
   USE distribution_center,   ONLY : aband,bseparal
   !
@@ -55,8 +51,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: iks, current_spin, nbndval_k
-  LOGICAL, INTENT(IN) :: lz_method
+  INTEGER, INTENT(IN) :: current_spin, nbndval_k
   COMPLEX(DP), INTENT(IN) :: evc1(npwx,nbndval0x,nks)
   COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,nbndval0x)
   !
@@ -95,14 +90,12 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
         ENDDO
      ENDIF
      !
-     ! parallel loop
-     !
      size_index_matrix = size_index_matrix_lz(current_spin)
      !
      ALLOCATE(aux_bse2(npwx,nbndval0x))
      aux_bse2 = (0._DP,0._DP)
      !
-     IF(.NOT. lz_method) THEN
+     IF(.NOT. l_lanczos) THEN
         ALLOCATE(kd1_ij(npwx,size_index_matrix))
         kd1_ij(:,:) = (0._DP,0._DP)
      ENDIF
@@ -118,14 +111,11 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
         ibnd_index = INT(index_matrix_lz(ig1,1,current_spin))
         jbnd_index = INT(index_matrix_lz(ig1,2,current_spin))
         !
-        IF(lz_method) THEN
+        IF(l_lanczos) THEN
            !
            ! READ response at iq,ik,ispin
            !
-           caux(:) = (0._DP,0._DP)
            CALL read_bse_pots_g2r(caux, ibnd_index, jbnd_index, current_spin, .TRUE.)
-           !
-           psic(:) = (0._DP,0._DP)
            !
            IF(l_use_localise_repr) THEN
               CALL single_invfft_gamma(dffts,npw,npwx,aux_bse1(:,jbnd_index),psic,'Wave')
@@ -137,8 +127,6 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
            !
            ALLOCATE(gaux(npwx))
            !
-           gaux(:) = (0._DP,0._DP)
-           !
            CALL single_fwfft_gamma(dffts,npw,npwx,psic,gaux,'Wave')
            !
            aux_bse2(:,ibnd_index) = aux_bse2(:,ibnd_index) + gaux(:)
@@ -149,7 +137,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
            !
            ALLOCATE(gaux(npwx))
            !
-           CALL read_bse_pots_g2g(gaux, ibnd_index, jbnd_index, current_spin, .TRUE.)
+           CALL read_bse_pots_g2g(gaux, ibnd_index, jbnd_index, current_spin)
            !
            kd1_ij(:,ig1) = gaux(:)
            !
@@ -159,7 +147,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
         !
      ENDDO
      !
-     IF(.NOT. lz_method) THEN
+     IF(.NOT. l_lanczos) THEN
         CALL mp_sum(kd1_ij, inter_image_comm)
      ELSE
         CALL mp_sum(aux_bse2, inter_image_comm)
@@ -169,7 +157,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
      !
      ! LOOP OVER BANDS AT KPOINT
      !
-     IF(.NOT. lz_method) THEN
+     IF(.NOT. l_lanczos) THEN
         !
         ! Davidson method
         !
@@ -227,7 +215,6 @@ SUBROUTINE bse_kernel_finite_field_gamma(iks, current_spin, nbndval_k, evc1, bse
            !
            ! Back to reciprocal space
            !
-           psic(:) = (0._DP,0._DP)
            IF(il1 < nbvalloc) THEN
               psic(:) = CMPLX(raux1,raux2,KIND=DP)
            ELSE

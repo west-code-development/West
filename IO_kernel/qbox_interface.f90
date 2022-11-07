@@ -38,7 +38,7 @@ MODULE qbox_interface
     IMPLICIT NONE
     !
     INTEGER,INTENT(IN) :: current_spin,nbndval
-    CHARACTER(LEN=256),INTENT(IN) :: qbox_wfc_filename
+    CHARACTER(LEN=*),INTENT(IN) :: qbox_wfc_filename
     COMPLEX(DP),INTENT(OUT) :: evc(npwx,nbndval)
     !
     INTEGER :: iwfc, nwfcs, nspin, ispin, is, ir

@@ -11,17 +11,16 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbse_init_setup(code)
+SUBROUTINE wbse_init_setup()
   !-----------------------------------------------------------------------
   !
   USE westcom,          ONLY : localization,l_use_localise_repr,l_use_bisection_thr,&
-                             & l_use_ecutrho,nbnd_occ,wbse_save_dir,wbse_init_save_dir
+                             & l_use_ecutrho,wbse_init_save_dir
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
   !
   IMPLICIT NONE
   !
-  CHARACTER(LEN=9), INTENT(IN):: code
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   CALL do_setup()

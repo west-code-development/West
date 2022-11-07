@@ -646,7 +646,7 @@ CONTAINS
     INTEGER :: iun, ierr, is
     INTEGER :: nipol_input_tmp, nspin
     CHARACTER(LEN=3) :: ipol_label_tmp
-    INTEGER :: n_lzstep_tmp
+    INTEGER :: nlan_tmp
     REAL(DP), ALLOCATABLE :: beta_store_tmp(:,:)
     REAL(DP), ALLOCATABLE :: gamma_store_tmp(:,:)
     COMPLEX(DP), ALLOCATABLE :: zeta_store_tmp(:,:,:)
@@ -667,40 +667,40 @@ CONTAINS
           CALL iotk_scan_dat(iun, 'nspin', nspin)
           CALL iotk_scan_dat(iun, 'nipol_input', nipol_input_tmp)
           CALL iotk_scan_dat(iun, 'ipol_label', ipol_label_tmp)
-          CALL iotk_scan_dat(iun, 'n_lanczos', n_lzstep_tmp)
+          CALL iotk_scan_dat(iun, 'n_lanczos', nlan_tmp)
           CALL iotk_scan_end(iun, 'SUMMARY')
           !
           WRITE(stdout,*)
           WRITE(stdout,'(5x,a)') 'Reading alpha beta zeta of the polarzation ' &
           & //TRIM(ipol_label_tmp)//' from file '//TRIM(file_ip)
           !
-          IF(n_lzstep_tmp < itermax0) THEN
+          IF(nlan_tmp < itermax0) THEN
              CALL errore('read_b_g_z_file', 'Error in lriter_stop < itermax0, reduce itermax0',1)
           ENDIF
           !
-          ALLOCATE(beta_store_tmp(n_lzstep_tmp,nspin))
-          ALLOCATE(gamma_store_tmp(n_lzstep_tmp,nspin))
+          ALLOCATE(beta_store_tmp(nlan_tmp,nspin))
+          ALLOCATE(gamma_store_tmp(nlan_tmp,nspin))
           !
           CALL iotk_scan_begin(iun, 'BETA_STORE')
           DO is = 1,nspin
-             CALL iotk_scan_dat(iun, 'beta_store_k', beta_store_tmp(1:n_lzstep_tmp,is))
+             CALL iotk_scan_dat(iun, 'beta_store_k', beta_store_tmp(1:nlan_tmp,is))
           ENDDO
           CALL iotk_scan_end(iun, 'BETA_STORE')
           !
           CALL iotk_scan_begin(iun, 'GAMMA_STORE')
           DO is = 1,nspin
-             CALL iotk_scan_dat(iun, 'gamma_store_k', gamma_store_tmp(1:n_lzstep_tmp,is))
+             CALL iotk_scan_dat(iun, 'gamma_store_k', gamma_store_tmp(1:nlan_tmp,is))
           ENDDO
           CALL iotk_scan_end(iun, 'GAMMA_STORE')
           !
-          ALLOCATE(zeta_store_tmp(3,n_lzstep_tmp,nspin))
+          ALLOCATE(zeta_store_tmp(3,nlan_tmp,nspin))
           !
           CALL iotk_scan_begin(iun, 'ZETA_STORE')
           !
           DO ip2 = 1,3
              CALL iotk_scan_dat(iun, 'zeta_store_ipol_j', ip2)
              DO is = 1,nspin
-                CALL iotk_scan_dat(iun, 'zeta_store_k', zeta_store_tmp(ip2,1:n_lzstep_tmp,is))
+                CALL iotk_scan_dat(iun, 'zeta_store_k', zeta_store_tmp(ip2,1:nlan_tmp,is))
              ENDDO
           ENDDO
           CALL iotk_scan_end(iun, 'ZETA_STORE')

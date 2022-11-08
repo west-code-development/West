@@ -131,9 +131,9 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          !
-         fname = TRIM( wstat_restart_dir ) // '/V'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wstat_restart_dir)//'/V'//my_label//'.dat'
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
-         fname = TRIM( wstat_restart_dir ) // '/N'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wstat_restart_dir)//'/N'//my_label//'.dat'
          CALL pdep_merge_and_write_G(fname,dng(:,local_j))
          !
       ENDDO
@@ -257,13 +257,13 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          !
-         fname = TRIM( wstat_restart_dir ) // '/V'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wstat_restart_dir)//'/V'//my_label//'.dat'
          IF (PRESENT (lastdone_iq)) THEN
             CALL pdep_merge_and_write_G(fname,dvg(:,local_j),lastdone_iq)
          ELSE
             CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
          ENDIF
-         fname = TRIM( wstat_restart_dir ) // '/N'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wstat_restart_dir)//'/N'//my_label//'.dat'
          IF (PRESENT (lastdone_iq)) THEN
             CALL pdep_merge_and_write_G(fname,dng(:,local_j),lastdone_iq)
          ELSE
@@ -314,9 +314,9 @@ MODULE wstat_restart
          CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( 'hr_vr.dat' ) )
          DO ip = 1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
-            fname = 'V'//TRIM(ADJUSTL(my_label))//'.dat'
+            fname = 'V'//my_label//'.dat'
             CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
-            fname = 'N'//TRIM(ADJUSTL(my_label))//'.dat'
+            fname = 'N'//my_label//'.dat'
             CALL remove_if_present( TRIM( wstat_restart_dir ) // '/' // TRIM( fname ) )
          ENDDO
          ierr = f_rmdir( TRIM( wstat_restart_dir ) )
@@ -637,13 +637,13 @@ MODULE wstat_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j>nbase) CYCLE
          !
-         fname = TRIM( wstat_restart_dir ) // '/V'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wstat_restart_dir)//'/V'//my_label//'.dat'
          IF ( PRESENT(iq) ) THEN
             CALL pdep_read_G_and_distribute(fname,dvg(:,local_j),iq)
          ELSE
             CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
          ENDIF
-         fname = TRIM( wstat_restart_dir ) // '/N'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wstat_restart_dir)//'/N'//my_label//'.dat'
          IF ( PRESENT(iq) ) THEN
             CALL pdep_read_G_and_distribute(fname,dng(:,local_j),iq)
          ELSE

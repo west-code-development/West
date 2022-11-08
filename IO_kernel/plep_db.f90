@@ -131,7 +131,7 @@ MODULE plep_db
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > n_pdep_eigen) CYCLE
          !
-         fname = TRIM(wbse_save_dir)//'/E'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wbse_save_dir)//'/E'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
          !
       ENDDO
@@ -289,7 +289,7 @@ MODULE plep_db
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > n_eigen_to_get) CYCLE
          !
-         fname = TRIM(wbse_save_dir)//'/E'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(wbse_save_dir)//'/E'//my_label//'.dat'
          CALL plep_read_G_and_distribute(fname,dvg_exc(:,:,:,local_j))
          !
       ENDDO

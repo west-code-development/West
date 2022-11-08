@@ -202,9 +202,9 @@ MODULE wbse_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > nbase) CYCLE
          !
-         fname = TRIM(dirname)//'/V'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(dirname)//'/V'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
-         fname = TRIM(dirname)//'/N'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(dirname)//'/N'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dng_exc(:,:,:,local_j))
          !
       ENDDO
@@ -395,9 +395,9 @@ MODULE wbse_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > nbase) CYCLE
          !
-         fname = TRIM(dirname)//'/V'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(dirname)//'/V'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
-         fname = TRIM(dirname)//'/N'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(dirname)//'/N'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dng_exc(:,:,:,local_j))
          !
       ENDDO
@@ -449,9 +449,9 @@ MODULE wbse_restart
          CALL remove_if_present(TRIM(dirname)//'/vr.dat')
          DO ip = 1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
-            fname = 'V'//TRIM(ADJUSTL(my_label))//'.dat'
+            fname = 'V'//my_label//'.dat'
             CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
-            fname = 'N'//TRIM(ADJUSTL(my_label))//'.dat'
+            fname = 'N'//my_label//'.dat'
             CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
          ENDDO
          ierr = f_rmdir(TRIM(dirname))
@@ -882,9 +882,9 @@ MODULE wbse_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > nbase) CYCLE
          !
-         fname = TRIM(dirname)//'/V'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(dirname)//'/V'//my_label//'.dat'
          CALL plep_read_G_and_distribute(fname,dvg_exc(:,:,:,local_j))
-         fname = TRIM(dirname)//'/N'//TRIM(ADJUSTL(my_label))//'.dat'
+         fname = TRIM(dirname)//'/N'//my_label//'.dat'
          CALL plep_read_G_and_distribute(fname,dng_exc(:,:,:,local_j))
          !
       ENDDO

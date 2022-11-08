@@ -157,17 +157,17 @@ SUBROUTINE do_dip()
               iaux = iaux+1
               WRITE(label_d,'(I9)') iaux
               !
-              CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').trans',trans)
+              CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').trans',trans)
               IF(gamma_only) THEN
                  aux_r = dip_cart_r(istate,jstate,:)
-                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').re',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').re',aux_r)
                  aux_r = 0._DP
-                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').im',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').im',aux_r)
               ELSE
                  aux_r = REAL(dip_cart_c(istate,jstate,:),KIND=DP)
-                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').re',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').re',aux_r)
                  aux_r = AIMAG(dip_cart_c(istate,jstate,:))
-                 CALL json%add('output.D.K'//label_k//'.dipole('//TRIM(ADJUSTL(label_d))//').im',aux_r)
+                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').im',aux_r)
               ENDIF
            ENDDO
         ENDDO

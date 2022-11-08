@@ -444,7 +444,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM(wbse_init_save_dir)//'aux_imageid_'//TRIM(ADJUSTL(my_label))//'.dat'
+      filename = TRIM(wbse_init_save_dir)//'aux_imageid_'//my_label//'.dat'
       !
       IF(my_pool_id /= 0) RETURN
       IF(my_bgrp_id /= 0) RETURN
@@ -510,7 +510,7 @@ MODULE wbse_init_restart
       !
       image_id = bseparal%mylevelid
       WRITE(my_label,'(i6.6)') image_id
-      filename = TRIM(wbse_init_save_dir)//'aux_imageid_'//TRIM(ADJUSTL(my_label))//'.dat'
+      filename = TRIM(wbse_init_save_dir)//'aux_imageid_'//my_label//'.dat'
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !

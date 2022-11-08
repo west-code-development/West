@@ -54,12 +54,12 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   INTEGER :: iu, ig, stat
   CHARACTER(LEN=:), ALLOCATABLE :: lockfile
-  CHARACTER(LEN=:), ALLOCATABLE :: filename
+  CHARACTER(LEN=:), ALLOCATABLE :: fname
   REAL(DP), ALLOCATABLE :: aux_rr(:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux1_r(:,:),aux1_g(:)
   REAL(DP), ALLOCATABLE :: frspin(:,:)
   !
-  CHARACTER(LEN=1) :: my_spin
+  CHARACTER :: my_spin
   CHARACTER(LEN=6) :: my_labeliq, my_labelik
   CHARACTER(LEN=6) :: my_label1, my_label2
   CHARACTER(LEN=256) :: kernel, driver
@@ -93,8 +93,8 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   WRITE(my_labelik,'(i6.6)') iks
   WRITE(my_spin,'(i1)') current_spin
   !
-  CALL io_push_title('Wbse_init for ' // TRIM(kernel) // ' with ' // TRIM(driver) // ' driver' // &
-       & ' ik'// TRIM(my_labelik) // ' iq'// TRIM(my_labeliq) // ' ispin'// TRIM(my_spin))
+  CALL io_push_title('Wbse_init for '//TRIM(kernel)//' with '//TRIM(driver)//' driver'//&
+       & ' ik'//my_labelik//' iq'//my_labeliq//' ispin'//my_spin)
   !
   aband = idistribute()
   CALL aband%init(nbndval,'i','bse_nbndval',.TRUE.)
@@ -143,13 +143,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
         ENDDO
      ENDDO
      !
-     filename = TRIM(wbse_init_save_dir)//'/index_matrix_iq'//TRIM(ADJUSTL(my_labeliq))//'_ik'//&
-                & TRIM(ADJUSTL(my_labelik))//'_spin'//TRIM(ADJUSTL(my_spin))//'.dat'
-     CALL wbse_index_matrix_write(filename,do_index,2,index_matrix(1:do_index,:))
+     fname = TRIM(wbse_init_save_dir)//'/index_matrix_iq'//my_labeliq//'_ik'//&
+             & my_labelik//'_spin'//my_spin//'.dat'
+     CALL wbse_index_matrix_write(fname,do_index,2,index_matrix(1:do_index,:))
   ELSE
-     filename = TRIM(wbse_init_save_dir)//'/index_matrix_iq'//TRIM(ADJUSTL(my_labeliq))//'_ik'//&
-                & TRIM(ADJUSTL(my_labelik))//'_spin'//TRIM(ADJUSTL(my_spin))//'.dat'
-     CALL wbse_index_matrix_read(filename,tmp_size,do_index,2,index_matrix)
+     fname = TRIM(wbse_init_save_dir)//'/index_matrix_iq'//my_labeliq//'_ik'//&
+             & my_labelik//'_spin'//my_spin//'.dat'
+     CALL wbse_index_matrix_read(fname,tmp_size,do_index,2,index_matrix)
   ENDIF
   !
   ALLOCATE(restart_matrix(do_index))
@@ -158,9 +158,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   calc_is_done = .FALSE.
   IF(l_restart_calc) THEN
-      filename = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//TRIM(ADJUSTL(my_labeliq))//'_ik'//&
-                 & TRIM(ADJUSTL(my_labelik))//'_spin'//TRIM(ADJUSTL(my_spin))//'.dat'
-      CALL wbse_stat_restart_read(filename,do_index,restart_matrix,calc_is_done)
+      fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
+              & my_labelik//'_spin'//my_spin//'.dat'
+      CALL wbse_stat_restart_read(fname,do_index,restart_matrix,calc_is_done)
   ENDIF
   !
   IF(calc_is_done) GOTO 2222
@@ -262,19 +262,19 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      aux_rr(:) = REAL(aux_r,KIND=DP)/SQRT(omega) ! scale down pert.
      aux_rr(:) = 0.5_DP * aux_rr ! change from rydberg to hartree
      !
-     ! Write aux_rr --> filename.xml
+     ! Write aux_rr --> fname.xml
      !
-     filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+     fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
      !
-     CALL write_function3d(filename,aux_rr,dffts)
+     CALL write_function3d(fname,aux_rr,dffts)
      !
      ! DUMP A LOCK FILE
      !
      IF(me_bgrp == 0) THEN
         lockfile = 'I.'//itoa(my_image_id)//'.lock'
         OPEN(NEWUNIT=iu,FILE=lockfile)
-        filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
-        WRITE(iu,'(A)') filename
+        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+        WRITE(iu,'(A)') fname
         CLOSE(iu)
         !
         CALL sleep_and_wait_for_lock_to_be_removed(lockfile, '["response"]')
@@ -287,17 +287,17 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      IF(lsda) THEN
         ALLOCATE(frspin(dffts%nnr,2))
         !
-        filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
-        CALL read_function3d(filename,frspin(:,1),dffts)
-        filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
-        CALL read_function3d(filename,frspin(:,2),dffts)
+        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
+        CALL read_function3d(fname,frspin(:,1),dffts)
+        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
+        CALL read_function3d(fname,frspin(:,2),dffts)
         !
         aux_rr(:) = frspin(:,1) + frspin(:,2)
         !
         DEALLOCATE(frspin)
      ELSE
-        filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
-        CALL read_function3d(filename,aux_rr,dffts)
+        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
+        CALL read_function3d(fname,aux_rr,dffts)
      ENDIF
      !
      DO ir = 1, dffts%nnr
@@ -337,9 +337,8 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      WRITE(my_label2,'(i6.6)') jbnd
      WRITE(my_spin,'(i1)') current_spin
      !
-     filename = TRIM(wbse_init_save_dir)//'/E'//TRIM(ADJUSTL(my_label1))//'_'//&
-                & TRIM(ADJUSTL(my_label2))//'_'//TRIM(ADJUSTL(my_spin))//'.dat'
-     CALL pdep_merge_and_write_G(filename,dvg)
+     fname = TRIM(wbse_init_save_dir)//'/E'//my_label1//'_'//my_label2//'_'//my_spin//'.dat'
+     CALL pdep_merge_and_write_G(fname,dvg)
      !
      DEALLOCATE(rho_aux, dvg)
      DEALLOCATE(aux1_g)
@@ -358,26 +357,26 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      ENDDO
      !
      calc_is_done = .FALSE.
-     filename = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//TRIM(ADJUSTL(my_labeliq))//'_ik'//&
-                & TRIM(ADJUSTL(my_labelik))//'_spin'//TRIM(ADJUSTL(my_spin))//'.dat'
-     CALL wbse_stat_restart_write(filename,do_index,restart_matrix,calc_is_done)
+     fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
+             & my_labelik//'_spin'//my_spin//'.dat'
+     CALL wbse_stat_restart_write(fname,do_index,restart_matrix,calc_is_done)
      !
      ! clean up
      !
      IF(me_bgrp == 0) THEN
-        filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
-        OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
+        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+        OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
         IF(stat == 0) CLOSE(iu, STATUS='DELETE')
         IF(lsda) THEN
-           filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
-           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
+           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
+           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
            IF(stat == 0) CLOSE(iu, STATUS='DELETE')
-           filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
-           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
+           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
+           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
            IF(stat == 0) CLOSE(iu, STATUS='DELETE')
         ELSE
-           filename = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
-           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=filename, STATUS='OLD')
+           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
+           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
            IF(stat == 0) CLOSE(iu, STATUS='DELETE')
         ENDIF
      ENDIF
@@ -387,9 +386,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   ENDDO
   !
   calc_is_done = .TRUE.
-  filename = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//TRIM(ADJUSTL(my_labeliq))//'_ik'//&
-             & TRIM(ADJUSTL(my_labelik))//'_spin'//TRIM(ADJUSTL(my_spin))//'.dat'
-  CALL wbse_stat_restart_write(filename,do_index,restart_matrix,calc_is_done)
+  fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
+          & my_labelik//'_spin'//my_spin//'.dat'
+  CALL wbse_stat_restart_write(fname,do_index,restart_matrix,calc_is_done)
   !
 2222 CONTINUE
   !

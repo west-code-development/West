@@ -16,7 +16,7 @@ SUBROUTINE bse_hqp_psi(iks, nbvalloc, psi, dpsi)
   USE kinds,               ONLY : DP
   USE noncollin_module,    ONLY : npol
   USE wavefunctions,       ONLY : evc
-  USE mp_bands,            ONLY : intra_bgrp_comm
+  USE mp_global,           ONLY : intra_bgrp_comm
   USE mp,                  ONLY : mp_sum
   USE control_flags,       ONLY : gamma_only
   USE pwcom,               ONLY : npw,npwx,nbnd,et

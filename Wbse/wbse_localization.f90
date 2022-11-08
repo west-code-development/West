@@ -17,7 +17,6 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : aband
-  USE class_idistribute,    ONLY : idistribute
   USE westcom,              ONLY : l_use_bisection_thr,wfc_from_qbox
   USE wavefunctions,        ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
@@ -26,8 +25,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   USE fft_at_k,             ONLY : single_invfft_k
   USE pwcom,                ONLY : igk_k,npw,npwx
   USE gvect,                ONLY : gstart
-  USE mp_bands,             ONLY : intra_bgrp_comm
-  USE mp_global,            ONLY : inter_image_comm
+  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE qbox_interface,       ONLY : load_qbox_wfc
   USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection

@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
+SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
   !-----------------------------------------------------------------------
   !
   USE json_module,      ONLY : json_file
@@ -43,9 +43,9 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
   INTEGER, INTENT(IN) :: driver(num_drivers)
   TYPE(json_file), INTENT(INOUT) :: json
   !
-  IF ( mpime == root ) THEN
+  IF(mpime == root) THEN
      !
-     IF ( ANY(driver(:)==1) ) THEN
+     IF(ANY(driver(:)==1)) THEN
         !
         CALL json%add('input.input_west.qe_prefix',TRIM(qe_prefix))
         CALL json%add('input.input_west.west_prefix',TRIM(west_prefix))
@@ -53,7 +53,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==2) ) THEN
+     IF(ANY(driver(:)==2)) THEN
         !
         CALL json%add('input.wstat_control.wstat_calculation',TRIM(wstat_calculation))
         CALL json%add('input.wstat_control.n_pdep_eigen',n_pdep_eigen)
@@ -72,7 +72,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==3) ) THEN
+     IF(ANY(driver(:)==3)) THEN
         !
         CALL json%add('input.wfreq_control.wfreq_calculation',TRIM(wfreq_calculation))
         CALL json%add('input.wfreq_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
@@ -95,7 +95,7 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==4) ) THEN
+     IF(ANY(driver(:)==4)) THEN
         !
         CALL json%add('input.westpp_control.westpp_calculation',TRIM(westpp_calculation))
         CALL json%add('input.westpp_control.westpp_range',westpp_range)
@@ -110,13 +110,13 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==5) ) THEN
+     IF(ANY(driver(:)==5)) THEN
         !
         CALL json%add('input.server_control.document',TRIM(document))
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==6) ) THEN
+     IF(ANY(driver(:)==6)) THEN
         !
         CALL json%add('input.wbse_init_control.wbse_init_calculation',TRIM(wbse_init_calculation))
         CALL json%add('input.wbse_init_control.localization',TRIM(localization))
@@ -126,9 +126,9 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
         CALL json%add('input.wbse_init_control.spin_channel',spin_channel)
         !
-     END IF
+     ENDIF
      !
-     IF ( ANY(driver(:)==7) ) THEN
+     IF(ANY(driver(:)==7)) THEN
         !
         CALL json%add('input.wbse_control.wbse_calculation',TRIM(wbse_calculation))
         CALL json%add('input.wbse_control.solver',TRIM(solver))
@@ -148,9 +148,9 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
         CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
         !
-     END IF
+     ENDIF
      !
-     IF ( ANY(driver(:)==8) ) THEN
+     IF(ANY(driver(:)==8)) THEN
         !
         CALL json%add('input.wbsepp_control.wbsepp_calculation',TRIM(wbsepp_calculation))
         CALL json%add('input.wbsepp_control.n_liouville_read_from_file',n_liouville_read_from_file)
@@ -170,13 +170,13 @@ SUBROUTINE add_intput_parameters_to_json_file( num_drivers, driver, json )
         CALL json%add('input.wbsepp_control.epsil',epsil)
         CALL json%add('input.wbsepp_control.spin_channel',spin_channel)
         !
-     END IF
+     ENDIF
      !
   ENDIF
   !
 END SUBROUTINE
 !
-SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
+SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
   !
   USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512
   USE forpy_mod,        ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,dict_create,&
@@ -240,11 +240,11 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   CALL start_clock('fetch_input')
   !
-  IF ( mpime == root ) THEN
+  IF(mpime == root) THEN
      !
      IERR = import_py(pymod, 'west_fetch_input')
      !
-     IF ( ANY(driver(:)==1) ) THEN
+     IF(ANY(driver(:)==1)) THEN
         !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
@@ -267,9 +267,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==2) ) THEN
+     IF(ANY(driver(:)==2)) THEN
         !
-        IF ( gamma_only ) THEN
+        IF(gamma_only) THEN
            nq = 1
         ELSE
            nq = nk1*nk2*nk3
@@ -306,7 +306,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%getitem(tmp_obj, 'qlist')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
-        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
         ALLOCATE(qlist(list_len))
         DO i = 0, list_len-1 ! Python indices start at 0
            IERR = tmp_list%getitem(qlist(i+1), i) ! Fortran indices start at 1
@@ -318,7 +318,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==3) ) THEN
+     IF(ANY(driver(:)==3)) THEN
         !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
@@ -347,7 +347,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         IERR = return_dict%getitem(tmp_obj, 'qp_bands')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
-        IF( ALLOCATED(qp_bands) ) DEALLOCATE(qp_bands)
+        IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
         ALLOCATE(qp_bands(list_len))
         DO i = 0, list_len-1 ! Python indices start at 0
            IERR = tmp_list%getitem(qp_bands(i+1), i) ! Fortran indices start at 1
@@ -378,7 +378,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==4) ) THEN
+     IF(ANY(driver(:)==4)) THEN
         !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
@@ -428,7 +428,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==5) ) THEN
+     IF(ANY(driver(:)==5)) THEN
         !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
@@ -449,9 +449,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==6) ) THEN
+     IF(ANY(driver(:)==6)) THEN
         !
-        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
         ALLOCATE(qlist(1))
         qlist = (/1/)
         !
@@ -480,7 +480,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==7) ) THEN
+     IF(ANY(driver(:)==7)) THEN
         !
         IERR = tuple_create(args, 3)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
@@ -517,9 +517,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==8) ) THEN
+     IF(ANY(driver(:)==8)) THEN
         !
-        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
         ALLOCATE(qlist(1))
         qlist = (/1/)
         !
@@ -571,15 +571,15 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   ! BCAST & CHECKS
   !
-  IF ( ANY(driver(:)==1) ) THEN
+  IF(ANY(driver(:)==1)) THEN
      !
      CALL mp_bcast(qe_prefix,root,world_comm); prefix = qe_prefix
      CALL mp_bcast(west_prefix,root,world_comm)
-     CALL mp_bcast(outdir,root,world_comm); tmp_dir = trimcheck (outdir)
+     CALL mp_bcast(outdir,root,world_comm); tmp_dir = trimcheck(outdir)
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==2) ) THEN
+  IF(ANY(driver(:)==2)) THEN
      !
      CALL mp_bcast(wstat_calculation,root,world_comm)
      CALL mp_bcast(n_pdep_eigen,root,world_comm)
@@ -597,46 +597,46 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
      IF(mpime /= root) THEN
-        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
         ALLOCATE(qlist(nq))
      ENDIF
      CALL mp_bcast(qlist,root,world_comm)
      !
      ! CHECKS
      !
-     IF( n_pdep_times < 2 ) CALL errore('fetch_input','Err: n_pdep_times<2',1)
-     IF( n_pdep_eigen < 1 ) CALL errore('fetch_input','Err: n_pdep_eigen<1',1)
-     IF( n_pdep_eigen*n_pdep_times < nimage ) CALL errore('fetch_input','Err: n_pdep_eigen*n_pdep_times<nimage',1)
-     IF( n_pdep_maxiter < 1 ) CALL errore('fetch_input','Err: n_pdep_maxiter<1',1)
-     IF( n_dfpt_maxiter < 1 ) CALL errore('fetch_input','Err: n_dfpt_maxiter<1',1)
-     IF( n_pdep_read_from_file < 0 ) CALL errore('fetch_input','Err: n_pdep_read_from_file<0',1)
-     IF( n_pdep_read_from_file > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_read_from_file>n_pdep_eigen',1)
-     IF( tr2_dfpt <= 0._DP ) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
-     IF( trev_pdep <= 0._DP ) CALL errore('fetch_input','Err: trev_pdep<0.',1)
-     IF( trev_pdep_rel <= 0._DP ) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
-     IF( n_pdep_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen',1)
-     IF( n_pdep_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_times',1)
-     IF( n_pdep_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_maxiter',1)
-     IF( n_dfpt_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_dfpt_maxiter',1)
-     IF( n_pdep_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_read_from_file',1)
-     IF( n_steps_write_restart == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
+     IF(n_pdep_times < 2) CALL errore('fetch_input','Err: n_pdep_times<2',1)
+     IF(n_pdep_eigen < 1) CALL errore('fetch_input','Err: n_pdep_eigen<1',1)
+     IF(n_pdep_eigen*n_pdep_times < nimage) CALL errore('fetch_input','Err: n_pdep_eigen*n_pdep_times<nimage',1)
+     IF(n_pdep_maxiter < 1) CALL errore('fetch_input','Err: n_pdep_maxiter<1',1)
+     IF(n_dfpt_maxiter < 1) CALL errore('fetch_input','Err: n_dfpt_maxiter<1',1)
+     IF(n_pdep_read_from_file < 0) CALL errore('fetch_input','Err: n_pdep_read_from_file<0',1)
+     IF(n_pdep_read_from_file > n_pdep_eigen) CALL errore('fetch_input','Err: n_pdep_read_from_file>n_pdep_eigen',1)
+     IF(tr2_dfpt <= 0._DP) CALL errore('fetch_input','Err: tr2_dfpt<0.',1)
+     IF(trev_pdep <= 0._DP) CALL errore('fetch_input','Err: trev_pdep<0.',1)
+     IF(trev_pdep_rel <= 0._DP) CALL errore('fetch_input','Err: trev_pdep_rel<0.',1)
+     IF(n_pdep_eigen == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen',1)
+     IF(n_pdep_times == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_times',1)
+     IF(n_pdep_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_maxiter',1)
+     IF(n_dfpt_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_dfpt_maxiter',1)
+     IF(n_pdep_read_from_file == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_read_from_file',1)
+     IF(n_steps_write_restart == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
      IF(gamma_only) THEN
-        IF (SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1',1)
+        IF(SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1',1)
      ELSE
-        IF (SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3',1)
+        IF(SIZE(qlist)>nk1*nk2*nk3) CALL errore('fetch_input','Err: SIZE(qlist)>nk1*nk2*nk3',1)
      ENDIF
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==3) ) THEN
+  IF(ANY(driver(:)==3)) THEN
      !
      CALL mp_bcast(wfreq_calculation,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(qp_bandrange,root,world_comm)
-     IF( mpime == root ) n_qp_bands = SIZE(qp_bands)
+     IF(mpime == root) n_qp_bands = SIZE(qp_bands)
      CALL mp_bcast(n_qp_bands,root,world_comm)
-     IF( mpime /= root ) THEN
-        IF( ALLOCATED(qp_bands) ) DEALLOCATE(qp_bands)
+     IF(mpime /= root) THEN
+        IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
         ALLOCATE(qp_bands(n_qp_bands))
      ENDIF
      CALL mp_bcast(qp_bands,root,world_comm)
@@ -659,44 +659,44 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      IF(.NOT. gamma_only) THEN
         DO i = 1, 9
-           IF( wfreq_calculation(i:i) == 'H' ) CALL errore('fetch_input','Err: QDET requires gamma_only',1)
+           IF(wfreq_calculation(i:i) == 'H') CALL errore('fetch_input','Err: QDET requires gamma_only',1)
         ENDDO
      ENDIF
      IF(.NOT. l_enable_off_diagonal) THEN
         DO i = 1, 9
-           IF( wfreq_calculation(i:i) == 'H' ) CALL errore('fetch_input','Err: QDET requires l_enable_off_diagonal',1)
+           IF(wfreq_calculation(i:i) == 'H') CALL errore('fetch_input','Err: QDET requires l_enable_off_diagonal',1)
         ENDDO
      ENDIF
-     IF( n_lanczos < 2 ) CALL errore('fetch_input','Err: n_lanczos<2',1)
-     IF( n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use<1',1)
-     IF( n_pdep_eigen_to_use > n_pdep_eigen ) CALL errore('fetch_input','Err: n_pdep_eigen_to_use>n_pdep_eigen',1)
-     IF( n_imfreq < 1 ) CALL errore('fetch_input','Err: n_imfreq<1',1)
-     IF( n_refreq < 1 ) CALL errore('fetch_input','Err: n_refreq<1',1)
-     IF( n_spectralf < 2 ) CALL errore('fetch_input','Err: n_spectralf<1',1)
-     IF( qp_bandrange(1) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
-     IF( qp_bandrange(2) < 1 ) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
-     IF( qp_bandrange(2) < qp_bandrange(1) ) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
-     IF( qp_bands(1) /= 0 ) THEN
+     IF(n_lanczos < 2) CALL errore('fetch_input','Err: n_lanczos<2',1)
+     IF(n_pdep_eigen_to_use < 1) CALL errore('fetch_input','Err: n_pdep_eigen_to_use<1',1)
+     IF(n_pdep_eigen_to_use > n_pdep_eigen) CALL errore('fetch_input','Err: n_pdep_eigen_to_use>n_pdep_eigen',1)
+     IF(n_imfreq < 1) CALL errore('fetch_input','Err: n_imfreq<1',1)
+     IF(n_refreq < 1) CALL errore('fetch_input','Err: n_refreq<1',1)
+     IF(n_spectralf < 2) CALL errore('fetch_input','Err: n_spectralf<1',1)
+     IF(qp_bandrange(1) < 1) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
+     IF(qp_bandrange(2) < 1) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
+     IF(qp_bandrange(2) < qp_bandrange(1)) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
+     IF(qp_bands(1) /= 0) THEN
         DO i = 0, SIZE(qp_bands)-1 ! Python indices start at 0
-           IF( qp_bands(i+1) < 1 ) CALL errore('fetch_input','Err: qp_bands<1',1)
-           IF( i /= SIZE(qp_bands)-1 ) THEN
-              IF( qp_bands(i+1) >= qp_bands(i+2) ) CALL errore('fetch_input','Err: qp_bands must be sorted in ascending order',1)
+           IF(qp_bands(i+1) < 1) CALL errore('fetch_input','Err: qp_bands<1',1)
+           IF(i /= SIZE(qp_bands)-1) THEN
+              IF(qp_bands(i+1) >= qp_bands(i+2)) CALL errore('fetch_input','Err: qp_bands must be sorted in ascending order',1)
            ENDIF
         ENDDO
      ENDIF
-     IF( ecut_imfreq <= 0._DP ) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
-     IF( ecut_refreq <= 0._DP ) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
-     IF( ecut_spectralf(2) < ecut_spectralf(1) ) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
-     IF( wfreq_eta <= 0._DP ) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
-     IF( n_secant_maxiter < 0 ) CALL errore('fetch_input','Err: n_secant_maxiter<0',1)
-     IF( trev_secant <= 0._DP ) CALL errore('fetch_input','Err: trev_secant<0.',1)
-     IF( l_enable_off_diagonal .AND. .NOT. gamma_only ) CALL errore('fetch_input','Err: off-diagonal implemented for gamma only',1)
-     IF( n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
-     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
-     IF( n_imfreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_imfreq',1)
-     IF( n_refreq == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_refreq',1)
-     IF( n_secant_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_secant_maxiter',1)
-     IF( n_spectralf == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_spectralf',1)
+     IF(ecut_imfreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
+     IF(ecut_refreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
+     IF(ecut_spectralf(2) < ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
+     IF(wfreq_eta <= 0._DP) CALL errore('fetch_input','Err: wfreq_eta<0.',1)
+     IF(n_secant_maxiter < 0) CALL errore('fetch_input','Err: n_secant_maxiter<0',1)
+     IF(trev_secant <= 0._DP) CALL errore('fetch_input','Err: trev_secant<0.',1)
+     IF(l_enable_off_diagonal .AND. .NOT. gamma_only) CALL errore('fetch_input','Err: off-diagonal implemented for gamma only',1)
+     IF(n_pdep_eigen_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
+     IF(n_lanczos == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
+     IF(n_imfreq == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_imfreq',1)
+     IF(n_refreq == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_refreq',1)
+     IF(n_secant_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_secant_maxiter',1)
+     IF(n_spectralf == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_spectralf',1)
      !
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
@@ -706,7 +706,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==4) ) THEN
+  IF(ANY(driver(:)==4)) THEN
      !
      CALL mp_bcast(westpp_calculation,root,world_comm)
      CALL mp_bcast(westpp_range,root,world_comm)
@@ -721,35 +721,35 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      ! CHECKS
      !
-     IF( westpp_range(1) < 1 ) CALL errore('fetch_input','Err: westpp_range(1)<1',1)
-     IF( westpp_range(2) < 1 ) CALL errore('fetch_input','Err: westpp_range(2)<1',1)
-     IF( westpp_range(2) < westpp_range(1) ) CALL errore('fetch_input','Err: westpp_range(2)<westpp_range(1)',1)
-     IF( westpp_nr < 1 ) CALL errore('fetch_input','Err: westpp_nr<1',1)
-     IF( westpp_n_pdep_eigen_to_use < 1 ) CALL errore('fetch_input','Err: westpp_n_pdep_eigen_to_use<1',1)
-     IF( westpp_rmax < 0._DP ) CALL errore('fetch_input','Err: westpp_rmax<0.',1)
-     IF( westpp_epsinfty < 1._DP ) CALL errore('fetch_input','Err: westpp_epsinfty<1.',1)
-     IF( westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_n_pdep_eigen_to_use',1)
-     IF( westpp_nr == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch westpp_nr',1)
-     IF( westpp_box(1) > westpp_box(2) .OR. westpp_box(3) > westpp_box(4) .OR. westpp_box(5) > westpp_box(6) ) &
+     IF(westpp_range(1) < 1) CALL errore('fetch_input','Err: westpp_range(1)<1',1)
+     IF(westpp_range(2) < 1) CALL errore('fetch_input','Err: westpp_range(2)<1',1)
+     IF(westpp_range(2) < westpp_range(1)) CALL errore('fetch_input','Err: westpp_range(2)<westpp_range(1)',1)
+     IF(westpp_nr < 1) CALL errore('fetch_input','Err: westpp_nr<1',1)
+     IF(westpp_n_pdep_eigen_to_use < 1) CALL errore('fetch_input','Err: westpp_n_pdep_eigen_to_use<1',1)
+     IF(westpp_rmax < 0._DP) CALL errore('fetch_input','Err: westpp_rmax<0.',1)
+     IF(westpp_epsinfty < 1._DP) CALL errore('fetch_input','Err: westpp_epsinfty<1.',1)
+     IF(westpp_n_pdep_eigen_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch westpp_n_pdep_eigen_to_use',1)
+     IF(westpp_nr == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch westpp_nr',1)
+     IF(westpp_box(1) > westpp_box(2) .OR. westpp_box(3) > westpp_box(4) .OR. westpp_box(5) > westpp_box(6)) &
      & CALL errore('fetch_input','Err: invalid westpp_box',1)
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==5) ) THEN
+  IF(ANY(driver(:)==5)) THEN
      !
      lenc = LEN(document)
      CALL mp_bcast(lenc,root,world_comm)
-     IF( mpime /= root ) ALLOCATE(CHARACTER(LEN=lenc) :: document)
+     IF(mpime /= root) ALLOCATE(CHARACTER(LEN=lenc) :: document)
      CALL mp_bcast(document,root,world_comm)
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==6) ) THEN
+  IF(ANY(driver(:)==6)) THEN
      !
-     IF( mpime == root ) nq = SIZE(qlist)
+     IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
-     IF( mpime /= root ) THEN
-        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+     IF(mpime /= root) THEN
+        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
         ALLOCATE(qlist(nq))
      ENDIF
      CALL mp_bcast(qlist,root,world_comm)
@@ -762,7 +762,8 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      CALL mp_bcast(overlap_thr,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
      !
-     IF( spin_channel == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
+     IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
+     IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
      !
      SELECT CASE(TRIM(localization))
      CASE('N','n','B','b')
@@ -770,7 +771,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL errore('fetch_input','Err: localization /= (N,B)',1)
      END SELECT
      !
-     IF (spin_channel < 1 .OR. spin_channel > 2) THEN
+     IF(spin_channel < 1 .OR. spin_channel > 2) THEN
         CALL errore('fetch_input','Err: spin_channel/= 1,2',spin_channel)
      ENDIF
      !
@@ -790,7 +791,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==7) ) THEN
+  IF(ANY(driver(:)==7)) THEN
      !
      CALL mp_bcast(wbse_calculation,root,world_comm)
      CALL mp_bcast(solver,root,world_comm)
@@ -812,12 +813,13 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      ! CHECKS
      !
-     IF( n_liouville_eigen == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_eigen',1)
-     IF( n_liouville_times == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_times',1)
-     IF( n_liouville_maxiter == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_maxiter',1)
-     IF( n_liouville_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
-     IF( n_steps_write_restart == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
-     IF( n_lanczos == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
+     IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
+     IF(n_liouville_eigen == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_eigen',1)
+     IF(n_liouville_times == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_times',1)
+     IF(n_liouville_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_maxiter',1)
+     IF(n_liouville_read_from_file == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
+     IF(n_steps_write_restart == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
+     IF(n_lanczos == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
      !
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
@@ -843,25 +845,25 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL errore('fetch_input','Err: spin_excitation /= (S,T)',1)
      END SELECT
      !
-     IF( wbse_calculation == 'D' .OR. wbse_calculation == 'd' ) THEN
-        IF( n_liouville_times < 2 ) CALL errore('fetch_input','Err: n_liouville_times<2',1)
-        IF( n_liouville_eigen < 1 ) CALL errore('fetch_input','Err: n_liouville_eigen<1',1)
-        IF( n_liouville_eigen*n_liouville_times < nimage ) &
+     IF(wbse_calculation == 'D' .OR. wbse_calculation == 'd') THEN
+        IF(n_liouville_times < 2) CALL errore('fetch_input','Err: n_liouville_times<2',1)
+        IF(n_liouville_eigen < 1) CALL errore('fetch_input','Err: n_liouville_eigen<1',1)
+        IF(n_liouville_eigen*n_liouville_times < nimage) &
         & CALL errore('fetch_input','Err: n_liouville_eigen*n_liouville_times<nimage',1)
-        IF( n_liouville_maxiter < 1 ) CALL errore('fetch_input','Err: n_liouville_maxiter<1',1)
-        IF( n_liouville_read_from_file < 0 ) CALL errore('fetch_input','Err: n_liouville_read_from_file<0',1)
-        IF( n_liouville_read_from_file > n_liouville_eigen ) &
+        IF(n_liouville_maxiter < 1) CALL errore('fetch_input','Err: n_liouville_maxiter<1',1)
+        IF(n_liouville_read_from_file < 0) CALL errore('fetch_input','Err: n_liouville_read_from_file<0',1)
+        IF(n_liouville_read_from_file > n_liouville_eigen) &
         & CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
      ENDIF
      !
   ENDIF
   !
-  IF ( ANY(driver(:)==8) ) THEN
+  IF(ANY(driver(:)==8)) THEN
      !
-     IF( mpime == root ) nq = SIZE(qlist)
+     IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
-     IF( mpime /= root ) THEN
-        IF( ALLOCATED(qlist) ) DEALLOCATE(qlist)
+     IF(mpime /= root) THEN
+        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
         ALLOCATE(qlist(nq))
      ENDIF
      CALL mp_bcast(qlist,root,world_comm)
@@ -886,15 +888,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
      ! CHECKS
      !
-     IF( n_liouville_read_from_file == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
-     IF( iexc_plot == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch iexc_plot',1)
-     IF( itermax == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch itermax',1)
-     IF( itermax0 == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch itermax0',1)
-     IF( ipol == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch ipol',1)
-     IF( sym_op == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch sym_op',1)
-     IF( units == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch units',1)
-     IF( verbosity == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch verbosity',1)
-     IF( spin_channel == DUMMY_DEFAULT ) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
+     IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
+     IF(n_liouville_read_from_file == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
+     IF(iexc_plot == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch iexc_plot',1)
+     IF(itermax == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch itermax',1)
+     IF(itermax0 == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch itermax0',1)
+     IF(ipol == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch ipol',1)
+     IF(sym_op == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch sym_op',1)
+     IF(units == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch units',1)
+     IF(verbosity == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch verbosity',1)
+     IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
      !
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
@@ -902,7 +905,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
      END SELECT
      !
-     IF (spin_channel < 1 .OR. spin_channel > 2) CALL errore('fetch_input','Err: spin_channel/= 1,2',spin_channel)
+     IF(spin_channel < 1 .OR. spin_channel > 2) CALL errore('fetch_input','Err: spin_channel/= 1,2',spin_channel)
      !
   ENDIF
   !
@@ -910,9 +913,9 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
   !
   ! REPORT
   !
-  IF ( debug .AND. mpime == root ) THEN
+  IF(debug .AND. mpime == root) THEN
      !
-     IF ( ANY(driver(:)==1) ) THEN
+     IF(ANY(driver(:)==1)) THEN
         !
         ! REPORT
         !
@@ -927,7 +930,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==2) ) THEN
+     IF(ANY(driver(:)==2)) THEN
         !
         ! REPORT
         !
@@ -955,7 +958,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==3) ) THEN
+     IF(ANY(driver(:)==3)) THEN
         !
         ! REPORT
         !
@@ -966,7 +969,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
         CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
         CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
-        IF ( qp_bands(1) > 0 ) THEN
+        IF(qp_bands(1) > 0) THEN
            DO i = 0, list_len-1 ! Python indices start at 0
               CALL io_push_value('qp_bands',qp_bands(i),numsp)
            ENDDO
@@ -991,7 +994,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==4) ) THEN
+     IF(ANY(driver(:)==4)) THEN
         !
         ! REPORT
         !
@@ -1021,7 +1024,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==5) ) THEN
+     IF(ANY(driver(:)==5)) THEN
         !
         ! REPORT
         !
@@ -1034,7 +1037,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==6) ) THEN
+     IF(ANY(driver(:)==6)) THEN
         !
         ! REPORT
         !
@@ -1053,7 +1056,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==7) ) THEN
+     IF(ANY(driver(:)==7)) THEN
         !
         ! REPORT
         !
@@ -1082,7 +1085,7 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
         !
      ENDIF
      !
-     IF ( ANY(driver(:)==8) ) THEN
+     IF(ANY(driver(:)==8)) THEN
         !
         ! REPORT
         !
@@ -1115,16 +1118,16 @@ SUBROUTINE fetch_input_yml( num_drivers, driver, verbose, debug )
      !
   ENDIF
   !
-  IF ( verbose .AND. mpime == root ) THEN
+  IF(verbose .AND. mpime == root) THEN
      !
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
      !
-     CALL add_intput_parameters_to_json_file( num_drivers, driver, json )
+     CALL add_intput_parameters_to_json_file(num_drivers, driver, json)
      !
-     OPEN( NEWUNIT=iunit, FILE=TRIM(logfile) )
-     CALL json%print( iunit )
-     CLOSE( iunit )
+     OPEN(NEWUNIT=iunit, FILE=TRIM(logfile))
+     CALL json%print(iunit)
+     CLOSE(iunit)
      CALL json%destroy()
      !
   ENDIF

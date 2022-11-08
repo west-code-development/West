@@ -136,7 +136,7 @@ MODULE check_ovl_wfc
       USE kinds,                ONLY : DP
       USE fft_base,             ONLY : dfftp
       USE cell_base,            ONLY : omega
-      USE mp_bands,             ONLY : intra_bgrp_comm
+      USE mp_global,            ONLY : intra_bgrp_comm
       USE mp,                   ONLY : mp_sum
       !
       IMPLICIT NONE
@@ -176,7 +176,7 @@ MODULE check_ovl_wfc
       USE kinds,                ONLY : DP
       USE fft_base,             ONLY : dfftp
       USE cell_base,            ONLY : omega
-      USE mp_bands,             ONLY : intra_bgrp_comm
+      USE mp_global,            ONLY : intra_bgrp_comm
       USE mp,                   ONLY : mp_sum
       !
       IMPLICIT NONE

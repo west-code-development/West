@@ -18,6 +18,22 @@ MODULE west_io
   !
   IMPLICIT NONE
   !
+  ! Base64 was changed to binary in order to improve I/O performance.
+  !
+  ! A simple format is used here:
+  ! a header consisting of HD_LENGTH=32 integers, followed by raw data.
+  ! Currently only 3 integers are used in the header, storing:
+  ! (1) the version identifier of the format
+  ! (2) the endianness (0 for GE, 1 for LE)
+  ! (3) the length of the raw data (number of COMPLEX DP entries)
+  ! (4-32) not used (yet).
+  !
+  INTEGER, PARAMETER :: HD_LENGTH = 32
+  INTEGER, PARAMETER :: HD_VERSION = 210405
+  INTEGER, PARAMETER :: HD_ID_VERSION = 1
+  INTEGER, PARAMETER :: HD_ID_LITTLE_ENDIAN = 2
+  INTEGER, PARAMETER :: HD_ID_DIMENSION = 3
+  !
 #if defined(__SX6)
 #  define DIRECT_IO_FACTOR 1
 #else

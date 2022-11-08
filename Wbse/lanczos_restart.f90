@@ -21,8 +21,6 @@ MODULE lanczos_restart
   !
   IMPLICIT NONE
   !
-  INTEGER, PRIVATE :: iunout
-  !
   PUBLIC :: lanczos_restart_write
   PUBLIC :: lanczos_restart_read
   PUBLIC :: lanczos_postpro_write
@@ -47,7 +45,7 @@ MODULE lanczos_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr, ipol, ipol2, is
+      INTEGER :: iun, ierr, ipol, ipol2, is
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -67,8 +65,8 @@ MODULE lanczos_restart
          !
          ! ... open XML descriptor
          !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(fname), BINARY=.FALSE., IERR=ierr)
+         CALL iotk_free_unit(iun, ierr)
+         CALL iotk_open_write(iun, FILE=TRIM(fname), BINARY=.FALSE., IERR=ierr)
          !
       ENDIF
       !
@@ -78,51 +76,51 @@ MODULE lanczos_restart
       !
       IF(mpime == root) THEN
          !
-         CALL iotk_write_begin(iunout, 'SUMMARY')
-         CALL iotk_write_dat(iunout, 'nipol_input', nipol_input)
-         CALL iotk_write_dat(iunout, 'ipol_input', ipol_input)
-         CALL iotk_write_dat(iunout, 'n_lanczos', n_lanczos)
-         CALL iotk_write_dat(iunout, 'pliter_stop', pliter_stop)
-         CALL iotk_write_dat(iunout, 'lriter_stop', lriter_stop)
-         CALL iotk_write_end(iunout, 'SUMMARY')
+         CALL iotk_write_begin(iun, 'SUMMARY')
+         CALL iotk_write_dat(iun, 'nipol_input', nipol_input)
+         CALL iotk_write_dat(iun, 'ipol_input', ipol_input)
+         CALL iotk_write_dat(iun, 'n_lanczos', n_lanczos)
+         CALL iotk_write_dat(iun, 'pliter_stop', pliter_stop)
+         CALL iotk_write_dat(iun, 'lriter_stop', lriter_stop)
+         CALL iotk_write_end(iun, 'SUMMARY')
          !
-         CALL iotk_write_begin(iunout, 'ALPHA_STORE')
+         CALL iotk_write_begin(iun, 'ALPHA_STORE')
          DO ipol = 1, nipol_input
             DO is = 1, nspin
-               CALL iotk_write_dat(iunout, 'alpha_store_k', alpha_store(ipol,:,is))
+               CALL iotk_write_dat(iun, 'alpha_store_k', alpha_store(ipol,:,is))
             ENDDO
          ENDDO
-         CALL iotk_write_end(iunout, 'ALPHA_STORE')
+         CALL iotk_write_end(iun, 'ALPHA_STORE')
          !
-         CALL iotk_write_begin(iunout, 'BETA_STORE')
+         CALL iotk_write_begin(iun, 'BETA_STORE')
          DO ipol = 1, nipol_input
             DO is = 1, nspin
-               CALL iotk_write_dat(iunout, 'beta_store_k', beta_store(ipol,:,is))
+               CALL iotk_write_dat(iun, 'beta_store_k', beta_store(ipol,:,is))
             ENDDO
          ENDDO
-         CALL iotk_write_end(iunout, 'BETA_STORE')
+         CALL iotk_write_end(iun, 'BETA_STORE')
          !
-         CALL iotk_write_begin(iunout, 'GAMMA_STORE')
+         CALL iotk_write_begin(iun, 'GAMMA_STORE')
          DO ipol = 1, nipol_input
             DO is = 1, nspin
-               CALL iotk_write_dat(iunout, 'gamma_store_k', gamma_store(ipol,:,is))
+               CALL iotk_write_dat(iun, 'gamma_store_k', gamma_store(ipol,:,is))
             ENDDO
          ENDDO
-         CALL iotk_write_end(iunout, 'GAMMA_STORE')
+         CALL iotk_write_end(iun, 'GAMMA_STORE')
          !
-         CALL iotk_write_begin(iunout, 'ZETA_STORE')
+         CALL iotk_write_begin(iun, 'ZETA_STORE')
          DO ipol = 1, nipol_input
-            CALL iotk_write_dat(iunout, 'zeta_store_ipol_i', ipol)
+            CALL iotk_write_dat(iun, 'zeta_store_ipol_i', ipol)
             DO ipol2 = 1, 3
-               CALL iotk_write_dat(iunout, 'zeta_store_ipol_j', ipol2)
+               CALL iotk_write_dat(iun, 'zeta_store_ipol_j', ipol2)
                DO is = 1, nspin
-                  CALL iotk_write_dat(iunout, 'zeta_store_k', zeta_store(ipol,ipol2,:,is))
+                  CALL iotk_write_dat(iun, 'zeta_store_k', zeta_store(ipol,ipol2,:,is))
                ENDDO
             ENDDO
          ENDDO
-         CALL iotk_write_end(iunout, 'ZETA_STORE')
+         CALL iotk_write_end(iun, 'ZETA_STORE')
          !
-         CALL iotk_close_write(iunout)
+         CALL iotk_close_write(iun)
          !
       ENDIF
       !
@@ -303,7 +301,7 @@ MODULE lanczos_restart
       !
       ! Workspace
       !
-      INTEGER :: ierr, ipol2, is
+      INTEGER :: iun, ierr, ipol2, is
       CHARACTER(LEN=256) :: fname
       CHARACTER(LEN=4) :: my_ip
       !
@@ -319,8 +317,8 @@ MODULE lanczos_restart
          !
          ! ... open XML descriptor
          !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(fname), BINARY=.FALSE., IERR=ierr)
+         CALL iotk_free_unit(iun, ierr)
+         CALL iotk_open_write(iun, FILE=TRIM(fname), BINARY=.FALSE., IERR=ierr)
          !
       ENDIF
       !
@@ -330,42 +328,42 @@ MODULE lanczos_restart
       !
       IF(mpime == root) THEN
          !
-         CALL iotk_write_begin(iunout, 'SUMMARY')
-         CALL iotk_write_dat(iunout, 'nspin', nspin)
-         CALL iotk_write_dat(iunout, 'nipol_input', nipol_input)
-         CALL iotk_write_dat(iunout, 'ipol_label', ipol_label)
-         CALL iotk_write_dat(iunout, 'n_lanczos', n_lanczos)
-         CALL iotk_write_end(iunout, 'SUMMARY')
+         CALL iotk_write_begin(iun, 'SUMMARY')
+         CALL iotk_write_dat(iun, 'nspin', nspin)
+         CALL iotk_write_dat(iun, 'nipol_input', nipol_input)
+         CALL iotk_write_dat(iun, 'ipol_label', ipol_label)
+         CALL iotk_write_dat(iun, 'n_lanczos', n_lanczos)
+         CALL iotk_write_end(iun, 'SUMMARY')
          !
-         CALL iotk_write_begin(iunout, 'ALPHA_STORE')
+         CALL iotk_write_begin(iun, 'ALPHA_STORE')
          DO is = 1, nspin
-            CALL iotk_write_dat(iunout, 'alpha_store_k', alpha_store(ipol_iter,:,is))
+            CALL iotk_write_dat(iun, 'alpha_store_k', alpha_store(ipol_iter,:,is))
          ENDDO
-         CALL iotk_write_end(iunout, 'ALPHA_STORE')
+         CALL iotk_write_end(iun, 'ALPHA_STORE')
          !
-         CALL iotk_write_begin(iunout, 'BETA_STORE')
+         CALL iotk_write_begin(iun, 'BETA_STORE')
          DO is = 1, nspin
-            CALL iotk_write_dat(iunout, 'beta_store_k', beta_store(ipol_iter,:,is))
+            CALL iotk_write_dat(iun, 'beta_store_k', beta_store(ipol_iter,:,is))
          ENDDO
-         CALL iotk_write_end(iunout, 'BETA_STORE')
+         CALL iotk_write_end(iun, 'BETA_STORE')
          !
-         CALL iotk_write_begin(iunout, 'GAMMA_STORE')
+         CALL iotk_write_begin(iun, 'GAMMA_STORE')
          DO is = 1, nspin
-            CALL iotk_write_dat(iunout, 'gamma_store_k', gamma_store(ipol_iter,:,is))
+            CALL iotk_write_dat(iun, 'gamma_store_k', gamma_store(ipol_iter,:,is))
          ENDDO
-         CALL iotk_write_end(iunout, 'GAMMA_STORE')
+         CALL iotk_write_end(iun, 'GAMMA_STORE')
          !
-         CALL iotk_write_begin(iunout, 'ZETA_STORE')
-         CALL iotk_write_dat(iunout, 'zeta_store_ipol_i', ipol_iter)
+         CALL iotk_write_begin(iun, 'ZETA_STORE')
+         CALL iotk_write_dat(iun, 'zeta_store_ipol_i', ipol_iter)
          DO ipol2 = 1, 3
-            CALL iotk_write_dat(iunout, 'zeta_store_ipol_j', ipol2)
+            CALL iotk_write_dat(iun, 'zeta_store_ipol_j', ipol2)
             DO is = 1, nspin
-               CALL iotk_write_dat(iunout, 'zeta_store_k', zeta_store(ipol_iter,ipol2,:,is))
+               CALL iotk_write_dat(iun, 'zeta_store_k', zeta_store(ipol_iter,ipol2,:,is))
             ENDDO
          ENDDO
-         CALL iotk_write_end(iunout, 'ZETA_STORE')
+         CALL iotk_write_end(iun, 'ZETA_STORE')
          !
-         CALL iotk_close_write(iunout)
+         CALL iotk_close_write(iun)
          !
       ENDIF
       !

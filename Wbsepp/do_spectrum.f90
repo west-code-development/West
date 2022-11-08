@@ -135,7 +135,7 @@ SUBROUTINE do_spectrum()
      !
      ! Read beta, gamma, and zeta coefficients
      !
-     CALL read_b_g_z_file_html()
+     CALL read_b_g_z_file()
      !
      ! Optional: use an extrapolation scheme
      !
@@ -530,14 +530,11 @@ SUBROUTINE do_spectrum()
   !
 CONTAINS
   !
+  !-----------------------------------------------------------------------
   LOGICAL FUNCTION is_peak(omeg,alpha)
-    !-------------------------------------------------------------------------
+    !---------------------------------------------------------------------
     !
     ! A simple algorithm for detecting peaks.
-    ! Increments of omega between alpha steps should be constant
-    ! omega must increase monothonically
-    ! no checks performed!
-    ! OBM 2010
     !
     IMPLICIT NONE
     !
@@ -599,11 +596,11 @@ CONTAINS
     !
   END FUNCTION
   !
+  !-----------------------------------------------------------------------
   REAL(DP) FUNCTION integrator(dh,alpha)
-    !------------------------------------------------------------------------
+    !---------------------------------------------------------------------
     !
-    ! This function calculates an integral every
-    ! three points, using the Simpson's rule.
+    ! Calculates an integral every three points, using the Simpson's rule.
     !
     IMPLICIT NONE
     !
@@ -634,10 +631,11 @@ CONTAINS
     !
   END FUNCTION
   !
-  SUBROUTINE read_b_g_z_file_html()
-    !------------------------------------------------------------------------
+  !-----------------------------------------------------------------------
+  SUBROUTINE read_b_g_z_file()
+    !---------------------------------------------------------------------
     !
-    ! This subroutine reads the coefficients from the html file.
+    ! Reads beta, gamma, and zeta coefficients.
     !
     USE iotk_module
     !
@@ -671,7 +669,7 @@ CONTAINS
           CALL iotk_scan_end(iun, 'SUMMARY')
           !
           WRITE(stdout,*)
-          WRITE(stdout,'(5x,a)') 'Reading alpha beta zeta of the polarzation ' &
+          WRITE(stdout,'(5x,a)') 'Reading beta, gamma, zeta of the polarzation ' &
           & //TRIM(ipol_label_tmp)//' from file '//TRIM(file_ip)
           !
           IF(nlan_tmp < itermax0) THEN
@@ -738,10 +736,9 @@ CONTAINS
     !
   END SUBROUTINE
   !
+  !-----------------------------------------------------------------------
   SUBROUTINE extrapolate()
-    !
-    ! This subroutine applies the 'extrapolation' scheme
-    ! for extrapolating the reduced matrix.
+    !---------------------------------------------------------------------
     !
     IMPLICIT NONE
     !
@@ -808,10 +805,9 @@ CONTAINS
     !
   END SUBROUTINE
   !
+  !-----------------------------------------------------------------------
   SUBROUTINE calc_chi(freq,broad,chi)
-    !-----------------------------------------------------------------------------
-    !
-    ! This subroutine calculates the susceptibility.
+    !---------------------------------------------------------------------
     !
     IMPLICIT NONE
     !
@@ -869,11 +865,11 @@ CONTAINS
     !
   END SUBROUTINE
   !
+  !-----------------------------------------------------------------------
   SUBROUTINE wl_to_color(wavelength,red,green,blue)
-    !----------------------------------------------------------------------------
+    !---------------------------------------------------------------------
     !
-    ! Gives the colour intensity of a given wavelength
-    ! in terms of RGB (red, green and blue).
+    ! Gives the colour intensity of a given wavelength in terms of RGB (red, green and blue).
     !
     IMPLICIT NONE
     !

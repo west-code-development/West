@@ -701,7 +701,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
+        CALL errore('fetch_input','Err: macropol_calculation/=(N,C)',1)
      END SELECT
      !
   ENDIF
@@ -768,11 +768,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      SELECT CASE(TRIM(localization))
      CASE('N','n','B','b')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: localization /= (N,B)',1)
+        CALL errore('fetch_input','Err: localization/=(N,B)',1)
      END SELECT
      !
-     IF(spin_channel < 1 .OR. spin_channel > 2) THEN
-        CALL errore('fetch_input','Err: spin_channel/= 1,2',spin_channel)
+     IF(spin_channel < 0 .OR. spin_channel > 2) THEN
+        CALL errore('fetch_input','Err: spin_channel/=0,1,2',spin_channel)
      ENDIF
      !
      !use_qbox = .FALSE.
@@ -824,25 +824,25 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
+        CALL errore('fetch_input','Err: macropol_calculation/=(N,C)',1)
      END SELECT
      !
      SELECT CASE(TRIM(solver))
      CASE('BSE','bse','TDDFT','tddft')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: solver /= BSE or TDDFT',1)
+        CALL errore('fetch_input','Err: solver must be BSE or TDDFT',1)
      END SELECT
      !
      SELECT CASE(wbse_calculation)
      CASE('D','d','L','l')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: wbse_calculation /= (D,L)',1)
+        CALL errore('fetch_input','Err: wbse_calculation/=(D,L)',1)
      END SELECT
      !
      SELECT CASE(spin_excitation)
      CASE('s','S','singlet','t','T','triplet')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: spin_excitation /= (S,T)',1)
+        CALL errore('fetch_input','Err: spin_excitation/=(S,T)',1)
      END SELECT
      !
      IF(wbse_calculation == 'D' .OR. wbse_calculation == 'd') THEN
@@ -902,10 +902,10 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: macropol_calculation /= (N,C)',1)
+        CALL errore('fetch_input','Err: macropol_calculation/=(N,C)',1)
      END SELECT
      !
-     IF(spin_channel < 1 .OR. spin_channel > 2) CALL errore('fetch_input','Err: spin_channel/= 1,2',spin_channel)
+     IF(spin_channel < 1 .OR. spin_channel > 2) CALL errore('fetch_input','Err: spin_channel/=1,2',spin_channel)
      !
   ENDIF
   !

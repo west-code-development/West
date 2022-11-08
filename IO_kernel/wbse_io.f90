@@ -215,7 +215,7 @@ SUBROUTINE write_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
      WRITE(iun,POS=offset) header
      offset = offset+HD_LENGTH*SIZEOF(header(1))
      WRITE(iun,POS=offset) umatrix(1:oumat_dim,1:oumat_dim)
-     offset = offset+oumat_dim*oumat_dim*SIZEOF(umatrix(1,1))
+     offset = offset+SIZE(umatrix)*SIZEOF(umatrix(1,1))
      WRITE(iun,POS=offset) omatrix(1:oumat_dim,1:oumat_dim)
      CLOSE(iun)
      !
@@ -295,7 +295,7 @@ SUBROUTINE read_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
      !
      offset = offset+HD_LENGTH*SIZEOF(header(1))
      READ(iun,POS=offset) umatrix_tmp(1:oumat_dim_tmp,1:oumat_dim_tmp)
-     offset = offset+oumat_dim*oumat_dim*SIZEOF(umatrix(1,1))
+     offset = offset+SIZE(umatrix_tmp)*SIZEOF(umatrix(1,1))
      READ(iun,POS=offset) omatrix_tmp(1:oumat_dim_tmp,1:oumat_dim_tmp)
      CLOSE(iun)
      !

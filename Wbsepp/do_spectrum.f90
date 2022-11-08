@@ -13,15 +13,18 @@ SUBROUTINE do_spectrum()
   ! Pls do not distribute it to avoid the copyright problem.
   ! TODO: write this code in Python to make it become ours.
   !
-  USE kinds,               ONLY : DP
+  USE kinds,               ONLY : DP,i8b
   USE constants,           ONLY : pi,rytoev,evtonm,rytonm
-  USE io_global,           ONLY : stdout,ionode
+  USE io_global,           ONLY : stdout
   USE environment,         ONLY : environment_start,environment_end
   USE mp_global,           ONLY : mp_startup,mp_global_end
-  USE mp_world,            ONLY : world_comm
+  USE mp_world,            ONLY : world_comm,mpime,root
   USE mp,                  ONLY : mp_bcast,mp_barrier
   USE westcom,             ONLY : qe_prefix,itermax,itermax0,extrapolation,start,end,increment,&
-                                & epsil,ipol,sym_op,verbosity,units,spin_channel
+                                & epsil,ipol,sym_op,verbosity,units,spin_channel,wbse_save_dir
+  USE json_module,         ONLY : json_file
+  USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
+  USE base64_module,       ONLY : islittleendian
   !
   IMPLICIT NONE
   !
@@ -69,13 +72,13 @@ SUBROUTINE do_spectrum()
   !
   ! Subroutines etc.
   !
-  COMPLEX(DP), EXTERNAL :: zdotc
+  COMPLEX(DP), EXTERNAL :: ZDOTC
   !
   ! User controlled variable initialisation
   !
   CALL mp_startup()
   !
-  IF(ionode) THEN
+  IF(mpime == root) THEN
      !
      IF(itermax0 < 151 .AND. TRIM(extrapolation) /= 'no') THEN
         WRITE(stdout,'(5x,"Itermax0 is less than 150, no extrapolation scheme can be used")')
@@ -91,16 +94,12 @@ SUBROUTINE do_spectrum()
      !
      ! Polarization symmetry
      !
-     IF(.NOT. sym_op == 0) THEN
-        !
-        IF(sym_op == 1) THEN
-           WRITE(stdout,'(5x,"All polarization axes will be considered to be equal")')
-           n_ipol = 3
-           ipol = 1
-        ELSE
-           CALL errore('do_spectrum','Unsupported symmetry operation',1)
-        ENDIF
-        !
+     IF(sym_op == 1) THEN
+        WRITE(stdout,'(5x,"All polarization axes will be considered to be equal")')
+        n_ipol = 3
+        ipol = 1
+     ELSEIF(sym_op /= 0) THEN
+        CALL errore('do_spectrum','Unsupported symmetry operation',1)
      ENDIF
      !
      ! Terminator scheme
@@ -456,7 +455,7 @@ SUBROUTINE do_spectrum()
               ! First the degradation toward the end
               !
               IF(wl > 700._DP) THEN
-                 scale = 0.3_DP+0.7_DP* (780._DP-wl)/(780._DP-700._DP)
+                 scale = 0.3_DP+0.7_DP*(780._DP-wl)/(780._DP-700._DP)
               ELSEIF(wl < 420._DP) THEN
                  scale = 0.3_DP+0.7_DP*(wl-380._DP)/(420._DP-380._DP)
               ELSE
@@ -526,7 +525,7 @@ SUBROUTINE do_spectrum()
   ENDIF
   !
   CALL mp_barrier(world_comm)
-  CALL mp_global_end ()
+  CALL mp_global_end()
   !
 CONTAINS
   !
@@ -637,81 +636,87 @@ CONTAINS
     !
     ! Reads beta, gamma, and zeta coefficients.
     !
-    USE iotk_module
-    !
     IMPLICIT NONE
     !
-    INTEGER :: iun, ierr, is
-    INTEGER :: nipol_input_tmp, nspin
+    INTEGER :: iun, ierr, ival
+    INTEGER :: nipol_input_tmp, n_lanczos_tmp, nspin_tmp
     CHARACTER(LEN=3) :: ipol_label_tmp
-    INTEGER :: nlan_tmp
     REAL(DP), ALLOCATABLE :: beta_store_tmp(:,:)
     REAL(DP), ALLOCATABLE :: gamma_store_tmp(:,:)
     COMPLEX(DP), ALLOCATABLE :: zeta_store_tmp(:,:,:)
-    CHARACTER(LEN=4) :: my_ip
-    CHARACTER(LEN=256) :: file_ip
+    CHARACTER :: my_ip
+    CHARACTER(LEN=256) :: fname
+    CHARACTER(LEN=:), ALLOCATABLE :: cval
+    LOGICAL :: found
+    TYPE(json_file) :: json
+    INTEGER :: header(HD_LENGTH)
+    INTEGER(i8b) :: offset
     !
     IF(sym_op == 0) THEN
        !
        DO ip = 1,n_ipol
           !
-          WRITE(my_ip,'(i1)')ip
-          file_ip = 'summary.'//TRIM(my_ip)//'.xml'
+          WRITE(my_ip,'(i1)') ip
+          fname = TRIM(wbse_save_dir)//'/summary.'//my_ip//'.json'
           !
-          CALL iotk_free_unit(iun, ierr)
-          CALL iotk_open_read(iun, FILE=TRIM(file_ip), IERR=ierr)
+          CALL json%initialize()
+          CALL json%load(filename=fname)
           !
-          CALL iotk_scan_begin(iun, 'SUMMARY')
-          CALL iotk_scan_dat(iun, 'nspin', nspin)
-          CALL iotk_scan_dat(iun, 'nipol_input', nipol_input_tmp)
-          CALL iotk_scan_dat(iun, 'ipol_label', ipol_label_tmp)
-          CALL iotk_scan_dat(iun, 'n_lanczos', nlan_tmp)
-          CALL iotk_scan_end(iun, 'SUMMARY')
+          CALL json%get('nipol_input',ival,found)
+          IF(found) nipol_input_tmp = ival
+          CALL json%get('ipol_label',cval,found)
+          IF(found) ipol_label_tmp = cval
+          CALL json%get('n_lanczos',ival,found)
+          IF(found) n_lanczos_tmp = ival
+          CALL json%get('nspin',ival,found)
+          IF(found) nspin_tmp = ival
+          !
+          CALL json%destroy()
           !
           WRITE(stdout,*)
           WRITE(stdout,'(5x,a)') 'Reading beta, gamma, zeta of the polarzation ' &
-          & //TRIM(ipol_label_tmp)//' from file '//TRIM(file_ip)
+          & //TRIM(ipol_label_tmp)//' from file '//TRIM(fname)
           !
-          IF(nlan_tmp < itermax0) THEN
-             CALL errore('read_b_g_z_file', 'Error in lriter_stop < itermax0, reduce itermax0',1)
+          IF(n_lanczos_tmp < itermax0) THEN
+             CALL errore('read_b_g_z_file','Error in lriter_stop < itermax0, reduce itermax0',1)
           ENDIF
           !
-          ALLOCATE(beta_store_tmp(nlan_tmp,nspin))
-          ALLOCATE(gamma_store_tmp(nlan_tmp,nspin))
+          ALLOCATE(beta_store_tmp(n_lanczos_tmp,nspin_tmp))
+          ALLOCATE(gamma_store_tmp(n_lanczos_tmp,nspin_tmp))
+          ALLOCATE(zeta_store_tmp(3,n_lanczos_tmp,nspin_tmp))
           !
-          CALL iotk_scan_begin(iun, 'BETA_STORE')
-          DO is = 1,nspin
-             CALL iotk_scan_dat(iun, 'beta_store_k', beta_store_tmp(1:nlan_tmp,is))
-          ENDDO
-          CALL iotk_scan_end(iun, 'BETA_STORE')
+          WRITE(my_ip,'(i1)') ip
+          fname = TRIM(wbse_save_dir)//'/bgz.'//my_ip//'.dat'
+          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
+          IF(ierr /= 0) THEN
+             CALL errore('lanczos_restart_read','Cannot read file:'//TRIM(fname),1)
+          ENDIF
           !
-          CALL iotk_scan_begin(iun, 'GAMMA_STORE')
-          DO is = 1,nspin
-             CALL iotk_scan_dat(iun, 'gamma_store_k', gamma_store_tmp(1:nlan_tmp,is))
-          ENDDO
-          CALL iotk_scan_end(iun, 'GAMMA_STORE')
+          offset = 1
+          READ(iun,POS=offset) header
+          IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
+             CALL errore('lanczos_restart_read','Unknown file format:'//TRIM(fname),1)
+          ENDIF
+          IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
+             .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
+             CALL errore('lanczos_restart_read','Endianness mismatch:'//TRIM(fname),1)
+          ENDIF
           !
-          ALLOCATE(zeta_store_tmp(3,nlan_tmp,nspin))
+          offset = 1+HD_LENGTH*SIZEOF(header(1))
+          READ(iun,POS=offset) beta_store_tmp(1:n_lanczos_tmp,1:nspin_tmp)
+          offset = offset+SIZE(beta_store_tmp)*SIZEOF(beta_store_tmp(1,1))
+          READ(iun,POS=offset) gamma_store_tmp(1:n_lanczos_tmp,1:nspin_tmp)
+          offset = offset+SIZE(gamma_store_tmp)*SIZEOF(gamma_store_tmp(1,1))
+          READ(iun,POS=offset) zeta_store_tmp(1:3,1:n_lanczos_tmp,1:nspin_tmp)
+          CLOSE(iun)
           !
-          CALL iotk_scan_begin(iun, 'ZETA_STORE')
+          IF(nspin_tmp == 1) spin_channel = 1
           !
-          DO ip2 = 1,3
-             CALL iotk_scan_dat(iun, 'zeta_store_ipol_j', ip2)
-             DO is = 1,nspin
-                CALL iotk_scan_dat(iun, 'zeta_store_k', zeta_store_tmp(ip2,1:nlan_tmp,is))
-             ENDDO
-          ENDDO
-          CALL iotk_scan_end(iun, 'ZETA_STORE')
-          !
-          CALL iotk_close_read(iun)
-          !
-          IF(nspin == 1) spin_channel = 1
-          !
-          norm0(ip)                    = beta_store_tmp(1, spin_channel)
-          beta_store(ip,1:itermax0-1)  = beta_store_tmp(2:itermax0, spin_channel)
-          gamma_store(ip,1:itermax0-1) = gamma_store_tmp(2:itermax0, spin_channel)
-          beta_store(ip,itermax0)      = beta_store_tmp(itermax0, spin_channel)
-          gamma_store(ip,itermax0)     = gamma_store_tmp(itermax0, spin_channel)
+          norm0(ip)                    = beta_store_tmp(1,spin_channel)
+          beta_store(ip,1:itermax0-1)  = beta_store_tmp(2:itermax0,spin_channel)
+          gamma_store(ip,1:itermax0-1) = gamma_store_tmp(2:itermax0,spin_channel)
+          beta_store(ip,itermax0)      = beta_store_tmp(itermax0,spin_channel)
+          gamma_store(ip,itermax0)     = gamma_store_tmp(itermax0,spin_channel)
           !
           IF(n_ipol == 1) THEN
              zeta_store(1,1,1:itermax0) = zeta_store_tmp(ipol,1:itermax0,spin_channel)
@@ -725,8 +730,8 @@ CONTAINS
           !
        ENDDO
        !
-       IF(nspin == 1) degspin = 2
-       IF(nspin == 2) degspin = 1
+       IF(nspin_tmp == 1) degspin = 2
+       IF(nspin_tmp == 2) degspin = 1
        !
        beta_store(:,itermax0+1:itermax)   = 0._DP
        gamma_store(:,itermax0+1:itermax)  = 0._DP

@@ -63,7 +63,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
      ! Use wannier as representation
      !
      IF(l_load_qbox_loc_wfc) CALL load_qbox_wfc(evc_loc, wfc_from_qbox, current_spin, nbndval)
-     IF(l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs(nbndval, npwx, evc_loc, wfc_from_qbox)
+!     IF(l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs(nbndval, npwx, evc_loc, wfc_from_qbox)
      !
      WRITE(my_spin,'(i1)') current_spin
      fname = './localized_wfc_tmp_'//TRIM(my_spin)//'.dat'

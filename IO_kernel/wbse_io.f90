@@ -202,7 +202,7 @@ SUBROUTINE write_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
   !
   fname = TRIM(wbse_init_save_dir) // '/u_matrix.wan.occ.' // TRIM(my_spin) // '.dat'
   !
-  WRITE(stdout,'(5X,"Writing Omatrix & Umatrix to ",A)') TRIM(fname)
+  WRITE(stdout,'(/,5X,"Writing overlap and rotation matrices to ",A)') TRIM(fname)
   !
   IF(my_pool_id /= 0) RETURN
   IF(my_bgrp_id /= 0) RETURN
@@ -214,7 +214,7 @@ SUBROUTINE write_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
      ! ... open XML descriptor
      !
      CALL iotk_free_unit(iunout,ierr)
-     CALL iotk_open_write(iunout, FILE=TRIM(fname), BINARY=.False., IERR=ierr)
+     CALL iotk_open_write(iunout, FILE=TRIM(fname), BINARY=.FALSE., IERR=ierr)
      !
      CALL iotk_write_begin(iunout,'OUMATRIX_SIZE')
      CALL iotk_write_dat(iunout,'oumat_dim',oumat_dim)
@@ -272,17 +272,17 @@ SUBROUTINE read_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
   WRITE(my_spin,'(i1)') ispin
   fname = TRIM(wbse_init_save_dir)//'/u_matrix.wan.occ.'//TRIM(my_spin)//'.dat'
   !
-  WRITE(stdout,'(/,5X,"Reading Omatrix & Umatrix from ",A)') TRIM(fname)
+  WRITE(stdout,'(/,5X,"Reading overlap and rotation matrices from ",A)') TRIM(fname)
   !
   ierr = 0
   IF(ionode) THEN
      CALL iotk_free_unit(iunout, ierr)
-     CALL iotk_open_read(iunout, FILE=TRIM(fname), BINARY=.False., IERR=ierr)
+     CALL iotk_open_read(iunout, FILE=TRIM(fname), BINARY=.FALSE., IERR=ierr)
   ENDIF
   !
   CALL mp_bcast(ierr, root, world_comm)
   !
-  IF(ierr /=0) CALL errore('write_umatrix_and_ovl_matrix', 'cannot open file for reading', ierr)
+  IF(ierr /= 0) CALL errore('write_umatrix_and_ovl_matrix', 'cannot open file for reading', ierr)
   !
   IF(ionode) THEN
      CALL iotk_scan_begin(iunout, 'OUMATRIX_SIZE')
@@ -346,76 +346,74 @@ SUBROUTINE read_pwscf_wannier_orbs(ne, npw, c_emp, fname)
   COMPLEX(DP), ALLOCATABLE :: ctmp(:)
   INTEGER, ALLOCATABLE :: igk_l2g(:)
   !
-  ! ... Subroutine Body
-  !
-  ALLOCATE(igk_l2g(npwx))
-  !
-  ! ... the igk_l2g_kdip local-to-global map is needed to read wfcs
-  !
-  igk_l2g = 0
-  DO ig = 1, ngk(1)
-     igk_l2g(ig) = ig_l2g(igk_k(ig,1))
-  ENDDO
-  !
-  WRITE(stdout,'(/,5X,"Reading pwscf wannier orbs from ",A)') TRIM(fname)
-  !
-  ngw_l = npw
-  ngw_g = MAXVAL(igk_l2g(:))
-  CALL mp_max(ngw_g,intra_bgrp_comm)
-  !
-  ALLOCATE(ctmp(ngw_g))
-  !
-  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-     !
-     ! ONLY ROOT W/IN BGRP READS
-     !
-     IF(me_bgrp == root_bgrp) THEN
-        CALL iotk_free_unit(iun, ierr)
-        CALL iotk_open_read(iun, FILE=TRIM(fname), BINARY=.TRUE., IERR=ierr)
-     ENDIF
-     !
-  ENDIF
-  !
-  CALL mp_bcast(ierr,0,inter_bgrp_comm)
-  !
-  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-     !
-     ! ONLY ROOT W/IN BGRP READS
-     !
-     IF(me_bgrp == root_bgrp) THEN
-        CALL iotk_scan_begin(iun, 'WANWFC_GSPACE')
-     ENDIF
-     !
-  ENDIF
-  !
-  DO i = 1, ne
-     IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-        !
-        ! ONLY ROOT W/IN BGRP READS
-        !
-        IF(me_bgrp == root_bgrp) THEN
-           CALL iotk_scan_dat(iun, 'wfc' // iotk_index(i), ctmp(:))
-        ENDIF
-        !
-        CALL splitwf(c_emp(:,i), ctmp, ngw_l, igk_l2g, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
-        !
-     ENDIF
-  ENDDO
-  !
-  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-     !
-     ! ONLY ROOT W/IN BGRP READS
-     !
-     IF(me_bgrp == root_bgrp) THEN
-        CALL iotk_scan_end(iun, 'WANWFC_GSPACE')
-        CALL iotk_close_read(iun)
-     ENDIF
-     !
-  ENDIF
-  !
-  DEALLOCATE(ctmp, igk_l2g)
-  !
-  CALL mp_bcast(c_emp,0,inter_bgrp_comm)
-  CALL mp_bcast(c_emp,0,inter_pool_comm)
+!  ALLOCATE(igk_l2g(npwx))
+!  !
+!  ! ... the igk_l2g_kdip local-to-global map is needed to read wfcs
+!  !
+!  igk_l2g = 0
+!  DO ig = 1, ngk(1)
+!     igk_l2g(ig) = ig_l2g(igk_k(ig,1))
+!  ENDDO
+!  !
+!  WRITE(stdout,'(/,5X,"Reading Wannier orbitals from ",A)') TRIM(fname)
+!  !
+!  ngw_l = npw
+!  ngw_g = MAXVAL(igk_l2g(:))
+!  CALL mp_max(ngw_g,intra_bgrp_comm)
+!  !
+!  ALLOCATE(ctmp(ngw_g))
+!  !
+!  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+!     !
+!     ! ONLY ROOT W/IN BGRP READS
+!     !
+!     IF(me_bgrp == root_bgrp) THEN
+!        CALL iotk_free_unit(iun, ierr)
+!        CALL iotk_open_read(iun, FILE=TRIM(fname), BINARY=.TRUE., IERR=ierr)
+!     ENDIF
+!     !
+!  ENDIF
+!  !
+!  CALL mp_bcast(ierr,0,inter_bgrp_comm)
+!  !
+!  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+!     !
+!     ! ONLY ROOT W/IN BGRP READS
+!     !
+!     IF(me_bgrp == root_bgrp) THEN
+!        CALL iotk_scan_begin(iun, 'WANWFC_GSPACE')
+!     ENDIF
+!     !
+!  ENDIF
+!  !
+!  DO i = 1, ne
+!     IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+!        !
+!        ! ONLY ROOT W/IN BGRP READS
+!        !
+!        IF(me_bgrp == root_bgrp) THEN
+!           CALL iotk_scan_dat(iun, 'wfc' // iotk_index(i), ctmp(:))
+!        ENDIF
+!        !
+!        CALL splitwf(c_emp(:,i), ctmp, ngw_l, igk_l2g, me_bgrp, nproc_bgrp, root_bgrp, intra_bgrp_comm)
+!        !
+!     ENDIF
+!  ENDDO
+!  !
+!  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+!     !
+!     ! ONLY ROOT W/IN BGRP READS
+!     !
+!     IF(me_bgrp == root_bgrp) THEN
+!        CALL iotk_scan_end(iun, 'WANWFC_GSPACE')
+!        CALL iotk_close_read(iun)
+!     ENDIF
+!     !
+!  ENDIF
+!  !
+!  DEALLOCATE(ctmp, igk_l2g)
+!  !
+!  CALL mp_bcast(c_emp,0,inter_bgrp_comm)
+!  CALL mp_bcast(c_emp,0,inter_pool_comm)
   !
 END SUBROUTINE

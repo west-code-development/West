@@ -38,13 +38,13 @@ SUBROUTINE wbse_init_methods()
      !
      ! RESTART
      !
-     l_restart_calc = .True.
+     l_restart_calc = .TRUE.
      !
   CASE('s','S')
      !
      ! FROM SCRATCH
      !
-     l_restart_calc = .False.
+     l_restart_calc = .FALSE.
      !
   CASE DEFAULT
      CALL errore('Wbse_init', 'Wrong wbse_init_calculation', 1)

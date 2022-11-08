@@ -26,9 +26,9 @@ MODULE pdep_db
       !
       ! I/O
       !
-      CHARACTER(LEN=25), INTENT(OUT) :: fname
-      INTEGER, INTENT(IN) :: j
-      INTEGER, INTENT(IN), OPTIONAL :: iq
+      CHARACTER(LEN=25),INTENT(OUT) :: fname
+      INTEGER,INTENT(IN) :: j
+      INTEGER,INTENT(IN),OPTIONAL :: iq
       !
       ! Workspace
       !
@@ -72,34 +72,28 @@ MODULE pdep_db
       !
       ! I/O
       !
-      INTEGER, INTENT(IN), OPTIONAL :: iq
-      LOGICAL, INTENT(IN), OPTIONAL :: lprintinfo
+      INTEGER,INTENT(IN),OPTIONAL :: iq
+      LOGICAL,INTENT(IN),OPTIONAL :: lprintinfo
       !
       ! Workspace
       !
-      ! optional
-      INTEGER, PARAMETER :: default_iq = 1
-      INTEGER            :: iq_
-      LOGICAL, PARAMETER :: default_lprintinfo = .TRUE.
-      LOGICAL            :: lprintinfo_
-      ! labels
+      INTEGER,PARAMETER :: default_iq = 1
+      LOGICAL,PARAMETER :: default_lprintinfo = .TRUE.
+      INTEGER :: iq_
+      LOGICAL :: lprintinfo_
       CHARACTER(LEN=9) :: label_i
-      ! time
-      REAL(DP), EXTERNAL    :: GET_CLOCK
+      REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
-      CHARACTER(20), EXTERNAL :: human_readable_time
-      ! scratch
+      CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: global_j,local_j
-      ! json
       TYPE(json_core) :: jcor
       TYPE(json_file) :: json
-      TYPE(json_value), POINTER :: jval
-      INTEGER :: iunit,n_elements,ielement,myiq,write_element
+      TYPE(json_value),POINTER :: jval
+      INTEGER :: iun,n_elements,ielement,myiq,write_element
       LOGICAL :: found
-      ! files
-      CHARACTER(LEN=:), ALLOCATABLE :: summary_file
-      CHARACTER(LEN=:), ALLOCATABLE  :: eigenpot_filename(:)
-      CHARACTER(LEN=:), ALLOCATABLE  :: fname
+      CHARACTER(LEN=:),ALLOCATABLE :: summary_file
+      CHARACTER(LEN=:),ALLOCATABLE :: eigenpot_filename(:)
+      CHARACTER(LEN=:),ALLOCATABLE :: fname
       LOGICAL :: lexists
       !
       ! Assign defaut to optional parameters
@@ -119,7 +113,7 @@ MODULE pdep_db
       !
       CALL mp_barrier(world_comm)
       !
-      ! Start clock
+      ! Timing
       !
       CALL start_clock('pdep_db')
       time_spent(1) = get_clock('pdep_db')
@@ -132,7 +126,7 @@ MODULE pdep_db
          CALL generate_pdep_fname(eigenpot_filename(global_j),global_j,iq_)
       ENDDO
       IF(ALLOCATED(summary_file)) DEALLOCATE(summary_file)
-      summary_file = TRIM(ADJUSTL(wstat_save_dir))//'/summary.json'
+      summary_file = TRIM(wstat_save_dir)//'/summary.json'
       !
       ! Create summary file if it does not exist
       !
@@ -150,9 +144,9 @@ MODULE pdep_db
            CALL jcor%create_array(jval,'pdep')
            CALL json%add('dielectric_matrix.pdep',jval)
            !
-           OPEN(NEWUNIT=iunit,FILE=summary_file)
-           CALL json%print(iunit)
-           CLOSE(iunit)
+           OPEN(NEWUNIT=iun,FILE=summary_file)
+           CALL json%print(iun)
+           CLOSE(iun)
            !
            CALL json%destroy()
          ENDIF
@@ -183,9 +177,9 @@ MODULE pdep_db
          CALL json%add('dielectric_matrix.pdep('//label_i//').eigenval',ev(1:n_pdep_eigen))
          CALL json%add('dielectric_matrix.pdep('//label_i//').eigenvec',eigenpot_filename(1:n_pdep_eigen))
          !
-         OPEN(NEWUNIT=iunit,FILE=summary_file)
-         CALL json%print(iunit)
-         CLOSE(iunit)
+         OPEN(NEWUNIT=iun,FILE=summary_file)
+         CALL json%print(iun)
+         CLOSE(iun)
          CALL json%destroy()
          !
       ENDIF
@@ -199,7 +193,7 @@ MODULE pdep_db
          global_j = pert%l2g(local_j)
          IF(global_j > n_pdep_eigen) CYCLE
          !
-         fname = TRIM(ADJUSTL(wstat_save_dir))//'/'//TRIM(ADJUSTL(eigenpot_filename(global_j)))
+         fname = TRIM(wstat_save_dir)//'/'//TRIM(ADJUSTL(eigenpot_filename(global_j)))
          CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
          !
       ENDDO
@@ -208,7 +202,7 @@ MODULE pdep_db
       !
       CALL mp_barrier(world_comm)
       !
-      ! timing
+      ! Timing
       !
       time_spent(2) = get_clock('pdep_db')
       CALL stop_clock('pdep_db')
@@ -217,7 +211,7 @@ MODULE pdep_db
          WRITE(stdout,*)
          CALL io_push_bar()
          WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-         WRITE(stdout,'(5x,"In location : ",a)') TRIM(ADJUSTL(wstat_save_dir))
+         WRITE(stdout,'(5x,"In location : ",a)') TRIM(wstat_save_dir)
          CALL io_push_bar()
       ENDIF
       !
@@ -248,36 +242,30 @@ MODULE pdep_db
       !
       ! I/O
       !
-      INTEGER, INTENT(IN) :: nglob_to_be_read
-      INTEGER, INTENT(IN), OPTIONAL :: iq
-      LOGICAL, INTENT(IN), OPTIONAL :: lprintinfo
+      INTEGER,INTENT(IN) :: nglob_to_be_read
+      INTEGER,INTENT(IN),OPTIONAL :: iq
+      LOGICAL,INTENT(IN),OPTIONAL :: lprintinfo
       !
       ! Workspace
       !
-      ! optional
-      INTEGER, PARAMETER :: default_iq = 1
-      INTEGER            :: iq_
-      LOGICAL, PARAMETER :: default_lprintinfo = .TRUE.
-      LOGICAL            :: lprintinfo_
-      ! labels
-      CHARACTER(LEN=9)      :: label_i
-      ! time
-      REAL(DP), EXTERNAL    :: GET_CLOCK
+      INTEGER,PARAMETER :: default_iq = 1
+      LOGICAL,PARAMETER :: default_lprintinfo = .TRUE.
+      INTEGER :: iq_
+      LOGICAL :: lprintinfo_
+      CHARACTER(LEN=9) :: label_i
+      REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
-      CHARACTER(20), EXTERNAL :: human_readable_time
-      ! scratch
+      CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: n_eigen_to_get
       INTEGER :: tmp_n_pdep_eigen
       INTEGER :: global_j,local_j
-      REAL(DP), ALLOCATABLE :: tmp_ev(:)
-      ! json managers
+      REAL(DP),ALLOCATABLE :: tmp_ev(:)
       TYPE(json_file) :: json
       INTEGER :: n_elements,ielement,myiq
       LOGICAL :: found
-      INTEGER, ALLOCATABLE :: ilen(:)
-      ! files
-      CHARACTER(LEN=:), ALLOCATABLE :: eigenpot_filename(:)
-      CHARACTER(LEN=:), ALLOCATABLE :: fname
+      INTEGER,ALLOCATABLE :: ilen(:)
+      CHARACTER(LEN=:),ALLOCATABLE :: eigenpot_filename(:)
+      CHARACTER(LEN=:),ALLOCATABLE :: fname
       !
       ! Assign defaut to optional parameters
       !
@@ -298,18 +286,18 @@ MODULE pdep_db
       !
       CALL start_clock('pdep_db')
       !
-      ! TIMING
+      ! Timing
       !
       time_spent(1) = get_clock('pdep_db')
       !
-      ! 1)  READ THE INPUT FILE
+      ! 1) READ THE INPUT FILE
       !
       IF(mpime == root) THEN
          !
          CALL json%initialize()
-         CALL json%load(filename=TRIM(ADJUSTL(wstat_save_dir))//'/summary.json')
+         CALL json%load(filename=TRIM(wstat_save_dir)//'/summary.json')
          IF(json%failed()) THEN
-            CALL errore('pdep_db_read','Cannot open: '//TRIM(ADJUSTL(wstat_save_dir))//'/summary.json',1)
+            CALL errore('pdep_db_read','Cannot open: '//TRIM(wstat_save_dir)//'/summary.json',1)
          ENDIF
          !
          CALL json%info('dielectric_matrix.pdep',n_children=n_elements)
@@ -341,7 +329,7 @@ MODULE pdep_db
          n_eigen_to_get = MIN(tmp_n_pdep_eigen,nglob_to_be_read)
       ENDIF
       !
-      ! 2)  READ THE EIGENVALUES FILE
+      ! 2) READ THE EIGENVALUES FILE
       !
       IF(.NOT. ALLOCATED(ev)) ALLOCATE(ev(n_eigen_to_get))
       IF(mpime == root) ev(1:nglob_to_be_read) = tmp_ev(1:nglob_to_be_read)
@@ -352,7 +340,7 @@ MODULE pdep_db
          CALL mp_bcast(eigenpot_filename(ielement),root,world_comm)
       ENDDO
       !
-      ! 3)  READ THE EIGENVECTOR FILES
+      ! 3) READ THE EIGENVECTOR FILES
       !
       IF(.NOT. ALLOCATED(dvg)) THEN
          ALLOCATE(dvg(npwqx,pert%nlocx))
@@ -366,16 +354,16 @@ MODULE pdep_db
          global_j = pert%l2g(local_j)
          IF(global_j > n_eigen_to_get) CYCLE
          !
-         fname = TRIM(ADJUSTL(wstat_save_dir))//'/'//TRIM(ADJUSTL(eigenpot_filename(global_j)))
+         fname = TRIM(wstat_save_dir)//'/'//TRIM(ADJUSTL(eigenpot_filename(global_j)))
          CALL pdep_read_G_and_distribute(fname,dvg(:,local_j),iq_)
          !
       ENDDO
       !
-      ! MPI BARRIER
+      ! MPI barrier
       !
       CALL mp_barrier(world_comm)
       !
-      ! TIMING
+      ! Timing
       !
       time_spent(2) = get_clock('pdep_db')
       CALL stop_clock('pdep_db')
@@ -384,7 +372,7 @@ MODULE pdep_db
          WRITE(stdout,*)
          CALL io_push_bar()
          WRITE(stdout,'(5x,"SAVE read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-         WRITE(stdout,'(5x,"In location : ",a)') TRIM(ADJUSTL(wstat_save_dir))
+         WRITE(stdout,'(5x,"In location : ",a)') TRIM(wstat_save_dir)
          WRITE(stdout,'(5x,"Eigen. found : ",i12)') n_eigen_to_get
          CALL io_push_bar()
       ENDIF

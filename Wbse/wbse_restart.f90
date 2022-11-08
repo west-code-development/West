@@ -14,9 +14,8 @@
 MODULE wbse_restart
   !----------------------------------------------------------------------------
   !
-  USE iotk_module
-  USE kinds,     ONLY : DP
-  USE io_files,  ONLY : tmp_dir
+  USE kinds,       ONLY : DP
+  USE json_module, ONLY : json_file
   !
   IMPLICIT NONE
   !
@@ -31,14 +30,14 @@ MODULE wbse_restart
   CONTAINS
     !
     !------------------------------------------------------------------------
-    SUBROUTINE wbse_restart_write_real(dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
+    SUBROUTINE wbse_restart_write_real(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg_exc,dng_exc,wbse_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
+      USE mp,                   ONLY : mp_barrier,mp_get
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
       !
@@ -46,15 +45,14 @@ MODULE wbse_restart
       !
       ! I/O
       !
-      INTEGER,INTENT(IN) :: dav_iter, notcnv, nbase
+      INTEGER,INTENT(IN) :: dav_iter,notcnv,nbase
       REAL(DP),INTENT(IN) :: ew(n_pdep_basis)
       REAL(DP),INTENT(IN) :: hr_distr(n_pdep_basis,pert%nlocx)
       REAL(DP),INTENT(IN) :: vr_distr(n_pdep_basis,pert%nlocx)
       !
       ! Workspace
       !
-      INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -62,7 +60,9 @@ MODULE wbse_restart
       INTEGER :: local_j,global_j
       INTEGER :: im
       REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER :: iunout
+      !
+      TYPE(json_file) :: json
+      INTEGER :: iun
       !
       ! BARRIER
       !
@@ -70,8 +70,7 @@ MODULE wbse_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(wbse_restart_dir)
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(TRIM(wbse_restart_dir))
       !
       CALL start_clock('wbse_restart')
       time_spent(1) = get_clock('wbse_restart')
@@ -80,115 +79,43 @@ MODULE wbse_restart
       !
       IF(mpime == root) THEN
          !
-         ! ... open XML descriptor
+         CALL json%initialize()
          !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/summary.xml', BINARY=.FALSE., IERR=ierr)
+         CALL json%add('dav_iter',dav_iter)
+         CALL json%add('notcnv',notcnv)
+         CALL json%add('nbase',nbase)
+         CALL json%add('conv',conv(:))
+         CALL json%add('ev',ev(:))
+         CALL json%add('ew',ew(:))
          !
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
-      !
-      IF(mpime == root) THEN
-         CALL iotk_write_begin(iunout, 'R-SUMMARY')
-         CALL iotk_write_dat(iunout, 'dav_iter', dav_iter)
-         CALL iotk_write_dat(iunout, 'notcnv', notcnv)
-         CALL iotk_write_dat(iunout, 'nbase', nbase)
-         CALL iotk_write_dat(iunout, 'conv', conv(:))
-         CALL iotk_write_end(iunout, 'R-SUMMARY')
-         !
-         CALL iotk_close_write(iunout)
-      ENDIF
-      !
-      ! CREATE THE EIG FILE
-      !
-      IF(mpime == root) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/eig.xml', BINARY=.FALSE., IERR=ierr)
+         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('summary.json'))
+         CALL json%print(iun)
+         CLOSE(iun)
+         CALL json%destroy()
          !
       ENDIF
       !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
-      !
-      IF(mpime == root) THEN
-         CALL iotk_write_begin(iunout, 'RESTART_EIG')
-         CALL iotk_write_dat(iunout, 'ev', ev(:))
-         CALL iotk_write_dat(iunout, 'ew', ew(:))
-         CALL iotk_write_end(iunout, 'RESTART_EIG')
-         !
-         CALL iotk_close_write(iunout)
-      ENDIF
-      !
-      ! CREATE THE HR FILE
-      !
-      IF(mpime == root) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/hr.dat', BINARY=.TRUE., IERR=ierr)
-         !
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
+      ! CREATE THE HR, VR FILE
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
+      !
+      IF(mpime == root) THEN
+         !
+         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/hr_vr.dat',FORM='unformatted')
+         !
+      ENDIF
+      !
+      DO im = 0,nimage-1
          !
          IF(me_bgrp == 0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_write_begin(iunout, 'RESTART_HR_'//TRIM(my_label))
-            CALL iotk_write_dat(iunout, 'hr', tmp_distr(:,:))
-            CALL iotk_write_end(iunout, 'RESTART_HR'//TRIM(my_label))
-         ENDIF
-         !
-      ENDDO
-      !
-      IF(mpime == root) CALL iotk_close_write(iunout)
-      !
-      DEALLOCATE(tmp_distr)
-      !
-      ! CREATE THE VR FILE
-      !
-      IF(mpime == root) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/vr.dat', BINARY=.TRUE., IERR=ierr)
-         !
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
-      !
-      ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
+         IF(mpime == root) WRITE(iun) tmp_distr
          !
          IF(me_bgrp == 0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_write_begin(iunout, 'RESTART_VR_'//TRIM(my_label))
-            CALL iotk_write_dat(iunout, 'vr', tmp_distr(:,:))
-            CALL iotk_write_end(iunout, 'RESTART_VR'//TRIM(my_label))
-         ENDIF
+         IF(mpime == root) WRITE(iun) tmp_distr
          !
       ENDDO
       !
-      IF(mpime == root) CALL iotk_close_write(iunout)
+      IF(mpime == root) CLOSE(iun)
       !
       DEALLOCATE(tmp_distr)
       !
@@ -202,9 +129,9 @@ MODULE wbse_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > nbase) CYCLE
          !
-         fname = TRIM(dirname)//'/V'//my_label//'.dat'
+         fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
-         fname = TRIM(dirname)//'/N'//my_label//'.dat'
+         fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dng_exc(:,:,:,local_j))
          !
       ENDDO
@@ -217,20 +144,20 @@ MODULE wbse_restart
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(dirname)
+      WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE wbse_restart_write_complex(dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
+    SUBROUTINE wbse_restart_write_complex(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : my_image_id,me_bgrp,inter_image_comm,nimage
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg_exc,dng_exc,wbse_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast,mp_get
+      USE mp,                   ONLY : mp_barrier,mp_get
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert
       !
@@ -238,15 +165,14 @@ MODULE wbse_restart
       !
       ! I/O
       !
-      INTEGER,INTENT(IN)  :: dav_iter, notcnv, nbase
+      INTEGER,INTENT(IN)  :: dav_iter,notcnv,nbase
       REAL(DP),INTENT(IN) :: ew(n_pdep_basis)
       COMPLEX(DP),INTENT(IN) :: hr_distr(n_pdep_basis,pert%nlocx)
       COMPLEX(DP),INTENT(IN) :: vr_distr(n_pdep_basis,pert%nlocx)
       !
       ! Workspace
       !
-      INTEGER :: ierr
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -254,7 +180,9 @@ MODULE wbse_restart
       INTEGER :: local_j,global_j
       INTEGER :: im
       COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
-      INTEGER :: iunout
+      !
+      TYPE(json_file) :: json
+      INTEGER :: iun
       !
       ! BARRIER
       !
@@ -262,8 +190,7 @@ MODULE wbse_restart
       !
       ! MKDIR
       !
-      dirname = trim(wbse_restart_dir)
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(TRIM(wbse_restart_dir))
       !
       CALL start_clock('wbse_restart')
       time_spent(1) = get_clock('wbse_restart')
@@ -272,116 +199,43 @@ MODULE wbse_restart
       !
       IF(mpime == root) THEN
          !
-         ! ... open XML descriptor
+         CALL json%initialize()
          !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/summary.xml', BINARY=.FALSE., IERR = ierr)
+         CALL json%add('dav_iter',dav_iter)
+         CALL json%add('notcnv',notcnv)
+         CALL json%add('nbase',nbase)
+         CALL json%add('conv',conv(:))
+         CALL json%add('ev',ev(:))
+         CALL json%add('ew',ew(:))
          !
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
-      !
-      IF(mpime == root) THEN
-         !
-         CALL iotk_write_begin(iunout, 'R-SUMMARY')
-         CALL iotk_write_dat(iunout, 'dav_iter', dav_iter)
-         CALL iotk_write_dat(iunout, 'notcnv', notcnv)
-         CALL iotk_write_dat(iunout, 'nbase', nbase)
-         CALL iotk_write_dat(iunout, 'conv', conv(:))
-         CALL iotk_write_end(iunout, 'R-SUMMARY')
-         !
-         CALL iotk_close_write(iunout)
-      ENDIF
-      !
-      ! CREATE THE EIG FILE
-      !
-      IF(mpime == root) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/eig.xml', BINARY=.FALSE., IERR=ierr)
+         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('summary.json'))
+         CALL json%print(iun)
+         CLOSE(iun)
+         CALL json%destroy()
          !
       ENDIF
       !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
-      !
-      IF(mpime == root) THEN
-         CALL iotk_write_begin(iunout, 'RESTART_EIG')
-         CALL iotk_write_dat(iunout, 'ev', ev(:))
-         CALL iotk_write_dat(iunout, 'ew', ew(:))
-         CALL iotk_write_end(iunout, 'RESTART_EIG')
-         !
-         CALL iotk_close_write(iunout)
-      ENDIF
-      !
-      ! CREATE THE HR FILE
-      !
-      IF(mpime == root) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/hr.dat', BINARY=.TRUE., IERR=ierr)
-         !
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
+      ! CREATE THE HR, VR FILE
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
+      !
+      IF(mpime == root) THEN
+         !
+         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+         !
+      ENDIF
+      !
+      DO im = 0,nimage-1
          !
          IF(me_bgrp == 0) CALL mp_get(tmp_distr,hr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_write_begin(iunout, 'RESTART_HR_'//TRIM(my_label))
-            CALL iotk_write_dat(iunout, 'hr', tmp_distr(:,:))
-            CALL iotk_write_end(iunout, 'RESTART_HR'//TRIM(my_label))
-         ENDIF
-         !
-      ENDDO
-      !
-      IF(mpime == root) CALL iotk_close_write(iunout)
-      !
-      DEALLOCATE(tmp_distr)
-      !
-      ! CREATE THE VR FILE
-      !
-      IF(mpime == root) THEN
-         !
-         ! ... open XML descriptor
-         !
-         CALL iotk_free_unit(iunout, ierr)
-         CALL iotk_open_write(iunout, FILE=TRIM(dirname)//'/vr.dat', BINARY=.TRUE., IERR=ierr)
-         !
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      CALL errore('wbse_restart', 'cannot open restart file for writing', ierr)
-      !
-      ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
+         IF(mpime == root) WRITE(iun) tmp_distr
          !
          IF(me_bgrp == 0) CALL mp_get(tmp_distr,vr_distr,my_image_id,0,im,im,inter_image_comm)
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_write_begin(iunout, 'RESTART_VR_'//TRIM(my_label))
-            CALL iotk_write_dat(iunout, 'vr', tmp_distr(:,:))
-            CALL iotk_write_end(iunout, 'RESTART_VR'//TRIM(my_label))
-         ENDIF
+         IF(mpime == root) WRITE(iun) tmp_distr
          !
       ENDDO
       !
-      IF(mpime == root) CALL iotk_close_write(iunout)
+      IF(mpime == root) CLOSE(iun)
       !
       DEALLOCATE(tmp_distr)
       !
@@ -395,9 +249,9 @@ MODULE wbse_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > nbase) CYCLE
          !
-         fname = TRIM(dirname)//'/V'//my_label//'.dat'
+         fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
-         fname = TRIM(dirname)//'/N'//my_label//'.dat'
+         fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,dng_exc(:,:,:,local_j))
          !
       ENDDO
@@ -410,7 +264,7 @@ MODULE wbse_restart
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(dirname)
+      WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -421,16 +275,15 @@ MODULE wbse_restart
       !
       USE mp_world,             ONLY : root,mpime,world_comm
       USE mp,                   ONLY : mp_barrier,mp_bcast
-      USE westcom,              ONLY : n_pdep_basis
+      USE westcom,              ONLY : n_pdep_basis,wbse_restart_dir
       USE clib_wrappers,        ONLY : f_rmdir
       USE west_io,              ONLY : remove_if_present
-      USE westcom,              ONLY : wbse_restart_dir
       !
       IMPLICIT NONE
       !
       ! Workspace
       !
-      CHARACTER(LEN=256) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       INTEGER :: ierr,ip
       CHARACTER(6) :: my_label
       !
@@ -440,26 +293,22 @@ MODULE wbse_restart
       !
       ! ... clear the main restart directory
       !
-      dirname = TRIM(wbse_restart_dir)
-      !
       IF(mpime == root) THEN
-         CALL remove_if_present(TRIM(dirname)//'/summary.xml')
-         CALL remove_if_present(TRIM(dirname)//'/eig.xml')
-         CALL remove_if_present(TRIM(dirname)//'/hr.dat')
-         CALL remove_if_present(TRIM(dirname)//'/vr.dat')
+         CALL remove_if_present(TRIM(wbse_restart_dir)//'/summary.json')
+         CALL remove_if_present(TRIM(wbse_restart_dir)//'/hr_vr.dat')
          DO ip = 1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
             fname = 'V'//my_label//'.dat'
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wbse_restart_dir)//'/'//TRIM(fname))
             fname = 'N'//my_label//'.dat'
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wbse_restart_dir)//'/'//TRIM(fname))
          ENDDO
-         ierr = f_rmdir(TRIM(dirname))
+         ierr = f_rmdir(TRIM(wbse_restart_dir))
       ENDIF
       !
-      CALL mp_bcast(ierr, root, world_comm)
+      CALL mp_bcast(ierr,root,world_comm)
       !
-      CALL errore('wbse_restart', 'cannot clear restart', ierr)
+      CALL errore('wbse_restart','cannot clear restart',ierr)
       !
       ! BARRIER
       !
@@ -468,7 +317,7 @@ MODULE wbse_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE wbse_restart_read_real(dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
+    SUBROUTINE wbse_restart_read_real(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : world_comm
@@ -481,14 +330,13 @@ MODULE wbse_restart
       !
       ! I/O
       !
-      INTEGER,INTENT(OUT) :: dav_iter, notcnv, nbase
+      INTEGER,INTENT(OUT) :: dav_iter,notcnv,nbase
       REAL(DP),INTENT(OUT) :: ew(n_pdep_basis)
       REAL(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       REAL(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
       !
       ! Workspace
       !
-      CHARACTER(LEN=256) :: dirname
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -500,15 +348,11 @@ MODULE wbse_restart
       CALL start_clock('wbse_restart')
       time_spent(1) = get_clock('wbse_restart')
       !
-      dirname = TRIM(wbse_restart_dir)
+      CALL read_restart12_(dav_iter,notcnv,nbase,ew)
       !
-      CALL read_restart1_(dirname, dav_iter, notcnv, nbase)
+      CALL read_restart3d_(hr_distr,vr_distr)
       !
-      CALL read_restart2_(dirname, ew)
-      !
-      CALL read_restart3d_(dirname, hr_distr, vr_distr)
-      !
-      CALL read_restart4_(dirname, nbase)
+      CALL read_restart4_(nbase)
       !
       ! BARRIER
       !
@@ -519,13 +363,13 @@ MODULE wbse_restart
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM( dirname )
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE wbse_restart_read_complex(dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
+    SUBROUTINE wbse_restart_read_complex(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : world_comm
@@ -538,14 +382,13 @@ MODULE wbse_restart
       !
       ! I/O
       !
-      INTEGER,INTENT(OUT) :: dav_iter, notcnv, nbase
+      INTEGER,INTENT(OUT) :: dav_iter,notcnv,nbase
       REAL(DP),INTENT(OUT) :: ew(n_pdep_basis)
       COMPLEX(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       COMPLEX(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
       !
       ! Workspace
       !
-      CHARACTER(LEN=256) :: dirname
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
@@ -557,15 +400,11 @@ MODULE wbse_restart
       CALL start_clock('wbse_restart')
       time_spent(1) = get_clock('wbse_restart')
       !
-      dirname = TRIM(wbse_restart_dir)
+      CALL read_restart12_(dav_iter,notcnv,nbase,ew)
       !
-      CALL read_restart1_(dirname, dav_iter, notcnv, nbase)
+      CALL read_restart3z_(hr_distr,vr_distr)
       !
-      CALL read_restart2_(dirname, ew)
-      !
-      CALL read_restart3z_(dirname, hr_distr, vr_distr)
-      !
-      CALL read_restart4_(dirname, nbase)
+      CALL read_restart4_(nbase)
       !
       ! BARRIER
       !
@@ -576,16 +415,16 @@ MODULE wbse_restart
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(dirname)
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart1_(dirname, dav_iter, notcnv, nbase)
+    SUBROUTINE read_restart12_(dav_iter,notcnv,nbase,ew)
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : conv,n_pdep_eigen
+      USE westcom,              ONLY : conv,n_pdep_eigen,n_pdep_basis,wbse_restart_dir,ev
       USE mp_world,             ONLY : world_comm,mpime,root
       USE mp,                   ONLY : mp_bcast
       !
@@ -593,92 +432,55 @@ MODULE wbse_restart
       !
       ! I/O
       !
-      INTEGER,INTENT(OUT) :: dav_iter, notcnv, nbase
-      CHARACTER(LEN=*),INTENT(IN)  :: dirname
-      !
-      ! Workspace
-      !
-      INTEGER :: ierr,iun
-      !
-      ierr = 0
-      !
-      IF(mpime == root) THEN
-         CALL iotk_free_unit(iun, ierr)
-         CALL iotk_open_read(iun, FILE=TRIM(dirname)//'/summary.xml', IERR=ierr)
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      IF(ierr /= 0) CALL errore('wbse_restart', 'cannot open restart file for reading', ierr)
-      !
-      IF(mpime == root) THEN
-         CALL iotk_scan_begin(iun, 'R-SUMMARY')
-         CALL iotk_scan_dat(iun, 'dav_iter', dav_iter)
-         CALL iotk_scan_dat(iun, 'notcnv', notcnv)
-         CALL iotk_scan_dat(iun, 'nbase', nbase)
-         CALL iotk_scan_dat(iun, 'conv', conv(1:n_pdep_eigen))
-         CALL iotk_scan_end(iun, 'R-SUMMARY')
-         !
-         CALL iotk_close_read(iun)
-      ENDIF
-      !
-      CALL mp_bcast(dav_iter, root, world_comm)
-      CALL mp_bcast(notcnv, root, world_comm)
-      CALL mp_bcast(nbase, root, world_comm)
-      CALL mp_bcast(conv, root, world_comm)
-      !
-    END SUBROUTINE
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE read_restart2_(dirname, ew)
-      !------------------------------------------------------------------------
-      !
-      USE westcom,              ONLY : ev,n_pdep_basis
-      USE mp_world,             ONLY : world_comm,mpime,root
-      USE mp,                   ONLY : mp_bcast
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
+      INTEGER,INTENT(OUT) :: dav_iter,notcnv,nbase
       REAL(DP),INTENT(OUT) :: ew(n_pdep_basis)
-      CHARACTER(LEN=*),INTENT(IN)  :: dirname
       !
       ! Workspace
       !
-      INTEGER :: ierr,iun
-      !
-      ierr = 0
-      !
-      IF(mpime == root) THEN
-         CALL iotk_free_unit(iun, ierr)
-         CALL iotk_open_read(iun, FILE=TRIM(dirname)//'/eig.xml', IERR=ierr)
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      IF(ierr /= 0) CALL errore('wbse_restart', 'cannot open restart file for reading', ierr)
+      LOGICAL :: found
+      TYPE(json_file) :: json
+      REAL(DP),ALLOCATABLE :: rvals(:)
+      LOGICAL,ALLOCATABLE :: lvals(:)
+      INTEGER :: ival
       !
       IF(mpime == root) THEN
-         CALL iotk_scan_begin(iun, 'RESTART_EIG')
-         CALL iotk_scan_dat(iun, 'ev', ev(:))
-         CALL iotk_scan_dat(iun, 'ew', ew(:))
-         CALL iotk_scan_end(iun, 'RESTART_EIG')
          !
-         CALL iotk_close_read(iun)
+         CALL json%initialize()
+         CALL json%load(filename=TRIM(wbse_restart_dir)//'/'//TRIM('summary.json'))
+         !
+         CALL json%get('dav_iter',ival,found)
+         IF(found) dav_iter = ival
+         CALL json%get('notcnv',ival,found)
+         IF(found) notcnv = ival
+         CALL json%get('nbase',ival,found)
+         IF(found) nbase = ival
+         CALL json%get('conv',lvals,found)
+         IF(found) conv(1:n_pdep_eigen) = lvals(1:n_pdep_eigen)
+         CALL json%get('ev',rvals,found)
+         IF(found) ev(:) = rvals(:)
+         CALL json%get('ew',rvals,found)
+         IF(found) ew(1:n_pdep_basis) = rvals(1:n_pdep_basis)
+         !
+         CALL json%destroy()
+         !
       ENDIF
       !
-      CALL mp_bcast(ev, root, world_comm)
-      CALL mp_bcast(ew, root, world_comm)
+      CALL mp_bcast(dav_iter,root,world_comm)
+      CALL mp_bcast(notcnv,root,world_comm)
+      CALL mp_bcast(nbase,root,world_comm)
+      CALL mp_bcast(conv,root,world_comm)
+      !
+      CALL mp_bcast(ev,root,world_comm)
+      CALL mp_bcast(ew,root,world_comm)
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart3d_(dirname, hr_distr, vr_distr)
+    SUBROUTINE read_restart3d_(hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : n_pdep_basis
-      USE mp_world,             ONLY : world_comm,mpime,root
+      USE westcom,              ONLY : n_pdep_basis,wbse_restart_dir
+      USE mp_world,             ONLY : mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
       USE distribution_center,  ONLY : pert
       USE mp_global,            ONLY : nimage,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
@@ -689,85 +491,42 @@ MODULE wbse_restart
       !
       REAL(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       REAL(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
-      CHARACTER(LEN=*),INTENT(IN)  :: dirname
       !
       ! Workspace
       !
-      INTEGER :: ierr,iun
+      INTEGER :: iun
       INTEGER :: im
       REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
-      CHARACTER(6) :: my_label
-      !
-      ierr = 0
-      !
-      IF(mpime == root) THEN
-         CALL iotk_free_unit(iun, ierr)
-         CALL iotk_open_read(iun, FILE=TRIM(dirname)//'/hr.dat', BINARY=.TRUE., IERR=ierr)
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      IF(ierr /= 0 ) CALL errore('wbse_restart', 'cannot open restart file for reading', ierr)
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
+      !
+      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+      !
+      DO im = 0,nimage-1
          !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_scan_begin(iun, 'RESTART_HR_'//TRIM(my_label))
-            CALL iotk_scan_dat(iun, 'hr', tmp_distr(:,:))
-            CALL iotk_scan_end(iun, 'RESTART_HR'//TRIM(my_label))
-         ENDIF
-         !
+         IF(mpime == root) READ(iun) tmp_distr(:,:)
          IF(me_bgrp == 0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
-      ENDDO
-      DEALLOCATE(tmp_distr)
-      !
-      IF(mpime == root) CALL iotk_close_read(iun)
-      !
-      CALL mp_bcast(hr_distr, 0, intra_image_comm)
-      !
-      ierr = 0
-      !
-      IF(mpime == root) THEN
-         CALL iotk_free_unit(iun, ierr)
-         CALL iotk_open_read(iun, FILE=TRIM(dirname)//'/vr.dat', BINARY=.TRUE., IERR=ierr)
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      IF(ierr /= 0) CALL errore('wbse_restart', 'cannot open restart file for reading', ierr)
-      !
-      ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
-         !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_scan_begin(iun, 'RESTART_VR_'//TRIM(my_label))
-            CALL iotk_scan_dat(iun, 'vr', tmp_distr(:,:))
-            CALL iotk_scan_end(iun, 'RESTART_VR'//TRIM(my_label))
-         ENDIF
-         !
+         IF(mpime == root) READ(iun) tmp_distr(:,:)
          IF(me_bgrp == 0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
+      !
+      IF(mpime == root) CLOSE(iun)
+      !
       DEALLOCATE(tmp_distr)
       !
-      IF(mpime == root) CALL iotk_close_read(iun)
-      !
-      CALL mp_bcast(vr_distr, 0, intra_image_comm)
+      CALL mp_bcast(hr_distr,0,intra_image_comm)
+      CALL mp_bcast(vr_distr,0,intra_image_comm)
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart3z_(dirname, hr_distr, vr_distr)
+    SUBROUTINE read_restart3z_(hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : n_pdep_basis
-      USE mp_world,             ONLY : world_comm,mpime,root
+      USE westcom,              ONLY : n_pdep_basis,wbse_restart_dir
+      USE mp_world,             ONLY : mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
       USE distribution_center,  ONLY : pert
       USE mp_global,            ONLY : nimage,me_bgrp,inter_image_comm,intra_image_comm,my_image_id
@@ -778,96 +537,52 @@ MODULE wbse_restart
       !
       COMPLEX(DP),INTENT(OUT) :: hr_distr(n_pdep_basis,pert%nlocx)
       COMPLEX(DP),INTENT(OUT) :: vr_distr(n_pdep_basis,pert%nlocx)
-      CHARACTER(LEN=*),INTENT(IN)  :: dirname
       !
       ! Workspace
       !
-      INTEGER :: ierr,iun
+      INTEGER :: iun
       INTEGER :: im
       COMPLEX(DP),ALLOCATABLE :: tmp_distr(:,:)
-      CHARACTER(6) :: my_label
-      !
-      ierr = 0
-      !
-      IF(mpime == root) THEN
-         CALL iotk_free_unit(iun, ierr)
-         CALL iotk_open_read(iun, FILE=TRIM(dirname)//'/hr.dat', BINARY=.TRUE., IERR=ierr)
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      IF(ierr /= 0) CALL errore('wbse_restart', 'cannot open restart file for reading', ierr)
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
+      !
+      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+      !
+      DO im = 0,nimage-1
          !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_scan_begin(iun, 'RESTART_HR_'//TRIM(my_label))
-            CALL iotk_scan_dat(iun, 'hr', tmp_distr(:,:))
-            CALL iotk_scan_end(iun, 'RESTART_HR'//TRIM(my_label))
-         ENDIF
-         !
+         IF(mpime == root) READ(iun) tmp_distr(:,:)
          IF(me_bgrp == 0) CALL mp_get(hr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
-      ENDDO
-      DEALLOCATE(tmp_distr)
-      !
-      IF(mpime == root) CALL iotk_close_read(iun)
-      !
-      CALL mp_bcast(hr_distr, 0, intra_image_comm)
-      !
-      ierr = 0
-      !
-      IF(mpime == root) THEN
-         CALL iotk_free_unit(iun, ierr)
-         CALL iotk_open_read(iun, FILE=TRIM(dirname)//'/vr.dat', BINARY=.TRUE., IERR=ierr)
-      ENDIF
-      !
-      CALL mp_bcast(ierr, root, world_comm)
-      !
-      IF(ierr /= 0) CALL errore('wbse_restart', 'cannot open restart file for reading', ierr)
-      !
-      ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
-      DO im = 0, nimage-1
-         !
-         WRITE(my_label,'(i6.6)') im
-         !
-         IF(mpime == root) THEN
-            CALL iotk_scan_begin(iun, 'RESTART_VR_'//TRIM(my_label))
-            CALL iotk_scan_dat(iun, 'vr', tmp_distr(:,:))
-            CALL iotk_scan_end(iun, 'RESTART_VR'//TRIM(my_label))
-         ENDIF
-         !
+         IF(mpime == root) READ(iun) tmp_distr(:,:)
          IF(me_bgrp == 0) CALL mp_get(vr_distr,tmp_distr,my_image_id,im,0,im,inter_image_comm)
          !
       ENDDO
+      !
+      IF(mpime == root) CLOSE(iun)
+      !
       DEALLOCATE(tmp_distr)
       !
-      IF(mpime == root) CALL iotk_close_read(iun)
-      !
-      CALL mp_bcast(vr_distr, 0, intra_image_comm)
+      CALL mp_bcast(hr_distr,0,intra_image_comm)
+      CALL mp_bcast(vr_distr,0,intra_image_comm)
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE read_restart4_(dirname, nbase)
+    SUBROUTINE read_restart4_(nbase)
       !------------------------------------------------------------------------
       !
       USE pwcom,                ONLY : nks
-      USE westcom,              ONLY : npwqx,dvg_exc,dng_exc,nbndval0x
+      USE westcom,              ONLY : npwqx,dvg_exc,dng_exc,nbndval0x,wbse_restart_dir
       USE plep_io,              ONLY : plep_read_G_and_distribute
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
       !
-      CHARACTER(LEN=*),INTENT(IN)  :: dirname
       INTEGER,INTENT(IN) :: nbase
       !
-      INTEGER :: global_j, local_j
+      INTEGER :: global_j,local_j
       CHARACTER(6) :: my_label
-      CHARACTER(LEN=256) :: fname
+      CHARACTER(LEN=512) :: fname
       !
       IF(.NOT. ALLOCATED(dvg_exc)) ALLOCATE(dvg_exc(npwqx,nbndval0x,nks,pert%nlocx))
       IF(.NOT. ALLOCATED(dng_exc)) ALLOCATE(dng_exc(npwqx,nbndval0x,nks,pert%nlocx))
@@ -882,9 +597,9 @@ MODULE wbse_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > nbase) CYCLE
          !
-         fname = TRIM(dirname)//'/V'//my_label//'.dat'
+         fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
          CALL plep_read_G_and_distribute(fname,dvg_exc(:,:,:,local_j))
-         fname = TRIM(dirname)//'/N'//my_label//'.dat'
+         fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
          CALL plep_read_G_and_distribute(fname,dng_exc(:,:,:,local_j))
          !
       ENDDO

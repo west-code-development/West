@@ -76,12 +76,12 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
      CALL ifr%g2l(ifreq,iloc,who)
      IF ( me_bgrp == who ) THEN
         !
-        chi_body(:,:) = CMPLX(d_epsm1_ifr_a(:,:,ifreq),KIND=DP)
-        IF ( l_macropol ) chi_head = CMPLX(d_head_ifr_a(ifreq),KIND=DP)
+        chi_body(:,:) = CMPLX(d_epsm1_ifr_a(:,:,iloc),KIND=DP)
+        IF ( l_macropol ) chi_head = CMPLX(d_head_ifr_a(iloc),KIND=DP)
         !
         IF ( l_qdet_verbose ) THEN
-           chi_full_body(:,:) = CMPLX(d_epsm1_ifr(:,:,ifreq),KIND=DP)
-           IF ( l_macropol ) chi_full_head = CMPLX(d_head_ifr(ifreq),KIND=DP)
+           chi_full_body(:,:) = CMPLX(d_epsm1_ifr(:,:,iloc),KIND=DP)
+           IF ( l_macropol ) chi_full_head = CMPLX(d_head_ifr(iloc),KIND=DP)
         ENDIF
         !
      ENDIF

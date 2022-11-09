@@ -502,7 +502,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
         j = pijmap(2,p1)
         !
         !$acc host_data use_device(proj_c)
-        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s2),psic,'Wave')
+        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s1),psic,'Wave')
         !$acc end host_data
         !
         !$acc parallel loop present(rho_r)
@@ -533,7 +533,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            l = pijmap(2,p2)
            !
            !$acc host_data use_device(proj_c)
-           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s1),proj_c(:,l,s2),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s2),proj_c(:,l,s2),psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(rho_r)

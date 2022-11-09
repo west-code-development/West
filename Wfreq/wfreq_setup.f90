@@ -163,7 +163,6 @@ SUBROUTINE wfreq_setup
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'H') THEN
         !
-        IF(nspin > 1) CALL errore('wfreq_setup','QDET with nspin > 1 not supported',1)
         IF(real_space) CALL errore('wfreq_setup','QDET with real_space not supported',1)
         IF(lda_plus_u) CALL errore('wfreq_setup','QDET with lda_plus_u not supported',1)
         IF(lelfield) CALL errore('wfreq_setup','QDET with lelfield not supported',1)

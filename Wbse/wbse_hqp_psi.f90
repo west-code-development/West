@@ -132,34 +132,3 @@ SUBROUTINE read_qp_eigs()
   CALL mp_bcast(et_qp,ionode_id,world_comm)
   !
 END SUBROUTINE
-!
-SUBROUTINE read_ks_wfc()
-  !
-  USE mp,            ONLY : mp_bcast,mp_barrier
-  USE mp_world,      ONLY : world_comm
-  USE westcom,       ONLY : evc_ks
-  USE pwcom,         ONLY : npwx,nks,nbnd
-  USE plep_io,       ONLY : plep_read_G_and_distribute_wfc
-  !
-  IMPLICIT NONE
-  !
-  INTEGER :: iks
-  CHARACTER(LEN=3) :: my_ik
-  CHARACTER(LEN=256) :: fname
-  !
-  ! read eigenvalues from file
-  !
-  CALL mp_barrier(world_comm)
-  !
-  ALLOCATE(evc_ks(npwx,nbnd,nks))
-  !
-  DO iks = 1, nks
-     !
-     WRITE(my_ik,'(i1)') iks
-     !
-     fname = './ks_wfc_tmp_'//TRIM(my_ik)//'.dat'
-     CALL plep_read_G_and_distribute_wfc(fname,evc_ks(:,:,iks),nbnd)
-     !
-  ENDDO
-  !
-END SUBROUTINE

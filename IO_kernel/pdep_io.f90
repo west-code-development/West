@@ -40,20 +40,20 @@ MODULE pdep_io
       !
       ! I/O
       !
-      CHARACTER(*), INTENT(IN) :: fname
-      COMPLEX(DP), INTENT(IN) :: pdepg(npwqx)
-      INTEGER, INTENT(IN), OPTIONAL :: iq
+      CHARACTER(LEN=*),INTENT(IN) :: fname
+      COMPLEX(DP),INTENT(IN) :: pdepg(npwqx)
+      INTEGER,INTENT(IN),OPTIONAL :: iq
       !
       ! Workspace
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: ig
       INTEGER :: ndim
-      INTEGER :: iunit
+      INTEGER :: iun
       INTEGER :: npwqx_g
-      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:)
-      INTEGER, ALLOCATABLE :: igq_l2g(:)
-      INTEGER, PARAMETER :: default_iq = 1
+      INTEGER,ALLOCATABLE :: igq_l2g_kdip(:)
+      INTEGER,ALLOCATABLE :: igq_l2g(:)
+      INTEGER,PARAMETER :: default_iq = 1
       INTEGER :: iq_
       INTEGER :: header(HD_LENGTH)
       INTEGER(i8b) :: offset
@@ -100,17 +100,17 @@ MODULE pdep_io
                header(HD_ID_LITTLE_ENDIAN) = 1
             ENDIF
             !
-            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
+            OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
             offset = 1
-            WRITE(iunit,POS=offset) header
+            WRITE(iun,POS=offset) header
             offset = 1+HD_LENGTH*SIZEOF(header(1))
-            WRITE(iunit,POS=offset) tmp_vec(1:ndim)
-            CLOSE(iunit)
+            WRITE(iun,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iun)
             !
          ENDIF
          !
          DEALLOCATE(tmp_vec)
-      !
+         !
       ELSE
          !
          ! Resume all components
@@ -132,12 +132,12 @@ MODULE pdep_io
                header(HD_ID_LITTLE_ENDIAN) = 1
             ENDIF
             !
-            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
+            OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
             offset = 1
-            WRITE(iunit,POS=offset) header
+            WRITE(iun,POS=offset) header
             offset = 1+HD_LENGTH*SIZEOF(header(1))
-            WRITE(iunit,POS=offset) tmp_vec(1:ndim)
-            CLOSE(iunit)
+            WRITE(iun,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iun)
             !
          ENDIF
          !
@@ -163,20 +163,20 @@ MODULE pdep_io
       !
       ! I/O
       !
-      CHARACTER(*), INTENT(IN) :: fname
-      COMPLEX(DP), INTENT(OUT) :: pdepg(npwqx)
-      INTEGER, INTENT(IN), OPTIONAL :: iq
+      CHARACTER(LEN=*),INTENT(IN) :: fname
+      COMPLEX(DP),INTENT(OUT) :: pdepg(npwqx)
+      INTEGER,INTENT(IN),OPTIONAL :: iq
       !
       ! Workspace
       !
       COMPLEX(DP),ALLOCATABLE :: tmp_vec(:)
       INTEGER :: ig
       INTEGER :: ndim
-      INTEGER :: iunit
+      INTEGER :: iun
       INTEGER :: npwqx_g
-      INTEGER, ALLOCATABLE :: igq_l2g_kdip(:)
-      INTEGER, ALLOCATABLE :: igq_l2g(:)
-      INTEGER, PARAMETER :: default_iq = 1
+      INTEGER,ALLOCATABLE :: igq_l2g_kdip(:)
+      INTEGER,ALLOCATABLE :: igq_l2g(:)
+      INTEGER,PARAMETER :: default_iq = 1
       INTEGER :: iq_
       INTEGER :: ierr
       INTEGER :: header(HD_LENGTH)
@@ -204,27 +204,27 @@ MODULE pdep_io
          !
          IF(me_bgrp == root_bgrp) THEN
             !
-            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
+            OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
             IF(ierr /= 0) THEN
-               CALL errore('pdep_read','Cannot read file:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Cannot read file:'//TRIM(fname),1)
             ENDIF
             !
             offset = 1
-            READ(iunit,POS=offset) header
+            READ(iun,POS=offset) header
             IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-               CALL errore('pdep_read','Unknown file format:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Unknown file format:'//TRIM(fname),1)
             ENDIF
             IF(ndim /= header(HD_ID_DIMENSION)) THEN
-               CALL errore('pdep_read','Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Dimension mismatch:'//TRIM(fname),1)
             ENDIF
             IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
                .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-               CALL errore('pdep_read','Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Endianness mismatch:'//TRIM(fname),1)
             ENDIF
             !
             offset = 1+HD_LENGTH*SIZEOF(header(1))
-            READ(iunit,POS=offset) tmp_vec(1:ndim)
-            CLOSE(iunit)
+            READ(iun,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iun)
             !
          ENDIF
          !
@@ -258,27 +258,27 @@ MODULE pdep_io
          !
          IF(me_bgrp == root_bgrp) THEN
             !
-            OPEN(NEWUNIT=iunit,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
+            OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
             IF(ierr /= 0) THEN
-               CALL errore('pdep_read','Cannot read file:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Cannot read file:'//TRIM(fname),1)
             ENDIF
             !
             offset = 1
-            READ(iunit,POS=offset) header
+            READ(iun,POS=offset) header
             IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-               CALL errore('pdep_read','Unknown file format:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Unknown file format:'//TRIM(fname),1)
             ENDIF
             IF(ndim /= header(HD_ID_DIMENSION)) THEN
-               CALL errore('pdep_read','Dimension mismatch:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Dimension mismatch:'//TRIM(fname),1)
             ENDIF
             IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
                .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-               CALL errore('pdep_read','Endianness mismatch:'//TRIM(ADJUSTL(fname)),1)
+               CALL errore('pdep_read','Endianness mismatch:'//TRIM(fname),1)
             ENDIF
             !
             offset = 1+HD_LENGTH*SIZEOF(header(1))
-            READ(iunit,POS=offset) tmp_vec(1:ndim)
-            CLOSE(iunit)
+            READ(iun,POS=offset) tmp_vec(1:ndim)
+            CLOSE(iun)
             !
          ENDIF
          !

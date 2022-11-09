@@ -18,7 +18,7 @@ SUBROUTINE solve_h1e()
                                  & sigma_hf_full,qp_bands,ijpmap
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin,et
-  USE io_push,              ONLY : io_push_title,io_push_bar
+  USE io_push,              ONLY : io_push_title
   USE wfreq_db,             ONLY : qdet_db_write_h1e
   !
   IMPLICIT NONE
@@ -69,8 +69,6 @@ SUBROUTINE solve_h1e()
   h1e(:,:) = h1e - REAL(sigma_corr_full,KIND=DP)
   !
   CALL qdet_db_write_h1e(h1e)
-  !
-  CALL io_push_bar()
   !
   DEALLOCATE( h1e )
   !

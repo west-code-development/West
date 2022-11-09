@@ -30,6 +30,7 @@ io_push.o \
 linear_algebra_kernel.o \
 my_mkdir.o \
 parse_command_arguments.o \
+pw_memory_report.o \
 report_dynamical_memory.o \
 set_dirs.o \
 set_eprec.o \

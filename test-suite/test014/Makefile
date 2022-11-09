@@ -25,11 +25,11 @@ clean:
 title:
 	@echo
 	@echo "###############"
-	@echo "### test013 ###"
+	@echo "### test014 ###"
 	@echo "###############"
 	@echo
 
 description:
 	@echo
-	@echo "NV- Diamond spin-polarized QDET"
+	@echo "NV- diamond test spin-polarized QDET"
 	@echo

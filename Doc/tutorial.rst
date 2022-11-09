@@ -17,7 +17,17 @@ Intro tutorials:
    tutorials/basic/basic_005.ipynb
    tutorials/basic/basic_006.ipynb
 
-The following tutorials were used in 2017 for MICCoM's Computational Summer School:
+The following tutorials were used in `MICCoM Workshop & Hands-on Tutorials 2022 <http://miccom-center.org/workshop-and-hands-on-tutorials2022/index.html>`_:
+
+.. toctree::
+   :maxdepth: 1
+
+   tutorials/MICCoM_School_2022/miccom_000.ipynb
+   tutorials/MICCoM_School_2022/miccom_001.ipynb
+   tutorials/MICCoM_School_2022/miccom_002.ipynb
+   tutorials/MICCoM_School_2022/miccom_003.ipynb
+
+The following tutorials were used in `MICCoM Computational School 2017 <http://miccom-center.org/summer-school-2017/index.html>`_:
 
 .. toctree::
    :maxdepth: 1

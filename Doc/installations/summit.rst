@@ -1,7 +1,7 @@
 .. _summit:
 
 ===========
-Summit-OLCF
+OLCF-Summit
 ===========
 
 Summit is a GPU-accelerated supercomputer located at Oak Ridge National Laboratory, maintained by `OLCF <https://www.olcf.ornl.gov/>`_.

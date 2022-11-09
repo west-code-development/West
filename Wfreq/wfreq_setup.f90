@@ -25,7 +25,7 @@ SUBROUTINE wfreq_setup
                                    & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc
   USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
-  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx,nspin
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
@@ -203,5 +203,7 @@ SUBROUTINE wfreq_setup
      sigma_spectralf = 0._DP
      sigma_freq = 0._DP
   ENDIF
+  !
+  CALL wfreq_memory_report()
   !
 END SUBROUTINE

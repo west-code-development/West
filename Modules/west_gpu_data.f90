@@ -11,7 +11,7 @@
 MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
-   USE kinds,         ONLY : DP
+   USE kinds,         ONLY : DP,i8b
 #if defined(__CUDA)
    USE becmod_gpum,   ONLY : bec_type_d
    USE cublas
@@ -58,25 +58,32 @@ MODULE west_gpu_data
    !
    ! Chi invert
    !
+   INTEGER(i8b) :: l_inv
+   INTEGER(i8b) :: l_inv_h
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
+   INTEGER(i8b), ALLOCATABLE :: piv(:)
+#else
+   INTEGER, ALLOCATABLE :: piv(:)
+#endif
+   !$acc declare device_resident(piv)
+   REAL(DP), ALLOCATABLE :: work_r_h(:)
    REAL(DP), ALLOCATABLE :: work_r(:)
-   REAL(DP), ALLOCATABLE :: body_r(:,:)
    REAL(DP), ALLOCATABLE :: x_r(:,:)
    REAL(DP), ALLOCATABLE :: wh_r(:,:)
    REAL(DP), ALLOCATABLE :: wl_r(:,:)
    REAL(DP), ALLOCATABLE :: temph_r(:,:)
    REAL(DP), ALLOCATABLE :: templ_r(:,:)
    REAL(DP), ALLOCATABLE :: tempt_r(:,:)
-   !$acc declare device_resident(work_r,body_r,x_r,wh_r,wl_r,temph_r,templ_r,tempt_r)
+   !$acc declare device_resident(work_r,x_r,wh_r,wl_r,temph_r,templ_r,tempt_r)
+   COMPLEX(DP), ALLOCATABLE :: work_c_h(:)
    COMPLEX(DP), ALLOCATABLE :: work_c(:)
-   COMPLEX(DP), ALLOCATABLE :: body_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: x_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: wh_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: wl_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: temph_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: templ_c(:,:)
    COMPLEX(DP), ALLOCATABLE :: tempt_c(:,:)
-   !$acc declare device_resident(work_c,body_c,x_c,wh_c,wl_c,temph_c,templ_c,tempt_c)
-   INTEGER, DEVICE, POINTER :: piv_d(:)
+   !$acc declare device_resident(work_c,x_c,wh_c,wl_c,temph_c,templ_c,tempt_c)
    !
    ! Lanczos
    !
@@ -94,7 +101,8 @@ MODULE west_gpu_data
    !$acc declare device_resident(tmp_r3,ps_r,tmp_c3,ps_c)
    INTEGER, DEVICE, POINTER :: dfft_nl_d(:)
    INTEGER, DEVICE, POINTER :: dfft_nlm_d(:)
-   TYPE(cusolverDnHandle) :: cusolver_h
+   TYPE(cusolverDnHandle) :: cusolv_h
+   TYPE(cusolverDnParams) :: cusolv_p
    !
    CONTAINS
    !
@@ -124,8 +132,11 @@ MODULE west_gpu_data
    use_sp_fft = (use_gpu .AND. single_precision_fft_)
 #endif
    !
-   istat = cusolverDnCreate(cusolver_h)
-   IF(istat /= 0) CALL errore('gpu_start','coSOLVER init failed',1)
+   istat = cusolverDnCreate(cusolv_h)
+   IF(istat /= 0) CALL errore('gpu_start','coSOLVER init failed',istat)
+   !
+   istat = cusolverDnCreateParams(cusolv_p)
+   IF(istat /= 0) CALL errore('gpu_start','coSOLVER params init failed',istat)
    !
    WRITE(stdout,'(/,5X,A)') 'GPU acceleration enabled'
    !
@@ -141,7 +152,8 @@ MODULE west_gpu_data
    !
    INTEGER :: istat
    !
-   istat = cusolverDnDestroy(cusolver_h)
+   istat = cusolverDnDestroyParams(cusolv_p)
+   istat = cusolverDnDestroy(cusolv_h)
    !
    END SUBROUTINE
    !
@@ -391,34 +403,37 @@ MODULE west_gpu_data
    USE uspp_param,            ONLY : nhm
    USE wvfct,                 ONLY : npwx
    USE becmod_subs_gpum,      ONLY : allocate_bec_type_gpu
+   USE westcom,               ONLY : l_skip_nl_part_of_hcomr
    !
    IMPLICIT NONE
    !
    CALL allocate_linsolve_gpu(3)
    !
    ALLOCATE(gk(3,npwx))
-   ALLOCATE(dvkb(npwx,nkb))
-   ALLOCATE(work(npwx,nkb))
-   IF(noncolin) THEN
-      ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
-      ALLOCATE(psc(nkb,npol,1,2))
-   ELSE
-      ALLOCATE(deff(nhm,nhm,nat))
-      ALLOCATE(ps2(nkb,1,2))
-   ENDIF
-   !
-   CALL allocate_bec_type_gpu(nkb,1,becp1_d)
-   CALL allocate_bec_type_gpu(nkb,1,becp2_d)
-   !
-   IF(noncolin) THEN
-      becp1_d_nc_d => becp1_d%nc_d
-      becp2_d_nc_d => becp2_d%nc_d
-   ELSEIF(gamma_only) THEN
-      becp1_d_r_d => becp1_d%r_d
-      becp2_d_r_d => becp2_d%r_d
-   ELSE
-      becp1_d_k_d => becp1_d%k_d
-      becp2_d_k_d => becp2_d%k_d
+   IF(.NOT. l_skip_nl_part_of_hcomr .AND. nkb > 0) THEN
+      ALLOCATE(dvkb(npwx,nkb))
+      ALLOCATE(work(npwx,nkb))
+      IF(noncolin) THEN
+         ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
+         ALLOCATE(psc(nkb,npol,1,2))
+      ELSE
+         ALLOCATE(deff(nhm,nhm,nat))
+         ALLOCATE(ps2(nkb,1,2))
+      ENDIF
+      !
+      CALL allocate_bec_type_gpu(nkb,1,becp1_d)
+      CALL allocate_bec_type_gpu(nkb,1,becp2_d)
+      !
+      IF(noncolin) THEN
+         becp1_d_nc_d => becp1_d%nc_d
+         becp2_d_nc_d => becp2_d%nc_d
+      ELSEIF(gamma_only) THEN
+         becp1_d_r_d => becp1_d%r_d
+         becp2_d_r_d => becp2_d%r_d
+      ELSE
+         becp1_d_k_d => becp1_d%k_d
+         becp2_d_k_d => becp2_d%k_d
+      ENDIF
    ENDIF
    !
    END SUBROUTINE
@@ -428,6 +443,8 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE becmod_subs_gpum,      ONLY : deallocate_bec_type_gpu
+   USE uspp,                  ONLY : nkb
+   USE westcom,               ONLY : l_skip_nl_part_of_hcomr
 
    IMPLICIT NONE
    !
@@ -473,8 +490,10 @@ MODULE west_gpu_data
       NULLIFY(becp2_d_nc_d)
    ENDIF
    !
-   CALL deallocate_bec_type_gpu(becp1_d)
-   CALL deallocate_bec_type_gpu(becp2_d)
+   IF(.NOT. l_skip_nl_part_of_hcomr .AND. nkb > 0) THEN
+      CALL deallocate_bec_type_gpu(becp1_d)
+      CALL deallocate_bec_type_gpu(becp2_d)
+   ENDIF
    !
    END SUBROUTINE
    !
@@ -494,10 +513,10 @@ MODULE west_gpu_data
    !
    INTEGER :: istat
    INTEGER :: lwork
-   INTEGER :: lwork2
+   INTEGER(i8b) :: n8
    !
+   ALLOCATE(piv(n_pdep_eigen_to_use))
    IF(l_real) THEN
-      ALLOCATE(body_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       ALLOCATE(x_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
          ALLOCATE(wh_r(n_pdep_eigen_to_use,3))
@@ -507,19 +526,29 @@ MODULE west_gpu_data
          ALLOCATE(tempt_r(3,3))
       ENDIF
       !
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
+      n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
+      !
       !$acc host_data use_device(x_r)
-      istat = cusolverDnDgetrf_bufferSize(cusolver_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,&
-      & x_r,n_pdep_eigen_to_use,lwork)
-      istat = cusolverDnDtrtri_buffersize(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,&
-      & n_pdep_eigen_to_use,x_r,n_pdep_eigen_to_use,lwork2)
+      istat = cusolverDnXgetrf_bufferSize(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_R_64F),x_r,n8,&
+            & cudaDataType(CUDA_R_64F),l_inv,l_inv_h)
       !$acc end host_data
       !
-      lwork = MAX(lwork,lwork2)
+      l_inv = MAX(l_inv,(n8**2)*8)
+      !
+      ALLOCATE(work_r(l_inv/8))
+      ALLOCATE(work_r_h(l_inv_h/8))
+#else
+      !$acc host_data use_device(x_r)
+      istat = cusolverDnDgetrf_bufferSize(cusolv_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,x_r,&
+            & n_pdep_eigen_to_use,lwork)
+      !$acc end host_data
+      !
       lwork = MAX(lwork,n_pdep_eigen_to_use**2)
       !
       ALLOCATE(work_r(lwork))
+#endif
    ELSE
-      ALLOCATE(body_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       ALLOCATE(x_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
          ALLOCATE(wh_c(n_pdep_eigen_to_use,3))
@@ -529,19 +558,29 @@ MODULE west_gpu_data
          ALLOCATE(tempt_c(3,3))
       ENDIF
       !
+#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
+      n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
+      !
       !$acc host_data use_device(x_c)
-      istat = cusolverDnZgetrf_bufferSize(cusolver_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,&
-      & x_c,n_pdep_eigen_to_use,lwork)
-      istat = cusolverDnZtrtri_buffersize(cusolver_h,CUBLAS_FILL_MODE_UPPER,CUBLAS_DIAG_NON_UNIT,&
-      & n_pdep_eigen_to_use,x_c,n_pdep_eigen_to_use,lwork2)
+      istat = cusolverDnXgetrf_bufferSize(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_C_64F),x_c,n8,&
+            & cudaDataType(CUDA_C_64F),l_inv,l_inv_h)
       !$acc end host_data
       !
-      lwork = MAX(lwork,lwork2)
+      l_inv = MAX(l_inv,(n8**2)*16)
+      !
+      ALLOCATE(work_c(l_inv/16))
+      ALLOCATE(work_c_h(l_inv_h/16))
+#else
+      !$acc host_data use_device(x_c)
+      istat = cusolverDnZgetrf_bufferSize(cusolv_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,x_c,&
+            & n_pdep_eigen_to_use,lwork)
+      !$acc end host_data
+      !
       lwork = MAX(lwork,n_pdep_eigen_to_use**2)
       !
       ALLOCATE(work_c(lwork))
+#endif
    ENDIF
-   piv_d => NULL()
    !
    END SUBROUTINE
    !
@@ -551,8 +590,8 @@ MODULE west_gpu_data
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(body_r)) THEN
-      DEALLOCATE(body_r)
+   IF(ALLOCATED(piv)) THEN
+      DEALLOCATE(piv)
    ENDIF
    IF(ALLOCATED(x_r)) THEN
       DEALLOCATE(x_r)
@@ -572,11 +611,11 @@ MODULE west_gpu_data
    IF(ALLOCATED(tempt_r)) THEN
       DEALLOCATE(tempt_r)
    ENDIF
+   IF(ALLOCATED(work_r_h)) THEN
+      DEALLOCATE(work_r_h)
+   ENDIF
    IF(ALLOCATED(work_r)) THEN
       DEALLOCATE(work_r)
-   ENDIF
-   IF(ALLOCATED(body_c)) THEN
-      DEALLOCATE(body_c)
    ENDIF
    IF(ALLOCATED(x_c)) THEN
       DEALLOCATE(x_c)
@@ -596,11 +635,11 @@ MODULE west_gpu_data
    IF(ALLOCATED(tempt_c)) THEN
       DEALLOCATE(tempt_c)
    ENDIF
+   IF(ALLOCATED(work_c_h)) THEN
+      DEALLOCATE(work_c_h)
+   ENDIF
    IF(ALLOCATED(work_c)) THEN
       DEALLOCATE(work_c)
-   ENDIF
-   IF(ASSOCIATED(piv_d)) THEN
-      NULLIFY(piv_d)
    ENDIF
    !
    END SUBROUTINE

@@ -1,7 +1,7 @@
 .. _midway3:
 
 ================
-Midway3-UChicago
+UChicago-Midway3
 ================
 
 Midway3 is the HPC cluster of the University of Chicago, maintained by UChicago's `RCC <https://rcc.uchicago.edu/>`_.

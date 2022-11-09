@@ -16,7 +16,7 @@ def read_parameters_from_JSON(filename):
     bands = np.array(raw_["input"]["wfreq_control"]["qp_bands"], dtype=int)
 
     return nspin, npair, bands, indexmap
-    
+
 def read_one_body_terms_from_JSON(filename):
     """
     Read one-body terms from JSON file.
@@ -38,9 +38,9 @@ def read_one_body_terms_from_JSON(filename):
     for ispin in range(nspin):
         string1 = "K" + format(ispin + 1, "06d")
         h1e_pair[ispin, :] = np.array(raw_["qdet"]["h1e"][string1], dtype=float)
-    
+
     return h1e_pair
-    
+
 def read_two_body_terms_from_JSON(filename):
     """
     Read two-body terms from JSON file.

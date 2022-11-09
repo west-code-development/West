@@ -50,7 +50,7 @@ MODULE wfreq_db
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, ib, ipair, ib_index
+      INTEGER :: iks, ib, ipair
       CHARACTER(LEN=6) :: my_label_k, my_label_b
       CHARACTER(LEN=10) :: ccounter
       INTEGER :: counter
@@ -219,8 +219,7 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,&
-                                       & logfile
+      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,logfile
       USE pwcom,                ONLY : nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -229,8 +228,8 @@ MODULE wfreq_db
       IMPLICIT NONE
       !
       COMPLEX(DP),INTENT(IN):: eri_w(n_pairs,n_pairs,nspin,nspin)
-      REAL(DP),INTENT(IN), OPTIONAL:: eri_vc(n_pairs,n_pairs,nspin,nspin)
-      COMPLEX(DP),INTENT(IN), OPTIONAL:: eri_w_full(n_pairs,n_pairs,nspin,nspin)
+      REAL(DP),INTENT(IN),OPTIONAL:: eri_vc(n_pairs,n_pairs,nspin,nspin)
+      COMPLEX(DP),INTENT(IN),OPTIONAL:: eri_w_full(n_pairs,n_pairs,nspin,nspin)
       !
       REAL(DP), EXTERNAL    :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -268,15 +267,15 @@ MODULE wfreq_db
                      WRITE(my_label_ipair,'(i6.6)') ipair
                      !
                      IF (PRESENT(eri_vc)) THEN
-                       CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
-                       & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                       & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                        CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
+                        & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
+                        & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
                      ENDIF
                      !
                      IF (PRESENT(eri_w_full)) THEN
-                       CALL json%add('qdet.eri_w_full.K'//TRIM(my_label_ik)//'.K'// &
-                       & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                       & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                        CALL json%add('qdet.eri_w_full.K'//TRIM(my_label_ik)//'.K'// &
+                        & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
+                        & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
                      ENDIF
                      !
                      CALL json%add('qdet.eri_w.K'//TRIM(my_label_ik)//'.K'// &

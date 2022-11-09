@@ -56,9 +56,9 @@ MODULE lanczos_db
       !
       ! 1) WRITE TO DISK THE D0PSI
       !
-      DO ipol = 1, n_ipol
+      DO ipol = 1,n_ipol
          WRITE(my_label,'(i6.6)') ipol
-         fname = TRIM(wbse_save_dir)//'/D0PSI_'//TRIM(my_label)//'.dat'
+         fname = TRIM(wbse_save_dir)//'/D0PSI_'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,d0psi(:,:,:,ipol))
       ENDDO
       !
@@ -73,8 +73,8 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,"(5x,'D0PSI written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,"(5x,'In location : ',a)") TRIM(wbse_save_dir)
+      WRITE(stdout,'(5x,"D0PSI written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !
     END SUBROUTINE
@@ -111,9 +111,9 @@ MODULE lanczos_db
       CALL start_clock('lan_d0psi_read')
       time_spent(1) = get_clock('lan_d0psi_read')
       !
-      DO ipol = 1, n_ipol
+      DO ipol = 1,n_ipol
          WRITE(my_label,'(i6.6)') ipol
-         fname = TRIM(wbse_save_dir)//'/D0PSI_'//TRIM(my_label)//'.dat'
+         fname = TRIM(wbse_save_dir)//'/D0PSI_'//my_label//'.dat'
          CALL plep_read_G_and_distribute(fname,d0psi(:,:,:,ipol))
       ENDDO
       !
@@ -128,8 +128,8 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,"(5x,'D0PSI read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,"(5x,'In location : ',a)") TRIM(wbse_save_dir)
+      WRITE(stdout,'(5x,"D0PSI read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !
     END SUBROUTINE
@@ -183,8 +183,8 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,"(5x,'EVC1 EVC1_OLD written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,"(5x,'In location : ',a)") TRIM(wbse_save_dir)
+      WRITE(stdout,'(5x,"EVC1 EVC1_OLD written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !
     END SUBROUTINE
@@ -237,8 +237,8 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,"(5x,'EVC1 EVC1_OLD read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,"(5x,'In location : ',a)") TRIM(wbse_save_dir)
+      WRITE(stdout,'(5x,"EVC1 EVC1_OLD read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !
     END SUBROUTINE

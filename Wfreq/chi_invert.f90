@@ -18,7 +18,8 @@ MODULE chi_invert
    !
    PRIVATE
    !
-   PUBLIC :: chi_invert_real, chi_invert_complex
+   PUBLIC :: chi_invert_real
+   PUBLIC :: chi_invert_complex
    !
    CONTAINS
    !

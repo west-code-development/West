@@ -18,7 +18,10 @@ MODULE qbox_interface
   !
   PRIVATE
   !
-  PUBLIC :: load_qbox_wfc, init_qbox, finalize_qbox, sleep_and_wait_for_lock_to_be_removed
+  PUBLIC :: load_qbox_wfc
+  PUBLIC :: init_qbox
+  PUBLIC :: finalize_qbox
+  PUBLIC :: sleep_and_wait_for_lock_to_be_removed
   !
   CONTAINS
   !

@@ -92,7 +92,7 @@ SUBROUTINE do_eigenpot2 ( )
         !
         WRITE(labeli,'(i6.6)') global_j
         WRITE(labelq,'(i5.5)') iq
-        fname = TRIM( westpp_save_dir ) // '/eigQ'//TRIM(labelq)//'I'//TRIM(labeli)
+        fname = TRIM( westpp_save_dir ) // '/eigQ'//labelq//'I'//labeli
         CALL dump_r( auxr, fname)
         !
         CALL update_bar_type( barra,'westpp', 1 )

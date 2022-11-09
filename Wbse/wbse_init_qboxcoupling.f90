@@ -23,7 +23,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : igk_k,npw,npwx,lsda
   USE pdep_io,              ONLY : pdep_merge_and_write_G
-  USE wbse_init_restart,    ONLY : wbse_stat_restart_read,wbse_stat_restart_write,&
+  USE wbse_init_restart,    ONLY : wbse_status_restart_read,wbse_status_restart_write,&
                                  & wbse_index_matrix_read,wbse_index_matrix_write
   USE class_idistribute,    ONLY : idistribute
   USE distribution_center,  ONLY : aband,bseparal
@@ -106,7 +106,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   ALLOCATE(index_matrix(tmp_size,2))
   ALLOCATE(ovl_matrix(nbndval,nbndval))
   !
-  ovl_matrix(:,:) = 0.0_DP
   index_matrix(:,:) = 0.0_DP
   !
   IF(l_use_localise_repr) THEN
@@ -160,7 +159,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   IF(l_restart_calc) THEN
       fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
               & my_labelik//'_spin'//my_spin//'.dat'
-      CALL wbse_stat_restart_read(fname,do_index,restart_matrix,calc_is_done)
+      CALL wbse_status_restart_read(fname,do_index,restart_matrix,calc_is_done)
   ENDIF
   !
   IF(calc_is_done) GOTO 2222
@@ -359,7 +358,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      calc_is_done = .FALSE.
      fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
              & my_labelik//'_spin'//my_spin//'.dat'
-     CALL wbse_stat_restart_write(fname,do_index,restart_matrix,calc_is_done)
+     CALL wbse_status_restart_write(fname,do_index,restart_matrix,calc_is_done)
      !
      ! clean up
      !
@@ -388,17 +387,16 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   calc_is_done = .TRUE.
   fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
           & my_labelik//'_spin'//my_spin//'.dat'
-  CALL wbse_stat_restart_write(fname,do_index,restart_matrix,calc_is_done)
+  CALL wbse_status_restart_write(fname,do_index,restart_matrix,calc_is_done)
   !
 2222 CONTINUE
   !
   DEALLOCATE(index_matrix)
   IF(ALLOCATED(restart_matrix)) DEALLOCATE(restart_matrix)
   DEALLOCATE(ovl_matrix)
-  !
-  IF(ALLOCATED(psic))     DEALLOCATE(psic)
+  IF(ALLOCATED(psic)) DEALLOCATE(psic)
   IF(ALLOCATED(psic_aux)) DEALLOCATE(psic_aux)
-  IF(ALLOCATED(evc_loc))  DEALLOCATE(evc_loc)
+  IF(ALLOCATED(evc_loc)) DEALLOCATE(evc_loc)
   !
   CALL stop_bar_type(barra,'FF_Qbox')
   !

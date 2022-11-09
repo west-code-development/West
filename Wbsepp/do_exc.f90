@@ -211,7 +211,7 @@ SUBROUTINE do_exc()
   westpp_format = 'C'
   !
   WRITE(my_label,'(i6.6)') iexc
-  fname = './file_plot_exc_'//TRIM(my_label)
+  fname = 'file_plot_exc_'//my_label
   WRITE(stdout,*) "Write to file : ", fname
   IF(my_image_id == 0) CALL dump_r(rho_out(:,1), fname)
   !

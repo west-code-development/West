@@ -17,7 +17,7 @@ MODULE fourier_interpolation
   !
   CONTAINS
   !
-  SUBROUTINE ft_interpolate (fr, n1, n2, n3, fg, npw, npwx)
+  SUBROUTINE ft_interpolate(fr, n1, n2, n3, fg, npw, npwx)
     !
     ! Fourier transform a set of functions f from R space (fr) to G space (fg)
     ! fr can be defined on arbitrary R space grid (n1, n2, n3), as long as it is smoother than dffts
@@ -35,8 +35,6 @@ MODULE fourier_interpolation
     USE gvect,         ONLY : g
     USE control_flags, ONLY : gamma_only
     USE cell_base,     ONLY : at,bg,tpiba
-    USE mp_images,     ONLY : me_image
-    USE mp,            ONLY : mp_bcast
     USE mp_images,     ONLY : me_image
     !
     IMPLICIT NONE

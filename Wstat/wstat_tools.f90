@@ -62,7 +62,7 @@ MODULE wstat_tools
       !
       REAL(DP) :: time_spent(2)
       REAL(DP),EXTERNAL :: GET_CLOCK
-      CHARACTER(20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       LOGICAL :: l_parallel
       INTEGER :: npur,npuc
       CHARACTER(LEN=8) :: aux_label_npur
@@ -100,7 +100,7 @@ MODULE wstat_tools
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
            & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1)))), &
-           & '('//TRIM(ADJUSTL(aux_label_npur))//'x'//TRIM(ADJUSTL(aux_label_npuc))//')'
+           & '('//aux_label_npur//'x'//aux_label_npuc//')'
          !
       ELSE
          !
@@ -142,7 +142,7 @@ MODULE wstat_tools
       !
       REAL(DP) :: time_spent(2)
       REAL(DP),EXTERNAL :: GET_CLOCK
-      CHARACTER(20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       LOGICAL :: l_parallel
       INTEGER :: npur,npuc
       CHARACTER(LEN=8) :: aux_label_npur
@@ -180,7 +180,7 @@ MODULE wstat_tools
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
            & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1)))), &
-           & '('//TRIM(ADJUSTL(aux_label_npur))//'x'//TRIM(ADJUSTL(aux_label_npuc))//')'
+           & '('//aux_label_npur//'x'//aux_label_npuc//')'
          !
       ELSE
          !

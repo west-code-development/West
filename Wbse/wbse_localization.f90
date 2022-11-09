@@ -17,7 +17,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : aband
-  USE westcom,              ONLY : l_use_bisection_thr,wfc_from_qbox
+  USE westcom,              ONLY : l_use_bisection_thr,wfc_from_qbox,wbse_init_save_dir
   USE wavefunctions,        ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
   USE fft_base,             ONLY : dffts
@@ -33,8 +33,8 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   IMPLICIT NONE
   !
   INTEGER, INTENT(IN) :: current_spin, nbndval
-  REAL(DP),INTENT(INOUT) :: ovl_matrix(nbndval,nbndval)
-  COMPLEX(DP), INTENT(INOUT) :: evc_loc(npwx,nbndval)
+  REAL(DP),INTENT(OUT) :: ovl_matrix(nbndval,nbndval)
+  COMPLEX(DP), INTENT(OUT) :: evc_loc(npwx,nbndval)
   LOGICAL, INTENT(IN) :: l_restart
   !
   INTEGER :: ibnd, jbnd
@@ -44,7 +44,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   COMPLEX(DP), ALLOCATABLE :: psic1(:)
   COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:)
   CHARACTER(LEN=256) :: fname
-  CHARACTER(LEN=1) :: my_spin
+  CHARACTER :: labels
   LOGICAL :: l_load_west_loc_wfc
   LOGICAL :: l_load_qbox_loc_wfc
   REAL(KIND=DP), EXTERNAL :: DDOT
@@ -65,8 +65,8 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
      IF(l_load_qbox_loc_wfc) CALL load_qbox_wfc(evc_loc, wfc_from_qbox, current_spin, nbndval)
 !     IF(l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs(nbndval, npwx, evc_loc, wfc_from_qbox)
      !
-     WRITE(my_spin,'(i1)') current_spin
-     fname = './localized_wfc_tmp_'//TRIM(my_spin)//'.dat'
+     WRITE(labels,'(i1)') current_spin
+     fname = TRIM(wbse_init_save_dir)//'/evc_loc.'//labels//'.dat'
      CALL plep_merge_and_write_G(fname,evc_loc,nbndval)
      !
      ! Compute unitary rotation matrix
@@ -154,8 +154,8 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
      !
   ELSE
      !
-     WRITE(my_spin,'(i1)') current_spin
-     fname = './localized_wfc_tmp_'//TRIM(my_spin)//'.dat'
+     WRITE(labels,'(i1)') current_spin
+     fname = TRIM(wbse_init_save_dir)//'/evc_loc.'//labels//'.dat'
      CALL plep_read_G_and_distribute(fname,evc_loc,nbndval)
      !
   ENDIF

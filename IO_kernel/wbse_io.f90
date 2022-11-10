@@ -22,7 +22,7 @@ MODULE wbse_io
     !
     USE kinds,          ONLY : DP
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
-    USE westcom,        ONLY : wbse_init_save_dir
+    USE westcom,        ONLY : wbse_init_save_dir,l_reduce_io,tau_is_read,tau_all,n_tau
     USE pwcom,          ONLY : npwx
     !
     IMPLICIT NONE
@@ -34,7 +34,7 @@ MODULE wbse_io
     !
     ! Workspace
     !
-    INTEGER :: band_i,band_j
+    INTEGER :: band_i,band_j,iread
     CHARACTER :: my_spin
     CHARACTER(LEN=6) :: my_labeli,my_labelj
     CHARACTER(LEN=256) :: fname
@@ -42,12 +42,30 @@ MODULE wbse_io
     band_i = MIN(fixed_band_i,fixed_band_j)
     band_j = MAX(fixed_band_i,fixed_band_j)
     !
+    IF(l_reduce_io) THEN
+       !
+       iread = tau_is_read(band_i,band_j,ispin)
+       IF(iread > 0) THEN
+          rhog(:) = tau_all(:,iread)
+          RETURN
+       ENDIF
+       !
+    ENDIF
+    !
     WRITE(my_labeli,'(i6.6)') band_i
     WRITE(my_labelj,'(i6.6)') band_j
     WRITE(my_spin,'(i1)') ispin
     !
     fname = TRIM(wbse_init_save_dir)//'/E'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
     CALL pdep_read_G_and_distribute(fname,rhog)
+    !
+    IF(l_reduce_io) THEN
+       !
+       n_tau = n_tau+1
+       tau_is_read(band_i,band_j,ispin) = n_tau
+       tau_all(:,n_tau) = rhog
+       !
+    ENDIF
     !
   END SUBROUTINE
   !

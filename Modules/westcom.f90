@@ -340,6 +340,8 @@ MODULE wbse_center
   LOGICAL :: l_lanczos     = .FALSE.
   LOGICAL :: l_davidson    = .FALSE.
   LOGICAL :: l_bse_triplet = .FALSE.
+  LOGICAL :: l_reduce_io
+  INTEGER :: n_tau
   REAL(DP) :: sigma_c_head = 0._DP
   REAL(DP) :: sigma_x_head = 0._DP
   !
@@ -360,6 +362,8 @@ MODULE wbse_center
   REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
   INTEGER,     ALLOCATABLE :: size_index_matrix_lz(:)
   INTEGER,     ALLOCATABLE :: index_matrix_lz(:,:,:)
+  INTEGER,     ALLOCATABLE :: tau_is_read(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: tau_all(:,:)
   !
   ! Common workspace
   !

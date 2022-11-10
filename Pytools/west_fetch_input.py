@@ -107,6 +107,7 @@ default["wbse_control"]["macropol_calculation"] = "N"
 default["wbse_control"]["epsinfty"] = 1.0
 default["wbse_control"]["spin_excitation"] = "S"
 default["wbse_control"]["l_preconditioning"] = False
+default["wbse_control"]["l_reduce_io"] = True
 # #wbsepp control
 default["wbsepp_control"] = {}
 default["wbsepp_control"]["wbsepp_calculation"] = "S"

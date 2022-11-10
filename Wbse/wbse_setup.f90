@@ -124,10 +124,10 @@ SUBROUTINE bse_start()
   !
   USE kinds,            ONLY : DP
   USE io_global,        ONLY : stdout
-  USE pwcom,            ONLY : isk,nks
-  USE westcom,          ONLY : nbnd_occ,nbndval0x,sigma_c_head,sigma_x_head,epsinfty,&
-                             & l_use_localise_repr,overlap_thr,u_matrix,ovl_matrix,&
-                             & size_index_matrix_lz,index_matrix_lz
+  USE pwcom,            ONLY : isk,nks,npwx
+  USE westcom,          ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
+                             & sigma_c_head,sigma_x_head,epsinfty,l_use_localise_repr,overlap_thr,&
+                             & u_matrix,ovl_matrix,size_index_matrix_lz,index_matrix_lz
   USE lsda_mod,         ONLY : nspin
   USE constants,        ONLY : e2,pi
   USE cell_base,        ONLY : omega
@@ -263,5 +263,17 @@ SUBROUTINE bse_start()
 !     ENDDO
 !     !
 !  ENDIF
+  !
+  IF(l_reduce_io) THEN
+     !
+     do_index = SUM(size_index_matrix_lz)
+     !
+     ALLOCATE(tau_is_read(nbndval0x,nbndval0x,nspin))
+     ALLOCATE(tau_all(npwx,do_index))
+     !
+     tau_is_read(:,:,:) = 0
+     n_tau = 0
+     !
+  ENDIF
   !
 END SUBROUTINE

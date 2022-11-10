@@ -30,7 +30,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
                              & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,&
+                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,l_reduce_io,&
                              & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
                              & units,verbosity,extrapolation,start,end,increment,epsil
   USE mp_world,         ONLY : mpime,root
@@ -147,6 +147,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.epsinfty',epsinfty)
         CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
         CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
+        CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
         !
      ENDIF
      !
@@ -196,7 +197,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
                              & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
                              & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,&
+                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,l_reduce_io,&
                              & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
                              & units,verbosity,extrapolation,start,end,increment,epsil,&
                              & main_input_file,logfile
@@ -512,6 +513,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         IERR = return_dict%getitem(epsinfty, 'epsinfty')
         IERR = return_dict%getitem(cvalue, 'spin_excitation'); spin_excitation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(l_preconditioning, 'l_preconditioning')
+        IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
         !
         CALL return_dict%destroy
         !
@@ -810,6 +812,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      CALL mp_bcast(epsinfty,root,world_comm)
      CALL mp_bcast(spin_excitation,root,world_comm)
      CALL mp_bcast(l_preconditioning,root,world_comm)
+     CALL mp_bcast(l_reduce_io,root,world_comm)
      !
      ! CHECKS
      !
@@ -1080,6 +1083,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         CALL io_push_value('epsinfty',epsinfty,numsp)
         CALL io_push_value('spin_excitation',spin_excitation,numsp)
         CALL io_push_value('l_preconditioning',l_preconditioning,numsp)
+        CALL io_push_value('l_reduce_io',l_reduce_io,numsp)
         !
         CALL io_push_bar()
         !

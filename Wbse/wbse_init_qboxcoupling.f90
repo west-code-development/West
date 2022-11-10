@@ -47,8 +47,8 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   REAL(DP):: ovl_value
   REAL(DP), ALLOCATABLE :: rho_aux(:)
   REAL(DP), ALLOCATABLE :: ovl_matrix(:,:)
-  REAL(DP), ALLOCATABLE :: restart_matrix(:)
-  REAL(DP), ALLOCATABLE :: index_matrix(:,:)
+  INTEGER, ALLOCATABLE :: restart_matrix(:)
+  INTEGER, ALLOCATABLE :: index_matrix(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc_loc(:,:)
   COMPLEX(DP), ALLOCATABLE :: dvg(:), psic_aux(:)
   !
@@ -106,7 +106,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   ALLOCATE(index_matrix(tmp_size,2))
   ALLOCATE(ovl_matrix(nbndval,nbndval))
   !
-  index_matrix(:,:) = 0.0_DP
+  index_matrix(:,:) = 0
   !
   IF(l_use_localise_repr) THEN
      ALLOCATE(evc_loc(npwx,nbndval))
@@ -153,13 +153,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   ALLOCATE(restart_matrix(do_index))
   !
-  restart_matrix(:) = 0.0_DP
+  restart_matrix(:) = 0
   !
   calc_is_done = .FALSE.
   IF(l_restart_calc) THEN
-      fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
-              & my_labelik//'_spin'//my_spin//'.dat'
-      CALL wbse_status_restart_read(fname,do_index,restart_matrix,calc_is_done)
+     fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
+             & my_labelik//'_spin'//my_spin//'.dat'
+     CALL wbse_status_restart_read(fname,do_index,restart_matrix,calc_is_done)
   ENDIF
   !
   IF(calc_is_done) GOTO 2222
@@ -169,7 +169,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   bseparal = idistribute()
   CALL bseparal%init(do_index,'i','number_pairs', .TRUE.)
   !
-  CALL io_push_title('Applying ' // TRIM(kernel) // ' kernel with FF_Qbox ... ')
+  CALL io_push_title('Applying ' // TRIM(kernel) // ' kernel with FF_Qbox ...')
   !
   CALL start_bar_type(barra,'FF_Qbox',bseparal%nlocx)
   !
@@ -181,11 +181,11 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
      ig1  = bseparal%l2g(il1) ! global index of n_total
      !
-     ibnd = INT(index_matrix(ig1,1))
-     jbnd = INT(index_matrix(ig1,2))
+     ibnd = index_matrix(ig1,1)
+     jbnd = index_matrix(ig1,2)
      !
      IF(l_restart_calc) THEN
-        IF(INT(restart_matrix(ig1)) > 0) GOTO 1111
+        IF(restart_matrix(ig1) > 0) GOTO 1111
      ENDIF
      !
      IF((ig1 < 1) .OR. (ig1 > do_index)) GOTO 1111
@@ -232,7 +232,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
      ! vc in fock like term
      !
-     dvg(:) = (0.0_DP,0.0_DP)
+     dvg(:) = (0._DP,0._DP)
      DO ig = 1, npw
         dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
      ENDDO
@@ -247,7 +247,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
         CALL single_invfft_k(dffts,npw,npwx,aux1_g,aux_r,'Wave')
      ENDIF
      !
-     aux1_r(:,:) = (0.0_DP,0.0_DP)
+     aux1_r(:,:) = (0._DP,0._DP)
      aux1_r(:,current_spin) = aux_r
      !
      ! aux1_r = vc*aux1_r()
@@ -303,7 +303,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
         aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega), KIND=DP) ! rescale response
      ENDDO
      !
-     aux1_r(:,:) = (0.0_DP,0.0_DP)
+     aux1_r(:,:) = (0._DP,0._DP)
      aux1_r(:,current_spin) = aux_r
      !
      ! aux1_r = vc*aux1_r()
@@ -318,7 +318,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
      ! aux_r -> aux_g
      !
-     aux1_g(:) = (0.0_DP, 0.0_DP)
+     aux1_g(:) = (0._DP, 0._DP)
      !
      IF(gamma_only) THEN
         CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
@@ -343,7 +343,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      DEALLOCATE(aux1_g)
      DEALLOCATE(aux_r, aux1_r, aux_rr)
      !
-     restart_matrix(ig1) = 1.0_DP
+     restart_matrix(ig1) = 1
      !
 1111 CONTINUE
      !
@@ -352,13 +352,12 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      CALL mp_sum(restart_matrix(1:do_index), inter_image_comm)
      !
      DO ir = 1, do_index
-        IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1.0_DP
+        IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
      ENDDO
      !
-     calc_is_done = .FALSE.
      fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
              & my_labelik//'_spin'//my_spin//'.dat'
-     CALL wbse_status_restart_write(fname,do_index,restart_matrix,calc_is_done)
+     CALL wbse_status_restart_write(fname,do_index,restart_matrix)
      !
      ! clean up
      !
@@ -384,10 +383,9 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
   ENDDO
   !
-  calc_is_done = .TRUE.
   fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
           & my_labelik//'_spin'//my_spin//'.dat'
-  CALL wbse_status_restart_write(fname,do_index,restart_matrix,calc_is_done)
+  CALL wbse_status_restart_write(fname,do_index,restart_matrix)
   !
 2222 CONTINUE
   !

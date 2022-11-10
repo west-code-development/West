@@ -64,8 +64,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   INTEGER :: nbvalloc
   !
   REAL(DP), ALLOCATABLE :: raux1(:), raux2(:)
-  COMPLEX(DP), ALLOCATABLE :: aux_bse1(:,:), aux_bse2(:,:), kd1_ij(:,:)
-  COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:)
+  COMPLEX(DP), ALLOCATABLE :: aux_bse1(:,:), aux_bse2(:,:), kd1_ij(:,:), gaux(:)
   !
   IF(l_use_localise_repr) THEN
      ALLOCATE(aux_bse1(npwx,nbndval0x))
@@ -101,7 +100,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
         kd1_ij(:,:) = (0._DP,0._DP)
      ENDIF
      !
-     ALLOCATE(caux(dffts%nnr))
+     ALLOCATE(raux1(dffts%nnr))
      !
      DO il1 = 1, bseparal%nlocx
         !
@@ -109,14 +108,14 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
         !
         IF(ig1 < 1 .OR. ig1 > size_index_matrix) CYCLE
         !
-        ibnd_index = INT(index_matrix_lz(ig1,1,current_spin))
-        jbnd_index = INT(index_matrix_lz(ig1,2,current_spin))
+        ibnd_index = index_matrix_lz(ig1,1,current_spin)
+        jbnd_index = index_matrix_lz(ig1,2,current_spin)
         !
         IF(l_lanczos) THEN
            !
            ! READ response at iq,ik,ispin
            !
-           CALL read_bse_pots_g2r(caux, ibnd_index, jbnd_index, current_spin, .TRUE.)
+           CALL read_bse_pots_g2r(raux1,ibnd_index,jbnd_index,current_spin)
            !
            IF(l_use_localise_repr) THEN
               CALL single_invfft_gamma(dffts,npw,npwx,aux_bse1(:,jbnd_index),psic,'Wave')
@@ -124,7 +123,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
               CALL single_invfft_gamma(dffts,npw,npwx,evc1(:,jbnd_index,ikq),psic,'Wave')
            ENDIF
            !
-           psic(:) = CMPLX(REAL(psic,KIND=DP)*REAL(caux,KIND=DP),KIND=DP)
+           psic(:) = CMPLX(REAL(psic,KIND=DP)*raux1,KIND=DP)
            !
            ALLOCATE(gaux(npwx))
            !
@@ -154,7 +153,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
         CALL mp_sum(aux_bse2, inter_image_comm)
      ENDIF
      !
-     DEALLOCATE(caux)
+     DEALLOCATE(raux1)
      !
      ! LOOP OVER BANDS AT KPOINT
      !
@@ -183,8 +182,8 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
               !
               IF(summ_index > MIN(size_index_matrix, (nbndval_q+nbndval_k))) CYCLE
               !
-              ibnd_index = INT(index_matrix_lz(ig1,1,current_spin))
-              jbnd_index = INT(index_matrix_lz(ig1,2,current_spin))
+              ibnd_index = index_matrix_lz(ig1,1,current_spin)
+              jbnd_index = index_matrix_lz(ig1,2,current_spin)
               !
               IF(ibnd_index == ibnd) THEN
                  summ_index = summ_index+1

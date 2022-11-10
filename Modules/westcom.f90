@@ -359,7 +359,7 @@ MODULE wbse_center
   COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
   REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
   INTEGER,     ALLOCATABLE :: size_index_matrix_lz(:)
-  REAL(DP),    ALLOCATABLE :: index_matrix_lz(:,:,:)
+  INTEGER,     ALLOCATABLE :: index_matrix_lz(:,:,:)
   !
   ! Common workspace
   !

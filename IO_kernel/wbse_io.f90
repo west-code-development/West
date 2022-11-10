@@ -22,37 +22,25 @@ MODULE wbse_io
     !
     USE kinds,          ONLY : DP
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
-    USE fft_at_gamma,   ONLY : single_invfft_gamma
-    USE fft_at_k,       ONLY : single_invfft_k
     USE westcom,        ONLY : wbse_init_save_dir
     USE pwcom,          ONLY : npwx
     !
     IMPLICIT NONE
     !
+    ! I/O
+    !
     COMPLEX(DP), INTENT(OUT) :: rhog(npwx)
     INTEGER, INTENT(IN) :: fixed_band_i,fixed_band_j,ispin
     !
-    ! local variables
+    ! Workspace
     !
     INTEGER :: band_i,band_j
     CHARACTER :: my_spin
-    CHARACTER(LEN=6) :: my_labeli
-    CHARACTER(LEN=6) :: my_labelj
+    CHARACTER(LEN=6) :: my_labeli,my_labelj
     CHARACTER(LEN=256) :: fname
     !
-    IF(fixed_band_j < fixed_band_i) THEN
-       !
-       ! p_31 -> p_13
-       !
-       band_i = fixed_band_j
-       band_j = fixed_band_i
-       !
-    ELSE
-       !
-       band_i = fixed_band_i
-       band_j = fixed_band_j
-       !
-    ENDIF
+    band_i = MIN(fixed_band_i,fixed_band_j)
+    band_j = MAX(fixed_band_i,fixed_band_j)
     !
     WRITE(my_labeli,'(i6.6)') band_i
     WRITE(my_labelj,'(i6.6)') band_j
@@ -63,56 +51,30 @@ MODULE wbse_io
     !
   END SUBROUTINE
   !
-  SUBROUTINE read_bse_pots_g2r(rho_all,fixed_band_i,fixed_band_j,ispin,single_only)
+  SUBROUTINE read_bse_pots_g2r(rhor,fixed_band_i,fixed_band_j,ispin)
     !
     USE kinds,          ONLY : DP
     USE control_flags,  ONLY : gamma_only
     USE fft_base,       ONLY : dffts
-    USE pdep_io,        ONLY : pdep_read_G_and_distribute
     USE pwcom,          ONLY : npw,npwx
     USE fft_at_gamma,   ONLY : single_invfft_gamma
     USE fft_at_k,       ONLY : single_invfft_k
-    USE westcom,        ONLY : wbse_init_save_dir
     !
     IMPLICIT NONE
     !
-    COMPLEX(DP), INTENT(OUT) :: rho_all(dffts%nnr)
+    ! I/O
+    !
+    REAL(DP), INTENT(OUT) :: rhor(dffts%nnr)
     INTEGER, INTENT(IN) :: fixed_band_i,fixed_band_j,ispin
-    LOGICAL, INTENT(IN) :: single_only
     !
-    ! local variables
+    ! Workspace
     !
-    INTEGER :: band_i,band_j
-    CHARACTER :: my_spin
-    CHARACTER(LEN=6) :: my_labeli
-    CHARACTER(LEN=6) :: my_labelj
-    CHARACTER(LEN=256) :: fname
-    REAL(DP), ALLOCATABLE :: rhoaux1(:),rhoaux2(:)
     COMPLEX(DP), ALLOCATABLE :: aux_g(:),aux_r(:)
     !
     ALLOCATE(aux_g(npwx))
     ALLOCATE(aux_r(dffts%nnr))
     !
-    IF(fixed_band_j < fixed_band_i) THEN
-       !
-       ! p_31 -> p_13
-       !
-       band_i = fixed_band_j
-       band_j = fixed_band_i
-       !
-    ELSE
-       !
-       band_i = fixed_band_i
-       band_j = fixed_band_j
-       !
-    ENDIF
-    !
-    WRITE(my_labeli,'(i6.6)') band_i
-    WRITE(my_labelj,'(i6.6)') band_j
-    WRITE(my_spin,'(i1)') ispin
-    !
-    fname = TRIM(wbse_init_save_dir)//'/E'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
-    CALL pdep_read_G_and_distribute(fname,aux_g)
+    CALL read_bse_pots_g2g(aux_g,fixed_band_i,fixed_band_j,ispin)
     !
     ! G -> R
     !
@@ -122,53 +84,7 @@ MODULE wbse_io
        CALL single_invfft_k(dffts,npw,npwx,aux_g,aux_r,'Wave') ! no igk
     ENDIF
     !
-    IF(single_only) THEN
-       !
-       rho_all(:) = CMPLX(REAL(aux_r,KIND=DP),KIND=DP)
-       !
-    ELSE
-       !
-       ALLOCATE(rhoaux1(dffts%nnr))
-       ALLOCATE(rhoaux2(dffts%nnr))
-       !
-       rhoaux1(:) = REAL(aux_r(:),KIND=DP)
-       !
-       IF(fixed_band_j < (fixed_band_i+1)) THEN
-          !
-          ! p_21 -> p_12
-          !
-          band_i = fixed_band_j
-          band_j = fixed_band_i+1
-          !
-       ELSE
-          !
-          band_i = fixed_band_i+1
-          band_j = fixed_band_j
-          !
-       ENDIF
-       !
-       WRITE(my_labeli,'(i6.6)') band_i
-       WRITE(my_labelj,'(i6.6)') band_j
-       WRITE(my_spin,'(i1)') ispin
-       !
-       fname = TRIM(wbse_init_save_dir)//'/E'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
-       CALL pdep_read_G_and_distribute(fname,aux_g)
-       !
-       ! G -> R
-       !
-       IF(gamma_only) THEN
-          CALL single_invfft_gamma(dffts,npw,npwx,aux_g,aux_r,'Wave')
-       ELSE
-          CALL single_invfft_k(dffts,npw,npwx,aux_g,aux_r,'Wave') ! no igk
-       ENDIF
-       !
-       rhoaux2(:) = REAL(aux_r(:),KIND=DP)
-       !
-       ! total : rho(:) = [rho_ij, rho_i+1,j]
-       !
-       rho_all(:) = CMPLX(rhoaux1(:),rhoaux2(:),KIND=DP)
-       !
-    ENDIF
+    rhor(:) = REAL(aux_r,KIND=DP)
     !
     DEALLOCATE(aux_g)
     DEALLOCATE(aux_r)

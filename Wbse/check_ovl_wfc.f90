@@ -28,7 +28,7 @@ MODULE check_ovl_wfc
       INTEGER, INTENT(INOUT) :: bisec_loc(numband)
       !
       INTEGER :: ibnd, num_localized_orb,iunit
-      CHARACTER(LEN=3) :: my_spin
+      CHARACTER :: my_spin
       CHARACTER(LEN=256) :: file_bisection
       !
       ! read eigenvalues from file
@@ -39,7 +39,7 @@ MODULE check_ovl_wfc
       !
       WRITE(my_spin,'(i1)') current_spin
       !
-      file_bisection = TRIM(bisection_info)//'.'//TRIM(my_spin)
+      file_bisection = TRIM(bisection_info)//'.'//my_spin
       !
       IF(ionode) THEN
          OPEN(NEWUNIT=iunit, FILE=TRIM(file_bisection), FORM='FORMATTED', STATUS='OLD')

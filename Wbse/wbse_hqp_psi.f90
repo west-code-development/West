@@ -83,7 +83,7 @@ SUBROUTINE read_qp_eigs()
   INTEGER :: iun
   INTEGER :: ibnd, nqp_eigs
   INTEGER :: num_k_points,ik
-  CHARACTER(LEN=3) :: my_ik
+  CHARACTER :: my_ik
   CHARACTER(LEN=256) :: file_qp
   !
   ! read eigenvalues from file
@@ -102,7 +102,7 @@ SUBROUTINE read_qp_eigs()
      !
      WRITE(my_ik,'(i1)') ik
      !
-     file_qp = TRIM(qp_correction)//'.'//TRIM(my_ik)
+     file_qp = TRIM(qp_correction)//'.'//my_ik
      !
      IF(ionode) THEN
         OPEN(NEWUNIT=iun,FILE=TRIM(file_qp),FORM='FORMATTED',STATUS='OLD')

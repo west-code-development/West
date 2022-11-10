@@ -174,7 +174,7 @@ SUBROUTINE bse_start()
      tmp_size = nbndval0x*nbndval0x
      ALLOCATE(index_matrix_lz(tmp_size,2,nspin))
      !
-     index_matrix_lz(:,:,:) = 0._DP
+     index_matrix_lz(:,:,:) = 0
      !
      ALLOCATE(size_index_matrix_lz(nspin))
      !
@@ -220,7 +220,7 @@ SUBROUTINE bse_start()
 !     tmp_size = nbndval0x*nbndval0x*n_pdep_eigen
 !     ALLOCATE(index_matrix_lz(tmp_size,3,nspin))
 !     !
-!     index_matrix_lz(:,:,:) = 0._DP
+!     index_matrix_lz(:,:,:) = 0
 !     !
 !     ALLOCATE(size_index_matrix_lz(nspin))
 !     !

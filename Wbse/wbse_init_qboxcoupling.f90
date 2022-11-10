@@ -177,8 +177,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   DO il1 = 1, bseparal%nlocx
      !
-     ! WRITE PERTURBATIONS TO FILE
-     !
      ig1  = bseparal%l2g(il1) ! global index of n_total
      !
      ibnd = index_matrix(ig1,1)

@@ -9,12 +9,6 @@ MODULE check_ovl_wfc
   !
   IMPLICIT NONE
   !
-  PRIVATE
-  !
-  PUBLIC :: check_ovl_bisection
-  PUBLIC :: check_ovl_wannier
-  PUBLIC :: read_bisection_loc
-  !
   INTERFACE check_ovl_wannier
      MODULE PROCEDURE check_ovl_wannier_real, check_ovl_wannier_cmplx
   ENDINTERFACE

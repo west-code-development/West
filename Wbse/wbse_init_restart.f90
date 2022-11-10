@@ -16,13 +16,6 @@ MODULE wbse_init_restart
   !
   IMPLICIT NONE
   !
-  PRIVATE
-  !
-  PUBLIC :: wbse_index_matrix_write
-  PUBLIC :: wbse_index_matrix_read
-  PUBLIC :: wbse_status_restart_write
-  PUBLIC :: wbse_status_restart_read
-  !
   CONTAINS
     !
     SUBROUTINE wbse_index_matrix_write(fname,size_list,size_column,index_matrix)

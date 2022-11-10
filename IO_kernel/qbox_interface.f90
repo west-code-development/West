@@ -12,16 +12,9 @@
 MODULE qbox_interface
   !----------------------------------------------------------------------------
   !
-  IMPLICIT NONE
-  !
   ! currently only consider nks = nbgrp = 1 case
   !
-  PRIVATE
-  !
-  PUBLIC :: load_qbox_wfc
-  PUBLIC :: init_qbox
-  PUBLIC :: finalize_qbox
-  PUBLIC :: sleep_and_wait_for_lock_to_be_removed
+  IMPLICIT NONE
   !
   CONTAINS
   !

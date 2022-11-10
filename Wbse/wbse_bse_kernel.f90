@@ -41,7 +41,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
   USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma,double_invfft_gamma,&
                                   & double_fwfft_gamma
-  USE mp_global,             ONLY : inter_image_comm,inter_bgrp_comm
+  USE mp_global,             ONLY : inter_image_comm
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
   USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,l_use_localise_repr,u_matrix,&
                                   & index_matrix_lz,size_index_matrix_lz
@@ -233,7 +233,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
         !
         DEALLOCATE(kd1_ij)
         !
-        CALL mp_sum(aux_bse2, inter_bgrp_comm)
+        CALL mp_sum(aux_bse2, inter_image_comm)
         !
      ENDIF
      !

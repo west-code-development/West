@@ -16,12 +16,6 @@ MODULE lanczos_restart
   !
   IMPLICIT NONE
   !
-  PRIVATE
-  !
-  PUBLIC :: lanczos_restart_write
-  PUBLIC :: lanczos_restart_read
-  PUBLIC :: lanczos_postpro_write
-  !
   CONTAINS
     !
     !------------------------------------------------------------------

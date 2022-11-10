@@ -18,7 +18,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k
   USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
+  USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,&
@@ -221,7 +221,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      IF(l_lanczos) THEN
         CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
      ELSE
-        CALL mp_sum(evc1_new(:,:,iks),inter_bgrp_comm)
+        CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
      ENDIF
      !
      IF(l_diag_term_only) GOTO 113

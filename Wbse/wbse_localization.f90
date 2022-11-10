@@ -29,6 +29,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   USE mp,                   ONLY : mp_sum
   USE qbox_interface,       ONLY : load_qbox_wfc
   USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection
+  USE wbse_io,              ONLY : write_umatrix_and_omatrix
   !
   IMPLICIT NONE
   !

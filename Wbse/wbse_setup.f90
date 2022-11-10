@@ -122,16 +122,17 @@ END SUBROUTINE
 !
 SUBROUTINE bse_start()
   !
-  USE kinds,              ONLY : DP
-  USE io_global,          ONLY : stdout
-  USE pwcom,              ONLY : isk,nks
-  USE westcom,            ONLY : nbnd_occ,nbndval0x,sigma_c_head,sigma_x_head,epsinfty,&
-                               & l_use_localise_repr,overlap_thr,u_matrix,ovl_matrix,&
-                               & size_index_matrix_lz,index_matrix_lz
-  USE lsda_mod,           ONLY : nspin
-  USE constants,          ONLY : e2,pi
-  USE cell_base,          ONLY : omega
-  USE types_coulomb,      ONLY : pot3D
+  USE kinds,            ONLY : DP
+  USE io_global,        ONLY : stdout
+  USE pwcom,            ONLY : isk,nks
+  USE westcom,          ONLY : nbnd_occ,nbndval0x,sigma_c_head,sigma_x_head,epsinfty,&
+                             & l_use_localise_repr,overlap_thr,u_matrix,ovl_matrix,&
+                             & size_index_matrix_lz,index_matrix_lz
+  USE lsda_mod,         ONLY : nspin
+  USE constants,        ONLY : e2,pi
+  USE cell_base,        ONLY : omega
+  USE types_coulomb,    ONLY : pot3D
+  USE wbse_io,          ONLY : read_umatrix_and_omatrix
   !
   IMPLICIT NONE
   !

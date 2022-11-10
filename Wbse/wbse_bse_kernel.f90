@@ -46,6 +46,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,l_use_localise_repr,u_matrix,&
                                   & index_matrix_lz,size_index_matrix_lz
   USE distribution_center,   ONLY : aband,bseparal
+  USE wbse_io,               ONLY : read_bse_pots_g2r,read_bse_pots_g2g
   !
   IMPLICIT NONE
   !

@@ -346,9 +346,7 @@ MODULE wbse_center
   ! FOR global Lanzcos diago vars
   !
   COMPLEX(DP), ALLOCATABLE :: d0psi(:,:,:,:)
-  REAL(DP),    ALLOCATABLE :: alpha_store(:,:,:)
   REAL(DP),    ALLOCATABLE :: beta_store(:,:,:)
-  REAL(DP),    ALLOCATABLE :: gamma_store(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: zeta_store(:,:,:,:)
   !
   ! FOR Davidson method

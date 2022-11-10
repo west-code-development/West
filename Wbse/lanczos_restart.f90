@@ -31,8 +31,7 @@ MODULE lanczos_restart
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
       USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : wbse_save_dir,ipol_input,n_lanczos,alpha_store,beta_store,&
-                                    & gamma_store,zeta_store
+      USE westcom,             ONLY : wbse_save_dir,ipol_input,n_lanczos,beta_store,zeta_store
       USE mp,                  ONLY : mp_barrier
       USE lsda_mod,            ONLY : nspin
       USE json_module,         ONLY : json_file
@@ -93,12 +92,8 @@ MODULE lanczos_restart
          offset = 1
          WRITE(iun,POS=offset) header
          offset = offset+HD_LENGTH*SIZEOF(header(1))
-         WRITE(iun,POS=offset) alpha_store(1:nipol_input,1:n_lanczos,1:nspin)
-         offset = offset+SIZE(alpha_store)*SIZEOF(alpha_store(1,1,1))
          WRITE(iun,POS=offset) beta_store(1:nipol_input,1:n_lanczos,1:nspin)
          offset = offset+SIZE(beta_store)*SIZEOF(beta_store(1,1,1))
-         WRITE(iun,POS=offset) gamma_store(1:nipol_input,1:n_lanczos,1:nspin)
-         offset = offset+SIZE(gamma_store)*SIZEOF(gamma_store(1,1,1))
          WRITE(iun,POS=offset) zeta_store(1:nipol_input,1:3,1:n_lanczos,1:nspin)
          CLOSE(iun)
          !
@@ -125,8 +120,7 @@ MODULE lanczos_restart
       USE mp_world,            ONLY : mpime,root,world_comm
       USE mp,                  ONLY : mp_barrier,mp_bcast
       USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : wbse_save_dir,ipol_input,n_lanczos,alpha_store,beta_store,&
-                                    & gamma_store,zeta_store
+      USE westcom,             ONLY : wbse_save_dir,ipol_input,n_lanczos,beta_store,zeta_store
       USE lsda_mod,            ONLY : nspin
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
@@ -222,20 +216,14 @@ MODULE lanczos_restart
          ENDIF
          !
          offset = 1+HD_LENGTH*SIZEOF(header(1))
-         READ(iun,POS=offset) alpha_store(1:nipol_input,1:n_lanczos,1:nspin)
-         offset = offset+SIZE(alpha_store)*SIZEOF(alpha_store(1,1,1))
          READ(iun,POS=offset) beta_store(1:nipol_input,1:n_lanczos,1:nspin)
          offset = offset+SIZE(beta_store)*SIZEOF(beta_store(1,1,1))
-         READ(iun,POS=offset) gamma_store(1:nipol_input,1:n_lanczos,1:nspin)
-         offset = offset+SIZE(gamma_store)*SIZEOF(gamma_store(1,1,1))
          READ(iun,POS=offset) zeta_store(1:nipol_input,1:3,1:n_lanczos,1:nspin)
          CLOSE(iun)
          !
       ENDIF
       !
-      CALL mp_bcast(alpha_store,0,intra_image_comm)
       CALL mp_bcast(beta_store,0,intra_image_comm)
-      CALL mp_bcast(gamma_store,0,intra_image_comm)
       CALL mp_bcast(zeta_store,0,intra_image_comm)
       !
       ! BARRIER
@@ -258,7 +246,7 @@ MODULE lanczos_restart
       !
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
-      USE westcom,             ONLY : wbse_save_dir,n_lanczos,beta_store,gamma_store,zeta_store
+      USE westcom,             ONLY : wbse_save_dir,n_lanczos,beta_store,zeta_store
       USE mp,                  ONLY : mp_barrier
       USE io_global,           ONLY : stdout
       USE lsda_mod,            ONLY : nspin
@@ -324,8 +312,6 @@ MODULE lanczos_restart
          offset = offset+HD_LENGTH*SIZEOF(header(1))
          WRITE(iun,POS=offset) beta_store(ipol_iter,1:n_lanczos,1:nspin)
          offset = offset+SIZE(beta_store(ipol_iter,:,:))*SIZEOF(beta_store(1,1,1))
-         WRITE(iun,POS=offset) gamma_store(ipol_iter,1:n_lanczos,1:nspin)
-         offset = offset+SIZE(gamma_store(ipol_iter,:,:))*SIZEOF(gamma_store(1,1,1))
          WRITE(iun,POS=offset) zeta_store(ipol_iter,1:3,1:n_lanczos,1:nspin)
          CLOSE(iun)
          !

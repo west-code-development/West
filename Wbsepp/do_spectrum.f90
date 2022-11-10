@@ -50,7 +50,7 @@ SUBROUTINE do_spectrum()
   INTEGER :: iun1, iun2
   REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), scale, wl, degspin, f_sum
   COMPLEX(DP) :: omeg_c
-  REAL(DP), ALLOCATABLE :: beta_store(:,:), gamma_store(:,:)
+  REAL(DP), ALLOCATABLE :: beta_store(:,:)
   COMPLEX(DP), ALLOCATABLE :: zeta_store(:,:,:)
   COMPLEX(DP) :: green(3,3) ! susceptibility chi
   COMPLEX(DP), ALLOCATABLE :: a(:), b(:), c(:), r(:,:)
@@ -119,7 +119,6 @@ SUBROUTINE do_spectrum()
      ! Initialisation of coefficients
      !
      ALLOCATE(beta_store(n_ipol,itermax))
-     ALLOCATE(gamma_store(n_ipol,itermax))
      ALLOCATE(zeta_store(n_ipol,n_ipol,itermax))
      !
      ALLOCATE(a(itermax))
@@ -514,7 +513,6 @@ SUBROUTINE do_spectrum()
      IF(ALLOCATED(perceived_evaluated)) DEALLOCATE(perceived_evaluated)
      !
      IF(ALLOCATED(beta_store))  DEALLOCATE(beta_store)
-     IF(ALLOCATED(gamma_store)) DEALLOCATE(gamma_store)
      IF(ALLOCATED(zeta_store))  DEALLOCATE(zeta_store)
      !
      DEALLOCATE(a)
@@ -642,7 +640,6 @@ CONTAINS
     INTEGER :: nipol_input_tmp, n_lanczos_tmp, nspin_tmp
     CHARACTER(LEN=3) :: ipol_label_tmp
     REAL(DP), ALLOCATABLE :: beta_store_tmp(:,:)
-    REAL(DP), ALLOCATABLE :: gamma_store_tmp(:,:)
     COMPLEX(DP), ALLOCATABLE :: zeta_store_tmp(:,:,:)
     CHARACTER :: my_ip
     CHARACTER(LEN=256) :: fname
@@ -682,7 +679,6 @@ CONTAINS
           ENDIF
           !
           ALLOCATE(beta_store_tmp(n_lanczos_tmp,nspin_tmp))
-          ALLOCATE(gamma_store_tmp(n_lanczos_tmp,nspin_tmp))
           ALLOCATE(zeta_store_tmp(3,n_lanczos_tmp,nspin_tmp))
           !
           WRITE(my_ip,'(i1)') ip
@@ -705,8 +701,6 @@ CONTAINS
           offset = 1+HD_LENGTH*SIZEOF(header(1))
           READ(iun,POS=offset) beta_store_tmp(1:n_lanczos_tmp,1:nspin_tmp)
           offset = offset+SIZE(beta_store_tmp)*SIZEOF(beta_store_tmp(1,1))
-          READ(iun,POS=offset) gamma_store_tmp(1:n_lanczos_tmp,1:nspin_tmp)
-          offset = offset+SIZE(gamma_store_tmp)*SIZEOF(gamma_store_tmp(1,1))
           READ(iun,POS=offset) zeta_store_tmp(1:3,1:n_lanczos_tmp,1:nspin_tmp)
           CLOSE(iun)
           !
@@ -714,9 +708,7 @@ CONTAINS
           !
           norm0(ip)                    = beta_store_tmp(1,spin_channel)
           beta_store(ip,1:itermax0-1)  = beta_store_tmp(2:itermax0,spin_channel)
-          gamma_store(ip,1:itermax0-1) = gamma_store_tmp(2:itermax0,spin_channel)
           beta_store(ip,itermax0)      = beta_store_tmp(itermax0,spin_channel)
-          gamma_store(ip,itermax0)     = gamma_store_tmp(itermax0,spin_channel)
           !
           IF(n_ipol == 1) THEN
              zeta_store(1,1,1:itermax0) = zeta_store_tmp(ipol,1:itermax0,spin_channel)
@@ -725,7 +717,6 @@ CONTAINS
           ENDIF
           !
           DEALLOCATE(beta_store_tmp)
-          DEALLOCATE(gamma_store_tmp)
           DEALLOCATE(zeta_store_tmp)
           !
        ENDDO
@@ -734,7 +725,6 @@ CONTAINS
        IF(nspin_tmp == 2) degspin = 1
        !
        beta_store(:,itermax0+1:itermax)   = 0._DP
-       gamma_store(:,itermax0+1:itermax)  = 0._DP
        zeta_store(:,:,itermax0+1:itermax) = (0._DP,0._DP)
        !
     ENDIF
@@ -799,10 +789,8 @@ CONTAINS
           DO i = itermax0,itermax
              IF(MOD(i,2) == 1) THEN
                 beta_store(ip,i) = average(ip)+av_amplitude(ip)
-                gamma_store(ip,i) = average(ip)+av_amplitude(ip)
              ELSE
                 beta_store(ip,i) = average(ip)-av_amplitude(ip)
-                gamma_store(ip,i) = average(ip)-av_amplitude(ip)
              ENDIF
           ENDDO
        ENDDO
@@ -828,7 +816,7 @@ CONTAINS
        !
        DO i = 1,itermax-1
           b(i) = CMPLX(-beta_store(ip,i),KIND=DP)
-          c(i) = CMPLX(-gamma_store(ip,i),KIND=DP)
+          c(i) = b(i)
        ENDDO
        !
        r(ip,:) = (0._DP,0._DP)

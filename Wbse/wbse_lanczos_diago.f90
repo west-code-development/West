@@ -15,9 +15,8 @@ SUBROUTINE wbse_lanczos_diago()
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ,wbse_calculation,&
-                                 & d0psi,ipol_input,n_lanczos,alpha_store,beta_store,gamma_store,&
-                                 & zeta_store,nbndval0x,l_bse_calculation,size_index_matrix_lz,&
-                                 & n_steps_write_restart
+                                 & d0psi,ipol_input,n_lanczos,beta_store,zeta_store,nbndval0x,&
+                                 & l_bse_calculation,size_index_matrix_lz,n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
@@ -43,7 +42,7 @@ SUBROUTINE wbse_lanczos_diago()
   INTEGER, PARAMETER :: n_ipol = 3
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
-  REAL(DP) :: alpha(nspin),beta(nspin),gamma(nspin)
+  REAL(DP) :: beta(nspin),gamma(nspin)
   COMPLEX(DP) :: zeta(nspin),wbse_dot_out(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
   CHARACTER(LEN=256) :: tmp_dir_lan
@@ -104,14 +103,10 @@ SUBROUTINE wbse_lanczos_diago()
   END SELECT
   !
   ALLOCATE(d0psi(npwx,nbndval0x,nks,n_ipol))
-  ALLOCATE(alpha_store(nipol_input,n_lanczos,nspin))
   ALLOCATE(beta_store(nipol_input,n_lanczos,nspin))
-  ALLOCATE(gamma_store(nipol_input,n_lanczos,nspin))
   ALLOCATE(zeta_store(nipol_input,n_ipol,n_lanczos,nspin))
   !
-  alpha_store(:,:,:) = 0._DP
   beta_store(:,:,:) = 0._DP
-  gamma_store(:,:,:) = 0._DP
   zeta_store(:,:,:,:) = (0._DP,0._DP)
   !
   ALLOCATE(evc1(npwx,nbndval0x,nks))
@@ -127,7 +122,7 @@ SUBROUTINE wbse_lanczos_diago()
      !
      ! 1) read ipol_stopped
      ! 2) read ilan_stopped
-     ! 3) read store_alpha, store_beta, store_gamma
+     ! 3) read store_beta, store_zeta
      !
      ipol_restart = ipol_stopped
      ilan_restart = ilan_stopped+1
@@ -186,9 +181,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! By construction <p|Lq>=0 should be 0, forcing this both conserves
         ! resources and increases stability.
-        !
-        alpha = 0._DP
-        alpha_store(ip,iter,:) = alpha
+        ! ( i.e., alpha = 0 )
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
@@ -208,7 +201,6 @@ SUBROUTINE wbse_lanczos_diago()
         ENDDO
         !
         beta_store(ip,iter,:) = beta
-        gamma_store(ip,iter,:) = gamma
         !
         ! Renormalize q(i) and Lq(i)
         !
@@ -290,9 +282,11 @@ SUBROUTINE wbse_lanczos_diago()
   DEALLOCATE(pol_index_input)
   DEALLOCATE(pol_label_input)
   DEALLOCATE(d0psi)
-  DEALLOCATE(evc1,evc1_new,evc1_old)
-  DEALLOCATE(alpha_store,beta_store)
-  DEALLOCATE(gamma_store,zeta_store)
+  DEALLOCATE(evc1)
+  DEALLOCATE(evc1_new)
+  DEALLOCATE(evc1_old)
+  DEALLOCATE(beta_store)
+  DEALLOCATE(zeta_store)
   !
 END SUBROUTINE
 !

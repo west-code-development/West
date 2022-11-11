@@ -43,7 +43,7 @@ SUBROUTINE do_loc ( )
   REAL(DP), ALLOCATABLE :: local_fac(:,:), ipr(:,:)
   REAL(DP), ALLOCATABLE :: filter(:), filter_loc(:)
   REAL(DP) :: rho, r_vec(3), volume
-  CHARACTER(LEN=512) :: ikstring
+  CHARACTER(LEN=4) :: labelk
   TYPE(bar_type) :: barra
   TYPE(json_core) :: json
   TYPE(json_value), POINTER :: json_root, localization_object, ipr_object
@@ -159,8 +159,8 @@ SUBROUTINE do_loc ( )
   !
   ! Post processing
   !
-  local_fac(:,:) = volume/omega*local_fac(:,:)/REAL(n_points,KIND=DP)
-  ipr(:,:) = ipr(:,:)/REAL(dffts%nr1*dffts%nr2*dffts%nr3,KIND=DP)/omega
+  local_fac(:,:) = local_fac(:,:)/(dffts%nr1*dffts%nr2*dffts%nr3)
+  ipr(:,:) = ipr(:,:)/(dffts%nr1*dffts%nr2*dffts%nr3)/omega
   !
   ! sum up results
   !
@@ -192,12 +192,12 @@ SUBROUTINE do_loc ( )
         CALL json%add(json_root, ipr_object)
         !
         DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
-           WRITE(ikstring, '(I4)') iks
+           WRITE(labelk, '(I4)') iks
            !
            ! write localization factor and IPR for each iks-point
            !
-           CALL json%add(localization_object, TRIM(ADJUSTL(ikstring)), local_fac(:,iks))
-           CALL json%add(ipr_object, TRIM(ADJUSTL(ikstring)), ipr(:,iks))
+           CALL json%add(localization_object, labelk, local_fac(:,iks))
+           CALL json%add(ipr_object, labelk, ipr(:,iks))
         ENDDO
         !
         NULLIFY(localization_object)

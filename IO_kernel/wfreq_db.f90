@@ -276,7 +276,7 @@ MODULE wfreq_db
                      IF (PRESENT(eri_w_full)) THEN
                        CALL json%add('qdet.eri_w_full.K'//TRIM(my_label_ik)//'.K'// &
                        & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                       & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                       & REAL(eri_w_full(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
                      ENDIF
                      !
                      CALL json%add('qdet.eri_w.K'//TRIM(my_label_ik)//'.K'// &

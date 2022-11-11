@@ -11,12 +11,11 @@ SUBROUTINE wbse_lanczos_diago()
   !
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
-  USE io_files,             ONLY : tmp_dir
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
-  USE westcom,              ONLY : nbnd_occ,west_prefix,lrwfc,iuwfc,nbnd_occ,wbse_calculation,&
-                                 & d0psi,ipol_input,n_lanczos,beta_store,zeta_store,nbndval0x,&
-                                 & l_bse_calculation,size_index_matrix_lz,n_steps_write_restart
+  USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,ipol_input,&
+                                 & n_lanczos,beta_store,zeta_store,nbndval0x,l_bse_calculation,&
+                                 & size_index_matrix_lz,n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
@@ -45,10 +44,7 @@ SUBROUTINE wbse_lanczos_diago()
   REAL(DP) :: beta(nspin),gamma(nspin)
   COMPLEX(DP) :: zeta(nspin),wbse_dot_out(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
-  CHARACTER(LEN=256) :: tmp_dir_lan
   TYPE(bar_type) :: barra
-  !
-  tmp_dir_lan = TRIM(tmp_dir)//TRIM(west_prefix)//'.tmp_lan'
   !
   ! ... DISTRIBUTE lanczos
   !
@@ -259,9 +255,6 @@ SUBROUTINE wbse_lanczos_diago()
         evc1(:,:,:) = evc1_new
         !
         IF(n_steps_write_restart > 0 .AND. MOD(iter,n_steps_write_restart) == 0) THEN
-           CALL my_mkdir(tmp_dir_lan)
-           CALL copy_lan(tmp_dir_lan)
-           !
            CALL lanczos_restart_write(nipol_input,ip,iter)
            CALL lanczos_evcs_write(evc1,evc1_old)
         ENDIF
@@ -287,63 +280,5 @@ SUBROUTINE wbse_lanczos_diago()
   DEALLOCATE(evc1_old)
   DEALLOCATE(beta_store)
   DEALLOCATE(zeta_store)
-  !
-END SUBROUTINE
-!
-SUBROUTINE copy_lan(dir)
-  !
-  USE io_global,            ONLY : stdout
-  USE mp_world,             ONLY : root,mpime,world_comm
-  USE mp,                   ONLY : mp_barrier,mp_bcast
-  USE clib_wrappers,        ONLY : f_copy
-  USE westcom,              ONLY : wbse_save_dir
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  CHARACTER(LEN=*), INTENT(IN) :: dir
-  !
-  ! Workspace
-  !
-  CHARACTER(LEN=320) :: cp_source,cp_dest
-  INTEGER :: cp_status
-  !
-  ! BARRIER
-  !
-  CALL mp_barrier(world_comm)
-  !
-  ! ... clear the directory
-  !
-  IF(mpime == root) THEN
-    cp_source = TRIM(wbse_save_dir)//'/EVC1.dat'
-    cp_dest   = TRIM(dir)//'/EVC1.dat'
-    cp_status = f_copy(cp_source,cp_dest)
-  ENDIF
-  !
-  CALL mp_bcast(cp_status,root,world_comm)
-  CALL errore('copy_lan','cannot copy evc1',cp_status)
-  !
-  IF(mpime == root) THEN
-    cp_source = TRIM(wbse_save_dir)//'/EVC1_OLD.dat'
-    cp_dest   = TRIM(dir)//'/EVC1_OLD.dat'
-    cp_status = f_copy(cp_source,cp_dest)
-  ENDIF
-  !
-  CALL mp_bcast(cp_status,root,world_comm)
-  CALL errore('copy_lan','cannot copy evc1_old',cp_status)
-  !
-  IF(mpime == root) THEN
-    cp_source = TRIM(wbse_save_dir)//'/summary.xml'
-    cp_dest   = TRIM(dir)//'/summary.xml'
-    cp_status = f_copy(cp_source,cp_dest)
-  ENDIF
-  !
-  CALL mp_bcast(cp_status,root,world_comm)
-  CALL errore('copy_lan','cannot copy summary',cp_status)
-  !
-  WRITE(stdout,*)
-  WRITE(stdout,"(5x,'Done tmp save in location : ',a)") TRIM(dir)
-  WRITE(stdout,*)
   !
 END SUBROUTINE

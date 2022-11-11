@@ -45,7 +45,7 @@ MODULE plep_db
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iun,global_j,local_j
-      CHARACTER(LEN=9) :: label_j
+      CHARACTER(LEN=6) :: label_j
       CHARACTER(LEN=256) :: fname
       TYPE(json_file) :: json
       LOGICAL :: lexists
@@ -104,7 +104,7 @@ MODULE plep_db
          global_j = pert%l2g(local_j)
          IF(global_j > n_pdep_eigen) CYCLE
          !
-         WRITE(label_j,'(i9.9)') global_j
+         WRITE(label_j,'(i6.6)') global_j
          fname = TRIM(wbse_save_dir)//'/E'//label_j//'.dat'
          CALL plep_merge_and_write_G(TRIM(fname),dvg_exc(:,:,:,local_j))
          !
@@ -159,7 +159,7 @@ MODULE plep_db
       INTEGER :: n_eigen_to_get
       INTEGER :: tmp_n_pdep_eigen
       INTEGER :: global_j,local_j
-      CHARACTER(LEN=9) :: label_j
+      CHARACTER(LEN=6) :: label_j
       REAL(DP),ALLOCATABLE :: tmp_ev(:)
       TYPE(json_file) :: json
       CHARACTER(LEN=256) :: fname
@@ -219,7 +219,7 @@ MODULE plep_db
          global_j = pert%l2g(local_j)
          IF(global_j > n_eigen_to_get) CYCLE
          !
-         WRITE(label_j,'(i9.9)') global_j
+         WRITE(label_j,'(i6.6)') global_j
          fname = TRIM(wbse_save_dir)//'/E'//label_j//'.dat'
          CALL plep_read_G_and_distribute(TRIM(fname),dvg_exc(:,:,:,local_j))
          !

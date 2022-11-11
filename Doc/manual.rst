@@ -36,7 +36,6 @@ input_west
    * - **Description**
      - Prefix prepended to the Quantum ESPRESSO save folder.
 
-
 .. data:: west_prefix
 
 .. list-table::
@@ -49,7 +48,6 @@ input_west
      - "west"
    * - **Description**
      - Prefix prepended to the WEST save and restart folders.
-
 
 .. data:: outdir
 
@@ -64,8 +62,8 @@ input_west
    * - **Description**
      - Directory for: input, temporary, and output files.
 
-
 |
+
 
 -------------
 wstat_control
@@ -85,9 +83,8 @@ wstat_control
      - Available options are:
 
        - "S" : Start from scratch.
-       - "R" : Restart from an interrupted run. You should restart with the same number of cores, and images.
+       - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
        - "E" : Calculation of the response is external, i.e. outsourced to a server.
-
 
 .. data:: n_pdep_eigen
 
@@ -102,7 +99,6 @@ wstat_control
    * - **Description**
      - Number of PDEP eigenpotentials.
 
-
 .. data:: n_pdep_times
 
 .. list-table::
@@ -115,7 +111,6 @@ wstat_control
      - 4
    * - **Description**
      - Maximum dimension of the search space = n_pdep_eigen * n_pdep_times.
-
 
 .. data:: n_pdep_maxiter
 
@@ -130,7 +125,6 @@ wstat_control
    * - **Description**
      - Maximum number of iterations in PDEP.
 
-
 .. data:: n_dfpt_maxiter
 
 .. list-table::
@@ -144,7 +138,6 @@ wstat_control
    * - **Description**
      - Maximum number of iterations in DFPT.
 
-
 .. data:: n_pdep_read_from_file
 
 .. list-table::
@@ -157,7 +150,6 @@ wstat_control
      - 0
    * - **Description**
      - Number of PDEP eigenpotentials that can be read from file.
-
 
 .. data:: n_steps_write_restart
 
@@ -175,7 +167,6 @@ wstat_control
        - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the PDEP loop.
        - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the PDEP loop. Restart will not be possible.
 
-
 .. data:: trev_pdep
 
 .. list-table::
@@ -188,7 +179,6 @@ wstat_control
      - 0.001
    * - **Description**
      - Absolute convergence threshold for PDEP eigenvalues.
-
 
 .. data:: trev_pdep_rel
 
@@ -203,7 +193,6 @@ wstat_control
    * - **Description**
      - Relative convergence threshold for PDEP eigenvalues.
 
-
 .. data:: tr2_dfpt
 
 .. list-table::
@@ -216,7 +205,6 @@ wstat_control
      - 1.e-12
    * - **Description**
      - Convergence threshold in DFPT. Note that in the first PDEP iterations a reduced threshold for DFPT could be used by the code in order to speed up the computation.
-
 
 .. data:: l_kinetic_only
 
@@ -231,7 +219,6 @@ wstat_control
    * - **Description**
      - If (True), then only the kinetic term in the Hamiltonian is kept.
 
-
 .. data:: l_minimize_exx_if_active
 
 .. list-table::
@@ -244,7 +231,6 @@ wstat_control
      - False
    * - **Description**
      - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
-
 
 .. data:: l_use_ecutrho
 
@@ -259,7 +245,6 @@ wstat_control
    * - **Description**
      - If (True), then the eigenpotentials are represented with ecutrho instead of ecutwfc.
 
-
 .. data:: qlist
 
 .. list-table::
@@ -273,13 +258,12 @@ wstat_control
    * - **Description**
      - List of q-points to compute.
 
-
 |
+
 
 -------------
 wfreq_control
 -------------
-
 
 .. data:: wfreq_calculation
 
@@ -304,7 +288,6 @@ wfreq_control
        - "XWGQP" : Compute the QP corrections, and plot spectral functions.
        - "XWGQOP" : Compute all.
 
-
 .. data:: n_pdep_eigen_to_use
 
 .. list-table::
@@ -317,7 +300,6 @@ wfreq_control
      - dynamically set to match the number of electrons
    * - **Description**
      - Number of PDEP eigenvectors to use in Wfreq. They are read from previous Wstat run. This value cannot exceed n_pdep_eigen (defined in wstat_control) and is used to check the convergence of the calculation.
-
 
 .. data:: qp_bandrange
 
@@ -332,7 +314,6 @@ wfreq_control
    * - **Description**
      - Compute the QP corrections from band qp_bandrange[0] to band qp_bandrange[1]. Used only when qp_bands is not set. If qp_bands is set, the value of qp_bandrange is discarded.
 
-
 .. data:: qp_bands
 
 .. list-table::
@@ -345,7 +326,6 @@ wfreq_control
      - [0]
    * - **Description**
      - List of bands to compute the QP corrections. If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
-
 
 .. data:: macropol_calculation
 
@@ -363,7 +343,6 @@ wfreq_control
        - "N" : None. Choice valid for isolated systems.
        - "C" : Include long-wavelength limit. Choice valid for condensed systems.
 
-
 .. data:: n_lanczos
 
 .. list-table::
@@ -376,7 +355,6 @@ wfreq_control
      - 30
    * - **Description**
      - Number of Lanczos chains.
-
 
 .. data:: n_imfreq
 
@@ -391,7 +369,6 @@ wfreq_control
    * - **Description**
      - Number of frequecies used to sample the imaginary frequency axis in the range [0,ecut_imfreq].
 
-
 .. data:: n_refreq
 
 .. list-table::
@@ -404,7 +381,6 @@ wfreq_control
      - 272
    * - **Description**
      - Number of frequecies used to sample the real frequency axis in the range [0,ecut_refreq].
-
 
 .. data:: ecut_imfreq
 
@@ -419,7 +395,6 @@ wfreq_control
    * - **Description**
      - Cutoff for the imaginary frequencies (in Ry).
 
-
 .. data:: ecut_refreq
 
 .. list-table::
@@ -432,7 +407,6 @@ wfreq_control
      - 2.0
    * - **Description**
      - Cutoff for the real frequencies (in Ry).
-
 
 .. data:: wfreq_eta
 
@@ -447,7 +421,6 @@ wfreq_control
    * - **Description**
      - Energy shift of the poles (in Ry).
 
-
 .. data:: n_secant_maxiter
 
 .. list-table::
@@ -460,7 +433,6 @@ wfreq_control
      - 1
    * - **Description**
      - Maximum number of iterations in the secant solver.
-
 
 .. data:: trev_secant
 
@@ -475,7 +447,6 @@ wfreq_control
    * - **Description**
      - Convergence energy threshold (in Ry) for the secant solver.
 
-
 .. data:: l_enable_lanczos
 
 .. list-table::
@@ -488,7 +459,6 @@ wfreq_control
      - True
    * - **Description**
      - If (False), then Lanczos solvers are turned off.
-
 
 .. data:: l_enable_off_diagonal
 
@@ -505,7 +475,6 @@ wfreq_control
        - If (False) then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band).
        - If (True) then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
 
-
 .. data:: l_enable_gwetot
 
 .. list-table::
@@ -518,7 +487,6 @@ wfreq_control
      - False
    * - **Description**
      - Deprecated parameter.
-
 
 .. data:: o_restart_time
 
@@ -537,7 +505,6 @@ wfreq_control
        - If ( o_restart_time >  0 ) A checkpoint is written every o_restart_time minutes in the W and G loops.
        - If ( o_restart_time <  0 ) A checkpoint is NEVER written in the W and G loops. Restart will not be possible.
 
-
 .. data:: ecut_spectralf
 
 .. list-table::
@@ -550,7 +517,6 @@ wfreq_control
      - [-2.0,1.0]
    * - **Description**
      - Energy cutoff (in Ry) for the real frequencies. Used when wfreq_caculation contains the runlevel "P".
-
 
 .. data:: n_spectralf
 
@@ -567,10 +533,10 @@ wfreq_control
 
 |
 
+
 --------------
 westpp_control
 --------------
-
 
 .. data:: westpp_calculation
 
@@ -592,7 +558,6 @@ westpp_control
        - "D" : Output the dipole matrix elements.
        - "L" : Output the localization factor and the inverse participation ratio.
 
-
 .. data:: westpp_range
 
 .. list-table::
@@ -605,7 +570,6 @@ westpp_control
      - [1,2]
    * - **Description**
      - Range for W, E, S, D, and L run.
-
 
 .. data:: westpp_format
 
@@ -626,7 +590,6 @@ westpp_control
        - "z" : Planar average xy.
        - "s" : Spherical average.
 
-
 .. data:: westpp_sign
 
 .. list-table::
@@ -640,7 +603,6 @@ westpp_control
    * - **Description**
      - If (True), then the sign of the wavefunction/eigenpotential is kept in the output file.
 
-
 .. data:: westpp_n_pdep_eigen_to_use
 
 .. list-table::
@@ -652,8 +614,7 @@ westpp_control
    * - **Default**
      - 1
    * - **Description**
-     - Number PDEP eigenpotentials to read/use.
-
+     - Number of PDEP eigenpotentials to read/use.
 
 .. data:: westpp_r0
 
@@ -668,7 +629,6 @@ westpp_control
    * - **Description**
      - Position of the center (in a.u.) for spherical average plot.
 
-
 .. data:: westpp_nr
 
 .. list-table::
@@ -681,7 +641,6 @@ westpp_control
      - 100
    * - **Description**
      - Number of points in the spherical average plot.
-
 
 .. data:: westpp_rmax
 
@@ -696,7 +655,6 @@ westpp_control
    * - **Description**
      - Max radius (in a.u.) for the spherical average plot.
 
-
 .. data:: westpp_epsinfty
 
 .. list-table::
@@ -709,7 +667,6 @@ westpp_control
      - 1.0
    * - **Description**
      - Macroscopic relative dielectric constant. Used in the "S" runlevel.
-
 
 .. data:: westpp_box
 
@@ -725,6 +682,7 @@ westpp_control
      - Box [x_0, x_1, y_0, y_1, z_0, z_1] (in a.u.) within which the localization factor is computed (the "L" runlevel).
 
 |
+
 
 --------------
 server_control
@@ -746,10 +704,9 @@ server_control
 |
 
 
---------------
+-----------------
 wbse_init_control
---------------
-
+-----------------
 
 .. data:: wbse_init_calculation
 
@@ -764,7 +721,7 @@ wbse_init_control
    * - **Description**
      - Available options are:
 
-       - "S" : Start from scratch
+       - "S" : Start from scratch.
        - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
 
 .. data:: localization
@@ -780,8 +737,8 @@ wbse_init_control
    * - **Description**
      - Available options are:
 
-       - "N" : Kohn-Sham orbitals are not localized
-       - "B" : Bisected orbitals are used
+       - "N" : Kohn-Sham orbitals are not localized.
+       - "B" : Bisected orbitals are used.
 
 .. data:: wfc_from_qbox
 
@@ -826,13 +783,38 @@ wbse_init_control
        - "CHI_RPA" : W = vc + vc X_RPA vc
        - "XC_CHI_RPA" : W = vc + (vc+fxc) X vc
 
+.. data:: overlap_thr
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 0.0
+   * - **Description**
+     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed.
+
+.. data:: spin_channel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - Determine which spin channel to compute.
 
 |
 
---------------
-wbse_control
---------------
 
+------------
+wbse_control
+------------
 
 .. data:: wbse_calculation
 
@@ -852,6 +834,21 @@ wbse_control
        - "L" : Compute the absorption spectrum with the Lanczos method.
        - "l" : Restart the calculation for wbse_calculation = "L" from an interrupted run. You should restart with the same number of cores and images.
 
+.. data:: solver
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "BSE"
+   * - **Description**
+     - Available options are:
+
+       - "BSE" : Bethe-Salpeter equation.
+       - "TDDFT" : Time-dependent density functional theory.
 
 .. data:: qp_correction
 
@@ -867,10 +864,9 @@ wbse_control
      - Available options are:
 
        - "None" : Quasiparticle corrections are not added.
-       - specify the name of the file from which quasiparticle corrections are read (in eV).
+       - Specify the name of the file from which quasiparticle corrections are read (in eV).
 
-
-.. data:: scissor_operator
+.. data:: scissor_ope
 
 .. list-table::
    :widths: 10 90
@@ -882,22 +878,6 @@ wbse_control
      - 0.0
    * - **Description**
      - Value of the scissor operator (in eV).
-
-.. data:: solver
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - string
-   * - **Default**
-     - "BSE"
-   * - **Description**
-     - Available options are:
-
-       - "BSE" : Bethe-Salpeter equation
-       - "TDDFT" : Time-dependent density functional theory
 
 .. data:: n_liouville_eigen
 
@@ -912,7 +892,6 @@ wbse_control
    * - **Description**
      - Number of Liouville eigenvectors and eigenvalues.
 
-
 .. data:: n_liouville_times
 
 .. list-table::
@@ -925,7 +904,6 @@ wbse_control
      - 4
    * - **Description**
      - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times.
-
 
 .. data:: n_liouville_maxiter
 
@@ -940,7 +918,6 @@ wbse_control
    * - **Description**
      - Maximum number of iterations of the Davidson method.
 
-
 .. data:: n_liouville_read_from_file
 
 .. list-table::
@@ -953,7 +930,6 @@ wbse_control
      - 0
    * - **Description**
      - Number of Liouville eigenvectors that can be read from file.
-
 
 .. data:: trev_liouville
 
@@ -968,7 +944,6 @@ wbse_control
    * - **Description**
      - Absolute convergence threshold for Liouville eigenvalues.
 
-
 .. data:: trev_liouville_rel
 
 .. list-table::
@@ -981,7 +956,6 @@ wbse_control
      - 0.1
    * - **Description**
      - Relative convergence threshold for Liouville eigenvalues.
-
 
 .. data:: n_lanczos
 
@@ -996,6 +970,21 @@ wbse_control
    * - **Description**
      - Number of Lanczos iterations to be performed.
 
+.. data:: n_steps_write_restart
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1
+   * - **Description**
+     - Available options are:
+
+       - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the Lanczos loop.
+       - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the Lanczos loop. Restart will not be possible.
 
 .. data:: ipol_input
 
@@ -1009,25 +998,10 @@ wbse_control
      - "XX"
    * - **Description**
      - Determine which components of the polarizability tensor (alpha) are computed:
-       - "XX": alpha_xx
-       - "YY": alpha_yy
-       - "ZZ": alpha_zz
-        -"XYZ": three Lanczos chains are sequentially performed and the full polarizability tensor and the absorption coefficient are computed.
-
-
-.. data:: epsinfty
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - float
-   * - **Default**
-     - 1.0
-   * - **Description**
-     - Macroscopic relative dielectric constant.
-
+       - "XX": alpha_xx.
+       - "YY": alpha_yy.
+       - "ZZ": alpha_zz.
+       - "XYZ": three Lanczos chains are sequentially performed and the full polarizability tensor and the absorption coefficient are computed.
 
 .. data:: macropol_calculation
 
@@ -1044,6 +1018,19 @@ wbse_control
 
        - "N" : None. Choice valid for isolated systems.
        - "C" : Include long-wavelength limit. Choice valid for condensed systems.
+
+.. data:: epsinfty
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1.0
+   * - **Description**
+     - Macroscopic relative dielectric constant.
 
 .. data:: spin_excitation
 
@@ -1072,4 +1059,17 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - Preconditioning for the Davidson methos, for finite systems.
+     - Preconditioning for the Davidson method, for finite systems.
+
+.. data:: l_reduce_io
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - True
+   * - **Description**
+     - Speed up the Lanczos iterations by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.

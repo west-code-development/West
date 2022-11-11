@@ -634,6 +634,8 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   IF (l_macropol) CALL pot3D%compute_divergence('default')
   !
   eri_wp(:,:,:,:) = 0._DP
+  print *, 'Divergence =', pot3D%div
+  print *, 'Head of Chi=', REAL(chi_head) 
   !
   DO nloc = 1, nloc_max ! iterate over m, n
      !
@@ -654,9 +656,6 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
                     !
                     eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) &
                     & + braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
-                    IF(l_macropol .AND. i==j .AND. k==l) THEN
-                       eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + chi_head*pot3D%div
-                    ENDIF
                     !
                  ENDDO
               ENDDO
@@ -665,6 +664,22 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
      ENDDO
      !
   ENDDO ! iterate over m, n
+  DO s2 = 1, nspin
+    DO s1 = 1, nspin
+      DO p2 = 1, n_pairs
+        k = pijmap(1,p2)
+        l = pijmap(2,p2)
+
+        DO p1 = 1, n_pairs
+          i = pijmap(1,p1)
+          j = pijmap(2,p1)
+          IF(l_macropol .AND. i==j .AND. k==l) THEN
+             eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + chi_head*pot3D%div
+          ENDIF
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
   !
   CALL mp_sum(eri_wp, inter_image_comm)
   !

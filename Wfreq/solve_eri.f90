@@ -634,8 +634,6 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   IF (l_macropol) CALL pot3D%compute_divergence('default')
   !
   eri_wp(:,:,:,:) = 0._DP
-  print *, 'Divergence =', pot3D%div
-  print *, 'Head of Chi=', REAL(chi_head) 
   !
   DO nloc = 1, nloc_max ! iterate over m, n
      !

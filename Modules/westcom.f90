@@ -388,7 +388,6 @@ MODULE wbsepp_center
   INTEGER :: ipol
   INTEGER :: sym_op
   INTEGER :: units
-  INTEGER :: verbosity
   CHARACTER(LEN=60) :: extrapolation
   REAL(DP) :: start
   REAL(DP) :: end

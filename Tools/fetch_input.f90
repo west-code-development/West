@@ -32,7 +32,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
                              & ipol_input,epsinfty,spin_excitation,l_preconditioning,l_reduce_io,&
                              & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
-                             & units,verbosity,extrapolation,start,end,increment,epsil
+                             & units,extrapolation,start,end,increment,epsil
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -163,7 +163,6 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbsepp_control.ipol',ipol)
         CALL json%add('input.wbsepp_control.sym_op',sym_op)
         CALL json%add('input.wbsepp_control.units',units)
-        CALL json%add('input.wbsepp_control.verbosity',verbosity)
         CALL json%add('input.wbsepp_control.extrapolation',TRIM(extrapolation))
         CALL json%add('input.wbsepp_control.start',start)
         CALL json%add('input.wbsepp_control.end',end)
@@ -199,8 +198,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
                              & ipol_input,epsinfty,spin_excitation,l_preconditioning,l_reduce_io,&
                              & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
-                             & units,verbosity,extrapolation,start,end,increment,epsil,&
-                             & main_input_file,logfile
+                             & units,extrapolation,start,end,increment,epsil,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -555,7 +553,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         IERR = return_dict%get(ipol, 'ipol', DUMMY_DEFAULT)
         IERR = return_dict%get(sym_op, 'sym_op', DUMMY_DEFAULT)
         IERR = return_dict%get(units, 'units', DUMMY_DEFAULT)
-        IERR = return_dict%get(verbosity, 'verbosity', DUMMY_DEFAULT)
         IERR = return_dict%getitem(cvalue, 'extrapolation'); extrapolation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(start, 'start')
         IERR = return_dict%getitem(end, 'end')
@@ -881,7 +878,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      CALL mp_bcast(ipol,root,world_comm)
      CALL mp_bcast(sym_op,root,world_comm)
      CALL mp_bcast(units,root,world_comm)
-     CALL mp_bcast(verbosity,root,world_comm)
      CALL mp_bcast(extrapolation,root,world_comm)
      CALL mp_bcast(start,root,world_comm)
      CALL mp_bcast(end,root,world_comm)
@@ -899,7 +895,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      IF(ipol == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch ipol',1)
      IF(sym_op == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch sym_op',1)
      IF(units == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch units',1)
-     IF(verbosity == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch verbosity',1)
      IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
      !
      SELECT CASE(macropol_calculation)
@@ -1108,7 +1103,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         CALL io_push_value('ipol',ipol,numsp)
         CALL io_push_value('sym_op',sym_op,numsp)
         CALL io_push_value('units',units,numsp)
-        CALL io_push_value('verbosity',verbosity,numsp)
         CALL io_push_value('extrapolation',extrapolation,numsp)
         CALL io_push_value('start',start,numsp)
         CALL io_push_value('end',end,numsp)

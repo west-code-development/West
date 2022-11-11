@@ -18,7 +18,7 @@ SUBROUTINE do_eig_decomp()
   USE kinds,                ONLY : DP
   USE constants,            ONLY : pi
   USE io_global,            ONLY : stdout
-  USE distribution_center,  ONLY : pert,aband
+  USE distribution_center,  ONLY : pert
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE westcom,              ONLY : nbnd_occ,ev,dvg_exc,d0psi,n_liouville_read_from_file
@@ -58,13 +58,6 @@ SUBROUTINE do_eig_decomp()
   !
   pert = idistribute()
   CALL pert%init(nvec,'i','nvec',.TRUE.)
-  !
-  ! ... DISTRIBUTE nband
-  !
-  aband = idistribute()
-  CALL aband%init(nbndx_occ,'b','band_paralel',.TRUE.)
-  !
-  CALL wbse_memory_report() ! Before allocating I report the memory required.
   !
   ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !

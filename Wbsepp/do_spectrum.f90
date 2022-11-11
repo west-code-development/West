@@ -21,7 +21,7 @@ SUBROUTINE do_spectrum()
   USE mp_world,            ONLY : world_comm,mpime,root
   USE mp,                  ONLY : mp_bcast,mp_barrier
   USE westcom,             ONLY : qe_prefix,itermax,itermax0,extrapolation,start,end,increment,&
-                                & epsil,ipol,sym_op,verbosity,units,spin_channel,wbse_save_dir
+                                & epsil,ipol,sym_op,units,spin_channel,wbse_save_dir
   USE json_module,         ONLY : json_file
   USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
   USE base64_module,       ONLY : islittleendian
@@ -111,10 +111,6 @@ SUBROUTINE do_spectrum()
      ! Check the units (Ry, eV, nm)
      !
      IF(units < 0 .OR. units > 2) CALL errore('do_spectrum','Unsupported unit system',1)
-     !
-     IF(units /= 0 .AND. verbosity > 4) THEN
-        verbosity = 4
-     ENDIF
      !
      ! Initialisation of coefficients
      !
@@ -824,7 +820,7 @@ CONTAINS
        !
        ! |w_t|=(w-L) |1,0,0,...,0|
        !
-       CALL zgtsv(itermax,1,b,a,c,r(ip,:),itermax,info)
+       CALL ZGTSV(itermax,1,b,a,c,r(ip,:),itermax,info)
        !
        IF(info /= 0) CALL errore('calc_chi','Unable to solve tridiagonal system',1)
        !

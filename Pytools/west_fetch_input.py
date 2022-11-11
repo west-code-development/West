@@ -120,7 +120,6 @@ default["wbsepp_control"]["itermax0"] = 1000
 default["wbsepp_control"]["ipol"] = 1
 default["wbsepp_control"]["sym_op"] = 0
 default["wbsepp_control"]["units"] = 0
-default["wbsepp_control"]["verbosity"] = 0
 default["wbsepp_control"]["extrapolation"] = "no"
 default["wbsepp_control"]["start"] = 0.0
 default["wbsepp_control"]["end"] = 2.5

@@ -620,11 +620,11 @@ westpp_control
    * - **Description**
      - Available options for the output fortmat are:
 
-       - "c" : Cube.
-       - "x" : Planar average yz.
-       - "y" : Planar average xz.
-       - "z" : Planar average xy.
-       - "s" : Spherical average.
+       - "C" : Cube.
+       - "X" : Planar average yz.
+       - "Y" : Planar average xz.
+       - "Z" : Planar average xy.
+       - "S" : Spherical average.
 
 
 .. data:: westpp_sign
@@ -652,7 +652,7 @@ westpp_control
    * - **Default**
      - 1
    * - **Description**
-     - Number PDEP eigenpotentials to read/use.
+     - Number of PDEP eigenpotentials to read/use.
 
 
 .. data:: westpp_r0
@@ -666,7 +666,7 @@ westpp_control
    * - **Default**
      - [0.0, 0.0, 0.0]
    * - **Description**
-     - Position of the center (in a.u.) for spherical average plot.
+     - Position of the center (in a.u.) for spherical average plot or localization factor in a sphere.
 
 
 .. data:: westpp_nr
@@ -680,7 +680,7 @@ westpp_control
    * - **Default**
      - 100
    * - **Description**
-     - Number of points in the spherical average plot.
+     - Number of points in the spherical average plot or localization factor in a sphere.
 
 
 .. data:: westpp_rmax
@@ -694,7 +694,7 @@ westpp_control
    * - **Default**
      - 1.0
    * - **Description**
-     - Max radius (in a.u.) for the spherical average plot.
+     - Max radius (in a.u.) for the spherical average plot or localization factor in a sphere.
 
 
 .. data:: westpp_epsinfty

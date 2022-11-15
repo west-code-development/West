@@ -116,6 +116,7 @@ MODULE wbse_init_restart
          ENDIF
          !
          size_list1 = header(HD_ID_DIMENSION)
+         offset = offset+HD_LENGTH*SIZEOF(header(1))
          !
       ENDIF
       !
@@ -238,6 +239,7 @@ MODULE wbse_init_restart
          ENDIF
          !
          size_list_tmp = header(HD_ID_DIMENSION)
+         offset = offset+HD_LENGTH*SIZEOF(header(1))
          !
       ENDIF
       !

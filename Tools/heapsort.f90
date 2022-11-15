@@ -98,7 +98,7 @@ MODULE sort_tools
          IF(w+1 <= bottom) then
             IF(a(w+1) > a(w)) THEN
                w = w+1
-            END IF
+            ENDIF
          ENDIF
          !
          IF(a(v) >= a(w)) THEN
@@ -180,7 +180,7 @@ MODULE sort_tools
          IF(w+1 <= bottom) then
             IF(a(w+1) > a(w)) THEN
                w = w+1
-            END IF
+            ENDIF
          ENDIF
          !
          IF(a(v) >= a(w)) THEN

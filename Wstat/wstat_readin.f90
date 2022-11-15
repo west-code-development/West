@@ -45,7 +45,7 @@ SUBROUTINE wstat_readin()
      nkpt = nkstot/2
   ELSE
      nkpt = nkstot
-  END IF
+  ENDIF
   !
   IF(okvan) CALL errore('wstat_readin','ultrasoft pseudopotential not implemented',1)
   IF(doublegrid) CALL errore('wstat_readin','double grid not implemented',1)

@@ -162,8 +162,6 @@ SUBROUTINE wbse_dv_of_drho(dvscf, lrpa, add_nlcc, drhoc)
      CALL invfft ('Rho', dvhart (:,is), dfftp)
   ENDDO
   !
-  dvscf(:,:) = (0._DP,0._DP)
-  !
   IF(lrpa) THEN
      dvscf(:,:) = dvhart
   ELSE

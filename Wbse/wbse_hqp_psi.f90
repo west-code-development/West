@@ -39,10 +39,8 @@ SUBROUTINE bse_hqp_psi(iks, nbvalloc, psi, dpsi)
   !
   IF(gamma_only) THEN
      ALLOCATE(ps_r(nbnd,nbvalloc))
-     ps_r = 0._DP
   ENDIF
   ALLOCATE(ps_c(nbnd,nbvalloc))
-  ps_c = (0._DP,0._DP)
   !
   ! ps = < evc | f >
   !

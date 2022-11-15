@@ -35,8 +35,6 @@ SUBROUTINE wbse_dot(x,y,npwx,nbnd,nks,wbse_dot_out)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
   !
-  wbse_dot_out(:) = (0._DP,0._DP)
-  !
   DO is = 1, nspin
      !
      temp = (0._DP,0._DP)

@@ -116,7 +116,7 @@ SUBROUTINE do_dip()
         !
         CALL update_bar_type(barra,'westpp',1)
         !
-     END DO
+     ENDDO
      !
      IF(gamma_only) THEN
         CALL mp_sum(dip_cryst_r,intra_bgrp_comm)

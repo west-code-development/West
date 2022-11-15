@@ -18,24 +18,23 @@ SUBROUTINE wbse_davidson_diago ( )
   ! ... ( L - ev ) * dvg = 0
   !
   USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : inter_image_comm,my_image_id
+  USE mp,                   ONLY : mp_max,mp_bcast
   USE io_global,            ONLY : stdout
-  USE distribution_center,  ONLY : pert, aband
+  USE pwcom,                ONLY : nks,npw,npwx,ngk
+  USE distribution_center,  ONLY : pert,aband,bseparal
   USE class_idistribute,    ONLY : idistribute
-  USE io_push,              ONLY : io_push_title,io_push_bar
-  USE pwcom,                ONLY : nks,npwx
+  USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
-                                 & wstat_calculation,ev,conv,n_pdep_read_from_file,trev_pdep_rel,&
-                                 & l_is_wstat_converged,dvg_exc,dng_exc,nbndval0x,&
-                                 & l_preconditioning,nbnd_occ,lrwfc,iuwfc,l_bse_calculation,&
-                                 & size_index_matrix_lz
+                                 & wstat_calculation,ev,conv,n_pdep_read_from_file,&
+                                 & n_steps_write_restart,trev_pdep_rel,l_is_wstat_converged,&
+                                 & nbnd_occ,lrwfc,iuwfc,dvg_exc,dng_exc,nbndval0x,&
+                                 & l_preconditioning,l_bse_calculation,size_index_matrix_lz
   USE plep_db,              ONLY : plep_db_write,plep_db_read
-  USE wbse_restart,         ONLY : wbse_restart_write, wbse_restart_clear, wbse_restart_read
-  USE mp_global,            ONLY : inter_image_comm, my_image_id
-  USE mp,                   ONLY : mp_sum,mp_max,mp_bcast
-  USE wstat_tools,          ONLY : diagox,serial_diagox,redistribute_vr_distr
+  USE wbse_restart,         ONLY : wbse_restart_write,wbse_restart_clear,wbse_restart_read
+  USE wstat_tools,          ONLY : diagox,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
                                  & wbse_refresh_with_vr_distr,apply_preconditioning_dvg
-  USE distribution_center,  ONLY : bseparal
   USE buffers,              ONLY : get_buffer
   USE wavefunctions,        ONLY : evc
   !
@@ -219,6 +218,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ENDDO
      !
      dav_iter = -1
+     IF(n_steps_write_restart == 1) CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   CASE DEFAULT
      CALL errore('chidiago', 'Wrong wstat_calculation',1)
@@ -294,7 +294,7 @@ SUBROUTINE wbse_davidson_diago ( )
      CALL wbse_output_ev_and_time(nvec,ev,time_spent)
      !
      dav_iter = 0
-     !CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
+     IF(n_steps_write_restart == 1) CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDIF
   !
@@ -377,6 +377,7 @@ SUBROUTINE wbse_davidson_diago ( )
         DO iks  = 1, nks
            !
            nbndval = nbnd_occ(iks)
+           npw = ngk(iks)
            !
            ! ... read in GS wavefunctions iks
            !
@@ -489,7 +490,6 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            CALL plep_db_write( )
            CALL wbse_restart_clear()
-           CALL wbse_output_a_report(-1)
            !
            WRITE(iter_label,'(i8)') kter
            CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
@@ -513,7 +513,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            EXIT iterate
            !
-        END IF
+        ENDIF
         !
         ! ... refresh psi, H*psi and S*psi
         !
@@ -540,12 +540,10 @@ SUBROUTINE wbse_davidson_diago ( )
         !
      ENDIF
      !
-     IF (MOD(dav_iter,10)==0) THEN
-        CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr)
-     ENDIF
-     CALL wbse_output_a_report(dav_iter)
+     IF(n_steps_write_restart > 0 .AND. MOD(dav_iter,n_steps_write_restart) == 0) &
+     & CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
-  END DO iterate
+  ENDDO iterate
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
@@ -569,13 +567,12 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                  ONLY : DP
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id,world_comm
+  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id
   USE gvect,                  ONLY : gstart
-  USE mp,                     ONLY : mp_sum,mp_barrier,mp_bcast
+  USE mp,                     ONLY : mp_sum,mp_bcast
   USE pwcom,                  ONLY : nks,npw,npwx,ngk
   USE westcom,                ONLY : nbnd_occ,nbndval0x
   USE control_flags,          ONLY : gamma_only
-  USE io_push,                ONLY : io_push_title
   USE distribution_center,    ONLY : pert
   !
   IMPLICIT NONE
@@ -598,8 +595,6 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
   REAL(DP),EXTERNAL :: DDOT
   COMPLEX(DP),EXTERNAL :: ZDOTC
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL start_clock ('paramgs')
   !
@@ -813,8 +808,6 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
   DEALLOCATE( vec,zbraket,braket )
   !
-  CALL mp_barrier(world_comm)
-  !
   CALL stop_clock ('paramgs')
   !
 END SUBROUTINE
@@ -830,8 +823,8 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,nbndval0x
   USE constants,            ONLY : tpi
   USE distribution_center,  ONLY : pert
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
-  USE mp,                   ONLY : mp_bcast,mp_barrier,mp_max
+  USE mp_global,            ONLY : my_image_id,inter_image_comm
+  USE mp,                   ONLY : mp_bcast,mp_max
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
   !
@@ -849,8 +842,6 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   INTEGER  :: mloc,mstart,max_mloc
   REAL(DP) :: aux_real
   REAL(DP) :: rr, arg
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL start_clock ('randomize')
   !
@@ -931,40 +922,11 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   !
 END SUBROUTINE
 !
-SUBROUTINE wbse_output_a_report(iteration)
-   !
-   USE kinds,        ONLY : DP
-   USE westcom,      ONLY : n_pdep_eigen,ev,conv
-   USE west_io ,     ONLY : serial_table_output
-   USE mp_world,     ONLY : mpime,root
-   !
-   IMPLICIT NONE
-   !
-   INTEGER,INTENT(IN) :: iteration
-   CHARACTER(LEN=9) :: pref
-   INTEGER :: ip
-   REAL(DP) :: out_tab(n_pdep_eigen,3)
-   !
-   DO ip=1,n_pdep_eigen
-      out_tab(ip,1) = REAL(ip,DP)
-      out_tab(ip,2) = ev(ip)
-      out_tab(ip,3) = 0._DP
-      IF(conv(ip)) out_tab(ip,3) = 1._DP
-   ENDDO
-   IF(iteration>=0) THEN
-      WRITE(pref,"('itr_',i5.5)") iteration
-   ELSE
-      pref='converged'
-   ENDIF
-   CALL serial_table_output(mpime==root,'wbse.'//TRIM(ADJUSTL(pref)),out_tab,n_pdep_eigen,3,(/'   iprt','eigenv.','  conv.'/))
-   !
-END SUBROUTINE
-!
 SUBROUTINE wbse_output_ev_and_time(nvec,ev,time)
    !
    USE kinds,                ONLY : DP
    USE io_global,            ONLY : stdout
-   USE io_push,              ONLY : io_push_title,io_push_bar
+   USE io_push,              ONLY : io_push_bar
    !
    IMPLICIT NONE
    !

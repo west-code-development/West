@@ -198,7 +198,7 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
      !
      itmp(igk_l2g(ig)) = igk_l2g(ig)
      !
-  END DO
+  ENDDO
   !
   CALL mp_sum( itmp, intra_bgrp_comm )
   !
@@ -211,9 +211,9 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
         !
         igwk_(ngg) = ig
         !
-     END IF
+     ENDIF
      !
-  END DO
+  ENDDO
   !
   IF ( ngg /= ngk_g ) CALL errore( 'gk_l2gmap_kdip', 'unexpected dimension in ngg', 1 )
   !

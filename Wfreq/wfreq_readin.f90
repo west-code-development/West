@@ -45,7 +45,7 @@ SUBROUTINE wfreq_readin()
      nkpt = nkstot/2
   ELSE
      nkpt = nkstot
-  END IF
+  ENDIF
   !
   IF(okvan) CALL errore('wfreq_readin','ultrasoft pseudopotential not implemented',1)
   IF(doublegrid) CALL errore('wfreq_readin','double grid not implemented',1)

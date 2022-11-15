@@ -164,8 +164,8 @@ wstat_control
    * - **Description**
      - Available options are:
 
-       - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the PDEP loop.
-       - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the PDEP loop. Restart will not be possible.
+       - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the Davidson loop.
+       - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the Davidson loop. Restart will not be possible.
 
 .. data:: trev_pdep
 
@@ -983,8 +983,8 @@ wbse_control
    * - **Description**
      - Available options are:
 
-       - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the Lanczos loop.
-       - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the Lanczos loop. Restart will not be possible.
+       - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the Davidson or Lanczos loop.
+       - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the Davidson or Lanczos loop. Restart will not be possible.
 
 .. data:: ipol_input
 

@@ -108,8 +108,8 @@ CONTAINS
              CLOSE( UNIT=crashunit, STATUS='DELETE', IOSTAT=ios )
           ELSE
              WRITE(stdout,'(5x,"Remark: CRASH file could not be deleted")')
-          END IF
-       END IF
+          ENDIF
+       ENDIF
        !
     ELSE
        ! ... one processor per image (other than meta_ionode)
@@ -128,9 +128,9 @@ CONTAINS
 #else
           OPEN ( unit = stdout, file='/dev/null', status='unknown' )
 #endif
-       END IF
+       ENDIF
        !
-    END IF
+    ENDIF
     !
     ! Initialize base64 tables
     CALL base64_init()
@@ -200,12 +200,12 @@ CONTAINS
        WRITE( stdout,*)
        WRITE( stdout,3334) time_str
        WRITE( stdout,3335)
-    END IF
+    ENDIF
     !
     IF( meta_ionode ) THEN
        WRITE( stdout,'(A)')      '   JOB DONE.'
        WRITE( stdout,3335)
-    END IF
+    ENDIF
 3334 FORMAT(3X,A60,/)
 3335 FORMAT('=',78('-'),'=')
     FLUSH(stdout)

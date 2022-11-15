@@ -14,37 +14,23 @@ SUBROUTINE do_spectrum()
   ! TODO: write this code in Python to make it become ours.
   !
   USE kinds,               ONLY : DP,i8b
-  USE constants,           ONLY : pi,rytoev,evtonm,rytonm
+  USE constants,           ONLY : pi,rytoev,rytonm
   USE io_global,           ONLY : stdout
-  USE environment,         ONLY : environment_start,environment_end
-  USE mp_global,           ONLY : mp_startup,mp_global_end
   USE mp_world,            ONLY : world_comm,mpime,root
-  USE mp,                  ONLY : mp_bcast,mp_barrier
-  USE westcom,             ONLY : qe_prefix,itermax,itermax0,extrapolation,start,end,increment,&
-                                & epsil,ipol,sym_op,units,spin_channel,wbse_save_dir
+  USE mp,                  ONLY : mp_barrier
+  USE westcom,             ONLY : qe_prefix,wbse_save_dir,itermax,itermax0,extrapolation,start,end,&
+                                & increment,epsil,ipol,sym_op,units,spin_channel
   USE json_module,         ONLY : json_file
   USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
   USE base64_module,       ONLY : islittleendian
   !
   IMPLICIT NONE
   !
-  CHARACTER(LEN=256), EXTERNAL :: trimcheck
-  !
-  ! Constants
-  !
-  !  integer,  parameter :: dp=kind(0.d0)
-  !  real(dp), parameter :: pi=3.14159265d0
-  !  real(dp), parameter :: ry=13.6056981d0
-  !  real(dp), parameter :: ev2nm=1239.84172
-  !  real(dp), parameter :: ry2nm=91.1266519
-  !
-  ! User controlled variables
+  ! Workspace
   !
   REAL(DP) :: omega(3)
   CHARACTER(LEN=256):: filename
   CHARACTER(LEN=256):: filename_plot
-  !
-  ! General use variables & counters
   !
   INTEGER :: n_ipol, i,j, info, ip, ip2, counter
   INTEGER :: iun1, iun2
@@ -70,13 +56,7 @@ SUBROUTINE do_spectrum()
   INTEGER  :: perceived_itermax,perceived_iter
   REAL(DP), ALLOCATABLE :: perceived_intensity(:), perceived_evaluated(:)
   !
-  ! Subroutines etc.
-  !
   COMPLEX(DP), EXTERNAL :: ZDOTC
-  !
-  ! User controlled variable initialisation
-  !
-  CALL mp_startup()
   !
   IF(mpime == root) THEN
      !
@@ -519,7 +499,6 @@ SUBROUTINE do_spectrum()
   ENDIF
   !
   CALL mp_barrier(world_comm)
-  CALL mp_global_end()
   !
 CONTAINS
   !

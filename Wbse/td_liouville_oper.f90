@@ -18,11 +18,11 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k
   USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
-  USE mp_global,            ONLY : my_image_id,inter_image_comm
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
-  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,&
-                                 & double_fwfft_gamma,double_invfft_gamma
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
+                                 & double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,l_diag_term_only,scissor_ope,nbndval0x,&
                                  & l_bse_calculation,l_qp_correction,l_bse_triplet,l_lanczos,&
@@ -39,12 +39,9 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   !
   INTEGER :: ibnd, ibnd_1, iks, ir, nbndval
   INTEGER :: nbvalloc, il1
-  REAL(DP) :: scissor
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc1_aux(:,:)
-  !
-  scissor = scissor_ope
   !
   CALL start_clock('apply_lv')
   !
@@ -55,7 +52,6 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   !
   ! Calculation of the charge density response
   !
-  dvrs(:,:) = (0._DP,0._DP)
   CALL wbse_calc_dens(evc1, dvrs)
   !
   IF(l_bse_calculation) THEN
@@ -167,7 +163,6 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      ALLOCATE(hevc1(npwx*npol,nbvalloc))
      ALLOCATE(evc1_aux(npwx*npol,nbvalloc))
      !
-     hevc1(:,:) = (0._DP,0._DP)
      evc1_aux(:,:) = (0._DP,0._DP)
      !
      DO il1 = 1, nbvalloc
@@ -190,10 +185,10 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            ibnd = aband%l2g(il1)
            !
            IF(l_bse_calculation) THEN
-              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks)-scissor+sigma_x_head+sigma_c_head),KIND=DP), &
+              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP), &
                    & evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ELSE
-              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks)-scissor),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
+              CALL ZAXPY(npw, CMPLX(-(et_qp(ibnd,iks)-scissor_ope),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
               !
            ENDIF
         ENDDO
@@ -202,10 +197,10 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
            ibnd = aband%l2g(il1)
            !
            IF(l_bse_calculation) THEN
-              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks)-scissor+sigma_x_head+sigma_c_head),KIND=DP), &
+              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP), &
                    & evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ELSE
-              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks)-scissor),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
+              CALL ZAXPY(npw, CMPLX(-(et(ibnd,iks)-scissor_ope),KIND=DP), evc1(:,ibnd,iks), 1, hevc1(:,il1), 1)
            ENDIF
         ENDDO
      ENDIF
@@ -220,7 +215,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      IF(l_lanczos) THEN
         CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
      ELSE
-        CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
+        CALL mp_sum(evc1_new(:,:,iks),inter_bgrp_comm)
      ENDIF
      !
      IF(.NOT. l_diag_term_only) THEN
@@ -242,7 +237,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   ENDDO
   !
   DEALLOCATE(dvrs)
-  IF(ALLOCATED(psic)) DEALLOCATE(psic)
+  DEALLOCATE(psic)
   !
   CALL stop_clock('apply_lv')
   !

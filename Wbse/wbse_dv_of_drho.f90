@@ -67,54 +67,52 @@ SUBROUTINE wbse_dv_of_drho(dvscf, lrpa, add_nlcc, drhoc)
   CALL start_clock('dv_of_drho')
   !
   IF(add_nlcc .AND. .NOT. PRESENT(drhoc)) &
-     & CALL errore('wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1)
+  & CALL errore('wbse_dv_of_drho', 'drhoc is not present in the input of the routine', 1)
   !
   IF(lrpa) THEN
      ALLOCATE(dvaux(1,1))
-     GOTO 111
   ELSE
      ALLOCATE(dvaux(dfftp%nnr, nspin))
-  ENDIF
-  !
-  ! 1) The exchange-correlation contribution is computed in real space
-  !
-  fac = 1._DP / REAL(nspin,KIND=DP)
-  !
-  IF(nlcc_any .AND. add_nlcc) THEN
+     !
+     ! 1) The exchange-correlation contribution is computed in real space
+     !
+     fac = 1._DP / REAL(nspin,KIND=DP)
+     !
+     IF(nlcc_any .AND. add_nlcc) THEN
+        DO is = 1, nspin
+           rho%of_r(:,is) = rho%of_r(:,is) + fac * rho_core(:)
+           dvscf(:,is) = dvscf(:,is) + fac * drhoc(:)
+        ENDDO
+     ENDIF
+     !
+     dvaux(:,:) = (0._DP,0._DP)
      DO is = 1, nspin
-        rho%of_r(:,is) = rho%of_r(:,is) + fac * rho_core(:)
-        dvscf(:,is) = dvscf(:,is) + fac * drhoc(:)
+        DO is1 = 1, nspin
+           dvaux(:,is) = dvaux(:,is) + dmuxc(:,is,is1) * dvscf(:,is1)
+        ENDDO
      ENDDO
+     !
+     ! Add gradient correction to the response XC potential.
+     ! NB: If nlcc=.true. we need to add here its contribution.
+     ! grho contains already the core charge
+     !
+     IF(xclib_dft_is('gradient')) THEN
+        CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
+             & dvscf, nspin, nspin_gga, g, dvaux)
+     ENDIF
+     !
+     IF(dft_is_nonlocc()) THEN
+        CALL dnonloccorr(rho%of_r, dvscf, xq, dvaux)
+     ENDIF
+     !
+     IF(nlcc_any .AND. add_nlcc) THEN
+        DO is = 1, nspin
+           rho%of_r(:,is) = rho%of_r(:,is) - fac * rho_core(:)
+           dvscf(:,is) = dvscf(:,is) - fac * drhoc(:)
+        ENDDO
+     ENDIF
+     !
   ENDIF
-  !
-  dvaux(:,:) = (0._DP,0._DP)
-  DO is = 1, nspin
-     DO is1 = 1, nspin
-        dvaux(:,is) = dvaux(:,is) + dmuxc(:,is,is1) * dvscf(:,is1)
-     ENDDO
-  ENDDO
-  !
-  ! Add gradient correction to the response XC potential.
-  ! NB: If nlcc=.true. we need to add here its contribution.
-  ! grho contains already the core charge
-  !
-  IF(xclib_dft_is('gradient')) THEN
-     CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
-          & dvscf, nspin, nspin_gga, g, dvaux)
-  ENDIF
-  !
-  IF(dft_is_nonlocc()) THEN
-     CALL dnonloccorr(rho%of_r, dvscf, xq, dvaux)
-  ENDIF
-  !
-  IF(nlcc_any .AND. add_nlcc) THEN
-     DO is = 1, nspin
-        rho%of_r(:,is) = rho%of_r(:,is) - fac * rho_core(:)
-        dvscf(:,is) = dvscf(:,is) - fac * drhoc(:)
-     ENDDO
-  ENDIF
-  !
-111 CONTINUE
   !
   ! 2) Hartree contribution is computed in reciprocal space
   !

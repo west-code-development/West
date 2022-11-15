@@ -68,6 +68,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   CHARACTER(20), EXTERNAL :: human_readable_time
   !
   LOGICAL :: calc_is_done
+  LOGICAL :: l_skip
   REAL(DP), EXTERNAL :: DDOT
   !
   TYPE(bar_type) :: barra
@@ -162,230 +163,235 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      CALL wbse_status_restart_read(fname,do_index,restart_matrix,calc_is_done)
   ENDIF
   !
-  IF(calc_is_done) GOTO 2222
-  !
-  ! initialize the paralellization
-  !
-  bseparal = idistribute()
-  CALL bseparal%init(do_index,'i','number_pairs', .TRUE.)
-  !
-  CALL io_push_title('Applying ' // TRIM(kernel) // ' kernel with FF_Qbox ...')
-  !
-  CALL start_bar_type(barra,'FF_Qbox',bseparal%nlocx)
-  !
-  ! parallel loop
-  !
-  DO il1 = 1, bseparal%nlocx
+  IF(.NOT. calc_is_done) THEN
      !
-     ig1  = bseparal%l2g(il1) ! global index of n_total
+     ! initialize the paralellization
      !
-     ibnd = index_matrix(ig1,1)
-     jbnd = index_matrix(ig1,2)
+     bseparal = idistribute()
+     CALL bseparal%init(do_index,'i','number_pairs', .TRUE.)
      !
-     IF(l_restart_calc) THEN
-        IF(restart_matrix(ig1) > 0) GOTO 1111
-     ENDIF
+     CALL io_push_title('Applying ' // TRIM(kernel) // ' kernel with FF_Qbox ...')
      !
-     IF((ig1 < 1) .OR. (ig1 > do_index)) GOTO 1111
+     CALL start_bar_type(barra,'FF_Qbox',bseparal%nlocx)
      !
-     ALLOCATE(rho_aux(dffts%nnr))
-     ALLOCATE(dvg(npwx))
+     ! parallel loop
      !
-     IF(gamma_only) THEN
-        IF(l_use_localise_repr) THEN
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
-        ELSE
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
+     DO il1 = 1, bseparal%nlocx
+        !
+        ig1  = bseparal%l2g(il1) ! global index of n_total
+        !
+        ibnd = index_matrix(ig1,1)
+        jbnd = index_matrix(ig1,2)
+        !
+        l_skip = .FALSE.
+        IF(l_restart_calc) THEN
+           IF(restart_matrix(ig1) > 0) l_skip = .TRUE.
         ENDIF
         !
-        rho_aux(:) = REAL(psic,KIND=DP) * AIMAG(psic)
-     ELSE
-        IF(l_use_localise_repr) THEN
-           CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
-           CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
-        ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
-           CALL single_invfft_k(dffts,npw,npwx,evc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
+        IF(ig1 < 1 .OR. ig1 > do_index) l_skip = .TRUE.
+        !
+        IF(.NOT. l_skip) THEN
+           !
+           ALLOCATE(rho_aux(dffts%nnr))
+           ALLOCATE(dvg(npwx))
+           !
+           IF(gamma_only) THEN
+              IF(l_use_localise_repr) THEN
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
+              ELSE
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
+              ENDIF
+              !
+              rho_aux(:) = REAL(psic,KIND=DP) * AIMAG(psic)
+           ELSE
+              IF(l_use_localise_repr) THEN
+                 CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
+                 CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
+              ELSE
+                 CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
+                 CALL single_invfft_k(dffts,npw,npwx,evc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
+              ENDIF
+              !
+              rho_aux(:) = REAL(CONJG(psic)*psic_aux,KIND=DP)
+           ENDIF
+           !
+           rho_aux(:) = rho_aux/omega
+           !
+           ALLOCATE(aux1_g(npwx))
+           ALLOCATE(aux_r(dffts%nnr))
+           ALLOCATE(aux1_r(dffts%nnr,nspin))
+           ALLOCATE(aux_rr(dffts%nnr))
+           !
+           aux_r(:) = CMPLX(rho_aux,KIND=DP)
+           !
+           ! aux_r -> aux1_g
+           !
+           IF(gamma_only) THEN
+              CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
+           ELSE
+              CALL single_fwfft_k(dffts,npw,npwx,aux_r,aux1_g,'Wave')
+           ENDIF
+           !
+           ! vc in fock like term
+           !
+           dvg(:) = (0._DP,0._DP)
+           DO ig = 1, npw
+              dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
+           ENDDO
+           !
+           ! vc in correlation like term G->0 = 0
+           !
+           ! aux1_g -> aux_r
+           !
+           IF(gamma_only) THEN
+              CALL single_invfft_gamma(dffts,npw,npwx,aux1_g,aux_r,'Wave')
+           ELSE
+              CALL single_invfft_k(dffts,npw,npwx,aux1_g,aux_r,'Wave')
+           ENDIF
+           !
+           aux1_r(:,:) = (0._DP,0._DP)
+           aux1_r(:,current_spin) = aux_r
+           !
+           ! aux1_r = vc*aux1_r()
+           !
+           CALL wbse_dv_of_drho(aux1_r, .TRUE., .FALSE.)
+           !
+           aux_r(:) = aux1_r(:,current_spin)
+           !
+           ! Send data to Qbox to compute X|vc rho>
+           !
+           aux_rr(:) = REAL(aux_r,KIND=DP)/SQRT(omega) ! scale down pert.
+           aux_rr(:) = 0.5_DP * aux_rr ! change from rydberg to hartree
+           !
+           ! Write aux_rr --> fname.xml
+           !
+           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+           !
+           CALL write_function3d(fname,aux_rr,dffts)
+           !
+           ! DUMP A LOCK FILE
+           !
+           IF(me_bgrp == 0) THEN
+              lockfile = 'I.'//itoa(my_image_id)//'.lock'
+              OPEN(NEWUNIT=iu,FILE=lockfile)
+              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+              WRITE(iu,'(A)') fname
+              CLOSE(iu)
+              !
+              CALL sleep_and_wait_for_lock_to_be_removed(lockfile, '["response"]')
+           ENDIF
+           !
+           CALL mp_barrier(intra_image_comm)
+           !
+           ! READ RESPONSES
+           !
+           IF(lsda) THEN
+              ALLOCATE(frspin(dffts%nnr,2))
+              !
+              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
+              CALL read_function3d(fname,frspin(:,1),dffts)
+              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
+              CALL read_function3d(fname,frspin(:,2),dffts)
+              !
+              aux_rr(:) = frspin(:,1) + frspin(:,2)
+              !
+              DEALLOCATE(frspin)
+           ELSE
+              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
+              CALL read_function3d(fname,aux_rr,dffts)
+           ENDIF
+           !
+           DO ir = 1, dffts%nnr
+              aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega), KIND=DP) ! rescale response
+           ENDDO
+           !
+           aux1_r(:,:) = (0._DP,0._DP)
+           aux1_r(:,current_spin) = aux_r
+           !
+           ! aux1_r = vc*aux1_r()
+           !
+           IF(l_xcchi) THEN
+              CALL wbse_dv_of_drho(aux1_r, .FALSE., .FALSE.)
+           ELSE
+              CALL wbse_dv_of_drho(aux1_r, .TRUE., .FALSE.)
+           ENDIF
+           !
+           aux_r(:) = aux1_r(:,current_spin)
+           !
+           ! aux_r -> aux_g
+           !
+           aux1_g(:) = (0._DP, 0._DP)
+           !
+           IF(gamma_only) THEN
+              CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
+           ELSE
+              CALL single_fwfft_k(dffts,npw,npwx,aux_r,aux1_g,'Wave')
+           ENDIF
+           !
+           ! vc + vc/fxc X vc
+           !
+           dvg(:) = dvg + aux1_g
+           !
+           ! write dvg vc_rho + vc_rho X vc_rho to disk
+           !
+           WRITE(my_label1,'(i6.6)') ibnd
+           WRITE(my_label2,'(i6.6)') jbnd
+           WRITE(my_spin,'(i1)') current_spin
+           !
+           fname = TRIM(wbse_init_save_dir)//'/E'//my_label1//'_'//my_label2//'_'//my_spin//'.dat'
+           CALL pdep_merge_and_write_G(fname,dvg)
+           !
+           DEALLOCATE(rho_aux, dvg)
+           DEALLOCATE(aux1_g)
+           DEALLOCATE(aux_r, aux1_r, aux_rr)
+           !
+           restart_matrix(ig1) = 1
+           !
         ENDIF
         !
-        rho_aux(:) = REAL(CONJG(psic)*psic_aux,KIND=DP)
-     ENDIF
-     !
-     rho_aux(:) = rho_aux/omega
-     !
-     ALLOCATE(aux1_g(npwx))
-     ALLOCATE(aux_r(dffts%nnr))
-     ALLOCATE(aux1_r(dffts%nnr,nspin))
-     ALLOCATE(aux_rr(dffts%nnr))
-     !
-     aux_r(:) = CMPLX(rho_aux,KIND=DP)
-     !
-     ! aux_r -> aux1_g
-     !
-     IF(gamma_only) THEN
-        CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
-     ELSE
-        CALL single_fwfft_k(dffts,npw,npwx,aux_r,aux1_g,'Wave')
-     ENDIF
-     !
-     ! vc in fock like term
-     !
-     dvg(:) = (0._DP,0._DP)
-     DO ig = 1, npw
-        dvg(ig) = aux1_g(ig) * pot3D%sqvc(ig) * pot3D%sqvc(ig)
-     ENDDO
-     !
-     ! vc in correlation like term G->0 = 0
-     !
-     ! aux1_g -> aux_r
-     !
-     IF(gamma_only) THEN
-        CALL single_invfft_gamma(dffts,npw,npwx,aux1_g,aux_r,'Wave')
-     ELSE
-        CALL single_invfft_k(dffts,npw,npwx,aux1_g,aux_r,'Wave')
-     ENDIF
-     !
-     aux1_r(:,:) = (0._DP,0._DP)
-     aux1_r(:,current_spin) = aux_r
-     !
-     ! aux1_r = vc*aux1_r()
-     !
-     CALL wbse_dv_of_drho(aux1_r, .TRUE., .FALSE.)
-     !
-     aux_r(:) = aux1_r(:,current_spin)
-     !
-     ! Send data to Qbox to compute X|vc rho>
-     !
-     aux_rr(:) = REAL(aux_r,KIND=DP)/SQRT(omega) ! scale down pert.
-     aux_rr(:) = 0.5_DP * aux_rr ! change from rydberg to hartree
-     !
-     ! Write aux_rr --> fname.xml
-     !
-     fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
-     !
-     CALL write_function3d(fname,aux_rr,dffts)
-     !
-     ! DUMP A LOCK FILE
-     !
-     IF(me_bgrp == 0) THEN
-        lockfile = 'I.'//itoa(my_image_id)//'.lock'
-        OPEN(NEWUNIT=iu,FILE=lockfile)
-        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
-        WRITE(iu,'(A)') fname
-        CLOSE(iu)
+        ! for restarting, update status of restart_matrix
         !
-        CALL sleep_and_wait_for_lock_to_be_removed(lockfile, '["response"]')
-     ENDIF
-     !
-     CALL mp_barrier(intra_image_comm)
-     !
-     ! READ RESPONSES
-     !
-     IF(lsda) THEN
-        ALLOCATE(frspin(dffts%nnr,2))
+        CALL mp_sum(restart_matrix(1:do_index), inter_image_comm)
         !
-        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
-        CALL read_function3d(fname,frspin(:,1),dffts)
-        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
-        CALL read_function3d(fname,frspin(:,2),dffts)
+        DO ir = 1, do_index
+           IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
+        ENDDO
         !
-        aux_rr(:) = frspin(:,1) + frspin(:,2)
+        fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
+                & my_labelik//'_spin'//my_spin//'.dat'
+        CALL wbse_status_restart_write(fname,do_index,restart_matrix)
         !
-        DEALLOCATE(frspin)
-     ELSE
-        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
-        CALL read_function3d(fname,aux_rr,dffts)
-     ENDIF
-     !
-     DO ir = 1, dffts%nnr
-        aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega), KIND=DP) ! rescale response
-     ENDDO
-     !
-     aux1_r(:,:) = (0._DP,0._DP)
-     aux1_r(:,current_spin) = aux_r
-     !
-     ! aux1_r = vc*aux1_r()
-     !
-     IF(l_xcchi) THEN
-        CALL wbse_dv_of_drho(aux1_r, .FALSE., .FALSE.)
-     ELSE
-        CALL wbse_dv_of_drho(aux1_r, .TRUE., .FALSE.)
-     ENDIF
-     !
-     aux_r(:) = aux1_r(:,current_spin)
-     !
-     ! aux_r -> aux_g
-     !
-     aux1_g(:) = (0._DP, 0._DP)
-     !
-     IF(gamma_only) THEN
-        CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
-     ELSE
-        CALL single_fwfft_k(dffts,npw,npwx,aux_r,aux1_g,'Wave')
-     ENDIF
-     !
-     ! vc + vc/fxc X vc
-     !
-     dvg(:) = dvg + aux1_g
-     !
-     ! write dvg vc_rho + vc_rho X vc_rho to disk
-     !
-     WRITE(my_label1,'(i6.6)') ibnd
-     WRITE(my_label2,'(i6.6)') jbnd
-     WRITE(my_spin,'(i1)') current_spin
-     !
-     fname = TRIM(wbse_init_save_dir)//'/E'//my_label1//'_'//my_label2//'_'//my_spin//'.dat'
-     CALL pdep_merge_and_write_G(fname,dvg)
-     !
-     DEALLOCATE(rho_aux, dvg)
-     DEALLOCATE(aux1_g)
-     DEALLOCATE(aux_r, aux1_r, aux_rr)
-     !
-     restart_matrix(ig1) = 1
-     !
-1111 CONTINUE
-     !
-     ! for restarting, update status of restart_matrix
-     !
-     CALL mp_sum(restart_matrix(1:do_index), inter_image_comm)
-     !
-     DO ir = 1, do_index
-        IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
+        ! clean up
+        !
+        IF(me_bgrp == 0) THEN
+           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
+           IF(stat == 0) CLOSE(iu, STATUS='DELETE')
+           IF(lsda) THEN
+              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
+              OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
+              IF(stat == 0) CLOSE(iu, STATUS='DELETE')
+              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
+              OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
+              IF(stat == 0) CLOSE(iu, STATUS='DELETE')
+           ELSE
+              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
+              OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
+              IF(stat == 0) CLOSE(iu, STATUS='DELETE')
+           ENDIF
+        ENDIF
+        !
+        CALL update_bar_type(barra,'FF_Qbox',1)
+        !
      ENDDO
      !
      fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
              & my_labelik//'_spin'//my_spin//'.dat'
      CALL wbse_status_restart_write(fname,do_index,restart_matrix)
      !
-     ! clean up
+     CALL stop_bar_type(barra,'FF_Qbox')
      !
-     IF(me_bgrp == 0) THEN
-        fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
-        OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
-        IF(stat == 0) CLOSE(iu, STATUS='DELETE')
-        IF(lsda) THEN
-           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
-           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
-           IF(stat == 0) CLOSE(iu, STATUS='DELETE')
-           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
-           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
-           IF(stat == 0) CLOSE(iu, STATUS='DELETE')
-        ELSE
-           fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
-           OPEN(NEWUNIT=iu, IOSTAT=stat, FILE=fname, STATUS='OLD')
-           IF(stat == 0) CLOSE(iu, STATUS='DELETE')
-        ENDIF
-     ENDIF
-     !
-     CALL update_bar_type(barra,'FF_Qbox',1)
-     !
-  ENDDO
-  !
-  fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
-          & my_labelik//'_spin'//my_spin//'.dat'
-  CALL wbse_status_restart_write(fname,do_index,restart_matrix)
-  !
-2222 CONTINUE
+  ENDIF
   !
   DEALLOCATE(index_matrix)
   IF(ALLOCATED(restart_matrix)) DEALLOCATE(restart_matrix)
@@ -393,8 +399,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   IF(ALLOCATED(psic)) DEALLOCATE(psic)
   IF(ALLOCATED(psic_aux)) DEALLOCATE(psic_aux)
   IF(ALLOCATED(evc_loc)) DEALLOCATE(evc_loc)
-  !
-  CALL stop_bar_type(barra,'FF_Qbox')
   !
   CALL stop_clock('wbse_qbox_coupling')
   !

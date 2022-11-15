@@ -97,73 +97,72 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
-     IF(l_diag_term_only) GOTO 112
-     IF(l_bse_triplet)    GOTO 112
-     !
-     IF(gamma_only) THEN
+     IF((.NOT. l_diag_term_only) .AND. (.NOT. l_bse_triplet)) THEN
         !
-        ! double bands @ gamma
-        !
-        DO il1 = 1, nbvalloc - MOD(nbvalloc,2), 2
-           ibnd   = aband%l2g(il1)
-           ibnd_1 = aband%l2g(il1+1)
+        IF(gamma_only) THEN
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd_1),psic,'Wave')
+           ! double bands @ gamma
            !
-           DO ir = 1,dffts%nnr
-              psic(ir) = psic(ir) * CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+           DO il1 = 1, nbvalloc - MOD(nbvalloc,2), 2
+              ibnd   = aband%l2g(il1)
+              ibnd_1 = aband%l2g(il1+1)
+              !
+              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,ibnd_1),psic,'Wave')
+              !
+              DO ir = 1,dffts%nnr
+                 psic(ir) = psic(ir) * CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+              ENDDO
+              !
+              CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),evc1_new(:,ibnd_1,iks),'Wave')
            ENDDO
            !
-           CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),evc1_new(:,ibnd_1,iks),'Wave')
-        ENDDO
-        !
-        ! single band @ gamma
-        !
-        IF(MOD(nbvalloc,2) == 1) THEN
-           ibnd = aband%l2g(nbvalloc)
+           ! single band @ gamma
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
+           IF(MOD(nbvalloc,2) == 1) THEN
+              ibnd = aband%l2g(nbvalloc)
+              !
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
+              !
+              DO ir = 1,dffts%nnr
+                 psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+              ENDDO
+              !
+              CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave')
+           ENDIF
            !
-           DO ir = 1,dffts%nnr
-              psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
-           ENDDO
+        ELSE
            !
-           CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave')
-        ENDIF
-        !
-     ELSE
-        !
-        ! only single bands
-        !
-        DO il1 = 1, nbvalloc
-           ibnd = aband%l2g(il1)
+           ! only single bands
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
-           !
-           DO ir = 1, dffts%nnr
-              psic(ir) = psic(ir) * dvrs(ir,current_spin)
-           ENDDO
-           !
-           CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave',igk_k(:,current_k))
-        ENDDO
-        !
-        IF(npol == 2) THEN
            DO il1 = 1, nbvalloc
               ibnd = aband%l2g(il1)
               !
-              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
               !
               DO ir = 1, dffts%nnr
                  psic(ir) = psic(ir) * dvrs(ir,current_spin)
               ENDDO
               !
-              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1:npwx*2,ibnd,iks),'Wave',igk_k(:,current_k))
+              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave',igk_k(:,current_k))
            ENDDO
+           !
+           IF(npol == 2) THEN
+              DO il1 = 1, nbvalloc
+                 ibnd = aband%l2g(il1)
+                 !
+                 CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
+                 !
+                 DO ir = 1, dffts%nnr
+                    psic(ir) = psic(ir) * dvrs(ir,current_spin)
+                 ENDDO
+                 !
+                 CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1:npwx*2,ibnd,iks),'Wave',igk_k(:,current_k))
+              ENDDO
+           ENDIF
+           !
         ENDIF
         !
      ENDIF
-     !
-112  CONTINUE
      !
      ALLOCATE(hevc1(npwx*npol,nbvalloc))
      ALLOCATE(evc1_aux(npwx*npol,nbvalloc))
@@ -224,13 +223,11 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
      ENDIF
      !
-     IF(l_diag_term_only) GOTO 113
-     !
-     IF(l_bse_calculation) THEN
-        CALL wbse_bse_kernel(current_spin, nbndval, evc1, evc1_new(:,:,iks))
+     IF(.NOT. l_diag_term_only) THEN
+        IF(l_bse_calculation) THEN
+           CALL wbse_bse_kernel(current_spin, nbndval, evc1, evc1_new(:,:,iks))
+        ENDIF
      ENDIF
-     !
-113  CONTINUE
      !
      IF(gamma_only) THEN
         IF(gstart == 2) THEN

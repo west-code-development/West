@@ -19,7 +19,7 @@ MODULE qbox_interface
   CONTAINS
   !
   !----------------------------------------------------------------------------
-  SUBROUTINE load_qbox_wfc(evc,qbox_wfc_fname,current_spin,nbndval)
+  SUBROUTINE load_qbox_wfc(evc,qbox_wfc_fname,ispin,nbndval)
     !----------------------------------------------------------------------------
     !
     USE kinds,                  ONLY : DP
@@ -36,21 +36,21 @@ MODULE qbox_interface
     !
     IMPLICIT NONE
     !
-    INTEGER,INTENT(IN) :: current_spin,nbndval
+    INTEGER,INTENT(IN) :: ispin,nbndval
     CHARACTER(LEN=*),INTENT(IN) :: qbox_wfc_fname
     COMPLEX(DP),INTENT(OUT) :: evc(npwx,nbndval)
     !
-    INTEGER :: iwfc,nwfcs,nspin,qbox_ispin,ispin
+    INTEGER :: iwfc,nwfcs,nspin
     INTEGER :: nx,ny,nz
-    CHARACTER(LEN=20) :: namespin
     REAL(DP),ALLOCATABLE :: psir(:)
+    CHARACTER(LEN=:),ALLOCATABLE :: namespin
     CHARACTER(LEN=:),ALLOCATABLE :: charbase64
     INTEGER :: ndim,nbytes,nlen,ierr
     TYPE(tuple) :: args
     TYPE(dict) :: kwargs,return_dict
     TYPE(list) :: tmp_list
     TYPE(module_py) :: pymod
-    TYPE(object) :: return_obj,tmp_obj
+    TYPE(object) :: return_obj,return_obj2,tmp_obj
     INTEGER,PARAMETER :: DUMMY_DEFAULT = -1210
     !
     ! read Qbox XML file and overwrite current evc array
@@ -69,12 +69,14 @@ MODULE qbox_interface
        WRITE(stdout,'(5X,2A)') 'Qbox interface: reading from file ',TRIM(qbox_wfc_fname)
        !
        ierr = import_py(pymod,'west_function3d')
-       ierr = tuple_create(args,1)
+       ierr = tuple_create(args,2)
        ierr = args%setitem(0,TRIM(qbox_wfc_fname))
+       ierr = args%setitem(1,ispin)
        ierr = dict_create(kwargs)
        ierr = call_py(return_obj,pymod,'qb_wfc_info',args,kwargs)
        ierr = cast(return_dict,return_obj)
        ierr = return_dict%get(nspin,'nspin',DUMMY_DEFAULT)
+       ierr = return_dict%getitem(namespin,'namespin')
        ierr = return_dict%get(nwfcs,'nwfcs',DUMMY_DEFAULT)
        ierr = return_dict%getitem(tmp_obj,'grid')
        ierr = cast(tmp_list,tmp_obj)
@@ -87,7 +89,6 @@ MODULE qbox_interface
        !
        CALL args%destroy
        CALL kwargs%destroy
-       CALL return_obj%destroy
        CALL return_dict%destroy
        CALL tmp_list%destroy
        CALL tmp_obj%destroy
@@ -111,52 +112,37 @@ MODULE qbox_interface
     ! read KS orbitals
     !
     WRITE(stdout,'(5X,A)') 'Qbox interface: loading KS orbitals'
+    WRITE(stdout,'(10X,A,I5,2I3)') TRIM(ADJUSTL(namespin)),nwfcs,nspin,ispin
     !
-    DO ispin = 1,nspin
+    DO iwfc = 1,nwfcs
        !
-       IF(nspin > 1) THEN
-          CALL errore('load_qbox_wfc','only nspin = 1 supported',nspin)
-       ELSE
-          namespin = 'none'
-          qbox_ispin = 1
+       IF(ionode) THEN
+          !
+          ierr = tuple_create(args,2)
+          ierr = args%setitem(0,return_obj)
+          ierr = args%setitem(1,iwfc)
+          ierr = dict_create(kwargs)
+          ierr = call_py(return_obj2,pymod,'qb_wfc_to_base64',args,kwargs)
+          ierr = cast(return_dict,return_obj2)
+          ierr = return_dict%getitem(charbase64,'grid_function')
+          !
+          CALL args%destroy
+          CALL kwargs%destroy
+          CALL return_obj2%destroy
+          CALL return_dict%destroy
+          !
+          CALL base64_decode_double(charbase64(1:nlen),ndim,psir)
+          IF(.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,psir)
+          !
        ENDIF
        !
-       IF(qbox_ispin == current_spin) THEN
-          !
-          WRITE(stdout,'(10X,A,I5,2I3)') namespin,nwfcs,nspin,qbox_ispin
-          !
-          DO iwfc = 1,nwfcs
-             !
-             IF(ionode) THEN
-                !
-                ierr = tuple_create(args,2)
-                ierr = args%setitem(0,TRIM(qbox_wfc_fname))
-                ierr = args%setitem(1,iwfc)
-                ierr = dict_create(kwargs)
-                ierr = call_py(return_obj,pymod,'qb_wfc_to_base64',args,kwargs)
-                ierr = cast(return_dict,return_obj)
-                ierr = return_dict%getitem(charbase64,'grid_function')
-                !
-                CALL args%destroy
-                CALL kwargs%destroy
-                CALL return_obj%destroy
-                CALL return_dict%destroy
-                !
-                CALL base64_decode_double(charbase64(1:nlen),ndim,psir)
-                IF(.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,psir)
-                !
-             ENDIF
-             !
-             CALL ft_interpolate(psir,nx,ny,nz,evc(:,iwfc),npw,npwx)
-             !
-          ENDDO
-          !
-       ENDIF
+       CALL ft_interpolate(psir,nx,ny,nz,evc(:,iwfc),npw,npwx)
        !
     ENDDO
     !
     IF(ionode) THEN
        !
+       CALL return_obj%destroy
        CALL pymod%destroy
        !
        DEALLOCATE(psir)

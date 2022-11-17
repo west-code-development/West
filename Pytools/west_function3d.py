@@ -78,31 +78,42 @@ def base64_to_function3D(*args, **kwargs):
 def qb_wfc_info(*args, **kwargs):
     #
     fileName = args[0]
+    ispin = int(args[1])
     #
     data = {}
     #
     root = ET.parse(fileName)
     wavefunction = root.find("wavefunction")
-    data["nspin"] = int(wavefunction.attrib["nspin"])
-    slater_determinant = wavefunction.find("slater_determinant")
+    nspin = int(wavefunction.attrib["nspin"])
+    assert( ispin > 0 and ispin <= nspin )
+    data["nspin"] = nspin
+    grid = wavefunction.find("grid")
+    data["grid"] = [ int(grid.attrib["nx"]), int(grid.attrib["ny"]), int(grid.attrib["nz"])]
+    slater_determinant = wavefunction.findall("slater_determinant")[ispin-1]
+    if nspin > 1:
+        data["namespin"] = slater_determinant.attrib["spin"]
+    else:
+        data["namespin"] = "none"
     data["nwfcs"] = int(slater_determinant.attrib["size"])
     grid_function = slater_determinant.findall("grid_function")[3]
-    assert( grid_function.attrib["type"] in ["double","complex"] )
-    data["dtype"] = grid_function.attrib["type"]
-    grid = root.find("wavefunction").find("grid")
-    data["grid"] = [ int(grid.attrib["nx"]), int(grid.attrib["ny"]), int(grid.attrib["nz"])]
+    dtype = grid_function.attrib["type"]
+    assert( dtype in ["double","complex"] )
+    data["dtype"] = dtype
+    encoding = grid_function.attrib["encoding"]
+    assert( encoding == "base64" )
+    data["encoding"] = encoding
+    data["functions"] = slater_determinant.findall("grid_function")
     #
     return data
 
 def qb_wfc_to_base64(*args, **kwargs):
     #
-    fileName = args[0]
+    functions = args[0]["functions"]
     iwfc = int(args[1])
     #
     data = {}
     #
-    root = ET.parse(fileName)
-    grid_function = root.find("wavefunction").find("slater_determinant").findall("grid_function")[iwfc-1]
+    grid_function = functions[iwfc-1]
     data["grid_function"] = grid_function.text.replace("\n","")
     #
     return data

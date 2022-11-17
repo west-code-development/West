@@ -10,7 +10,6 @@
 # This file is part of WEST.
 #
 
-from __future__ import print_function
 import sys
 from os import path, remove
 import yaml

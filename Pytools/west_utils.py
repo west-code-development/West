@@ -10,7 +10,6 @@
 # This file is part of WEST.
 #
 
-from __future__ import print_function
 from os import mkdir
 import sys
 

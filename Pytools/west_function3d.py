@@ -75,6 +75,38 @@ def base64_to_function3D(*args, **kwargs):
     #
     return 0
 
+def qb_wfc_info(*args, **kwargs):
+    #
+    fileName = args[0]
+    #
+    data = {}
+    #
+    root = ET.parse(fileName)
+    wavefunction = root.find("wavefunction")
+    data["nspin"] = int(wavefunction.attrib["nspin"])
+    slater_determinant = wavefunction.find("slater_determinant")
+    data["nwfcs"] = int(slater_determinant.attrib["size"])
+    grid_function = slater_determinant.findall("grid_function")[3]
+    assert( grid_function.attrib["type"] in ["double","complex"] )
+    data["dtype"] = grid_function.attrib["type"]
+    grid = root.find("wavefunction").find("grid")
+    data["grid"] = [ int(grid.attrib["nx"]), int(grid.attrib["ny"]), int(grid.attrib["nz"])]
+    #
+    return data
+
+def qb_wfc_to_base64(*args, **kwargs):
+    #
+    fileName = args[0]
+    iwfc = int(args[1])
+    #
+    data = {}
+    #
+    root = ET.parse(fileName)
+    grid_function = root.find("wavefunction").find("slater_determinant").findall("grid_function")[iwfc-1]
+    data["grid_function"] = grid_function.text.replace("\n","")
+    #
+    return data
+
 def test() :
     #
     base64_to_function3D("vext.xml",name="delta_v",domain='{"a":[1,0,0],"b":[0,1,0],"c":[0,0,1]}',grid="[2,3,3]",grid_function="encoded\nfunction\ngoes\nhere\n",dtype="double")

@@ -19,10 +19,9 @@ MODULE qbox_interface
   CONTAINS
   !
   !----------------------------------------------------------------------------
-  SUBROUTINE load_qbox_wfc(evc, qbox_wfc_filename, current_spin, nbndval)
+  SUBROUTINE load_qbox_wfc(evc,qbox_wfc_fname,current_spin,nbndval)
     !----------------------------------------------------------------------------
     !
-    USE iotk_module
     USE kinds,                  ONLY : DP
     USE mp,                     ONLY : mp_bcast
     USE mp_global,              ONLY : intra_image_comm
@@ -30,24 +29,35 @@ MODULE qbox_interface
     USE pwcom,                  ONLY : npw,npwx
     USE fourier_interpolation,  ONLY : ft_interpolate
     USE io_push,                ONLY : io_push_title
+    USE forpy_mod,              ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,&
+                                     & dict_create,list,object,cast
+    USE base64_module,          ONLY : lenbase64,base64_byteswap_double,base64_decode_double,&
+                                     & islittleendian
     !
     IMPLICIT NONE
     !
     INTEGER,INTENT(IN) :: current_spin,nbndval
-    CHARACTER(LEN=*),INTENT(IN) :: qbox_wfc_filename
+    CHARACTER(LEN=*),INTENT(IN) :: qbox_wfc_fname
     COMPLEX(DP),INTENT(OUT) :: evc(npwx,nbndval)
     !
-    INTEGER :: iwfc, nwfcs, nspin, ispin, is, ir
-    INTEGER :: nx, ny, nz
-    INTEGER :: iun
-    CHARACTER(iotk_attlenx) :: attr
+    INTEGER :: iwfc,nwfcs,nspin,qbox_ispin,ispin
+    INTEGER :: nx,ny,nz
     CHARACTER(LEN=20) :: namespin
     REAL(DP),ALLOCATABLE :: psir(:)
-    CHARACTER(iotk_attlenx) :: slen
+    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
+    INTEGER :: ndim,nbytes,nlen,ierr
+    TYPE(tuple) :: args
+    TYPE(dict) :: kwargs,return_dict
+    TYPE(list) :: tmp_list
+    TYPE(module_py) :: pymod
+    TYPE(object) :: return_obj,tmp_obj
+    INTEGER,PARAMETER :: DUMMY_DEFAULT = -1210
     !
     ! read Qbox XML file and overwrite current evc array
     !
     CALL io_push_title('Loading Qbox wavefunction...')
+    !
+    CALL start_clock('load_qb')
     !
     ! root of first image read Qbox XML file, Fourier interpolate to evc of whole image,
     ! then first image bcast evc to other images
@@ -56,90 +66,104 @@ MODULE qbox_interface
     !
     IF(ionode) THEN
        !
-       WRITE(stdout,'(5X,2A)') 'Qbox interface: reading from file ', TRIM(qbox_wfc_filename)
+       WRITE(stdout,'(5X,2A)') 'Qbox interface: reading from file ',TRIM(qbox_wfc_fname)
        !
-       CALL iotk_free_unit(iun)
-       CALL iotk_open_read(iun, FILE=TRIM(qbox_wfc_filename))
+       ierr = import_py(pymod,'west_function3d')
+       ierr = tuple_create(args,1)
+       ierr = args%setitem(0,TRIM(qbox_wfc_fname))
+       ierr = dict_create(kwargs)
+       ierr = call_py(return_obj,pymod,'qb_wfc_info',args,kwargs)
+       ierr = cast(return_dict,return_obj)
+       ierr = return_dict%get(nspin,'nspin',DUMMY_DEFAULT)
+       ierr = return_dict%get(nwfcs,'nwfcs',DUMMY_DEFAULT)
+       ierr = return_dict%getitem(tmp_obj,'grid')
+       ierr = cast(tmp_list,tmp_obj)
+       ierr = tmp_list%getitem(nx,0)
+       ierr = tmp_list%getitem(ny,1)
+       ierr = tmp_list%getitem(nz,2)
        !
-       CALL iotk_scan_begin(iun, 'wavefunction', attr)
-       CALL iotk_scan_attr(attr, 'nspin', nspin)
+       IF(nspin == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read nspin',1)
+       IF(nwfcs == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read nwfcs',1)
        !
-       ! read grid size
+       CALL args%destroy
+       CALL kwargs%destroy
+       CALL return_obj%destroy
+       CALL return_dict%destroy
+       CALL tmp_list%destroy
+       CALL tmp_obj%destroy
        !
-       CALL iotk_scan_empty(iun, 'grid', attr)
-       CALL iotk_scan_attr(attr, 'nx', nx)
-       CALL iotk_scan_attr(attr, 'ny', ny)
-       CALL iotk_scan_attr(attr, 'nz', nz)
+       WRITE(stdout,'(5X,A,3I5)') 'Qbox interface: grid size: ',nx,ny,nz
        !
-       WRITE(stdout,'(5X,A,3I5)') 'Qbox interface: grid size: ', nx, ny, nz
-       !
-       ALLOCATE(psir(nx*ny*nz))
+       ndim = nx*ny*nz
+       ALLOCATE(psir(ndim))
+       nbytes = SIZEOF(psir(1)) * ndim
+       nlen = lenbase64(nbytes)
+       ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
        !
     ENDIF
     !
-    CALL mp_bcast(nx, 0, intra_image_comm)
-    CALL mp_bcast(ny, 0, intra_image_comm)
-    CALL mp_bcast(nz, 0, intra_image_comm)
-    CALL mp_bcast(nspin, 0, intra_image_comm)
+    CALL mp_bcast(nspin,0,intra_image_comm)
+    CALL mp_bcast(nwfcs,0,intra_image_comm)
+    CALL mp_bcast(nx,0,intra_image_comm)
+    CALL mp_bcast(ny,0,intra_image_comm)
+    CALL mp_bcast(nz,0,intra_image_comm)
     !
     ! read KS orbitals
     !
     WRITE(stdout,'(5X,A)') 'Qbox interface: loading KS orbitals'
     !
-    DO is = 1,nspin
+    DO ispin = 1,nspin
        !
        IF(nspin > 1) THEN
-          IF(ionode) THEN
-             CALL iotk_scan_begin(iun, 'slater_determinant', attr)
-             CALL iotk_scan_attr(attr, 'spin', namespin)
-             CALL iotk_scan_attr(attr, 'size', nwfcs)
-          ENDIF
-          !
-          CALL mp_bcast(namespin, 0, intra_image_comm)
-          CALL mp_bcast(nwfcs, 0, intra_image_comm)
-          !
-          IF(namespin == 'up') ispin = 1
-          IF(namespin == 'down') ispin = 2
+          CALL errore('load_qbox_wfc','only nspin = 1 supported',nspin)
        ELSE
-          IF(ionode) THEN
-             CALL iotk_scan_begin(iun, 'slater_determinant', attr)
-             CALL iotk_scan_attr(attr, 'size', nwfcs)
-          ENDIF
-          !
-          CALL mp_bcast(nwfcs, 0, intra_image_comm)
-          !
           namespin = 'none'
-          ispin = 1
+          qbox_ispin = 1
        ENDIF
        !
-       IF(ispin == current_spin) THEN
+       IF(qbox_ispin == current_spin) THEN
           !
-          WRITE(stdout,'(10X,A,I5,2I3)') namespin, nwfcs, nspin, ispin
+          WRITE(stdout,'(10X,A,I5,2I3)') namespin,nwfcs,nspin,qbox_ispin
           !
           DO iwfc = 1,nwfcs
              !
              IF(ionode) THEN
-                CALL iotk_scan_begin(iun, 'grid_function', slen)
-                READ(iun,*) (psir(ir), ir = 1, nx*ny*nz)
-                CALL iotk_scan_end(iun, 'grid_function')
+                !
+                ierr = tuple_create(args,2)
+                ierr = args%setitem(0,TRIM(qbox_wfc_fname))
+                ierr = args%setitem(1,iwfc)
+                ierr = dict_create(kwargs)
+                ierr = call_py(return_obj,pymod,'qb_wfc_to_base64',args,kwargs)
+                ierr = cast(return_dict,return_obj)
+                ierr = return_dict%getitem(charbase64,'grid_function')
+                !
+                CALL args%destroy
+                CALL kwargs%destroy
+                CALL return_obj%destroy
+                CALL return_dict%destroy
+                !
+                CALL base64_decode_double(charbase64(1:nlen),ndim,psir)
+                IF(.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,psir)
+                !
              ENDIF
              !
-             CALL ft_interpolate(psir, nx, ny, nz, evc(:,iwfc), npw, npwx)
+             CALL ft_interpolate(psir,nx,ny,nz,evc(:,iwfc),npw,npwx)
              !
           ENDDO
           !
        ENDIF
        !
-       IF(ionode) CALL iotk_scan_end(iun, 'slater_determinant')
-       !
     ENDDO
     !
     IF(ionode) THEN
-       CALL iotk_scan_end(iun, 'wavefunction')
-       CALL iotk_close_read(iun)
+       !
+       CALL pymod%destroy
        !
        DEALLOCATE(psir)
+       !
     ENDIF
+    !
+    CALL stop_clock('load_qb')
     !
   END SUBROUTINE
   !
@@ -160,12 +184,9 @@ MODULE qbox_interface
     !
     IF(me_bgrp == 0) THEN
        lockfile = 'I.'//itoa(my_image_id)//'.lock'
-       OPEN(NEWUNIT=iun, FILE=lockfile)
+       OPEN(NEWUNIT=iun,FILE=lockfile)
        CLOSE(iun)
-       !
-       ! SLEEP AND WAIT FOR LOCKFILE TO BE REMOVED
-       !
-       CALL sleep_and_wait_for_lock_to_be_removed(lockfile, '["script"]')
+       CALL sleep_and_wait_for_lock_to_be_removed(lockfile,'["script"]')
     ENDIF
     !
     CALL mp_barrier(intra_image_comm)
@@ -196,7 +217,7 @@ MODULE qbox_interface
   END SUBROUTINE
   !
   !----------------------------------------------------------------------------
-  SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile, consider_only)
+  SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile,consider_only)
     !----------------------------------------------------------------------------
     !
     USE westcom,                ONLY : document
@@ -215,22 +236,20 @@ MODULE qbox_interface
     TYPE(object) :: return_obj
     INTEGER :: return_int
     !
-    ierr = import_py(pymod, 'west_clientserver')
-    !
-    ierr = tuple_create(args, 1)
-    ierr = args%setitem(0, TRIM(ADJUSTL(lockfile)))
+    ierr = import_py(pymod,'west_clientserver')
+    ierr = tuple_create(args,1)
+    ierr = args%setitem(0,TRIM(ADJUSTL(lockfile)))
     ierr = dict_create(kwargs)
-    ierr = kwargs%setitem('document', document)
+    ierr = kwargs%setitem('document',document)
     !
     IF(PRESENT(consider_only)) THEN
-       ierr = kwargs%setitem('consider_only', consider_only)
+       ierr = kwargs%setitem('consider_only',consider_only)
     ENDIF
     !
-    ierr = call_py(return_obj, pymod, 'sleep_and_wait', args, kwargs)
+    ierr = call_py(return_obj,pymod,'sleep_and_wait',args,kwargs)
+    ierr = cast(return_int,return_obj)
     !
-    ierr = cast(return_int, return_obj)
-    !
-    IF(return_int /= 0) CALL errore('sleep', 'Did not wake well', return_int)
+    IF(return_int /= 0) CALL errore('sleep','Did not wake well',return_int)
     !
     CALL kwargs%destroy
     CALL args%destroy

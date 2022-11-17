@@ -88,7 +88,7 @@ default["wbse_init_control"]["bisection_info"] = "info.bis"
 default["wbse_init_control"]["chi_kernel"] = "CHI"
 default["wbse_init_control"]["overlap_thr"] = 0.0
 default["wbse_init_control"]["spin_channel"] = 0
-# #wbse_control
+# wbse_control
 default["wbse_control"] = {}
 default["wbse_control"]["wbse_calculation"] = "D"
 default["wbse_control"]["solver"] =  "BSE"
@@ -101,14 +101,14 @@ default["wbse_control"]["n_liouville_read_from_file"] = 0
 default["wbse_control"]["trev_liouville"] = 0.001
 default["wbse_control"]["trev_liouville_rel"] = 0.1
 default["wbse_control"]["n_lanczos"] = 0
-default["wbse_control"]["n_steps_write_restart"] = 200
+default["wbse_control"]["n_steps_write_restart"] = 100
 default["wbse_control"]["ipol_input"] = "XX"
 default["wbse_control"]["macropol_calculation"] = "N"
 default["wbse_control"]["epsinfty"] = 1.0
 default["wbse_control"]["spin_excitation"] = "S"
 default["wbse_control"]["l_preconditioning"] = False
 default["wbse_control"]["l_reduce_io"] = True
-# #wbsepp control
+# wbsepp control
 default["wbsepp_control"] = {}
 default["wbsepp_control"]["wbsepp_calculation"] = "S"
 default["wbsepp_control"]["n_liouville_read_from_file"] = 0

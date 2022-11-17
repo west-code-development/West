@@ -501,15 +501,10 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            ! ... last iteration, some roots not converged: return
            !
-           CALL stop_clock( 'chidiago:last' )
-           !
-           CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr )
-           !
-           CALL plep_db_write( )
-           CALL wbse_restart_clear()
-           !
            WRITE( stdout, '(5X,"WARNING: ",I5, &
                 &   " eigenvalues not converged in chidiago")' ) notcnv
+           !
+           CALL stop_clock( 'chidiago:last' )
            !
            EXIT iterate
            !
@@ -541,7 +536,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ENDIF
      !
      IF(n_steps_write_restart > 0 .AND. MOD(dav_iter,n_steps_write_restart) == 0) &
-     & CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+        CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDDO iterate
   !

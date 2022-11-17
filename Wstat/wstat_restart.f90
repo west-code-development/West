@@ -88,7 +88,7 @@ MODULE wstat_restart
          CALL json%add('ev',ev(:))
          CALL json%add('ew',ew(:))
          !
-         OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/'//TRIM('summary.json'))
+         OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/summary.json')
          CALL json%print(iun)
          CLOSE(iun)
          CALL json%destroy()
@@ -214,7 +214,7 @@ MODULE wstat_restart
             CALL json%add('lastdone_iq',lastdone_iq)
          ENDIF
          !
-         OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/'//TRIM('summary.json'))
+         OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/summary.json')
          CALL json%print(iun)
          CLOSE(iun)
          CALL json%destroy()
@@ -227,7 +227,7 @@ MODULE wstat_restart
       !
       IF(mpime == root) THEN
          !
-         OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+         OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/hr_vr.dat',FORM='unformatted')
          !
       ENDIF
       !
@@ -471,7 +471,7 @@ MODULE wstat_restart
       IF(mpime == root) THEN
          !
          CALL json%initialize()
-         CALL json%load(filename=TRIM(wstat_restart_dir)//'/'//TRIM('summary.json'))
+         CALL json%load(filename=TRIM(wstat_restart_dir)//'/summary.json')
          !
          CALL json%get('dav_iter',ival,found)
          IF(found) dav_iter = ival
@@ -532,7 +532,7 @@ MODULE wstat_restart
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
       !
-      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/hr_vr.dat',FORM='unformatted')
       !
       DO im = 0,nimage-1
          !
@@ -580,7 +580,7 @@ MODULE wstat_restart
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
       !
-      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wstat_restart_dir)//'/hr_vr.dat',FORM='unformatted')
       !
       DO im = 0,nimage-1
          !

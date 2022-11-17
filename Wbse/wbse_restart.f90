@@ -88,7 +88,7 @@ MODULE wbse_restart
          CALL json%add('ev',ev(:))
          CALL json%add('ew',ew(:))
          !
-         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('summary.json'))
+         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/summary.json')
          CALL json%print(iun)
          CLOSE(iun)
          CALL json%destroy()
@@ -208,7 +208,7 @@ MODULE wbse_restart
          CALL json%add('ev',ev(:))
          CALL json%add('ew',ew(:))
          !
-         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('summary.json'))
+         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/summary.json')
          CALL json%print(iun)
          CLOSE(iun)
          CALL json%destroy()
@@ -221,7 +221,7 @@ MODULE wbse_restart
       !
       IF(mpime == root) THEN
          !
-         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+         OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/hr_vr.dat',FORM='unformatted')
          !
       ENDIF
       !
@@ -446,7 +446,7 @@ MODULE wbse_restart
       IF(mpime == root) THEN
          !
          CALL json%initialize()
-         CALL json%load(filename=TRIM(wbse_restart_dir)//'/'//TRIM('summary.json'))
+         CALL json%load(filename=TRIM(wbse_restart_dir)//'/summary.json')
          !
          CALL json%get('dav_iter',ival,found)
          IF(found) dav_iter = ival
@@ -500,7 +500,7 @@ MODULE wbse_restart
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
       !
-      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/hr_vr.dat',FORM='unformatted')
       !
       DO im = 0,nimage-1
          !
@@ -546,7 +546,7 @@ MODULE wbse_restart
       !
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
       !
-      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/'//TRIM('hr_vr.dat'),FORM='unformatted')
+      IF(mpime == root) OPEN(NEWUNIT=iun,FILE=TRIM(wbse_restart_dir)//'/hr_vr.dat',FORM='unformatted')
       !
       DO im = 0,nimage-1
          !

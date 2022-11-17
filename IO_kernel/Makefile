@@ -8,7 +8,6 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG)../FFT_kernel \
            $(MOD_FLAG)../Libraries/Base64 \
            $(MOD_FLAG)../Libraries/Forpy \
-           $(MOD_FLAG)../Libraries/iotk \
            $(MOD_FLAG)../Libraries/Json \
            $(MOD_FLAG)../Modules \
            $(MOD_FLAG)../Para_kernel \

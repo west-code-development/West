@@ -12,7 +12,6 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG)../IO_kernel \
            $(MOD_FLAG)../Libraries/Base64 \
            $(MOD_FLAG)../Libraries/Forpy \
-           $(MOD_FLAG)../Libraries/iotk \
            $(MOD_FLAG)../Libraries/Json \
            $(MOD_FLAG)../Modules \
            $(MOD_FLAG)../Para_kernel \
@@ -61,7 +60,6 @@ WESTLIBS = \
 ../FFT_kernel/lib_fft_kernel.a \
 ../Tools/libtools.a \
 ../Modules/libmodules.a \
-../Libraries/iotk/libiotk.a \
 ../Libraries/Forpy/libforpy.a \
 ../Libraries/Json/libjson.a \
 ../Libraries/Base64/libbase64.a

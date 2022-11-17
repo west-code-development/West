@@ -16,10 +16,9 @@ then
 # externally maintained should not go into this list
 
     dirs=" West/Coulomb_kernel West/DFPT_kernel West/FFT_kernel \
-           West/Hamiltonian_kernel West/IO_kernel West/Libraries/iotk \
-           West/Libraries/Json-test West/Libraries/Json West/Modules \
-           West/Para_kernel West/Tools West/Wbse West/Wbsepp West/Westpp \
-           West/Wfreq West/Wstat "
+           West/Hamiltonian_kernel West/IO_kernel West/Libraries/Json-test \
+           West/Libraries/Json West/Modules West/Para_kernel West/Tools \
+           West/Wbse West/Wbsepp West/Westpp West/Wfreq West/Wstat "
 
 elif
     test $1 = "-addson"
@@ -68,7 +67,7 @@ for dir in $dirs; do
         West/Hamiltonian_kernel )
              DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/IO_kernel )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/iotk $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Libraries/Json-test )
              DEPENDS="$LEVEL2/Libraries/Json" ;;
         West/Libraries/Json )
@@ -80,9 +79,9 @@ for dir in $dirs; do
         West/Tools )
              DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Wbse )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/iotk $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbsepp $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Wbsepp )
-             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/iotk $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
+             DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Westpp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Westpp )
              DEPENDS="$DEPEND2 $LEVEL2/PW/src $LEVEL1/Libraries/Base64 $LEVEL1/Libraries/Forpy $LEVEL1/Libraries/Json $LEVEL1/Coulomb_kernel $LEVEL1/DFPT_kernel $LEVEL1/FFT_kernel $LEVEL1/Hamiltonian_kernel $LEVEL1/IO_kernel $LEVEL1/Modules $LEVEL1/Para_kernel $LEVEL1/Tools $LEVEL1/Wbse $LEVEL1/Wbsepp $LEVEL1/Wfreq $LEVEL1/Wstat" ;;
         West/Wfreq )

@@ -691,6 +691,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
            !
            DO iks  = 1, nks
               !
+              nbndval = nbnd_occ(iks)
               npw = ngk(iks)
               !
               DO ibnd = 1, nbndval
@@ -706,6 +707,8 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
         ! 5) Copy the current vector into V
         !
         DO iks  = 1, nks
+           !
+           nbndval = nbnd_occ(iks)
            !
            DO ibnd = 1, nbndval
               !

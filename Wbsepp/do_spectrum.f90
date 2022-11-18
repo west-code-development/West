@@ -30,9 +30,9 @@ SUBROUTINE do_spectrum()
   CHARACTER(LEN=256):: filename
   CHARACTER(LEN=256):: filename_plot
   !
-  INTEGER :: ipol, n_ipol, i, j, info, ip, ip2, counter, itermax
+  INTEGER :: ipol, n_ipol, i, ierr, ip, ip2, counter, itermax
   INTEGER :: iun1, iun2
-  REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), scaling, wl, degspin, f_sum
+  REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), degspin, f_sum
   REAL(DP) :: xmin, xmax, dx
   COMPLEX(DP) :: omeg_c
   REAL(DP), ALLOCATABLE :: beta_store(:,:)
@@ -40,20 +40,6 @@ SUBROUTINE do_spectrum()
   COMPLEX(DP) :: green(3,3) ! susceptibility chi
   COMPLEX(DP), ALLOCATABLE :: a(:), b(:), c(:), r(:,:)
   LOGICAL :: skip
-  !
-  ! For perceived color analysis
-  !
-  REAL(DP), PARAMETER :: vis_start    = 0.116829041_DP
-  REAL(DP), PARAMETER :: vis_start_wl = 780._DP
-  REAL(DP), PARAMETER :: vis_end      = 0.239806979_DP
-  REAL(DP), PARAMETER :: vis_end_wl   = 380._DP
-  LOGICAL  :: do_perceived
-  REAL(DP) :: perceived_red   = 0._DP
-  REAL(DP) :: perceived_green = 0._DP
-  REAL(DP) :: perceived_blue  = 0._DP
-  REAL(DP) :: perceived_renorm
-  INTEGER  :: perceived_itermax,perceived_iter
-  REAL(DP), ALLOCATABLE :: perceived_intensity(:), perceived_evaluated(:)
   !
   COMPLEX(DP), EXTERNAL :: ZDOTC
   !
@@ -152,35 +138,6 @@ SUBROUTINE do_spectrum()
      !
      OPEN(NEWUNIT=iun1,FILE=filename)
      OPEN(NEWUNIT=iun2,FILE=filename_plot)
-     !
-     !-----------------------------------------------------------------------------!
-     !                          PERCEIVED COLOR ANALYSIS                           !
-     !-----------------------------------------------------------------------------!
-     !
-     ! The perceived color analysis uses the perception fit from the following program:
-     ! RGB VALUES FOR VISIBLE WAVELENGTHS by Dan Bruton (astro@tamu.edu)
-     ! Let's see if the environment is suitable for perceived color analysis
-     ! This is needed for optics, not for EELS.
-     !
-     do_perceived = .FALSE.
-     !
-     IF(which_unit == 0 .AND. xmin < vis_start .AND. xmax > vis_end .AND. n_ipol == 3) THEN
-        do_perceived = .TRUE.
-        perceived_itermax = INT((vis_end-vis_start)/dx)
-     ELSEIF(which_unit == 2 .AND. xmin < vis_end_wl .AND. xmax > vis_start_wl .AND. n_ipol == 3) THEN
-        do_perceived = .TRUE.
-        perceived_itermax = INT((vis_start_wl-vis_end_wl)/dx)
-     ENDIF
-     !
-     IF(do_perceived) THEN
-        WRITE(stdout,'(/,5x,"Will attempt to calculate perceived color")')
-        perceived_iter = 1
-        ALLOCATE(perceived_intensity(perceived_itermax))
-        ALLOCATE(perceived_evaluated(perceived_itermax))
-        perceived_intensity(:) = 0._DP
-        perceived_evaluated(:) = -1._DP
-        perceived_renorm = -9999999._DP
-     ENDIF
      !
      ! Header of the output plot file
      !
@@ -313,20 +270,6 @@ SUBROUTINE do_spectrum()
            !
            f_sum = f_sum + integrator(dx,alpha_temp(3))
            !
-           ! Perceived color analysis
-           !
-           IF(omega(3) < vis_end .AND. omega(3) > vis_start .AND. do_perceived) THEN
-              !
-              perceived_intensity(perceived_iter) = alpha_temp(3)
-              perceived_evaluated(perceived_iter) = omega(3)
-              perceived_iter = perceived_iter + 1
-              !
-              ! Renormalization to 1
-              !
-              IF(alpha_temp(3) > perceived_renorm) perceived_renorm = alpha_temp(3)
-              !
-           ENDIF
-           !
         ENDIF
         !
         xmin = xmin + dx
@@ -394,68 +337,6 @@ SUBROUTINE do_spectrum()
         WRITE(stdout,'(5x,"Integral of absorbtion coefficient ",F15.8)') f_sum
      ENDIF
      !
-     !------------------------------------------------------------------------!
-     !                      Perceived color analysis                          !
-     !------------------------------------------------------------------------!
-     !
-     IF(ALLOCATED(perceived_intensity)) THEN
-        !
-        WRITE(stdout,'(5x,"Perceived color analysis is experimental")')
-        perceived_intensity(:) = perceived_intensity(:)/perceived_renorm
-        perceived_intensity(:) = 1._DP-perceived_intensity(:) !inverse spectrum
-        !
-        DO j = 1,INT(perceived_itermax/8)
-           DO i = 1,perceived_itermax
-              !
-              wl = 91.1266519_DP/perceived_evaluated(i) !hc/hbar.omega=lambda (hbar.omega in rydberg units)
-              !
-              ! WARNING alpha_temp duty change: now contains R G and B
-              !
-              CALL wl_to_color(wl,alpha_temp(1),alpha_temp(2),alpha_temp(3))
-              !
-              ! Now the intensities
-              ! First the degradation toward the end
-              !
-              IF(wl > 700._DP) THEN
-                 scaling = 0.3_DP+0.7_DP*(780._DP-wl)/(780._DP-700._DP)
-              ELSEIF(wl < 420._DP) THEN
-                 scaling = 0.3_DP+0.7_DP*(wl-380._DP)/(420._DP-380._DP)
-              ELSE
-                 scaling = 1._DP
-              ENDIF
-              !
-              alpha_temp(:) = scaling*alpha_temp(:)
-              !
-              ! Then the data from absorbtion spectrum
-              !
-              alpha_temp(:) = perceived_intensity(i)*alpha_temp(:)
-              !
-              ! The perceived color can also be calculated here
-              !
-              IF(j == 1) THEN
-                 perceived_red = perceived_red+alpha_temp(1)
-                 perceived_green = perceived_green+alpha_temp(2)
-                 perceived_blue = perceived_blue+alpha_temp(3)
-              ENDIF
-              !
-           ENDDO
-        ENDDO
-        !
-        perceived_red = perceived_red/(1._DP*perceived_itermax)
-        perceived_green = perceived_green/(1._DP*perceived_itermax)
-        perceived_blue = perceived_blue/(1._DP*perceived_itermax)
-        !
-        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') &
-        & perceived_red,perceived_green,perceived_blue
-        WRITE(stdout,'(5x,"Perceived R G B ",3(F15.8,1X))') &
-        & perceived_red*255._DP,perceived_green*255._DP,perceived_blue*255._DP
-        !
-     ENDIF
-     !
-     !----------------------------------------------------------------------!
-     !                   End of perceived color analysis                    !
-     !----------------------------------------------------------------------!
-     !
      ! f-sum rule
      !
      xmin = 0._DP
@@ -471,9 +352,6 @@ SUBROUTINE do_spectrum()
      WRITE(stdout,'(5x,"Integral test:",F15.8,"  Actual: ",F15.8:)') f_sum, 0.5_DP*xmin*xmin
      !
      ! Deallocations
-     !
-     IF(ALLOCATED(perceived_intensity)) DEALLOCATE(perceived_intensity)
-     IF(ALLOCATED(perceived_evaluated)) DEALLOCATE(perceived_evaluated)
      !
      IF(ALLOCATED(beta_store))  DEALLOCATE(beta_store)
      IF(ALLOCATED(zeta_store))  DEALLOCATE(zeta_store)
@@ -778,9 +656,9 @@ CONTAINS
        !
        ! |w_t|=(w-L) |1,0,0,...,0|
        !
-       CALL ZGTSV(itermax,1,b,a,c,r(ip,:),itermax,info)
+       CALL ZGTSV(itermax,1,b,a,c,r(ip,:),itermax,ierr)
        !
-       IF(info /= 0) CALL errore('calc_chi','Unable to solve tridiagonal system',1)
+       IF(ierr /= 0) CALL errore('calc_chi','Unable to solve tridiagonal system',1)
        !
        ! p=-div.rho'
        ! p= chi . E
@@ -809,55 +687,6 @@ CONTAINS
        ENDDO
        !
     ENDDO
-    !
-  END SUBROUTINE
-  !
-  !-----------------------------------------------------------------------
-  SUBROUTINE wl_to_color(wavelength,red,green,blue)
-    !---------------------------------------------------------------------
-    !
-    ! Gives the colour intensity of a given wavelength in terms of RGB (red, green and blue).
-    !
-    IMPLICIT NONE
-    !
-    REAL(DP), INTENT(IN) :: wavelength
-    REAL(DP), INTENT(OUT) :: red,green,blue
-    !
-    IF(wavelength >= 380._DP .AND. wavelength <= 440._DP) THEN
-       red = -1._DP*(wavelength-440._DP)/(440._DP-380._DP)
-       green = 0._DP
-       blue = 1._DP
-    ENDIF
-    !
-    IF(wavelength >= 440._DP .AND. wavelength<=490._DP) THEN
-       red = 0._DP
-       green = (wavelength-440._DP)/(490._DP-440._DP)
-       blue = 1._DP
-    ENDIF
-    !
-    IF(wavelength >= 490._DP .AND. wavelength<=510._DP) THEN
-       red = 0._DP
-       green = 1._DP
-       blue = -1._DP*(wavelength-510._DP)/(510._DP-490._DP)
-    ENDIF
-    !
-    IF(wavelength >= 510._DP .AND. wavelength <= 580._DP) THEN
-       red = (wavelength-510._DP)/(580._DP-510._DP)
-       green = 1._DP
-       blue = 0._DP
-    ENDIF
-    !
-    IF(wavelength >= 580._DP .AND. wavelength <= 645._DP) THEN
-       red = 1._DP
-       green = -1._DP*(wavelength-645._DP)/(645._DP-580._DP)
-       blue = 0._DP
-    ENDIF
-    !
-    IF(wavelength >= 645._DP .AND. wavelength <= 780._DP) THEN
-       red = 1._DP
-       green = 0._DP
-       blue = 0._DP
-    ENDIF
     !
   END SUBROUTINE
   !

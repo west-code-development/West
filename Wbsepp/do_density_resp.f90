@@ -53,7 +53,6 @@ SUBROUTINE do_density_resp()
   nvec = n_liouville_read_from_file
   pert = idistribute()
   CALL pert%init(nvec,'i','nvec',.TRUE.)
-  CALL wbse_memory_report()
   !
   ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !
@@ -118,7 +117,7 @@ SUBROUTINE do_density_resp()
   !
   CALL mp_sum(summ0, intra_bgrp_comm)
   !
-  WRITE(stdout,*) "Plot of charge density response of the exciton states (Ry unit): ", iexc, ev(iexc)
+  WRITE(stdout,*) "Plot of charge density response of the exciton state (Ry unit): ", iexc, ev(iexc)
   WRITE(stdout,*) "summ0", summ0
   !
   westpp_format = 'C'

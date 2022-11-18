@@ -68,7 +68,6 @@ SUBROUTINE do_exc()
   nvec = n_liouville_read_from_file
   pert = idistribute()
   CALL pert%init(nvec,'i','nvec',.TRUE.)
-  CALL wbse_memory_report()
   !
   ! READ EIGENVALUES AND VECTORS FROM OUTPUT
   !
@@ -205,7 +204,7 @@ SUBROUTINE do_exc()
   !
   rho_out(:,1) = rho_out(:,1)/summ0
   !
-  WRITE(stdout,*) "Plot of exciton states (Ry unit): ", iexc, ev(iexc)
+  WRITE(stdout,*) "Plot of exciton state (Ry unit): ", iexc, ev(iexc)
   WRITE(stdout,*) "Hole state is fixed at (alat unit): ", r0_aux(1), r0_aux(2), r0_aux(3)
   !
   westpp_format = 'C'

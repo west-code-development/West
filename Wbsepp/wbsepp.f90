@@ -46,15 +46,15 @@ PROGRAM wbsepp
   lgate = .FALSE.
   DO i = 1, 4
      IF( wbsepp_calculation(i:i) == 's' .OR. wbsepp_calculation(i:i) == 'S' ) lgate(1) = .TRUE. ! Spectrum
-     IF( wbsepp_calculation(i:i) == 'p' .OR. wbsepp_calculation(i:i) == 'P' ) lgate(2) = .TRUE. ! Eig decomposition
-     IF( wbsepp_calculation(i:i) == 'e' .OR. wbsepp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Exciton states
-     IF( wbsepp_calculation(i:i) == 'd' .OR. wbsepp_calculation(i:i) == 'D' ) lgate(4) = .TRUE. ! Density response
+     IF( wbsepp_calculation(i:i) == 'e' .OR. wbsepp_calculation(i:i) == 'E' ) lgate(2) = .TRUE. ! Exciton state
+     IF( wbsepp_calculation(i:i) == 'r' .OR. wbsepp_calculation(i:i) == 'R' ) lgate(3) = .TRUE. ! Density response
+     IF( wbsepp_calculation(i:i) == 'p' .OR. wbsepp_calculation(i:i) == 'P' ) lgate(4) = .TRUE. ! Eigen decomp
   ENDDO
   !
   IF( lgate(1) ) CALL do_spectrum( )
-  IF( lgate(2) ) CALL do_eig_decomp( )
-  IF( lgate(3) ) CALL do_exc( )
-  IF( lgate(4) ) CALL do_density_resp( )
+  IF( lgate(2) ) CALL do_exc( )
+  IF( lgate(3) ) CALL do_density_resp( )
+  IF( lgate(4) ) CALL do_eig_decomp( )
   !
   CALL exx_ungo( )
   !

@@ -43,7 +43,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
                                   & double_fwfft_gamma
   USE mp_global,             ONLY : inter_image_comm,inter_bgrp_comm
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
-  USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,l_use_localise_repr,u_matrix,&
+  USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,l_local_repr,u_matrix,&
                                   & index_matrix_lz,size_index_matrix_lz
   USE distribution_center,   ONLY : aband,bseparal
   USE wbse_io,               ONLY : read_bse_pots_g2r,read_bse_pots_g2g
@@ -66,7 +66,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   REAL(DP), ALLOCATABLE :: raux1(:), raux2(:)
   COMPLEX(DP), ALLOCATABLE :: aux_bse1(:,:), aux_bse2(:,:), kd1_ij(:,:), gaux(:)
   !
-  IF(l_use_localise_repr) THEN
+  IF(l_local_repr) THEN
      ALLOCATE(aux_bse1(npwx,nbndval0x))
   ENDIF
   !
@@ -80,7 +80,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
      !
      npw = ngk(ikq)
      !
-     IF(l_use_localise_repr) THEN
+     IF(l_local_repr) THEN
         aux_bse1(:,:) = (0._DP,0._DP)
         !
         DO ibnd = 1, nbndval0x
@@ -117,7 +117,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
            !
            CALL read_bse_pots_g2r(raux1,ibnd_index,jbnd_index,current_spin)
            !
-           IF(l_use_localise_repr) THEN
+           IF(l_local_repr) THEN
               CALL single_invfft_gamma(dffts,npw,npwx,aux_bse1(:,jbnd_index),psic,'Wave')
            ELSE
               CALL single_invfft_gamma(dffts,npw,npwx,evc1(:,jbnd_index,ikq),psic,'Wave')
@@ -189,7 +189,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
                  summ_index = summ_index+1
                  psic(:) = (0._DP,0._DP)
                  !
-                 IF(l_use_localise_repr) THEN
+                 IF(l_local_repr) THEN
                     CALL double_invfft_gamma(dffts,npw,npwx,aux_bse1(:,jbnd_index),kd1_ij(:,ig1),psic,'Wave')
                  ELSE
                     CALL double_invfft_gamma(dffts,npw,npwx,evc1(:,jbnd_index,ikq),kd1_ij(:,ig1),psic,'Wave')
@@ -202,7 +202,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
                  summ_index = summ_index+1
                  psic(:) = (0._DP,0._DP)
                  !
-                 IF(l_use_localise_repr) THEN
+                 IF(l_local_repr) THEN
                     CALL double_invfft_gamma(dffts,npw,npwx,aux_bse1(:,jbnd_index),kd1_ij(:,ig1),psic,'Wave')
                  ELSE
                     CALL double_invfft_gamma(dffts,npw,npwx,evc1(:,jbnd_index,ikq),kd1_ij(:,ig1),psic,'Wave')
@@ -237,7 +237,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
         !
      ENDIF
      !
-     IF(l_use_localise_repr) THEN
+     IF(l_local_repr) THEN
         !
         ! U^{+}(\xi)
         !
@@ -261,7 +261,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   !
   DEALLOCATE(aux_bse2)
   !
-  IF(l_use_localise_repr) THEN
+  IF(l_local_repr) THEN
      DEALLOCATE(aux_bse1)
   ENDIF
   !

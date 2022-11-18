@@ -30,9 +30,9 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
                              & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,l_reduce_io,&
-                             & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
-                             & units,extrapolation,start,end,increment,epsil
+                             & ipol_input,wbse_epsinfty,spin_excitation,l_preconditioning,&
+                             & l_reduce_io,wbsepp_calculation,wbsepp_r0,iexc_plot,n_lanczos_to_use,&
+                             & n_extrapolation,range,broad
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -144,7 +144,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.n_steps_write_restart',n_steps_write_restart)
         CALL json%add('input.wbse_control.ipol_input',TRIM(ipol_input))
         CALL json%add('input.wbse_control.macropol_calculation',TRIM(macropol_calculation))
-        CALL json%add('input.wbse_control.epsinfty',epsinfty)
+        CALL json%add('input.wbse_control.wbse_epsinfty',wbse_epsinfty)
         CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
         CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
         CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
@@ -156,19 +156,14 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbsepp_control.wbsepp_calculation',TRIM(wbsepp_calculation))
         CALL json%add('input.wbsepp_control.n_liouville_read_from_file',n_liouville_read_from_file)
         CALL json%add('input.wbsepp_control.macropol_calculation',macropol_calculation)
-        CALL json%add('input.wbsepp_control.r0_input',r0_input)
-        CALL json%add('input.wbsepp_control.iexc_plot',iexc_plot)
-        CALL json%add('input.wbsepp_control.itermax',itermax)
-        CALL json%add('input.wbsepp_control.itermax0',itermax0)
-        CALL json%add('input.wbsepp_control.ipol',ipol)
-        CALL json%add('input.wbsepp_control.sym_op',sym_op)
-        CALL json%add('input.wbsepp_control.units',units)
-        CALL json%add('input.wbsepp_control.extrapolation',TRIM(extrapolation))
-        CALL json%add('input.wbsepp_control.start',start)
-        CALL json%add('input.wbsepp_control.end',end)
-        CALL json%add('input.wbsepp_control.increment',increment)
-        CALL json%add('input.wbsepp_control.epsil',epsil)
+        CALL json%add('input.wbsepp_control.ipol_input',TRIM(ipol_input))
         CALL json%add('input.wbsepp_control.spin_channel',spin_channel)
+        CALL json%add('input.wbsepp_control.wbsepp_r0',wbsepp_r0)
+        CALL json%add('input.wbsepp_control.iexc_plot',iexc_plot)
+        CALL json%add('input.wbsepp_control.n_lanczos_to_use',n_lanczos_to_use)
+        CALL json%add('input.wbsepp_control.n_extrapolation',n_extrapolation)
+        CALL json%add('input.wbsepp_control.range',range)
+        CALL json%add('input.wbsepp_control.broad',broad)
         !
      ENDIF
      !
@@ -196,9 +191,9 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
                              & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
                              & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & ipol_input,epsinfty,spin_excitation,l_preconditioning,l_reduce_io,&
-                             & wbsepp_calculation,r0_input,iexc_plot,itermax,itermax0,ipol,sym_op,&
-                             & units,extrapolation,start,end,increment,epsil,main_input_file,logfile
+                             & ipol_input,wbse_epsinfty,spin_excitation,l_preconditioning,&
+                             & l_reduce_io,wbsepp_calculation,wbsepp_r0,iexc_plot,n_lanczos_to_use,&
+                             & n_extrapolation,range,broad,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -508,7 +503,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         IERR = return_dict%get(n_steps_write_restart, 'n_steps_write_restart', DUMMY_DEFAULT)
         IERR = return_dict%getitem(cvalue, 'ipol_input'); ipol_input = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(epsinfty, 'epsinfty')
+        IERR = return_dict%getitem(wbse_epsinfty, 'wbse_epsinfty')
         IERR = return_dict%getitem(cvalue, 'spin_excitation'); spin_excitation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(l_preconditioning, 'l_preconditioning')
         IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
@@ -539,26 +534,28 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         IERR = return_dict%getitem(cvalue, 'wbsepp_calculation'); wbsepp_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(n_liouville_read_from_file, 'n_liouville_read_from_file', DUMMY_DEFAULT)
         IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(tmp_obj, 'r0_input')
+        IERR = return_dict%getitem(cvalue, 'ipol_input'); ipol_input = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(tmp_obj, 'wbsepp_r0')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%len(list_len)
-        IERR = tmp_list%getitem(r0_input(1), 0) ! Fortran indices start at 1
-        IERR = tmp_list%getitem(r0_input(2), 1) ! Fortran indices start at 1
-        IERR = tmp_list%getitem(r0_input(3), 2) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(wbsepp_r0(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(wbsepp_r0(2), 1) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(wbsepp_r0(3), 2) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         IERR = return_dict%get(iexc_plot, 'iexc_plot', DUMMY_DEFAULT)
-        IERR = return_dict%get(itermax, 'itermax', DUMMY_DEFAULT)
-        IERR = return_dict%get(itermax0, 'itermax0', DUMMY_DEFAULT)
-        IERR = return_dict%get(ipol, 'ipol', DUMMY_DEFAULT)
-        IERR = return_dict%get(sym_op, 'sym_op', DUMMY_DEFAULT)
-        IERR = return_dict%get(units, 'units', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(cvalue, 'extrapolation'); extrapolation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(start, 'start')
-        IERR = return_dict%getitem(end, 'end')
-        IERR = return_dict%getitem(increment, 'increment')
-        IERR = return_dict%getitem(epsil, 'epsil')
-        IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_lanczos_to_use, 'n_lanczos_to_use', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_extrapolation, 'n_extrapolation', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(tmp_obj, 'range')
+        IERR = cast(tmp_list,tmp_obj)
+        IERR = tmp_list%len(list_len)
+        IERR = tmp_list%getitem(range(1), 0) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(range(2), 1) ! Fortran indices start at 1
+        IERR = tmp_list%getitem(range(3), 2) ! Fortran indices start at 1
+        CALL tmp_list%destroy
+        CALL tmp_obj%destroy
+        IERR = return_dict%getitem(broad, 'broad')
         !
         CALL return_dict%destroy
         !
@@ -806,7 +803,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      CALL mp_bcast(n_steps_write_restart,root,world_comm)
      CALL mp_bcast(ipol_input,root,world_comm)
      CALL mp_bcast(macropol_calculation,root,world_comm)
-     CALL mp_bcast(epsinfty,root,world_comm)
+     CALL mp_bcast(wbse_epsinfty,root,world_comm)
      CALL mp_bcast(spin_excitation,root,world_comm)
      CALL mp_bcast(l_preconditioning,root,world_comm)
      CALL mp_bcast(l_reduce_io,root,world_comm)
@@ -871,31 +868,23 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      CALL mp_bcast(wbsepp_calculation,root,world_comm)
      CALL mp_bcast(n_liouville_read_from_file,root,world_comm)
      CALL mp_bcast(macropol_calculation,root,world_comm)
-     CALL mp_bcast(r0_input,root,world_comm)
-     CALL mp_bcast(iexc_plot,root,world_comm)
-     CALL mp_bcast(itermax,root,world_comm)
-     CALL mp_bcast(itermax0,root,world_comm)
-     CALL mp_bcast(ipol,root,world_comm)
-     CALL mp_bcast(sym_op,root,world_comm)
-     CALL mp_bcast(units,root,world_comm)
-     CALL mp_bcast(extrapolation,root,world_comm)
-     CALL mp_bcast(start,root,world_comm)
-     CALL mp_bcast(end,root,world_comm)
-     CALL mp_bcast(increment,root,world_comm)
-     CALL mp_bcast(epsil,root,world_comm)
+     CALL mp_bcast(ipol_input,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
+     CALL mp_bcast(wbsepp_r0,root,world_comm)
+     CALL mp_bcast(iexc_plot,root,world_comm)
+     CALL mp_bcast(n_lanczos_to_use,root,world_comm)
+     CALL mp_bcast(n_extrapolation,root,world_comm)
+     CALL mp_bcast(range,root,world_comm)
+     CALL mp_bcast(broad,root,world_comm)
      !
      ! CHECKS
      !
      IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
      IF(n_liouville_read_from_file == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
-     IF(iexc_plot == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch iexc_plot',1)
-     IF(itermax == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch itermax',1)
-     IF(itermax0 == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch itermax0',1)
-     IF(ipol == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch ipol',1)
-     IF(sym_op == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch sym_op',1)
-     IF(units == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch units',1)
      IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
+     IF(iexc_plot == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch iexc_plot',1)
+     IF(n_lanczos_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos_to_use',1)
+     IF(n_extrapolation == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_extrapolation',1)
      !
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
@@ -1075,7 +1064,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         CALL io_push_value('n_steps_write_restart',n_steps_write_restart,numsp)
         CALL io_push_value('ipol_input',ipol_input,numsp)
         CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
-        CALL io_push_value('epsinfty',epsinfty,numsp)
+        CALL io_push_value('wbse_epsinfty',wbse_epsinfty,numsp)
         CALL io_push_value('spin_excitation',spin_excitation,numsp)
         CALL io_push_value('l_preconditioning',l_preconditioning,numsp)
         CALL io_push_value('l_reduce_io',l_reduce_io,numsp)
@@ -1094,21 +1083,18 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         CALL io_push_value('wbsepp_calculation',wbsepp_calculation,numsp)
         CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
         CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
-        CALL io_push_value('r0_input(1) [alat]',r0_input(1),numsp)
-        CALL io_push_value('r0_input(2) [alat]',r0_input(2),numsp)
-        CALL io_push_value('r0_input(3) [alat]',r0_input(3),numsp)
-        CALL io_push_value('iexc_plot',iexc_plot,numsp)
-        CALL io_push_value('itermax',itermax,numsp)
-        CALL io_push_value('itermax0',itermax0,numsp)
-        CALL io_push_value('ipol',ipol,numsp)
-        CALL io_push_value('sym_op',sym_op,numsp)
-        CALL io_push_value('units',units,numsp)
-        CALL io_push_value('extrapolation',extrapolation,numsp)
-        CALL io_push_value('start',start,numsp)
-        CALL io_push_value('end',end,numsp)
-        CALL io_push_value('increment',increment,numsp)
-        CALL io_push_value('epsil',epsil,numsp)
+        CALL io_push_value('ipol_input',ipol_input,numsp)
         CALL io_push_value('spin_channel',spin_channel,numsp)
+        CALL io_push_value('wbsepp_r0(1) [alat]',wbsepp_r0(1),numsp)
+        CALL io_push_value('wbsepp_r0(2) [alat]',wbsepp_r0(2),numsp)
+        CALL io_push_value('wbsepp_r0(3) [alat]',wbsepp_r0(3),numsp)
+        CALL io_push_value('iexc_plot',iexc_plot,numsp)
+        CALL io_push_value('n_lanczos_to_use',n_lanczos_to_use,numsp)
+        CALL io_push_value('n_extrapolation',n_extrapolation,numsp)
+        CALL io_push_value('range(1)',range(1),numsp)
+        CALL io_push_value('range(2)',range(2),numsp)
+        CALL io_push_value('range(3)',range(3),numsp)
+        CALL io_push_value('broad',broad,numsp)
         !
         CALL io_push_bar()
         !

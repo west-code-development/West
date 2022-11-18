@@ -17,7 +17,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : aband
-  USE westcom,              ONLY : l_use_bisection_thr,wfc_from_qbox,wbse_init_save_dir
+  USE westcom,              ONLY : l_bisect_thr,wfc_from_qbox,wbse_init_save_dir
   USE wavefunctions,        ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
   USE fft_base,             ONLY : dffts
@@ -95,7 +95,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
      !
      ovl_matrix(:,:) = 0._DP
      !
-     IF(l_use_bisection_thr) THEN
+     IF(l_bisect_thr) THEN
         !
         ALLOCATE(bisec_loc(nbndval))
         !

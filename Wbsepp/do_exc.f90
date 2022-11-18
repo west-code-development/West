@@ -25,7 +25,7 @@ SUBROUTINE do_exc()
   USE mp_global,              ONLY : me_bgrp,intra_bgrp_comm,my_image_id,inter_image_comm
   USE buffers,                ONLY : get_buffer
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev,dvg_exc,n_liouville_read_from_file,&
-                                   & iexc_plot,r0_input,westpp_format
+                                   & iexc_plot,wbsepp_r0,westpp_format
   USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
   USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
   USE plep_db,                ONLY : plep_db_read
@@ -50,17 +50,17 @@ SUBROUTINE do_exc()
   CHARACTER(LEN=256) :: fname
   INTEGER :: iexc
   INTEGER :: n_point, ni
-  REAL(DP) :: r0_input_aux(3)
+  REAL(DP) :: r0_aux(3)
   REAL(DP) :: dstep, ri1, ri0, dx,dy,dz, drr, summ, summ0, vi1, vi0
   !
   iexc = iexc_plot
-  r0_input_aux(1) = r0_input(1)
-  r0_input_aux(2) = r0_input(2)
-  r0_input_aux(3) = r0_input(3)
+  r0_aux(1) = wbsepp_r0(1)
+  r0_aux(2) = wbsepp_r0(2)
+  r0_aux(3) = wbsepp_r0(3)
   !
   DO ip = 1, n_ipol
-     IF(r0_input_aux(ip) < 0) r0_input_aux(ip) = r0_input_aux(ip) + at(ip,ip)
-     IF(r0_input_aux(ip) > at(ip,ip)) r0_input_aux(ip) = r0_input_aux(ip) - at(ip,ip)
+     IF(r0_aux(ip) < 0) r0_aux(ip) = r0_aux(ip) + at(ip,ip)
+     IF(r0_aux(ip) > at(ip,ip)) r0_aux(ip) = r0_aux(ip) - at(ip,ip)
   ENDDO
   !
   ! ... DISTRIBUTE nvec
@@ -112,9 +112,9 @@ SUBROUTINE do_exc()
   dr(:) = 10000000
   !
   DO ir = 1, dffts%nnr
-     dr(ir) = SQRT((r(ir,1) - r0_input_aux(1))**2 + &
-                   (r(ir,2) - r0_input_aux(2))**2 + &
-                   (r(ir,3) - r0_input_aux(3))**2)
+     dr(ir) = SQRT((r(ir,1) - r0_aux(1))**2 + &
+                   (r(ir,2) - r0_aux(2))**2 + &
+                   (r(ir,3) - r0_aux(3))**2)
   ENDDO
   !
   drmin_g = MINVAL(dr)
@@ -206,7 +206,7 @@ SUBROUTINE do_exc()
   rho_out(:,1) = rho_out(:,1)/summ0
   !
   WRITE(stdout,*) "Plot of exciton states (Ry unit): ", iexc, ev(iexc)
-  WRITE(stdout,*) "Hole state is fixed at (alat unit): ", r0_input_aux(1), r0_input_aux(2), r0_input_aux(3)
+  WRITE(stdout,*) "Hole state is fixed at (alat unit): ", r0_aux(1), r0_aux(2), r0_aux(3)
   !
   westpp_format = 'C'
   !
@@ -245,15 +245,15 @@ SUBROUTINE do_exc()
      summ0 = 0._DP
      DO ir = 1, dffts%nnr
         !
-        dx = r(ir,1) - r0_input_aux(1)
+        dx = r(ir,1) - r0_aux(1)
         IF (dx > at(1,1) * 0.5_DP) dx = dx - at(1,1)
         IF (dx <= -at(1,1) * 0.5_DP) dx = dx + at(1,1)
         !
-        dy = r(ir,2) - r0_input_aux(2)
+        dy = r(ir,2) - r0_aux(2)
         IF (dy > at(2,2) * 0.5_DP) dy = dy - at(2,2)
         IF (dy <= -at(2,2) * 0.5_DP) dy = dy + at(2,2)
         !
-        dz = r(ir,3) - r0_input_aux(3)
+        dz = r(ir,3) - r0_aux(3)
         IF (dz > at(3,3) * 0.5_DP) dz = dz - at(3,3)
         IF (dz <= -at(3,3) * 0.5_DP) dz = dz + at(3,3)
         !

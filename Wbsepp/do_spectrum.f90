@@ -9,17 +9,15 @@
 SUBROUTINE do_spectrum()
   !---------------------------------------------------------------------
   !
-  ! This routine is modified from the TDDFT code.
-  ! Pls do not distribute it to avoid the copyright problem.
-  ! TODO: write this code in Python to make it become ours.
+  ! Adapted from QE/TDDFPTsrc/turbo_spectrum.f90
   !
   USE kinds,               ONLY : DP,i8b
   USE constants,           ONLY : pi,rytoev,rytonm
   USE io_global,           ONLY : stdout
   USE mp_world,            ONLY : world_comm,mpime,root
   USE mp,                  ONLY : mp_barrier
-  USE westcom,             ONLY : qe_prefix,wbse_save_dir,itermax,itermax0,extrapolation,start,end,&
-                                & increment,epsil,ipol,sym_op,units,spin_channel
+  USE westcom,             ONLY : qe_prefix,wbse_save_dir,ipol_input,spin_channel,n_lanczos_to_use,&
+                                & n_extrapolation,which_unit,range,broad
   USE json_module,         ONLY : json_file
   USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
   USE base64_module,       ONLY : islittleendian
@@ -32,9 +30,10 @@ SUBROUTINE do_spectrum()
   CHARACTER(LEN=256):: filename
   CHARACTER(LEN=256):: filename_plot
   !
-  INTEGER :: n_ipol, i,j, info, ip, ip2, counter
+  INTEGER :: ipol, n_ipol, i, j, info, ip, ip2, counter, itermax
   INTEGER :: iun1, iun2
-  REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), scale, wl, degspin, f_sum
+  REAL(DP) :: norm0(3), average(3), av_amplitude(3), alpha_temp(3), scaling, wl, degspin, f_sum
+  REAL(DP) :: xmin, xmax, dx
   COMPLEX(DP) :: omeg_c
   REAL(DP), ALLOCATABLE :: beta_store(:,:)
   COMPLEX(DP), ALLOCATABLE :: zeta_store(:,:,:)
@@ -60,37 +59,35 @@ SUBROUTINE do_spectrum()
   !
   IF(mpime == root) THEN
      !
-     IF(itermax0 < 151 .AND. TRIM(extrapolation) /= 'no') THEN
-        WRITE(stdout,'(5x,"Itermax0 is less than 150, no extrapolation scheme can be used")')
-        extrapolation = 'no'
+     xmin = range(1)
+     xmax = range(2)
+     dx = range(3)
+     !
+     IF(n_lanczos_to_use < 151 .AND. n_extrapolation > 0) THEN
+        WRITE(stdout,'(5x,"n_lanczos_to_use < 151, no extrapolation can be used")')
+        n_extrapolation = 0
      ENDIF
      !
-     IF(ipol < 4) THEN
+     SELECT CASE(ipol_input)
+     CASE('XX','xx')
+        ipol = 1
         n_ipol = 1
-     ELSE
-        n_ipol = 3
+     CASE('YY','yy')
+        ipol = 2
+        n_ipol = 1
+     CASE('ZZ','zz')
+        ipol = 3
+        n_ipol = 1
+     CASE('XYZ','xyz')
         ipol = 1
-     ENDIF
-     !
-     ! Polarization symmetry
-     !
-     IF(sym_op == 1) THEN
-        WRITE(stdout,'(5x,"All polarization axes will be considered to be equal")')
         n_ipol = 3
-        ipol = 1
-     ELSEIF(sym_op /= 0) THEN
-        CALL errore('do_spectrum','Unsupported symmetry operation',1)
-     ENDIF
+     CASE DEFAULT
+        CALL errore('do_spectrum','Wrong ipol_input',1)
+     END SELECT
      !
      ! Terminator scheme
      !
-     IF(TRIM(extrapolation) == 'no') THEN
-        itermax = itermax0
-     ENDIF
-     !
-     ! Check the units (Ry, eV, nm)
-     !
-     IF(units < 0 .OR. units > 2) CALL errore('do_spectrum','Unsupported unit system',1)
+     itermax = n_lanczos_to_use+n_extrapolation
      !
      ! Initialisation of coefficients
      !
@@ -118,7 +115,7 @@ SUBROUTINE do_spectrum()
      ! Spectrum calculation
      !
      WRITE(stdout,'(/5x,"Data ready, starting to calculate observables...")')
-     WRITE(stdout,'(/5x,"Broadening = ",f15.8," Ry")') epsil
+     WRITE(stdout,'(/5x,"Broadening = ",f15.8," Ry")') broad
      !
      filename = TRIM(qe_prefix) // '.plot_chi.dat'
      filename_plot = TRIM(qe_prefix) // '.abs_spectrum.dat'
@@ -136,21 +133,11 @@ SUBROUTINE do_spectrum()
         WRITE(stdout,'(/,5x,"Insufficent info for S")')
      ENDIF
      !
-     ! Units
-     !
-     IF(units == 0) THEN
-        WRITE(stdout,'(/,5x,"Functions are reported in \hbar.\omega Energy unit is (Ry)")')
-     ELSEIF(units == 1) THEN
-        WRITE(stdout,'(/,5x,"Functions are reported in \hbar.\omega Energy unit is (eV)")')
-     ELSEIF(units == 2) THEN
-        WRITE(stdout,'(/,5x,"Functions are reported in (nm), Energy unit is (eV)")')
-     ENDIF
-     !
      ! The static dipole polarizability / static charge-density susceptibility
      !
      WRITE(stdout,'(/,5x,"Static dipole polarizability tensor:")')
      !
-     CALL calc_chi(0._DP,epsil,green(:,:))
+     CALL calc_chi(0._DP,broad,green(:,:))
      !
      DO ip = 1,n_ipol
         DO ip2 = 1,n_ipol
@@ -177,12 +164,12 @@ SUBROUTINE do_spectrum()
      !
      do_perceived = .FALSE.
      !
-     IF(units == 0 .AND. start < vis_start .AND. end > vis_end .AND. n_ipol == 3) THEN
+     IF(which_unit == 0 .AND. xmin < vis_start .AND. xmax > vis_end .AND. n_ipol == 3) THEN
         do_perceived = .TRUE.
-        perceived_itermax = INT((vis_end-vis_start)/increment)
-     ELSEIF(units == 2 .AND. start < vis_end_wl .AND. end > vis_start_wl .AND. n_ipol == 3) THEN
+        perceived_itermax = INT((vis_end-vis_start)/dx)
+     ELSEIF(which_unit == 2 .AND. xmin < vis_end_wl .AND. xmax > vis_start_wl .AND. n_ipol == 3) THEN
         do_perceived = .TRUE.
-        perceived_itermax = INT((vis_start_wl-vis_end_wl)/increment)
+        perceived_itermax = INT((vis_start_wl-vis_end_wl)/dx)
      ENDIF
      !
      IF(do_perceived) THEN
@@ -197,11 +184,11 @@ SUBROUTINE do_spectrum()
      !
      ! Header of the output plot file
      !
-     IF(units == 0) THEN
+     IF(which_unit == 0) THEN
         WRITE(iun1,'("#Chi is reported as CHI_(i)_(j) \hbar \omega (Ry) Re(chi) (e^2*a_0^2/Ry) Im(chi) (e^2*a_0^2/Ry)")')
-     ELSEIF(units == 1) THEN
+     ELSEIF(which_unit == 1) THEN
         WRITE(iun1,'("#Chi is reported as CHI_(i)_(j) \hbar \omega (eV) Re(chi) (e^2*a_0^2/eV) Im(chi) (e^2*a_0^2/eV)")')
-     ELSEIF(units == 2) THEN
+     ELSEIF(which_unit == 2) THEN
         WRITE(iun1,'("#Chi is reported as CHI_(i)_(j) wavelength (nm) Re(chi) (e^2*a_0^2/eV) Im(chi) (e^2*a_0^2/eV)")')
      ENDIF
      !
@@ -216,12 +203,12 @@ SUBROUTINE do_spectrum()
      omega(1) = omega(2)
      omega(2) = omega(3)
      !
-     IF(units == 0) THEN
-        omega(3) = start
-     ELSEIF(units == 1) THEN
-        omega(3) = start/rytoev
-     ELSEIF(units == 2) THEN
-        omega(3) = rytonm/start
+     IF(which_unit == 0) THEN
+        omega(3) = xmin
+     ELSEIF(which_unit == 1) THEN
+        omega(3) = xmin/rytoev
+     ELSEIF(which_unit == 2) THEN
+        omega(3) = rytonm/xmin
      ENDIF
      !
      !-------------------------------------------------------------!
@@ -234,34 +221,34 @@ SUBROUTINE do_spectrum()
         !
         ! Calculation of the susceptibility
         !
-        CALL calc_chi(omega(3),epsil,green(:,:))
+        CALL calc_chi(omega(3),broad,green(:,:))
         !
-        IF(units == 1 .OR. units == 2) THEN
+        IF(which_unit == 1 .OR. which_unit == 2) THEN
            green(:,:) = green(:,:)/rytoev
         ENDIF
         !
         DO ip = 1,n_ipol
            DO ip2 = 1,n_ipol
               WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-              & ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
+              & ip2, ip, xmin, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            ENDDO
         ENDDO
         !
         alpha_temp(3) = omega(3) * AIMAG(green(1,1)+green(2,2)+green(3,3))/(pi*3._DP)
         !
-        IF(units == 1 .OR. units == 2) THEN
+        IF(which_unit == 1 .OR. which_unit == 2) THEN
            alpha_temp(3) = alpha_temp(3)*rytoev
         ENDIF
         !
         ! alpha is ready
         !
-        WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
+        WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') xmin, alpha_temp(3)
         !
         ! This is for the f-sum rule
         !
-        f_sum = increment*alpha_temp(3)/3._DP
+        f_sum = dx*alpha_temp(3)/3._DP
         !
-        start = start + increment
+        xmin = xmin + dx
         !
      ENDIF
      !
@@ -269,26 +256,26 @@ SUBROUTINE do_spectrum()
      !                       OMEGA LOOP                             !
      !--------------------------------------------------------------!
      !
-     DO WHILE(start < end)
+     DO WHILE(xmin < xmax)
         !
         ! Units conversion and omega history
         !
         omega(1) = omega(2)
         omega(2) = omega(3)
         !
-        IF(units == 0) THEN
-           omega(3) = start
-        ELSEIF(units == 1) THEN
-           omega(3) = start/rytoev
-        ELSEIF(units == 2) THEN
-           omega(3) = rytonm/start
+        IF(which_unit == 0) THEN
+           omega(3) = xmin
+        ELSEIF(which_unit == 1) THEN
+           omega(3) = xmin/rytoev
+        ELSEIF(which_unit == 2) THEN
+           omega(3) = rytonm/xmin
         ENDIF
         !
         ! Calculation of the susceptibility for a given frequency omega.
         !
-        CALL calc_chi(omega(3),epsil,green(:,:))
+        CALL calc_chi(omega(3),broad,green(:,:))
         !
-        IF(units == 1 .OR. units == 2) THEN
+        IF(which_unit == 1 .OR. which_unit == 2) THEN
            green(:,:) = green(:,:)/rytoev
         ENDIF
         !
@@ -297,9 +284,9 @@ SUBROUTINE do_spectrum()
         DO ip = 1,n_ipol
            DO ip2 = 1,n_ipol
               IF(n_ipol == 3) WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-                              & ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
+                              & ip2, ip, xmin, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
               IF(n_ipol == 1) WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-                              & ipol, ipol, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
+                              & ipol, ipol, xmin, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            ENDDO
         ENDDO
         !
@@ -311,20 +298,20 @@ SUBROUTINE do_spectrum()
            alpha_temp(2) = alpha_temp(3)
            alpha_temp(3) = omega(3) * AIMAG(green(1,1)+green(2,2)+green(3,3))/(pi*3._DP)
            !
-           IF(units == 1 .OR. units == 2) THEN
+           IF(which_unit == 1 .OR. which_unit == 2) THEN
               alpha_temp(3) = alpha_temp(3)*rytoev
            ENDIF
            !
            ! alpha is ready
            !
-           WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
+           WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') xmin, alpha_temp(3)
            !
            IF(is_peak(omega(3),alpha_temp(3))) &
-               WRITE(stdout,'(5x,"Possible peak at ",F15.8," Ry; Intensity=",E11.2)') omega(1),alpha_temp(1)
+           & WRITE(stdout,'(5x,"Possible peak at ",F15.8," Ry; Intensity=",E11.2)') omega(1),alpha_temp(1)
            !
            ! f-sum rule
            !
-           f_sum = f_sum + integrator(increment,alpha_temp(3))
+           f_sum = f_sum + integrator(dx,alpha_temp(3))
            !
            ! Perceived color analysis
            !
@@ -342,7 +329,7 @@ SUBROUTINE do_spectrum()
            !
         ENDIF
         !
-        start = start + increment
+        xmin = xmin + dx
         !
      ENDDO
      !
@@ -360,26 +347,26 @@ SUBROUTINE do_spectrum()
         !
         ! Units conversion
         !
-        IF(units == 0) THEN
-           omega(3) = start
-        ELSEIF(units == 1) THEN
-           omega(3) = start/rytoev
-        ELSEIF(units == 2) THEN
-           omega(3) = rytonm/start
+        IF(which_unit == 0) THEN
+           omega(3) = xmin
+        ELSEIF(which_unit == 1) THEN
+           omega(3) = xmin/rytoev
+        ELSEIF(which_unit == 2) THEN
+           omega(3) = rytonm/xmin
         ENDIF
         !
         ! Calculation of the susceptibility
         !
-        CALL calc_chi(omega(3),epsil,green(:,:))
+        CALL calc_chi(omega(3),broad,green(:,:))
         !
-        IF(units == 1 .OR. units == 2) THEN
+        IF(which_unit == 1 .OR. which_unit == 2) THEN
            green(:,:) = green(:,:)/rytoev
         ENDIF
         !
         DO ip = 1,n_ipol
            DO ip2 = 1,n_ipol
               WRITE(iun1,'(5x,"chi_",i1,"_",i1,"=",2x,3(e15.8,2x))') &
-              & ip2, ip, start, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
+              & ip2, ip, xmin, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
            ENDDO
         ENDDO
         !
@@ -387,17 +374,17 @@ SUBROUTINE do_spectrum()
         !
         alpha_temp(3) = omega(3) * AIMAG(green(1,1)+green(2,2)+green(3,3))/(pi*3._DP)
         !
-        IF(units == 1 .OR. units == 2) THEN
+        IF(which_unit == 1 .OR. which_unit == 2) THEN
            alpha_temp(3) = alpha_temp(3)*rytoev
         ENDIF
         !
         ! alpha is ready
         !
-        WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') start, alpha_temp(3)
+        WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') xmin, alpha_temp(3)
         !
         ! alpha is ready
         !
-        f_sum = f_sum + increment*alpha_temp(3)/3._DP
+        f_sum = f_sum + dx*alpha_temp(3)/3._DP
         !
      ENDIF
      !
@@ -430,14 +417,14 @@ SUBROUTINE do_spectrum()
               ! First the degradation toward the end
               !
               IF(wl > 700._DP) THEN
-                 scale = 0.3_DP+0.7_DP*(780._DP-wl)/(780._DP-700._DP)
+                 scaling = 0.3_DP+0.7_DP*(780._DP-wl)/(780._DP-700._DP)
               ELSEIF(wl < 420._DP) THEN
-                 scale = 0.3_DP+0.7_DP*(wl-380._DP)/(420._DP-380._DP)
+                 scaling = 0.3_DP+0.7_DP*(wl-380._DP)/(420._DP-380._DP)
               ELSE
-                 scale = 1._DP
+                 scaling = 1._DP
               ENDIF
               !
-              alpha_temp(:) = scale*alpha_temp(:)
+              alpha_temp(:) = scaling*alpha_temp(:)
               !
               ! Then the data from absorbtion spectrum
               !
@@ -471,17 +458,17 @@ SUBROUTINE do_spectrum()
      !
      ! f-sum rule
      !
-     start = 0._DP
+     xmin = 0._DP
      f_sum = 0._DP
      !
-     DO WHILE(start < end)
-        f_sum = f_sum + integrator(increment,start)
-        start = start + increment
+     DO WHILE(xmin < xmax)
+        f_sum = f_sum + integrator(dx,xmin)
+        xmin = xmin + dx
      ENDDO
      !
-     f_sum = f_sum + increment*start/3._DP
+     f_sum = f_sum + dx*xmin/3._DP
      !
-     WRITE(stdout,'(5x,"Integral test:",F15.8,"  Actual: ",F15.8:)') f_sum, 0.5_DP*start*start
+     WRITE(stdout,'(5x,"Integral test:",F15.8,"  Actual: ",F15.8:)') f_sum, 0.5_DP*xmin*xmin
      !
      ! Deallocations
      !
@@ -612,7 +599,7 @@ CONTAINS
     IMPLICIT NONE
     !
     INTEGER :: iun, ierr, ival
-    INTEGER :: nipol_input_tmp, n_lanczos_tmp, nspin_tmp
+    INTEGER :: n_lanczos_tmp, nspin_tmp
     CHARACTER(LEN=3) :: ipol_label_tmp
     REAL(DP), ALLOCATABLE :: beta_store_tmp(:,:)
     COMPLEX(DP), ALLOCATABLE :: zeta_store_tmp(:,:,:)
@@ -624,85 +611,79 @@ CONTAINS
     INTEGER :: header(HD_LENGTH)
     INTEGER(i8b) :: offset
     !
-    IF(sym_op == 0) THEN
+    DO ip = 1,n_ipol
        !
-       DO ip = 1,n_ipol
-          !
-          WRITE(my_ip,'(i1)') ip
-          fname = TRIM(wbse_save_dir)//'/summary.'//my_ip//'.json'
-          !
-          CALL json%initialize()
-          CALL json%load(filename=fname)
-          !
-          CALL json%get('nipol_input',ival,found)
-          IF(found) nipol_input_tmp = ival
-          CALL json%get('ipol_label',cval,found)
-          IF(found) ipol_label_tmp = cval
-          CALL json%get('n_lanczos',ival,found)
-          IF(found) n_lanczos_tmp = ival
-          CALL json%get('nspin',ival,found)
-          IF(found) nspin_tmp = ival
-          !
-          CALL json%destroy()
-          !
-          WRITE(stdout,*)
-          WRITE(stdout,'(5x,a)') 'Reading beta, gamma, zeta of the polarzation ' &
-          & //TRIM(ipol_label_tmp)//' from file '//TRIM(fname)
-          !
-          IF(n_lanczos_tmp < itermax0) THEN
-             CALL errore('read_b_g_z_file','Error in lriter_stop < itermax0, reduce itermax0',1)
-          ENDIF
-          !
-          ALLOCATE(beta_store_tmp(n_lanczos_tmp,nspin_tmp))
-          ALLOCATE(zeta_store_tmp(3,n_lanczos_tmp,nspin_tmp))
-          !
-          WRITE(my_ip,'(i1)') ip
-          fname = TRIM(wbse_save_dir)//'/bgz.'//my_ip//'.dat'
-          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
-          IF(ierr /= 0) THEN
-             CALL errore('lanczos_restart_read','Cannot read file:'//TRIM(fname),1)
-          ENDIF
-          !
-          offset = 1
-          READ(iun,POS=offset) header
-          IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-             CALL errore('lanczos_restart_read','Unknown file format:'//TRIM(fname),1)
-          ENDIF
-          IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
-             .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-             CALL errore('lanczos_restart_read','Endianness mismatch:'//TRIM(fname),1)
-          ENDIF
-          !
-          offset = 1+HD_LENGTH*SIZEOF(header(1))
-          READ(iun,POS=offset) beta_store_tmp(1:n_lanczos_tmp,1:nspin_tmp)
-          offset = offset+SIZE(beta_store_tmp)*SIZEOF(beta_store_tmp(1,1))
-          READ(iun,POS=offset) zeta_store_tmp(1:3,1:n_lanczos_tmp,1:nspin_tmp)
-          CLOSE(iun)
-          !
-          IF(nspin_tmp == 1) spin_channel = 1
-          !
-          norm0(ip)                    = beta_store_tmp(1,spin_channel)
-          beta_store(ip,1:itermax0-1)  = beta_store_tmp(2:itermax0,spin_channel)
-          beta_store(ip,itermax0)      = beta_store_tmp(itermax0,spin_channel)
-          !
-          IF(n_ipol == 1) THEN
-             zeta_store(1,1,1:itermax0) = zeta_store_tmp(ipol,1:itermax0,spin_channel)
-          ELSE
-             zeta_store(ip,:,1:itermax0) = zeta_store_tmp(:,1:itermax0,spin_channel)
-          ENDIF
-          !
-          DEALLOCATE(beta_store_tmp)
-          DEALLOCATE(zeta_store_tmp)
-          !
-       ENDDO
+       WRITE(my_ip,'(i1)') ip
+       fname = TRIM(wbse_save_dir)//'/summary.'//my_ip//'.json'
        !
-       IF(nspin_tmp == 1) degspin = 2
-       IF(nspin_tmp == 2) degspin = 1
+       CALL json%initialize()
+       CALL json%load(filename=fname)
        !
-       beta_store(:,itermax0+1:itermax)   = 0._DP
-       zeta_store(:,:,itermax0+1:itermax) = (0._DP,0._DP)
+       CALL json%get('ipol_label',cval,found)
+       IF(found) ipol_label_tmp = cval
+       CALL json%get('n_lanczos',ival,found)
+       IF(found) n_lanczos_tmp = ival
+       CALL json%get('nspin',ival,found)
+       IF(found) nspin_tmp = ival
        !
-    ENDIF
+       CALL json%destroy()
+       !
+       WRITE(stdout,*)
+       WRITE(stdout,'(5x,a)') 'Reading beta, gamma, zeta of the polarzation ' &
+       & //TRIM(ipol_label_tmp)//' from file '//TRIM(fname)
+       !
+       IF(n_lanczos_tmp < n_lanczos_to_use) THEN
+          CALL errore('read_b_g_z_file','n_lanczos_to_use > n_lanczos, reduce n_lanczos_to_use',1)
+       ENDIF
+       !
+       ALLOCATE(beta_store_tmp(n_lanczos_tmp,nspin_tmp))
+       ALLOCATE(zeta_store_tmp(3,n_lanczos_tmp,nspin_tmp))
+       !
+       WRITE(my_ip,'(i1)') ip
+       fname = TRIM(wbse_save_dir)//'/bgz.'//my_ip//'.dat'
+       OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
+       IF(ierr /= 0) THEN
+          CALL errore('read_b_g_z_file','Cannot read file:'//TRIM(fname),1)
+       ENDIF
+       !
+       offset = 1
+       READ(iun,POS=offset) header
+       IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
+          CALL errore('read_b_g_z_file','Unknown file format:'//TRIM(fname),1)
+       ENDIF
+       IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
+          .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
+          CALL errore('read_b_g_z_file','Endianness mismatch:'//TRIM(fname),1)
+       ENDIF
+       !
+       offset = 1+HD_LENGTH*SIZEOF(header(1))
+       READ(iun,POS=offset) beta_store_tmp(1:n_lanczos_tmp,1:nspin_tmp)
+       offset = offset+SIZE(beta_store_tmp)*SIZEOF(beta_store_tmp(1,1))
+       READ(iun,POS=offset) zeta_store_tmp(1:3,1:n_lanczos_tmp,1:nspin_tmp)
+       CLOSE(iun)
+       !
+       IF(nspin_tmp == 1) spin_channel = 1
+       !
+       norm0(ip) = beta_store_tmp(1,spin_channel)
+       beta_store(ip,1:n_lanczos_to_use-1) = beta_store_tmp(2:n_lanczos_to_use,spin_channel)
+       beta_store(ip,n_lanczos_to_use) = beta_store_tmp(n_lanczos_to_use,spin_channel)
+       !
+       IF(n_ipol == 1) THEN
+          zeta_store(1,1,1:n_lanczos_to_use) = zeta_store_tmp(ipol,1:n_lanczos_to_use,spin_channel)
+       ELSE
+          zeta_store(ip,:,1:n_lanczos_to_use) = zeta_store_tmp(:,1:n_lanczos_to_use,spin_channel)
+       ENDIF
+       !
+       DEALLOCATE(beta_store_tmp)
+       DEALLOCATE(zeta_store_tmp)
+       !
+    ENDDO
+    !
+    IF(nspin_tmp == 1) degspin = 2
+    IF(nspin_tmp == 2) degspin = 1
+    !
+    beta_store(:,n_lanczos_to_use+1:itermax) = 0._DP
+    zeta_store(:,:,n_lanczos_to_use+1:itermax) = (0._DP,0._DP)
     !
   END SUBROUTINE
   !
@@ -714,7 +695,7 @@ CONTAINS
     !
     skip = .FALSE.
     !
-    IF(TRIM(extrapolation) /= 'no') THEN
+    IF(n_extrapolation > 0) THEN
        !
        average = 0._DP
        av_amplitude = 0._DP
@@ -724,7 +705,7 @@ CONTAINS
           WRITE(stdout,'(/5x,"Polarization direction:",I1)') ip
           counter = 0
           !
-          DO i = 151,itermax0
+          DO i = 151,n_lanczos_to_use
              IF(skip) THEN
                 skip = .FALSE.
                 CYCLE
@@ -758,10 +739,8 @@ CONTAINS
           !
        ENDDO
        !
-       IF(TRIM(extrapolation) == 'constant') av_amplitude = 0
-       !
        DO ip = 1,n_ipol
-          DO i = itermax0,itermax
+          DO i = n_lanczos_to_use,itermax
              IF(MOD(i,2) == 1) THEN
                 beta_store(ip,i) = average(ip)+av_amplitude(ip)
              ELSE

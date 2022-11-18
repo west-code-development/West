@@ -16,8 +16,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   USE cell_base,            ONLY : omega
   USE io_push,              ONLY : io_push_title
   USE types_coulomb,        ONLY : pot3D
-  USE westcom,              ONLY : wbse_init_save_dir,chi_kernel,l_xcchi,l_use_localise_repr,&
-                                 & overlap_thr
+  USE westcom,              ONLY : wbse_init_save_dir,chi_kernel,l_local_repr,overlap_thr
   USE control_flags,        ONLY : gamma_only
   USE wavefunctions,        ONLY : evc,psic
   USE fft_base,             ONLY : dffts
@@ -42,17 +41,17 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   INTEGER, INTENT(IN) :: iks,ikq,current_spin,nbndval
   LOGICAL, INTENT(IN) :: l_restart_calc
   !
-  INTEGER :: ibnd, jbnd, tmp_size
-  INTEGER :: il1, ig1, ir, do_index
+  INTEGER :: ibnd,jbnd,tmp_size
+  INTEGER :: il1,ig1,ir,do_index
   REAL(DP):: ovl_value
   REAL(DP), ALLOCATABLE :: rho_aux(:)
   REAL(DP), ALLOCATABLE :: ovl_matrix(:,:)
   INTEGER, ALLOCATABLE :: restart_matrix(:)
   INTEGER, ALLOCATABLE :: index_matrix(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc_loc(:,:)
-  COMPLEX(DP), ALLOCATABLE :: dvg(:), psic_aux(:)
+  COMPLEX(DP), ALLOCATABLE :: dvg(:),psic_aux(:)
   !
-  INTEGER :: iu, ig, stat
+  INTEGER :: iu,ig,stat
   CHARACTER(LEN=:), ALLOCATABLE :: lockfile
   CHARACTER(LEN=:), ALLOCATABLE :: fname
   REAL(DP), ALLOCATABLE :: aux_rr(:)
@@ -60,13 +59,14 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   REAL(DP), ALLOCATABLE :: frspin(:,:)
   !
   CHARACTER :: my_spin
-  CHARACTER(LEN=6) :: my_labeliq, my_labelik
-  CHARACTER(LEN=6) :: my_label1, my_label2
-  CHARACTER(LEN=256) :: kernel, driver
+  CHARACTER(LEN=6) :: my_labeliq,my_labelik
+  CHARACTER(LEN=6) :: my_label1,my_label2
+  CHARACTER(LEN=256) :: kernel,driver
   !
   REAL(DP), EXTERNAL :: get_clock
   CHARACTER(20), EXTERNAL :: human_readable_time
   !
+  LOGICAL :: l_xcchi
   LOGICAL :: calc_is_done
   LOGICAL :: l_skip
   REAL(DP), EXTERNAL :: DDOT
@@ -109,7 +109,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   index_matrix(:,:) = 0
   !
-  IF(l_use_localise_repr) THEN
+  IF(l_local_repr) THEN
      ALLOCATE(evc_loc(npwx,nbndval))
      CALL wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart_calc)
   ENDIF
@@ -196,7 +196,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
            ALLOCATE(dvg(npwx))
            !
            IF(gamma_only) THEN
-              IF(l_use_localise_repr) THEN
+              IF(l_local_repr) THEN
                  CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
               ELSE
                  CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
@@ -204,7 +204,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
               !
               rho_aux(:) = REAL(psic,KIND=DP) * AIMAG(psic)
            ELSE
-              IF(l_use_localise_repr) THEN
+              IF(l_local_repr) THEN
                  CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave',igk_k(:,1)) ! only 1 kpoint
                  CALL single_invfft_k(dffts,npw,npwx,evc_loc(:,jbnd),psic_aux,'Wave',igk_k(:,1)) ! only 1 kpoint
               ELSE

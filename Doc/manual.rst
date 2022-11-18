@@ -1019,7 +1019,7 @@ wbse_control
        - "N" : None. Choice valid for isolated systems.
        - "C" : Include long-wavelength limit. Choice valid for condensed systems.
 
-.. data:: epsinfty
+.. data:: wbse_epsinfty
 
 .. list-table::
    :widths: 10 90

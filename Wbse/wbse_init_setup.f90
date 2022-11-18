@@ -14,10 +14,9 @@
 SUBROUTINE wbse_init_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,          ONLY : localization,l_use_localise_repr,l_use_bisection_thr,&
-                             & l_use_ecutrho,wbse_init_save_dir
-  USE kinds,            ONLY : DP
-  USE types_coulomb,    ONLY : pot3D
+  USE westcom,        ONLY : localization,l_local_repr,l_bisect_thr,l_use_ecutrho,wbse_init_save_dir
+  USE kinds,          ONLY : DP
+  USE types_coulomb,  ONLY : pot3D
   !
   IMPLICIT NONE
   !
@@ -27,11 +26,11 @@ SUBROUTINE wbse_init_setup()
   !
   SELECT CASE(TRIM(localization))
   CASE('N','n')
-     l_use_localise_repr = .FALSE.
-     l_use_bisection_thr = .FALSE.
+     l_local_repr = .FALSE.
+     l_bisect_thr = .FALSE.
   CASE('B','b')
-     l_use_localise_repr = .TRUE.
-     l_use_bisection_thr = .TRUE.
+     l_local_repr = .TRUE.
+     l_bisect_thr = .TRUE.
   END SELECT
   !
   l_use_ecutrho = .FALSE.

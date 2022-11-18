@@ -24,9 +24,9 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,l_diag_term_only,scissor_ope,nbndval0x,&
-                                 & l_bse_calculation,l_qp_correction,l_bse_triplet,l_lanczos,&
-                                 & sigma_c_head,sigma_x_head,et_qp
+  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,scissor_ope,nbndval0x,l_bse_calculation,&
+                                 & l_qp_correction,l_bse_triplet,l_lanczos,sigma_c_head,&
+                                 & sigma_x_head,et_qp
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
   !
@@ -93,7 +93,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
-     IF((.NOT. l_diag_term_only) .AND. (.NOT. l_bse_triplet)) THEN
+     IF(.NOT. l_bse_triplet) THEN
         !
         IF(gamma_only) THEN
            !
@@ -218,10 +218,8 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
         CALL mp_sum(evc1_new(:,:,iks),inter_bgrp_comm)
      ENDIF
      !
-     IF(.NOT. l_diag_term_only) THEN
-        IF(l_bse_calculation) THEN
-           CALL wbse_bse_kernel(current_spin, nbndval, evc1, evc1_new(:,:,iks))
-        ENDIF
+     IF(l_bse_calculation) THEN
+        CALL wbse_bse_kernel(current_spin, nbndval, evc1, evc1_new(:,:,iks))
      ENDIF
      !
      IF(gamma_only) THEN

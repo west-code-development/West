@@ -15,7 +15,6 @@ MODULE scratch_area
   !-----------------------------------------------------------------------
   !
   USE kinds,     ONLY : DP
-  USE fft_types, ONLY : fft_type_descriptor
   !
   IMPLICIT NONE
   !
@@ -91,7 +90,8 @@ MODULE scratch_area
   !
   ! I/O
   !
-  TYPE(fft_type_descriptor) :: dfft_io
+  INTEGER, PARAMETER :: iuwfc = 20
+  INTEGER :: lrwfc
   !
 END MODULE
 !
@@ -289,16 +289,15 @@ MODULE wbse_init_center
   ! INPUT FOR wbse_init
   !
   CHARACTER(LEN=1) :: wbse_init_calculation
-  CHARACTER(LEN=256) :: localization
-  CHARACTER(LEN=256) :: chi_kernel
-  CHARACTER(LEN=256) :: wfc_from_qbox
-  CHARACTER(LEN=256) :: bisection_info ! bisection info file name, extension is spin channel
+  CHARACTER(LEN=1) :: localization
+  CHARACTER(LEN=20) :: chi_kernel
+  CHARACTER(LEN=512) :: wfc_from_qbox
+  CHARACTER(LEN=512) :: bisection_info ! bisection info file name, extension is spin channel
                                        ! bisection_info = 'info.bis', default file = 'info.bis.1'
   REAL(DP) :: overlap_thr              ! overlap threshold for index_matrix calculation in wbse_init_qboxcoupling
   INTEGER :: spin_channel
-  LOGICAL :: l_use_localise_repr = .FALSE.
-  LOGICAL :: l_use_bisection_thr = .FALSE.
-  LOGICAL :: l_xcchi = .FALSE.         ! XC CHI in wbse_init_qboxcoupling
+  LOGICAL :: l_local_repr
+  LOGICAL :: l_bisect_thr
   !
   ! Common workspace
   !
@@ -317,8 +316,8 @@ MODULE wbse_center
   ! INPUT FOR wbse_control
   !
   CHARACTER(LEN=1) :: wbse_calculation
-  CHARACTER(LEN=256) :: solver
-  CHARACTER(LEN=256) :: qp_correction
+  CHARACTER(LEN=20) :: solver
+  CHARACTER(LEN=512) :: qp_correction
   REAL(DP) :: scissor_ope
   INTEGER :: n_liouville_times
   INTEGER :: n_liouville_eigen
@@ -329,21 +328,20 @@ MODULE wbse_center
   CHARACTER(LEN=3) :: ipol_input
   LOGICAL :: l_qp_correction
   LOGICAL :: l_bse_calculation ! BSE True, TDDFT False
-  LOGICAL :: l_diag_term_only = .FALSE.
   LOGICAL :: l_preconditioning
-  REAL(DP) :: epsinfty
-  CHARACTER(LEN=256) :: spin_excitation
+  REAL(DP) :: wbse_epsinfty
+  CHARACTER(LEN=1) :: spin_excitation
   !
   ! FOR global variables
   !
   INTEGER :: nbndval0x
-  LOGICAL :: l_lanczos     = .FALSE.
-  LOGICAL :: l_davidson    = .FALSE.
-  LOGICAL :: l_bse_triplet = .FALSE.
+  LOGICAL :: l_lanczos
+  LOGICAL :: l_davidson
+  LOGICAL :: l_bse_triplet
   LOGICAL :: l_reduce_io
   INTEGER :: n_tau
-  REAL(DP) :: sigma_c_head = 0._DP
-  REAL(DP) :: sigma_x_head = 0._DP
+  REAL(DP) :: sigma_c_head
+  REAL(DP) :: sigma_x_head
   !
   ! FOR global Lanzcos diago vars
   !
@@ -357,7 +355,6 @@ MODULE wbse_center
   COMPLEX(DP), ALLOCATABLE :: dvg_exc(:,:,:,:)
   !
   REAL(DP),    ALLOCATABLE :: et_qp(:,:)
-  COMPLEX(DP), ALLOCATABLE :: evc_ks(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
   REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
   INTEGER,     ALLOCATABLE :: size_index_matrix_lz(:)
@@ -383,35 +380,17 @@ MODULE wbsepp_center
   !
   CHARACTER(LEN=4) :: wbsepp_calculation
   !
-  INTEGER :: itermax
-  INTEGER :: itermax0
-  INTEGER :: ipol
-  INTEGER :: sym_op
-  INTEGER :: units
-  CHARACTER(LEN=60) :: extrapolation
-  REAL(DP) :: start
-  REAL(DP) :: end
-  REAL(DP) :: increment
-  REAL(DP) :: epsil
-  REAL(DP) :: r0_input(3)
   INTEGER :: iexc_plot
+  INTEGER :: n_lanczos_to_use
+  INTEGER :: n_extrapolation
+  INTEGER, PARAMETER :: which_unit = 0
+  REAL(DP) :: range(3)
+  REAL(DP) :: broad
+  REAL(DP) :: wbsepp_r0(3)
   !
   ! Common workspace
   !
   CHARACTER(LEN=512) :: wbsepp_save_dir
-  !
-END MODULE
-!
-!
-MODULE wan_center
-  !
-  USE kinds, ONLY : DP
-  !
-  IMPLICIT NONE
-  !
-  REAL(DP), ALLOCATABLE :: wanc(:,:)
-  REAL(DP), ALLOCATABLE :: wanu(:,:)
-  INTEGER :: wantot
   !
 END MODULE
 !
@@ -435,23 +414,13 @@ MODULE occ_center
                                                ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
   LOGICAL               :: l_frac_occ          ! If .true. then occupations may be fractional
                                                ! nbnd_occ_full == nbnd_occ when l_frac_occ is .false.
-  REAL(DP)              :: docc_thr = 0.001_DP ! Threshold for comparing occupation numbers
-  REAL(DP)              :: de_thr = 0.001_DP   ! Threshold for comparing single-particle energies
+  REAL(DP), PARAMETER   :: docc_thr = 0.001_DP ! Threshold for comparing occupation numbers
+  REAL(DP), PARAMETER   :: de_thr = 0.001_DP   ! Threshold for comparing single-particle energies
                                                ! When two orbitals' energies differ by less than this threshold,
                                                ! they are considered degenerate. An error will be raised if two
                                                ! orbitals with different occupation numbers are degenerate in
                                                ! the fractional occupation case. See subroutine dfpt and
                                                ! compute_pt1_dpsi for details.
-  !
-END MODULE
-!
-!
-MODULE io_unit_numbers
-  !
-  IMPLICIT NONE
-  !
-  INTEGER, PARAMETER :: iuwfc = 20
-  INTEGER :: lrwfc
   !
 END MODULE
 !
@@ -464,11 +433,9 @@ MODULE westcom
   USE server_center
   USE wfreq_center
   USE westpp_center
-  USE wan_center
-  USE occ_center
-  USE io_unit_numbers
   USE wbse_init_center
   USE wbse_center
   USE wbsepp_center
+  USE occ_center
   !
 END MODULE

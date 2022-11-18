@@ -14,15 +14,14 @@
 SUBROUTINE wbse_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,          ONLY : localization,l_use_localise_repr,l_use_bisection_thr,&
-                             & macropol_calculation,l_macropol,solver,l_bse_calculation,&
-                             & wbse_calculation,l_davidson,l_lanczos,qp_correction,l_qp_correction,&
-                             & spin_excitation,l_bse_triplet,wstat_calculation,n_pdep_times,&
-                             & n_pdep_eigen,n_pdep_basis,n_pdep_maxiter,n_pdep_read_from_file,&
-                             & trev_pdep_rel,trev_pdep,n_liouville_times,n_liouville_eigen,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville_rel,&
-                             & trev_liouville,alphapv_dfpt,l_use_ecutrho,nbndval0x,nbnd_occ,&
-                             & wbse_save_dir
+  USE westcom,          ONLY : localization,l_local_repr,l_bisect_thr,macropol_calculation,&
+                             & l_macropol,solver,l_bse_calculation,wbse_calculation,l_davidson,&
+                             & l_lanczos,qp_correction,l_qp_correction,spin_excitation,&
+                             & l_bse_triplet,wstat_calculation,n_pdep_times,n_pdep_eigen,&
+                             & n_pdep_basis,n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,&
+                             & trev_pdep,n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
+                             & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
+                             & alphapv_dfpt,l_use_ecutrho,nbndval0x,nbnd_occ,wbse_save_dir
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
   !
@@ -34,11 +33,11 @@ SUBROUTINE wbse_setup()
   !
   SELECT CASE(TRIM(localization))
   CASE('N','n')
-     l_use_localise_repr = .FALSE.
-     l_use_bisection_thr = .FALSE.
+     l_local_repr = .FALSE.
+     l_bisect_thr = .FALSE.
   CASE('B','b')
-     l_use_localise_repr = .TRUE.
-     l_use_bisection_thr = .TRUE.
+     l_local_repr = .TRUE.
+     l_bisect_thr = .TRUE.
   END SELECT
   !
   SELECT CASE(macropol_calculation)
@@ -56,8 +55,10 @@ SUBROUTINE wbse_setup()
   SELECT CASE(wbse_calculation)
   CASE('D','d')
      l_davidson = .TRUE.
+     l_lanczos = .FALSE.
   CASE('L','l')
-     l_lanczos  = .TRUE.
+     l_lanczos = .TRUE.
+     l_davidson = .FALSE.
   END SELECT
   !
   IF (TRIM(qp_correction) == '') THEN
@@ -126,7 +127,7 @@ SUBROUTINE bse_start()
   USE io_global,        ONLY : stdout
   USE pwcom,            ONLY : isk,nks,npwx
   USE westcom,          ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
-                             & sigma_c_head,sigma_x_head,epsinfty,l_use_localise_repr,overlap_thr,&
+                             & sigma_c_head,sigma_x_head,wbse_epsinfty,l_local_repr,overlap_thr,&
                              & u_matrix,ovl_matrix,size_index_matrix_lz,index_matrix_lz
   USE lsda_mod,         ONLY : nspin
   USE constants,        ONLY : e2,pi
@@ -149,13 +150,13 @@ SUBROUTINE bse_start()
   ! compute macroscopic term, it needs macroscopic dielectric constant
   ! from input.
   !
-  sigma_c_head = ((1._DP/epsinfty) - 1._DP) * (2._DP*e2/pi) * ((6._DP*pi*pi/omega)**(1._DP/3._DP))
+  sigma_c_head = ((1._DP/wbse_epsinfty) - 1._DP) * (2._DP*e2/pi) * ((6._DP*pi*pi/omega)**(1._DP/3._DP))
   !
   WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:",f9.5)') sigma_c_head
   !
   ! allocate and read unitary matrix and overlap matrix, if any
   !
-  IF(l_use_localise_repr) THEN
+  IF(l_local_repr) THEN
      !
      ALLOCATE(u_matrix(nbndval0x,nbndval0x,nspin))
      ALLOCATE(ovl_matrix(nbndval0x,nbndval0x,nspin))
@@ -188,13 +189,13 @@ SUBROUTINE bse_start()
         !
         DO ibnd = 1,nbndval
            DO jbnd = 1,nbndval
-              IF(l_use_localise_repr) THEN
+              IF(l_local_repr) THEN
                  ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
               ELSE
                  ovl_value = 0._DP
               ENDIF
               !
-              IF(l_use_localise_repr) THEN
+              IF(l_local_repr) THEN
                  IF(ovl_value >= overlap_thr) THEN
                     do_index = do_index + 1
                     index_matrix_lz(do_index,1,current_spin) = ibnd
@@ -235,7 +236,7 @@ SUBROUTINE bse_start()
 !        DO alnd = 1,n_pdep_eigen
 !           DO ibnd = 1,nbndval
 !              DO jbnd = 1,nbndval
-!                 IF(l_use_localise_repr) THEN
+!                 IF(l_local_repr) THEN
 !                    ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
 !                 ELSE
 !                    ovl_value = 0._DP

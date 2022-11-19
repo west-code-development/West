@@ -19,6 +19,7 @@ The complete **WEST** reference for input parameters.
 
 |
 
+
 ----------
 input_west
 ----------
@@ -529,7 +530,7 @@ wfreq_control
    * - **Default**
      - 204
    * - **Description**
-     - Number of frequecies used to plot the spectral function (runlevel "P"), sampling the interval [ecut_spectralf[0],ecut_spectralf[1]].
+     - Number of frequecies used to plot the spectral function (the "P" runlevel), sampling the interval [ecut_spectralf[0],ecut_spectralf[1]].
 
 |
 
@@ -796,19 +797,6 @@ wbse_init_control
    * - **Description**
      - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed.
 
-.. data:: spin_channel
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - int
-   * - **Default**
-     - 0
-   * - **Description**
-     - Determine which spin channel to compute.
-
 |
 
 
@@ -998,6 +986,7 @@ wbse_control
      - "XX"
    * - **Description**
      - Determine which components of the polarizability tensor (alpha) are computed:
+
        - "XX": alpha_xx.
        - "YY": alpha_yy.
        - "ZZ": alpha_zz.
@@ -1073,3 +1062,136 @@ wbse_control
      - True
    * - **Description**
      - Speed up the Lanczos iterations by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.
+
+|
+
+
+--------------
+wbsepp_control
+--------------
+
+.. data:: wbsepp_calculation
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "S"
+   * - **Description**
+     - Available options are:
+
+       - "S" : Output absorption spectrum.
+       - "E" : Output excition state.
+       - "R" : Output density response to exciton state.
+
+.. data:: n_liouville_read_from_file
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - Number of Liouville eigenvectors that can be read from file. Used in the "E" and "R" runlevels.
+
+.. data:: ipol_input
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "XX"
+   * - **Description**
+     - Determine which components of the absorption spectrum are computed in the "S" runlevel:
+
+       - "XX"
+       - "YY"
+       - "ZZ"
+       - "XYZ"
+
+.. data:: wbsepp_r0
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - 3-dim list of floats (a vector)
+   * - **Default**
+     - [0.0, 0.0, 0.0]
+   * - **Description**
+     - Position (in a.u.) of the hole state for the plot of exciton state (the "E" runlevel).
+
+.. data:: iexc_plot
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1
+   * - **Description**
+     - Determine which exciton state to be used in the "E" and "R" runlevels.
+
+.. data:: n_lanczos_to_use
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1000
+   * - **Description**
+     - Number of Lanczos steps to be used to compute the absorption spectrum (the "S" runlevel).
+
+.. data:: n_extrapolation
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - Number of extrapolation steps to be used to compute the absorption spectrum (the "S" runlevel).
+
+.. data:: range
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - 3-dim list of floats (a vector)
+   * - **Default**
+     - [0.0, 2.5, 0.001]
+   * - **Description**
+     - The absorption spectrum is computed from range[0] to range[1], with a step size of range[2] (in Ry). Used in the "S" runlevel.
+
+.. data:: broad
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 0.02
+   * - **Description**
+     - Broadening width (in Ry) used to compute the absorption spectrum (the "S" runlevel).

@@ -25,7 +25,7 @@ PROGRAM wbsepp
   !
   CHARACTER(LEN=9) :: code = 'WBSEPP'
   INTEGER :: i
-  LOGICAL :: lgate(4)
+  LOGICAL :: lgate(3)
   !
   ! *** START ***
   !
@@ -44,17 +44,15 @@ PROGRAM wbsepp
   CALL wbsepp_setup( )
   !
   lgate = .FALSE.
-  DO i = 1, 4
+  DO i = 1, 3
      IF( wbsepp_calculation(i:i) == 's' .OR. wbsepp_calculation(i:i) == 'S' ) lgate(1) = .TRUE. ! Spectrum
      IF( wbsepp_calculation(i:i) == 'e' .OR. wbsepp_calculation(i:i) == 'E' ) lgate(2) = .TRUE. ! Exciton state
      IF( wbsepp_calculation(i:i) == 'r' .OR. wbsepp_calculation(i:i) == 'R' ) lgate(3) = .TRUE. ! Density response
-     IF( wbsepp_calculation(i:i) == 'p' .OR. wbsepp_calculation(i:i) == 'P' ) lgate(4) = .TRUE. ! Eigen decomp
   ENDDO
   !
   IF( lgate(1) ) CALL do_spectrum( )
   IF( lgate(2) ) CALL do_exc( )
   IF( lgate(3) ) CALL do_density_resp( )
-  IF( lgate(4) ) CALL do_eig_decomp( )
   !
   CALL exx_ungo( )
   !

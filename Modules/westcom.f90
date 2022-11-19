@@ -378,7 +378,7 @@ MODULE wbsepp_center
   !
   ! INPUT FOR wbsepp_control
   !
-  CHARACTER(LEN=4) :: wbsepp_calculation
+  CHARACTER(LEN=3) :: wbsepp_calculation
   !
   INTEGER :: iexc_plot
   INTEGER :: n_lanczos_to_use

@@ -19,7 +19,6 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 
 WBSEPP_OBJS = \
 do_density_resp.o \
-do_eig_decomp.o \
 do_exc.o \
 do_spectrum.o \
 wbsepp.o \

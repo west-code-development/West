@@ -63,7 +63,7 @@ CONTAINS
     ! Input from (-i), output from (-o)
     !
     CALL parse_command_arguments()
-    CALL fetch_input_yml(1,(/1/),.FALSE.,.FALSE.)
+    CALL fetch_input_yml(1,(/1/),.FALSE.)
     !
     savedir = TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) // '.' // TRIM(lowercase_string(code)) // '.save/'
     logfile = TRIM(ADJUSTL(savedir)) // TRIM(lowercase_string(code)) // '.json'

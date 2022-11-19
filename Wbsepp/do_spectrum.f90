@@ -11,16 +11,17 @@ SUBROUTINE do_spectrum()
   !
   ! Adapted from QE/TDDFPTsrc/turbo_spectrum.f90
   !
-  USE kinds,               ONLY : DP,i8b
-  USE constants,           ONLY : pi,rytoev,rytonm
-  USE io_global,           ONLY : stdout
-  USE mp_world,            ONLY : world_comm,mpime,root
-  USE mp,                  ONLY : mp_barrier
-  USE westcom,             ONLY : qe_prefix,wbse_save_dir,ipol_input,spin_channel,n_lanczos_to_use,&
-                                & n_extrapolation,which_unit,range,broad
-  USE json_module,         ONLY : json_file
-  USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
-  USE base64_module,       ONLY : islittleendian
+  USE kinds,                 ONLY : DP,i8b
+  USE io_push,               ONLY : io_push_title
+  USE constants,             ONLY : pi,rytoev,rytonm
+  USE io_global,             ONLY : stdout
+  USE mp_world,              ONLY : world_comm,mpime,root
+  USE mp,                    ONLY : mp_barrier
+  USE westcom,               ONLY : qe_prefix,wbse_save_dir,ipol_input,spin_channel,&
+                                  & n_lanczos_to_use,n_extrapolation,which_unit,range,broad
+  USE json_module,           ONLY : json_file
+  USE west_io,               ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
+  USE base64_module,         ONLY : islittleendian
   !
   IMPLICIT NONE
   !
@@ -42,6 +43,8 @@ SUBROUTINE do_spectrum()
   LOGICAL :: skip
   !
   COMPLEX(DP), EXTERNAL :: ZDOTC
+  !
+  CALL io_push_title('Absorption (S)pectrum')
   !
   IF(mpime == root) THEN
      !
@@ -101,7 +104,7 @@ SUBROUTINE do_spectrum()
      ! Spectrum calculation
      !
      WRITE(stdout,'(/5x,"Data ready, starting to calculate observables...")')
-     WRITE(stdout,'(/5x,"Broadening = ",f15.8," Ry")') broad
+     WRITE(stdout,'(/5x,"Broadening =",f15.8," Ry")') broad
      !
      filename = TRIM(qe_prefix) // '.plot_chi.dat'
      filename_plot = TRIM(qe_prefix) // '.abs_spectrum.dat'
@@ -109,27 +112,27 @@ SUBROUTINE do_spectrum()
      WRITE(stdout,'(/5x,"Output file name: ",a)') TRIM(filename)
      WRITE(stdout,'(/5x,"Output file name: ",a)') TRIM(filename_plot)
      !
-     WRITE(stdout,'(/,5x,"chi_i_j: dipole polarizability tensor in units of e^2*a_0^2/energy")')
+     WRITE(stdout,'(/5x,"chi_i_j: dipole polarizability tensor in units of e^2*a_0^2/energy")')
      !
      IF(n_ipol == 3) THEN
-        WRITE(stdout,'(/,5x,"S: oscillator strength in units of 1/energy")')
-        WRITE(stdout,'(/,5x,"S(\hbar \omega) = 2m/( 3 \pi e^2 \hbar) \omega sum_j chi_j_j")')
-        WRITE(stdout,'(/,5x,"S(\hbar \omega) satisfies the f-sum rule: \int_0^\infty dE S(E) = N_el ")')
+        WRITE(stdout,'(/5x,"S: oscillator strength in units of 1/energy")')
+        WRITE(stdout,'(/5x,"S(\hbar \omega) = 2m/( 3 \pi e^2 \hbar) \omega sum_j chi_j_j")')
+        WRITE(stdout,'(/5x,"S(\hbar \omega) satisfies the f-sum rule: \int_0^\infty dE S(E) = N_el")')
      ELSE
-        WRITE(stdout,'(/,5x,"Insufficent info for S")')
+        WRITE(stdout,'(/5x,"Insufficent info for S")')
      ENDIF
      !
      ! The static dipole polarizability / static charge-density susceptibility
      !
-     WRITE(stdout,'(/,5x,"Static dipole polarizability tensor:")')
+     WRITE(stdout,'(/5x,"Static dipole polarizability tensor:")')
      !
      CALL calc_chi(0._DP,broad,green(:,:))
      !
      DO ip = 1,n_ipol
         DO ip2 = 1,n_ipol
-           IF(n_ipol == 3) WRITE(stdout,'(5x,"chi_",i1,"_",i1,"=",2x,e15.8," + i",e15.8)') &
+           IF(n_ipol == 3) WRITE(stdout,'(5x,"chi_",i1,"_",i1," = ",e15.8," + i",e15.8)') &
                            & ip2, ip, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
-           IF(n_ipol == 1) WRITE(stdout,'(5x,"chi_",i1,"_",i1,"=",2x,e15.8," + i",e15.8)') &
+           IF(n_ipol == 1) WRITE(stdout,'(5x,"chi_",i1,"_",i1," = ",e15.8," + i",e15.8)') &
                            & ipol, ipol, REAL(green(ip,ip2),KIND=DP), AIMAG(green(ip,ip2))
         ENDDO
      ENDDO
@@ -264,7 +267,7 @@ SUBROUTINE do_spectrum()
            WRITE(iun2,'(5x,"Trchi(w)=",2x,2(e15.8,2x))') xmin, alpha_temp(3)
            !
            IF(is_peak(omega(3),alpha_temp(3))) &
-           & WRITE(stdout,'(5x,"Possible peak at ",F15.8," Ry; Intensity=",E11.2)') omega(1),alpha_temp(1)
+           & WRITE(stdout,'(5x,"Possible peak at ",f15.8," Ry; Intensity=",e11.2)') omega(1),alpha_temp(1)
            !
            ! f-sum rule
            !
@@ -334,7 +337,7 @@ SUBROUTINE do_spectrum()
      CLOSE(iun1)
      !
      IF(n_ipol == 3) THEN
-        WRITE(stdout,'(5x,"Integral of absorbtion coefficient ",F15.8)') f_sum
+        WRITE(stdout,'(/5x,"Integral of absorbtion coefficient:",f15.8)') f_sum
      ENDIF
      !
      ! f-sum rule
@@ -349,7 +352,8 @@ SUBROUTINE do_spectrum()
      !
      f_sum = f_sum + dx*xmin/3._DP
      !
-     WRITE(stdout,'(5x,"Integral test:",F15.8,"  Actual: ",F15.8:)') f_sum, 0.5_DP*xmin*xmin
+     WRITE(stdout,'(5x,"Integral test:",f15.8,"  Actual:",f15.8:)') f_sum, 0.5_DP*xmin*xmin
+     WRITE(stdout,*)
      !
      ! Deallocations
      !
@@ -506,8 +510,7 @@ CONTAINS
        !
        CALL json%destroy()
        !
-       WRITE(stdout,*)
-       WRITE(stdout,'(5x,a)') 'Reading beta, gamma, zeta of the polarzation ' &
+       WRITE(stdout,'(/5x,a)') 'Reading beta, gamma, zeta of the polarzation ' &
        & //TRIM(ipol_label_tmp)//' from file '//TRIM(fname)
        !
        IF(n_lanczos_tmp < n_lanczos_to_use) THEN
@@ -580,7 +583,7 @@ CONTAINS
        !
        DO ip = 1,n_ipol
           !
-          WRITE(stdout,'(/5x,"Polarization direction:",I1)') ip
+          WRITE(stdout,'(/5x,"Polarization direction: ",I1)') ip
           counter = 0
           !
           DO i = 151,n_lanczos_to_use
@@ -612,8 +615,8 @@ CONTAINS
           av_amplitude(ip) = av_amplitude(ip)/counter
           !
           WRITE(stdout,'(5x,"Lanczos coefficients:")')
-          WRITE(stdout,'(5x,"Average =",3F15.8)') average(ip)
-          WRITE(stdout,'(5x,"Average oscillation amplitude =",F15.8)') av_amplitude(ip)
+          WRITE(stdout,'(5x,"Average =",3f15.8)') average(ip)
+          WRITE(stdout,'(5x,"Average oscillation amplitude =",f15.8)') av_amplitude(ip)
           !
        ENDDO
        !

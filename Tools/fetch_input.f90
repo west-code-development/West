@@ -155,7 +155,6 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         !
         CALL json%add('input.wbsepp_control.wbsepp_calculation',TRIM(wbsepp_calculation))
         CALL json%add('input.wbsepp_control.n_liouville_read_from_file',n_liouville_read_from_file)
-        CALL json%add('input.wbsepp_control.macropol_calculation',macropol_calculation)
         CALL json%add('input.wbsepp_control.ipol_input',TRIM(ipol_input))
         CALL json%add('input.wbsepp_control.spin_channel',spin_channel)
         CALL json%add('input.wbsepp_control.wbsepp_r0',wbsepp_r0)
@@ -171,9 +170,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
   !
 END SUBROUTINE
 !
-SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
+SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   !
-  USE io_push,          ONLY : io_push_title,io_push_value,io_push_bar,io_push_es0,io_push_c512
   USE forpy_mod,        ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,dict_create,&
                              & list,object,cast
   USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
@@ -212,7 +210,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
   INTEGER, INTENT(IN) :: num_drivers
   INTEGER, INTENT(IN) :: driver(num_drivers)
   LOGICAL, INTENT(IN) :: verbose
-  LOGICAL, INTENT(IN) :: debug
   !
   INTEGER :: IERR
   TYPE(tuple) :: args
@@ -224,7 +221,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
   INTEGER :: list_len
   INTEGER :: i
   INTEGER :: nq
-  INTEGER :: numsp
   INTEGER :: n_qp_bands
   CHARACTER(LEN=512), EXTERNAL :: trimcheck
   CHARACTER(LEN=:),ALLOCATABLE :: cvalue
@@ -533,7 +529,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
         !
         IERR = return_dict%getitem(cvalue, 'wbsepp_calculation'); wbsepp_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(n_liouville_read_from_file, 'n_liouville_read_from_file', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'ipol_input'); ipol_input = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
         IERR = return_dict%getitem(tmp_obj, 'wbsepp_r0')
@@ -867,7 +862,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      !
      CALL mp_bcast(wbsepp_calculation,root,world_comm)
      CALL mp_bcast(n_liouville_read_from_file,root,world_comm)
-     CALL mp_bcast(macropol_calculation,root,world_comm)
      CALL mp_bcast(ipol_input,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
      CALL mp_bcast(wbsepp_r0,root,world_comm)
@@ -886,221 +880,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose, debug)
      IF(n_lanczos_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos_to_use',1)
      IF(n_extrapolation == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_extrapolation',1)
      !
-     SELECT CASE(macropol_calculation)
-     CASE('N','n','C','c')
-     CASE DEFAULT
-        CALL errore('fetch_input','Err: macropol_calculation/=(N,C)',1)
-     END SELECT
-     !
      IF(spin_channel < 1 .OR. spin_channel > 2) CALL errore('fetch_input','Err: spin_channel/=1,2',spin_channel)
      !
   ENDIF
   !
   CALL mp_barrier(world_comm)
-  !
-  ! REPORT
-  !
-  IF(debug .AND. mpime == root) THEN
-     !
-     IF(ANY(driver(:)==1)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : input_west')
-        !
-        numsp = 14
-        CALL io_push_c512('qe_prefix',qe_prefix,numsp)
-        CALL io_push_c512('west_prefix',west_prefix,numsp)
-        CALL io_push_c512('outdir',outdir,numsp)
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==2)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : wstat_control')
-        !
-        numsp = 30
-        CALL io_push_value('wstat_calculation',wstat_calculation,numsp)
-        CALL io_push_value('n_pdep_eigen',n_pdep_eigen,numsp)
-        CALL io_push_value('n_pdep_times',n_pdep_times,numsp)
-        CALL io_push_value('n_pdep_maxiter',n_pdep_maxiter,numsp)
-        CALL io_push_value('n_dfpt_maxiter',n_dfpt_maxiter,numsp)
-        CALL io_push_value('n_pdep_read_from_file',n_pdep_read_from_file,numsp)
-        CALL io_push_value('n_steps_write_restart',n_steps_write_restart,numsp)
-        CALL io_push_es0('trev_pdep',trev_pdep,numsp)
-        CALL io_push_es0('trev_pdep_rel',trev_pdep_rel,numsp)
-        CALL io_push_es0('tr2_dfpt',tr2_dfpt,numsp)
-        CALL io_push_value('l_kinetic_only',l_kinetic_only,numsp)
-        CALL io_push_value('l_minimize_exx_if_active',l_minimize_exx_if_active,numsp)
-        CALL io_push_value('l_use_ecutrho',l_use_ecutrho,numsp)
-        DO i = 1, SIZE(qlist)
-           CALL io_push_value('qlist',qlist(i),numsp)
-        ENDDO
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==3)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : wfreq_control')
-        !
-        numsp = 40
-        CALL io_push_value('wfreq_calculation',wfreq_calculation,numsp)
-        CALL io_push_value('n_pdep_eigen_to_use',n_pdep_eigen_to_use,numsp)
-        CALL io_push_value('qp_bandrange(1)',qp_bandrange(1),numsp)
-        CALL io_push_value('qp_bandrange(2)',qp_bandrange(2),numsp)
-        IF(qp_bands(1) > 0) THEN
-           DO i = 0, list_len-1 ! Python indices start at 0
-              CALL io_push_value('qp_bands',qp_bands(i),numsp)
-           ENDDO
-        ENDIF
-        CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
-        CALL io_push_value('n_lanczos',n_lanczos,numsp)
-        CALL io_push_value('n_imfreq',n_imfreq,numsp)
-        CALL io_push_value('n_refreq',n_refreq,numsp)
-        CALL io_push_value('ecut_imfreq [Ry]',ecut_imfreq,numsp)
-        CALL io_push_value('ecut_refreq [Ry]',ecut_refreq,numsp)
-        CALL io_push_value('wfreq_eta [Ry]',wfreq_eta,numsp)
-        CALL io_push_value('n_secant_maxiter',n_secant_maxiter,numsp)
-        CALL io_push_value('trev_secant [Ry]',trev_secant,numsp)
-        CALL io_push_value('l_enable_lanczos',l_enable_lanczos,numsp)
-        CALL io_push_value('l_enable_off_diagonal',l_enable_off_diagonal,numsp)
-        CALL io_push_value('o_restart_time [min]',o_restart_time,numsp)
-        CALL io_push_value('ecut_spectralf(1) [Ry]',ecut_spectralf(1),numsp)
-        CALL io_push_value('ecut_spectralf(2) [Ry]',ecut_spectralf(2),numsp)
-        CALL io_push_value('n_spectralf',n_spectralf,numsp)
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==4)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : westpp_control')
-        !
-        numsp = 40
-        CALL io_push_value('westpp_calculation',westpp_calculation,numsp)
-        CALL io_push_value('westpp_range(1)',westpp_range(1),numsp)
-        CALL io_push_value('westpp_range(2)',westpp_range(2),numsp)
-        CALL io_push_value('westpp_format',westpp_format,numsp)
-        CALL io_push_value('westpp_sign',westpp_sign,numsp)
-        CALL io_push_value('westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use,numsp)
-        CALL io_push_value('westpp_r0(1)',westpp_r0(1),numsp)
-        CALL io_push_value('westpp_r0(2)',westpp_r0(2),numsp)
-        CALL io_push_value('westpp_r0(3)',westpp_r0(3),numsp)
-        CALL io_push_value('westpp_nr',westpp_nr,numsp)
-        CALL io_push_value('westpp_rmax',westpp_rmax,numsp)
-        CALL io_push_value('westpp_epsinfty',westpp_epsinfty,numsp)
-        CALL io_push_value('westpp_box(1)',westpp_box(1),numsp)
-        CALL io_push_value('westpp_box(2)',westpp_box(2),numsp)
-        CALL io_push_value('westpp_box(3)',westpp_box(3),numsp)
-        CALL io_push_value('westpp_box(4)',westpp_box(4),numsp)
-        CALL io_push_value('westpp_box(5)',westpp_box(5),numsp)
-        CALL io_push_value('westpp_box(6)',westpp_box(6),numsp)
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==5)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : server_control')
-        !
-        numsp = 40
-        CALL io_push_value('document',document,numsp)
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==6)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : wbse_init')
-        !
-        numsp = 23
-        CALL io_push_value('wbse_init_calculation',wbse_init_calculation,numsp)
-        CALL io_push_value('localization',localization,numsp)
-        CALL io_push_value('wfc_from_qbox',wfc_from_qbox,numsp)
-        CALL io_push_value('bisection_info',bisection_info,numsp)
-        CALL io_push_value('chi_kernel',chi_kernel,numsp)
-        CALL io_push_value('overlap_thr',overlap_thr,numsp)
-        CALL io_push_value('spin_channel',spin_channel,numsp)
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==7)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : wbse_control')
-        !
-        numsp = 23
-        CALL io_push_value('wbse_calculation',wbse_calculation,numsp)
-        CALL io_push_value('solver',solver,numsp)
-        CALL io_push_value('qp_correction',qp_correction,numsp)
-        CALL io_push_value('scissor_ope',scissor_ope,numsp)
-        CALL io_push_value('n_liouville_eigen',n_liouville_eigen,numsp)
-        CALL io_push_value('n_liouville_times',n_liouville_times,numsp)
-        CALL io_push_value('n_liouville_maxiter',n_liouville_maxiter,numsp)
-        CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
-        CALL io_push_value('trev_liouville',trev_liouville,numsp)
-        CALL io_push_value('trev_liouville_rel',trev_liouville_rel,numsp)
-        CALL io_push_value('n_lanczos',n_lanczos,numsp)
-        CALL io_push_value('n_steps_write_restart',n_steps_write_restart,numsp)
-        CALL io_push_value('ipol_input',ipol_input,numsp)
-        CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
-        CALL io_push_value('wbse_epsinfty',wbse_epsinfty,numsp)
-        CALL io_push_value('spin_excitation',spin_excitation,numsp)
-        CALL io_push_value('l_preconditioning',l_preconditioning,numsp)
-        CALL io_push_value('l_reduce_io',l_reduce_io,numsp)
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==8)) THEN
-        !
-        ! REPORT
-        !
-        CALL io_push_title('I/O Summary : wbsepp_input')
-        !
-        numsp = 30
-        CALL io_push_value('wbsepp_calculation',wbsepp_calculation,numsp)
-        CALL io_push_value('n_liouville_read_from_file',n_liouville_read_from_file,numsp)
-        CALL io_push_value('macropol_calculation',macropol_calculation,numsp)
-        CALL io_push_value('ipol_input',ipol_input,numsp)
-        CALL io_push_value('spin_channel',spin_channel,numsp)
-        CALL io_push_value('wbsepp_r0(1) [alat]',wbsepp_r0(1),numsp)
-        CALL io_push_value('wbsepp_r0(2) [alat]',wbsepp_r0(2),numsp)
-        CALL io_push_value('wbsepp_r0(3) [alat]',wbsepp_r0(3),numsp)
-        CALL io_push_value('iexc_plot',iexc_plot,numsp)
-        CALL io_push_value('n_lanczos_to_use',n_lanczos_to_use,numsp)
-        CALL io_push_value('n_extrapolation',n_extrapolation,numsp)
-        CALL io_push_value('range(1)',range(1),numsp)
-        CALL io_push_value('range(2)',range(2),numsp)
-        CALL io_push_value('range(3)',range(3),numsp)
-        CALL io_push_value('broad',broad,numsp)
-        !
-        CALL io_push_bar()
-        !
-     ENDIF
-     !
-  ENDIF
   !
   IF(verbose .AND. mpime == root) THEN
      !

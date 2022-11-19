@@ -12,55 +12,57 @@
 !
 SUBROUTINE do_exc()
   !
-  USE kinds,                  ONLY : DP
-  USE constants,              ONLY : pi
-  USE io_global,              ONLY : stdout
-  USE cell_base,              ONLY : omega,at,alat
-  USE fft_base,               ONLY : dffts,dfftp
-  USE lsda_mod,               ONLY : nspin,lsda
-  USE wavefunctions,          ONLY : psic,evc
-  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg
-  USE control_flags,          ONLY : gamma_only
-  USE mp,                     ONLY : mp_sum,mp_bcast,mp_min
-  USE mp_global,              ONLY : me_bgrp,intra_bgrp_comm,my_image_id,inter_image_comm
-  USE buffers,                ONLY : get_buffer
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,ev,dvg_exc,n_liouville_read_from_file,&
-                                   & iexc_plot,wbsepp_r0,westpp_format
-  USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
-  USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
-  USE plep_db,                ONLY : plep_db_read
-  USE distribution_center,    ONLY : pert
-  USE class_idistribute,      ONLY : idistribute
+  USE kinds,                 ONLY : DP
+  USE constants,             ONLY : pi
+  USE io_push,               ONLY : io_push_title
+  USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
+  USE io_global,             ONLY : stdout
+  USE cell_base,             ONLY : omega,at,alat
+  USE fft_base,              ONLY : dffts,dfftp
+  USE lsda_mod,              ONLY : nspin,lsda
+  USE wavefunctions,         ONLY : psic,evc
+  USE pwcom,                 ONLY : npw,npwx,igk_k,current_k,ngk,nks,current_spin,isk,wg
+  USE control_flags,         ONLY : gamma_only
+  USE mp,                    ONLY : mp_sum,mp_bcast,mp_min
+  USE mp_global,             ONLY : me_bgrp,intra_bgrp_comm,my_image_id,inter_image_comm
+  USE buffers,               ONLY : get_buffer
+  USE westcom,               ONLY : iuwfc,lrwfc,nbnd_occ,ev,dvg_exc,n_liouville_read_from_file,&
+                                  & iexc_plot,wbsepp_r0,westpp_format
+  USE fft_at_gamma,          ONLY : double_invfft_gamma
+  USE fft_at_k,              ONLY : single_invfft_k
+  USE plep_db,               ONLY : plep_db_read
+  USE distribution_center,   ONLY : pert
+  USE class_idistribute,     ONLY : idistribute
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
-  INTEGER :: ibnd, nbndval, nvec
-  INTEGER :: ir, i, j, k, ip, iks, index0, ir_end
+  INTEGER :: ibnd,nbndval,nvec
+  INTEGER :: ir,i,j,k,ip,iks,index0,ir_end
   REAL(DP) :: drmin_g
-  REAL(DP) :: rcoeff, w1
+  REAL(DP) :: rcoeff,w1
   REAL(DP) :: inv_nr1,inv_nr2,inv_nr3
   COMPLEX(DP) :: zcoeff
-  REAL(DP), ALLOCATABLE :: r(:,:),dr(:), rho_out(:,:), segno(:)
+  REAL(DP), ALLOCATABLE :: r(:,:),dr(:),rho_out(:,:),segno(:)
   COMPLEX(DP), ALLOCATABLE :: psic_aux(:)
   COMPLEX(DP), ALLOCATABLE :: rho_aux(:,:)
   INTEGER, PARAMETER :: n_ipol = 3
-  CHARACTER(LEN=6) :: my_label
-  CHARACTER(LEN=256) :: fname
+  CHARACTER(LEN=512) :: fname
   INTEGER :: iexc
-  INTEGER :: n_point, ni
-  REAL(DP) :: r0_aux(3)
-  REAL(DP) :: dstep, ri1, ri0, dx,dy,dz, drr, summ, summ0, vi1, vi0
+  INTEGER :: n_point,ni
+  REAL(DP) :: r0(3)
+  REAL(DP) :: dstep,ri1,ri0,dx,dy,dz,drr,summ,summ0,vi1,vi0
+  TYPE(bar_type) :: barra
   !
   iexc = iexc_plot
-  r0_aux(1) = wbsepp_r0(1)
-  r0_aux(2) = wbsepp_r0(2)
-  r0_aux(3) = wbsepp_r0(3)
+  r0(1) = wbsepp_r0(1)/alat
+  r0(2) = wbsepp_r0(2)/alat
+  r0(3) = wbsepp_r0(3)/alat
   !
   DO ip = 1, n_ipol
-     IF(r0_aux(ip) < 0) r0_aux(ip) = r0_aux(ip) + at(ip,ip)
-     IF(r0_aux(ip) > at(ip,ip)) r0_aux(ip) = r0_aux(ip) - at(ip,ip)
+     IF(r0(ip) < 0) r0(ip) = r0(ip) + at(ip,ip)
+     IF(r0(ip) > at(ip,ip)) r0(ip) = r0(ip) - at(ip,ip)
   ENDDO
   !
   ! ... DISTRIBUTE nvec
@@ -83,9 +85,9 @@ SUBROUTINE do_exc()
   !
   ! Calculate r
   !
-  inv_nr1 = 1._DP / REAL( dfftp%nr1, KIND=DP )
-  inv_nr2 = 1._DP / REAL( dfftp%nr2, KIND=DP )
-  inv_nr3 = 1._DP / REAL( dfftp%nr3, KIND=DP )
+  inv_nr1 = 1._DP / REAL(dfftp%nr1,KIND=DP)
+  inv_nr2 = 1._DP / REAL(dfftp%nr2,KIND=DP)
+  inv_nr3 = 1._DP / REAL(dfftp%nr3,KIND=DP)
   !
   index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%nr3p(1:me_bgrp))
   ir_end = MIN(dfftp%nnr,dfftp%nr1x*dfftp%nr2x*dfftp%nr3p(me_bgrp+1))
@@ -111,16 +113,20 @@ SUBROUTINE do_exc()
   dr(:) = 10000000
   !
   DO ir = 1, dffts%nnr
-     dr(ir) = SQRT((r(ir,1) - r0_aux(1))**2 + &
-                   (r(ir,2) - r0_aux(2))**2 + &
-                   (r(ir,3) - r0_aux(3))**2)
+     dr(ir) = SQRT((r(ir,1) - r0(1))**2 + &
+                   (r(ir,2) - r0(2))**2 + &
+                   (r(ir,3) - r0(3))**2)
   ENDDO
   !
   drmin_g = MINVAL(dr)
   !
-  CALL mp_min(drmin_g, intra_bgrp_comm)
+  CALL mp_min(drmin_g,intra_bgrp_comm)
   !
   rho_aux(:,:) = 0._DP
+  !
+  CALL io_push_title('(E)xciton State')
+  !
+  CALL start_bar_type(barra,'wbsepp',SUM(nbnd_occ))
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
      !
@@ -157,7 +163,7 @@ SUBROUTINE do_exc()
               ENDIF
            ENDDO
            !
-           CALL mp_sum(rcoeff, intra_bgrp_comm)
+           CALL mp_sum(rcoeff,intra_bgrp_comm)
            !
            segno(:) = SIGN(1._DP,AIMAG(psic(:)))
            !
@@ -178,7 +184,7 @@ SUBROUTINE do_exc()
               ENDIF
            ENDDO
            !
-           CALL mp_sum(zcoeff, intra_bgrp_comm)
+           CALL mp_sum(zcoeff,intra_bgrp_comm)
            !
            rho_aux(:,current_spin) = rho_aux(:,current_spin) + w1 * zcoeff * psic_aux(:)
            !
@@ -186,9 +192,13 @@ SUBROUTINE do_exc()
            !
         ENDIF
         !
+        CALL update_bar_type(barra,'wbsepp',1)
+        !
      ENDDO
      !
   ENDDO
+  !
+  CALL stop_bar_type(barra,'wbsepp')
   !
   rho_out(:,:) = 0._DP
   rho_out(:,current_spin) = (REAL(rho_aux(:,current_spin),KIND=DP)**2 + AIMAG(rho_aux(:,current_spin))**2)/omega
@@ -200,19 +210,17 @@ SUBROUTINE do_exc()
   !
   summ0 = summ0*omega/(dfftp%nr1*dfftp%nr2*dfftp%nr3)
   !
-  CALL mp_sum(summ0, intra_bgrp_comm)
+  CALL mp_sum(summ0,intra_bgrp_comm)
   !
   rho_out(:,1) = rho_out(:,1)/summ0
   !
-  WRITE(stdout,*) "Plot of exciton state (Ry unit): ", iexc, ev(iexc)
-  WRITE(stdout,*) "Hole state is fixed at (alat unit): ", r0_aux(1), r0_aux(2), r0_aux(3)
+  WRITE(stdout,'(5x,a,i6,f12.6)') 'Plot of exciton state (Ry): ',iexc,ev(iexc)
+  WRITE(stdout,'(5x,a,3f12.6)') 'Hole state is fixed at (a.u.): ',r0*alat
   !
   westpp_format = 'C'
   !
-  WRITE(my_label,'(i6.6)') iexc
-  fname = 'file_plot_exc_'//my_label
-  WRITE(stdout,*) "Write to file : ", fname
-  IF(my_image_id == 0) CALL dump_r(rho_out(:,1), fname)
+  WRITE(fname,'(a,i6.6)') 'plot_exc_',iexc
+  IF(my_image_id == 0) CALL dump_r(rho_out(:,1),TRIM(fname))
   !
   summ = 0._DP
   DO ir = 1, dffts%nnr
@@ -221,13 +229,13 @@ SUBROUTINE do_exc()
   !
   summ = summ*omega/(dfftp%nr1*dfftp%nr2*dfftp%nr3)
   !
-  CALL mp_sum(summ, intra_bgrp_comm)
+  CALL mp_sum(summ,intra_bgrp_comm)
   !
-  WRITE(stdout,*) "Check normalization: ", summ
+  WRITE(stdout,'(5x,a,f12.6)') 'Check normalization: ',summ
   !
   ! plot distribution density
   !
-  WRITE(stdout,*) "Plot of distribution electrons"
+  WRITE(stdout,'(5x,a)') 'Plot of distribution electrons'
   !
   dstep = 0.01_DP
   n_point = INT(at(1,1)*0.5_DP/dstep)
@@ -244,15 +252,15 @@ SUBROUTINE do_exc()
      summ0 = 0._DP
      DO ir = 1, dffts%nnr
         !
-        dx = r(ir,1) - r0_aux(1)
+        dx = r(ir,1) - r0(1)
         IF (dx > at(1,1) * 0.5_DP) dx = dx - at(1,1)
         IF (dx <= -at(1,1) * 0.5_DP) dx = dx + at(1,1)
         !
-        dy = r(ir,2) - r0_aux(2)
+        dy = r(ir,2) - r0(2)
         IF (dy > at(2,2) * 0.5_DP) dy = dy - at(2,2)
         IF (dy <= -at(2,2) * 0.5_DP) dy = dy + at(2,2)
         !
-        dz = r(ir,3) - r0_aux(3)
+        dz = r(ir,3) - r0(3)
         IF (dz > at(3,3) * 0.5_DP) dz = dz - at(3,3)
         IF (dz <= -at(3,3) * 0.5_DP) dz = dz + at(3,3)
         !
@@ -265,10 +273,10 @@ SUBROUTINE do_exc()
         !
      ENDDO
      !
-     CALL mp_sum(summ, intra_bgrp_comm)
-     CALL mp_sum(summ0, intra_bgrp_comm)
+     CALL mp_sum(summ,intra_bgrp_comm)
+     CALL mp_sum(summ0,intra_bgrp_comm)
      !
-     WRITE(stdout, "(i5, 5x, f12.6, 5x, f12.6, 5x, 2f12.6)") ni, ri1*alat, (vi0-vi1), summ0, summ
+     WRITE(stdout,'(5x,i5,5x,f12.6,5x,f12.6,5x,2f12.6)') ni,ri1*alat,(vi0-vi1),summ0,summ
      !
   ENDDO
   !

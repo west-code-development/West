@@ -27,7 +27,7 @@ SUBROUTINE wbse_init_readin()
   !
   CALL start_clock('wbse_init_readin')
   !
-  CALL fetch_input_yml(3,(/1,5,6/),.TRUE.,.FALSE.)
+  CALL fetch_input_yml(3,(/1,5,6/),.TRUE.)
   !
   !  read the input file produced by the pwscf program
   !  allocate memory and recalculate what is needed

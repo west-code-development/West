@@ -111,7 +111,6 @@ default["wbse_control"]["l_reduce_io"] = True
 default["wbsepp_control"] = {}
 default["wbsepp_control"]["wbsepp_calculation"] = "S"
 default["wbsepp_control"]["n_liouville_read_from_file"] = 0
-default["wbsepp_control"]["macropol_calculation"] = "N"
 default["wbsepp_control"]["ipol_input"] = "XX"
 default["wbsepp_control"]["spin_channel"] = 1
 default["wbsepp_control"]["wbsepp_r0"] = [0., 0., 0.]

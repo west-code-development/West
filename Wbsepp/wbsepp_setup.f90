@@ -15,19 +15,13 @@ SUBROUTINE wbsepp_setup
   !-----------------------------------------------------------------------
   !
   USE types_coulomb,          ONLY : pot3D
-  USE westcom,                ONLY : macropol_calculation,l_macropol,west_prefix,nbnd_occ,&
-                                   & l_use_ecutrho,nbndval0x
+  USE westcom,                ONLY : west_prefix,nbnd_occ,l_use_ecutrho,nbndval0x
   USE io_files,               ONLY : tmp_dir
   USE westcom,                ONLY : wbse_save_dir
   !
   IMPLICIT NONE
   !
   CALL do_setup()
-  !
-  SELECT CASE(macropol_calculation)
-  CASE('c','C')
-     l_macropol = .TRUE.
-  END SELECT
   !
   l_use_ecutrho = .FALSE.
   !

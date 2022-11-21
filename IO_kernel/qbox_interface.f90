@@ -19,39 +19,29 @@ MODULE qbox_interface
   CONTAINS
   !
   !----------------------------------------------------------------------------
-  SUBROUTINE load_qbox_wfc(evc,qbox_wfc_fname,ispin,nbndval)
+  SUBROUTINE load_qbox_wfc(ispin,nbndval,evc)
     !----------------------------------------------------------------------------
     !
-    USE kinds,                  ONLY : DP
+    USE kinds,                  ONLY : DP,i8b
     USE mp,                     ONLY : mp_bcast
     USE mp_global,              ONLY : intra_image_comm
     USE io_global,              ONLY : stdout,ionode
     USE pwcom,                  ONLY : npw,npwx
     USE fourier_interpolation,  ONLY : ft_interpolate
     USE io_push,                ONLY : io_push_title
-    USE forpy_mod,              ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,&
-                                     & dict_create,list,object,cast
-    USE base64_module,          ONLY : lenbase64,base64_byteswap_double,base64_decode_double,&
-                                     & islittleendian
+    USE westcom,                ONLY : wfc_from_qbox
     !
     IMPLICIT NONE
     !
     INTEGER,INTENT(IN) :: ispin,nbndval
-    CHARACTER(LEN=*),INTENT(IN) :: qbox_wfc_fname
     COMPLEX(DP),INTENT(OUT) :: evc(npwx,nbndval)
     !
-    INTEGER :: iwfc,nwfcs,nspin
-    INTEGER :: nx,ny,nz
+    CHARACTER(LEN=256) :: fname
+    INTEGER :: iun,ierr
+    INTEGER :: iwfc,nwfcs
+    INTEGER :: nx,ny,nz,ndim
+    INTEGER(i8b) :: offset
     REAL(DP),ALLOCATABLE :: psir(:)
-    CHARACTER(LEN=:),ALLOCATABLE :: namespin
-    CHARACTER(LEN=:),ALLOCATABLE :: charbase64
-    INTEGER :: ndim,nbytes,nlen,ierr
-    TYPE(tuple) :: args
-    TYPE(dict) :: kwargs,return_dict
-    TYPE(list) :: tmp_list
-    TYPE(module_py) :: pymod
-    TYPE(object) :: return_obj,return_obj2,tmp_obj
-    INTEGER,PARAMETER :: DUMMY_DEFAULT = -1210
     !
     ! read Qbox XML file and overwrite current evc array
     !
@@ -66,44 +56,26 @@ MODULE qbox_interface
     !
     IF(ionode) THEN
        !
-       WRITE(stdout,'(5X,2A)') 'Qbox interface: reading from file ',TRIM(qbox_wfc_fname)
+       WRITE(fname,'(A,I1)') TRIM(wfc_from_qbox)//'.',ispin
+       WRITE(stdout,'(5X,2A)') 'Qbox interface: reading from file ',TRIM(fname)
        !
-       ierr = import_py(pymod,'west_function3d')
-       ierr = tuple_create(args,2)
-       ierr = args%setitem(0,TRIM(qbox_wfc_fname))
-       ierr = args%setitem(1,ispin)
-       ierr = dict_create(kwargs)
-       ierr = call_py(return_obj,pymod,'qb_wfc_info',args,kwargs)
-       ierr = cast(return_dict,return_obj)
-       ierr = return_dict%get(nspin,'nspin',DUMMY_DEFAULT)
-       ierr = return_dict%getitem(namespin,'namespin')
-       ierr = return_dict%get(nwfcs,'nwfcs',DUMMY_DEFAULT)
-       ierr = return_dict%getitem(tmp_obj,'grid')
-       ierr = cast(tmp_list,tmp_obj)
-       ierr = tmp_list%getitem(nx,0)
-       ierr = tmp_list%getitem(ny,1)
-       ierr = tmp_list%getitem(nz,2)
+       OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
        !
-       IF(nspin == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read nspin',1)
-       IF(nwfcs == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read nwfcs',1)
+       IF(ierr /= 0) THEN
+          CALL errore('load_qbox_wfc','Cannot read file:'//TRIM(fname),1)
+       ENDIF
        !
-       CALL args%destroy
-       CALL kwargs%destroy
-       CALL return_dict%destroy
-       CALL tmp_list%destroy
-       CALL tmp_obj%destroy
+       offset = 1
+       READ(iun,POS=offset) nwfcs,nx,ny,nz
+       offset = offset+4*SIZEOF(nwfcs)
        !
        WRITE(stdout,'(5X,A,3I5)') 'Qbox interface: grid size: ',nx,ny,nz
        !
        ndim = nx*ny*nz
        ALLOCATE(psir(ndim))
-       nbytes = SIZEOF(psir(1)) * ndim
-       nlen = lenbase64(nbytes)
-       ALLOCATE(CHARACTER(LEN=nlen) :: charbase64)
        !
     ENDIF
     !
-    CALL mp_bcast(nspin,0,intra_image_comm)
     CALL mp_bcast(nwfcs,0,intra_image_comm)
     CALL mp_bcast(nx,0,intra_image_comm)
     CALL mp_bcast(ny,0,intra_image_comm)
@@ -111,28 +83,14 @@ MODULE qbox_interface
     !
     ! read KS orbitals
     !
-    WRITE(stdout,'(5X,A)') 'Qbox interface: loading KS orbitals'
-    WRITE(stdout,'(10X,A,I5,2I3)') TRIM(ADJUSTL(namespin)),nwfcs,nspin,ispin
+    WRITE(stdout,'(5X,A,I5,A)') 'Qbox interface: loading ',nwfcs,' KS orbitals'
     !
     DO iwfc = 1,nwfcs
        !
        IF(ionode) THEN
           !
-          ierr = tuple_create(args,2)
-          ierr = args%setitem(0,return_obj)
-          ierr = args%setitem(1,iwfc)
-          ierr = dict_create(kwargs)
-          ierr = call_py(return_obj2,pymod,'qb_wfc_to_base64',args,kwargs)
-          ierr = cast(return_dict,return_obj2)
-          ierr = return_dict%getitem(charbase64,'grid_function')
-          !
-          CALL args%destroy
-          CALL kwargs%destroy
-          CALL return_obj2%destroy
-          CALL return_dict%destroy
-          !
-          CALL base64_decode_double(charbase64(1:nlen),ndim,psir)
-          IF(.NOT. islittleendian()) CALL base64_byteswap_double(nbytes,psir)
+          READ(iun,POS=offset) psir
+          offset = offset+SIZEOF(psir)
           !
        ENDIF
        !
@@ -142,8 +100,7 @@ MODULE qbox_interface
     !
     IF(ionode) THEN
        !
-       CALL return_obj%destroy
-       CALL pymod%destroy
+       CLOSE(iun)
        !
        DEALLOCATE(psir)
        !

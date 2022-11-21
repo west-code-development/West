@@ -17,7 +17,7 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : aband
-  USE westcom,              ONLY : l_bisect_thr,wfc_from_qbox,wbse_init_save_dir
+  USE westcom,              ONLY : l_bisect_thr,wbse_init_save_dir
   USE wavefunctions,        ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
   USE fft_base,             ONLY : dffts
@@ -63,8 +63,8 @@ SUBROUTINE wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_resta
      !
      ! Use wannier as representation
      !
-     IF(l_load_qbox_loc_wfc) CALL load_qbox_wfc(evc_loc, wfc_from_qbox, current_spin, nbndval)
-!     IF(l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs(nbndval, npwx, evc_loc, wfc_from_qbox)
+     IF(l_load_qbox_loc_wfc) CALL load_qbox_wfc(current_spin, nbndval, evc_loc)
+!     IF(l_load_west_loc_wfc) CALL read_pwscf_wannier_orbs()
      !
      WRITE(labels,'(i1)') current_spin
      fname = TRIM(wbse_init_save_dir)//'/evc_loc.'//labels//'.dat'

@@ -750,9 +750,9 @@ wbse_init_control
    * - **Type**
      - string
    * - **Default**
-     - "qb.xml"
+     - "qb.wfc"
    * - **Description**
-     - Name of the Qbox sample file.
+     - Name of the file that contains Qbox wavefunctions.
 
 .. data:: bisection_info
 

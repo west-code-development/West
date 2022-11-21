@@ -206,20 +206,20 @@ MODULE pdep_io
             !
             OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
             IF(ierr /= 0) THEN
-               CALL errore('pdep_read','Cannot read file:'//TRIM(fname),1)
+               CALL errore('pdep_read','Cannot read file: '//TRIM(fname),1)
             ENDIF
             !
             offset = 1
             READ(iun,POS=offset) header
             IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-               CALL errore('pdep_read','Unknown file format:'//TRIM(fname),1)
+               CALL errore('pdep_read','Unknown file format: '//TRIM(fname),1)
             ENDIF
             IF(ndim /= header(HD_ID_DIMENSION)) THEN
-               CALL errore('pdep_read','Dimension mismatch:'//TRIM(fname),1)
+               CALL errore('pdep_read','Dimension mismatch: '//TRIM(fname),1)
             ENDIF
             IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
                .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-               CALL errore('pdep_read','Endianness mismatch:'//TRIM(fname),1)
+               CALL errore('pdep_read','Endianness mismatch: '//TRIM(fname),1)
             ENDIF
             !
             offset = 1+HD_LENGTH*SIZEOF(header(1))
@@ -260,20 +260,20 @@ MODULE pdep_io
             !
             OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
             IF(ierr /= 0) THEN
-               CALL errore('pdep_read','Cannot read file:'//TRIM(fname),1)
+               CALL errore('pdep_read','Cannot read file: '//TRIM(fname),1)
             ENDIF
             !
             offset = 1
             READ(iun,POS=offset) header
             IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-               CALL errore('pdep_read','Unknown file format:'//TRIM(fname),1)
+               CALL errore('pdep_read','Unknown file format: '//TRIM(fname),1)
             ENDIF
             IF(ndim /= header(HD_ID_DIMENSION)) THEN
-               CALL errore('pdep_read','Dimension mismatch:'//TRIM(fname),1)
+               CALL errore('pdep_read','Dimension mismatch: '//TRIM(fname),1)
             ENDIF
             IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
                .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-               CALL errore('pdep_read','Endianness mismatch:'//TRIM(fname),1)
+               CALL errore('pdep_read','Endianness mismatch: '//TRIM(fname),1)
             ENDIF
             !
             offset = 1+HD_LENGTH*SIZEOF(header(1))

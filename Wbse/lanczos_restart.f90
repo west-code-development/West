@@ -196,17 +196,17 @@ MODULE lanczos_restart
          fname = TRIM(wbse_save_dir)//'/abgz.dat'
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
          IF(ierr /= 0) THEN
-            CALL errore('lanczos_restart_read','Cannot read file:'//TRIM(fname),1)
+            CALL errore('lanczos_restart_read','Cannot read file: '//TRIM(fname),1)
          ENDIF
          !
          offset = 1
          READ(iun,POS=offset) header
          IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-            CALL errore('lanczos_restart_read','Unknown file format:'//TRIM(fname),1)
+            CALL errore('lanczos_restart_read','Unknown file format: '//TRIM(fname),1)
          ENDIF
          IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
             .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-            CALL errore('lanczos_restart_read','Endianness mismatch:'//TRIM(fname),1)
+            CALL errore('lanczos_restart_read','Endianness mismatch: '//TRIM(fname),1)
          ENDIF
          !
          offset = 1+HD_LENGTH*SIZEOF(header(1))

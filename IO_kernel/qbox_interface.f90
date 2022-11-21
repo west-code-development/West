@@ -62,14 +62,14 @@ MODULE qbox_interface
        OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
        !
        IF(ierr /= 0) THEN
-          CALL errore('load_qbox_wfc','Cannot read file:'//TRIM(fname),1)
+          CALL errore('load_qbox_wfc','Cannot read file: '//TRIM(fname),1)
        ENDIF
        !
        offset = 1
        READ(iun,POS=offset) nwfcs,nx,ny,nz
        offset = offset+4*SIZEOF(nwfcs)
        !
-       WRITE(stdout,'(5X,A,3I5)') 'Qbox interface: grid size: ',nx,ny,nz
+       WRITE(stdout,'(5X,A,3I5)') 'Qbox interface: grid size ',nx,ny,nz
        !
        ndim = nx*ny*nz
        ALLOCATE(psir(ndim))

@@ -297,7 +297,7 @@ MODULE pdep_db
          CALL json%initialize()
          CALL json%load(filename=TRIM(wstat_save_dir)//'/summary.json')
          IF(json%failed()) THEN
-            CALL errore('pdep_db_read','Cannot open: '//TRIM(wstat_save_dir)//'/summary.json',1)
+            CALL errore('pdep_db_read','Cannot open file: '//TRIM(wstat_save_dir)//'/summary.json',1)
          ENDIF
          !
          CALL json%info('dielectric_matrix.pdep',n_children=n_elements)

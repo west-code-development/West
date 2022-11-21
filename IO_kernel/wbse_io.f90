@@ -212,17 +212,17 @@ MODULE wbse_io
        !
        OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
        IF(ierr /= 0) THEN
-          CALL errore('read_umatrix_and_omatrix','Cannot read file:'//TRIM(fname),1)
+          CALL errore('read_umatrix_and_omatrix','Cannot read file: '//TRIM(fname),1)
        ENDIF
        !
        offset = 1
        READ(iun,POS=offset) header
        IF(HD_VERSION /= header(HD_ID_VERSION)) THEN
-          CALL errore('read_umatrix_and_omatrix','Unknown file format:'//TRIM(fname),1)
+          CALL errore('read_umatrix_and_omatrix','Unknown file format: '//TRIM(fname),1)
        ENDIF
        IF((islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 0)) &
           .OR. (.NOT. islittleendian() .AND. (header(HD_ID_LITTLE_ENDIAN) == 1))) THEN
-          CALL errore('read_umatrix_and_omatrix','Endianness mismatch:'//TRIM(fname),1)
+          CALL errore('read_umatrix_and_omatrix','Endianness mismatch: '//TRIM(fname),1)
        ENDIF
        oumat_dim_tmp = header(HD_ID_DIMENSION)
        !

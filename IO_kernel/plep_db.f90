@@ -181,7 +181,7 @@ MODULE plep_db
          CALL json%initialize()
          CALL json%load(filename=TRIM(wbse_save_dir)//'/summary.json')
          IF(json%failed()) THEN
-            CALL errore('plep_db_read','Cannot open: '//TRIM(wbse_save_dir)//'/summary.json',1)
+            CALL errore('plep_db_read','Cannot open file: '//TRIM(wbse_save_dir)//'/summary.json',1)
          ENDIF
          !
          CALL json%destroy()

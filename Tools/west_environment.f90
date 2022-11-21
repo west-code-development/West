@@ -51,6 +51,16 @@ CONTAINS
     CHARACTER(LEN=6), EXTERNAL :: int_to_char
     INTEGER :: ios, crashunit, n_json
     INTEGER, PARAMETER :: n_json_max = 100
+    LOGICAL, EXTERNAL :: matches
+    !
+#if defined(__CUDA)
+    !
+    ! CUDA not yet available for wbse_init, wbse, wbsepp
+    !
+    IF(matches('wbse',TRIM(lowercase_string(code)))) THEN
+       CALL errore(TRIM(lowercase_string(code)),'CUDA not yet implemented for BSE',1)
+    ENDIF
+#endif
     !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash
@@ -65,8 +75,8 @@ CONTAINS
     CALL parse_command_arguments()
     CALL fetch_input_yml(1,(/1/),.FALSE.)
     !
-    savedir = TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) // '.' // TRIM(lowercase_string(code)) // '.save/'
-    logfile = TRIM(ADJUSTL(savedir)) // TRIM(lowercase_string(code)) // '.json'
+    savedir = TRIM(outdir) // TRIM(west_prefix) // '.' // TRIM(lowercase_string(code)) // '.save/'
+    logfile = TRIM(savedir) // TRIM(lowercase_string(code)) // '.json'
     !
     ! Do not overwrite existing JSON file
     !
@@ -75,13 +85,13 @@ CONTAINS
     INQUIRE(FILE=TRIM(logfile),EXIST=exst)
     !
     DO WHILE(exst)
-       logfile = TRIM(ADJUSTL(savedir))//TRIM(lowercase_string(code))//'_'//TRIM(int_to_char(n_json))//'.json'
+       logfile = TRIM(savedir)//TRIM(lowercase_string(code))//'_'//TRIM(int_to_char(n_json))//'.json'
        INQUIRE(FILE=TRIM(logfile),EXIST=exst)
        n_json = n_json+1
        IF(n_json > n_json_max) CALL errore(TRIM(code),'Too many JSON files',1)
     ENDDO
     !
-    CALL my_mkdir( TRIM(ADJUSTL(savedir)) )
+    CALL my_mkdir( TRIM(savedir) )
     !
     ! ... use .FALSE. to disable all clocks except the total cpu time clock
     ! ... use .TRUE. to enable clocks
@@ -92,7 +102,7 @@ CONTAINS
     ! ... for compatibility with PWSCF
     !
 #if defined(__MPI)
-    nd_nmbr = TRIM ( int_to_char( me_image+1 ))
+    nd_nmbr = TRIM( int_to_char( me_image+1 ))
 #else
     nd_nmbr = ' '
 #endif
@@ -121,12 +131,12 @@ CONTAINS
        IF (debug ) THEN
           uname = 'out.' // trim(int_to_char( my_image_id )) // '_' // &
                trim(int_to_char( me_image))
-          OPEN ( unit = stdout, file = TRIM(uname),status='unknown')
+          OPEN( UNIT = stdout, FILE = TRIM(uname),STATUS='UNKNOWN')
        ELSE
 #if defined(_WIN32)
-          OPEN ( unit = stdout, file='NUL:', status='unknown' )
+          OPEN( UNIT = stdout, FILE='NUL:', STATUS='UNKNOWN' )
 #else
-          OPEN ( unit = stdout, file='/dev/null', status='unknown' )
+          OPEN( UNIT = stdout, FILE='/dev/null', STATUS='UNKNOWN' )
 #endif
        ENDIF
        !
@@ -257,9 +267,9 @@ CONTAINS
     !
     CALL date_and_tim( cdate, ctime )
     !
-    IF ( TRIM (west_git_revision) /= 'unknown' ) THEN
+    IF ( TRIM(west_git_revision) /= 'unknown' ) THEN
        WRITE( stdout, '(/5X,"Program ",A," v. ",A," git rev. ",A," starts on ",A9," at ",A9)' ) &
-       & TRIM(code), TRIM(west_version_number), TRIM (west_git_revision), cdate, ctime
+       & TRIM(code), TRIM(west_version_number), TRIM(west_git_revision), cdate, ctime
     ELSE
        WRITE( stdout, '(/5X,"Program ",A," v. ",A," starts on ",A9," at ",A9)' ) &
        & TRIM(code), TRIM(west_version_number), cdate, ctime
@@ -271,7 +281,7 @@ CONTAINS
     &/9X," URL http://www.west-code.org"", ", &
     &/5X,"in publications or presentations arising from this work.")' )
     !
-    WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM (version_number)
+    WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM(version_number)
     !
     IF( islittleendian() ) THEN
        WRITE( stdout, '(/5X,"I/O is Little Endian",A)') ""
@@ -289,7 +299,7 @@ CONTAINS
       CALL json%add('software.package', 'WEST' )
       CALL json%add('software.program', TRIM(code) )
       CALL json%add('software.version', TRIM(west_version_number) )
-      IF( TRIM (west_git_revision) /= 'unknown' ) CALL json%add('software.westgit', TRIM(west_git_revision) )
+      IF( TRIM(west_git_revision) /= 'unknown' ) CALL json%add('software.westgit', TRIM(west_git_revision) )
       CALL json%add('software.website','http://www.west-code.org')
       CALL json%add('software.citation','M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).')
       CALL json%add('software.qeversion', TRIM(version_number) )

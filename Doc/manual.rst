@@ -782,7 +782,8 @@ wbse_init_control
 
        - "CHI" : W = vc + vc X vc
        - "CHI_RPA" : W = vc + vc X_RPA vc
-       - "XC_CHI_RPA" : W = vc + (vc+fxc) X vc
+       - "XC_CHI" : W = vc + (vc+fxc) X vc
+       - "XC_CHI_RPA" : W = vc + (vc+fxc) X_RPA vc
 
 .. data:: overlap_thr
 
@@ -821,22 +822,6 @@ wbse_control
        - "d" : Restart the calculation for wbse_calculation = "D" from an interrupted run. You should restart with the same number of cores and images.
        - "L" : Compute the absorption spectrum with the Lanczos method.
        - "l" : Restart the calculation for wbse_calculation = "L" from an interrupted run. You should restart with the same number of cores and images.
-
-.. data:: solver
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - string
-   * - **Default**
-     - "BSE"
-   * - **Description**
-     - Available options are:
-
-       - "BSE" : Bethe-Salpeter equation.
-       - "TDDFT" : Time-dependent density functional theory.
 
 .. data:: qp_correction
 
@@ -1036,19 +1021,6 @@ wbse_control
 
        - "S" : Singlet.
        - "T" : Triplet.
-
-.. data:: l_preconditioning
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - bool
-   * - **Default**
-     - False
-   * - **Description**
-     - Preconditioning for the Davidson method, for finite systems.
 
 .. data:: l_reduce_io
 

@@ -61,7 +61,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   CHARACTER :: my_spin
   CHARACTER(LEN=6) :: my_labeliq,my_labelik
   CHARACTER(LEN=6) :: my_label1,my_label2
-  CHARACTER(LEN=256) :: kernel,driver
+  CHARACTER(LEN=256) :: driver
   !
   REAL(DP), EXTERNAL :: get_clock
   CHARACTER(20), EXTERNAL :: human_readable_time
@@ -77,16 +77,12 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   CALL start_clock('wbse_qbox_coupling')
   !
-  IF(chi_kernel == 'XC_CHI') THEN
-     kernel  = 'CHI'
+  SELECT CASE(chi_kernel)
+  CASE('XC_CHI','XC_CHI_RPA')
      l_xcchi = .TRUE.
-  ELSEIF(chi_kernel == 'XC_CHI_RPA') THEN
-     kernel  = 'CHI_RPA'
-     l_xcchi = .TRUE.
-  ELSE
-     kernel  = chi_kernel
+  CASE DEFAULT
      l_xcchi = .FALSE.
-  ENDIF
+  END SELECT
   !
   driver = 'FF_Qbox'
   !
@@ -94,7 +90,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   WRITE(my_labelik,'(i6.6)') iks
   WRITE(my_spin,'(i1)') current_spin
   !
-  CALL io_push_title('Wbse_init for '//TRIM(kernel)//' with '//TRIM(driver)//' driver'//&
+  CALL io_push_title('wbse_init for '//TRIM(chi_kernel)//' with '//TRIM(driver)//' driver'//&
        & ' ik'//my_labelik//' iq'//my_labeliq//' ispin'//my_spin)
   !
   aband = idistribute()
@@ -170,7 +166,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      bseparal = idistribute()
      CALL bseparal%init(do_index,'i','number_pairs', .TRUE.)
      !
-     CALL io_push_title('Applying ' // TRIM(kernel) // ' kernel with FF_Qbox ...')
+     CALL io_push_title('Applying ' // TRIM(chi_kernel) // ' kernel with FF_Qbox ...')
      !
      CALL start_bar_type(barra,'FF_Qbox',bseparal%nlocx)
      !

@@ -29,6 +29,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
                                  & sigma_x_head,et_qp
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
+  USE wbse_dv,              ONLY : wbse_dv_of_drho
   !
   IMPLICIT NONE
   !

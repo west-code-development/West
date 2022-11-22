@@ -24,6 +24,7 @@ SUBROUTINE wbse_setup()
                              & alphapv_dfpt,l_use_ecutrho,nbndval0x,nbnd_occ,wbse_save_dir
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
+  USE wbse_dv,          ONLY : wbse_dv_setup
   !
   IMPLICIT NONE
   !

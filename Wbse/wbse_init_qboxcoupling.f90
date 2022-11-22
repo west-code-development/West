@@ -35,6 +35,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   USE conversions,          ONLY : itoa
   USE qbox_interface,       ONLY : sleep_and_wait_for_lock_to_be_removed
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
+  USE wbse_dv,              ONLY : wbse_dv_of_drho
   !
   IMPLICIT NONE
   !

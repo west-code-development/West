@@ -28,8 +28,7 @@ wbse_bse_kernel.o \
 wbse_calc_dens.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
-wbse_dv_of_drho.o \
-wbse_dv_setup.o \
+wbse_dv.o \
 wbse_hqp_psi.o \
 wbse_init.o \
 wbse_init_methods.o \

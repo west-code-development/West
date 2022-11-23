@@ -57,9 +57,8 @@ TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps wfreq.x
 
-wfreq.x : $(PWOBJS) $(WFREQ_OBJS) $(QEMODS) $(WESTLIBS)
-	$(LD) $(LDFLAGS) -o wfreq.x \
-		$(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) ${PYT_LDFLAGS}
+wfreq.x : $(WFREQ_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) ${PYT_LDFLAGS}
 	- ( cd ../../bin ; ln -fs ../West/Wfreq/wfreq.x . )
 
 tldeps :

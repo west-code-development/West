@@ -31,7 +31,6 @@ QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
 ../Wstat/libwstat.a \
-../Wbse/libwbse.a \
 ../Westpp/libwestpp.a \
 ../IO_kernel/lib_io_kernel.a \
 ../DFPT_kernel/lib_dfpt_kernel.a \
@@ -49,9 +48,8 @@ TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps wbsepp.x
 
-wbsepp.x : $(PWOBJS) $(WBSEPP_OBJS) $(QEMODS) $(WESTLIBS)
-	$(LD) $(LDFLAGS) -o wbsepp.x \
-	        $(WBSEPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) $(PYT_LDFLAGS)
+wbsepp.x : $(WBSEPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wbsepp/wbsepp.x . )
 
 tldeps :

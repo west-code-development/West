@@ -48,9 +48,8 @@ TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps westpp.x libwestpp.a
 
-westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(WESTLIBS)
-	$(LD) $(LDFLAGS) -o westpp.x \
-		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) ${PYT_LDFLAGS}
+westpp.x : $(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Westpp/westpp.x . )
 
 tldeps :

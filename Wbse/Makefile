@@ -23,14 +23,12 @@ WBSE_OBJS = \
 check_ovl_wfc.o \
 lanczos_restart.o \
 td_liouville_oper.o \
-wbse.o \
 wbse_bse_kernel.o \
 wbse_calc_dens.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
 wbse_dv.o \
 wbse_hqp_psi.o \
-wbse_init.o \
 wbse_init_methods.o \
 wbse_init_qboxcoupling.o \
 wbse_init_readin.o \
@@ -65,20 +63,14 @@ WESTLIBS = \
 
 TLDEPS = bindir mods pwlibs pw
 
-all : title tldeps libwbse.a wbse.x wbse_init.x
+all : title tldeps wbse.x wbse_init.x
 
-libwbse.a : $(WBSE_OBJS)
-	$(AR) $(ARFLAGS) $@ $?
-	$(RANLIB) $@
-
-wbse.x : wbse.o libwbse.a $(PWOBJS) $(WBSE_OBJS) $(QEMODS) $(WESTLIBS)
-	$(LD) $(LDFLAGS) -o $@ wbse.o libwbse.a \
-	        $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) $(PYT_LDFLAGS)
+wbse.x : wbse.o $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wbse/wbse.x . )
 
-wbse_init.x : wbse_init.o libwbse.a $(PWOBJS) $(WBSE_OBJS) $(QEMODS) $(WESTLIBS)
-	$(LD) $(LDFLAGS) -o $@ wbse_init.o libwbse.a \
-		$(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) $(PYT_LDFLAGS)
+wbse_init.x : wbse_init.o $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wbse/wbse_init.x . )
 
 tldeps :

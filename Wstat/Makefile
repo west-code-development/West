@@ -48,9 +48,8 @@ TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps wstat.x libwstat.a
 
-wstat.x : $(PWOBJS) $(WSTAT_OBJS) $(QEMODS) $(WESTLIBS)
-	$(LD) $(LDFLAGS) -o wstat.x \
-                $(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) $(PYT_LDFLAGS)
+wstat.x : $(WSTAT_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Wstat/wstat.x . )
 
 tldeps :

@@ -55,9 +55,9 @@ CONTAINS
     !
 #if defined(__CUDA)
     !
-    ! CUDA not yet available for wbse_init, wbse, wbsepp
+    ! CUDA not yet available for wbse.x
     !
-    IF(matches('wbse',TRIM(lowercase_string(code)))) THEN
+    IF(matches('wbse.x',TRIM(lowercase_string(code)))) THEN
        CALL errore(TRIM(lowercase_string(code)),'CUDA not yet implemented for BSE',1)
     ENDIF
 #endif

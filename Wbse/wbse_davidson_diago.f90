@@ -22,7 +22,7 @@ SUBROUTINE wbse_davidson_diago ( )
   USE mp,                   ONLY : mp_max,mp_bcast
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : nks,npw,npwx,ngk
-  USE distribution_center,  ONLY : pert,aband,bseparal
+  USE distribution_center,  ONLY : pert,aband,bandpair
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
@@ -85,14 +85,14 @@ SUBROUTINE wbse_davidson_diago ( )
   ! ... DISTRIBUTE nband
   !
   aband = idistribute()
-  CALL aband%init(nbndval0x,'b','band_paralel',.TRUE.)
+  CALL aband%init(nbndval0x,'b','nbndval',.TRUE.)
   !
   ! ... DISTRIBUTE bse_kernel
   !
   size_index_matrix = MAXVAL(size_index_matrix_lz(:))
   IF (l_bse_calculation) THEN
-     bseparal = idistribute()
-     CALL bseparal%init(size_index_matrix,'i','bse_kernel',.TRUE.)
+     bandpair = idistribute()
+     CALL bandpair%init(size_index_matrix,'i','n_pairs',.TRUE.)
   ENDIF
   !
   CALL wbse_memory_report() ! Before allocating I report the memory required.

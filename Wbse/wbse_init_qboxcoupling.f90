@@ -25,7 +25,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   USE wbse_init_restart,    ONLY : wbse_status_restart_read,wbse_status_restart_write,&
                                  & wbse_index_matrix_read,wbse_index_matrix_write
   USE class_idistribute,    ONLY : idistribute
-  USE distribution_center,  ONLY : aband,bseparal
+  USE distribution_center,  ONLY : aband,bandpair
   USE function3d,           ONLY : write_function3d,read_function3d
   USE mp,                   ONLY : mp_barrier,mp_sum
   USE lsda_mod,             ONLY : nspin
@@ -95,9 +95,8 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
        & ' ik'//my_labelik//' iq'//my_labeliq//' ispin'//my_spin)
   !
   aband = idistribute()
-  CALL aband%init(nbndval,'i','bse_nbndval',.TRUE.)
+  CALL aband%init(nbndval,'i','nbndval',.TRUE.)
   !
-  IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dffts%nnr))
   IF(.NOT. gamma_only) ALLOCATE(psic_aux(dffts%nnr))
   !
   tmp_size = nbndval*nbndval
@@ -164,18 +163,18 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
      ! initialize the paralellization
      !
-     bseparal = idistribute()
-     CALL bseparal%init(do_index,'i','number_pairs', .TRUE.)
+     bandpair = idistribute()
+     CALL bandpair%init(do_index,'i','n_pairs', .TRUE.)
      !
      CALL io_push_title('Applying ' // TRIM(chi_kernel) // ' kernel with FF_Qbox ...')
      !
-     CALL start_bar_type(barra,'FF_Qbox',bseparal%nlocx)
+     CALL start_bar_type(barra,'FF_Qbox',bandpair%nlocx)
      !
      ! parallel loop
      !
-     DO il1 = 1, bseparal%nlocx
+     DO il1 = 1, bandpair%nlocx
         !
-        ig1  = bseparal%l2g(il1) ! global index of n_total
+        ig1  = bandpair%l2g(il1) ! global index of n_total
         !
         ibnd = index_matrix(ig1,1)
         jbnd = index_matrix(ig1,2)
@@ -393,7 +392,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   DEALLOCATE(index_matrix)
   IF(ALLOCATED(restart_matrix)) DEALLOCATE(restart_matrix)
   DEALLOCATE(ovl_matrix)
-  IF(ALLOCATED(psic)) DEALLOCATE(psic)
   IF(ALLOCATED(psic_aux)) DEALLOCATE(psic_aux)
   IF(ALLOCATED(evc_loc)) DEALLOCATE(evc_loc)
   !

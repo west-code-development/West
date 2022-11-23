@@ -48,7 +48,6 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   !
   evc1_new(:,:,:) = (0._DP,0._DP)
   !
-  IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
   ALLOCATE(dvrs(dfftp%nnr,nspin))
   !
   ! Calculation of the charge density response
@@ -174,7 +173,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      CALL h_psi(npwx,npw,nbvalloc,evc1_aux,hevc1)
      !
      IF(l_qp_correction) THEN
-        CALL bse_hqp_psi(iks,nbvalloc,evc1_aux,hevc1)
+        CALL wbse_hqp_psi(iks,nbvalloc,evc1_aux,hevc1)
      ENDIF
      !
      DEALLOCATE(evc1_aux)
@@ -236,7 +235,6 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
   ENDDO
   !
   DEALLOCATE(dvrs)
-  DEALLOCATE(psic)
   !
   CALL stop_clock('apply_lv')
   !

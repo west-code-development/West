@@ -25,10 +25,8 @@ MODULE wbse_dv
     USE fft_base,              ONLY : dfftp
     USE uspp_param,            ONLY : upf
     USE uspp,                  ONLY : nlcc_any
-    USE noncollin_module,      ONLY : noncolin,domag
     USE eqv,                   ONLY : dmuxc
     USE xc_lib,                ONLY : xclib_dft_is
-    USE wavefunctions,         ONLY : psic
     USE lsda_mod,              ONLY : nspin
     !
     IMPLICIT NONE
@@ -59,14 +57,7 @@ MODULE wbse_dv
        !
        IF(xclib_dft_is('gradient')) THEN
           !
-          IF(noncolin .AND. domag) THEN
-             IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
-             psic(:) = (0._DP,0._DP)
-          ENDIF
-          !
           CALL setup_dgc()
-          !
-          IF(ALLOCATED(psic)) DEALLOCATE(psic)
           !
        ENDIF
        !

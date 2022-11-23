@@ -14,10 +14,7 @@
 SUBROUTINE wbsepp_setup
   !-----------------------------------------------------------------------
   !
-  USE types_coulomb,          ONLY : pot3D
-  USE westcom,                ONLY : west_prefix,nbnd_occ,l_use_ecutrho,nbndval0x
-  USE io_files,               ONLY : tmp_dir
-  USE westcom,                ONLY : wbse_save_dir
+  USE westcom,                ONLY : l_use_ecutrho,wbsepp_save_dir
   !
   IMPLICIT NONE
   !
@@ -27,12 +24,8 @@ SUBROUTINE wbsepp_setup
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Rho',.FALSE.,'gb')
-  !
   CALL set_nbndocc()
   !
-  nbndval0x = nbnd_occ(1)
-  !
-  wbse_save_dir = TRIM(tmp_dir) // TRIM(west_prefix) // '.wbse.save'
+  CALL my_mkdir(wbsepp_save_dir)
   !
 END SUBROUTINE

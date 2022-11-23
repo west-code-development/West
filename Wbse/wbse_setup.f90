@@ -142,9 +142,7 @@ SUBROUTINE bse_start()
   INTEGER :: ibnd, jbnd, iks, current_spin
   REAL(DP) :: ovl_value
   !
-  ! compute the divergence term in Fock potential, using F-G method
-  !
-  CALL pot3D%init('Rho',.FALSE.,'gb')
+  ! the divergence term in Fock potential
   !
   sigma_x_head = pot3D%div
   !

@@ -27,6 +27,5 @@ MODULE distribution_center
   TYPE(idistribute) :: band_group
   TYPE(idistribute) :: kpt_pool
   TYPE(idistribute) :: bandpair
-  TYPE(idistribute) :: bseparal
   !
 END MODULE

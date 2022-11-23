@@ -17,7 +17,7 @@ SUBROUTINE do_spectrum()
   USE io_global,             ONLY : stdout
   USE mp_world,              ONLY : world_comm,mpime,root
   USE mp,                    ONLY : mp_barrier
-  USE westcom,               ONLY : qe_prefix,wbse_save_dir,ipol_input,spin_channel,&
+  USE westcom,               ONLY : wbse_save_dir,wbsepp_save_dir,ipol_input,spin_channel,&
                                   & n_lanczos_to_use,n_extrapolation,which_unit,range,broad
   USE json_module,           ONLY : json_file
   USE west_io,               ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
@@ -28,8 +28,8 @@ SUBROUTINE do_spectrum()
   ! Workspace
   !
   REAL(DP) :: omega(3)
-  CHARACTER(LEN=256):: filename
-  CHARACTER(LEN=256):: filename_plot
+  CHARACTER(LEN=256):: fname1
+  CHARACTER(LEN=256):: fname2
   !
   INTEGER :: ipol, n_ipol, i, ierr, ip, ip2, counter, itermax
   INTEGER :: iun1, iun2
@@ -74,11 +74,7 @@ SUBROUTINE do_spectrum()
         CALL errore('do_spectrum','Wrong ipol_input',1)
      END SELECT
      !
-     ! Terminator scheme
-     !
      itermax = n_lanczos_to_use+n_extrapolation
-     !
-     ! Initialisation of coefficients
      !
      ALLOCATE(beta_store(n_ipol,itermax))
      ALLOCATE(zeta_store(n_ipol,n_ipol,itermax))
@@ -97,29 +93,25 @@ SUBROUTINE do_spectrum()
      !
      CALL read_b_g_z_file()
      !
-     ! Optional: use an extrapolation scheme
-     !
      CALL extrapolate()
      !
-     ! Spectrum calculation
-     !
      WRITE(stdout,'(/5x,"Data ready, starting to calculate observables...")')
-     WRITE(stdout,'(/5x,"Broadening =",f15.8," Ry")') broad
+     WRITE(stdout,'(5x,"Broadening =",f15.8," Ry")') broad
      !
-     filename = TRIM(qe_prefix) // '.plot_chi.dat'
-     filename_plot = TRIM(qe_prefix) // '.abs_spectrum.dat'
+     fname1 = TRIM(wbsepp_save_dir)//'/chi.dat'
+     fname2 = TRIM(wbsepp_save_dir)//'/abs_spectrum.dat'
      !
-     WRITE(stdout,'(/5x,"Output file name: ",a)') TRIM(filename)
-     WRITE(stdout,'(/5x,"Output file name: ",a)') TRIM(filename_plot)
+     WRITE(stdout,'(5x,"Output file name: ",a)') TRIM(fname1)
+     WRITE(stdout,'(5x,"Output file name: ",a)') TRIM(fname2)
      !
      WRITE(stdout,'(/5x,"chi_i_j: dipole polarizability tensor in units of e^2*a_0^2/energy")')
      !
      IF(n_ipol == 3) THEN
-        WRITE(stdout,'(/5x,"S: oscillator strength in units of 1/energy")')
-        WRITE(stdout,'(/5x,"S(\hbar \omega) = 2m/( 3 \pi e^2 \hbar) \omega sum_j chi_j_j")')
-        WRITE(stdout,'(/5x,"S(\hbar \omega) satisfies the f-sum rule: \int_0^\infty dE S(E) = N_el")')
+        WRITE(stdout,'(5x,"S: oscillator strength in units of 1/energy")')
+        WRITE(stdout,'(5x,"S(\hbar \omega) = 2m/( 3 \pi e^2 \hbar) \omega sum_j chi_j_j")')
+        WRITE(stdout,'(5x,"S(\hbar \omega) satisfies the f-sum rule: \int_0^\infty dE S(E) = N_el")')
      ELSE
-        WRITE(stdout,'(/5x,"Insufficent info for S")')
+        WRITE(stdout,'(5x,"Insufficent info for S")')
      ENDIF
      !
      ! The static dipole polarizability / static charge-density susceptibility
@@ -137,10 +129,8 @@ SUBROUTINE do_spectrum()
         ENDDO
      ENDDO
      !
-     ! Open the output file
-     !
-     OPEN(NEWUNIT=iun1,FILE=filename)
-     OPEN(NEWUNIT=iun2,FILE=filename_plot)
+     OPEN(NEWUNIT=iun1,FILE=TRIM(fname1))
+     OPEN(NEWUNIT=iun2,FILE=TRIM(fname2))
      !
      ! Header of the output plot file
      !
@@ -355,10 +345,8 @@ SUBROUTINE do_spectrum()
      WRITE(stdout,'(5x,"Integral test:",f15.8,"  Actual:",f15.8:)') f_sum, 0.5_DP*xmin*xmin
      WRITE(stdout,*)
      !
-     ! Deallocations
-     !
-     IF(ALLOCATED(beta_store))  DEALLOCATE(beta_store)
-     IF(ALLOCATED(zeta_store))  DEALLOCATE(zeta_store)
+     IF(ALLOCATED(beta_store)) DEALLOCATE(beta_store)
+     IF(ALLOCATED(zeta_store)) DEALLOCATE(zeta_store)
      !
      DEALLOCATE(a)
      DEALLOCATE(b)
@@ -485,7 +473,6 @@ CONTAINS
     CHARACTER(LEN=3) :: ipol_label_tmp
     REAL(DP), ALLOCATABLE :: beta_store_tmp(:,:)
     COMPLEX(DP), ALLOCATABLE :: zeta_store_tmp(:,:,:)
-    CHARACTER :: my_ip
     CHARACTER(LEN=256) :: fname
     CHARACTER(LEN=:), ALLOCATABLE :: cval
     LOGICAL :: found
@@ -495,11 +482,10 @@ CONTAINS
     !
     DO ip = 1,n_ipol
        !
-       WRITE(my_ip,'(i1)') ip
-       fname = TRIM(wbse_save_dir)//'/summary.'//my_ip//'.json'
+       WRITE(fname,'(a,i1,a)') TRIM(wbse_save_dir)//'/summary.',ip,'.json'
        !
        CALL json%initialize()
-       CALL json%load(filename=fname)
+       CALL json%load(filename=TRIM(fname))
        !
        CALL json%get('ipol_label',cval,found)
        IF(found) ipol_label_tmp = cval
@@ -520,8 +506,7 @@ CONTAINS
        ALLOCATE(beta_store_tmp(n_lanczos_tmp,nspin_tmp))
        ALLOCATE(zeta_store_tmp(3,n_lanczos_tmp,nspin_tmp))
        !
-       WRITE(my_ip,'(i1)') ip
-       fname = TRIM(wbse_save_dir)//'/bgz.'//my_ip//'.dat'
+       WRITE(fname,'(a,i1,a)') TRIM(wbse_save_dir)//'/bgz.',ip,'.dat'
        OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
        IF(ierr /= 0) THEN
           CALL errore('read_b_g_z_file','Cannot read file: '//TRIM(fname),1)

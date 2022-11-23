@@ -71,7 +71,6 @@ SUBROUTINE compute_d0psi_rs()
   !
   WRITE(stdout,'(/,5X,"Calculation of the dipole in real space")')
   !
-  IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
   ALLOCATE(aux_r(dfftp%nnr))
   ALLOCATE(r(dfftp%nnr,n_ipol))
   !
@@ -217,7 +216,6 @@ SUBROUTINE compute_d0psi_rs()
      !
   ENDDO
   !
-  IF(ALLOCATED(psic)) DEALLOCATE(psic)
   DEALLOCATE(aux_r)
   DEALLOCATE(r)
   !
@@ -290,12 +288,11 @@ END SUBROUTINE
 SUBROUTINE compute_d0psi_dfpt()
   !
   USE kinds,                ONLY : DP
-  USE fft_base,             ONLY : dfftp
   USE io_global,            ONLY : stdout
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
   USE buffers,              ONLY : get_buffer
-  USE wavefunctions,        ONLY : evc,psic
+  USE wavefunctions,        ONLY : evc
   USE noncollin_module,     ONLY : npol
   USE uspp,                 ONLY : vkb,nkb
   USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,lsda,igk_k,current_k,ngk
@@ -315,8 +312,6 @@ SUBROUTINE compute_d0psi_dfpt()
   LOGICAL, PARAMETER :: l_skip_nl_part_of_hcomr = .FALSE.
   REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
-  !
-  IF(.NOT. ALLOCATED(psic)) ALLOCATE(psic(dfftp%nnr))
   !
   WRITE(stdout,'(/,5X,"Calculation of the dipole using DFPT method")')
   !
@@ -403,7 +398,5 @@ SUBROUTINE compute_d0psi_dfpt()
      ENDDO
      !
   ENDDO
-  !
-  IF(ALLOCATED(psic)) DEALLOCATE(psic)
   !
 END SUBROUTINE

@@ -45,7 +45,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
   USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,l_local_repr,u_matrix,&
                                   & index_matrix_lz,size_index_matrix_lz
-  USE distribution_center,   ONLY : aband,bseparal
+  USE distribution_center,   ONLY : aband,bandpair
   USE wbse_io,               ONLY : read_bse_pots_g2r,read_bse_pots_g2g
   !
   IMPLICIT NONE
@@ -102,9 +102,9 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
      !
      ALLOCATE(raux1(dffts%nnr))
      !
-     DO il1 = 1, bseparal%nlocx
+     DO il1 = 1, bandpair%nlocx
         !
-        ig1 = bseparal%l2g(il1) ! global index of n_total
+        ig1 = bandpair%l2g(il1) ! global index of n_total
         !
         IF(ig1 < 1 .OR. ig1 > size_index_matrix) CYCLE
         !

@@ -5,7 +5,7 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
-SUBROUTINE bse_hqp_psi(iks, nbvalloc, psi, dpsi)
+SUBROUTINE wbse_hqp_psi(iks, nbvalloc, psi, dpsi)
   !
   ! evc is qp wfcs, et_qp is qp eigenvalues
   ! evc_ks is ks wfc, et is ks wfcs

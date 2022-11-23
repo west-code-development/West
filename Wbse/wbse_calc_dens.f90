@@ -5,12 +5,12 @@
 ! in the root directory of the present distribution,
 ! or http://www.gnu.org/copyleft/gpl.txt .
 !
+!---------------------------------------------------------------------
 SUBROUTINE wbse_calc_dens(devc, drho)
   !---------------------------------------------------------------------
   !
   ! This subroutine calculates the response charge density
   ! from linear response orbitals and ground state orbitals.
-  !
   !
   USE kinds,                  ONLY : DP
   USE cell_base,              ONLY : omega
@@ -24,41 +24,43 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   USE mp_global,              ONLY : my_image_id,inter_image_comm
   USE buffers,                ONLY : get_buffer
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,l_lanczos
-  USE fft_at_gamma,           ONLY : single_invfft_gamma,double_invfft_gamma
-  USE fft_at_k,               ONLY : single_fwfft_k,single_invfft_k
+  USE fft_at_gamma,           ONLY : double_invfft_gamma
+  USE fft_at_k,               ONLY : single_invfft_k
   USE distribution_center,    ONLY : aband
   !
   IMPLICIT NONE
   !
+  ! I/O
+  !
   COMPLEX(DP), INTENT(IN) :: devc(npwx*npol,nbndval0x,nks)
   COMPLEX(DP), INTENT(OUT) :: drho(dffts%nnr,nspin)
   !
-  ! Local variables
+  ! Workspace
   !
-  INTEGER :: ir, ibnd, iks, nbndval
-  INTEGER :: nbvalloc, il1
-  REAL(DP) :: w1, prod
-  COMPLEX(DP), ALLOCATABLE :: psic_aux(:)
+  INTEGER :: ir, ibnd, iks, nbndval, lbnd
+  REAL(DP) :: w1
+  REAL(DP), ALLOCATABLE :: tmp_r(:)
+  COMPLEX(DP), ALLOCATABLE :: tmp_c(:)
   !
   CALL start_clock('calc_dens')
   !
-  drho(:,:) = (0._DP,0._DP)
+  IF(gamma_only) THEN
+     ALLOCATE(tmp_r(dffts%nnr))
+     !
+     tmp_r(:) = 0._DP
+  ELSE
+     ALLOCATE(tmp_c(dffts%nnr))
+     !
+     drho(:,:) = (0._DP,0._DP)
+  ENDIF
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
      !
      nbndval = nbnd_occ(iks)
      !
-     nbvalloc = 0
-     DO il1 = 1, aband%nloc
-        ibnd = aband%l2g(il1)
-        IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
-        nbvalloc = nbvalloc + 1
-     ENDDO
-     !
      ! ... Set k-point and spin
      !
      current_k = iks
-     !
      IF(lsda) current_spin = isk(iks)
      !
      ! ... Number of G vectors for PW expansion of wfs at k
@@ -76,62 +78,62 @@ SUBROUTINE wbse_calc_dens(devc, drho)
         !
         ! double bands @ gamma
         !
-        DO il1 = 1, nbvalloc
+        DO lbnd = 1, aband%nloc
            !
-           ibnd = aband%l2g(il1)
+           ibnd = aband%l2g(lbnd)
+           IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
            !
            w1 = wg(ibnd,iks)/omega
            !
            CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),devc(:,ibnd,iks),psic,'Wave')
            !
            DO ir = 1, dffts%nnr
-              prod = REAL(psic(ir),KIND=DP) * AIMAG(psic(ir))
-              drho(ir,current_spin) = drho(ir,current_spin) + w1 * CMPLX(prod,KIND=DP)
+              tmp_r(ir) = tmp_r(ir) + w1*REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
            !
         ENDDO
         !
-     ELSE
+        drho(:,current_spin) = CMPLX(tmp_r,KIND=DP)
         !
-        ALLOCATE(psic_aux(dffts%nnr))
+     ELSE
         !
         ! only single bands
         !
-        DO il1 = 1, nbvalloc
+        DO lbnd = 1, aband%nloc
            !
-           ibnd = aband%l2g(il1)
+           ibnd = aband%l2g(lbnd)
+           IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
            !
            w1 = wg(ibnd,iks)/omega
            !
            CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,devc(:,ibnd,iks),psic_aux,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,devc(:,ibnd,iks),tmp_c,'Wave',igk_k(:,current_k))
            !
            DO ir = 1, dffts%nnr
-              drho(ir,current_spin) = drho(ir,current_spin) + w1 * CONJG(psic(ir))* psic_aux(ir)
+              drho(ir,current_spin) = drho(ir,current_spin) + w1*CONJG(psic(ir))*tmp_c(ir)
            ENDDO
            !
         ENDDO
         !
         IF(npol == 2) THEN
            !
-           DO il1 = 1, nbvalloc
+           DO lbnd = 1, aband%nloc
               !
-              ibnd = aband%l2g(il1)
+              ibnd = aband%l2g(lbnd)
+              IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
               !
               w1 = wg(ibnd,iks)/omega
               !
               CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
-              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,ibnd,iks),psic_aux,'Wave',igk_k(:,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,ibnd,iks),tmp_c,'Wave',igk_k(:,current_k))
               !
               DO ir = 1, dffts%nnr
-                 drho(ir,current_spin) = drho(ir,current_spin) + w1 * CONJG(psic(ir))* psic_aux(ir)
+                 drho(ir,current_spin) = drho(ir,current_spin) + w1 * CONJG(psic(ir))*tmp_c(ir)
               ENDDO
               !
            ENDDO
            !
         ENDIF
-        !
-        DEALLOCATE(psic_aux)
         !
      ENDIF
      !
@@ -139,6 +141,12 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   !
   IF(l_lanczos) THEN
      CALL mp_sum(drho,inter_image_comm)
+  ENDIF
+  !
+  IF(gamma_only) THEN
+     DEALLOCATE(tmp_r)
+  ELSE
+     DEALLOCATE(tmp_c)
   ENDIF
   !
   CALL stop_clock('calc_dens')

@@ -23,7 +23,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE mp,                   ONLY : mp_bcast,mp_barrier
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
-  USE distribution_center,  ONLY : aband,bseparal
+  USE distribution_center,  ONLY : aband,bandpair
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -50,15 +50,15 @@ SUBROUTINE wbse_lanczos_diago()
   !
   aband = idistribute()
   !
-  CALL aband%init(nbndval0x,'i','band_paralel',.TRUE.)
+  CALL aband%init(nbndval0x,'i','nbndval',.TRUE.)
   !
   ! ... DISTRIBUTE bse_kernel
   !
   size_index_matrix = MAXVAL(size_index_matrix_lz)
   !
   IF(l_bse_calculation) THEN
-     bseparal = idistribute()
-     CALL bseparal%init(size_index_matrix,'i','bse_kernel',.TRUE.)
+     bandpair = idistribute()
+     CALL bandpair%init(size_index_matrix,'i','n_pairs',.TRUE.)
   ENDIF
   !
   ! Main Lanzcos program

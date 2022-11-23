@@ -12,7 +12,7 @@
 !
 !-----------------------------------------------------------------------
 SUBROUTINE k_psi(lda,n,m,psi,hpsi)
-  !----------------------------------------------------------------------------
+  !-----------------------------------------------------------------------
   !
   ! ... This routine computes the product of the Hamiltonian (kinetic-only)
   ! ... matrix with m wavefunctions contained in psi

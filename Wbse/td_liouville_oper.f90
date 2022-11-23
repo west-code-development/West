@@ -173,7 +173,7 @@ SUBROUTINE west_apply_liouvillian(evc1, evc1_new)
      CALL h_psi(npwx,npw,nbvalloc,evc1_aux,hevc1)
      !
      IF(l_qp_correction) THEN
-        CALL wbse_hqp_psi(iks,nbvalloc,evc1_aux,hevc1)
+        CALL apply_hqp_to_m_wfcs(iks,nbvalloc,evc1_aux,hevc1)
      ENDIF
      !
      DEALLOCATE(evc1_aux)

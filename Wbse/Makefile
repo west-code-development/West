@@ -28,7 +28,6 @@ wbse_calc_dens.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
 wbse_dv.o \
-wbse_hqp_psi.o \
 wbse_init_methods.o \
 wbse_init_qboxcoupling.o \
 wbse_init_readin.o \

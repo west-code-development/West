@@ -10,7 +10,9 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
+!-----------------------------------------------------------------------
 SUBROUTINE wbse_init_methods()
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : isk,nks,npw,ngk
@@ -28,6 +30,8 @@ SUBROUTINE wbse_init_methods()
   IMPLICIT NONE
   !
   !LOGICAL, INTENT(IN) :: ff_activate
+  !
+  ! Workspace
   !
   INTEGER :: iks, current_spin
   INTEGER :: iq, nkq, ikq

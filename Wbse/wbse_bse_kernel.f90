@@ -10,7 +10,9 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
+!-----------------------------------------------------------------------
 SUBROUTINE wbse_bse_kernel(current_spin, nbndval_k, evc1, bse_kd1)
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
@@ -33,7 +35,9 @@ SUBROUTINE wbse_bse_kernel(current_spin, nbndval_k, evc1, bse_kd1)
   !
 END SUBROUTINE
 !
+!-----------------------------------------------------------------------
 SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
+  !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
   USE fft_base,              ONLY : dffts
@@ -56,7 +60,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin, nbndval_k, evc1, bse_kd1)
   COMPLEX(DP), INTENT(IN) :: evc1(npwx,nbndval0x,nks)
   COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,nbndval0x)
   !
-  ! local vars
+  ! Workspace
   !
   INTEGER :: ibnd, jbnd, ibnd_1, size_index_matrix, summ_index
   INTEGER :: ibnd_index, jbnd_index, il1, ig1

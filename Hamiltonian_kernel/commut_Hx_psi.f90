@@ -12,7 +12,7 @@
 !
 !-----------------------------------------------------------------------
 SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
-  !----------------------------------------------------------------------
+  !-----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >
   ! On output: dpsi(m-bands) = | dpsi_ik > = [H,x_ipol] | psi_ik > in crystal axis
@@ -278,7 +278,7 @@ END SUBROUTINE
 #if defined(__CUDA)
 !-----------------------------------------------------------------------
 SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
-  !----------------------------------------------------------------------
+  !-----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >
   ! On output: dpsi(m-bands) = | dpsi_ik > = [H,x_ipol] | psi_ik > in crystal axis
@@ -585,6 +585,7 @@ END SUBROUTINE
 !-----------------------------------------------------------------------
 SUBROUTINE compute_deff_real_gpu(deff, et)
   !-----------------------------------------------------------------------
+  !
   ! This routine computes the effective value of the D-eS coefficients
   ! which appear often in many expressions in the US or PAW case.
   ! This routine is for the collinear case.

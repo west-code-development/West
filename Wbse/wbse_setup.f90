@@ -28,6 +28,8 @@ SUBROUTINE wbse_setup()
   !
   IMPLICIT NONE
   !
+  ! Workspace
+  !
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   CALL do_setup()
@@ -122,7 +124,9 @@ SUBROUTINE wbse_setup()
   !
 END SUBROUTINE
 !
+!-----------------------------------------------------------------------
 SUBROUTINE bse_start()
+  !-----------------------------------------------------------------------
   !
   USE kinds,            ONLY : DP
   USE io_global,        ONLY : stdout
@@ -138,8 +142,10 @@ SUBROUTINE bse_start()
   !
   IMPLICIT NONE
   !
-  INTEGER :: do_index, nbndval, tmp_size, is
-  INTEGER :: ibnd, jbnd, iks, current_spin
+  ! Workspace
+  !
+  INTEGER :: do_index,nbndval,tmp_size,is
+  INTEGER :: ibnd,jbnd,iks,current_spin
   REAL(DP) :: ovl_value
   !
   ! the divergence term in Fock potential
@@ -275,5 +281,64 @@ SUBROUTINE bse_start()
      n_tau = 0
      !
   ENDIF
+  !
+END SUBROUTINE
+!
+!-----------------------------------------------------------------------
+SUBROUTINE read_qp_eigs()
+  !-----------------------------------------------------------------------
+  !
+  ! read qp eigenvalues from file
+  !
+  USE io_global,           ONLY : ionode
+  USE mp,                  ONLY : mp_bcast
+  USE mp_global,           ONLY : intra_image_comm
+  USE westcom,             ONLY : et_qp,qp_correction
+  USE pwcom,               ONLY : nks,nbnd,lsda
+  !
+  IMPLICIT NONE
+  !
+  ! Workspace
+  !
+  INTEGER :: iun,ierr
+  INTEGER :: ibnd,ik
+  INTEGER :: nqp_eigs,n_kpts
+  CHARACTER(LEN=256) :: fname
+  !
+  ALLOCATE(et_qp(nbnd,nks))
+  !
+  IF(lsda) THEN
+     n_kpts = nks/2
+  ELSE
+     n_kpts = nks
+  ENDIF
+  !
+  DO ik = 1,n_kpts
+     !
+     IF(ionode) THEN
+        !
+        WRITE(fname,'(a,i1)') TRIM(qp_correction)//'.',ik
+        !
+        OPEN(NEWUNIT=iun,FILE=TRIM(fname),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
+        IF(ierr /= 0) CALL errore('read_qp_eigs','Cannot read file: '//TRIM(fname),1)
+        !
+        READ(iun,*) nqp_eigs
+        IF(nqp_eigs /= nbnd) CALL errore('read_qp_eigs','nqp_eigs /= nbnd',1)
+        !
+        DO ibnd = 1,nqp_eigs
+           IF(lsda) THEN
+              READ(iun,*) et_qp(ibnd,ik),et_qp(ibnd,ik+n_kpts)
+           ELSE
+              READ(iun,*) et_qp(ibnd,ik)
+           ENDIF
+        ENDDO
+        !
+        CLOSE(iun)
+        !
+     ENDIF
+     !
+  ENDDO
+  !
+  CALL mp_bcast(et_qp,0,intra_image_comm)
   !
 END SUBROUTINE

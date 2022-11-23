@@ -181,7 +181,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
-        CALL wbse_dot(evc1,evc1_new,npwx,nbndval0x,nks,wbse_dot_out)
+        CALL wbse_dot(evc1,evc1_new,nbndval0x,nks,wbse_dot_out)
         !
         beta(:) = REAL(wbse_dot_out,KIND=DP)
         !
@@ -211,7 +211,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         IF(MOD(iter,2) == 0) THEN
            DO iip = 1,n_ipol
-              CALL wbse_dot(d0psi(:,:,:,iip),evc1,npwx,nbndval0x,nks,wbse_dot_out)
+              CALL wbse_dot(d0psi(:,:,:,iip),evc1,nbndval0x,nks,wbse_dot_out)
               !
               zeta(:) = wbse_dot_out
               zeta_store(ip,iip,iter,:) = zeta

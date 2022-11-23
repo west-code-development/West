@@ -10,7 +10,9 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
+!-----------------------------------------------------------------------
 SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
+  !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : omega
@@ -39,8 +41,12 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   IMPLICIT NONE
   !
+  ! I/O
+  !
   INTEGER, INTENT(IN) :: iks,ikq,current_spin,nbndval
   LOGICAL, INTENT(IN) :: l_restart_calc
+  !
+  ! Workspace
   !
   INTEGER :: ibnd,jbnd,tmp_size
   INTEGER :: il1,ig1,ir,do_index

@@ -45,14 +45,14 @@ PROGRAM wbsepp
   !
   lgate = .FALSE.
   DO i = 1, 3
-     IF( wbsepp_calculation(i:i) == 's' .OR. wbsepp_calculation(i:i) == 'S' ) lgate(1) = .TRUE. ! Spectrum
+     IF( wbsepp_calculation(i:i) == 's' .OR. wbsepp_calculation(i:i) == 'S' ) lgate(1) = .TRUE. ! Absorption spectrum
      IF( wbsepp_calculation(i:i) == 'e' .OR. wbsepp_calculation(i:i) == 'E' ) lgate(2) = .TRUE. ! Exciton state
      IF( wbsepp_calculation(i:i) == 'r' .OR. wbsepp_calculation(i:i) == 'R' ) lgate(3) = .TRUE. ! Density response
   ENDDO
   !
   IF( lgate(1) ) CALL do_spectrum( )
   IF( lgate(2) ) CALL do_exc( )
-  IF( lgate(3) ) CALL do_density_resp( )
+  IF( lgate(3) ) CALL do_resp( )
   !
   CALL exx_ungo( )
   !

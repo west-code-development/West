@@ -184,6 +184,9 @@ MODULE plep_db
             CALL errore('plep_db_read','Cannot open file: '//TRIM(wbse_save_dir)//'/summary.json',1)
          ENDIF
          !
+         CALL json%get('plep.eigenval',tmp_ev)
+         tmp_n_pdep_eigen = SIZE(tmp_ev,1)
+         !
          CALL json%destroy()
          !
       ENDIF

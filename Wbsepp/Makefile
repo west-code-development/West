@@ -18,8 +18,8 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 WBSEPP_OBJS = \
-do_density_resp.o \
 do_exc.o \
+do_resp.o \
 do_spectrum.o \
 wbsepp.o \
 wbsepp_readin.o \

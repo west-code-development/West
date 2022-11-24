@@ -16,7 +16,6 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   USE cell_base,              ONLY : omega
   USE fft_base,               ONLY : dffts
   USE lsda_mod,               ONLY : nspin,lsda
-  USE wavefunctions,          ONLY : psic,evc
   USE noncollin_module,       ONLY : npol
   USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,nks,current_spin,isk,wg,ngk
   USE control_flags,          ONLY : gamma_only
@@ -27,6 +26,12 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   USE fft_at_gamma,           ONLY : double_invfft_gamma
   USE fft_at_k,               ONLY : single_invfft_k
   USE distribution_center,    ONLY : aband
+#if defined(__CUDA)
+  USE wavefunctions_gpum,     ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions,          ONLY : evc_host=>evc
+#else
+  USE wavefunctions,          ONLY : evc_work=>evc,psic
+#endif
   !
   IMPLICIT NONE
   !
@@ -37,21 +42,28 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   !
   ! Workspace
   !
-  INTEGER :: ir, ibnd, iks, nbndval, lbnd
+  INTEGER :: ir, ibnd, iks, nbndval, lbnd, dffts_nnr
   REAL(DP) :: w1
-  REAL(DP), ALLOCATABLE :: tmp_r(:)
-  COMPLEX(DP), ALLOCATABLE :: tmp_c(:)
+  REAL(DP), ALLOCATABLE :: aux_r(:)
+  COMPLEX(DP), ALLOCATABLE :: aux_c(:)
+  COMPLEX(DP), ALLOCATABLE :: psic2(:)
+  !$acc declare device_resident(psic2)
   !
+#if defined(_CUDA)
+  CALL start_clock_gpu('calc_dens')
+#else
   CALL start_clock('calc_dens')
+#endif
+  !
+  dffts_nnr = dffts%nnr
   !
   IF(gamma_only) THEN
-     ALLOCATE(tmp_r(dffts%nnr))
-     !
-     tmp_r(:) = 0._DP
+     ALLOCATE(aux_r(dffts%nnr))
+     !$acc enter data create(aux_r)
   ELSE
-     ALLOCATE(tmp_c(dffts%nnr))
-     !
-     drho(:,:) = (0._DP,0._DP)
+     ALLOCATE(aux_c(dffts%nnr))
+     !$acc enter data create(aux_c)
+     ALLOCATE(psic2(dffts%nnr))
   ENDIF
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
@@ -70,11 +82,23 @@ SUBROUTINE wbse_calc_dens(devc, drho)
      ! ... read GS wavefunctions
      !
      IF(nks > 1) THEN
-        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc,0,inter_image_comm)
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
      ENDIF
      !
      IF(gamma_only) THEN
+        !
+        !$acc kernels present(aux_r)
+        aux_r(:) = 0._DP
+        !$acc end kernels
         !
         ! double bands @ gamma
         !
@@ -85,17 +109,27 @@ SUBROUTINE wbse_calc_dens(devc, drho)
            !
            w1 = wg(ibnd,iks)/omega
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),devc(:,ibnd,iks),psic,'Wave')
+           !$acc host_data use_device(devc)
+           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),devc(:,ibnd,iks),psic,'Wave')
+           !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
-              tmp_r(ir) = tmp_r(ir) + w1*REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
+           !$acc parallel loop present(aux_r)
+           DO ir = 1, dffts_nnr
+              aux_r(ir) = aux_r(ir) + w1*REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
            ENDDO
+           !$acc end parallel
            !
         ENDDO
         !
-        drho(:,current_spin) = CMPLX(tmp_r,KIND=DP)
+        !$acc update host(aux_r)
+        !
+        drho(:,current_spin) = CMPLX(aux_r,KIND=DP)
         !
      ELSE
+        !
+        !$acc kernels present(aux_c)
+        aux_c(:) = (0._DP,0._DP)
+        !$acc end kernels
         !
         ! only single bands
         !
@@ -106,34 +140,37 @@ SUBROUTINE wbse_calc_dens(devc, drho)
            !
            w1 = wg(ibnd,iks)/omega
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,devc(:,ibnd,iks),tmp_c,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
+           !$acc host_data use_device(devc,psic2)
+           CALL single_invfft_k(dffts,npw,npwx,devc(:,ibnd,iks),psic2,'Wave',igk_k(:,current_k))
+           !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
-              drho(ir,current_spin) = drho(ir,current_spin) + w1*CONJG(psic(ir))*tmp_c(ir)
+           !$acc parallel loop present(aux_c,psic2)
+           DO ir = 1, dffts_nnr
+              aux_c(ir) = aux_c(ir) + w1*CONJG(psic(ir))*psic2(ir)
            ENDDO
+           !$acc end parallel
+           !
+           IF(npol == 2) THEN
+              !
+              CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
+              !$acc host_data use_device(devc,psic2)
+              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,ibnd,iks),psic2,'Wave',igk_k(:,current_k))
+              !$acc end host_data
+              !
+              !$acc parallel loop present(aux_c,psic2)
+              DO ir = 1, dffts_nnr
+                 aux_c(ir) = aux_c(ir) + w1*CONJG(psic(ir))*psic2(ir)
+              ENDDO
+              !$acc end parallel
+              !
+           ENDIF
            !
         ENDDO
         !
-        IF(npol == 2) THEN
-           !
-           DO lbnd = 1, aband%nloc
-              !
-              ibnd = aband%l2g(lbnd)
-              IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
-              !
-              w1 = wg(ibnd,iks)/omega
-              !
-              CALL single_invfft_k(dffts,npw,npwx,evc(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
-              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,ibnd,iks),tmp_c,'Wave',igk_k(:,current_k))
-              !
-              DO ir = 1, dffts%nnr
-                 drho(ir,current_spin) = drho(ir,current_spin) + w1 * CONJG(psic(ir))*tmp_c(ir)
-              ENDDO
-              !
-           ENDDO
-           !
-        ENDIF
+        !$acc update host(aux_c)
+        !
+        drho(:,current_spin) = aux_c
         !
      ENDIF
      !
@@ -144,11 +181,18 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   ENDIF
   !
   IF(gamma_only) THEN
-     DEALLOCATE(tmp_r)
+     !$acc exit data delete(aux_r)
+     DEALLOCATE(aux_r)
   ELSE
-     DEALLOCATE(tmp_c)
+     !$acc exit data delete(aux_c)
+     DEALLOCATE(aux_c)
+     DEALLOCATE(psic2)
   ENDIF
   !
+#if defined(_CUDA)
+  CALL stop_clock_gpu('calc_dens')
+#else
   CALL stop_clock('calc_dens')
+#endif
   !
 END SUBROUTINE

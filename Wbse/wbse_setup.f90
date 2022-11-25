@@ -133,7 +133,7 @@ SUBROUTINE bse_start()
   USE pwcom,            ONLY : isk,nks,npwx
   USE westcom,          ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
                              & sigma_c_head,sigma_x_head,wbse_epsinfty,l_local_repr,overlap_thr,&
-                             & u_matrix,ovl_matrix,size_index_matrix_lz,index_matrix_lz
+                             & u_matrix,ovl_matrix,n_bse_idx,idx_matrix
   USE lsda_mod,         ONLY : nspin
   USE constants,        ONLY : e2,pi
   USE cell_base,        ONLY : omega
@@ -144,7 +144,7 @@ SUBROUTINE bse_start()
   !
   ! Workspace
   !
-  INTEGER :: do_index,nbndval,tmp_size,is
+  INTEGER :: do_idx,nbndval,is
   INTEGER :: ibnd,jbnd,iks,current_spin
   REAL(DP) :: ovl_value
   !
@@ -175,22 +175,21 @@ SUBROUTINE bse_start()
   !IF(.NOT. use_wstat_pdep) THEN
      !
      ! Using coupling approach, single k and q
-     ! define an index_matrix_lz, for bse_kernel paralel
+     ! define idx_matrix
      !
-     tmp_size = nbndval0x*nbndval0x
-     ALLOCATE(index_matrix_lz(tmp_size,2,nspin))
+     ALLOCATE(idx_matrix(nbndval0x*nbndval0x,2,nspin))
      !
-     index_matrix_lz(:,:,:) = 0
+     idx_matrix(:,:,:) = 0
      !
-     ALLOCATE(size_index_matrix_lz(nspin))
+     ALLOCATE(n_bse_idx(nspin))
      !
-     size_index_matrix_lz(:) = 0
+     n_bse_idx(:) = 0
      !
      DO iks = 1,nks
         !
         nbndval = nbnd_occ(iks)
         current_spin = isk(iks)
-        do_index = 0
+        do_idx = 0
         !
         DO ibnd = 1,nbndval
            DO jbnd = 1,nbndval
@@ -202,41 +201,40 @@ SUBROUTINE bse_start()
               !
               IF(l_local_repr) THEN
                  IF(ovl_value >= overlap_thr) THEN
-                    do_index = do_index + 1
-                    index_matrix_lz(do_index,1,current_spin) = ibnd
-                    index_matrix_lz(do_index,2,current_spin) = jbnd
+                    do_idx = do_idx + 1
+                    idx_matrix(do_idx,1,current_spin) = ibnd
+                    idx_matrix(do_idx,2,current_spin) = jbnd
                  ENDIF
               ELSE
-                 do_index = do_index + 1
-                 index_matrix_lz(do_index,1,current_spin) = ibnd
-                 index_matrix_lz(do_index,2,current_spin) = jbnd
+                 do_idx = do_idx + 1
+                 idx_matrix(do_idx,1,current_spin) = ibnd
+                 idx_matrix(do_idx,2,current_spin) = jbnd
               ENDIF
            ENDDO
         ENDDO
         !
-        size_index_matrix_lz(current_spin) = do_index
+        n_bse_idx(current_spin) = do_idx
         !
      ENDDO
      !
 !  ELSE
 !     !
 !     ! Using coupling approach, single k and q
-!     ! define an index_matrix_lz, for bse_kernel paralel
+!     ! define idx_matrix
 !     !
-!     tmp_size = nbndval0x*nbndval0x*n_pdep_eigen
-!     ALLOCATE(index_matrix_lz(tmp_size,3,nspin))
+!     ALLOCATE(idx_matrix(nbndval0x*nbndval0x*n_pdep_eigen,3,nspin))
 !     !
-!     index_matrix_lz(:,:,:) = 0
+!     idx_matrix(:,:,:) = 0
 !     !
-!     ALLOCATE(size_index_matrix_lz(nspin))
+!     ALLOCATE(n_bse_idx(nspin))
 !     !
-!     size_index_matrix_lz(:) = 0
+!     n_bse_idx(:) = 0
 !     !
 !     DO iks = 1,nks
 !        !
 !        nbndval = nbnd_occ(iks)
 !        current_spin = isk(iks)
-!        do_index = 0
+!        do_idx = 0
 !        !
 !        DO alnd = 1,n_pdep_eigen
 !           DO ibnd = 1,nbndval
@@ -249,22 +247,22 @@ SUBROUTINE bse_start()
 !                 !
 !                 IF(ovl_value >= overlap_thr) THEN
 !                    IF (gamma_only) THEN
-!                       do_index = do_index + 1
-!                       index_matrix_lz(do_index,1,current_spin) = ibnd
-!                       index_matrix_lz(do_index,2,current_spin) = jbnd
-!                       index_matrix_lz(do_index,3,current_spin) = alnd
+!                       do_idx = do_idx + 1
+!                       idx_matrix(do_idx,1,current_spin) = ibnd
+!                       idx_matrix(do_idx,2,current_spin) = jbnd
+!                       idx_matrix(do_idx,3,current_spin) = alnd
 !                    ENDIF
 !                 ELSE
-!                    do_index = do_index + 1
-!                    index_matrix_lz(do_index,1,current_spin) = ibnd
-!                    index_matrix_lz(do_index,2,current_spin) = jbnd
-!                    index_matrix_lz(do_index,3,current_spin) = alnd
+!                    do_idx = do_idx + 1
+!                    idx_matrix(do_idx,1,current_spin) = ibnd
+!                    idx_matrix(do_idx,2,current_spin) = jbnd
+!                    idx_matrix(do_idx,3,current_spin) = alnd
 !                 ENDIF
 !              ENDDO
 !           ENDDO
 !        ENDDO
 !        !
-!        size_index_matrix_lz(current_spin) = do_index
+!        n_bse_idx(current_spin) = do_idx
 !        !
 !     ENDDO
 !     !
@@ -272,10 +270,10 @@ SUBROUTINE bse_start()
   !
   IF(l_reduce_io) THEN
      !
-     do_index = SUM(size_index_matrix_lz)
+     do_idx = SUM(n_bse_idx)
      !
      ALLOCATE(tau_is_read(nbndval0x,nbndval0x,nspin))
-     ALLOCATE(tau_all(npwx,do_index))
+     ALLOCATE(tau_all(npwx,do_idx))
      !
      tau_is_read(:,:,:) = 0
      n_tau = 0

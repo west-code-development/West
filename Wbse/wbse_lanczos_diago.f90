@@ -15,7 +15,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,ipol_input,&
                                  & n_lanczos,beta_store,zeta_store,nbndval0x,l_bse_calculation,&
-                                 & size_index_matrix_lz,n_steps_write_restart
+                                 & n_bse_idx,n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
@@ -37,7 +37,7 @@ SUBROUTINE wbse_lanczos_diago()
   INTEGER :: iter
   INTEGER :: iks,is,nbndval
   INTEGER :: ilan_restart,ilan_stopped,ipol_restart,ipol_stopped
-  INTEGER :: size_index_matrix
+  INTEGER :: do_idx
   INTEGER, PARAMETER :: n_ipol = 3
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
@@ -54,11 +54,11 @@ SUBROUTINE wbse_lanczos_diago()
   !
   ! ... DISTRIBUTE bse_kernel
   !
-  size_index_matrix = MAXVAL(size_index_matrix_lz)
+  do_idx = MAXVAL(n_bse_idx)
   !
   IF(l_bse_calculation) THEN
      bandpair = idistribute()
-     CALL bandpair%init(size_index_matrix,'i','n_pairs',.TRUE.)
+     CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
   ENDIF
   !
   ! Main Lanzcos program

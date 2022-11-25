@@ -295,7 +295,7 @@ MODULE wbse_init_center
   CHARACTER(LEN=512) :: wfc_from_qbox
   CHARACTER(LEN=512) :: bisection_info ! bisection info file name, extension is spin channel
                                        ! bisection_info = 'info.bis', default file = 'info.bis.1'
-  REAL(DP) :: overlap_thr              ! overlap threshold for index_matrix calculation in wbse_init_qboxcoupling
+  REAL(DP) :: overlap_thr              ! overlap threshold for idx_matrix in wbse_init_qboxcoupling
   INTEGER :: spin_channel
   LOGICAL :: l_local_repr
   LOGICAL :: l_bisect_thr
@@ -358,8 +358,8 @@ MODULE wbse_center
   REAL(DP),    ALLOCATABLE :: et_qp(:,:)
   COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
   REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
-  INTEGER,     ALLOCATABLE :: size_index_matrix_lz(:)
-  INTEGER,     ALLOCATABLE :: index_matrix_lz(:,:,:)
+  INTEGER,     ALLOCATABLE :: n_bse_idx(:)
+  INTEGER,     ALLOCATABLE :: idx_matrix(:,:,:)
   INTEGER,     ALLOCATABLE :: tau_is_read(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: tau_all(:,:)
   !

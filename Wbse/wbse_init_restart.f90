@@ -18,7 +18,7 @@ MODULE wbse_init_restart
   !
   CONTAINS
     !
-    SUBROUTINE wbse_index_matrix_write(fname,size_list,size_column,index_matrix)
+    SUBROUTINE wbse_index_matrix_write(fname,size_list,size_column,idx_matrix)
       !
       USE kinds,               ONLY : i8b
       USE mp_world,            ONLY : world_comm
@@ -33,7 +33,7 @@ MODULE wbse_init_restart
       ! I/O
       !
       INTEGER,INTENT(IN) :: size_list,size_column
-      INTEGER,INTENT(IN) :: index_matrix(size_list,size_column)
+      INTEGER,INTENT(IN) :: idx_matrix(size_list,size_column)
       CHARACTER(LEN=*),INTENT(IN) :: fname
       !
       ! Workspace
@@ -61,7 +61,7 @@ MODULE wbse_init_restart
          offset = 1
          WRITE(iun,POS=offset) header
          offset = offset+HD_LENGTH*SIZEOF(header(1))
-         WRITE(iun,POS=offset) index_matrix(1:size_list,1:size_column)
+         WRITE(iun,POS=offset) idx_matrix(1:size_list,1:size_column)
          CLOSE(iun)
          !
       ENDIF
@@ -72,7 +72,7 @@ MODULE wbse_init_restart
       !
     END SUBROUTINE
     !
-    SUBROUTINE wbse_index_matrix_read(fname,size_list0,size_list1,size_column,index_matrix)
+    SUBROUTINE wbse_index_matrix_read(fname,size_list0,size_list1,size_column,idx_matrix)
       !
       USE kinds,               ONLY : i8b
       USE io_global,           ONLY : ionode
@@ -88,13 +88,13 @@ MODULE wbse_init_restart
       !
       INTEGER,INTENT(IN) :: size_list0,size_column
       INTEGER,INTENT(OUT) :: size_list1
-      INTEGER,INTENT(OUT) :: index_matrix(size_list0,size_column)
+      INTEGER,INTENT(OUT) :: idx_matrix(size_list0,size_column)
       CHARACTER(LEN=*),INTENT(IN) :: fname
       !
       ! Workspace
       !
       INTEGER :: ierr,iun
-      INTEGER,ALLOCATABLE :: index_matrix_tmp(:,:)
+      INTEGER,ALLOCATABLE :: idx_matrix_tmp(:,:)
       INTEGER :: header(HD_LENGTH)
       INTEGER(i8b) :: offset
       !
@@ -122,21 +122,21 @@ MODULE wbse_init_restart
       !
       CALL mp_bcast(size_list1,0,intra_image_comm)
       !
-      ALLOCATE(index_matrix_tmp(size_list1,size_column))
+      ALLOCATE(idx_matrix_tmp(size_list1,size_column))
       !
       IF(ionode) THEN
          !
-         READ(iun,POS=offset) index_matrix_tmp(1:size_list1,1:size_column)
+         READ(iun,POS=offset) idx_matrix_tmp(1:size_list1,1:size_column)
          CLOSE(iun)
          !
       ENDIF
       !
-      CALL mp_bcast(index_matrix_tmp,0,intra_image_comm)
+      CALL mp_bcast(idx_matrix_tmp,0,intra_image_comm)
       !
-      index_matrix(:,:) = 0
-      index_matrix(1:size_list1,1:size_column) = index_matrix_tmp(1:size_list1,1:size_column)
+      idx_matrix(:,:) = 0
+      idx_matrix(1:size_list1,1:size_column) = idx_matrix_tmp(1:size_list1,1:size_column)
       !
-      DEALLOCATE(index_matrix_tmp)
+      DEALLOCATE(idx_matrix_tmp)
       !
     END SUBROUTINE
     !

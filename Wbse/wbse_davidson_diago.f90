@@ -29,7 +29,7 @@ SUBROUTINE wbse_davidson_diago ( )
                                  & wstat_calculation,ev,conv,n_pdep_read_from_file,&
                                  & n_steps_write_restart,trev_pdep_rel,l_is_wstat_converged,&
                                  & nbnd_occ,lrwfc,iuwfc,dvg_exc,dng_exc,nbndval0x,&
-                                 & l_preconditioning,l_bse_calculation,size_index_matrix_lz
+                                 & l_preconditioning,l_bse_calculation,n_bse_idx
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE wbse_restart,         ONLY : wbse_restart_write,wbse_restart_clear,wbse_restart_read
   USE wstat_tools,          ONLY : diagox,redistribute_vr_distr
@@ -62,7 +62,7 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   INTEGER :: il1,ig1
   INTEGER :: iks, nbndval
-  INTEGER :: size_index_matrix
+  INTEGER :: do_idx
   REAL(DP) :: time_spent(2)
   CHARACTER(LEN=8) :: iter_label
   !
@@ -89,10 +89,10 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   ! ... DISTRIBUTE bse_kernel
   !
-  size_index_matrix = MAXVAL(size_index_matrix_lz(:))
+  do_idx = MAXVAL(n_bse_idx)
   IF (l_bse_calculation) THEN
      bandpair = idistribute()
-     CALL bandpair%init(size_index_matrix,'i','n_pairs',.TRUE.)
+     CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
   ENDIF
   !
   CALL wbse_memory_report() ! Before allocating I report the memory required.

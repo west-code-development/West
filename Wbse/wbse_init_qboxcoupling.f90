@@ -49,12 +49,12 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   ! Workspace
   !
   INTEGER :: ibnd,jbnd,tmp_size
-  INTEGER :: il1,ig1,ir,do_index
+  INTEGER :: il1,ig1,ir,do_idx
   REAL(DP):: ovl_value
   REAL(DP), ALLOCATABLE :: rho_aux(:)
   REAL(DP), ALLOCATABLE :: ovl_matrix(:,:)
   INTEGER, ALLOCATABLE :: restart_matrix(:)
-  INTEGER, ALLOCATABLE :: index_matrix(:,:)
+  INTEGER, ALLOCATABLE :: idx_matrix(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc_loc(:,:)
   COMPLEX(DP), ALLOCATABLE :: dvg(:),psic_aux(:)
   !
@@ -106,19 +106,19 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   IF(.NOT. gamma_only) ALLOCATE(psic_aux(dffts%nnr))
   !
   tmp_size = nbndval*nbndval
-  ALLOCATE(index_matrix(tmp_size,2))
+  ALLOCATE(idx_matrix(tmp_size,2))
   ALLOCATE(ovl_matrix(nbndval,nbndval))
   !
-  index_matrix(:,:) = 0
+  idx_matrix(:,:) = 0
   !
   IF(l_local_repr) THEN
      ALLOCATE(evc_loc(npwx,nbndval))
      CALL wbse_localization(current_spin, nbndval, evc_loc, ovl_matrix, l_restart_calc)
   ENDIF
   !
-  ! compute index_matrix
+  ! compute idx_matrix
   !
-  do_index = 0
+  do_idx = 0
   !
   IF(.NOT. l_restart_calc) THEN
      DO ibnd = 1, nbndval
@@ -129,16 +129,16 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
            IF(ovl_value >= overlap_thr) THEN
               IF(gamma_only) THEN
                  IF(jbnd >= ibnd) THEN
-                    do_index = do_index + 1
+                    do_idx = do_idx + 1
                     !
-                    index_matrix(do_index, 1) = ibnd
-                    index_matrix(do_index, 2) = jbnd
+                    idx_matrix(do_idx, 1) = ibnd
+                    idx_matrix(do_idx, 2) = jbnd
                  ENDIF
               ELSE
-                 do_index = do_index + 1
+                 do_idx = do_idx + 1
                  !
-                 index_matrix(do_index, 1) = ibnd
-                 index_matrix(do_index, 2) = jbnd
+                 idx_matrix(do_idx, 1) = ibnd
+                 idx_matrix(do_idx, 2) = jbnd
               ENDIF
            ENDIF
            !
@@ -147,14 +147,14 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
      fname = TRIM(wbse_init_save_dir)//'/index_matrix_iq'//my_labeliq//'_ik'//&
              & my_labelik//'_spin'//my_spin//'.dat'
-     CALL wbse_index_matrix_write(fname,do_index,2,index_matrix(1:do_index,:))
+     CALL wbse_index_matrix_write(fname,do_idx,2,idx_matrix(1:do_idx,:))
   ELSE
      fname = TRIM(wbse_init_save_dir)//'/index_matrix_iq'//my_labeliq//'_ik'//&
              & my_labelik//'_spin'//my_spin//'.dat'
-     CALL wbse_index_matrix_read(fname,tmp_size,do_index,2,index_matrix)
+     CALL wbse_index_matrix_read(fname,tmp_size,do_idx,2,idx_matrix)
   ENDIF
   !
-  ALLOCATE(restart_matrix(do_index))
+  ALLOCATE(restart_matrix(do_idx))
   !
   restart_matrix(:) = 0
   !
@@ -162,7 +162,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   IF(l_restart_calc) THEN
      fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
              & my_labelik//'_spin'//my_spin//'.dat'
-     CALL wbse_status_restart_read(fname,do_index,restart_matrix,calc_is_done)
+     CALL wbse_status_restart_read(fname,do_idx,restart_matrix,calc_is_done)
   ENDIF
   !
   IF(.NOT. calc_is_done) THEN
@@ -170,7 +170,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      ! initialize the paralellization
      !
      bandpair = idistribute()
-     CALL bandpair%init(do_index,'i','n_pairs', .TRUE.)
+     CALL bandpair%init(do_idx,'i','n_pairs', .TRUE.)
      !
      CALL io_push_title('Applying ' // TRIM(chi_kernel) // ' kernel with FF_Qbox ...')
      !
@@ -182,15 +182,15 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
         !
         ig1  = bandpair%l2g(il1) ! global index of n_total
         !
-        ibnd = index_matrix(ig1,1)
-        jbnd = index_matrix(ig1,2)
+        ibnd = idx_matrix(ig1,1)
+        jbnd = idx_matrix(ig1,2)
         !
         l_skip = .FALSE.
         IF(l_restart_calc) THEN
            IF(restart_matrix(ig1) > 0) l_skip = .TRUE.
         ENDIF
         !
-        IF(ig1 < 1 .OR. ig1 > do_index) l_skip = .TRUE.
+        IF(ig1 < 1 .OR. ig1 > do_idx) l_skip = .TRUE.
         !
         IF(.NOT. l_skip) THEN
            !
@@ -353,15 +353,15 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
         !
         ! for restarting, update status of restart_matrix
         !
-        CALL mp_sum(restart_matrix(1:do_index), inter_image_comm)
+        CALL mp_sum(restart_matrix(1:do_idx), inter_image_comm)
         !
-        DO ir = 1, do_index
+        DO ir = 1, do_idx
            IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
         ENDDO
         !
         fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
                 & my_labelik//'_spin'//my_spin//'.dat'
-        CALL wbse_status_restart_write(fname,do_index,restart_matrix)
+        CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
         !
         ! clean up
         !
@@ -389,14 +389,14 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
      !
      fname = TRIM(wbse_init_save_dir)//'/restart_matrix_iq'//my_labeliq//'_ik'//&
              & my_labelik//'_spin'//my_spin//'.dat'
-     CALL wbse_status_restart_write(fname,do_index,restart_matrix)
+     CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
      !
      CALL stop_bar_type(barra,'FF_Qbox')
      !
   ENDIF
   !
-  DEALLOCATE(index_matrix)
-  IF(ALLOCATED(restart_matrix)) DEALLOCATE(restart_matrix)
+  DEALLOCATE(idx_matrix)
+  DEALLOCATE(restart_matrix)
   DEALLOCATE(ovl_matrix)
   IF(ALLOCATED(psic_aux)) DEALLOCATE(psic_aux)
   IF(ALLOCATED(evc_loc)) DEALLOCATE(evc_loc)

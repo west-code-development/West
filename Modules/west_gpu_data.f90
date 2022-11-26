@@ -643,5 +643,36 @@ MODULE west_gpu_data
    ENDIF
    !
    END SUBROUTINE
+   !
+   !-----------------------------------------------------------------------
+   SUBROUTINE allocate_bse_gpu()
+   !-----------------------------------------------------------------------
+   !
+   USE pwcom,                 ONLY : wg
+   !
+   IMPLICIT NONE
+   !
+   !$acc enter data copyin(wg)
+   !
+   END SUBROUTINE
+   !
+   !-----------------------------------------------------------------------
+   SUBROUTINE deallocate_bse_gpu()
+   !-----------------------------------------------------------------------
+   !
+   USE pwcom,                 ONLY : wg
+   !
+   IMPLICIT NONE
+   !
+   IF(ALLOCATED(ps_r)) THEN
+      DEALLOCATE(ps_r)
+   ENDIF
+   IF(ALLOCATED(ps_c)) THEN
+      DEALLOCATE(ps_c)
+   ENDIF
+   !
+   !$acc exit data delete(wg)
+   !
+   END SUBROUTINE
 #endif
 END MODULE

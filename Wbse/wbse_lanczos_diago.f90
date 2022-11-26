@@ -20,13 +20,18 @@ SUBROUTINE wbse_lanczos_diago()
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
   USE mp_global,            ONLY : my_image_id,inter_image_comm
-  USE mp,                   ONLY : mp_bcast,mp_barrier
+  USE mp,                   ONLY : mp_bcast
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
   USE distribution_center,  ONLY : aband,bandpair
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,&
+                                 & deallocate_bse_gpu,reallocate_ps_gpu
+#endif
   !
   IMPLICIT NONE
   !
@@ -35,14 +40,15 @@ SUBROUTINE wbse_lanczos_diago()
   LOGICAL :: l_from_scratch
   INTEGER :: ip,iip,pol_index,nipol_input
   INTEGER :: iter
-  INTEGER :: iks,is,nbndval
+  INTEGER :: iks,is,nbndval,ig,ibnd
   INTEGER :: ilan_restart,ilan_stopped,ipol_restart,ipol_stopped
   INTEGER :: do_idx
   INTEGER, PARAMETER :: n_ipol = 3
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
+  REAL(DP) :: factor
   REAL(DP) :: beta(nspin),gamma(nspin)
-  COMPLEX(DP) :: zeta(nspin),wbse_dot_out(nspin)
+  COMPLEX(DP) :: zeta(nspin),dotp(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
   TYPE(bar_type) :: barra
   !
@@ -64,6 +70,11 @@ SUBROUTINE wbse_lanczos_diago()
   ! Main Lanzcos program
   !
   IF(n_lanczos < 1) CALL errore('wbse_lanczos_diago','n_lanczos must be > 0',1)
+  !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+  CALL allocate_bse_gpu()
+#endif
   !
   SELECT CASE(ipol_input)
   CASE('XX','xx')
@@ -98,16 +109,17 @@ SUBROUTINE wbse_lanczos_diago()
      CALL errore('wbse_lanczos_diago','wrong ipol_input',1)
   END SELECT
   !
-  ALLOCATE(d0psi(npwx,nbndval0x,nks,n_ipol))
   ALLOCATE(beta_store(nipol_input,n_lanczos,nspin))
   ALLOCATE(zeta_store(nipol_input,n_ipol,n_lanczos,nspin))
   !
   beta_store(:,:,:) = 0._DP
   zeta_store(:,:,:,:) = (0._DP,0._DP)
   !
+  ALLOCATE(d0psi(npwx,nbndval0x,nks,n_ipol))
   ALLOCATE(evc1(npwx,nbndval0x,nks))
   ALLOCATE(evc1_old(npwx,nbndval0x,nks))
   ALLOCATE(evc1_new(npwx,nbndval0x,nks))
+  !$acc enter data create(d0psi,evc1,evc1_old,evc1_new)
   !
   SELECT CASE(wbse_calculation)
   CASE('l')
@@ -128,6 +140,8 @@ SUBROUTINE wbse_lanczos_diago()
      CALL lanczos_d0psi_read()
      CALL lanczos_evcs_read(evc1,evc1_old)
      !
+     !$acc update device(d0psi,evc1,evc1_old)
+     !
      l_from_scratch = .FALSE.
      !
   CASE('L')
@@ -135,6 +149,8 @@ SUBROUTINE wbse_lanczos_diago()
      ! FROM SCRATCH
      !
      CALL solve_e_psi()
+     !
+     !$acc update host(d0psi)
      !
      CALL lanczos_d0psi_write()
      !
@@ -158,9 +174,11 @@ SUBROUTINE wbse_lanczos_diago()
      IF(l_from_scratch) THEN
         CALL io_push_title('Starting new Lanczos loop at ipol: '//TRIM(pol_label_input(ip)))
         !
+        !$acc kernels present(evc1_old,evc1_new,evc1,d0psi)
         evc1_old(:,:,:) = (0._DP,0._DP)
         evc1_new(:,:,:) = (0._DP,0._DP)
         evc1(:,:,:) = d0psi(:,:,:,pol_index)
+        !$acc end kernels
      ELSE
         CALL io_push_title('Retarting Lanczos loop at ipol: '//TRIM(pol_label_input(ip)))
      ENDIF
@@ -181,9 +199,9 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
-        CALL wbse_dot(evc1,evc1_new,nbndval0x,nks,wbse_dot_out)
+        CALL wbse_dot(evc1,evc1_new,nbndval0x,nks,dotp)
         !
-        beta(:) = REAL(wbse_dot_out,KIND=DP)
+        beta(:) = REAL(dotp,KIND=DP)
         !
         ! beta<0 is a serious error for the pseudo-Hermitian algorithm
         !
@@ -201,9 +219,27 @@ SUBROUTINE wbse_lanczos_diago()
         ! Renormalize q(i) and Lq(i)
         !
         DO iks = 1,nks
+           !
+           npw = ngk(iks)
            current_spin = isk(iks)
-           evc1(:,:,iks) = (1._DP/beta(current_spin))*evc1(:,:,iks)
-           evc1_new(:,:,iks) = (1._DP/beta(current_spin))*evc1_new(:,:,iks)
+           factor = 1._DP/beta(current_spin)
+           !
+           !$acc parallel loop collapse(2) present(evc1)
+           DO ibnd = 1,nbndval0x
+              DO ig = 1,npw
+                 evc1(ig,ibnd,iks) = factor*evc1(ig,ibnd,iks)
+              ENDDO
+           ENDDO
+           !$acc end parallel
+           !
+           !$acc parallel loop collapse(2) present(evc1_new)
+           DO ibnd = 1,nbndval0x
+              DO ig = 1,npw
+                 evc1_new(ig,ibnd,iks) = factor*evc1_new(ig,ibnd,iks)
+              ENDDO
+           ENDDO
+           !$acc end parallel
+           !
         ENDDO
         !
         ! Calculation of zeta coefficients.
@@ -211,9 +247,9 @@ SUBROUTINE wbse_lanczos_diago()
         !
         IF(MOD(iter,2) == 0) THEN
            DO iip = 1,n_ipol
-              CALL wbse_dot(d0psi(:,:,:,iip),evc1,nbndval0x,nks,wbse_dot_out)
+              CALL wbse_dot(d0psi(:,:,:,iip),evc1,nbndval0x,nks,dotp)
               !
-              zeta(:) = wbse_dot_out
+              zeta(:) = dotp
               zeta_store(ip,iip,iter,:) = zeta
            ENDDO
         ELSE
@@ -224,8 +260,19 @@ SUBROUTINE wbse_lanczos_diago()
         ENDIF
         !
         DO iks = 1,nks
+           !
+           npw = ngk(iks)
            current_spin = isk(iks)
-           evc1_new(:,:,iks) = evc1_new(:,:,iks) - gamma(current_spin)*evc1_old(:,:,iks)
+           factor = gamma(current_spin)
+           !
+           !$acc parallel loop collapse(2) present(evc1_new)
+           DO ibnd = 1,nbndval0x
+              DO ig = 1,npw
+                 evc1_new(ig,ibnd,iks) = evc1_new(ig,ibnd,iks)-factor*evc1_old(ig,ibnd,iks)
+              ENDDO
+           ENDDO
+           !$acc end parallel
+           !
         ENDDO
         !
         ! Apply P_c|evc1_new>
@@ -233,9 +280,6 @@ SUBROUTINE wbse_lanczos_diago()
         DO iks = 1,nks
            !
            nbndval = nbnd_occ(iks)
-           !
-           ! ... Number of G vectors for PW expansion of wfs at k
-           !
            npw = ngk(iks)
            !
            ! ... Read GS wavefunctions
@@ -243,18 +287,32 @@ SUBROUTINE wbse_lanczos_diago()
            IF(nks > 1) THEN
               IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
               CALL mp_bcast(evc,0,inter_image_comm)
+              !
+#if defined(__CUDA)
+              CALL using_evc(2)
+              CALL using_evc_d(0)
+#endif
            ENDIF
            !
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,evc1_new(1,1,iks),(1._DP,0._DP))
+#if defined(__CUDA)
+           CALL reallocate_ps_gpu(nbndval,nbndval)
+#endif
+           !
+           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,evc1_new(:,:,iks),(1._DP,0._DP))
+           !
         ENDDO
         !
         ! Throw away q(i-1),and make q(i+1) to be the current vector,
         ! be ready for the next iteration. evc1_new will be free again after this step
         !
+        !$acc kernels present(evc1_old,evc1,evc1_new)
         evc1_old(:,:,:) = evc1
         evc1(:,:,:) = evc1_new
+        !$acc end kernels
         !
         IF(n_steps_write_restart > 0 .AND. MOD(iter,n_steps_write_restart) == 0) THEN
+           !$acc update host(evc1,evc1_old)
+           !
            CALL lanczos_restart_write(nipol_input,ip,iter)
            CALL lanczos_evcs_write(evc1,evc1_old)
         ENDIF
@@ -272,8 +330,14 @@ SUBROUTINE wbse_lanczos_diago()
      !
   ENDDO polarization_loop
   !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+  CALL deallocate_bse_gpu()
+#endif
+  !
   DEALLOCATE(pol_index_input)
   DEALLOCATE(pol_label_input)
+  !$acc exit data delete(d0psi,evc1,evc1_old,evc1_new)
   DEALLOCATE(d0psi)
   DEALLOCATE(evc1)
   DEALLOCATE(evc1_new)

@@ -58,7 +58,7 @@ MODULE lanczos_db
       !
       DO ipol = 1,n_ipol
          WRITE(my_label,'(i6.6)') ipol
-         fname = TRIM(wbse_save_dir)//'/D0PSI_'//my_label//'.dat'
+         fname = TRIM(wbse_save_dir)//'/d0psi_'//my_label//'.dat'
          CALL plep_merge_and_write_G(fname,d0psi(:,:,:,ipol))
       ENDDO
       !
@@ -73,7 +73,7 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x,"D0PSI written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"d0psi written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !
@@ -113,7 +113,7 @@ MODULE lanczos_db
       !
       DO ipol = 1,n_ipol
          WRITE(my_label,'(i6.6)') ipol
-         fname = TRIM(wbse_save_dir)//'/D0PSI_'//my_label//'.dat'
+         fname = TRIM(wbse_save_dir)//'/d0psi_'//my_label//'.dat'
          CALL plep_read_G_and_distribute(fname,d0psi(:,:,:,ipol))
       ENDDO
       !
@@ -128,7 +128,7 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x,"D0PSI read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"d0psi read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !
@@ -166,10 +166,10 @@ MODULE lanczos_db
       !
       ! 1) WRITE TO DISK THE D0PSI
       !
-      fname = TRIM(wbse_save_dir)//'/EVC1.dat'
+      fname = TRIM(wbse_save_dir)//'/evc1.dat'
       CALL plep_merge_and_write_G(fname,evc1)
       !
-      fname = TRIM(wbse_save_dir)//'/EVC1_OLD.dat'
+      fname = TRIM(wbse_save_dir)//'/evc1_old.dat'
       CALL plep_merge_and_write_G(fname,evc1_old)
       !
       ! MPI BARRIER
@@ -183,7 +183,7 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x,"EVC1 EVC1_OLD written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"evc1 evc1_old written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !
@@ -221,9 +221,9 @@ MODULE lanczos_db
       CALL start_clock('lan_evc_read')
       time_spent(1) = get_clock('lan_evc_read')
       !
-      fname = TRIM(wbse_save_dir)//'/EVC1.dat'
+      fname = TRIM(wbse_save_dir)//'/evc1.dat'
       CALL plep_read_G_and_distribute(fname,evc1)
-      fname = TRIM(wbse_save_dir)//'/EVC1_OLD.dat'
+      fname = TRIM(wbse_save_dir)//'/evc1_old.dat'
       CALL plep_read_G_and_distribute(fname,evc1_old)
       !
       ! MPI BARRIER
@@ -237,7 +237,7 @@ MODULE lanczos_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x,"EVC1 EVC1_OLD read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"evc1 evc1_old read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
       WRITE(stdout,'(5x,"In location : ",a)') TRIM(wbse_save_dir)
       CALL io_push_bar()
       !

@@ -45,7 +45,6 @@ SUBROUTINE wbse_dot(x,y,nbnd,nks,wbse_dot_out)
         npw = ngk(iks)
         nbndval = nbnd_occ(iks)
         current_spin = isk(iks)
-        !
         IF(current_spin /= is) CYCLE
         !
         IF(gamma_only) THEN

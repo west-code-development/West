@@ -698,9 +698,8 @@ MODULE wbse_tools
       !
       USE kinds,                ONLY : DP
       USE mp_global,            ONLY : inter_image_comm
-      USE mp,                   ONLY : mp_bcast,mp_max
+      USE mp,                   ONLY : mp_max
       USE distribution_center,  ONLY : pert
-      USE buffers,              ONLY : get_buffer
       USE pwcom,                ONLY : nks,npwx
       USE westcom,              ONLY : nbnd_occ,nbndval0x
       USE wvfct,                ONLY : g2kin,et

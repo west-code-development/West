@@ -45,8 +45,7 @@ SUBROUTINE compute_d0psi_rs()
   !
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : at,alat
-  USE fft_base,             ONLY : dfftp,dffts
-  USE io_global,            ONLY : stdout
+  USE fft_base,             ONLY : dffts
   USE mp_global,            ONLY : my_image_id,inter_image_comm,me_bgrp
   USE mp,                   ONLY : mp_bcast
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
@@ -56,6 +55,7 @@ SUBROUTINE compute_d0psi_rs()
   USE control_flags,        ONLY : gamma_only
   USE gvect,                ONLY : gstart
   USE noncollin_module,     ONLY : npol
+  USE io_push,              ONLY : io_push_title
   USE pwcom,                ONLY : isk,igk_k,ngk,lsda,npw,npwx,nks
   USE westcom,              ONLY : nbndval0x,nbnd_occ,iuwfc,lrwfc,d0psi
 #if defined(__CUDA)
@@ -74,40 +74,40 @@ SUBROUTINE compute_d0psi_rs()
   REAL(DP) :: inv_nr1, inv_nr2, inv_nr3
   INTEGER :: ibnd, nbndval
   INTEGER :: iks, current_k, current_spin
-  INTEGER :: dfftp_nnr
+  INTEGER :: dffts_nnr
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: r(:,:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:)
   !$acc declare device_resident(aux_r)
   !
-  WRITE(stdout,'(/,5X,"Calculation of the dipole in real space")')
+  CALL io_push_title('Calculation of the dipole in real space')
   !
-  dfftp_nnr = dfftp%nnr
+  dffts_nnr = dffts%nnr
   !
-  ALLOCATE(aux_r(dfftp%nnr))
-  ALLOCATE(r(dfftp%nnr,n_ipol))
+  ALLOCATE(aux_r(dffts%nnr))
+  ALLOCATE(r(dffts%nnr,n_ipol))
   !$acc enter data create(r)
   !
   r(:,:) = 0._DP
   !
   ! Calculate r
   !
-  inv_nr1 = 1._DP / REAL(dfftp%nr1,KIND=DP)
-  inv_nr2 = 1._DP / REAL(dfftp%nr2,KIND=DP)
-  inv_nr3 = 1._DP / REAL(dfftp%nr3,KIND=DP)
+  inv_nr1 = 1._DP / REAL(dffts%nr1,KIND=DP)
+  inv_nr2 = 1._DP / REAL(dffts%nr2,KIND=DP)
+  inv_nr3 = 1._DP / REAL(dffts%nr3,KIND=DP)
   !
-  index0 = dfftp%nr1x*dfftp%nr2x*SUM(dfftp%nr3p(1:me_bgrp))
-  ir_end = MIN(dfftp%nnr,dfftp%nr1x*dfftp%nr2x*dfftp%nr3p(me_bgrp+1))
+  index0 = dffts%nr1x*dffts%nr2x*SUM(dffts%nr3p(1:me_bgrp))
+  ir_end = MIN(dffts%nnr,dffts%nr1x*dffts%nr2x*dffts%nr3p(me_bgrp+1))
   !
   DO ir = 1, ir_end
      !
      ! ... three dimensional indexes
      !
      i = index0 + ir - 1
-     k = i / (dfftp%nr1x*dfftp%nr2x)
-     i = i - (dfftp%nr1x*dfftp%nr2x)*k
-     j = i / dfftp%nr1x
-     i = i - dfftp%nr1x*j
+     k = i / (dffts%nr1x*dffts%nr2x)
+     i = i - (dffts%nr1x*dffts%nr2x)*k
+     j = i / dffts%nr1x
+     i = i - dffts%nr1x*j
      !
      DO ip = 1, n_ipol
         r(ir,ip) = REAL(i,KIND=DP)*inv_nr1*at(ip,1) &
@@ -139,19 +139,14 @@ SUBROUTINE compute_d0psi_rs()
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
-     !
-#if defined(__CUDA)
-     !
-     ! ... Sync GPU
-     !
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-#endif
      !
      IF(gamma_only) THEN
         !
@@ -170,7 +165,7 @@ SUBROUTINE compute_d0psi_rs()
               DO ip = 1, n_ipol
                  !
                  !$acc parallel loop present(aux_r,r)
-                 DO ir = 1, dfftp_nnr
+                 DO ir = 1, dffts_nnr
                     psic(ir) = aux_r(ir)*r(ir,ip)*alat
                  ENDDO
                  !$acc end parallel
@@ -194,7 +189,7 @@ SUBROUTINE compute_d0psi_rs()
               DO ip = 1, n_ipol
                  !
                  !$acc parallel loop present(aux_r,r)
-                 DO ir = 1, dfftp_nnr
+                 DO ir = 1, dffts_nnr
                     psic(ir) = CMPLX(REAL(aux_r(ir),KIND=DP)*r(ir,ip)*alat,KIND=DP)
                  ENDDO
                  !$acc end parallel
@@ -224,7 +219,7 @@ SUBROUTINE compute_d0psi_rs()
            DO ip = 1, n_ipol
               !
               !$acc parallel loop present(aux_r,r)
-              DO ir = 1, dfftp_nnr
+              DO ir = 1, dffts_nnr
                  psic(ir) = aux_r(ir)*r(ir,ip)*alat
               ENDDO
               !$acc end parallel
@@ -250,7 +245,7 @@ SUBROUTINE compute_d0psi_rs()
               DO ip = 1, n_ipol
                  !
                  !$acc parallel loop present(aux_r,r)
-                 DO ir = 1, dfftp_nnr
+                 DO ir = 1, dffts_nnr
                     psic(ir) = aux_r(ir)*r(ir,ip)*alat
                  ENDDO
                  !$acc end parallel
@@ -297,28 +292,28 @@ SUBROUTINE compute_d0psi_rs()
   !
 END SUBROUTINE
 !
-SUBROUTINE shift_d0psi(r, n_ipol)
+SUBROUTINE shift_d0psi(r,n_ipol)
   !
   ! Shift a position operator r to the center of the molecule
   ! for a proper calculation of d0psi in R-space.
   !
-  USE fft_base,         ONLY : dfftp
-  USE kinds,            ONLY : DP
-  USE ions_base,        ONLY : nat,tau
-  USE io_global,        ONLY : stdout
-  USE cell_base,        ONLY : at
+  USE fft_base,             ONLY : dffts
+  USE kinds,                ONLY : DP
+  USE ions_base,            ONLY : nat,tau
+  USE io_global,            ONLY : stdout
+  USE cell_base,            ONLY : at
   !
   IMPLICIT NONE
   !
   INTEGER, INTENT(IN) :: n_ipol
-  REAL(DP), INTENT(INOUT) :: r(dfftp%nnr,n_ipol)
+  REAL(DP), INTENT(INOUT) :: r(dffts%nnr,n_ipol)
   !
   ! local vars
   !
   REAL(DP) :: mmin(3), mmax(3), center(3), origin(3), check_cell
   INTEGER :: ip, iatm, ir, ip1, ip2
   !
-  WRITE(stdout,'(/,5X,"Dipole is shifted to the center of cell for the calculation of d0psi")')
+  WRITE(stdout,'(5X,"Dipole is shifted to the center of cell for the calculation of d0psi")')
   !
   check_cell = 0._DP
   !
@@ -346,7 +341,7 @@ SUBROUTINE shift_d0psi(r, n_ipol)
      origin(ip)= center(ip)-0.5_DP*at(ip,ip)
   ENDDO
   !
-  DO ir = 1, dfftp%nnr
+  DO ir = 1, dffts%nnr
      !
      DO ip = 1, n_ipol
         r(ir,ip)= r(ir,ip) - origin(ip)
@@ -368,14 +363,15 @@ SUBROUTINE compute_d0psi_dfpt()
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE buffers,              ONLY : get_buffer
+  USE uspp_init,            ONLY : init_us_2
   USE control_flags,        ONLY : gamma_only
   USE gvect,                ONLY : gstart
   USE noncollin_module,     ONLY : npol
+  USE io_push,              ONLY : io_push_title
   USE pwcom,                ONLY : npw,npwx,nks,current_spin,isk,xk,lsda,igk_k,current_k,ngk
   USE westcom,              ONLY : nbndval0x,nbnd_occ,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,&
                                  & l_kinetic_only,d0psi,l_lanczos,l_skip_nl_part_of_hcomr
   USE distribution_center,  ONLY : aband
-  USE uspp_init,            ONLY : init_us_2
 #if defined(__CUDA)
   USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
@@ -400,7 +396,7 @@ SUBROUTINE compute_d0psi_dfpt()
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
   !$acc declare device_resident(eprec,e,phi,phi_tmp)
   !
-  WRITE(stdout,'(/,5X,"Calculation of the dipole using DFPT method")')
+  CALL io_push_title('Calculation of the dipole using DFPT method')
   !
   DO iks = 1, nks   ! KPOINT-SPIN
      !
@@ -432,6 +428,9 @@ SUBROUTINE compute_d0psi_dfpt()
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
@@ -444,8 +443,6 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      CALL using_becp_auto(2)
      CALL using_becp_d_auto(0)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
      CALL using_et(2)
      CALL using_et_d(0)
      !

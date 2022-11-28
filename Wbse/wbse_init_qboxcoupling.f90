@@ -80,8 +80,6 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   !
   TYPE(bar_type) :: barra
   !
-  CALL wbse_init_memory_report()
-  !
   CALL start_clock('wbse_qbox_coupling')
   !
   SELECT CASE(chi_kernel)

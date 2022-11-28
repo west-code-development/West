@@ -77,6 +77,9 @@ MODULE wbse_io
     USE pwcom,          ONLY : npw,npwx
     USE fft_at_gamma,   ONLY : single_invfft_gamma
     USE fft_at_k,       ONLY : single_invfft_k
+#if defined(__CUDA)
+    USE west_gpu,       ONLY : gaux,tmp_c
+#endif
     !
     IMPLICIT NONE
     !
@@ -87,25 +90,42 @@ MODULE wbse_io
     !
     ! Workspace
     !
-    COMPLEX(DP), ALLOCATABLE :: aux_g(:),aux_r(:)
+    INTEGER :: dffts_nnr,ir
+#if !defined(__CUDA)
+    COMPLEX(DP), ALLOCATABLE :: gaux(:),tmp_c(:)
+#endif
     !
-    ALLOCATE(aux_g(npwx))
-    ALLOCATE(aux_r(dffts%nnr))
+#if !defined(__CUDA)
+    ALLOCATE(gaux(npwx))
+    ALLOCATE(tmp_c(dffts%nnr))
+#endif
     !
-    CALL read_bse_pots_g2g(aux_g,fixed_band_i,fixed_band_j,ispin)
+    CALL read_bse_pots_g2g(gaux,fixed_band_i,fixed_band_j,ispin)
+    !
+    !$acc update device(gaux)
     !
     ! G -> R
     !
+    !$acc host_data use_device(gaux,tmp_c)
     IF(gamma_only) THEN
-       CALL single_invfft_gamma(dffts,npw,npwx,aux_g,aux_r,'Wave')
+       CALL single_invfft_gamma(dffts,npw,npwx,gaux,tmp_c,'Wave')
     ELSE
-       CALL single_invfft_k(dffts,npw,npwx,aux_g,aux_r,'Wave') ! no igk
+       CALL single_invfft_k(dffts,npw,npwx,gaux,tmp_c,'Wave') ! no igk
     ENDIF
+    !$acc end host_data
     !
-    rhor(:) = REAL(aux_r,KIND=DP)
+    dffts_nnr = dffts%nnr
     !
-    DEALLOCATE(aux_g)
-    DEALLOCATE(aux_r)
+    !$acc parallel loop present(rhor,tmp_c)
+    DO ir = 1,dffts_nnr
+       rhor(ir) = REAL(tmp_c(ir),KIND=DP)
+    ENDDO
+    !$acc end parallel
+    !
+#if !defined(__CUDA)
+    DEALLOCATE(gaux)
+    DEALLOCATE(tmp_c)
+#endif
     !
   END SUBROUTINE
   !

@@ -10,14 +10,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   ! Applies the linear response operator to response wavefunctions
   !
   USE kinds,                ONLY : DP
-  USE fft_base,             ONLY : dffts,dfftp
+  USE fft_base,             ONLY : dffts
   USE gvect,                ONLY : gstart
   USE uspp,                 ONLY : vkb,nkb
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k,nbnd
   USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_sum,mp_bcast
-  USE mp_global,            ONLY : nimage,my_image_id,inter_image_comm,nbgrp,my_bgrp_id,inter_bgrp_comm
+  USE mp_global,            ONLY : nimage,my_image_id,inter_image_comm,nbgrp,my_bgrp_id,&
+                                 & inter_bgrp_comm
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
@@ -32,9 +33,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE wvfct_gpum,           ONLY : using_et,using_et_d
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
-  USE west_gpu,             ONLY : reallocate_ps_gpu
+  USE west_gpu,             ONLY : dvrs,hevc1,evc1_loc,reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -50,10 +50,12 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbvalloc,il1
   INTEGER :: dffts_nnr
   COMPLEX(DP) :: factor
+#if !defined(__CUDA)
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
-  COMPLEX(DP), ALLOCATABLE :: evc1_aux(:,:)
-  !$acc declare device_resident(hevc1,evc1_aux)
+  COMPLEX(DP), ALLOCATABLE :: evc1_loc(:,:)
+  !$acc declare device_resident(hevc1,evc1_loc)
+#endif
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('apply_lv')
@@ -67,19 +69,11 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   evc1_new(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
   !
-  ALLOCATE(dvrs(dfftp%nnr,nspin))
-  !$acc enter data create(dvrs)
-  !
-  nbndval = MAXVAL(nbnd_occ)
-  nbvalloc = 0
-  DO il1 = 1,aband%nloc
-     ibnd = aband%l2g(il1)
-     IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
-     nbvalloc = nbvalloc+1
-  ENDDO
-  !
-  ALLOCATE(hevc1(npwx*npol,nbvalloc))
-  ALLOCATE(evc1_aux(npwx*npol,nbvalloc))
+#if !defined(__CUDA)
+  ALLOCATE(hevc1(npwx*npol,aband%nloc))
+  ALLOCATE(evc1_loc(npwx*npol,aband%nloc))
+  ALLOCATE(dvrs(dffts%nnr,nspin))
+#endif
   !
   ! Calculation of the charge density response
   !
@@ -132,6 +126,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
@@ -144,10 +141,6 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
      CALL using_becp_auto(2)
      CALL using_becp_d_auto(0)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-     CALL using_et(2)
-     CALL using_et_d(0)
 #endif
      !
      IF(.NOT. l_bse_triplet) THEN
@@ -233,7 +226,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
         !
      ENDIF
      !
-     !$acc parallel loop collapse(2) present(evc1_aux,evc1)
+     !$acc parallel loop collapse(2) present(evc1_loc,evc1)
      DO il1 = 1,nbvalloc
         !
         ! ibnd = aband%l2g(il1)
@@ -244,7 +237,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
            ELSE
               ibnd = nbgrp*(il1-1)+my_bgrp_id+1
            ENDIF
-           evc1_aux(ig,il1) = evc1(ig,ibnd,iks)
+           evc1_loc(ig,il1) = evc1(ig,ibnd,iks)
         ENDDO
         !
      ENDDO
@@ -254,18 +247,18 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      ! handles band parallelization separately
      !
 #if defined(__CUDA)
-     !$acc host_data use_device(evc1_aux,hevc1)
-     CALL h_psi__gpu(npwx,npw,nbvalloc,evc1_aux,hevc1)
+     !$acc host_data use_device(evc1_loc,hevc1)
+     CALL h_psi__gpu(npwx,npw,nbvalloc,evc1_loc,hevc1)
      !$acc end host_data
 #else
-     CALL h_psi_(npwx,npw,nbvalloc,evc1_aux,hevc1)
+     CALL h_psi_(npwx,npw,nbvalloc,evc1_loc,hevc1)
 #endif
      !
      IF(l_qp_correction) THEN
 #if defined(__CUDA)
         CALL reallocate_ps_gpu(nbnd,nbvalloc)
 #endif
-        CALL apply_hqp_to_m_wfcs(iks,nbvalloc,evc1_aux,hevc1)
+        CALL apply_hqp_to_m_wfcs(iks,nbvalloc,evc1_loc,hevc1)
      ENDIF
      !
      ! Subtract the eigenvalues
@@ -339,10 +332,11 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
   ENDDO
   !
-  !$acc exit data delete(dvrs)
+#if !defined(__CUDA)
   DEALLOCATE(dvrs)
   DEALLOCATE(hevc1)
-  DEALLOCATE(evc1_aux)
+  DEALLOCATE(evc1_loc)
+#endif
   !
 #if defined(__CUDA)
   CALL stop_clock_gpu('apply_lv')

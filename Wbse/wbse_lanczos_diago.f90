@@ -29,6 +29,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
+  USE wvfct_gpum,           ONLY : using_et,using_et_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,&
                                  & deallocate_bse_gpu,reallocate_ps_gpu
 #endif
@@ -50,6 +51,9 @@ SUBROUTINE wbse_lanczos_diago()
   REAL(DP) :: beta(nspin),gamma(nspin)
   COMPLEX(DP) :: zeta(nspin),dotp(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: evc1_new
+#endif
   TYPE(bar_type) :: barra
   !
   ! ... DISTRIBUTE lanczos
@@ -60,9 +64,8 @@ SUBROUTINE wbse_lanczos_diago()
   !
   ! ... DISTRIBUTE bse_kernel
   !
-  do_idx = MAXVAL(n_bse_idx)
-  !
   IF(l_bse_calculation) THEN
+     do_idx = MAXVAL(n_bse_idx)
      bandpair = idistribute()
      CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
   ENDIF
@@ -71,9 +74,18 @@ SUBROUTINE wbse_lanczos_diago()
   !
   IF(n_lanczos < 1) CALL errore('wbse_lanczos_diago','n_lanczos must be > 0',1)
   !
+  CALL wbse_memory_report()
+  !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  CALL allocate_bse_gpu()
+  CALL allocate_bse_gpu(aband%nloc)
+  !
+  IF(nks == 1) THEN
+     CALL using_evc(2)
+     CALL using_evc_d(0)
+     CALL using_et(2)
+     CALL using_et_d(0)
+  ENDIF
 #endif
   !
   SELECT CASE(ipol_input)
@@ -163,9 +175,8 @@ SUBROUTINE wbse_lanczos_diago()
      CALL errore('wbse_lanczos_diago','wrong wlzcos_calculation',1)
   END SELECT
   !
-  WRITE(stdout,'(/,5x,"Lanczos linear-response absorption spectrum calculation")')
-  WRITE(stdout,'(/,5x,"using Tamm-Dancoff Liouvillian operator")')
-  WRITE(stdout,'(/,5x,"number of Lanczos iterations = ",i6)') n_lanczos
+  CALL io_push_title('Lanczos linear-response absorption spectrum calculation')
+  WRITE(stdout,'(5x,"Using Tamm-Dancoff Liouvillian operator")')
   !
   polarization_loop : DO ip = ipol_restart,nipol_input
      !

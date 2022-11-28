@@ -106,7 +106,7 @@ SUBROUTINE wbse_setup()
   !
   CALL set_nbndocc()
   !
-  nbndval0x = MAXVAL(nbnd_occ(:))
+  nbndval0x = MAXVAL(nbnd_occ)
   !
   CALL wbse_dv_setup(l_bse_calculation)
   !

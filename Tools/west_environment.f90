@@ -53,15 +53,6 @@ CONTAINS
     INTEGER, PARAMETER :: n_json_max = 100
     LOGICAL, EXTERNAL :: matches
     !
-#if defined(__CUDA)
-    !
-    ! CUDA not yet available for wbse.x
-    !
-    IF(matches('wbse.x',TRIM(lowercase_string(code)))) THEN
-       CALL errore(TRIM(lowercase_string(code)),'CUDA not yet implemented for BSE',1)
-    ENDIF
-#endif
-    !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash
     !

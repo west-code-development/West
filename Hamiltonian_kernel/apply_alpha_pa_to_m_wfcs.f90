@@ -48,7 +48,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
   COMPLEX(DP), ALLOCATABLE :: ps_c(:,:)
 #endif
   !
-#if defined(_CUDA)
+#if defined(__CUDA)
   CALL start_clock_gpu('alphapa')
 #else
   CALL start_clock('alphapa')
@@ -102,7 +102,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
      !
   ENDIF
   !
-#if defined(_CUDA)
+#if defined(__CUDA)
   CALL stop_clock_gpu('alphapa')
 #else
   CALL stop_clock('alphapa')

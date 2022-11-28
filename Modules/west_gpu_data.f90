@@ -649,10 +649,11 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE pwcom,                 ONLY : wg
+   USE westcom,               ONLY : et_qp,u_matrix
    !
    IMPLICIT NONE
    !
-   !$acc enter data copyin(wg)
+   !$acc enter data copyin(wg,et_qp,u_matrix)
    !
    END SUBROUTINE
    !
@@ -661,6 +662,7 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE pwcom,                 ONLY : wg
+   USE westcom,               ONLY : et_qp,u_matrix
    !
    IMPLICIT NONE
    !
@@ -671,7 +673,7 @@ MODULE west_gpu_data
       DEALLOCATE(ps_c)
    ENDIF
    !
-   !$acc exit data delete(wg)
+   !$acc exit data delete(wg,et_qp,u_matrix)
    !
    END SUBROUTINE
 #endif

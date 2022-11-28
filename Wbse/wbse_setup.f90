@@ -170,8 +170,6 @@ SUBROUTINE bse_start()
         CALL read_umatrix_and_omatrix(nbndval0x,is,u_matrix(:,:,is),ovl_matrix(:,:,is))
      ENDDO
      !
-     !$acc enter data copyin(u_matrix)
-     !
   ENDIF
   !
   !IF(.NOT. use_wstat_pdep) THEN

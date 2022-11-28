@@ -14,9 +14,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   USE gvect,                ONLY : gstart
   USE uspp,                 ONLY : vkb,nkb
   USE lsda_mod,             ONLY : nspin
-  USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k
+  USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k,nbnd
   USE control_flags,        ONLY : gamma_only
-  USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast
+  USE mp,                   ONLY : mp_sum,mp_bcast
   USE mp_global,            ONLY : nimage,my_image_id,inter_image_comm,nbgrp,my_bgrp_id,inter_bgrp_comm
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
@@ -34,6 +34,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   USE wavefunctions,        ONLY : evc_host=>evc
   USE wvfct_gpum,           ONLY : using_et,using_et_d
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE west_gpu,             ONLY : reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -120,7 +121,6 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
      IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.FALSE.)
 #endif
-     CALL g2_kin(iks)
      !
      ! ... Number of G vectors for PW expansion of wfs at k
      !
@@ -262,6 +262,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
 #endif
      !
      IF(l_qp_correction) THEN
+#if defined(__CUDA)
+        CALL reallocate_ps_gpu(nbnd,nbvalloc)
+#endif
         CALL apply_hqp_to_m_wfcs(iks,nbvalloc,evc1_aux,hevc1)
      ENDIF
      !
@@ -308,13 +311,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      ENDDO
      !$acc end parallel
      !
-     !$acc host_data use_device(evc1_new)
+     !$acc update host(evc1_new)
      IF(l_lanczos) THEN
         CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
      ELSE
         CALL mp_sum(evc1_new(:,:,iks),inter_bgrp_comm)
      ENDIF
-     !$acc end host_data
+     !$acc update device(evc1_new)
      !
      IF(l_bse_calculation) THEN
         CALL wbse_bse_kernel(current_spin,nbndval,evc1,evc1_new(:,:,iks))

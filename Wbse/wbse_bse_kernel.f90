@@ -70,10 +70,10 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   INTEGER :: ibnd_index,jbnd_index,il1,ig1
   INTEGER :: nbndval_q,current_spin_ikq,ikq
   INTEGER :: dffts_nnr
-  !
+  COMPLEX(DP) :: reduce
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
   COMPLEX(DP), ALLOCATABLE :: tmp1(:,:),tmp2(:,:),kd1_ij(:,:),gaux(:)
-  !$acc declare device_resident(tmp1,tmp2,kd1_ij)
+  !$acc declare device_resident(raux2,tmp1)
   !
   dffts_nnr = dffts%nnr
   !
@@ -81,12 +81,14 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      ALLOCATE(tmp1(npwx,nbndval0x))
   ENDIF
   ALLOCATE(tmp2(npwx,nbndval0x))
+  do_idx = MAXVAL(n_bse_idx)
+  ALLOCATE(kd1_ij(npwx,do_idx))
   ALLOCATE(raux1(dffts%nnr))
   IF(.NOT. l_lanczos) THEN
      ALLOCATE(raux2(dffts%nnr))
   ENDIF
   ALLOCATE(gaux(npwx))
-  !$acc enter data create(raux1,gaux)
+  !$acc enter data create(tmp2,kd1_ij,raux1,gaux)
   !
   DO ikq = 1, nks
      !
@@ -97,16 +99,16 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      npw = ngk(ikq)
      !
      IF(l_local_repr) THEN
-        !$acc kernels present(tmp1)
-        tmp1(:,:) = (0._DP,0._DP)
-        !$acc end kernels
-        !
-        !$acc parallel loop collapse(3) present(tmp1,u_matrix,evc1)
-        DO ibnd = 1, nbndval0x
-           DO jbnd = 1, nbndval0x
-              DO ig = 1, npw
-                 tmp1(ig,jbnd) = tmp1(ig,jbnd)+u_matrix(ibnd,jbnd,current_spin)*evc1(ig,ibnd,ikq)
+        !$acc parallel present(tmp1,u_matrix,evc1)
+        !$acc loop collapse(2)
+        DO jbnd = 1, nbndval0x
+           DO ig = 1, npw
+              reduce = (0._DP,0._DP)
+              !$acc loop reduction(+:reduce)
+              DO ibnd = 1, nbndval0x
+                 reduce = reduce+u_matrix(ibnd,jbnd,current_spin)*evc1(ig,ibnd,ikq)
               ENDDO
+              tmp1(ig,jbnd) = reduce
            ENDDO
         ENDDO
         !$acc end parallel
@@ -115,8 +117,6 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      do_idx = n_bse_idx(current_spin)
      !
      IF(.NOT. l_lanczos) THEN
-        ALLOCATE(kd1_ij(npwx,do_idx))
-        !
         !$acc kernels present(kd1_ij)
         kd1_ij(:,:) = (0._DP,0._DP)
         !$acc end kernels
@@ -186,13 +186,13 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      ENDDO
      !
      IF(.NOT. l_lanczos) THEN
-        !$acc host_data use_device(kd1_ij)
+        !$acc update host(kd1_ij)
         CALL mp_sum(kd1_ij,inter_image_comm)
-        !$acc end host_data
+        !$acc update device(kd1_ij)
      ELSE
-        !$acc host_data use_device(tmp2)
+        !$acc update host(tmp2)
         CALL mp_sum(tmp2,inter_image_comm)
-        !$acc end host_data
+        !$acc update device(tmp2)
      ENDIF
      !
      ! LOOP OVER BANDS AT KPOINT
@@ -209,8 +209,11 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
            ibnd = aband%l2g(il1)
            jbnd = aband%l2g(il1+1)
            !
+           !$acc kernels present(raux1,raux2)
            raux1(:) = 0._DP
            raux2(:) = 0._DP
+           !$acc end kernels
+           !
            n_done = 0
            !
            ! LOOP OVER BANDS AT QPOINT
@@ -290,11 +293,9 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
            !
         ENDDO
         !
-        DEALLOCATE(kd1_ij)
-        !
-        !$acc host_data use_device(tmp2)
+        !$acc updata host(tmp2)
         CALL mp_sum(tmp2,inter_bgrp_comm)
-        !$acc end host_data
+        !$acc updata device(tmp2)
         !
      ENDIF
      !
@@ -302,16 +303,16 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
         !
         ! U^{+}(\xi)
         !
-        !$acc kernels present(tmp1)
-        tmp1 = (0._DP,0._DP)
-        !$acc end kernels
-        !
-        !$acc parallel loop collapse(3) present(tmp1,u_matrix,tmp2)
-        DO ibnd = 1, nbndval0x
-           DO jbnd = 1, nbndval0x
-              DO ig = 1, npw
-                 tmp1(ig,jbnd) = tmp1(ig,jbnd)+CONJG(u_matrix(jbnd,ibnd,current_spin))*tmp2(ig,ibnd)
+        !$acc parallel present(tmp1,u_matrix,tmp2)
+        !$acc loop collapse(2)
+        DO jbnd = 1, nbndval0x
+           DO ig = 1, npw
+              reduce = (0._DP,0._DP)
+              !$acc loop reduction(+:reduce)
+              DO ibnd = 1, nbndval0x
+                 reduce = reduce+CONJG(u_matrix(jbnd,ibnd,current_spin))*tmp2(ig,ibnd)
               ENDDO
+              tmp1(ig,jbnd) = reduce
            ENDDO
         ENDDO
         !$acc end parallel
@@ -319,7 +320,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
         !$acc parallel loop collapse(2) present(bse_kd1,tmp1)
         DO ibnd = 1, nbndval0x
            DO ig = 1, npw
-              bse_kd1(ig,ibnd) =  bse_kd1(ig,ibnd)-tmp1(ig,ibnd)
+              bse_kd1(ig,ibnd) = bse_kd1(ig,ibnd)-tmp1(ig,ibnd)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -329,7 +330,7 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
         !$acc parallel loop collapse(2) present(bse_kd1,tmp2)
         DO ibnd = 1, nbndval0x
            DO ig = 1, npw
-              bse_kd1(ig,ibnd) =  bse_kd1(ig,ibnd)-tmp2(ig,ibnd)
+              bse_kd1(ig,ibnd) = bse_kd1(ig,ibnd)-tmp2(ig,ibnd)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -341,8 +342,9 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   IF(l_local_repr) THEN
      DEALLOCATE(tmp1)
   ENDIF
+  !$acc exit data delete(tmp2,kd1_ij,raux1,gaux)
   DEALLOCATE(tmp2)
-  !$acc exit data delete(raux1,gaux)
+  DEALLOCATE(kd1_ij)
   DEALLOCATE(raux1)
   IF(.NOT. l_lanczos) THEN
      DEALLOCATE(raux2)

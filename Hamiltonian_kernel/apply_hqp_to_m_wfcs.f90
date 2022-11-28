@@ -17,7 +17,7 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
   ! g = S|evc><evc|f>*(et_qp - et - Delta) + Delta|f>
   !
   USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : npw,npwx,nbnd,et
+  USE pwcom,                ONLY : npw,npwx,nbnd
   USE mp_global,            ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE control_flags,        ONLY : gamma_only
@@ -25,10 +25,13 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
   USE westcom,              ONLY : et_qp
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : evc=>evc_d
+  USE wvfct,                ONLY : et_host=>et
+  USE wvfct_gpum,           ONLY : et_work=>et_d
   USE west_gpu,             ONLY : ps_r,ps_c
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc
+  USE wvfct,                ONLY : et_work=>et
 #endif
   !
   IMPLICIT NONE
@@ -48,15 +51,17 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
   COMPLEX(DP), ALLOCATABLE :: ps_c(:,:)
 #endif
   !
-#if defined(_CUDA)
+#if defined(__CUDA)
   CALL start_clock_gpu('hqp')
 #else
   CALL start_clock('hqp')
 #endif
   !
-  !$acc enter data copyin(et,et_qp)
-  !
-  delta = et_qp(nbnd,iks)-et(nbnd,iks)
+#if defined(__CUDA)
+  delta = et_qp(nbnd,iks)-et_host(nbnd,iks)
+#else
+  delta = et_qp(nbnd,iks)-et_work(nbnd,iks)
+#endif
   !
   ! ps = < evc | f >
   !
@@ -75,10 +80,10 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc parallel loop collapse(2) present(ps_r,et_qp,et)
+     !$acc parallel loop collapse(2) present(ps_r,et_qp)
      DO ibnd = 1,m
         DO jbnd = 1,nbnd
-           ps_r(jbnd,ibnd) = ps_r(jbnd,ibnd)*(et_qp(jbnd,iks)-et(jbnd,iks)-delta)
+           ps_r(jbnd,ibnd) = ps_r(jbnd,ibnd)*(et_qp(jbnd,iks)-et_work(jbnd,iks)-delta)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -102,10 +107,10 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc parallel loop collapse(2) present(ps_c,et_qp,et)
+     !$acc parallel loop collapse(2) present(ps_c,et_qp)
      DO ibnd = 1,m
         DO jbnd = 1,nbnd
-           ps_c(jbnd,ibnd) = ps_c(jbnd,ibnd)*(et_qp(jbnd,iks)-et(jbnd,iks)-delta)
+           ps_c(jbnd,ibnd) = ps_c(jbnd,ibnd)*(et_qp(jbnd,iks)-et_work(jbnd,iks)-delta)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -128,9 +133,7 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
   ENDDO
   !$acc end parallel
   !
-  !$acc exit data delete(et,et_qp)
-  !
-#if defined(_CUDA)
+#if defined(__CUDA)
   CALL stop_clock_gpu('hqp')
 #else
   CALL stop_clock('hqp')

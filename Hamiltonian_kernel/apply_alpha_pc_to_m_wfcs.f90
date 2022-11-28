@@ -47,7 +47,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
   COMPLEX(DP), ALLOCATABLE :: ps_c(:,:)
 #endif
   !
-#if defined(_CUDA)
+#if defined(__CUDA)
   CALL start_clock_gpu('alphapc')
 #else
   CALL start_clock('alphapc')
@@ -101,7 +101,7 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      !
   ENDIF
   !
-#if defined(_CUDA)
+#if defined(__CUDA)
   CALL stop_clock_gpu('alphapc')
 #else
   CALL stop_clock('alphapc')

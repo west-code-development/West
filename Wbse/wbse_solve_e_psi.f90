@@ -522,13 +522,9 @@ SUBROUTINE compute_d0psi_dfpt()
 #endif
      !
      IF(l_lanczos) THEN
-        !
         !$acc update host(d0psi)
-        !
         CALL mp_sum(d0psi(:,:,iks,:),inter_image_comm)
-        !
         !$acc update device(d0psi)
-        !
      ENDIF
      !
 #if defined(__CUDA)

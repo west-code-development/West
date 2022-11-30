@@ -37,6 +37,12 @@ SUBROUTINE wbse_davidson_diago ( )
                                  & wbse_refresh_with_vr_distr,apply_preconditioning_dvg
   USE buffers,              ONLY : get_buffer
   USE wavefunctions,        ONLY : evc
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
+  USE wvfct_gpum,           ONLY : using_et,using_et_d
+  USE west_gpu,             ONLY : caux1,allocate_gpu,deallocate_gpu,allocate_bse_gpu,&
+                                 & deallocate_bse_gpu,reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
+#endif
   !
   IMPLICIT NONE
   !
@@ -46,7 +52,7 @@ SUBROUTINE wbse_davidson_diago ( )
     ! dimension of the matrix to be diagonalized
     ! leading dimension of matrix evc, as declared in the calling pgm unit
   INTEGER :: dav_iter, notcnv
-    ! integer  number of iterations performed
+    ! integer number of iterations performed
     ! number of unconverged roots
   INTEGER :: kter, nbase, np, n, ip
     ! counter on iterations
@@ -55,10 +61,13 @@ SUBROUTINE wbse_davidson_diago ( )
     ! do-loop counters
     ! counter on the bands
   INTEGER :: ierr,mloc,mstart,max_mloc
-  INTEGER, ALLOCATABLE  :: ishift(:)
+  INTEGER, ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
   COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: hr_distr, vr_distr, dng_exc_tmp, dvg_exc_tmp
+#endif
   !
   INTEGER :: il1,ig1
   INTEGER :: iks, nbndval
@@ -71,7 +80,7 @@ SUBROUTINE wbse_davidson_diago ( )
   ! ... INITIALIZATION
   !
   l_is_wstat_converged = .FALSE.
-  nvec  = n_pdep_eigen
+  nvec = n_pdep_eigen
   nvecx = n_pdep_basis
   !
   CALL start_clock( 'chidiago' )
@@ -97,6 +106,18 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   CALL wbse_memory_report() ! Before allocating I report the memory required.
   !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+  CALL allocate_bse_gpu(aband%nloc)
+  !
+  CALL using_et(2)
+  CALL using_et_d(0)
+  IF(nks == 1) THEN
+     CALL using_evc(2)
+     CALL using_evc_d(0)
+  ENDIF
+#endif
+  !
   ! ... MEMORY ALLOCATION
   !
   IF ( nvec > nvecx / 2 ) CALL errore( 'chidiago', 'nvecx is too small', 1 )
@@ -108,6 +129,7 @@ SUBROUTINE wbse_davidson_diago ( )
   ALLOCATE( dvg_exc_tmp( npwx, nbndval0x, nks), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dvg ', ABS(ierr) )
+  !$acc enter data create(dvg_exc_tmp)
   !
   ALLOCATE( dng_exc( npwx, nbndval0x, nks, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -116,6 +138,7 @@ SUBROUTINE wbse_davidson_diago ( )
   ALLOCATE( dng_exc_tmp( npwx, nbndval0x, nks ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dng ', ABS(ierr) )
+  !$acc enter data create(dng_exc_tmp)
   !
   ALLOCATE( hr_distr( nvecx, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -129,7 +152,7 @@ SUBROUTINE wbse_davidson_diago ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate ew ', ABS(ierr) )
   !
-  ALLOCATE( ev( nvec  ), STAT=ierr )
+  ALLOCATE( ev( nvec ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate ev ', ABS(ierr) )
   !
@@ -137,15 +160,15 @@ SUBROUTINE wbse_davidson_diago ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate conv ', ABS(ierr) )
   !
-  nbase  = nvec
-  conv   = .FALSE.
-  ev     = 0._DP
-  ew     = 0._DP
-  dng_exc= 0._DP
-  dvg_exc= 0._DP
-  hr_distr(:,:) = 0._DP
-  vr_distr(:,:) = 0._DP
-  notcnv  = nvec
+  nbase = nvec
+  conv = .FALSE.
+  ev = 0._DP
+  ew = 0._DP
+  dng_exc = 0._DP
+  dvg_exc = 0._DP
+  hr_distr = 0._DP
+  vr_distr = 0._DP
+  notcnv = nvec
   dav_iter = -2
   !
   ! KIND OF CALCULATION
@@ -197,22 +220,26 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      DO ip = mstart, mstart+max_mloc-1
         !
-        IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
-           !
+        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
+#if defined(__CUDA)
+           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*nbndval0x*nks)
+#else
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !
+#endif
         ELSE
-           !
+           !$acc kernels present(dvg_exc_tmp)
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
-           !
+           !$acc end kernels
         ENDIF
         !
-        CALL west_apply_liouvillian (dvg_exc_tmp(:,:,:), dng_exc_tmp(:,:,:))
+        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp)
         !
-        IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
-           !
+        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
+#if defined(__CUDA)
+           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*nbndval0x*nks)
+#else
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-           !
+#endif
         ENDIF
         !
      ENDDO
@@ -257,22 +284,26 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      DO ip = mstart, mstart+max_mloc-1
         !
-        IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
-           !
+        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
+#if defined(__CUDA)
+           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*nbndval0x*nks)
+#else
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !
+#endif
         ELSE
-           !
+           !$acc kernels present(dvg_exc_tmp)
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
-           !
+           !$acc end kernels
         ENDIF
         !
-        CALL west_apply_liouvillian (dvg_exc_tmp(:,:,:), dng_exc_tmp(:,:,:))
+        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp)
         !
-        IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
-           !
+        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
+#if defined(__CUDA)
+           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*nbndval0x*nks)
+#else
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-           !
+#endif
         ENDIF
         !
      ENDDO
@@ -304,7 +335,7 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   ! --------------------
   !
-  iterate: DO kter = 1,  n_pdep_maxiter
+  iterate: DO kter = 1, n_pdep_maxiter
      !
      time_spent(1) = get_clock( 'chidiago' )
      !
@@ -381,19 +412,29 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            ! ... read in GS wavefunctions iks
            !
-           IF (nks>1) THEN
-              !
-              IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+           IF(nks > 1) THEN
+              IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
               CALL mp_bcast(evc,0,inter_image_comm)
               !
+#if defined(__CUDA)
+              CALL using_evc(2)
+              CALL using_evc_d(0)
+#endif
            ENDIF
            !
+           ! Pc amat
+           !
            IF (.NOT.( ig1 <= nbase .OR. ig1 > nbase+notcnv )) THEN
+#if defined(__CUDA)
+              CALL memcpy_H2D(caux1,dvg_exc(:,:,iks,il1),npwx*nbndval0x)
               !
-              ! Pc amat
+              CALL reallocate_ps_gpu(nbndval,nbndval)
+              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,caux1,(1.0_DP,0.0_DP))
               !
+              CALL memcpy_D2H(dvg_exc(:,:,iks,il1),caux1,npwx*nbndval0x)
+#else
               CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,dvg_exc(:,:,iks,il1),(1.0_DP,0.0_DP))
-              !
+#endif
            ENDIF
            !
         ENDDO
@@ -424,22 +465,26 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      DO ip = mstart, mstart+max_mloc-1
         !
-        IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
-           !
+        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
+#if defined(__CUDA)
+           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*nbndval0x*nks)
+#else
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-           !
+#endif
         ELSE
-           !
+           !$acc kernels present(dvg_exc_tmp)
            dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
-           !
+           !$acc end kernels
         ENDIF
         !
-        CALL west_apply_liouvillian (dvg_exc_tmp(:,:,:), dng_exc_tmp(:,:,:))
+        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp)
         !
-        IF ((mstart <= ip).AND.(ip <= mstart+mloc-1)) THEN
-           !
+        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
+#if defined(__CUDA)
+           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*nbndval0x*nks)
+#else
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-           !
+#endif
         ENDIF
         !
      ENDDO
@@ -474,7 +519,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ! ... the reduced basis set is becoming too large, or in any case if
      ! ... we are at the last iteration refresh the basis set. i.e. replace
      ! ... the first nvec elements with the current estimate of the
-     ! ... eigenvectors;  set the basis dimension to nvec.
+     ! ... eigenvectors; set the basis dimension to nvec.
      !
      IF ( notcnv == 0 .OR. nbase+notcnv > nvecx .OR. kter == n_pdep_maxiter ) THEN
         !
@@ -501,8 +546,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            ! ... last iteration, some roots not converged: return
            !
-           WRITE( stdout, '(5X,"WARNING: ",I5, &
-                &   " eigenvalues not converged in chidiago")' ) notcnv
+           WRITE( stdout, '(5X,"WARNING: ",I5," eigenvalues not converged in chidiago")' ) notcnv
            !
            CALL stop_clock( 'chidiago:last' )
            !
@@ -540,6 +584,11 @@ SUBROUTINE wbse_davidson_diago ( )
      !
   ENDDO iterate
   !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+  CALL deallocate_bse_gpu()
+#endif
+  !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
   DEALLOCATE( ev )
@@ -549,6 +598,7 @@ SUBROUTINE wbse_davidson_diago ( )
   DEALLOCATE( dng_exc )
   DEALLOCATE( dvg_exc )
   !
+  !$acc exit data delete(dng_exc_tmp,dvg_exc_tmp)
   DEALLOCATE( dng_exc_tmp )
   DEALLOCATE( dvg_exc_tmp )
   !
@@ -556,26 +606,29 @@ SUBROUTINE wbse_davidson_diago ( )
   !
 END SUBROUTINE
 !
+!
+!----------------------------------------------------------------------------
 SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
+  !----------------------------------------------------------------------------
   !
   ! MGS of the vectors beloging to the interval [ m_global_start, m_global_end ]
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
-  USE kinds,                  ONLY : DP
-  USE mp_global,              ONLY : intra_bgrp_comm,inter_image_comm,my_image_id
-  USE gvect,                  ONLY : gstart
-  USE mp,                     ONLY : mp_sum,mp_bcast
-  USE pwcom,                  ONLY : nks,npw,npwx,ngk
-  USE westcom,                ONLY : nbnd_occ,nbndval0x
-  USE control_flags,          ONLY : gamma_only
-  USE distribution_center,    ONLY : pert
+  USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm,my_image_id
+  USE gvect,                ONLY : gstart
+  USE mp,                   ONLY : mp_sum,mp_bcast
+  USE pwcom,                ONLY : nks,npw,npwx,ngk
+  USE westcom,              ONLY : nbnd_occ,nbndval0x
+  USE control_flags,        ONLY : gamma_only
+  USE distribution_center,  ONLY : pert
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: m_global_start,m_global_end
-  COMPLEX(DP) :: amat(npwx,nbndval0x,nks,pert%nlocx)
+  INTEGER,INTENT(IN) :: m_global_start,m_global_end
+  COMPLEX(DP),INTENT(INOUT) :: amat(npwx,nbndval0x,nks,pert%nlocx)
   !
   ! Workspace
   !
@@ -639,7 +692,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
              !
              anorm = 0.0_DP
              !
-             DO iks  = 1, nks
+             DO iks = 1, nks
                 !
                 nbndval = nbnd_occ(iks)
                 npw = ngk(iks)
@@ -663,14 +716,14 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
              !
              anorm = 0.0_DP
              !
-             DO iks  = 1, nks
+             DO iks = 1, nks
                 !
                 nbndval = nbnd_occ(iks)
                 npw = ngk(iks)
                 !
                 DO ibnd = 1, nbndval
                    !
-                   anorm  = anorm + DDOT(2*npw,amat(1,ibnd,iks,k_local),1,amat(1,ibnd,iks,k_local),1)
+                   anorm = anorm + DDOT(2*npw,amat(1,ibnd,iks,k_local),1,amat(1,ibnd,iks,k_local),1)
                    !
                 ENDDO
                 !
@@ -684,7 +737,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
            !
            za = CMPLX( 1._DP/SQRT(anorm), 0._DP,KIND=DP)
            !
-           DO iks  = 1, nks
+           DO iks = 1, nks
               !
               nbndval = nbnd_occ(iks)
               npw = ngk(iks)
@@ -701,7 +754,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
         !
         ! 5) Copy the current vector into V
         !
-        DO iks  = 1, nks
+        DO iks = 1, nks
            !
            nbndval = nbnd_occ(iks)
            !
@@ -735,7 +788,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               !
               anorm = 0.0_DP
               !
-              DO iks  = 1, nks
+              DO iks = 1, nks
                  !
                  nbndval = nbnd_occ(iks)
                  npw = ngk(iks)
@@ -772,14 +825,14 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               !
               anormc = (0.0_DP,0.0_DP)
               !
-              DO iks  = 1, nks
+              DO iks = 1, nks
                  !
                  nbndval = nbnd_occ(iks)
                  npw = ngk(iks)
                  !
                  DO ibnd = 1, nbndval
                     !
-                    anormc = anormc +  ZDOTC(npw,vec(1,ibnd,iks),1,amat(1,ibnd,iks,ip),1)
+                    anormc = anormc + ZDOTC(npw,vec(1,ibnd,iks),1,amat(1,ibnd,iks,ip),1)
                     !
                  ENDDO
                  !
@@ -810,7 +863,10 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
 END SUBROUTINE
 !
-SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
+!
+!----------------------------------------------------------------------------
+SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
+  !----------------------------------------------------------------------------
   !
   ! Randomize in dvg the vectors belonging to [ mglobalstart, mglobalend ]
   !
@@ -825,19 +881,23 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   USE mp,                   ONLY : mp_bcast,mp_max
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
+  USE west_gpu,             ONLY : caux1,reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
+#endif
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  INTEGER,    INTENT(IN)   :: mglobalstart, mglobalend
-  COMPLEX(DP),INTENT(INOUT):: amat(npwx,nbndval0x,nks,pert%nlocx)
+  INTEGER,INTENT(IN) :: mglobalstart, mglobalend
+  COMPLEX(DP),INTENT(INOUT) :: amat(npwx,nbndval0x,nks,pert%nlocx)
   !
   ! Workspace
   !
   REAL(DP),ALLOCATABLE :: random_num_debug(:,:)
-  INTEGER  :: il1,ig1,ig,ibnd,iks,nbndval
-  INTEGER  :: mloc,mstart,max_mloc
+  INTEGER :: il1,ig1,ig,ibnd,iks,nbndval
+  INTEGER :: mloc,mstart,max_mloc
   REAL(DP) :: aux_real
   REAL(DP) :: rr, arg
   !
@@ -867,7 +927,7 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
      !
      aux_real=randy(ig1)
      !
-     DO iks  = 1, nks
+     DO iks = 1, nks
         !
         nbndval = nbnd_occ(iks)
         npw = ngk(iks)
@@ -895,19 +955,29 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
         !
         ! ... read in GS wavefunctions iks
         !
-        IF (nks>1) THEN
-           !
-           IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+        IF(nks > 1) THEN
+           IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc,0,inter_image_comm)
            !
+#if defined(__CUDA)
+           CALL using_evc(2)
+           CALL using_evc_d(0)
+#endif
         ENDIF
         !
         ! Pc amat
         !
         IF (.NOT.( ig1 < mglobalstart .OR. ig1 > mglobalend )) THEN
+#if defined(__CUDA)
+           CALL memcpy_H2D(caux1,amat(:,:,iks,il1),npwx*nbndval0x)
            !
+           CALL reallocate_ps_gpu(nbndval,nbndval)
+           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,caux1,(1.0_DP,0.0_DP))
+           !
+           CALL memcpy_D2H(amat(:,:,iks,il1),caux1,npwx*nbndval0x)
+#else
            CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,amat(:,:,iks,il1),(1.0_DP,0.0_DP))
-           !
+#endif
         ENDIF
         !
      ENDDO
@@ -920,30 +990,37 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend  )
   !
 END SUBROUTINE
 !
+!
+!----------------------------------------------------------------------------
 SUBROUTINE wbse_output_ev_and_time(nvec,ev,time)
-   !
-   USE kinds,                ONLY : DP
-   USE io_global,            ONLY : stdout
-   USE io_push,              ONLY : io_push_bar
-   !
-   IMPLICIT NONE
-   !
-   INTEGER,INTENT(IN)  :: nvec
-   REAL(DP),INTENT(IN) :: ev(nvec)
-   REAL(DP),INTENT(IN) :: time(2)
-   !
-   INTEGER :: i,j
-   CHARACTER(20),EXTERNAL :: human_readable_time
-   !
-   WRITE(stdout,'(7X,a)') ' '
-   DO i = 1, INT( nvec / 9 )
-      WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*(i-1)+1,9*i)
-   ENDDO
-   IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*INT(nvec/9)+1,nvec)
-   WRITE(stdout,'(7X,a)') ' '
-   CALL io_push_bar()
-   WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
-   TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
-   CALL io_push_bar()
-   !
+  !----------------------------------------------------------------------------
+  !
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE io_push,              ONLY : io_push_bar
+  !
+  ! I/O
+  !
+  IMPLICIT NONE
+  !
+  INTEGER,INTENT(IN) :: nvec
+  REAL(DP),INTENT(IN) :: ev(nvec)
+  REAL(DP),INTENT(IN) :: time(2)
+  !
+  ! Workspace
+  !
+  INTEGER :: i,j
+  CHARACTER(20),EXTERNAL :: human_readable_time
+  !
+  WRITE(stdout,*)
+  DO i = 1, INT( nvec / 9 )
+     WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*(i-1)+1,9*i)
+  ENDDO
+  IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*INT(nvec/9)+1,nvec)
+  WRITE(stdout,*)
+  CALL io_push_bar()
+  WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
+  TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
+  CALL io_push_bar()
+  !
 END SUBROUTINE

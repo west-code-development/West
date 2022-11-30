@@ -682,7 +682,7 @@ MODULE west_gpu_data
       ALLOCATE(kd1_ij(npwx,MAXVAL(n_bse_idx)))
       !$acc enter data create(kd1_ij)
    ENDIF
-   IF(l_local_repr) THEN
+   IF(l_local_repr .OR. .NOT. l_lanczos) THEN
       ALLOCATE(caux1(npwx,nbndval0x))
    ENDIF
    ALLOCATE(caux2(npwx,nbndval0x))

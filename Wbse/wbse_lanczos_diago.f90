@@ -80,11 +80,11 @@ SUBROUTINE wbse_lanczos_diago()
   CALL allocate_gpu()
   CALL allocate_bse_gpu(aband%nloc)
   !
+  CALL using_et(2)
+  CALL using_et_d(0)
   IF(nks == 1) THEN
      CALL using_evc(2)
      CALL using_evc_d(0)
-     CALL using_et(2)
-     CALL using_et_d(0)
   ENDIF
 #endif
   !

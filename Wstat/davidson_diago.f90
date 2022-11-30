@@ -16,7 +16,7 @@
 SUBROUTINE davidson_diago ( )
   !----------------------------------------------------------------------------
   !
-  USE control_flags,   ONLY : gamma_only
+  USE control_flags,        ONLY : gamma_only
   !
   IMPLICIT NONE
   !
@@ -27,6 +27,7 @@ SUBROUTINE davidson_diago ( )
   ENDIF
   !
 END SUBROUTINE
+!
 !
 !----------------------------------------------------------------------------
 SUBROUTINE davidson_diago_gamma ( )
@@ -60,7 +61,7 @@ SUBROUTINE davidson_diago_gamma ( )
     ! dimension of the matrix to be diagonalized
     ! leading dimension of matrix evc, as declared in the calling pgm unit
   INTEGER :: dav_iter, notcnv
-    ! integer  number of iterations performed
+    ! integer number of iterations performed
     ! number of unconverged roots
   INTEGER :: kter, nbase, np, n
     ! counter on iterations
@@ -130,7 +131,7 @@ SUBROUTINE davidson_diago_gamma ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate ew ', ABS(ierr) )
   !
-  ALLOCATE( ev( nvec  ), STAT=ierr )
+  ALLOCATE( ev( nvec ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate ev ', ABS(ierr) )
   !
@@ -364,7 +365,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ! ... the reduced basis set is becoming too large, or in any case if
      ! ... we are at the last iteration refresh the basis set. i.e. replace
      ! ... the first nvec elements with the current estimate of the
-     ! ... eigenvectors;  set the basis dimension to nvec.
+     ! ... eigenvectors; set the basis dimension to nvec.
      !
      IF ( notcnv == 0 .OR. nbase+notcnv > nvecx .OR. kter == n_pdep_maxiter ) THEN
         !
@@ -391,8 +392,7 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            ! ... last iteration, some roots not converged: return
            !
-           WRITE( stdout, '(5X,"WARNING: ",I5, &
-                &   " eigenvalues not converged in chidiago")' ) notcnv
+           WRITE( stdout, '(5X,"WARNING: ",I5," eigenvalues not converged in chidiago")' ) notcnv
            !
            CALL stop_clock( 'chidiago:last' )
            !
@@ -430,13 +430,11 @@ SUBROUTINE davidson_diago_gamma ( )
      !
   ENDDO iterate
   !
-  !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
   DEALLOCATE( ev )
   DEALLOCATE( hr_distr )
   DEALLOCATE( vr_distr )
-  !
   !
   DEALLOCATE( dng )
   DEALLOCATE( dvg )
@@ -444,6 +442,7 @@ SUBROUTINE davidson_diago_gamma ( )
   CALL stop_clock( 'chidiago' )
   !
 END SUBROUTINE
+!
 !
 !----------------------------------------------------------------------------
 SUBROUTINE davidson_diago_k ( )
@@ -478,7 +477,7 @@ SUBROUTINE davidson_diago_k ( )
     ! dimension of the matrix to be diagonalized
     ! leading dimension of matrix evc, as declared in the calling pgm unit
   INTEGER :: dav_iter, notcnv
-    ! integer  number of iterations performed
+    ! integer number of iterations performed
     ! number of unconverged roots
   INTEGER :: kter, nbase, np, n
     ! counter on iterations
@@ -550,7 +549,7 @@ SUBROUTINE davidson_diago_k ( )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate ew ', ABS(ierr) )
   !
-  ALLOCATE( ev( nvec  ), STAT=ierr )
+  ALLOCATE( ev( nvec ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate ev ', ABS(ierr) )
   !
@@ -571,8 +570,8 @@ SUBROUTINE davidson_diago_k ( )
      ew = 0._DP
      dng = 0._DP
      dvg = 0._DP
-     hr_distr(:,:) = 0._DP
-     vr_distr(:,:) = 0._DP
+     hr_distr = 0._DP
+     vr_distr = 0._DP
      notcnv = nvec
      dav_iter = -2
      !
@@ -836,7 +835,7 @@ SUBROUTINE davidson_diago_k ( )
         ! ... the reduced basis set is becoming too large, or in any case if
         ! ... we are at the last iteration refresh the basis set. i.e. replace
         ! ... the first nvec elements with the current estimate of the
-        ! ... eigenvectors;  set the basis dimension to nvec.
+        ! ... eigenvectors; set the basis dimension to nvec.
         !
         IF ( notcnv == 0 .OR. nbase+notcnv > nvecx .OR. kter == n_pdep_maxiter ) THEN
            !
@@ -863,8 +862,7 @@ SUBROUTINE davidson_diago_k ( )
               !
               ! ... last iteration, some roots not converged: return
               !
-              WRITE( stdout, '(5X,"WARNING: ",I5, &
-                   &   " eigenvalues not converged in chidiago")' ) notcnv
+              WRITE( stdout, '(5X,"WARNING: ",I5," eigenvalues not converged in chidiago")' ) notcnv
               !
               CALL stop_clock( 'chidiago:last' )
               !
@@ -912,26 +910,27 @@ SUBROUTINE davidson_diago_k ( )
   DEALLOCATE( hr_distr )
   DEALLOCATE( vr_distr )
   !
-  !
   DEALLOCATE( dng )
   DEALLOCATE( dvg )
   !
 END SUBROUTINE
 !
 !
+!----------------------------------------------------------------------------
 SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
+  !----------------------------------------------------------------------------
   !
   ! MGS of the vectors beloging to the interval [ m_global_start, m_global_end ]
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
-  USE kinds,                  ONLY : DP
-  USE mp_global,              ONLY : inter_pool_comm,my_pool_id,intra_bgrp_comm,inter_bgrp_comm,&
-                                   & my_bgrp_id,inter_image_comm,my_image_id
-  USE gvect,                  ONLY : gstart
-  USE mp,                     ONLY : mp_sum,mp_bcast
-  USE westcom,                ONLY : npwq,npwqx
-  USE control_flags,          ONLY : gamma_only
-  USE distribution_center,    ONLY : pert
+  USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : inter_pool_comm,my_pool_id,intra_bgrp_comm,inter_bgrp_comm,&
+                                 & my_bgrp_id,inter_image_comm,my_image_id
+  USE gvect,                ONLY : gstart
+  USE mp,                   ONLY : mp_sum,mp_bcast
+  USE westcom,              ONLY : npwq,npwqx
+  USE control_flags,        ONLY : gamma_only
+  USE distribution_center,  ONLY : pert
 #if defined(__CUDA)
   USE cublas
 #endif
@@ -1163,7 +1162,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
 END SUBROUTINE
 !
 !
-SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
+!----------------------------------------------------------------------------
+SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend )
+  !----------------------------------------------------------------------------
   !
   ! Randomize in dvg the vectors belonging to [ mglobalstart, mglobalend ]
   !
@@ -1179,7 +1180,7 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
   ! I/O
   !
   INTEGER,INTENT(IN) :: mglobalstart, mglobalend
-  COMPLEX(DP) :: amat(npwqx,pert%nlocx)
+  COMPLEX(DP),INTENT(INOUT) :: amat(npwqx,pert%nlocx)
   !
   ! Workspace
   !
@@ -1230,7 +1231,9 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend  )
 END SUBROUTINE
 !
 !
+!----------------------------------------------------------------------------
 SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
+  !----------------------------------------------------------------------------
   !
   ! Randomize in dvg the vectors belonging to [ mglobalstart, mglobalend ]
   !
@@ -1248,7 +1251,7 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
   ! I/O
   !
   INTEGER,INTENT(IN) :: mglobalstart, mglobalend
-  COMPLEX(DP) :: amat(npwqx,pert%nlocx)
+  COMPLEX(DP),INTENT(INOUT) :: amat(npwqx,pert%nlocx)
   INTEGER,INTENT(IN) :: iq
   !
   ! Workspace
@@ -1300,166 +1303,178 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
 END SUBROUTINE
 !
 !
+!----------------------------------------------------------------------------
 SUBROUTINE output_ev_and_time(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
-   !
-   USE json_module,          ONLY : json_file
-   USE kinds,                ONLY : DP
-   USE io_global,            ONLY : stdout
-   USE io_push,              ONLY : io_push_bar
-   USE mp_world,             ONLY : mpime,root
-   USE westcom,              ONLY : logfile
-   !
-   IMPLICIT NONE
-   !
-   TYPE(json_file) :: json
-   INTEGER,INTENT(IN) :: nvec
-   REAL(DP),INTENT(IN) :: ev_(nvec)
-   LOGICAL,INTENT(IN) :: conv_(nvec)
-   REAL(DP),INTENT(IN) :: time(2)
-   INTEGER,INTENT(IN) :: sternop(2)
-   REAL(DP),INTENT(IN) :: tr2
-   INTEGER,INTENT(IN) :: dav_iter, notcnv, dfpt_dim, diago_dim
-   !
-   INTEGER :: i,j
-   CHARACTER(20),EXTERNAL :: human_readable_time
-   CHARACTER(LEN=6) :: cdav
-   INTEGER :: ndav,iunit
-   LOGICAL :: found
-   !
-   WRITE(stdout,'(7X,a)') ' '
-   DO i = 1, INT( nvec / 9 )
-      WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
-   ENDDO
-   IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
-   WRITE(stdout,'(7X,a)') ' '
-   CALL io_push_bar()
-   WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
-   TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
-   CALL io_push_bar()
-   !
-   IF( mpime == root ) THEN
-      !
-      CALL json%initialize()
-      !
-      CALL json%load(filename=TRIM(logfile))
-      !
-      CALL json%get('exec.ndav', ndav, found )
-      !
-      IF( found ) THEN
-         ndav = ndav+1
-      ELSE
-         ndav = 1
-      ENDIF
-      !
-      WRITE(cdav,'(i6)') ndav
-      !
-      CALL json%update('exec.ndav', ndav, found )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').ev',  ev_        ( 1:nvec ) )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_ ( 1:nvec ) )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2) )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))) )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))) )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', sternop(2)-sternop(1) )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2 )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim )
-      CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
-      !
-      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-      CALL json%print( iunit )
-      CLOSE( iunit )
-      !
-      CALL json%destroy()
-      !
-   ENDIF
-   !
+  !----------------------------------------------------------------------------
+  !
+  USE json_module,          ONLY : json_file
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE io_push,              ONLY : io_push_bar
+  USE mp_world,             ONLY : mpime,root
+  USE westcom,              ONLY : logfile
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  INTEGER,INTENT(IN) :: nvec
+  REAL(DP),INTENT(IN) :: ev_(nvec)
+  LOGICAL,INTENT(IN) :: conv_(nvec)
+  REAL(DP),INTENT(IN) :: time(2)
+  INTEGER,INTENT(IN) :: sternop(2)
+  REAL(DP),INTENT(IN) :: tr2
+  INTEGER,INTENT(IN) :: dav_iter, notcnv, dfpt_dim, diago_dim
+  !
+  ! Workspace
+  !
+  TYPE(json_file) :: json
+  INTEGER :: i,j
+  CHARACTER(20),EXTERNAL :: human_readable_time
+  CHARACTER(LEN=6) :: cdav
+  INTEGER :: ndav,iunit
+  LOGICAL :: found
+  !
+  WRITE(stdout,*)
+  DO i = 1, INT( nvec / 9 )
+     WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
+  ENDDO
+  IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
+  WRITE(stdout,*)
+  CALL io_push_bar()
+  WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
+  TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
+  CALL io_push_bar()
+  !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     !
+     CALL json%load(filename=TRIM(logfile))
+     !
+     CALL json%get('exec.ndav', ndav, found)
+     !
+     IF( found ) THEN
+        ndav = ndav+1
+     ELSE
+        ndav = 1
+     ENDIF
+     !
+     WRITE(cdav,'(i6)') ndav
+     !
+     CALL json%update('exec.ndav', ndav, found)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').ev', ev_(1:nvec))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_(1:nvec))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', sternop(2)-sternop(1))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim)
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
+  !
 END SUBROUTINE
 !
 !
+!----------------------------------------------------------------------------
 SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_dim,dav_iter,notcnv,iq)
-   !
-   USE json_module,          ONLY : json_file
-   USE kinds,                ONLY : DP
-   USE io_global,            ONLY : stdout
-   USE io_push,              ONLY : io_push_bar
-   USE mp_world,             ONLY : mpime,root
-   USE westcom,              ONLY : logfile
-   USE types_bz_grid,        ONLY : q_grid
-   !
-   IMPLICIT NONE
-   !
-   TYPE(json_file) :: json
-   INTEGER,INTENT(IN) :: nvec
-   REAL(DP),INTENT(IN) :: ev_(nvec)
-   LOGICAL,INTENT(IN) :: conv_(nvec)
-   REAL(DP),INTENT(IN) :: time(2)
-   INTEGER,INTENT(IN) :: sternop(2)
-   REAL(DP),INTENT(IN) :: tr2
-   INTEGER,INTENT(IN) :: dav_iter, notcnv, dfpt_dim, diago_dim
-   INTEGER,INTENT(IN) :: iq
-   !
-   INTEGER :: i,j
-   CHARACTER(20),EXTERNAL :: human_readable_time
-   CHARACTER(LEN=6) :: cdav
-   CHARACTER(LEN=5) :: cq
-   INTEGER :: ndav(q_grid%np),iunit
-   LOGICAL :: found
-   !
-   WRITE(stdout,'(7X,a)') ' '
-   DO i = 1, INT( nvec / 9 )
-      WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
-   ENDDO
-   IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
-   WRITE(stdout,'(7X,a)') ' '
-   CALL io_push_bar()
-   WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
-   TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
-   CALL io_push_bar()
-   !
-   IF( mpime == root ) THEN
-      !
-      CALL json%initialize()
-      !
-      CALL json%load(filename=TRIM(logfile))
-      !
-      WRITE(cq,'(i5)') iq
-      !
-      CALL json%get('exec.ndav.Q'//TRIM((ADJUSTL(cq))), ndav(iq), found )
-      !
-      IF( found ) THEN
-         ndav(iq) = ndav(iq)+1
-      ELSE
-         ndav(iq) = 1
-      ENDIF
-      !
-      WRITE(cdav,'(i6)') ndav(iq)
-      !
-      CALL json%update('exec.ndav.Q'//TRIM(ADJUSTL(cq)), ndav(iq), found )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').ev',  ev_        ( 1:nvec ) )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').conv', conv_ ( 1:nvec ) )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2) )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_elap:hum',&
-        & TRIM(human_readable_time(time(2))) )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_iter:sec',&
+  !----------------------------------------------------------------------------
+  !
+  USE json_module,          ONLY : json_file
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE io_push,              ONLY : io_push_bar
+  USE mp_world,             ONLY : mpime,root
+  USE westcom,              ONLY : logfile
+  USE types_bz_grid,        ONLY : q_grid
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  INTEGER,INTENT(IN) :: nvec
+  REAL(DP),INTENT(IN) :: ev_(nvec)
+  LOGICAL,INTENT(IN) :: conv_(nvec)
+  REAL(DP),INTENT(IN) :: time(2)
+  INTEGER,INTENT(IN) :: sternop(2)
+  REAL(DP),INTENT(IN) :: tr2
+  INTEGER,INTENT(IN) :: dav_iter, notcnv, dfpt_dim, diago_dim
+  INTEGER,INTENT(IN) :: iq
+  !
+  ! Workspace
+  !
+  TYPE(json_file) :: json
+  INTEGER :: i,j
+  CHARACTER(20),EXTERNAL :: human_readable_time
+  CHARACTER(LEN=6) :: cdav
+  CHARACTER(LEN=5) :: cq
+  INTEGER :: ndav(q_grid%np),iunit
+  LOGICAL :: found
+  !
+  WRITE(stdout,*)
+  DO i = 1, INT( nvec / 9 )
+     WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
+  ENDDO
+  IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
+  WRITE(stdout,*)
+  CALL io_push_bar()
+  WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
+  TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
+  CALL io_push_bar()
+  !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     !
+     CALL json%load(filename=TRIM(logfile))
+     !
+     WRITE(cq,'(i5)') iq
+     !
+     CALL json%get('exec.ndav.Q'//TRIM(ADJUSTL(cq)), ndav(iq), found)
+     !
+     IF( found ) THEN
+        ndav(iq) = ndav(iq)+1
+     ELSE
+        ndav(iq) = 1
+     ENDIF
+     !
+     WRITE(cdav,'(i6)') ndav(iq)
+     !
+     CALL json%update('exec.ndav.Q'//TRIM(ADJUSTL(cq)), ndav(iq), found)
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter)
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').ev', ev_(1:nvec))
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').conv', conv_(1:nvec))
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv)
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2))
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_elap:hum', &
+        & TRIM(human_readable_time(time(2))))
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_iter:sec', &
         & (time(2)-time(1)))
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_iter:hum',&
-        & TRIM(human_readable_time(time(2)-time(1))) )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').sternop_ncalls',&
-        & sternop(2)-sternop(1) )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2 )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim )
-      CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim )
-      !
-      OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
-      CALL json%print( iunit )
-      CLOSE( iunit )
-      !
-      CALL json%destroy()
-      !
-   ENDIF
-   !
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').time_iter:hum', &
+        & TRIM(human_readable_time(time(2)-time(1))))
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').sternop_ncalls', &
+        & sternop(2)-sternop(1))
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').dfpt_tr2', tr2)
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').dfpt_dim', dfpt_dim)
+     CALL json%add('exec.davitr.Q'//TRIM(ADJUSTL(cq))//'('//TRIM(ADJUSTL(cdav))//').diago_dim', diago_dim)
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
+  !
 END SUBROUTINE

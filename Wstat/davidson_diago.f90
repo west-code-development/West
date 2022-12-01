@@ -10,8 +10,6 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
-#define MONE (-1._DP, 0._DP )
-!
 !----------------------------------------------------------------------------
 SUBROUTINE davidson_diago ( )
   !----------------------------------------------------------------------------
@@ -960,6 +958,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   REAL(DP),EXTERNAL :: DDOT
   COMPLEX(DP),EXTERNAL :: ZDOTC
 #endif
+  COMPLEX(DP),PARAMETER :: mone = (-1._DP,0._DP)
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('paramgs')
@@ -1045,7 +1044,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               !
               ! normalize | k_l >
               !
-              za = 1._DP/SQRT(anorm)
+              za = CMPLX(1._DP/SQRT(anorm),KIND=DP)
               !
               !$acc host_data use_device(amat)
               CALL ZSCAL(npwq,za,amat(1,k_local),1)
@@ -1056,7 +1055,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            ! 5) Copy the current vector into V
            !
            !$acc host_data use_device(amat,vec)
-           CALL ZCOPY(npwqx,amat(1,k_local),1,vec(1),1)
+           CALL ZCOPY(npwqx,amat(1,k_local),1,vec,1)
            !$acc end host_data
            !
            !$acc update host(vec)
@@ -1117,14 +1116,14 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
 #else
            IF(gamma_only) THEN
               DO ip = j_local,m_local_end !pert%nloc
-                 braket(ip) = 2._DP * DDOT(2*npwq,vec(1),1,amat(1,ip),1)
+                 braket(ip) = 2._DP * DDOT(2*npwq,vec,1,amat(1,ip),1)
               ENDDO
               IF(gstart==2) FORALL(ip=j_local:m_local_end) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
               CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
               FORALL(ip=j_local:m_local_end) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
            ELSE
               DO ip = j_local,m_local_end !pert%nloc
-                 zbraket(ip) = ZDOTC(npwq,vec(1),1,amat(1,ip),1)
+                 zbraket(ip) = ZDOTC(npwq,vec,1,amat(1,ip),1)
               ENDDO
               CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
            ENDIF
@@ -1133,7 +1132,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            ncol=m_local_end-j_local+1
            !
            !$acc host_data use_device(vec,zbraket,amat)
-           CALL ZGERU(npwqx,ncol,MONE,vec(1),1,zbraket(j_local),1,amat(1,j_local),npwqx)
+           CALL ZGERU(npwqx,ncol,mone,vec,1,zbraket(j_local),1,amat(1,j_local),npwqx)
            !$acc end host_data
            !
         ENDIF

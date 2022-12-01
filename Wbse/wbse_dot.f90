@@ -58,15 +58,15 @@ SUBROUTINE wbse_dot(x,y,nbnd,nks,wbse_dot_out)
            ENDDO
            !$acc end parallel
            !
+           reduce = reduce*2._DP
+           !
            IF(gstart == 2) THEN
               !$acc parallel loop reduction(+:reduce) present(wg,x,y) copy(reduce)
               DO ibnd = 1, nbndval
-                 reduce = reduce - 0.5_DP*wg(ibnd,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
+                 reduce = reduce - wg(ibnd,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
               ENDDO
               !$acc end parallel
            ENDIF
-           !
-           reduce = reduce*2._DP
            !
         ELSE
            !

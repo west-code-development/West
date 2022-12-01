@@ -64,10 +64,11 @@ SUBROUTINE wbse_davidson_diago ( )
   INTEGER, ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
-  COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: hr_distr, vr_distr, dng_exc_tmp, dvg_exc_tmp
+  ATTRIBUTES(PINNED) :: hr_distr, vr_distr
 #endif
+  COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
+  !$acc declare device_resident(dng_exc_tmp,dvg_exc_tmp)
   !
   INTEGER :: il1,ig1
   INTEGER :: iks, nbndval
@@ -129,7 +130,6 @@ SUBROUTINE wbse_davidson_diago ( )
   ALLOCATE( dvg_exc_tmp( npwx, nbndval0x, nks), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dvg ', ABS(ierr) )
-  !$acc enter data create(dvg_exc_tmp)
   !
   ALLOCATE( dng_exc( npwx, nbndval0x, nks, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -138,7 +138,6 @@ SUBROUTINE wbse_davidson_diago ( )
   ALLOCATE( dng_exc_tmp( npwx, nbndval0x, nks ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dng ', ABS(ierr) )
-  !$acc enter data create(dng_exc_tmp)
   !
   ALLOCATE( hr_distr( nvecx, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -228,7 +227,7 @@ SUBROUTINE wbse_davidson_diago ( )
 #endif
         ELSE
            !$acc kernels present(dvg_exc_tmp)
-           dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
+           dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
            !$acc end kernels
         ENDIF
         !
@@ -292,7 +291,7 @@ SUBROUTINE wbse_davidson_diago ( )
 #endif
         ELSE
            !$acc kernels present(dvg_exc_tmp)
-           dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
+           dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
            !$acc end kernels
         ENDIF
         !
@@ -429,11 +428,11 @@ SUBROUTINE wbse_davidson_diago ( )
               CALL memcpy_H2D(caux1,dvg_exc(:,:,iks,il1),npwx*nbndval0x)
               !
               CALL reallocate_ps_gpu(nbndval,nbndval)
-              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,caux1,(1.0_DP,0.0_DP))
+              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,caux1,(1._DP,0._DP))
               !
               CALL memcpy_D2H(dvg_exc(:,:,iks,il1),caux1,npwx*nbndval0x)
 #else
-              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,dvg_exc(:,:,iks,il1),(1.0_DP,0.0_DP))
+              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,dvg_exc(:,:,iks,il1),(1._DP,0._DP))
 #endif
            ENDIF
            !
@@ -473,7 +472,7 @@ SUBROUTINE wbse_davidson_diago ( )
 #endif
         ELSE
            !$acc kernels present(dvg_exc_tmp)
-           dvg_exc_tmp(:,:,:) = (0.0_DP, 0.0_DP)
+           dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
            !$acc end kernels
         ENDIF
         !
@@ -598,7 +597,6 @@ SUBROUTINE wbse_davidson_diago ( )
   DEALLOCATE( dng_exc )
   DEALLOCATE( dvg_exc )
   !
-  !$acc exit data delete(dng_exc_tmp,dvg_exc_tmp)
   DEALLOCATE( dng_exc_tmp )
   DEALLOCATE( dvg_exc_tmp )
   !
@@ -622,6 +620,9 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   USE westcom,              ONLY : nbnd_occ,nbndval0x
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : pert
+#if defined(__CUDA)
+  USE cublas
+#endif
   !
   IMPLICIT NONE
   !
@@ -632,26 +633,34 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
   ! Workspace
   !
-  INTEGER :: ig, ip, ibnd, iks
-  INTEGER :: k_global, k_local, j_local, k_id, nbndval
-  REAL(DP) :: anorm
-  REAL(DP),ALLOCATABLE :: braket(:)
-  COMPLEX(DP),ALLOCATABLE :: vec(:,:,:),zbraket(:)
   LOGICAL :: unfinished
-  COMPLEX(DP) :: za, anormc
+  INTEGER :: ig,ip,ncol,ibnd,iks,nbndval
+  INTEGER :: k_global,k_local,j_local,k_id
   INTEGER :: m_local_start,m_local_end
+  REAL(DP) :: anorm
+  COMPLEX(DP) :: za,anormc
+  COMPLEX(DP),ALLOCATABLE :: zbraket(:)
+  COMPLEX(DP),ALLOCATABLE :: vec(:,:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: vec
+#endif
+  COMPLEX(DP),PARAMETER :: mone = (-1._DP,0._DP)
   !
-  REAL(DP),EXTERNAL :: DDOT
-  COMPLEX(DP),EXTERNAL :: ZDOTC
-  !
-  CALL start_clock ('paramgs')
-  !
-  ALLOCATE( vec(npwx,nbndval0x,nks), zbraket(pert%nloc), braket(pert%nloc) )
+#if defined(__CUDA)
+  CALL start_clock_gpu('paramgs')
+#else
+  CALL start_clock('paramgs')
+#endif
   !
   ! 1) Run some checks
   !
   IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
-     & CALL errore( 'mgs', 'wbse_do_mgs problem', 1 )
+  & CALL errore( 'mgs', 'wbse_do_mgs problem', 1 )
+  !
+  ALLOCATE(vec(npwx,nbndval0x,nks))
+  ALLOCATE(zbraket(pert%nloc))
+  !
+  !$acc enter data create(vec,zbraket) copyin(amat)
   !
   ! 2) Localize m_global_start
   !
@@ -688,83 +697,52 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
            !
            ! anorm = < k_l | k_l >
            !
-           IF(gamma_only) THEN
-             !
-             anorm = 0.0_DP
-             !
-             DO iks = 1, nks
-                !
-                nbndval = nbnd_occ(iks)
-                npw = ngk(iks)
-                !
-                DO ibnd = 1, nbndval
-                   !
-                   anorm = anorm + 2.0_DP * DDOT(2*npw,amat(1,ibnd,iks,k_local),1,amat(1,ibnd,iks,k_local),1)
-                   !
-                   IF(gstart==2) THEN
-                     !
-                     anorm = anorm - REAL(amat(1,ibnd,iks,k_local),KIND=DP) * REAL(amat(1,ibnd,iks,k_local),KIND=DP)
-
-                     !
-                   ENDIF
-                   !
-                ENDDO
-                !
-             ENDDO
-             !
-           ELSE
-             !
-             anorm = 0.0_DP
-             !
-             DO iks = 1, nks
-                !
-                nbndval = nbnd_occ(iks)
-                npw = ngk(iks)
-                !
-                DO ibnd = 1, nbndval
-                   !
-                   anorm = anorm + DDOT(2*npw,amat(1,ibnd,iks,k_local),1,amat(1,ibnd,iks,k_local),1)
-                   !
-                ENDDO
-                !
-             ENDDO
-             !
-           ENDIF
-           !
-           CALL mp_sum(anorm,intra_bgrp_comm)
-           !
-           ! normalize | k_l >
-           !
-           za = CMPLX( 1._DP/SQRT(anorm), 0._DP,KIND=DP)
-           !
+           anorm = 0._DP
            DO iks = 1, nks
               !
               nbndval = nbnd_occ(iks)
               npw = ngk(iks)
               !
+              !$acc parallel loop collapse(2) reduction(+:anorm) present(amat) copy(anorm)
               DO ibnd = 1, nbndval
-                 !
-                 CALL ZSCAL(npw,za,amat(1,ibnd,iks,k_local),1)
-                 !
+                 DO ig = 1, npw
+                    anorm = anorm+REAL(amat(ig,ibnd,iks,k_local),KIND=DP)**2+AIMAG(amat(ig,ibnd,iks,k_local))**2
+                 ENDDO
               ENDDO
+              !$acc end parallel
+              !
+              IF(gamma_only) THEN
+                 anorm = 2._DP*anorm
+                 IF(gstart == 2) THEN
+                    !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
+                    DO ibnd = 1, nbndval
+                       anorm = anorm-REAL(amat(1,ibnd,iks,k_local),KIND=DP)**2
+                    ENDDO
+                    !$acc end parallel
+                 ENDIF
+              ENDIF
               !
            ENDDO
+           !
+           CALL mp_sum(anorm,intra_bgrp_comm)
+           !
+           ! normalize | k_l >
+           !
+           za = CMPLX(1._DP/SQRT(anorm),KIND=DP)
+           !
+           !$acc host_data use_device(amat)
+           CALL ZSCAL(npwx*nbndval0x*nks,za,amat(1,1,1,k_local),1)
+           !$acc end host_data
            !
         ENDIF
         !
         ! 5) Copy the current vector into V
         !
-        DO iks = 1, nks
-           !
-           nbndval = nbnd_occ(iks)
-           !
-           DO ibnd = 1, nbndval
-              !
-              CALL ZCOPY(npwx,amat(1,ibnd,iks,k_local),1,vec(1,ibnd,iks),1)
-              !
-           ENDDO
-           !
-        ENDDO
+        !$acc host_data use_device(amat,vec)
+        CALL ZCOPY(npwx*nbndval0x*nks,amat(1,1,1,k_local),1,vec,1)
+        !$acc end host_data
+        !
+        !$acc update host(vec)
         !
         j_local=MAX(k_local+1,m_local_start)
         !
@@ -780,86 +758,85 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
      !
      IF(unfinished) THEN
         !
+        !$acc update device(vec)
+        !
         ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
         !
-        IF (gamma_only) THEN
+        DO ip = j_local,m_local_end
            !
-           DO ip = j_local,m_local_end !pert%nloc
+           IF(gamma_only) THEN
+              anorm = 0._DP
+           ELSE
+              anormc = (0._DP,0._DP)
+           ENDIF
+           !
+           DO iks = 1, nks
               !
-              anorm = 0.0_DP
+              nbndval = nbnd_occ(iks)
+              npw = ngk(iks)
               !
-              DO iks = 1, nks
-                 !
-                 nbndval = nbnd_occ(iks)
-                 npw = ngk(iks)
-                 !
+              IF(gamma_only) THEN
+                 !$acc parallel loop collapse(2) reduction(+:anorm) present(vec,amat) copy(anorm)
                  DO ibnd = 1, nbndval
-                    !
-                    anorm = anorm + 2._DP * DDOT(2*npw,vec(1,ibnd,iks),1,amat(1,ibnd,iks,ip),1)
-                    !
-                    IF (gstart==2) THEN
-                       !
+                    DO ig = 1, npw
+                       anorm = anorm + REAL(vec(ig,ibnd,iks),KIND=DP)*REAL(amat(ig,ibnd,iks,ip),KIND=DP) &
+                       & + AIMAG(vec(ig,ibnd,iks))*AIMAG(amat(ig,ibnd,iks,ip))
+                    ENDDO
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 anorm = 2._DP*anorm
+                 IF(gstart == 2) THEN
+                    !$acc parallel loop reduction(+:anorm) present(vec,amat) copy(anorm)
+                    DO ibnd = 1, nbndval
                        anorm = anorm - REAL(vec(1,ibnd,iks),KIND=DP)*REAL(amat(1,ibnd,iks,ip),KIND=DP)
-                       !
-                    ENDIF
-                    !
-                 ENDDO
-                 !
-              ENDDO
-              !
-              braket(ip) = anorm
-              !
-           ENDDO
-           !
-           CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
-           !
-           DO ip = j_local,m_local_end !pert%nloc
-              !
-              zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
-              !
-           ENDDO
-           !
-        ELSE
-           !
-           DO ip = j_local,m_local_end !pert%nloc
-              !
-              anormc = (0.0_DP,0.0_DP)
-              !
-              DO iks = 1, nks
-                 !
-                 nbndval = nbnd_occ(iks)
-                 npw = ngk(iks)
-                 !
+                    ENDDO
+                    !$acc end parallel
+                 ENDIF
+              ELSE
+                 !$acc parallel loop collapse(2) reduction(+:anormc) present(vec,amat) copy(anormc)
                  DO ibnd = 1, nbndval
-                    !
-                    anormc = anormc + ZDOTC(npw,vec(1,ibnd,iks),1,amat(1,ibnd,iks,ip),1)
-                    !
+                    DO ig = 1, npw
+                       anormc = anormc + CONJG(vec(ig,ibnd,iks))*amat(ig,ibnd,iks,ip)
+                    ENDDO
                  ENDDO
-                 !
-              ENDDO
-              !
-              zbraket(ip) = anormc
+                 !$acc end parallel
+              ENDIF
               !
            ENDDO
            !
-           CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
-           !
-        ENDIF
-        !
-        DO ip = j_local, m_local_end
-           !
-           amat(:,:,:,ip) = amat(:,:,:,ip) - vec(:,:,:)*zbraket(ip)
+           IF(gamma_only) THEN
+              zbraket(ip) = CMPLX(anorm,KIND=DP)
+           ELSE
+              zbraket(ip) = anormc
+           ENDIF
            !
         ENDDO
         !
+        CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
+        !
+        !$acc update device(zbraket)
+        !
+        ncol=m_local_end-j_local+1
+        !
+        !$acc host_data use_device(vec,zbraket,amat)
+        CALL ZGERU(npwx*nbndval0x*nks,ncol,mone,vec,1,zbraket(j_local),1,amat(1,1,1,j_local),npwx*nbndval0x*nks)
+        !$acc end host_data
         !
      ENDIF
      !
   ENDDO
   !
-  DEALLOCATE( vec,zbraket,braket )
+  !$acc exit data delete(vec,zbraket) copyout(amat)
   !
-  CALL stop_clock ('paramgs')
+  DEALLOCATE(vec)
+  DEALLOCATE(zbraket)
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('paramgs')
+#else
+  CALL stop_clock('paramgs')
+#endif
   !
 END SUBROUTINE
 !
@@ -947,7 +924,7 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
               amat(ig,ibnd,iks,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / &
                             ( g(1,ig)*g(1,ig) + &
                               g(2,ig)*g(2,ig) + &
-                              g(3,ig)*g(3,ig) + 1.0_DP )
+                              g(3,ig)*g(3,ig) + 1._DP )
            ENDDO
 !$OMP ENDDO
 !$OMP END PARALLEL
@@ -972,11 +949,11 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
            CALL memcpy_H2D(caux1,amat(:,:,iks,il1),npwx*nbndval0x)
            !
            CALL reallocate_ps_gpu(nbndval,nbndval)
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,caux1,(1.0_DP,0.0_DP))
+           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,caux1,(1._DP,0._DP))
            !
            CALL memcpy_D2H(amat(:,:,iks,il1),caux1,npwx*nbndval0x)
 #else
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,amat(:,:,iks,il1),(1.0_DP,0.0_DP))
+           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,amat(:,:,iks,il1),(1._DP,0._DP))
 #endif
         ENDIF
         !

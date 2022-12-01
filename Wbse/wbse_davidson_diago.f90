@@ -31,7 +31,8 @@ SUBROUTINE wbse_davidson_diago ( )
                                  & nbnd_occ,lrwfc,iuwfc,dvg_exc,dng_exc,nbndval0x,&
                                  & l_preconditioning,l_bse_calculation,n_bse_idx
   USE plep_db,              ONLY : plep_db_write,plep_db_read
-  USE wbse_restart,         ONLY : wbse_restart_write,wbse_restart_clear,wbse_restart_read
+  USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
+                                 & davidson_restart_read
   USE wstat_tools,          ONLY : diagox,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
                                  & wbse_refresh_with_vr_distr,apply_preconditioning_dvg
@@ -177,7 +178,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! RESTART
      !
-     CALL wbse_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+     CALL davidson_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   CASE('s','S')
      !
@@ -244,7 +245,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ENDDO
      !
      dav_iter = -1
-     IF(n_steps_write_restart == 1) CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+     IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   CASE DEFAULT
      CALL errore('chidiago', 'Wrong wstat_calculation',1)
@@ -324,7 +325,7 @@ SUBROUTINE wbse_davidson_diago ( )
      CALL wbse_output_ev_and_time(nvec,ev,time_spent)
      !
      dav_iter = 0
-     IF(n_steps_write_restart == 1) CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+     IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDIF
   !
@@ -533,7 +534,7 @@ SUBROUTINE wbse_davidson_diago ( )
            CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr )
            !
            CALL plep_db_write( )
-           CALL wbse_restart_clear()
+           CALL davidson_restart_clear()
            !
            WRITE(iter_label,'(i8)') kter
            CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
@@ -579,7 +580,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ENDIF
      !
      IF(n_steps_write_restart > 0 .AND. MOD(dav_iter,n_steps_write_restart) == 0) &
-        CALL wbse_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+        CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDDO iterate
   !

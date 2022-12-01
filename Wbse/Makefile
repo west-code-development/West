@@ -37,7 +37,6 @@ wbse_lanczos_diago.o \
 wbse_localization.o\
 wbse_memory_report.o \
 wbse_readin.o \
-wbse_restart.o  \
 wbse_setup.o \
 wbse_solve_e_psi.o \
 wbse_tools.o

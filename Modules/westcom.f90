@@ -328,7 +328,6 @@ MODULE wbse_center
   REAL(DP) :: trev_liouville_rel
   CHARACTER(LEN=3) :: ipol_input
   LOGICAL :: l_qp_correction
-  LOGICAL :: l_bse_calculation ! BSE True, TDDFT False
   LOGICAL :: l_preconditioning
   REAL(DP) :: wbse_epsinfty
   CHARACTER(LEN=1) :: spin_excitation
@@ -336,6 +335,7 @@ MODULE wbse_center
   ! FOR global variables
   !
   INTEGER :: nbndval0x
+  LOGICAL :: l_bse_calculation ! BSE True, TDDFT False
   LOGICAL :: l_lanczos
   LOGICAL :: l_davidson
   LOGICAL :: l_bse_triplet

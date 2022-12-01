@@ -20,10 +20,10 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 WSTAT_OBJS = \
 apply_operator.o \
 davidson_diago.o \
+davidson_restart.o \
 wstat.o \
 wstat_memory_report.o \
 wstat_readin.o \
-wstat_restart.o \
 wstat_setup.o \
 wstat_tools.o
 

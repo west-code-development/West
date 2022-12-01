@@ -46,7 +46,8 @@ SUBROUTINE davidson_diago_gamma ( )
                                  & n_steps_write_restart,npwqx,trev_pdep_rel,tr2_dfpt,&
                                  & l_is_wstat_converged,fftdriver,nbnd_occ
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
+  USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
+                                 & davidson_restart_read
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
                                  & refresh_with_vr_distr
   USE types_coulomb,        ONLY : pot3D
@@ -157,7 +158,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      ! RESTART
      !
-     CALL wstat_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+     CALL davidson_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDIF
   IF( wstat_calculation(1:1)=="S" .OR. wstat_calculation(2:2)=="S" ) THEN
@@ -198,7 +199,7 @@ SUBROUTINE davidson_diago_gamma ( )
      pccg_res_tr2 = -1._DP
      CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, 1 )
      dav_iter = -1
-     IF(n_steps_write_restart == 1) CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+     IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDIF
   !
@@ -250,7 +251,7 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      CALL output_ev_and_time(nvec,ev,conv,time_spent,sternop_ncalls,pccg_res_tr2,dfpt_dim,diago_dim,dav_iter,notcnv)
      dav_iter = 0
-     IF(n_steps_write_restart == 1) CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+     IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDIF
   !
@@ -378,7 +379,7 @@ SUBROUTINE davidson_diago_gamma ( )
            CALL refresh_with_vr_distr( dvg, nvec, nbase, nvecx, vr_distr )
            !
            CALL pdep_db_write( )
-           CALL wstat_restart_clear()
+           CALL davidson_restart_clear()
            !
            WRITE(iter_label,'(i8)') kter
            CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
@@ -424,7 +425,7 @@ SUBROUTINE davidson_diago_gamma ( )
      ENDIF
      !
      IF(n_steps_write_restart > 0 .AND. MOD(dav_iter,n_steps_write_restart) == 0) &
-        CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+        CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDDO iterate
   !
@@ -461,7 +462,8 @@ SUBROUTINE davidson_diago_k ( )
                                  & n_steps_write_restart,trev_pdep_rel,tr2_dfpt,&
                                  & l_is_wstat_converged,ngq,npwq,npwqx,nbnd_occ
   USE pdep_db,              ONLY : pdep_db_write,pdep_db_read
-  USE wstat_restart,        ONLY : wstat_restart_write,wstat_restart_clear,wstat_restart_read
+  USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
+                                 & davidson_restart_read
   USE wstat_tools,          ONLY : diagox,build_hr,redistribute_vr_distr,update_with_vr_distr,&
                                  & refresh_with_vr_distr
   USE types_bz_grid,        ONLY : q_grid
@@ -608,7 +610,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         IF ( .NOT. l_restart_q_done ) THEN
            !
-           CALL wstat_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq, iq )
+           CALL davidson_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, lastdone_iq, iq )
            !
            IF ( iq < lastdone_iq ) THEN
               CYCLE QPOINTS_LOOP
@@ -666,7 +668,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, iq )
         dav_iter = -1
-        IF(n_steps_write_restart == 1) CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq )
+        IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq )
         !
      ENDIF
      !
@@ -719,7 +721,7 @@ SUBROUTINE davidson_diago_k ( )
         !
         CALL output_ev_and_time_q( nvec,ev,conv,time_spent,sternop_ncalls,pccg_res_tr2,dfpt_dim,diago_dim,dav_iter,notcnv,iq )
         dav_iter = 0
-        IF(n_steps_write_restart == 1) CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq )
+        IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq )
         !
      ENDIF
      !
@@ -848,7 +850,7 @@ SUBROUTINE davidson_diago_k ( )
               CALL refresh_with_vr_distr( dvg, nvec, nbase, nvecx, vr_distr )
               !
               CALL pdep_db_write( iq )
-              CALL wstat_restart_clear()
+              CALL davidson_restart_clear()
               !
               WRITE(iter_label,'(i8)') kter
               CALL io_push_title("Convergence achieved !!! in "//TRIM(iter_label)//" steps")
@@ -894,7 +896,7 @@ SUBROUTINE davidson_diago_k ( )
         ENDIF
         !
         IF(n_steps_write_restart > 0 .AND. MOD(dav_iter,n_steps_write_restart) == 0) &
-           CALL wstat_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq )
+           CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr, iq )
         !
      ENDDO iterate
      !

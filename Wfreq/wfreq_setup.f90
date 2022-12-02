@@ -25,7 +25,7 @@ SUBROUTINE wfreq_setup
                                    & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc
   USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
-  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx,nspin
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
   USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
@@ -163,7 +163,6 @@ SUBROUTINE wfreq_setup
   DO i = 1,9
      IF(wfreq_calculation(i:i) == 'H') THEN
         !
-        IF(nspin > 1) CALL errore('wfreq_setup','QDET with nspin > 1 not supported',1)
         IF(real_space) CALL errore('wfreq_setup','QDET with real_space not supported',1)
         IF(lda_plus_u) CALL errore('wfreq_setup','QDET with lda_plus_u not supported',1)
         IF(lelfield) CALL errore('wfreq_setup','QDET with lelfield not supported',1)

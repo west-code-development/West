@@ -211,7 +211,7 @@ MODULE wfreq_db
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE qdet_db_write_eri(eri_vc,eri_w)
+    SUBROUTINE qdet_db_write_eri(eri_w,eri_vc,eri_w_full)
     !------------------------------------------------------------------------
       !
       USE mp,                   ONLY : mp_barrier
@@ -225,8 +225,9 @@ MODULE wfreq_db
       !
       IMPLICIT NONE
       !
-      REAL(DP),INTENT(IN):: eri_vc(n_pairs,n_pairs,nspin,nspin)
       COMPLEX(DP),INTENT(IN):: eri_w(n_pairs,n_pairs,nspin,nspin)
+      REAL(DP),INTENT(IN),OPTIONAL:: eri_vc(n_pairs,n_pairs,nspin,nspin)
+      COMPLEX(DP),INTENT(IN),OPTIONAL:: eri_w_full(n_pairs,n_pairs,nspin,nspin)
       !
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
@@ -263,8 +264,15 @@ MODULE wfreq_db
                      !
                      WRITE(my_label_ipair,'(i6.6)') ipair
                      !
-                     CALL json%add('qdet.eri_vc.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
-                     & my_label_ipair,eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     IF(PRESENT(eri_vc)) THEN
+                        CALL json%add('qdet.eri_vc.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                        & my_label_ipair,eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     ENDIF
+                     !
+                     IF(PRESENT(eri_w_full)) THEN
+                        CALL json%add('qdet.eri_w_full.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                        & my_label_ipair,eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     ENDIF
                      !
                      CALL json%add('qdet.eri_w.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
                      & my_label_ipair,REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)

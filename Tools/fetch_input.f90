@@ -22,17 +22,17 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
-                             & l_enable_off_diagonal,o_restart_time,ecut_spectralf,n_spectralf,&
-                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
-                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,westpp_box,document,wbse_init_calculation,&
-                             & localization,wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,&
-                             & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
-                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & ipol_input,wbse_epsinfty,spin_excitation,l_preconditioning,&
-                             & l_reduce_io,wbsepp_calculation,wbsepp_r0,iexc_plot,n_lanczos_to_use,&
-                             & n_extrapolation,range,broad
+                             & l_qdet_verbose,l_enable_off_diagonal,o_restart_time,ecut_spectralf,&
+                             & n_spectralf,westpp_calculation,westpp_range,westpp_format,&
+                             & westpp_sign,westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,&
+                             & westpp_rmax,westpp_epsinfty,westpp_box,document,&
+                             & wbse_init_calculation,localization,wfc_from_qbox,bisection_info,&
+                             & chi_kernel,overlap_thr,spin_channel,wbse_calculation,solver,&
+                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
+                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
+                             & trev_liouville_rel,ipol_input,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_reduce_io,wbsepp_calculation,wbsepp_r0,&
+                             & iexc_plot,n_lanczos_to_use,n_extrapolation,range,broad
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -181,17 +181,18 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
-                             & l_enable_off_diagonal,o_restart_time,ecut_spectralf,n_spectralf,&
-                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
-                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
-                             & westpp_epsinfty,westpp_box,document,wbse_init_calculation,&
-                             & localization,wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,&
-                             & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
-                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & ipol_input,wbse_epsinfty,spin_excitation,l_preconditioning,&
-                             & l_reduce_io,wbsepp_calculation,wbsepp_r0,iexc_plot,n_lanczos_to_use,&
-                             & n_extrapolation,range,broad,main_input_file,logfile
+                             & l_qdet_verbose,l_enable_off_diagonal,o_restart_time,ecut_spectralf,&
+                             & n_spectralf,westpp_calculation,westpp_range,westpp_format,&
+                             & westpp_sign,westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,&
+                             & westpp_rmax,westpp_epsinfty,westpp_box,document,&
+                             & wbse_init_calculation,localization,wfc_from_qbox,bisection_info,&
+                             & chi_kernel,overlap_thr,spin_channel,wbse_calculation,solver,&
+                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
+                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
+                             & trev_liouville_rel,ipol_input,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_reduce_io,wbsepp_calculation,wbsepp_r0,&
+                             & iexc_plot,n_lanczos_to_use,n_extrapolation,range,broad,&
+                             & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -354,6 +355,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%get(n_secant_maxiter, 'n_secant_maxiter', DUMMY_DEFAULT)
         IERR = return_dict%getitem(trev_secant, 'trev_secant')
         IERR = return_dict%getitem(l_enable_lanczos, 'l_enable_lanczos')
+        IERR = return_dict%getitem(l_qdet_verbose, 'l_qdet_verbose')
         IERR = return_dict%getitem(l_enable_off_diagonal, 'l_enable_off_diagonal')
         IERR = return_dict%getitem(o_restart_time, 'o_restart_time')
         IERR = return_dict%getitem(tmp_obj, 'ecut_spectralf')
@@ -641,6 +643,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(n_secant_maxiter,root,world_comm)
      CALL mp_bcast(trev_secant,root,world_comm)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
+     CALL mp_bcast(l_qdet_verbose,root,world_comm)
      CALL mp_bcast(l_enable_off_diagonal,root,world_comm)
      CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)

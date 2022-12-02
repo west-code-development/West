@@ -19,15 +19,15 @@ MODULE wbse_tools
   IMPLICIT NONE
   !
   INTERFACE wbse_build_hr
-     MODULE PROCEDURE build_hr_real, build_hr_complex
+     MODULE PROCEDURE build_hr_real
   END INTERFACE
   !
   INTERFACE wbse_update_with_vr_distr
-     MODULE PROCEDURE update_with_vr_distr_real, update_with_vr_distr_complex
+     MODULE PROCEDURE update_with_vr_distr_real
   END INTERFACE
   !
   INTERFACE wbse_refresh_with_vr_distr
-     MODULE PROCEDURE refresh_with_vr_distr_real, refresh_with_vr_distr_complex
+     MODULE PROCEDURE refresh_with_vr_distr_real
   END INTERFACE
   !
   INTERFACE apply_preconditioning_dvg
@@ -42,8 +42,9 @@ MODULE wbse_tools
       !
       !  c_distr = < ag | bg >
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
-      USE mp,                   ONLY : mp_sum
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,&
+                                     & inter_bgrp_comm,my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_sum,mp_bcast
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -62,132 +63,108 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,ibnd,iks,nbndval
+      INTEGER :: il1,il2,il3,ig1,ibnd,iks,nbndval
       INTEGER :: icycl,idx,nloc
       REAL(DP):: reduce
-      REAL(DP),EXTERNAL :: DDOT
       !
+#if defined(__CUDA)
+      CALL start_clock_gpu('build_hr')
+#else
       CALL start_clock('build_hr')
+#endif
       !
-      ! Initialize to zero
-      !
-      c_distr(:,l2_s:l2_e) = 0._DP
-      !
-      DO icycl = 0,nimage-1
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         IF(l2_e >= l2_s) THEN
+            !
+            !$acc enter data create(ag,c_distr(1:pert%nglob,l2_s:l2_e)) copyin(bg)
+            !
+            !$acc kernels present(c_distr(1:pert%nglob,l2_s:l2_e))
+            c_distr(1:pert%nglob,l2_s:l2_e) = 0._DP
+            !$acc end kernels
+            !
+         ENDIF
          !
-         DO il1 = 1,nloc
+         DO icycl = 0,nimage-1
             !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
-            !
-            DO il2 = l2_s,l2_e
+            IF(l2_e >= l2_s) THEN
                !
-               reduce = 0._DP
+               idx = MOD(my_image_id+icycl,nimage)
+               nloc = pert%nglob/nimage
+               IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
                !
-               DO iks = 1,nks
+               !$acc update device(ag) wait
+               !
+               DO il1 = 1,nloc
                   !
-                  nbndval = nbnd_occ(iks)
-                  npw = ngk(iks)
+                  ig1 = pert%l2g(il1,idx)
+                  IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
                   !
-                  DO ibnd = 1,nbndval
-                     reduce = reduce + 2._DP * DDOT(2*npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
-                     IF(gstart == 2) reduce = reduce - REAL(ag(1,ibnd,iks,il1),KIND=DP)*REAL(bg(1,ibnd,iks,il2),KIND=DP)
+                  !$acc parallel async present(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e),nbnd_occ,ngk)
+                  !$acc loop
+                  DO il2 = l2_s,l2_e
+                     !
+                     reduce = 0._DP
+                     !
+                     !$acc loop seq
+                     DO iks = 1,nks
+                        !
+                        nbndval = nbnd_occ(iks)
+                        npw = ngk(iks)
+                        !
+                        !$acc loop collapse(2) reduction(+:reduce)
+                        DO ibnd = 1,nbndval
+                           DO il3 = 1,npw
+                              reduce = reduce+REAL(ag(il3,ibnd,iks,il1),KIND=DP)*REAL(bg(il3,ibnd,iks,il2),KIND=DP) &
+                              & +AIMAG(ag(il3,ibnd,iks,il1))*AIMAG(bg(il3,ibnd,iks,il2))
+                           ENDDO
+                        ENDDO
+                        !
+                        reduce = reduce*2._DP
+                        !
+                        IF(gstart == 2) THEN
+                           !$acc loop reduction(+:reduce)
+                           DO ibnd = 1,nbndval
+                              reduce = reduce-REAL(ag(1,ibnd,iks,il1),KIND=DP)*REAL(bg(1,ibnd,iks,il2),KIND=DP)
+                           ENDDO
+                        ENDIF
+                        !
+                     ENDDO
+                     !
+                     c_distr(ig1,il2) = reduce
+                     !
                   ENDDO
+                  !$acc end parallel
                   !
                ENDDO
                !
-               c_distr(ig1,il2) = reduce
-               !
-            ENDDO
+            ENDIF
+            !
+            ! Cycle ag
+            !
+            CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
             !
          ENDDO
          !
-         ! Cycle ag
+         IF(l2_e >= l2_s) THEN
+            !
+            !$acc update host(c_distr(1:pert%nglob,l2_s:l2_e)) wait
+            !$acc exit data delete(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e))
+            !
+            CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+            !
+         ENDIF
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-      ENDDO
+      ENDIF
       !
-      CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
+      CALL mp_bcast(c_distr,0,inter_bgrp_comm)
+      CALL mp_bcast(c_distr,0,inter_pool_comm)
       !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('build_hr')
+#else
       CALL stop_clock('build_hr')
-      !
-    END SUBROUTINE
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE build_hr_complex(ag,bg,l2_s,l2_e,c_distr,g_e)
-      !------------------------------------------------------------------------
-      !
-      !  c_distr = < ag | bg >
-      !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
-      USE mp,                   ONLY : mp_sum
-      USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw,ngk
-      USE westcom,              ONLY : nbnd_occ,nbndval0x
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x,nks,pert%nlocx)
-      COMPLEX(DP),INTENT(IN) :: bg(npwx,nbndval0x,nks,pert%nlocx)
-      INTEGER,INTENT(IN) :: l2_s,l2_e
-      COMPLEX(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
-      INTEGER,INTENT(IN) :: g_e
-      !
-      ! Workspace
-      !
-      INTEGER :: il1,il2,ig1,ibnd,iks,nbndval
-      INTEGER :: icycl,idx,nloc
-      COMPLEX(DP),EXTERNAL :: ZDOTC
-      !
-      CALL start_clock('build_hr')
-      !
-      ! Initialize to zero
-      !
-      c_distr(:,l2_s:l2_e) = 0._DP
-      !
-      DO icycl = 0,nimage-1
-         !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-         !
-         DO il1 = 1,nloc
-            !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
-            !
-            DO il2 = l2_s,l2_e
-               DO iks = 1,nks
-                  !
-                  nbndval = nbnd_occ(iks)
-                  npw = ngk(iks)
-                  !
-                  DO ibnd = 1,nbndval
-                     c_distr(ig1,il2) = c_distr(ig1,il2) + ZDOTC(npw,ag(1,ibnd,iks,il1),1,bg(1,ibnd,iks,il2),1)
-                  ENDDO
-                  !
-               ENDDO
-            ENDDO
-            !
-         ENDDO
-         !
-         ! Cycle ag
-         !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-      ENDDO
-      !
-      CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
-      !
-      CALL stop_clock('build_hr')
+#endif
       !
     END SUBROUTINE
     !
@@ -195,7 +172,7 @@ MODULE wbse_tools
     SUBROUTINE update_with_vr_distr_real(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_bgrp_id,my_pool_id
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -213,280 +190,185 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
+      INTEGER :: il1,il2,il3,ig1,ig2,ibnd,iks,nbndval
       INTEGER :: icycl,idx,nloc
-      COMPLEX(DP) :: zconst
+      REAL(DP) :: dconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
       !
+#if defined(__CUDA)
+      CALL start_clock_gpu('update_vr')
+#else
       CALL start_clock('update_vr')
+#endif
       !
-      ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg(:,:,:,:) = 0._DP
+      ! ag, bg only needed by pool 0 and band group 0 in the next step
       !
-      DO icycl = 0,nimage-1
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
          !
-         DO il1 = 1,nloc
+         !$acc enter data create(ag,bg,hg)
+         !
+         !$acc kernels present(hg)
+         hg(:,:,:,:) = 0._DP
+         !$acc end kernels
+         !
+         DO icycl = 0,nimage-1
             !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > n) CYCLE
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            DO il2 = 1,pert%nloc
+            !$acc update device(ag) wait
+            !
+            DO il1 = 1,nloc
                !
-               ig2 = pert%l2g(il2)
-               IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > n) CYCLE
                !
-               zconst = CMPLX(vr_distr(ig1,il2),KIND=DP)
-               !
-               DO iks = 1,nks
+               DO il2 = 1,pert%nloc
                   !
-                  nbndval = nbnd_occ(iks)
-                  npw = ngk(iks)
+                  ig2 = pert%l2g(il2)
+                  IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
                   !
-                  DO ibnd = 1,nbndval
-                     CALL ZAXPY(npw,zconst,ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
+                  dconst = vr_distr(ig1,il2)
+                  !
+                  DO iks = 1,nks
+                     !
+                     nbndval = nbnd_occ(iks)
+                     npw = ngk(iks)
+                     !
+                     !$acc parallel loop collapse(2) async present(hg,ag)
+                     DO ibnd = 1,nbndval
+                        DO il3 = 1,npw
+                           hg(il3,ibnd,iks,il2) = dconst*ag(il3,ibnd,iks,il1)+hg(il3,ibnd,iks,il2)
+                        ENDDO
+                     ENDDO
+                     !$acc end parallel
+                     !
                   ENDDO
                   !
                ENDDO
                !
             ENDDO
             !
+            ! Cycle ag
+            !
+            CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
+            !
          ENDDO
          !
-         ! Cycle ag
+         !$acc update device(ag) wait
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-      ENDDO
-      !
-      DO il2 = 1,pert%nloc
-         !
-         ig2 = pert%l2g(il2)
-         IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-         !
-         DO iks = 1,nks
+         DO il2 = 1,pert%nloc
             !
-            nbndval = nbnd_occ(iks)
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
             !
-            DO ibnd = 1,nbndval
-               ag(:,ibnd,iks,il2) = -ew(ig2) * hg(:,ibnd,iks,il2)
+            dconst = -ew(ig2)
+            !
+            DO iks = 1,nks
+               !
+               nbndval = nbnd_occ(iks)
+               npw = ngk(iks)
+               !
+               !$acc parallel loop collapse(2) async present(ag,hg)
+               DO ibnd = 1,nbndval
+                  DO il3 = 1,npw
+                     ag(:,ibnd,iks,il2) = dconst*hg(:,ibnd,iks,il2)
+                  ENDDO
+               ENDDO
+               !$acc end parallel
+               !
             ENDDO
             !
          ENDDO
          !
-      ENDDO
-      !
-      hg(:,:,:,:) = 0._DP
-      !
-      DO icycl = 0,nimage-1
+         !$acc wait
+         !$acc kernels present(hg)
+         hg(:,:,:,:) = 0._DP
+         !$acc end kernels
          !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-         !
-         DO il1 = 1,nloc
+         DO icycl = 0,nimage-1
             !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > n) CYCLE
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            DO il2 = 1,pert%nloc
+            !$acc update device(bg) wait
+            !
+            DO il1 = 1,nloc
                !
-               ig2 = pert%l2g(il2)
-               IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > n) CYCLE
                !
-               zconst = CMPLX(vr_distr(ig1,il2),KIND=DP)
-               !
-               DO iks = 1,nks
+               DO il2 = 1,pert%nloc
                   !
-                  nbndval = nbnd_occ(iks)
-                  npw = ngk(iks)
+                  ig2 = pert%l2g(il2)
+                  IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
                   !
-                  DO ibnd = 1,nbndval
-                     CALL ZAXPY(npw,zconst,bg(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
+                  dconst = vr_distr(ig1,il2)
+                  !
+                  DO iks = 1,nks
+                     !
+                     nbndval = nbnd_occ(iks)
+                     npw = ngk(iks)
+                     !
+                     !$acc parallel loop collapse(2) async present(hg,bg)
+                     DO ibnd = 1,nbndval
+                        DO il3 = 1,npw
+                           hg(il3,ibnd,iks,il2) = dconst*bg(il3,ibnd,iks,il1)+hg(il3,ibnd,iks,il2)
+                        ENDDO
+                     ENDDO
+                     !$acc end parallel
+                     !
                   ENDDO
                   !
                ENDDO
                !
             ENDDO
             !
+            ! Cycle bg
+            !
+            CALL mp_circular_shift_left_c16_4d(bg,icycl,inter_image_comm)
+            !
          ENDDO
          !
-         ! Cycle bg
+         !$acc wait
          !
-         CALL mp_circular_shift_left_c16_4d(bg,icycl,inter_image_comm)
-         !
-      ENDDO
-      !
-      DO il2 = 1,pert%nloc
-         !
-         ig2 = pert%l2g(il2)
-         IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-         !
-         DO iks = 1,nks
+         DO il2 = 1,pert%nloc
             !
-            nbndval = nbnd_occ(iks)
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
             !
-            DO ibnd = 1,nbndval
-               ag(:,ibnd,iks,il2) = ag(:,ibnd,iks,il2) + hg(:,ibnd,iks,il2)
+            DO iks = 1,nks
+               !
+               nbndval = nbnd_occ(iks)
+               npw = ngk(iks)
+               !
+               !$acc parallel loop collapse(2) async present(ag,hg)
+               DO ibnd = 1,nbndval
+                  DO il3 = 1,npw
+                     ag(il3,ibnd,iks,il2) = ag(il3,ibnd,iks,il2)+hg(il3,ibnd,iks,il2)
+                  ENDDO
+               ENDDO
+               !$acc end parallel
+               !
             ENDDO
             !
          ENDDO
          !
-      ENDDO
+         !$acc update host(ag) wait
+         !$acc exit data delete(ag,bg,hg)
+         DEALLOCATE(hg)
+         !
+      ENDIF
       !
-      DEALLOCATE(hg)
-      !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('update_vr')
+#else
       CALL stop_clock('update_vr')
-      !
-    END SUBROUTINE
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE update_with_vr_distr_complex(ag,bg,nselect,n,lda,vr_distr,ew)
-      !------------------------------------------------------------------------
-      !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
-      USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw,ngk
-      USE westcom,              ONLY : nbnd_occ,nbndval0x
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x,nks,pert%nlocx)
-      COMPLEX(DP),INTENT(INOUT) :: bg(npwx,nbndval0x,nks,pert%nlocx)
-      INTEGER,INTENT(IN) :: nselect,n,lda
-      COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
-      REAL(DP),INTENT(IN) :: ew(lda)
-      !
-      ! Workspace
-      !
-      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
-      INTEGER :: icycl,idx,nloc
-      COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
-      !
-      CALL start_clock('update_vr')
-      !
-      ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg(:,:,:,:) = 0._DP
-      !
-      DO icycl = 0,nimage-1
-         !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-         !
-         DO il1 = 1,nloc
-            !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > n) CYCLE
-            !
-            DO il2 = 1,pert%nloc
-               !
-               ig2 = pert%l2g(il2)
-               IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-               !
-               DO iks = 1,nks
-                  !
-                  nbndval = nbnd_occ(iks)
-                  npw = ngk(iks)
-                  !
-                  DO ibnd = 1,nbndval
-                     CALL ZAXPY(npw,vr_distr(ig1,il2),ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
-                  ENDDO
-                  !
-               ENDDO
-               !
-            ENDDO
-            !
-         ENDDO
-         !
-         ! Cycle ag
-         !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-      ENDDO
-      !
-      DO il2 = 1,pert%nloc
-         !
-         ig2 = pert%l2g(il2)
-         IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-         !
-         DO iks = 1,nks
-            !
-            nbndval = nbnd_occ(iks)
-            !
-            DO ibnd = 1,nbndval
-               ag(:,ibnd,iks,il2) = -ew(ig2) * hg(:,ibnd,iks,il2)
-            ENDDO
-            !
-         ENDDO
-         !
-      ENDDO
-      !
-      hg(:,:,:,:) = 0._DP
-      !
-      DO icycl = 0,nimage-1
-         !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-         !
-         DO il1 = 1,nloc
-            !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > n) CYCLE
-            !
-            DO il2 = 1,pert%nloc
-               !
-               ig2 = pert%l2g(il2)
-               IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-               !
-               DO iks = 1,nks
-                  !
-                  nbndval = nbnd_occ(iks)
-                  npw = ngk(iks)
-                  !
-                  DO ibnd = 1,nbndval
-                     CALL ZAXPY(npw,vr_distr(ig1,il2),bg(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
-                  ENDDO
-                  !
-               ENDDO
-               !
-            ENDDO
-            !
-         ENDDO
-         !
-         ! Cycle bg
-         !
-         CALL mp_circular_shift_left_c16_4d(bg,icycl,inter_image_comm)
-         !
-      ENDDO
-      !
-      DO il2 = 1,pert%nloc
-         !
-         ig2 = pert%l2g(il2)
-         IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-         !
-         DO iks = 1,nks
-            !
-            nbndval = nbnd_occ(iks)
-            !
-            DO ibnd = 1,nbndval
-               ag(:,ibnd,iks,il2) = ag(:,ibnd,iks,il2) + hg(:,ibnd,iks,il2)
-            ENDDO
-            !
-         ENDDO
-         !
-      ENDDO
-      !
-      DEALLOCATE(hg)
-      !
-      CALL stop_clock('update_vr')
+#endif
       !
     END SUBROUTINE
     !
@@ -494,7 +376,9 @@ MODULE wbse_tools
     SUBROUTINE refresh_with_vr_distr_real(ag,nselect,n,lda,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
+                                     & my_bgrp_id,inter_pool_comm,my_pool_id
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,nbndval0x
@@ -510,185 +394,126 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
+      INTEGER :: il1,il2,il3,ig1,ig2,ibnd,iks,nbndval
       INTEGER :: icycl,idx,nloc
-      COMPLEX(DP) :: zconst
+      REAL(DP) :: dconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
       !
+#if defined(__CUDA)
+      CALL start_clock_gpu('refresh_vr')
+#else
       CALL start_clock('refresh_vr')
+#endif
       !
-      ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg(:,:,:,:) = 0._DP
-      !
-      DO icycl = 0,nimage-1
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
          !
-         DO il1 = 1,nloc
+         !$acc enter data create(ag,hg)
+         !
+         !$acc kernels present(hg)
+         hg(:,:,:,:) = 0._DP
+         !$acc end kernels
+         !
+         DO icycl = 0,nimage-1
             !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > n) CYCLE
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            DO il2 = 1,pert%nloc
+            !$acc update device(ag) wait
+            !
+            DO il1 = 1,nloc
                !
-               ig2 = pert%l2g(il2)
-               IF(ig2 > nselect) CYCLE
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 < 1 .OR. ig1 > n) CYCLE
                !
-               zconst = CMPLX(vr_distr(ig1,il2),KIND=DP)
-               !
-               DO iks = 1,nks
+               DO il2 = 1,pert%nloc
                   !
-                  nbndval = nbnd_occ(iks)
-                  npw = ngk(iks)
+                  ig2 = pert%l2g(il2)
+                  IF(ig2 > nselect) CYCLE
                   !
-                  DO ibnd = 1,nbndval
-                     CALL ZAXPY(npw,zconst,ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
+                  dconst = vr_distr(ig1,il2)
+                  !
+                  DO iks = 1,nks
+                     !
+                     nbndval = nbnd_occ(iks)
+                     npw = ngk(iks)
+                     !
+                     !$acc parallel loop collapse(2) async present(hg,ag)
+                     DO ibnd = 1,nbndval
+                        DO il3 = 1,npw
+                           hg(il3,ibnd,iks,il2) = dconst*ag(il3,ibnd,iks,il1)+hg(il3,ibnd,iks,il2)
+                        ENDDO
+                     ENDDO
+                     !$acc end parallel
+                     !
                   ENDDO
                   !
                ENDDO
                !
             ENDDO
             !
+            ! Cycle ag
+            !
+            CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
+            !
          ENDDO
          !
-         ! Cycle ag
+         !$acc wait
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-      ENDDO
-      !
-      DO il2 = 1,pert%nloc
-         !
-         ig2 = pert%l2g(il2)
-         !
-         IF(ig2 > nselect) THEN
-            DO iks = 1,nks
-               !
-               nbndval = nbnd_occ(iks)
-               !
-               DO ibnd = 1,nbndval
-                  ag(:,ibnd,iks,il2) = 0._DP
-               ENDDO
-               !
-            ENDDO
-         ELSE
-            DO iks  = 1,nks
-               !
-               nbndval = nbnd_occ(iks)
-               !
-               DO ibnd = 1,nbndval
-                  ag(:,ibnd,iks,il2) = hg(:,ibnd,iks,il2)
-               ENDDO
-               !
-            ENDDO
-         ENDIF
-         !
-      ENDDO
-      !
-      DEALLOCATE(hg)
-      !
-      CALL stop_clock('refresh_vr')
-      !
-    END SUBROUTINE
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE refresh_with_vr_distr_complex(ag,nselect,n,lda,vr_distr)
-      !------------------------------------------------------------------------
-      !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id
-      USE distribution_center,  ONLY : pert
-      USE pwcom,                ONLY : nks,npwx,npw,ngk
-      USE westcom,              ONLY : nbnd_occ,nbndval0x
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x,nks,pert%nlocx)
-      INTEGER,INTENT(IN) :: nselect,n,lda
-      COMPLEX(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
-      !
-      ! Workspace
-      !
-      INTEGER :: il1,il2,ig1,ig2,ibnd,iks,nbndval
-      INTEGER :: icycl,idx,nloc
-      COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
-      !
-      CALL start_clock('refresh_vr')
-      !
-      ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
-      hg(:,:,:,:) = 0._DP
-      !
-      DO icycl = 0,nimage-1
-         !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-         !
-         DO il1 = 1,nloc
+         DO il2 = 1,pert%nloc
             !
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 < 1 .OR. ig1 > n) CYCLE
+            ig2 = pert%l2g(il2)
             !
-            DO il2 = 1,pert%nloc
-               !
-               ig2 = pert%l2g(il2)
-               IF(ig2 > nselect) CYCLE
-               !
+            IF(ig2 > nselect) THEN
                DO iks = 1,nks
                   !
                   nbndval = nbnd_occ(iks)
                   npw = ngk(iks)
                   !
+                  !$acc parallel loop collapse(2) async present(ag)
                   DO ibnd = 1,nbndval
-                     CALL ZAXPY(npw,vr_distr(ig1,il2),ag(1,ibnd,iks,il1),1,hg(1,ibnd,iks,il2),1)
+                     DO il3 = 1,npw
+                        ag(il3,ibnd,iks,il2) = 0._DP
+                     ENDDO
                   ENDDO
+                  !$acc end parallel
                   !
                ENDDO
-               !
-            ENDDO
+            ELSE
+               DO iks  = 1,nks
+                  !
+                  nbndval = nbnd_occ(iks)
+                  npw = ngk(iks)
+                  !
+                  !$acc parallel loop collapse(2) async present(ag,hg)
+                  DO ibnd = 1,nbndval
+                     DO il3 = 1,npw
+                        ag(il3,ibnd,iks,il2) = hg(il3,ibnd,iks,il2)
+                     ENDDO
+                  ENDDO
+                  !$acc end parallel
+                  !
+               ENDDO
+            ENDIF
+            !
          ENDDO
          !
-         ! Cycle ag
+         !$acc update host(ag) wait
+         !$acc exit data delete(ag,hg)
+         DEALLOCATE(hg)
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-      ENDDO
+      ENDIF
       !
-      DO il2 = 1,pert%nloc
-         !
-         ig2 = pert%l2g(il2)
-         !
-         IF(ig2 > nselect) THEN
-           DO iks = 1,nks
-              !
-              nbndval = nbnd_occ(iks)
-              !
-              DO ibnd = 1,nbndval
-                 ag(:,ibnd,iks,il2) = 0._DP
-              ENDDO
-              !
-           ENDDO
-         ELSE
-           DO iks = 1,nks
-              !
-              nbndval = nbnd_occ(iks)
-              !
-              DO ibnd = 1,nbndval
-                 ag(:,ibnd,iks,il2) = hg(:,ibnd,iks,il2)
-              ENDDO
-              !
-           ENDDO
-         ENDIF
-         !
-      ENDDO
+      CALL mp_bcast(ag,0,inter_bgrp_comm)
+      CALL mp_bcast(ag,0,inter_pool_comm)
       !
-      DEALLOCATE(hg)
-      !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('refresh_vr')
+#else
       CALL stop_clock('refresh_vr')
+#endif
       !
     END SUBROUTINE
     !

@@ -667,8 +667,9 @@ MODULE west_gpu_data
    USE wvfct,                 ONLY : npwx
    USE noncollin_module,      ONLY : npol
    USE fft_base,              ONLY : dffts
-   USE pwcom,                 ONLY : wg
-   USE westcom,               ONLY : nbndval0x,n_bse_idx,l_local_repr,l_lanczos,et_qp,u_matrix
+   USE pwcom,                 ONLY : wg,ngk
+   USE westcom,               ONLY : nbnd_occ,nbndval0x,n_bse_idx,l_local_repr,l_lanczos,et_qp,&
+                                   & u_matrix
    !
    IMPLICIT NONE
    !
@@ -701,7 +702,7 @@ MODULE west_gpu_data
       ALLOCATE(psic2(dffts%nnr))
    ENDIF
    !
-   !$acc enter data copyin(wg,et_qp,u_matrix)
+   !$acc enter data copyin(wg,et_qp,u_matrix,nbnd_occ,ngk)
    !
    END SUBROUTINE
    !
@@ -709,8 +710,8 @@ MODULE west_gpu_data
    SUBROUTINE deallocate_bse_gpu()
    !-----------------------------------------------------------------------
    !
-   USE pwcom,                 ONLY : wg
-   USE westcom,               ONLY : et_qp,u_matrix
+   USE pwcom,                 ONLY : wg,ngk
+   USE westcom,               ONLY : nbnd_occ,et_qp,u_matrix
    !
    IMPLICIT NONE
    !
@@ -764,7 +765,7 @@ MODULE west_gpu_data
       DEALLOCATE(ps_c)
    ENDIF
    !
-   !$acc exit data delete(wg,et_qp,u_matrix)
+   !$acc exit data delete(wg,et_qp,u_matrix,nbnd_occ,ngk)
    !
    END SUBROUTINE
 #endif

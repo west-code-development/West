@@ -360,7 +360,7 @@ SUBROUTINE compute_d0psi_dfpt()
   !
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
-  USE mp_global,            ONLY : my_image_id,inter_image_comm
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE buffers,              ONLY : get_buffer
   USE uspp_init,            ONLY : init_us_2
@@ -518,11 +518,13 @@ SUBROUTINE compute_d0psi_dfpt()
      CALL deallocate_macropol_gpu()
 #endif
      !
+     !$acc update host(d0psi)
      IF(l_lanczos) THEN
-        !$acc update host(d0psi)
         CALL mp_sum(d0psi(:,:,iks,:),inter_image_comm)
-        !$acc update device(d0psi)
+     ELSE
+        CALL mp_sum(d0psi(:,:,iks,:),inter_bgrp_comm)
      ENDIF
+     !$acc update device(d0psi)
      !
 #if defined(__CUDA)
      CALL reallocate_ps_gpu(nbndval,nbndval)

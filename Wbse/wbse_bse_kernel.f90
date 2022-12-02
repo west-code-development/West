@@ -192,14 +192,14 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
         !
      ENDDO
      !
-     IF(.NOT. l_lanczos) THEN
-        !$acc update host(kd1_ij)
-        CALL mp_sum(kd1_ij,inter_image_comm)
-        !$acc update device(kd1_ij)
-     ELSE
+     IF(l_lanczos) THEN
         !$acc update host(caux2)
         CALL mp_sum(caux2,inter_image_comm)
         !$acc update device(caux2)
+     ELSE
+        !$acc update host(kd1_ij)
+        CALL mp_sum(kd1_ij,inter_image_comm)
+        !$acc update device(kd1_ij)
      ENDIF
      !
      ! LOOP OVER BANDS AT KPOINT

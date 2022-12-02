@@ -20,7 +20,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,nks,current_spin,isk,wg,ngk
   USE control_flags,          ONLY : gamma_only
   USE mp,                     ONLY : mp_sum,mp_bcast
-  USE mp_global,              ONLY : my_image_id,inter_image_comm
+  USE mp_global,              ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
   USE buffers,                ONLY : get_buffer
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,l_lanczos
   USE fft_at_gamma,           ONLY : double_invfft_gamma
@@ -180,6 +180,8 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   !
   IF(l_lanczos) THEN
      CALL mp_sum(drho,inter_image_comm)
+  ELSE
+     CALL mp_sum(drho,inter_bgrp_comm)
   ENDIF
   !
 #if !defined(__CUDA)

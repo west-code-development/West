@@ -614,7 +614,8 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !    also with respect to the vectors belonging to the interval [ 1, m_global_start -1 ]
   !
   USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm,my_image_id
+  USE mp_global,            ONLY : inter_pool_comm,my_pool_id,intra_bgrp_comm,inter_bgrp_comm,&
+                                 & my_bgrp_id,inter_image_comm,my_image_id
   USE gvect,                ONLY : gstart
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE pwcom,                ONLY : nks,npw,npwx,ngk
@@ -658,180 +659,188 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
   & CALL errore( 'mgs', 'wbse_do_mgs problem', 1 )
   !
-  ALLOCATE(vec(npwx,nbndval0x,nks))
-  ALLOCATE(zbraket(pert%nloc))
-  !
-  !$acc enter data create(vec,zbraket) copyin(amat)
-  !
-  ! 2) Localize m_global_start
-  !
-  m_local_start = 1
-  DO ip = 1, pert%nloc
-     ig = pert%l2g(ip)
-     IF( ig < m_global_start ) CYCLE
-     m_local_start = ip
-     EXIT
-  ENDDO
-  !
-  ! 3) Localize m_global_end
-  !
-  m_local_end = pert%nloc
-  DO ip = pert%nloc, 1, -1
-     ig = pert%l2g(ip)
-     IF( ig > m_global_end ) CYCLE
-     m_local_end = ip
-     EXIT
-  ENDDO
-  !
-  j_local=1
-  unfinished=.TRUE.
-  !
-  DO k_global=1,m_global_end
+  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
      !
-     CALL pert%g2l(k_global,k_local,k_id)
+     ALLOCATE(vec(npwx,nbndval0x,nks))
+     ALLOCATE(zbraket(pert%nloc))
      !
-     IF(my_image_id==k_id) THEN
+     !$acc enter data create(vec,zbraket) copyin(amat)
+     !
+     ! 2) Localize m_global_start
+     !
+     m_local_start = 1
+     DO ip = 1, pert%nloc
+        ig = pert%l2g(ip)
+        IF( ig < m_global_start ) CYCLE
+        m_local_start = ip
+        EXIT
+     ENDDO
+     !
+     ! 3) Localize m_global_end
+     !
+     m_local_end = pert%nloc
+     DO ip = pert%nloc, 1, -1
+        ig = pert%l2g(ip)
+        IF( ig > m_global_end ) CYCLE
+        m_local_end = ip
+        EXIT
+     ENDDO
+     !
+     j_local=1
+     unfinished=.TRUE.
+     !
+     DO k_global=1,m_global_end
         !
-        ! 4) Eventually, normalize the current vector
+        CALL pert%g2l(k_global,k_local,k_id)
         !
-        IF( k_global >= m_global_start ) THEN
+        IF(my_image_id==k_id) THEN
            !
-           ! anorm = < k_l | k_l >
+           ! 4) Eventually, normalize the current vector
            !
-           anorm = 0._DP
-           DO iks = 1, nks
+           IF( k_global >= m_global_start ) THEN
               !
-              nbndval = nbnd_occ(iks)
-              npw = ngk(iks)
+              ! anorm = < k_l | k_l >
               !
-              !$acc parallel loop collapse(2) reduction(+:anorm) present(amat) copy(anorm)
-              DO ibnd = 1, nbndval
-                 DO ig = 1, npw
-                    anorm = anorm+REAL(amat(ig,ibnd,iks,k_local),KIND=DP)**2+AIMAG(amat(ig,ibnd,iks,k_local))**2
-                 ENDDO
-              ENDDO
-              !$acc end parallel
-              !
-              IF(gamma_only) THEN
-                 anorm = 2._DP*anorm
-                 IF(gstart == 2) THEN
-                    !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
-                    DO ibnd = 1, nbndval
-                       anorm = anorm-REAL(amat(1,ibnd,iks,k_local),KIND=DP)**2
-                    ENDDO
-                    !$acc end parallel
-                 ENDIF
-              ENDIF
-              !
-           ENDDO
-           !
-           CALL mp_sum(anorm,intra_bgrp_comm)
-           !
-           ! normalize | k_l >
-           !
-           za = CMPLX(1._DP/SQRT(anorm),KIND=DP)
-           !
-           !$acc host_data use_device(amat)
-           CALL ZSCAL(npwx*nbndval0x*nks,za,amat(1,1,1,k_local),1)
-           !$acc end host_data
-           !
-        ENDIF
-        !
-        ! 5) Copy the current vector into V
-        !
-        !$acc host_data use_device(amat,vec)
-        CALL ZCOPY(npwx*nbndval0x*nks,amat(1,1,1,k_local),1,vec,1)
-        !$acc end host_data
-        !
-        !$acc update host(vec)
-        !
-        j_local=MAX(k_local+1,m_local_start)
-        !
-        IF(j_local>m_local_end) unfinished=.FALSE.
-        !
-     ENDIF
-     !
-     ! BCAST | vec >
-     !
-     CALL mp_bcast(vec,k_id,inter_image_comm)
-     !
-     ! Update when needed
-     !
-     IF(unfinished) THEN
-        !
-        !$acc update device(vec)
-        !
-        ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
-        !
-        DO ip = j_local,m_local_end
-           !
-           IF(gamma_only) THEN
               anorm = 0._DP
-           ELSE
-              anormc = (0._DP,0._DP)
-           ENDIF
-           !
-           DO iks = 1, nks
-              !
-              nbndval = nbnd_occ(iks)
-              npw = ngk(iks)
-              !
-              IF(gamma_only) THEN
-                 !$acc parallel loop collapse(2) reduction(+:anorm) present(vec,amat) copy(anorm)
+              DO iks = 1, nks
+                 !
+                 nbndval = nbnd_occ(iks)
+                 npw = ngk(iks)
+                 !
+                 !$acc parallel loop collapse(2) reduction(+:anorm) present(amat) copy(anorm)
                  DO ibnd = 1, nbndval
                     DO ig = 1, npw
-                       anorm = anorm + REAL(vec(ig,ibnd,iks),KIND=DP)*REAL(amat(ig,ibnd,iks,ip),KIND=DP) &
-                       & + AIMAG(vec(ig,ibnd,iks))*AIMAG(amat(ig,ibnd,iks,ip))
+                       anorm = anorm+REAL(amat(ig,ibnd,iks,k_local),KIND=DP)**2 &
+                       & +AIMAG(amat(ig,ibnd,iks,k_local))**2
                     ENDDO
                  ENDDO
                  !$acc end parallel
                  !
-                 anorm = 2._DP*anorm
-                 IF(gstart == 2) THEN
-                    !$acc parallel loop reduction(+:anorm) present(vec,amat) copy(anorm)
+                 IF(gamma_only) THEN
+                    anorm = 2._DP*anorm
+                    IF(gstart == 2) THEN
+                       !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
+                       DO ibnd = 1, nbndval
+                          anorm = anorm-REAL(amat(1,ibnd,iks,k_local),KIND=DP)**2
+                       ENDDO
+                       !$acc end parallel
+                    ENDIF
+                 ENDIF
+                 !
+              ENDDO
+              !
+              CALL mp_sum(anorm,intra_bgrp_comm)
+              !
+              ! normalize | k_l >
+              !
+              za = CMPLX(1._DP/SQRT(anorm),KIND=DP)
+              !
+              !$acc host_data use_device(amat)
+              CALL ZSCAL(npwx*nbndval0x*nks,za,amat(1,1,1,k_local),1)
+              !$acc end host_data
+              !
+           ENDIF
+           !
+           ! 5) Copy the current vector into V
+           !
+           !$acc host_data use_device(amat,vec)
+           CALL ZCOPY(npwx*nbndval0x*nks,amat(1,1,1,k_local),1,vec,1)
+           !$acc end host_data
+           !
+           !$acc update host(vec)
+           !
+           j_local=MAX(k_local+1,m_local_start)
+           !
+           IF(j_local>m_local_end) unfinished=.FALSE.
+           !
+        ENDIF
+        !
+        ! BCAST | vec >
+        !
+        CALL mp_bcast(vec,k_id,inter_image_comm)
+        !
+        ! Update when needed
+        !
+        IF(unfinished) THEN
+           !
+           !$acc update device(vec)
+           !
+           ! IN the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
+           !
+           DO ip = j_local,m_local_end
+              !
+              IF(gamma_only) THEN
+                 anorm = 0._DP
+              ELSE
+                 anormc = (0._DP,0._DP)
+              ENDIF
+              !
+              DO iks = 1, nks
+                 !
+                 nbndval = nbnd_occ(iks)
+                 npw = ngk(iks)
+                 !
+                 IF(gamma_only) THEN
+                    !$acc parallel loop collapse(2) reduction(+:anorm) present(vec,amat) copy(anorm)
                     DO ibnd = 1, nbndval
-                       anorm = anorm - REAL(vec(1,ibnd,iks),KIND=DP)*REAL(amat(1,ibnd,iks,ip),KIND=DP)
+                       DO ig = 1, npw
+                          anorm = anorm+REAL(vec(ig,ibnd,iks),KIND=DP)*REAL(amat(ig,ibnd,iks,ip),KIND=DP) &
+                          & +AIMAG(vec(ig,ibnd,iks))*AIMAG(amat(ig,ibnd,iks,ip))
+                       ENDDO
+                    ENDDO
+                    !$acc end parallel
+                    !
+                    anorm = 2._DP*anorm
+                    IF(gstart == 2) THEN
+                       !$acc parallel loop reduction(+:anorm) present(vec,amat) copy(anorm)
+                       DO ibnd = 1, nbndval
+                          anorm = anorm-REAL(vec(1,ibnd,iks),KIND=DP)*REAL(amat(1,ibnd,iks,ip),KIND=DP)
+                       ENDDO
+                       !$acc end parallel
+                    ENDIF
+                 ELSE
+                    !$acc parallel loop collapse(2) reduction(+:anormc) present(vec,amat) copy(anormc)
+                    DO ibnd = 1, nbndval
+                       DO ig = 1, npw
+                          anormc = anormc+CONJG(vec(ig,ibnd,iks))*amat(ig,ibnd,iks,ip)
+                       ENDDO
                     ENDDO
                     !$acc end parallel
                  ENDIF
+                 !
+              ENDDO
+              !
+              IF(gamma_only) THEN
+                 zbraket(ip) = CMPLX(anorm,KIND=DP)
               ELSE
-                 !$acc parallel loop collapse(2) reduction(+:anormc) present(vec,amat) copy(anormc)
-                 DO ibnd = 1, nbndval
-                    DO ig = 1, npw
-                       anormc = anormc + CONJG(vec(ig,ibnd,iks))*amat(ig,ibnd,iks,ip)
-                    ENDDO
-                 ENDDO
-                 !$acc end parallel
+                 zbraket(ip) = anormc
               ENDIF
               !
            ENDDO
            !
-           IF(gamma_only) THEN
-              zbraket(ip) = CMPLX(anorm,KIND=DP)
-           ELSE
-              zbraket(ip) = anormc
-           ENDIF
+           CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
            !
-        ENDDO
+           !$acc update device(zbraket)
+           !
+           ncol=m_local_end-j_local+1
+           !
+           !$acc host_data use_device(vec,zbraket,amat)
+           CALL ZGERU(npwx*nbndval0x*nks,ncol,mone,vec,1,zbraket(j_local),1,amat(1,1,1,j_local),npwx*nbndval0x*nks)
+           !$acc end host_data
+           !
+        ENDIF
         !
-        CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
-        !
-        !$acc update device(zbraket)
-        !
-        ncol=m_local_end-j_local+1
-        !
-        !$acc host_data use_device(vec,zbraket,amat)
-        CALL ZGERU(npwx*nbndval0x*nks,ncol,mone,vec,1,zbraket(j_local),1,amat(1,1,1,j_local),npwx*nbndval0x*nks)
-        !$acc end host_data
-        !
-     ENDIF
+     ENDDO
      !
-  ENDDO
+     !$acc exit data delete(vec,zbraket) copyout(amat)
+     !
+     DEALLOCATE(vec)
+     DEALLOCATE(zbraket)
+     !
+  ENDIF
   !
-  !$acc exit data delete(vec,zbraket) copyout(amat)
-  !
-  DEALLOCATE(vec)
-  DEALLOCATE(zbraket)
+  CALL mp_bcast(amat,0,inter_bgrp_comm)
+  CALL mp_bcast(amat,0,inter_pool_comm)
   !
 #if defined(__CUDA)
   CALL stop_clock_gpu('paramgs')

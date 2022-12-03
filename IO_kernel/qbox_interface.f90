@@ -22,7 +22,7 @@ MODULE qbox_interface
   SUBROUTINE load_qbox_wfc(ispin,nbndval,evc)
     !----------------------------------------------------------------------------
     !
-    USE kinds,                  ONLY : DP,i8b
+    USE kinds,                  ONLY : DP
     USE mp,                     ONLY : mp_bcast
     USE mp_global,              ONLY : intra_image_comm
     USE io_global,              ONLY : stdout,ionode
@@ -30,6 +30,8 @@ MODULE qbox_interface
     USE fourier_interpolation,  ONLY : ft_interpolate
     USE io_push,                ONLY : io_push_title
     USE westcom,                ONLY : wfc_from_qbox
+    USE forpy_mod,              ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,&
+                                     & dict_create,ndarray,object,cast
     !
     IMPLICIT NONE
     !
@@ -37,11 +39,16 @@ MODULE qbox_interface
     COMPLEX(DP),INTENT(OUT) :: evc(npwx,nbndval)
     !
     CHARACTER(LEN=256) :: fname
-    INTEGER :: iun,ierr
+    INTEGER :: ierr
     INTEGER :: iwfc,nwfcs
-    INTEGER :: nx,ny,nz,ndim
-    INTEGER(i8b) :: offset
-    REAL(DP),ALLOCATABLE :: psir(:)
+    INTEGER :: nx,ny,nz
+    REAL(DP),POINTER :: psir(:)
+    TYPE(module_py) :: pymod
+    TYPE(tuple) :: args
+    TYPE(dict) :: kwargs,return_dict
+    TYPE(ndarray) :: return_ndarray
+    TYPE(object) :: return_obj
+    INTEGER,PARAMETER :: DUMMY_DEFAULT = -1210
     !
     ! read Qbox XML file and overwrite current evc array
     !
@@ -59,20 +66,36 @@ MODULE qbox_interface
        WRITE(fname,'(A,I1)') TRIM(wfc_from_qbox)//'.',ispin
        WRITE(stdout,'(5X,2A)') 'Qbox interface: reading from file ',TRIM(fname)
        !
-       OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
+       ierr = import_py(pymod,'west_read_bse')
+       ierr = tuple_create(args,1)
+       ierr = args%setitem(0,TRIM(fname))
+       ierr = dict_create(kwargs)
+       ierr = call_py(return_obj,pymod,'bse_read_qb_param',args,kwargs)
+       ierr = cast(return_dict,return_obj)
+       ierr = return_dict%get(nwfcs,'nwfcs',DUMMY_DEFAULT)
+       ierr = return_dict%get(nx,'nx',DUMMY_DEFAULT)
+       ierr = return_dict%get(ny,'ny',DUMMY_DEFAULT)
+       ierr = return_dict%get(nz,'nz',DUMMY_DEFAULT)
        !
-       IF(ierr /= 0) THEN
-          CALL errore('load_qbox_wfc','Cannot read file: '//TRIM(fname),1)
-       ENDIF
+       IF(nwfcs == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read nwfcs',1)
+       IF(nx == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read nx',1)
+       IF(ny == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read ny',1)
+       IF(nz == DUMMY_DEFAULT) CALL errore('load_qbox_wfc','cannot read nz',1)
        !
-       offset = 1
-       READ(iun,POS=offset) nwfcs,nx,ny,nz
-       offset = offset+4*SIZEOF(nwfcs)
+       CALL args%destroy
+       CALL kwargs%destroy
+       CALL return_obj%destroy
+       CALL return_dict%destroy
        !
        WRITE(stdout,'(5X,A,3I5)') 'Qbox interface: grid size ',nx,ny,nz
        !
-       ndim = nx*ny*nz
-       ALLOCATE(psir(ndim))
+       ALLOCATE(psir(nx*ny*nz))
+       !
+    ELSE
+       !
+       ! ft_interpolate segfaults without this allocation
+       !
+       ALLOCATE(psir(1))
        !
     ENDIF
     !
@@ -89,8 +112,18 @@ MODULE qbox_interface
        !
        IF(ionode) THEN
           !
-          READ(iun,POS=offset) psir
-          offset = offset+SIZEOF(psir)
+          ierr = tuple_create(args,2)
+          ierr = args%setitem(0,TRIM(fname))
+          ierr = args%setitem(1,iwfc)
+          ierr = dict_create(kwargs)
+          ierr = call_py(return_obj,pymod,'bse_read_qb_wfc',args,kwargs)
+          ierr = cast(return_ndarray,return_obj)
+          ierr = return_ndarray%get_data(psir)
+          !
+          CALL args%destroy
+          CALL kwargs%destroy
+          CALL return_obj%destroy
+          CALL return_ndarray%destroy
           !
        ENDIF
        !
@@ -100,7 +133,11 @@ MODULE qbox_interface
     !
     IF(ionode) THEN
        !
-       CLOSE(iun)
+       CALL pymod%destroy
+       !
+       NULLIFY(psir)
+       !
+    ELSE
        !
        DEALLOCATE(psir)
        !

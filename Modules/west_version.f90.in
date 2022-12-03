@@ -21,7 +21,7 @@ MODULE west_version
   CHARACTER(LEN=*), PARAMETER :: west_version_number = 'checkit'
   CHARACTER(LEN=*), PARAMETER :: west_git_revision = 'unknown'
   CHARACTER(LEN=*), PARAMETER :: west_topdir = 'unset'
-  LOGICAL, PARAMETER :: forpy_use_numpy = .FALSE.
+  LOGICAL, PARAMETER :: forpy_use_numpy = .TRUE.
   TYPE(list) :: paths
   !
   CONTAINS

@@ -72,9 +72,6 @@ SUBROUTINE davidson_diago_gamma ( )
   INTEGER, ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
-#if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: hr_distr, vr_distr
-#endif
   !
   INTEGER :: il1,ig1
   REAL(DP) :: time_spent(2)
@@ -489,9 +486,6 @@ SUBROUTINE davidson_diago_k ( )
   INTEGER,ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   COMPLEX(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
-#if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: hr_distr, vr_distr
-#endif
   !
   INTEGER :: il1,ig1,i
   REAL(DP) :: time_spent(2)

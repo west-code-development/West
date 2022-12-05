@@ -304,13 +304,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      ENDDO
      !$acc end parallel
      !
-     !$acc update host(evc1_new)
+     !$acc update host(evc1_new(1:npwx*npol,1:nbndval0x,iks:iks))
      IF(l_lanczos) THEN
         CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
      ELSE
         CALL mp_sum(evc1_new(:,:,iks),inter_bgrp_comm)
      ENDIF
-     !$acc update device(evc1_new)
+     !$acc update device(evc1_new(1:npwx*npol,1:nbndval0x,iks:iks))
      !
      IF(l_bse_calculation) THEN
         CALL wbse_bse_kernel(current_spin,nbndval,evc1,evc1_new(:,:,iks))

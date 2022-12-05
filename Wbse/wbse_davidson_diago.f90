@@ -65,11 +65,10 @@ SUBROUTINE wbse_davidson_diago ( )
   INTEGER, ALLOCATABLE :: ishift(:)
   REAL(DP), ALLOCATABLE :: ew(:)
   REAL(DP), ALLOCATABLE :: hr_distr(:,:), vr_distr(:,:)
-#if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: hr_distr, vr_distr
-#endif
   COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
-  !$acc declare device_resident(dng_exc_tmp,dvg_exc_tmp)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: dng_exc_tmp
+#endif
   !
   INTEGER :: il1,ig1
   INTEGER :: iks, nbndval
@@ -110,7 +109,6 @@ SUBROUTINE wbse_davidson_diago ( )
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  CALL allocate_bse_gpu(aband%nloc)
   !
   CALL using_et(2)
   CALL using_et_d(0)
@@ -131,6 +129,7 @@ SUBROUTINE wbse_davidson_diago ( )
   ALLOCATE( dvg_exc_tmp( npwx, nbndval0x, nks), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dvg ', ABS(ierr) )
+  !$acc enter data create(dvg_exc_tmp)
   !
   ALLOCATE( dng_exc( npwx, nbndval0x, nks, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -139,6 +138,7 @@ SUBROUTINE wbse_davidson_diago ( )
   ALLOCATE( dng_exc_tmp( npwx, nbndval0x, nks ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( 'chidiago',' cannot allocate dng ', ABS(ierr) )
+  !$acc enter data create(dng_exc_tmp)
   !
   ALLOCATE( hr_distr( nvecx, pert%nlocx ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -218,6 +218,10 @@ SUBROUTINE wbse_davidson_diago ( )
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
      !
+#if defined(__CUDA)
+     CALL allocate_bse_gpu(aband%nloc)
+#endif
+     !
      DO ip = mstart, mstart+max_mloc-1
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
@@ -243,6 +247,10 @@ SUBROUTINE wbse_davidson_diago ( )
         ENDIF
         !
      ENDDO
+     !
+#if defined(__CUDA)
+     CALL deallocate_bse_gpu()
+#endif
      !
      dav_iter = -1
      IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
@@ -282,6 +290,10 @@ SUBROUTINE wbse_davidson_diago ( )
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
      !
+#if defined(__CUDA)
+     CALL allocate_bse_gpu(aband%nloc)
+#endif
+     !
      DO ip = mstart, mstart+max_mloc-1
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
@@ -307,6 +319,10 @@ SUBROUTINE wbse_davidson_diago ( )
         ENDIF
         !
      ENDDO
+     !
+#if defined(__CUDA)
+     CALL deallocate_bse_gpu()
+#endif
      !
      ! </ EXTRA STEP >
      !
@@ -401,6 +417,10 @@ SUBROUTINE wbse_davidson_diago ( )
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
      !
+#if defined(__CUDA)
+     ALLOCATE(caux1(npwx,nbndval0x))
+#endif
+     !
      DO il1 = mstart, mstart+max_mloc-1
         !
         ig1 = pert%l2g(il1)
@@ -441,6 +461,10 @@ SUBROUTINE wbse_davidson_diago ( )
         !
      ENDDO
      !
+#if defined(__CUDA)
+     DEALLOCATE(caux1)
+#endif
+     !
      ! ... MGS
      !
      CALL wbse_do_mgs(dvg_exc,nbase+1,nbase+notcnv)
@@ -462,6 +486,10 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
+     !
+#if defined(__CUDA)
+     CALL allocate_bse_gpu(aband%nloc)
+#endif
      !
      DO ip = mstart, mstart+max_mloc-1
         !
@@ -488,6 +516,10 @@ SUBROUTINE wbse_davidson_diago ( )
         ENDIF
         !
      ENDDO
+     !
+#if defined(__CUDA)
+     CALL deallocate_bse_gpu()
+#endif
      !
      ! ... update the reduced Liouville hamiltonian
      !
@@ -586,7 +618,6 @@ SUBROUTINE wbse_davidson_diago ( )
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()
-  CALL deallocate_bse_gpu()
 #endif
   !
   DEALLOCATE( conv )
@@ -598,6 +629,7 @@ SUBROUTINE wbse_davidson_diago ( )
   DEALLOCATE( dng_exc )
   DEALLOCATE( dvg_exc )
   !
+  !$acc exit data delete(dng_exc_tmp,dvg_exc_tmp)
   DEALLOCATE( dng_exc_tmp )
   DEALLOCATE( dvg_exc_tmp )
   !
@@ -906,6 +938,10 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
   max_mloc = mloc
   CALL mp_max (max_mloc, inter_image_comm)
   !
+#if defined(__CUDA)
+  ALLOCATE(caux1(npwx,nbndval0x))
+#endif
+  !
   DO il1 = mstart, mstart+max_mloc-1
      !
      ig1=pert%l2g(il1)
@@ -972,6 +1008,10 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
   ENDDO
   !
   DEALLOCATE(random_num_debug)
+  !
+#if defined(__CUDA)
+  DEALLOCATE(caux1)
+#endif
   !
   CALL stop_clock ('randomize')
   !

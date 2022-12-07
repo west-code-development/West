@@ -14,7 +14,6 @@ default:
 	@echo "  wfreq        calculation of dynamical dielectric response and GW self-energy"
 	@echo "  westpp       postprocessing programs"
 	@echo "  wbse         calculation of BSE"
-	@echo "  wbsepp       postprocessing BSE"
 	@echo '  all          same as "make wstat wfreq westpp"'
 	@echo
 	@echo "where target is one of the following operations:"
@@ -133,20 +132,12 @@ pytools \
 wstat \
 wbse_do
 
-wbsepp: \
-pytools \
-wstat \
-westpp \
-wbse_do \
-wbsepp_do
-
 all: \
 pytools \
 wstat \
 wfreq \
 westpp \
-wbse \
-wbsepp
+wbse
 
 doc: include_make_inc
 	if test -d doc ; then \
@@ -228,11 +219,6 @@ wbse_do: wstat_do io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do f
 	( cd Wbse ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
 	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
 
-wbsepp_do: wbse_do westpp_do wstat_do io_kernel_do dfpt_kernel_do para_kernel_do coulomb_kernel_do fft_kernel_do tools_do modules_do libraries_do
-	if test -d Wbsepp ; then \
-	( cd Wbsepp ; if test "$(MAKE)" = "" ; then make $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; \
-	else $(MAKE) $(MFLAGS) all PYT_LDFLAGS="${PYT_LDFLAGS}"; fi ) ; fi
-
 clean: \
 pytools_undo \
 libraries_undo \
@@ -247,8 +233,7 @@ io_kernel_undo \
 wstat_undo \
 wfreq_undo \
 westpp_undo \
-wbse_undo \
-wbsepp_undo
+wbse_undo
 
 pytools_undo:
 	if test -d Pytools ; then \
@@ -318,11 +303,6 @@ westpp_undo:
 wbse_undo:
 	if test -d Wbse ; then \
 	( cd Wbse ; if test "$(MAKE)" = "" ; then make clean ; \
-	else $(MAKE) clean ; fi ) ; fi
-
-wbsepp_undo:
-	if test -d Wbsepp ; then \
-	( cd Wbsepp ; if test "$(MAKE)" = "" ; then make clean ; \
 	else $(MAKE) clean ; fi ) ; fi
 
 unconf:

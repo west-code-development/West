@@ -273,6 +273,7 @@ MODULE westpp_center
   INTEGER :: westpp_nr
   REAL(DP) :: westpp_rmax
   REAL(DP) :: westpp_epsinfty
+  INTEGER :: westpp_n_liouville_to_use
   !
   ! Common workspace
   !
@@ -371,31 +372,6 @@ MODULE wbse_center
 END MODULE
 !
 !
-MODULE wbsepp_center
-  !
-  USE kinds, ONLY : DP
-  !
-  IMPLICIT NONE
-  !
-  ! INPUT FOR wbsepp_control
-  !
-  CHARACTER(LEN=3) :: wbsepp_calculation
-  !
-  INTEGER :: iexc_plot
-  INTEGER :: n_lanczos_to_use
-  INTEGER :: n_extrapolation
-  INTEGER, PARAMETER :: which_unit = 0
-  REAL(DP) :: range(3)
-  REAL(DP) :: broad
-  REAL(DP) :: wbsepp_r0(3)
-  !
-  ! Common workspace
-  !
-  CHARACTER(LEN=512) :: wbsepp_save_dir
-  !
-END MODULE
-!
-!
 MODULE occ_center
   !
   USE kinds, ONLY : DP
@@ -436,7 +412,6 @@ MODULE westcom
   USE westpp_center
   USE wbse_init_center
   USE wbse_center
-  USE wbsepp_center
   USE occ_center
   !
 END MODULE

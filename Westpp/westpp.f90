@@ -25,7 +25,7 @@ PROGRAM westpp
   !
   CHARACTER(LEN=9) :: code = 'WESTPP'
   INTEGER :: i
-  LOGICAL :: lgate(6)
+  LOGICAL :: lgate(8)
   !
   ! *** START ***
   !
@@ -48,9 +48,11 @@ PROGRAM westpp
      IF( westpp_calculation(i:i) == 'r' .OR. westpp_calculation(i:i) == 'R' ) lgate(1) = .TRUE. ! Rho --> density
      IF( westpp_calculation(i:i) == 'w' .OR. westpp_calculation(i:i) == 'W' ) lgate(2) = .TRUE. ! Wavefunction
      IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Eigenpotentials
-     IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) lgate(4) = .TRUE. ! SXX
+     IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) lgate(4) = .TRUE. ! Screened exact exchange
      IF( westpp_calculation(i:i) == 'd' .OR. westpp_calculation(i:i) == 'D' ) lgate(5) = .TRUE. ! Dipole matrix
      IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(6) = .TRUE. ! Localization
+     IF( westpp_calculation(i:i) == 'x' .OR. westpp_calculation(i:i) == 'X' ) lgate(7) = .TRUE. ! Exciton
+     IF( westpp_calculation(i:i) == 'p' .OR. westpp_calculation(i:i) == 'P' ) lgate(8) = .TRUE. ! Density response to exciton
   ENDDO
   !
   IF( lgate(1) ) CALL do_rho( )
@@ -59,6 +61,8 @@ PROGRAM westpp
   IF( lgate(4) ) CALL do_sxx( )
   IF( lgate(5) ) CALL do_dip( )
   IF( lgate(6) ) CALL do_loc( )
+  IF( lgate(7) ) CALL do_exc( )
+  IF( lgate(8) ) CALL do_resp( )
   !
   CALL exx_ungo( )
   !

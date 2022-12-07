@@ -37,7 +37,6 @@ SUBROUTINE exx_go()
   !
   LOGICAL :: is_westpp
   LOGICAL :: is_wbse_init
-  LOGICAL :: is_wbsepp
   LOGICAL :: exst
   LOGICAL, EXTERNAL :: matches
   !
@@ -47,9 +46,8 @@ SUBROUTINE exx_go()
   !
   is_westpp = matches('westpp.x',command_line)
   is_wbse_init = matches('wbse_init.x',command_line)
-  is_wbsepp = matches('wbsepp.x',command_line)
   !
-  IF(is_westpp .OR. is_wbse_init .OR. is_wbsepp) RETURN
+  IF(is_westpp .OR. is_wbse_init) RETURN
   !
   IF(xclib_dft_is('hybrid')) THEN
      exxdiv_treatment = 'gb'

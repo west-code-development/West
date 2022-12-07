@@ -21,7 +21,7 @@ SUBROUTINE wbse_setup()
                              & n_pdep_basis,n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,&
                              & trev_pdep,n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
-                             & alphapv_dfpt,l_use_ecutrho,nbndval0x,nbnd_occ,wbse_save_dir
+                             & alphapv_dfpt,l_use_ecutrho,wbse_save_dir
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
   USE wbse_dv,          ONLY : wbse_dv_setup
@@ -105,8 +105,6 @@ SUBROUTINE wbse_setup()
   CALL pot3D%init('Rho',.FALSE.,'gb')
   !
   CALL set_nbndocc()
-  !
-  nbndval0x = MAXVAL(nbnd_occ)
   !
   CALL wbse_dv_setup(l_bse_calculation)
   !

@@ -76,6 +76,7 @@ default["westpp_control"]["westpp_nr"] = 100
 default["westpp_control"]["westpp_rmax"] = 1.
 default["westpp_control"]["westpp_epsinfty"] = 1.
 default["westpp_control"]["westpp_box"] = [0., 0., 0., 0., 0., 0.]
+default["westpp_control"]["westpp_n_liouville_to_use"] = 1
 # server_control
 default["server_control"] = {}
 default["server_control"]["document"] = "{}"
@@ -108,18 +109,6 @@ default["wbse_control"]["wbse_epsinfty"] = 1.
 default["wbse_control"]["spin_excitation"] = "S"
 default["wbse_control"]["l_preconditioning"] = False
 default["wbse_control"]["l_reduce_io"] = True
-# wbsepp control
-default["wbsepp_control"] = {}
-default["wbsepp_control"]["wbsepp_calculation"] = "S"
-default["wbsepp_control"]["n_liouville_read_from_file"] = 0
-default["wbsepp_control"]["ipol_input"] = "XX"
-default["wbsepp_control"]["spin_channel"] = 1
-default["wbsepp_control"]["wbsepp_r0"] = [0., 0., 0.]
-default["wbsepp_control"]["iexc_plot"] = 1
-default["wbsepp_control"]["n_lanczos_to_use"] = 1000
-default["wbsepp_control"]["n_extrapolation"] = 0
-default["wbsepp_control"]["range"] = [0., 2.5, 0.001]
-default["wbsepp_control"]["broad"] = 0.02
 
 ############################
 # DYNAMICAL DEFAULT VALUES #
@@ -318,7 +307,6 @@ server_control :
     read_keyword_from_file(fileName,"server_control",True)
     read_keyword_from_file(fileName,"wbse_init_control",True)
     read_keyword_from_file(fileName,"wbse_control",True)
-    read_keyword_from_file(fileName,"wbsepp_control",True)
     #
     remove(fileName)
 

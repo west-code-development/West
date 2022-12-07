@@ -25,14 +25,13 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & l_qdet_verbose,l_enable_off_diagonal,o_restart_time,ecut_spectralf,&
                              & n_spectralf,westpp_calculation,westpp_range,westpp_format,&
                              & westpp_sign,westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,&
-                             & westpp_rmax,westpp_epsinfty,westpp_box,document,&
-                             & wbse_init_calculation,localization,wfc_from_qbox,bisection_info,&
-                             & chi_kernel,overlap_thr,spin_channel,wbse_calculation,solver,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,ipol_input,wbse_epsinfty,spin_excitation,&
-                             & l_preconditioning,l_reduce_io,wbsepp_calculation,wbsepp_r0,&
-                             & iexc_plot,n_lanczos_to_use,n_extrapolation,range,broad
+                             & westpp_rmax,westpp_epsinfty,westpp_box,westpp_n_liouville_to_use,&
+                             & document,wbse_init_calculation,localization,wfc_from_qbox,&
+                             & bisection_info,chi_kernel,overlap_thr,spin_channel,wbse_calculation,&
+                             & solver,qp_correction,scissor_ope,n_liouville_eigen,&
+                             & n_liouville_times,n_liouville_maxiter,n_liouville_read_from_file,&
+                             & trev_liouville,trev_liouville_rel,ipol_input,wbse_epsinfty,&
+                             & spin_excitation,l_preconditioning,l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -107,6 +106,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.westpp_control.westpp_rmax',westpp_rmax)
         CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
         CALL json%add('input.westpp_control.westpp_box',westpp_box)
+        CALL json%add('input.westpp_control.westpp_n_liouville_to_use',westpp_n_liouville_to_use)
         !
      ENDIF
      !
@@ -151,21 +151,6 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         !
      ENDIF
      !
-     IF(ANY(driver(:)==8)) THEN
-        !
-        CALL json%add('input.wbsepp_control.wbsepp_calculation',TRIM(wbsepp_calculation))
-        CALL json%add('input.wbsepp_control.n_liouville_read_from_file',n_liouville_read_from_file)
-        CALL json%add('input.wbsepp_control.ipol_input',TRIM(ipol_input))
-        CALL json%add('input.wbsepp_control.spin_channel',spin_channel)
-        CALL json%add('input.wbsepp_control.wbsepp_r0',wbsepp_r0)
-        CALL json%add('input.wbsepp_control.iexc_plot',iexc_plot)
-        CALL json%add('input.wbsepp_control.n_lanczos_to_use',n_lanczos_to_use)
-        CALL json%add('input.wbsepp_control.n_extrapolation',n_extrapolation)
-        CALL json%add('input.wbsepp_control.range',range)
-        CALL json%add('input.wbsepp_control.broad',broad)
-        !
-     ENDIF
-     !
   ENDIF
   !
 END SUBROUTINE
@@ -184,15 +169,13 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & l_qdet_verbose,l_enable_off_diagonal,o_restart_time,ecut_spectralf,&
                              & n_spectralf,westpp_calculation,westpp_range,westpp_format,&
                              & westpp_sign,westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,&
-                             & westpp_rmax,westpp_epsinfty,westpp_box,document,&
-                             & wbse_init_calculation,localization,wfc_from_qbox,bisection_info,&
-                             & chi_kernel,overlap_thr,spin_channel,wbse_calculation,solver,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,ipol_input,wbse_epsinfty,spin_excitation,&
-                             & l_preconditioning,l_reduce_io,wbsepp_calculation,wbsepp_r0,&
-                             & iexc_plot,n_lanczos_to_use,n_extrapolation,range,broad,&
-                             & main_input_file,logfile
+                             & westpp_rmax,westpp_epsinfty,westpp_box,westpp_n_liouville_to_use,&
+                             & document,wbse_init_calculation,localization,wfc_from_qbox,&
+                             & bisection_info,chi_kernel,overlap_thr,spin_channel,wbse_calculation,&
+                             & solver,qp_correction,scissor_ope,n_liouville_eigen,&
+                             & n_liouville_times,n_liouville_maxiter,n_liouville_read_from_file,&
+                             & trev_liouville,trev_liouville_rel,ipol_input,wbse_epsinfty,&
+                             & spin_excitation,l_preconditioning,l_reduce_io,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -413,6 +396,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = tmp_list%getitem(westpp_box(4), 3)
         IERR = tmp_list%getitem(westpp_box(5), 4)
         IERR = tmp_list%getitem(westpp_box(6), 5)
+        IERR = return_dict%get(westpp_n_liouville_to_use, 'westpp_n_liouville_to_use', DUMMY_DEFAULT)
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         !
@@ -505,54 +489,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(cvalue, 'spin_excitation'); spin_excitation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(l_preconditioning, 'l_preconditioning')
         IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
-        !
-        CALL return_dict%destroy
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==8)) THEN
-        !
-        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
-        ALLOCATE(qlist(1))
-        qlist = (/1/)
-        !
-        IERR = tuple_create(args, 3)
-        IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
-        IERR = args%setitem(1, 'wbsepp_control')
-        IERR = args%setitem(2, verbose)
-        IERR = dict_create(kwargs)
-        !
-        IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
-        IERR = cast(return_dict, return_obj)
-        !
-        CALL args%destroy
-        CALL kwargs%destroy
-        CALL return_obj%destroy
-        !
-        IERR = return_dict%getitem(cvalue, 'wbsepp_calculation'); wbsepp_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%get(n_liouville_read_from_file, 'n_liouville_read_from_file', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(cvalue, 'ipol_input'); ipol_input = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(tmp_obj, 'wbsepp_r0')
-        IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%len(list_len)
-        IERR = tmp_list%getitem(wbsepp_r0(1), 0) ! Fortran indices start at 1
-        IERR = tmp_list%getitem(wbsepp_r0(2), 1) ! Fortran indices start at 1
-        IERR = tmp_list%getitem(wbsepp_r0(3), 2) ! Fortran indices start at 1
-        CALL tmp_list%destroy
-        CALL tmp_obj%destroy
-        IERR = return_dict%get(iexc_plot, 'iexc_plot', DUMMY_DEFAULT)
-        IERR = return_dict%get(n_lanczos_to_use, 'n_lanczos_to_use', DUMMY_DEFAULT)
-        IERR = return_dict%get(n_extrapolation, 'n_extrapolation', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(tmp_obj, 'range')
-        IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%len(list_len)
-        IERR = tmp_list%getitem(range(1), 0) ! Fortran indices start at 1
-        IERR = tmp_list%getitem(range(2), 1) ! Fortran indices start at 1
-        IERR = tmp_list%getitem(range(3), 2) ! Fortran indices start at 1
-        CALL tmp_list%destroy
-        CALL tmp_obj%destroy
-        IERR = return_dict%getitem(broad, 'broad')
         !
         CALL return_dict%destroy
         !
@@ -712,6 +648,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(westpp_rmax,root,world_comm)
      CALL mp_bcast(westpp_epsinfty,root,world_comm)
      CALL mp_bcast(westpp_box,root,world_comm)
+     CALL mp_bcast(westpp_n_liouville_to_use,root,world_comm)
      !
      ! CHECKS
      !
@@ -726,6 +663,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(westpp_nr == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch westpp_nr',1)
      IF(westpp_box(1) > westpp_box(2) .OR. westpp_box(3) > westpp_box(4) .OR. westpp_box(5) > westpp_box(6)) &
      & CALL errore('fetch_input','Err: invalid westpp_box',1)
+     IF(westpp_n_liouville_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch westpp_n_liouville_to_use',1)
      !
   ENDIF
   !
@@ -850,40 +788,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IF(n_liouville_read_from_file > n_liouville_eigen) &
         & CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
      ENDIF
-     !
-  ENDIF
-  !
-  IF(ANY(driver(:)==8)) THEN
-     !
-     IF(mpime == root) nq = SIZE(qlist)
-     CALL mp_bcast(nq,root,world_comm)
-     IF(mpime /= root) THEN
-        IF(ALLOCATED(qlist)) DEALLOCATE(qlist)
-        ALLOCATE(qlist(nq))
-     ENDIF
-     CALL mp_bcast(qlist,root,world_comm)
-     !
-     CALL mp_bcast(wbsepp_calculation,root,world_comm)
-     CALL mp_bcast(n_liouville_read_from_file,root,world_comm)
-     CALL mp_bcast(ipol_input,root,world_comm)
-     CALL mp_bcast(spin_channel,root,world_comm)
-     CALL mp_bcast(wbsepp_r0,root,world_comm)
-     CALL mp_bcast(iexc_plot,root,world_comm)
-     CALL mp_bcast(n_lanczos_to_use,root,world_comm)
-     CALL mp_bcast(n_extrapolation,root,world_comm)
-     CALL mp_bcast(range,root,world_comm)
-     CALL mp_bcast(broad,root,world_comm)
-     !
-     ! CHECKS
-     !
-     IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
-     IF(n_liouville_read_from_file == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
-     IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
-     IF(iexc_plot == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch iexc_plot',1)
-     IF(n_lanczos_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos_to_use',1)
-     IF(n_extrapolation == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_extrapolation',1)
-     !
-     IF(spin_channel < 1 .OR. spin_channel > 2) CALL errore('fetch_input','Err: spin_channel/=1,2',spin_channel)
      !
   ENDIF
   !

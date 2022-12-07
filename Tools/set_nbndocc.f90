@@ -17,12 +17,11 @@ SUBROUTINE set_nbndocc()
   ! current_spin is needed
   !
   USE kinds,                  ONLY : DP
-  USE pwcom,                  ONLY : nbnd,nelup,neldw,isk,nelec,lsda,nks,&
-                                   & lgauss,ltetra,wg,wk,tfixed_occ
+  USE pwcom,                  ONLY : nbnd,nelup,neldw,isk,nelec,lsda,nks,lgauss,ltetra,wg,wk,&
+                                   & tfixed_occ
   USE constants,              ONLY : degspin
   USE noncollin_module,       ONLY : noncolin
-  USE westcom,                ONLY : nbnd_occ,l_frac_occ,occupation,&
-                                   & nbnd_occ_full,docc_thr
+  USE westcom,                ONLY : nbndval0x,nbnd_occ,l_frac_occ,occupation,nbnd_occ_full,docc_thr
   USE control_flags,          ONLY : gamma_only
   !
   IMPLICIT NONE
@@ -112,5 +111,7 @@ SUBROUTINE set_nbndocc()
   ENDIF
   !
   IF(MAXVAL(nbnd_occ(:)) == 0) CALL errore("set_nbndocc", "nbnd_occ was not set", 1)
+  !
+  nbndval0x = MAXVAL(nbnd_occ)
   !
 END SUBROUTINE

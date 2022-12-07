@@ -29,15 +29,16 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
                                  & sigma_x_head,et_qp
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
-  USE wbse_dv,              ONLY : wbse_dv_of_drho
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE wbse_dv,              ONLY : wbse_dv_of_drho_gpu
   USE west_gpu,             ONLY : dvrs,hevc1,evc1_loc,reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
+  USE wbse_dv,              ONLY : wbse_dv_of_drho
 #endif
   !
   IMPLICIT NONE
@@ -47,6 +48,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !
   ! Local variables
   !
+  LOGICAL :: lrpa
   INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbvalloc,il1
   INTEGER :: dffts_nnr
   COMPLEX(DP) :: factor
@@ -79,13 +81,12 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !
   CALL wbse_calc_dens(evc1,dvrs)
   !
-  IF(l_bse_calculation) THEN
-     CALL wbse_dv_of_drho(dvrs,.TRUE.,.FALSE.)
-  ELSE
-     CALL wbse_dv_of_drho(dvrs,.FALSE.,.FALSE.)
-  ENDIF
-  !
-  !$acc update device(dvrs)
+  lrpa = l_bse_calculation
+#if defined(__CUDA)
+  CALL wbse_dv_of_drho_gpu(dvrs,lrpa,.FALSE.)
+#else
+  CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
+#endif
   !
   DO iks = 1,nks
      !

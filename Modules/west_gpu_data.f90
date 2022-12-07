@@ -101,7 +101,8 @@ MODULE west_gpu_data
    COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
    COMPLEX(DP), ALLOCATABLE :: evc1_loc(:,:)
    COMPLEX(DP), ALLOCATABLE :: psic2(:)
-   !$acc declare device_resident(raux2,caux1,hevc1,evc1_loc,psic2)
+   COMPLEX(DP), ALLOCATABLE :: dvhart(:)
+   !$acc declare device_resident(raux2,caux1,hevc1,evc1_loc,psic2,dvhart)
    COMPLEX(DP), PINNED, ALLOCATABLE :: gaux(:)
    !
    ! Workspace
@@ -701,6 +702,7 @@ MODULE west_gpu_data
    IF(.NOT. gamma_only) THEN
       ALLOCATE(psic2(dffts%nnr))
    ENDIF
+   ALLOCATE(dvhart(dffts%nnr))
    !
    !$acc enter data copyin(et_qp,u_matrix)
    !
@@ -756,6 +758,9 @@ MODULE west_gpu_data
    ENDIF
    IF(ALLOCATED(psic2)) THEN
       DEALLOCATE(psic2)
+   ENDIF
+   IF(ALLOCATED(dvhart)) THEN
+      DEALLOCATE(dvhart)
    ENDIF
    IF(ALLOCATED(ps_r)) THEN
       DEALLOCATE(ps_r)

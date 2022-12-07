@@ -192,7 +192,7 @@ MODULE wbse_dv
        !
        qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
        !
-       IF (qg2 > 1.E-8_DP) THEN
+       IF(qg2 > 1.E-8_DP) THEN
           dvhart(dfftp%nl(ig),:) = e2 * fpi * dvscf(dfftp%nl(ig),1) / (tpiba2 * qg2)
        ENDIF
        !
@@ -221,7 +221,7 @@ MODULE wbse_dv
     ! Transformed back to real space
     !
     DO is = 1, nspin
-       CALL invfft ('Rho', dvhart (:,is), dfftp)
+       CALL invfft('Rho', dvhart(:,is), dfftp)
     ENDDO
     !
     IF(lrpa) THEN
@@ -231,9 +231,104 @@ MODULE wbse_dv
     ENDIF
     !
     DEALLOCATE(dvaux)
+    DEALLOCATE(dvhart)
     !
     CALL stop_clock('dv_of_drho')
     !
   END SUBROUTINE
+  !
+#if defined(__CUDA)
+  !-----------------------------------------------------------------------
+  SUBROUTINE wbse_dv_of_drho_gpu(dvscf, lrpa, add_nlcc)
+    !-----------------------------------------------------------------------
+    !
+    USE kinds,             ONLY : DP
+    USE constants,         ONLY : e2, fpi
+    USE fft_base,          ONLY : dffts
+    USE fft_interfaces,    ONLY : fwfft, invfft
+    USE gvect,             ONLY : ngm, g
+    USE cell_base,         ONLY : tpiba2
+    USE lsda_mod,          ONLY : nspin
+    USE control_flags,     ONLY : gamma_only
+    USE martyna_tuckerman, ONLY : do_comp_mt
+    USE qpoint,            ONLY : xq
+    USE west_gpu,          ONLY : dvhart,dfft_nl_d,dfft_nlm_d
+    !
+    IMPLICIT NONE
+    !
+    ! I/O
+    !
+    COMPLEX(DP), INTENT(INOUT) :: dvscf(dffts%nnr, nspin)
+    LOGICAL, INTENT(IN) :: lrpa
+    LOGICAL, INTENT(IN) :: add_nlcc
+    !
+    ! Workspace
+    !
+    INTEGER :: is, ig, ir, dffts_nnr
+    REAL(DP) :: xq1, xq2, xq3, qg2
+    !
+    CALL start_clock_gpu('dv_of_drho')
+    !
+    IF(add_nlcc) CALL errore('wbse_dv_of_drho_gpu', 'add_nlcc is not supported', 1)
+    IF(.NOT. lrpa) CALL errore('wbse_dv_of_drho_gpu', 'only lrpa is supported', 1)
+    IF(do_comp_mt) CALL errore('wbse_dv_of_drho_gpu', 'do_comp_mt is not supported', 1)
+    !
+    dffts_nnr = dffts%nnr
+    xq1 = xq(1)
+    xq2 = xq(2)
+    xq3 = xq(3)
+    !
+    IF(nspin == 2) THEN
+       !$acc parallel loop present(dvscf)
+       DO ir = 1, dffts_nnr
+          dvscf(ir,1) = dvscf(ir,1) + dvscf(ir,2)
+       ENDDO
+       !$acc end parallel
+    ENDIF
+    !
+    !$acc host_data use_device(dvscf)
+    CALL fwfft('Rho', dvscf(:,1), dffts)
+    !$acc end host_data
+    !
+    !$acc kernels present(dvhart)
+    dvhart(:) = (0._DP,0._DP)
+    !$acc end kernels
+    !
+    !$acc parallel loop present(g,dvhart,dvscf)
+    DO ig = 1, ngm
+       !
+       qg2 = (g(1,ig)+xq1)**2 + (g(2,ig)+xq2)**2 + (g(3,ig)+xq3)**2
+       !
+       IF(qg2 > 1.E-8_DP) THEN
+          dvhart(dfft_nl_d(ig)) = e2 * fpi * dvscf(dfft_nl_d(ig),1) / (tpiba2 * qg2)
+       ENDIF
+       !
+    ENDDO
+    !$acc end parallel
+    !
+    IF(gamma_only) THEN
+       !$acc parallel loop present(dvhart)
+       DO ig = 1, ngm
+          dvhart(dfft_nlm_d(ig)) = CONJG(dvhart(dfft_nl_d(ig)))
+       ENDDO
+       !$acc end parallel
+    ENDIF
+    !
+    !$acc host_data use_device(dvhart)
+    CALL invfft('Rho', dvhart, dffts)
+    !$acc end host_data
+    !
+    !$acc parallel loop collapse(2) present(dvscf,dvhart)
+    DO is = 1, nspin
+       DO ir = 1, dffts_nnr
+          dvscf(ir,is) = dvhart(ir)
+       ENDDO
+    ENDDO
+    !$acc end parallel
+    !
+    CALL stop_clock_gpu('dv_of_drho')
+    !
+  END SUBROUTINE
+#endif
   !
 END MODULE

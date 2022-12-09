@@ -18,7 +18,8 @@ SUBROUTINE wbse_lanczos_diago()
                                  & n_bse_idx,n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
-  USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,lanczos_postpro_write
+  USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,&
+                                 & lanczos_restart_clear,lanczos_log
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_bcast
   USE wavefunctions,        ONLY : evc
@@ -48,8 +49,8 @@ SUBROUTINE wbse_lanczos_diago()
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
   REAL(DP) :: factor
-  REAL(DP) :: beta(nspin),gamma(nspin)
-  COMPLEX(DP) :: zeta(nspin),dotp(nspin)
+  REAL(DP) :: beta(nspin)
+  COMPLEX(DP) :: dotp(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: evc1_new
@@ -121,11 +122,11 @@ SUBROUTINE wbse_lanczos_diago()
      CALL errore('wbse_lanczos_diago','wrong ipol_input',1)
   END SELECT
   !
-  ALLOCATE(beta_store(nipol_input,n_lanczos,nspin))
-  ALLOCATE(zeta_store(nipol_input,n_ipol,n_lanczos,nspin))
+  ALLOCATE(beta_store(n_lanczos,nipol_input,nspin))
+  ALLOCATE(zeta_store(n_lanczos,n_ipol,nipol_input,nspin))
   !
   beta_store(:,:,:) = 0._DP
-  zeta_store(:,:,:,:) = (0._DP,0._DP)
+  zeta_store(:,:,:,:) = 0._DP
   !
   ALLOCATE(d0psi(npwx,nbndval0x,nks,n_ipol))
   ALLOCATE(evc1(npwx,nbndval0x,nks))
@@ -142,7 +143,7 @@ SUBROUTINE wbse_lanczos_diago()
      !
      ! 1) read ipol_stopped
      ! 2) read ilan_stopped
-     ! 3) read store_beta, store_zeta
+     ! 3) read beta_store, zeta_store
      !
      ipol_restart = ipol_stopped
      ilan_restart = ilan_stopped+1
@@ -221,11 +222,10 @@ SUBROUTINE wbse_lanczos_diago()
               CALL errore('wbse_lanczos_diago','negative beta',1)
            ELSE
               beta(is) = SQRT(beta(is))
-              gamma(is) = beta(is)
            ENDIF
         ENDDO
         !
-        beta_store(ip,iter,:) = beta
+        beta_store(iter,ip,:) = beta
         !
         ! Renormalize q(i) and Lq(i)
         !
@@ -260,13 +260,11 @@ SUBROUTINE wbse_lanczos_diago()
            DO iip = 1,n_ipol
               CALL wbse_dot(d0psi(:,:,:,iip),evc1,nbndval0x,nks,dotp)
               !
-              zeta(:) = dotp
-              zeta_store(ip,iip,iter,:) = zeta
+              zeta_store(iter,iip,ip,:) = dotp
            ENDDO
         ELSE
            DO iip = 1,n_ipol
-              zeta(:) = (0._DP,0._DP)
-              zeta_store(ip,iip,iter,:) = zeta
+              zeta_store(iter,iip,ip,:) = 0._DP
            ENDDO
         ENDIF
         !
@@ -274,7 +272,7 @@ SUBROUTINE wbse_lanczos_diago()
            !
            npw = ngk(iks)
            current_spin = isk(iks)
-           factor = gamma(current_spin)
+           factor = beta(current_spin)
            !
            !$acc parallel loop collapse(2) present(evc1_new)
            DO ibnd = 1,nbndval0x
@@ -332,7 +330,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
      ENDDO lancz_loop
      !
-     CALL lanczos_postpro_write(nipol_input,ip,pol_label_input(ip))
+     CALL lanczos_log(ip,pol_label_input(ip))
      !
      ilan_restart = 1
      l_from_scratch = .TRUE.
@@ -340,6 +338,8 @@ SUBROUTINE wbse_lanczos_diago()
      CALL stop_bar_type(barra,'lan_diago')
      !
   ENDDO polarization_loop
+  !
+  CALL lanczos_restart_clear()
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()

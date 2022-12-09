@@ -24,9 +24,9 @@ MODULE lanczos_restart
       !
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
-      USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : wbse_save_dir,ipol_input,n_lanczos,beta_store,zeta_store
       USE mp,                  ONLY : mp_barrier
+      USE io_global,           ONLY : stdout
+      USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store
       USE lsda_mod,            ONLY : nspin
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
@@ -53,6 +53,10 @@ MODULE lanczos_restart
       !
       CALL mp_barrier(world_comm)
       !
+      ! MKDIR
+      !
+      CALL my_mkdir(TRIM(wbse_restart_dir))
+      !
       CALL start_clock('lan_restart')
       time_spent(1) = get_clock('lan_restart')
       !
@@ -63,13 +67,12 @@ MODULE lanczos_restart
          CALL json%initialize()
          !
          CALL json%add('nipol_input',nipol_input)
-         CALL json%add('ipol_input',TRIM(ipol_input))
          CALL json%add('n_lanczos',n_lanczos)
          CALL json%add('nspin',nspin)
          CALL json%add('ipol_stopped',ipol_stopped)
          CALL json%add('ilan_stopped',ilan_stopped)
          !
-         fname = TRIM(wbse_save_dir)//'/summary.json'
+         fname = TRIM(wbse_restart_dir)//'/summary.json'
          OPEN(NEWUNIT=iun,FILE=TRIM(fname))
          CALL json%print(iun)
          CLOSE(iun)
@@ -81,14 +84,14 @@ MODULE lanczos_restart
             header(HD_ID_LITTLE_ENDIAN) = 1
          ENDIF
          !
-         fname = TRIM(wbse_save_dir)//'/abgz.dat'
+         fname = TRIM(wbse_restart_dir)//'/lanczos.dat'
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
          offset = 1
          WRITE(iun,POS=offset) header
          offset = offset+HD_LENGTH*SIZEOF(header(1))
-         WRITE(iun,POS=offset) beta_store(1:nipol_input,1:n_lanczos,1:nspin)
+         WRITE(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input,1:nspin)
          offset = offset+SIZE(beta_store)*SIZEOF(beta_store(1,1,1))
-         WRITE(iun,POS=offset) zeta_store(1:nipol_input,1:3,1:n_lanczos,1:nspin)
+         WRITE(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input,1:nspin)
          CLOSE(iun)
          !
       ENDIF
@@ -102,7 +105,7 @@ MODULE lanczos_restart
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wbse_save_dir)
+      WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -110,11 +113,10 @@ MODULE lanczos_restart
     SUBROUTINE lanczos_restart_read(nipol_input,ipol_stopped,ilan_stopped)
       !
       USE kinds,               ONLY : DP,i8b
-      USE mp_global,           ONLY : world_comm,intra_image_comm
       USE mp_world,            ONLY : mpime,root,world_comm
       USE mp,                  ONLY : mp_barrier,mp_bcast
       USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : wbse_save_dir,ipol_input,n_lanczos,beta_store,zeta_store
+      USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store
       USE lsda_mod,            ONLY : nspin
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
@@ -129,10 +131,8 @@ MODULE lanczos_restart
       !
       ! Workspace
       !
-      INTEGER :: iun,ival,ierr
+      INTEGER :: iun,ierr
       INTEGER :: nipol_input_tmp,n_lanczos_tmp,nspin_tmp
-      CHARACTER(LEN=3) :: ipol_input_tmp
-      CHARACTER(LEN=:), ALLOCATABLE :: cval
       LOGICAL :: found
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
@@ -151,49 +151,36 @@ MODULE lanczos_restart
       !
       IF(mpime == root) THEN
          !
-         fname = TRIM(wbse_save_dir)//'/summary.json'
+         fname = TRIM(wbse_restart_dir)//'/summary.json'
          !
          CALL json%initialize()
          CALL json%load(filename=fname)
          !
-         CALL json%get('nipol_input',ival,found)
-         IF(found) nipol_input_tmp = ival
-         CALL json%get('ipol_input',cval,found)
-         IF(found) ipol_input_tmp = cval
-         CALL json%get('n_lanczos',ival,found)
-         IF(found) n_lanczos_tmp = ival
-         CALL json%get('nspin',ival,found)
-         IF(found) nspin_tmp = ival
-         CALL json%get('ipol_stopped',ival,found)
-         IF(found) ipol_stopped = ival
-         CALL json%get('ilan_stopped',ival,found)
-         IF(found) ilan_stopped = ival
+         CALL json%get('nipol_input',nipol_input_tmp,found)
+         IF(.NOT. found) CALL errore('lanczos_restart_read','nipol_input not found')
+         CALL json%get('n_lanczos',n_lanczos_tmp,found)
+         IF(.NOT. found) CALL errore('lanczos_restart_read','n_lanczos not found')
+         CALL json%get('nspin',nspin_tmp,found)
+         IF(.NOT. found) CALL errore('lanczos_restart_read','nspin not found')
+         CALL json%get('ipol_stopped',ipol_stopped,found)
+         IF(.NOT. found) CALL errore('lanczos_restart_read','ipol_stopped not found')
+         CALL json%get('ilan_stopped',ilan_stopped,found)
+         IF(.NOT. found) CALL errore('lanczos_restart_read','ilan_stopped not found')
          !
          CALL json%destroy()
          !
-      ENDIF
-      !
-      CALL mp_bcast(nipol_input_tmp,root,world_comm)
-      CALL mp_bcast(ipol_input_tmp,root,world_comm)
-      CALL mp_bcast(n_lanczos_tmp,root,world_comm)
-      CALL mp_bcast(nspin_tmp,root,world_comm)
-      CALL mp_bcast(ipol_stopped,root,world_comm)
-      CALL mp_bcast(ilan_stopped,root,world_comm)
-      !
-      IF(ipol_input_tmp /= ipol_input) CALL errore('lanczos_restart_read','inconsistent ipol_input',1)
-      IF(n_lanczos_tmp > n_lanczos) CALL errore('lanczos_restart_read','last n_lanczos > n_lanczos',1)
-      IF(nspin_tmp /= nspin) CALL errore('lanczos_restart_read','inconsistent nspin',1)
-      IF(ipol_stopped > nipol_input) CALL errore('lanczos_restart_read','ipol_stopped > nipol_input',1)
-      IF(ilan_stopped > n_lanczos) CALL errore('lanczos_restart_read','ilan_stopped > n_lanczos',1)
-      !
-      IF(ilan_stopped == n_lanczos .AND. ipol_stopped+1 <= nipol_input) THEN
-         ipol_stopped = ipol_stopped+1
-         ilan_stopped = 0
-      ENDIF
-      !
-      IF(mpime == root) THEN
+         IF(nipol_input_tmp /= nipol_input) CALL errore('lanczos_restart_read','inconsistent nipol_input',1)
+         IF(n_lanczos_tmp > n_lanczos) CALL errore('lanczos_restart_read','last n_lanczos > n_lanczos',1)
+         IF(nspin_tmp /= nspin) CALL errore('lanczos_restart_read','inconsistent nspin',1)
+         IF(ipol_stopped > nipol_input) CALL errore('lanczos_restart_read','ipol_stopped > nipol_input',1)
+         IF(ilan_stopped > n_lanczos) CALL errore('lanczos_restart_read','ilan_stopped > n_lanczos',1)
          !
-         fname = TRIM(wbse_save_dir)//'/abgz.dat'
+         IF(ilan_stopped == n_lanczos .AND. ipol_stopped+1 <= nipol_input) THEN
+            ipol_stopped = ipol_stopped+1
+            ilan_stopped = 0
+         ENDIF
+         !
+         fname = TRIM(wbse_restart_dir)//'/lanczos.dat'
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
          IF(ierr /= 0) THEN
             CALL errore('lanczos_restart_read','Cannot read file: '//TRIM(fname),1)
@@ -210,15 +197,17 @@ MODULE lanczos_restart
          ENDIF
          !
          offset = 1+HD_LENGTH*SIZEOF(header(1))
-         READ(iun,POS=offset) beta_store(1:nipol_input,1:n_lanczos,1:nspin)
+         READ(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input,1:nspin)
          offset = offset+SIZE(beta_store)*SIZEOF(beta_store(1,1,1))
-         READ(iun,POS=offset) zeta_store(1:nipol_input,1:3,1:n_lanczos,1:nspin)
+         READ(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input,1:nspin)
          CLOSE(iun)
          !
       ENDIF
       !
-      CALL mp_bcast(beta_store,0,intra_image_comm)
-      CALL mp_bcast(zeta_store,0,intra_image_comm)
+      CALL mp_bcast(ipol_stopped,root,world_comm)
+      CALL mp_bcast(ilan_stopped,root,world_comm)
+      CALL mp_bcast(beta_store,root,world_comm)
+      CALL mp_bcast(zeta_store,root,world_comm)
       !
       ! BARRIER
       !
@@ -229,85 +218,63 @@ MODULE lanczos_restart
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
       WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wbse_save_dir)
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
     !
     !------------------------------------------------------------------
-    SUBROUTINE lanczos_postpro_write(nipol_input,ipol_iter,ipol_label)
+    SUBROUTINE lanczos_log(ipol_iter,ipol_label)
       !----------------------------------------------------------------
       !
-      USE kinds,               ONLY : DP,i8b
+      USE kinds,               ONLY : DP
       USE mp_world,            ONLY : mpime,root,world_comm
-      USE westcom,             ONLY : wbse_save_dir,n_lanczos,beta_store,zeta_store
       USE mp,                  ONLY : mp_barrier
-      USE io_global,           ONLY : stdout
+      USE westcom,             ONLY : logfile,n_lanczos,beta_store,zeta_store
       USE lsda_mod,            ONLY : nspin
       USE json_module,         ONLY : json_file
-      USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
-      USE base64_module,       ONLY : islittleendian
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      INTEGER, INTENT(IN) :: nipol_input,ipol_iter
+      INTEGER, INTENT(IN) :: ipol_iter
       CHARACTER(LEN=3), INTENT(IN) :: ipol_label
       !
       ! Workspace
       !
-      INTEGER :: iun
-      CHARACTER :: my_ip
-      CHARACTER(LEN=256) :: fname
-      REAL(DP), EXTERNAL :: GET_CLOCK
-      REAL(DP) :: time_spent(2)
-      CHARACTER(20), EXTERNAL :: human_readable_time
+      CHARACTER(LEN=6) :: labels
+      INTEGER :: iun,is
       TYPE(json_file) :: json
-      INTEGER :: header(HD_LENGTH)
-      INTEGER(i8b) :: offset
       !
       ! BARRIER
       !
       CALL mp_barrier(world_comm)
       !
-      CALL start_clock('lan_restart')
-      time_spent(1) = get_clock('lan_restart')
-      !
-      ! CREATE THE SUMMARY FILE
-      !
       IF(mpime == root) THEN
          !
          CALL json%initialize()
+         CALL json%load(filename=TRIM(logfile))
          !
-         CALL json%add('nipol_input',nipol_input)
-         CALL json%add('ipol_label',TRIM(ipol_label))
-         CALL json%add('n_lanczos',n_lanczos)
-         CALL json%add('nspin',nspin)
+         IF(nspin > 1) THEN
+            DO is = 1,nspin
+               WRITE(labels,'(I6.6)') is
+               CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.beta',&
+               & beta_store(:,ipol_iter,is))
+               CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.zeta',&
+               & RESHAPE(zeta_store(:,:,ipol_iter,is),(/n_lanczos*3/)))
+            ENDDO
+         ELSE
+            CALL json%add('output.lanczos.'//TRIM(ipol_label)//'.beta',&
+            & beta_store(:,ipol_iter,1))
+            CALL json%add('output.lanczos.'//TRIM(ipol_label)//'.zeta',&
+            & RESHAPE(zeta_store(:,:,ipol_iter,1),(/n_lanczos*3/)))
+         ENDIF
          !
-         WRITE(my_ip,'(i1)') ipol_iter
-         fname = TRIM(wbse_save_dir)//'/summary.'//my_ip//'.json'
-         OPEN(NEWUNIT=iun,FILE=TRIM(fname))
+         OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
          CALL json%print(iun)
          CLOSE(iun)
          CALL json%destroy()
-         !
-         header = 0
-         header(HD_ID_VERSION) = HD_VERSION
-         IF(islittleendian()) THEN
-            header(HD_ID_LITTLE_ENDIAN) = 1
-         ENDIF
-         !
-         WRITE(my_ip,'(i1)') ipol_iter
-         fname = TRIM(wbse_save_dir)//'/bgz.'//my_ip//'.dat'
-         OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
-         offset = 1
-         WRITE(iun,POS=offset) header
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
-         WRITE(iun,POS=offset) beta_store(ipol_iter,1:n_lanczos,1:nspin)
-         offset = offset+SIZE(beta_store(ipol_iter,:,:))*SIZEOF(beta_store(1,1,1))
-         WRITE(iun,POS=offset) zeta_store(ipol_iter,1:3,1:n_lanczos,1:nspin)
-         CLOSE(iun)
          !
       ENDIF
       !
@@ -315,13 +282,42 @@ MODULE lanczos_restart
       !
       CALL mp_barrier(world_comm)
       !
-      CALL stop_clock('lan_restart')
-      time_spent(2) = get_clock('lan_restart')
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE lanczos_restart_clear()
+      !------------------------------------------------------------------------
       !
-      WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wbse_save_dir)
-      WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
+      USE mp_world,             ONLY : root,mpime,world_comm
+      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE westcom,              ONLY : wbse_restart_dir
+      USE clib_wrappers,        ONLY : f_rmdir
+      USE west_io,              ONLY : remove_if_present
+      !
+      IMPLICIT NONE
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      !
+      ! BARRIER
+      !
+      CALL mp_barrier(world_comm)
+      !
+      ! ... clear the main restart directory
+      !
+      IF(mpime == root) THEN
+         CALL remove_if_present(TRIM(wbse_restart_dir)//'/summary.json')
+         ierr = f_rmdir(TRIM(wbse_restart_dir))
+      ENDIF
+      !
+      CALL mp_bcast(ierr,root,world_comm)
+      !
+      CALL errore('lanczos_restart','cannot clear restart',ierr)
+      !
+      ! BARRIER
+      !
+      CALL mp_barrier(world_comm)
       !
     END SUBROUTINE
     !

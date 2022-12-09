@@ -349,7 +349,7 @@ MODULE wbse_center
   !
   COMPLEX(DP), ALLOCATABLE :: d0psi(:,:,:,:)
   REAL(DP),    ALLOCATABLE :: beta_store(:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: zeta_store(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: zeta_store(:,:,:,:)
   !
   ! FOR Davidson method
   !

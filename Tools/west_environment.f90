@@ -51,7 +51,6 @@ CONTAINS
     CHARACTER(LEN=6), EXTERNAL :: int_to_char
     INTEGER :: ios, crashunit, n_json
     INTEGER, PARAMETER :: n_json_max = 100
-    LOGICAL, EXTERNAL :: matches
     !
     ! ... Intel compilers v .ge.8 allocate a lot of stack space
     ! ... Stack limit is often small, thus causing SIGSEGV and crash

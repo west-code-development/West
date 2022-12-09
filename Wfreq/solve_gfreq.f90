@@ -149,7 +149,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
         IF (l_enable_off_diagonal) THEN
-           barra_load = barra_load + n_bands - ib_index + 1
+           barra_load = barra_load + ib_index
         ELSE
            barra_load = barra_load + 1
         ENDIF

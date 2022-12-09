@@ -1,7 +1,7 @@
 .. _midway2:
 
 ================
-Midway2-UChicago
+UChicago-Midway2
 ================
 
 Midway2 is the HPC cluster of the University of Chicago, maintained by UChicago's `RCC <https://rcc.uchicago.edu/>`_.

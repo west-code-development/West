@@ -15,7 +15,8 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   !-----------------------------------------------------------------------
   !
   USE westcom,              ONLY : n_pdep_eigen_to_use,l_macropol,d_epsm1_ifr_a,z_epsm1_rfr_a,&
-                                 & imfreq_list,refreq_list,z_head_rfr_a,d_head_ifr_a,n_pairs,eri_w
+                                 & z_head_rfr_a,d_head_ifr_a,z_head_rfr,z_epsm1_rfr,d_epsm1_ifr,&
+                                 & d_head_ifr,n_pairs,eri_w,l_qdet_verbose
   USE distribution_center,  ONLY : pert,ifr,rfr
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
@@ -33,12 +34,12 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   LOGICAL,INTENT(IN) :: l_isFreqReal
   !
   INTEGER :: who, iloc
-  REAL(DP) :: freq
-  COMPLEX(DP) :: chi_head
+  COMPLEX(DP) :: chi_head, chi_full_head
   !
   REAL(DP),ALLOCATABLE :: braket(:,:,:)
   REAL(DP),ALLOCATABLE :: eri_vc(:,:,:,:)
-  COMPLEX(DP),ALLOCATABLE :: chi_body(:,:)
+  COMPLEX(DP), ALLOCATABLE ::eri_w_full(:,:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: chi_body(:,:), chi_full_body(:,:)
   !
   ! Compute 4-center integrals of W (screened electron repulsion integrals, eri)
   ! (ij|W|kl) = int dx dx' f_i(x) f_j(x) W(r,r') f_k(x') f_l(x')
@@ -51,6 +52,7 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
 #endif
   !
   ALLOCATE( chi_body( pert%nglob, pert%nloc ) )
+  IF ( l_qdet_verbose ) ALLOCATE( chi_full_body( pert%nglob, pert%nloc ) )
   !
   ! Load chi at given frequency (index and logical from input)
   !
@@ -58,10 +60,14 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
      !
      CALL rfr%g2l(ifreq,iloc,who)
      IF ( me_bgrp == who ) THEN
-        !
-        freq = refreq_list(iloc)
         chi_body(:,:) = z_epsm1_rfr_a(:,:,iloc)
+        !
         IF ( l_macropol ) chi_head = z_head_rfr_a(iloc)
+        !
+        IF ( l_qdet_verbose ) THEN
+           chi_full_body(:,:) = z_epsm1_rfr(:,:,iloc)
+           IF ( l_macropol ) chi_full_head = z_head_rfr(iloc)
+        ENDIF
         !
      ENDIF
      !
@@ -70,15 +76,18 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
      CALL ifr%g2l(ifreq,iloc,who)
      IF ( me_bgrp == who ) THEN
         !
-        freq = imfreq_list(iloc)
-        chi_body(:,:) = CMPLX(d_epsm1_ifr_a(:,:,ifreq),KIND=DP)
-        IF ( l_macropol ) chi_head = CMPLX(d_head_ifr_a(ifreq),KIND=DP)
+        chi_body(:,:) = CMPLX(d_epsm1_ifr_a(:,:,iloc),KIND=DP)
+        IF ( l_macropol ) chi_head = CMPLX(d_head_ifr_a(iloc),KIND=DP)
+        !
+        IF ( l_qdet_verbose ) THEN
+           chi_full_body(:,:) = CMPLX(d_epsm1_ifr(:,:,iloc),KIND=DP)
+           IF ( l_macropol ) chi_full_head = CMPLX(d_head_ifr(iloc),KIND=DP)
+        ENDIF
         !
      ENDIF
      !
   ENDIF
   !
-  CALL mp_bcast( freq, who, intra_bgrp_comm )
   CALL mp_bcast( chi_body, who, intra_bgrp_comm )
   IF ( l_macropol ) THEN
      CALL mp_bcast( chi_head, who, intra_bgrp_comm )
@@ -86,14 +95,20 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
      chi_head = (0._DP,0._DP)
   ENDIF
   !
+  IF ( l_qdet_verbose ) THEN
+     CALL mp_bcast( chi_full_body, who, intra_bgrp_comm )
+     IF ( l_macropol ) THEN
+        CALL mp_bcast( chi_full_head, who, intra_bgrp_comm )
+     ELSE
+        chi_full_head = (0._DP,0._DP)
+     ENDIF
+  ENDIF
+  !
   ! Compute ERI (Electron Repulsion Integrals)
   !
-  ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
   ALLOCATE( eri_w(n_pairs,n_pairs,nspin,nspin) )
-  !
-  ! 4-center integrals of Vc
-  !
-  CALL compute_eri_vc(eri_vc)
+  ALLOCATE( eri_vc(n_pairs,n_pairs,nspin,nspin) )
+  IF ( l_qdet_verbose ) ALLOCATE( eri_w_full(n_pairs,n_pairs,nspin,nspin) )
   !
   ! 4-center integrals of Wp
   !
@@ -102,11 +117,21 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   CALL compute_braket(braket)
   CALL compute_eri_wp(braket, chi_head, chi_body, eri_w)
   !
+  ! 4-center integrals of Vc
+  !
+  CALL compute_eri_vc(eri_vc)
+  IF ( l_qdet_verbose ) CALL compute_eri_wp(braket, chi_full_head, chi_full_body, eri_w_full)
+  !
   ! 4-center integrals of W
   !
   eri_w(:,:,:,:) = eri_vc + eri_w
+  IF ( l_qdet_verbose ) eri_w_full(:,:,:,:) = eri_vc + eri_w_full
   !
-  CALL qdet_db_write_eri(eri_vc,eri_w)
+  IF ( l_qdet_verbose ) THEN
+     CALL qdet_db_write_eri(eri_w, eri_vc, eri_w_full)
+  ELSE
+     CALL qdet_db_write_eri(eri_w)
+  ENDIF
   !
   CALL io_push_bar()
   !
@@ -117,6 +142,11 @@ SUBROUTINE solve_eri(ifreq,l_isFreqReal)
   DEALLOCATE( chi_body )
   DEALLOCATE( braket )
   DEALLOCATE( eri_vc )
+
+  IF ( l_qdet_verbose ) THEN
+     DEALLOCATE( eri_w_full )
+     DEALLOCATE( chi_full_body )
+  ENDIF
   !
 END SUBROUTINE
 !
@@ -135,14 +165,14 @@ SUBROUTINE compute_braket(braket)
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : wstat_save_dir,npwq,npwqx,n_pdep_eigen_to_use,fftdriver,&
                                  & proj_c,n_pairs,pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm
+  USE mp_global,            ONLY : intra_bgrp_comm,inter_bgrp_comm,inter_image_comm
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,double_invfft_gamma
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE types_coulomb,        ONLY : pot3D
   USE io_push,              ONLY : io_push_title
-  USE distribution_center,  ONLY : macropert
+  USE distribution_center,  ONLY : macropert,bandpair
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
 #if defined(__CUDA)
@@ -161,7 +191,7 @@ SUBROUTINE compute_braket(braket)
   REAL(DP),ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(rho_r,rho_g,sqvc)
   !
-  INTEGER :: s, m, p1, i, j, ig, ir, mloc
+  INTEGER :: s, m, p1, p1loc, i, j, ig, ir, mloc
   INTEGER :: barra_load
   INTEGER :: dffts_nnr
   CHARACTER(LEN=25) :: filepot
@@ -170,6 +200,10 @@ SUBROUTINE compute_braket(braket)
   REAL(DP) :: reduce
   !
   CALL io_push_title('braket')
+  !
+  ! Distribute pairs over band groups
+  !
+  CALL bandpair%init(n_pairs,'b','n_pairs',.FALSE.)
   !
   CALL pot3D%init(fftdriver,.FALSE.,'default')
   !
@@ -223,8 +257,9 @@ SUBROUTINE compute_braket(braket)
         !
         ! Compute the braket for each pair of functions
         !
-        DO p1 = 1, n_pairs
+        DO p1loc = 1, bandpair%nloc
            !
+           p1 = bandpair%l2g(p1loc)
            i = pijmap(1,p1)
            j = pijmap(2,p1)
            !
@@ -267,8 +302,9 @@ SUBROUTINE compute_braket(braket)
      ENDDO
   ENDDO
   !
-  CALL mp_sum(braket, inter_image_comm)
   CALL mp_sum(braket, intra_bgrp_comm)
+  CALL mp_sum(braket, inter_bgrp_comm)
+  CALL mp_sum(braket, inter_image_comm)
   !
   CALL stop_bar_type( barra,'eri_brak' )
   !
@@ -288,7 +324,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : l_macropol,n_pairs,pijmap,proj_c,npwq,npwqx
+  USE westcom,              ONLY : n_pairs,pijmap,proj_c,npwq,npwqx
   USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm
   USE distribution_center,  ONLY : bandpair
   USE fft_base,             ONLY : dffts
@@ -462,7 +498,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
         j = pijmap(2,p1)
         !
         !$acc host_data use_device(proj_c)
-        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s2),psic,'Wave')
+        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s1),psic,'Wave')
         !$acc end host_data
         !
         !$acc parallel loop present(rho_r)
@@ -493,7 +529,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            l = pijmap(2,p2)
            !
            !$acc host_data use_device(proj_c)
-           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s1),proj_c(:,l,s2),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s2),proj_c(:,l,s2),psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(rho_r)
@@ -560,13 +596,14 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE distribution_center,  ONLY : pert,macropert
+  USE distribution_center,  ONLY : pert,macropert,bandpair
   USE pwcom,                ONLY : nspin
-  USE westcom,              ONLY : n_pdep_eigen_to_use,fftdriver,n_pairs,pijmap,l_macropol
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_pairs,pijmap,l_macropol
   USE types_coulomb,        ONLY : pot3D
-  USE mp_global,            ONLY : inter_image_comm
-  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
+  USE mp_global,            ONLY : nbgrp,my_bgrp_id,inter_bgrp_comm,nimage,my_image_id,&
+                                 & inter_image_comm
   USE mp,                   ONLY : mp_sum
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_title
   USE cell_base,            ONLY : omega
   !
@@ -576,7 +613,9 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   COMPLEX(DP),INTENT(IN) :: chi_head, chi_body(pert%nglob,pert%nloc)
   COMPLEX(DP),INTENT(OUT) :: eri_wp(n_pairs,n_pairs,nspin,nspin)
   !
-  INTEGER :: s1, s2, p1, p2, i, j, k, l, m, n, nloc, nloc_max
+  INTEGER :: s1, s2, p1, p2, p2loc, i, j, k, l, m, n, nloc, nloc_max, bandpair_nloc
+  REAL(DP) :: div
+  COMPLEX(DP) :: reduce
   TYPE(bar_type) :: barra
   !
   CALL io_push_title('Wp Integrals (PDEP)')
@@ -587,45 +626,73 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
      nloc_max = nloc
   ENDDO
   !
+  ! Distribute pairs over band groups
+  !
+  CALL bandpair%init(n_pairs,'b','n_pairs',.FALSE.)
+  !
   ! Workload too small for progress bar
   !
   CALL start_bar_type(barra, 'Wp', 1)
   !
-  IF (l_macropol) CALL pot3D%compute_divergence('default')
+  IF (l_macropol) THEN
+     CALL pot3D%compute_divergence('default')
+     div = pot3D%div
+  ENDIF
   !
+  bandpair_nloc = bandpair%nloc
+  !
+  !$acc enter data create(eri_wp) copyin(pijmap,braket,chi_body)
+  !
+  !$acc kernels present(eri_wp)
   eri_wp(:,:,:,:) = 0._DP
+  !$acc end kernels
   !
-  DO nloc = 1, nloc_max ! iterate over m, n
-     !
-     n = macropert%l2g(nloc)
-     !
-     DO m = 1, n_pdep_eigen_to_use
-        DO s2 = 1, nspin
-           DO s1 = 1, nspin
-              DO p2 = 1, n_pairs
-                 !
-                 k = pijmap(1,p2)
-                 l = pijmap(2,p2)
-                 !
-                 DO p1 = 1, n_pairs
+  !$acc parallel present(pijmap,braket,chi_body,eri_wp)
+  !$acc loop collapse(4)
+  DO s2 = 1, nspin
+     DO s1 = 1, nspin
+        DO p2loc = 1, bandpair_nloc
+           DO p1 = 1, n_pairs
+              !
+              ! p2 = bandpair%l2g(p2loc)
+              !
+              p2 = nbgrp*(p2loc-1)+my_bgrp_id+1
+              k = pijmap(1,p2)
+              l = pijmap(2,p2)
+              !
+              i = pijmap(1,p1)
+              j = pijmap(2,p1)
+              !
+              reduce = (0._DP,0._DP)
+              !
+              !$acc loop collapse(2) reduction(+:reduce)
+              DO nloc = 1, nloc_max ! iterate over m, n
+                 DO m = 1, n_pdep_eigen_to_use
                     !
-                    i = pijmap(1,p1)
-                    j = pijmap(2,p1)
+                    ! n = macropert%l2g(nloc)
                     !
-                    eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) &
-                    & + braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
-                    IF(l_macropol .AND. i==j .AND. k==l) THEN
-                       eri_wp(p1,p2,s1,s2) = eri_wp(p1,p2,s1,s2) + chi_head*pot3D%div
+                    n = nimage*(nloc-1)+my_image_id+1
+                    !
+                    reduce = reduce + braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
+                    IF(l_macropol .AND. i == j .AND. k == l) THEN
+                       reduce = reduce + chi_head*div
                     ENDIF
                     !
                  ENDDO
-              ENDDO
+              ENDDO ! iterate over m, n
+              !
+              eri_wp(p1,p2,s1,s2) = reduce
+              !
            ENDDO
         ENDDO
      ENDDO
-     !
-  ENDDO ! iterate over m, n
+  ENDDO
+  !$acc end parallel
   !
+  !$acc update host(eri_wp)
+  !$acc exit data delete(eri_wp,pijmap,braket,chi_body)
+  !
+  CALL mp_sum(eri_wp, inter_bgrp_comm)
   CALL mp_sum(eri_wp, inter_image_comm)
   !
   CALL update_bar_type(barra, 'Wp', 1)

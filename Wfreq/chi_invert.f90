@@ -43,7 +43,7 @@ MODULE chi_invert
       USE linear_algebra_kernel, ONLY : matinvrs_dge
       USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
 #if defined(__CUDA)
-      USE west_gpu,              ONLY : body_r,x_r,wh_r,wl_r,temph_r,templ_r,tempt_r
+      USE west_gpu,              ONLY : x_r,wh_r,wl_r,temph_r,templ_r,tempt_r
       USE cublas
 #endif
       !
@@ -62,14 +62,12 @@ MODULE chi_invert
       REAL(DP) :: ky
 #if !defined(__CUDA)
       REAL(DP) :: tempt_r(3,3)
-      REAL(DP),ALLOCATABLE :: body_r(:,:)
       REAL(DP),ALLOCATABLE :: wh_r(:,:)
       REAL(DP),ALLOCATABLE :: wl_r(:,:)
       REAL(DP),ALLOCATABLE :: x_r(:,:)
       REAL(DP),ALLOCATABLE :: temph_r(:,:)
       REAL(DP),ALLOCATABLE :: templ_r(:,:)
       !
-      ALLOCATE(body_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       ALLOCATE(x_r(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
          ALLOCATE(wh_r(n_pdep_eigen_to_use,3))
@@ -80,14 +78,6 @@ MODULE chi_invert
 #endif
       !
       !$acc update device(matilda)
-      !
-      !$acc parallel loop collapse(2) present(body_r,matilda)
-      DO i2 = 1,n_pdep_eigen_to_use
-         DO i1 = 1,n_pdep_eigen_to_use
-            body_r(i1,i2) = matilda(i1,i2)
-         ENDDO
-      ENDDO
-      !$acc end parallel
       !
       IF(l_macropol) THEN
          !
@@ -116,13 +106,13 @@ MODULE chi_invert
       !
       ! X = (1-B)^{-1}
       !
-      !$acc parallel loop collapse(2) present(x_r,body_r)
+      !$acc parallel loop collapse(2) present(x_r,matilda)
       DO i2 = 1,n_pdep_eigen_to_use
          DO i1 = 1,n_pdep_eigen_to_use
             IF(i1 == i2) THEN
-               x_r(i1,i2) = 1._DP-body_r(i1,i2)
+               x_r(i1,i2) = 1._DP-matilda(i1,i2)
             ELSE
-               x_r(i1,i2) = -body_r(i1,i2)
+               x_r(i1,i2) = -matilda(i1,i2)
             ENDIF
          ENDDO
       ENDDO
@@ -164,9 +154,9 @@ MODULE chi_invert
          head = 0._DP
       ENDIF
       !
-      !$acc host_data use_device(x_r,body_r,temph_r,templ_r,lambda)
+      !$acc host_data use_device(x_r,matilda,temph_r,templ_r,lambda)
       CALL DGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,1._DP,x_r,&
-      & n_pdep_eigen_to_use,body_r,n_pdep_eigen_to_use,0._DP,lambda,n_pdep_eigen_to_use)
+      & n_pdep_eigen_to_use,matilda,nma,0._DP,lambda,n_pdep_eigen_to_use)
       !
       IF(l_macropol) THEN
          f = 1._DP/(3._DP*ky)
@@ -178,7 +168,6 @@ MODULE chi_invert
       !$acc update host(lambda)
       !
 #if !defined(__CUDA)
-      DEALLOCATE(body_r)
       DEALLOCATE(x_r)
       IF(l_macropol) THEN
          DEALLOCATE(wh_r)
@@ -211,7 +200,7 @@ MODULE chi_invert
       USE linear_algebra_kernel, ONLY : matinvrs_zge
       USE westcom,               ONLY : n_pdep_eigen_to_use,l_macropol
 #if defined(__CUDA)
-      USE west_gpu,              ONLY : body_c,x_c,wh_c,wl_c,temph_c,templ_c,tempt_c
+      USE west_gpu,              ONLY : x_c,wh_c,wl_c,temph_c,templ_c,tempt_c
       USE cublas
 #endif
       !
@@ -232,7 +221,6 @@ MODULE chi_invert
       COMPLEX(DP) :: ky
 #if !defined(__CUDA)
       COMPLEX(DP) :: tempt_c(3,3)
-      COMPLEX(DP),ALLOCATABLE :: body_c(:,:)
       COMPLEX(DP),ALLOCATABLE :: wh_c(:,:)
       COMPLEX(DP),ALLOCATABLE :: wl_c(:,:)
       COMPLEX(DP),ALLOCATABLE :: x_c(:,:)
@@ -250,7 +238,6 @@ MODULE chi_invert
       ENDIF
       !
 #if !defined(__CUDA)
-      ALLOCATE(body_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       ALLOCATE(x_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_dohead) THEN
          ALLOCATE(wh_c(n_pdep_eigen_to_use,3))
@@ -261,14 +248,6 @@ MODULE chi_invert
 #endif
       !
       !$acc update device(matilda)
-      !
-      !$acc parallel loop collapse(2) present(body_c,matilda)
-      DO i2 = 1,n_pdep_eigen_to_use
-         DO i1 = 1,n_pdep_eigen_to_use
-            body_c(i1,i2) = matilda(i1,i2)
-         ENDDO
-      ENDDO
-      !$acc end parallel
       !
       IF(l_dohead) THEN
          !
@@ -297,13 +276,13 @@ MODULE chi_invert
       !
       ! X = (1-B)^{-1}
       !
-      !$acc parallel loop collapse(2) present(x_c,body_c)
+      !$acc parallel loop collapse(2) present(x_c,matilda)
       DO i2 = 1,n_pdep_eigen_to_use
          DO i1 = 1,n_pdep_eigen_to_use
             IF(i1 == i2) THEN
-               x_c(i1,i2) = 1._DP-body_c(i1,i2)
+               x_c(i1,i2) = 1._DP-matilda(i1,i2)
             ELSE
-               x_c(i1,i2) = -body_c(i1,i2)
+               x_c(i1,i2) = -matilda(i1,i2)
             ENDIF
          ENDDO
       ENDDO
@@ -345,9 +324,9 @@ MODULE chi_invert
          head = zero
       ENDIF
       !
-      !$acc host_data use_device(x_c,body_c,temph_c,templ_c,lambda)
+      !$acc host_data use_device(x_c,matilda,temph_c,templ_c,lambda)
       CALL ZGEMM('N','N',n_pdep_eigen_to_use,n_pdep_eigen_to_use,n_pdep_eigen_to_use,one,x_c,&
-      & n_pdep_eigen_to_use,body_c,n_pdep_eigen_to_use,zero,lambda,n_pdep_eigen_to_use)
+      & n_pdep_eigen_to_use,matilda,nma,zero,lambda,n_pdep_eigen_to_use)
       !
       IF(l_dohead) THEN
          f = one/(3._DP*ky)
@@ -359,7 +338,6 @@ MODULE chi_invert
       !$acc update host(lambda)
       !
 #if !defined(__CUDA)
-      DEALLOCATE(body_c)
       DEALLOCATE(x_c)
       IF(l_dohead) THEN
          DEALLOCATE(wh_c)

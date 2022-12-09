@@ -1,8 +1,8 @@
 .. _cori:
 
-=================
-Cori-NERSC (XC40)
-=================
+==========
+NERSC-Cori
+==========
 
 Cori is a Cray XC40 located at National Energy Research Scientific Computing Center (`NERSC <https://www.nersc.gov/>`_).
 
@@ -13,7 +13,7 @@ Cori is a Cray XC40 located at National Energy Research Scientific Computing Cen
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on May 6, 2022):
+WEST executables can be compiled using the following script (tested on October 4, 2022):
 
 .. code-block:: bash
 
@@ -50,6 +50,12 @@ Running WEST Jobs
 
 The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Cori (Haswell partition) with 32 MPI ranks per node. The <project_name> must be replaced with an active project allocation.
 
+**Important**: The following environment variable is needed to work around a bug in ROMIO, Cray MPICH.
+
+.. code-block:: bash
+
+   export ROMIO_FSTYPE_FORCE="ufs:"
+
 .. code-block:: bash
 
    $ cat run_west.sh
@@ -70,6 +76,8 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    export CRAYPE_LINK_TYPE=dynamic
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/python/3.9.7.1/lib
 
+   export ROMIO_FSTYPE_FORCE="ufs:"
+
    export OMP_NUM_THREADS=1
    export OMP_PLACE=threads
    export OMP_PROC_BIND=spread
@@ -77,7 +85,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    NTASKS=$(($SLURM_NTASKS_PER_NODE * $SLURM_JOB_NUM_NODES))
 
-   srun -N $SLURM_JOB_NUM_NODES -n $SLURM_NTASKS_PER_NODE -c $SLURM_CPUS_PER_TASK ./wstat.x -i wstat.in &> wstat.out
+   srun -N $SLURM_JOB_NUM_NODES -n $NTASKS -c $SLURM_CPUS_PER_TASK ./wstat.x -i wstat.in &> wstat.out
 
 Job submission is done with the following:
 

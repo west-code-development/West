@@ -1,8 +1,8 @@
 .. _bebop:
 
-=========
-Bebop-ANL
-=========
+==============
+ANL-LCRC-Bebop
+==============
 
 Bebop is an HPC cluster maintained by the `Laboratory Computing Resource Center (LCRC) <https://www.lcrc.anl.gov/>`_ at Argonne National Laboratory.
 
@@ -13,7 +13,7 @@ Bebop is an HPC cluster maintained by the `Laboratory Computing Resource Center 
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on Aug 10, 2022):
+WEST executables can be compiled using the following script (tested on September 19, 2022):
 
 .. code-block:: bash
 
@@ -21,7 +21,7 @@ WEST executables can be compiled using the following script (tested on Aug 10, 2
    #!/bin/bash
 
    module purge
-   module load git/2.21.0-spiuz7o
+   module load git/2.31.1-6p7naeb
    module load intel-oneapi/2021.4.0.3422
    module load anaconda3/2021.05
 

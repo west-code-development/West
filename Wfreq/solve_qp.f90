@@ -229,7 +229,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      ib_index = band_group%l2g(ibloc)
      !
      IF(l_enable_off_diagonal) THEN
-        barra_load = barra_load+n_bands-ib_index+1
+        barra_load = barra_load+ib_index
      ELSE
         barra_load = barra_load+1
      ENDIF
@@ -505,10 +505,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   DEALLOCATE( l2g )
   DEALLOCATE( overlap )
   DEALLOCATE( overlap_loc )
-  IF( l_QDET ) THEN
-     DEALLOCATE( d_epsm1_ifr )
-     DEALLOCATE( z_epsm1_rfr )
-  ENDIF
   DEALLOCATE( dtemp2 )
   DEALLOCATE( ztemp2 )
   DEALLOCATE( d_epsm1_ifr_trans )

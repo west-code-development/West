@@ -490,6 +490,23 @@ wfreq_control
      - If (False), then Lanczos solvers are turned off.
 
 
+.. data:: l_qdet_verbose
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - Controls what two-body terms of the QDET effective Hamiltonian are written to file.
+
+       - If (False), then only the partially screened two-body terms are written to file.
+       - If (True), then the fully screened, partially screened, and bare two-body terms are written to file.
+
+
 .. data:: l_enable_off_diagonal
 
 .. list-table::
@@ -502,8 +519,8 @@ wfreq_control
      - False
    * - **Description**
      -
-       - If (False) then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band).
-       - If (True) then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
+       - If (False), then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band).
+       - If (True), then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
 
 
 .. data:: l_enable_gwetot
@@ -604,7 +621,7 @@ westpp_control
    * - **Default**
      - [1,2]
    * - **Description**
-     - Range for W, E, S, and D run.
+     - Range for W, E, S, D, and L run.
 
 
 .. data:: westpp_format
@@ -620,11 +637,11 @@ westpp_control
    * - **Description**
      - Available options for the output fortmat are:
 
-       - "c" : Cube.
-       - "x" : Planar average yz.
-       - "y" : Planar average xz.
-       - "z" : Planar average xy.
-       - "s" : Spherical average.
+       - "C" : Cube.
+       - "X" : Planar average yz.
+       - "Y" : Planar average xz.
+       - "Z" : Planar average xy.
+       - "S" : Spherical average.
 
 
 .. data:: westpp_sign
@@ -652,7 +669,7 @@ westpp_control
    * - **Default**
      - 1
    * - **Description**
-     - Number PDEP eigenpotentials to read/use.
+     - Number of PDEP eigenpotentials to read/use.
 
 
 .. data:: westpp_r0
@@ -666,7 +683,7 @@ westpp_control
    * - **Default**
      - [0.0, 0.0, 0.0]
    * - **Description**
-     - Position of the center (in a.u.) for spherical average plot.
+     - Position of the center (in a.u.) for spherical average plot or localization factor in a sphere.
 
 
 .. data:: westpp_nr
@@ -680,7 +697,7 @@ westpp_control
    * - **Default**
      - 100
    * - **Description**
-     - Number of points in the spherical average plot.
+     - Number of points in the spherical average plot or localization factor in a sphere.
 
 
 .. data:: westpp_rmax
@@ -694,7 +711,7 @@ westpp_control
    * - **Default**
      - 1.0
    * - **Description**
-     - Max radius (in a.u.) for the spherical average plot.
+     - Max radius (in a.u.) for the spherical average plot or localization factor in a sphere.
 
 
 .. data:: westpp_epsinfty

@@ -770,7 +770,7 @@ wbse_init_control
    * - **Default**
      - "qb.wfc"
    * - **Description**
-     - Name of the file that contains Qbox wavefunctions.
+     - Name of the file that contains Qbox wavefunctions. Used only when localization is "B".
 
 .. data:: bisection_info
 
@@ -783,7 +783,7 @@ wbse_init_control
    * - **Default**
      - "info.bis"
    * - **Description**
-     - Name of the file that contains info about bisection.
+     - Name of the file that contains info about bisection. Used only when localization is "B".
 
 .. data:: chi_kernel
 
@@ -814,7 +814,7 @@ wbse_init_control
    * - **Default**
      - 0.0
    * - **Description**
-     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed.
+     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization is "B".
 
 |
 
@@ -881,7 +881,7 @@ wbse_control
    * - **Default**
      - 1
    * - **Description**
-     - Number of Liouville eigenvectors and eigenvalues.
+     - Number of Liouville eigenvectors and eigenvalues. Used only when wbse_calculation is "D" or "d".
 
 .. data:: n_liouville_times
 
@@ -894,7 +894,7 @@ wbse_control
    * - **Default**
      - 4
    * - **Description**
-     - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times.
+     - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times. Used only when wbse_calculation is "D" or "d".
 
 .. data:: n_liouville_maxiter
 
@@ -907,7 +907,7 @@ wbse_control
    * - **Default**
      - 100
    * - **Description**
-     - Maximum number of iterations of the Davidson method.
+     - Maximum number of iterations of the Davidson method. Used only when wbse_calculation is "D" or "d".
 
 .. data:: n_liouville_read_from_file
 
@@ -920,7 +920,7 @@ wbse_control
    * - **Default**
      - 0
    * - **Description**
-     - Number of Liouville eigenvectors that can be read from file.
+     - Number of Liouville eigenvectors that can be read from file. Used only when wbse_calculation is "D" or "d".
 
 .. data:: trev_liouville
 
@@ -933,7 +933,7 @@ wbse_control
    * - **Default**
      - 0.001
    * - **Description**
-     - Absolute convergence threshold for Liouville eigenvalues.
+     - Absolute convergence threshold for Liouville eigenvalues. Used only when wbse_calculation is "D" or "d".
 
 .. data:: trev_liouville_rel
 
@@ -946,7 +946,7 @@ wbse_control
    * - **Default**
      - 0.1
    * - **Description**
-     - Relative convergence threshold for Liouville eigenvalues.
+     - Relative convergence threshold for Liouville eigenvalues. Used only when wbse_calculation is "D" or "d".
 
 .. data:: n_lanczos
 
@@ -959,7 +959,7 @@ wbse_control
    * - **Default**
      - 10
    * - **Description**
-     - Number of Lanczos iterations to be performed.
+     - Number of Lanczos iterations to be performed. Used only when wbse_calculation is "L" or "l".
 
 .. data:: n_steps_write_restart
 
@@ -1051,4 +1051,4 @@ wbse_control
    * - **Default**
      - True
    * - **Description**
-     - Speeds up the Lanczos iterations by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.
+     - Speeds up the Lanczos iterations by reducing I/O, at the price of increasing memory consumption. Turn off to save memory. Used only when wbse_calculation is "L" or "l".

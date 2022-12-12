@@ -674,12 +674,13 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
                     n = nimage*(nloc-1)+my_image_id+1
                     !
                     reduce = reduce + braket(p1,s1,m)*chi_body(m,nloc)*braket(p2,s2,n)/omega
-                    IF(l_macropol .AND. i == j .AND. k == l) THEN
-                       reduce = reduce + chi_head*div
-                    ENDIF
                     !
                  ENDDO
               ENDDO ! iterate over m, n
+              !
+              IF(l_macropol .AND. i == j .AND. k == l) THEN
+                 reduce = reduce + chi_head*div
+              ENDIF
               !
               eri_wp(p1,p2,s1,s2) = reduce
               !

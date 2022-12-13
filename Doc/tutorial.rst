@@ -17,6 +17,14 @@ Intro tutorials:
    tutorials/basic/basic_005.ipynb
    tutorials/basic/basic_006.ipynb
 
+Advanced tutorials:
+
+.. toctree::
+   :maxdepth: 1
+
+   tutorials/advanced/advanced_001.ipynb
+   tutorials/advanced/advanced_002.ipynb
+
 The following tutorials were used in `MICCoM Workshop & Hands-on Tutorials 2022 <http://miccom-center.org/workshop-and-hands-on-tutorials2022/index.html>`_:
 
 .. toctree::

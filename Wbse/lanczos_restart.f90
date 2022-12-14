@@ -256,20 +256,13 @@ MODULE lanczos_restart
          CALL json%initialize()
          CALL json%load(filename=TRIM(logfile))
          !
-         IF(nspin > 1) THEN
-            DO is = 1,nspin
-               WRITE(labels,'(I6.6)') is
-               CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.beta',&
-               & beta_store(:,ipol_iter,is))
-               CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.zeta',&
-               & RESHAPE(zeta_store(:,:,ipol_iter,is),(/n_lanczos*3/)))
-            ENDDO
-         ELSE
-            CALL json%add('output.lanczos.'//TRIM(ipol_label)//'.beta',&
-            & beta_store(:,ipol_iter,1))
-            CALL json%add('output.lanczos.'//TRIM(ipol_label)//'.zeta',&
-            & RESHAPE(zeta_store(:,:,ipol_iter,1),(/n_lanczos*3/)))
-         ENDIF
+         DO is = 1,nspin
+            WRITE(labels,'(I6.6)') is
+            CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.beta',&
+            & beta_store(:,ipol_iter,is))
+            CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.zeta',&
+            & RESHAPE(zeta_store(:,:,ipol_iter,is),(/n_lanczos*3/)))
+         ENDDO
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
          CALL json%print(iun)

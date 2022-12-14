@@ -768,7 +768,7 @@ wbse_init_control
    * - **Type**
      - string
    * - **Default**
-     - "qb.wfc"
+     - "qb_wfc"
    * - **Description**
      - Name of the file that contains Qbox wavefunctions. Used only when localization is "B".
 
@@ -781,7 +781,7 @@ wbse_init_control
    * - **Type**
      - string
    * - **Default**
-     - "info.bis"
+     - "bis_info"
    * - **Description**
      - Name of the file that contains info about bisection. Used only when localization is "B".
 

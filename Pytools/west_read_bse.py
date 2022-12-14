@@ -39,7 +39,7 @@ def bse_read_qb_wfc(*args, **kwargs):
 
 def test() :
     #
-    fileName = "qb.wfc.1"
+    fileName = "qb_wfc.1"
     nwfcs = 4
     nx = 30
     ny = 30

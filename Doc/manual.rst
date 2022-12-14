@@ -855,7 +855,7 @@ wbse_control
      - Available options are:
 
        - "None" : Quasiparticle corrections are not added.
-       - Specify the name of the file from which quasiparticle corrections are read (in eV).
+       - Specify the name of the file from which quasiparticle corrections are read (in Ry).
 
 .. data:: scissor_ope
 
@@ -868,7 +868,7 @@ wbse_control
    * - **Default**
      - 0.0
    * - **Description**
-     - Value of the scissor operator (in eV).
+     - Value of the scissor operator (in Ry).
 
 .. data:: n_liouville_eigen
 

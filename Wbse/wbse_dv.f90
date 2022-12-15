@@ -12,7 +12,7 @@ MODULE wbse_dv
   CONTAINS
   !
   !-----------------------------------------------------------------------
-  SUBROUTINE wbse_dv_setup(l_bse_calc)
+  SUBROUTINE wbse_dv_setup(l_skip)
     !-----------------------------------------------------------------------
     !
     !  This subroutine prepares some variables which are needed for derivatives
@@ -31,7 +31,7 @@ MODULE wbse_dv
     !
     IMPLICIT NONE
     !
-    LOGICAL, INTENT(IN) :: l_bse_calc
+    LOGICAL, INTENT(IN) :: l_skip
     !
     CALL start_clock('dv_setup')
     !
@@ -39,7 +39,7 @@ MODULE wbse_dv
     !
     ALLOCATE(dmuxc(dfftp%nnr,nspin,nspin))
     !
-    IF(l_bse_calc) THEN
+    IF(l_skip) THEN
        !
        dmuxc = (0._DP,0._DP)
        !

@@ -37,7 +37,7 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   USE conversions,          ONLY : itoa
   USE qbox_interface,       ONLY : sleep_and_wait_for_lock_to_be_removed
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE wbse_dv,              ONLY : wbse_dv_of_drho
+  USE wbse_dv,              ONLY : wbse_dv_setup,wbse_dv_of_drho
   !
   IMPLICIT NONE
   !
@@ -85,9 +85,13 @@ SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restar
   SELECT CASE(chi_kernel)
   CASE('XC_CHI','XC_CHI_RPA')
      l_xcchi = .TRUE.
+     l_skip = .FALSE.
   CASE DEFAULT
      l_xcchi = .FALSE.
+     l_skip = .TRUE.
   END SELECT
+  !
+  CALL wbse_dv_setup(l_skip)
   !
   driver = 'FF_Qbox'
   !

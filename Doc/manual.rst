@@ -798,10 +798,12 @@ wbse_init_control
    * - **Description**
      - Available options are:
 
-       - "CHI" : W = vc + vc X vc
-       - "CHI_RPA" : W = vc + vc X_RPA vc
-       - "XC_CHI" : W = vc + (vc+fxc) X vc
-       - "XC_CHI_RPA" : W = vc + (vc+fxc) X_RPA vc
+       - "CHI" : :math:`{W = v_c + v_c \chi v_c}`
+       - "XC_CHI" : :math:`{W = v_c + (v_c+f_{xc}) \chi v_c}`
+
+       :math:`{W}` and :math:`{v_c}` are the screened and bare Coulomb interactions, respectively, :math:`{\chi}` is the density-density response function, :math:`{f_{xc}}` is the exchange-correlation potential.
+
+       In addition to :math:`{\chi}`, :math:`{\chi_{\mathrm{RPA}}}` or :math:`{\chi_{\mathrm{IPA}}}` may be requested by specifying "approximation: RPA" or "approximation: IPA" in the document keyword of the server_control section (see also `West/Pytools/west_clientserver.py`).
 
 .. data:: overlap_thr
 

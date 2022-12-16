@@ -394,7 +394,7 @@ SUBROUTINE compute_d0psi_dfpt()
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
-  !$acc declare device_resident(eprec,e,phi,phi_tmp)
+  !$acc declare device_resident(eprec,e,phi_tmp)
   !
   CALL io_push_title('Calculation of the dipole using DFPT method')
   !
@@ -457,12 +457,11 @@ SUBROUTINE compute_d0psi_dfpt()
      ALLOCATE(e(3))
      ALLOCATE(phi_tmp(npwx*npol,3))
      ALLOCATE(phi(npwx*npol,3))
+     !$acc enter data create(phi)
      !
      ! LOOP over band states
      !
-     !$acc kernels present(d0psi)
      d0psi(:,:,iks,:) = (0._DP,0._DP)
-     !$acc end kernels
      !
      DO il1 = 1, aband%nloc
         !
@@ -482,7 +481,9 @@ SUBROUTINE compute_d0psi_dfpt()
         !
         CALL apply_alpha_pc_to_m_wfcs(nbndval,3,phi_tmp,(1._DP,0._DP))
         !
+        !$acc host_data use_device(eprec)
         CALL set_eprec(1,evc_work(:,iv),eprec(1))
+        !$acc end host_data
         !
         !$acc parallel loop present(eprec,e)
         DO ie = 1,3
@@ -505,6 +506,8 @@ SUBROUTINE compute_d0psi_dfpt()
         !
         IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
         !
+        !$acc update host(phi)
+        !
         d0psi(:,iv,iks,:) = phi
         !
      ENDDO
@@ -512,13 +515,13 @@ SUBROUTINE compute_d0psi_dfpt()
      DEALLOCATE(eprec)
      DEALLOCATE(e)
      DEALLOCATE(phi_tmp)
+     !$acc exit data delete(phi)
      DEALLOCATE(phi)
      !
 #if defined(__CUDA)
      CALL deallocate_macropol_gpu()
 #endif
      !
-     !$acc update host(d0psi)
      IF(l_lanczos) THEN
         CALL mp_sum(d0psi(:,:,iks,:),inter_image_comm)
      ELSE

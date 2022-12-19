@@ -857,7 +857,7 @@ wbse_control
      - Available options are:
 
        - "None" : Quasiparticle corrections are not added.
-       - Specify the name of the file from which quasiparticle corrections are read (in Ry).
+       - Specify the name of the Wfreq output file (in JSON format) from which quasiparticle corrections are read.
 
 .. data:: scissor_ope
 

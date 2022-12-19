@@ -284,56 +284,52 @@ END SUBROUTINE
 SUBROUTINE read_qp_eigs()
   !-----------------------------------------------------------------------
   !
-  ! read qp eigenvalues from file
+  ! read qp eigenvalues from JSON file
   !
-  USE io_global,           ONLY : ionode
-  USE mp,                  ONLY : mp_bcast
-  USE mp_global,           ONLY : intra_image_comm
-  USE westcom,             ONLY : et_qp,qp_correction
-  USE pwcom,               ONLY : nks,nbnd,lsda
+  USE kinds,            ONLY : DP
+  USE constants,        ONLY : RYTOEV
+  USE io_global,        ONLY : ionode
+  USE mp,               ONLY : mp_bcast
+  USE mp_global,        ONLY : intra_image_comm
+  USE westcom,          ONLY : et_qp,qp_correction
+  USE pwcom,            ONLY : nspin,nbnd
+  USE json_module,      ONLY : json_file
   !
   IMPLICIT NONE
   !
   ! Workspace
   !
-  INTEGER :: iun,ierr
-  INTEGER :: ibnd,ik
-  INTEGER :: nqp_eigs,n_kpts
-  CHARACTER(LEN=256) :: fname
+  LOGICAL :: found
+  INTEGER :: is,nspin_tmp
+  CHARACTER(LEN=6) :: labels
+  REAL(DP),ALLOCATABLE :: rvals(:)
+  TYPE(json_file) :: json
   !
-  ALLOCATE(et_qp(nbnd,nks))
+  ALLOCATE(et_qp(nbnd,nspin))
   !
-  IF(lsda) THEN
-     n_kpts = nks/2
-  ELSE
-     n_kpts = nks
+  IF(ionode) THEN
+     !
+     CALL json%initialize()
+     CALL json%load(filename=TRIM(qp_correction))
+     !
+     CALL json%get('system.electron.nspin',nspin_tmp,found)
+     IF(.NOT. found) CALL errore('read_qp_eigs','nspin not found',1)
+     IF(nspin_tmp /= nspin) CALL errore('read_qp_eigs','nspin mismatch',1)
+     !
+     DO is = 1,nspin
+        !
+        WRITE(labels,'(i6.6)') is
+        !
+        CALL json%get('output.Q.K'//labels//'.eqpSec',rvals,found)
+        IF(.NOT. found) CALL errore('read_qp_eigs','eqpSec not found',1)
+        IF(SIZE(rvals) /= nbnd) CALL errore('read_qp_eigs','nbnd mismatch',1)
+        et_qp(:,is) = rvals/RYTOEV
+        !
+     ENDDO
+     !
+     CALL json%destroy()
+     !
   ENDIF
-  !
-  DO ik = 1,n_kpts
-     !
-     IF(ionode) THEN
-        !
-        WRITE(fname,'(a,i1)') TRIM(qp_correction)//'.',ik
-        !
-        OPEN(NEWUNIT=iun,FILE=TRIM(fname),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
-        IF(ierr /= 0) CALL errore('read_qp_eigs','Cannot read file: '//TRIM(fname),1)
-        !
-        READ(iun,*) nqp_eigs
-        IF(nqp_eigs /= nbnd) CALL errore('read_qp_eigs','nqp_eigs /= nbnd',1)
-        !
-        DO ibnd = 1,nqp_eigs
-           IF(lsda) THEN
-              READ(iun,*) et_qp(ibnd,ik),et_qp(ibnd,ik+n_kpts)
-           ELSE
-              READ(iun,*) et_qp(ibnd,ik)
-           ENDIF
-        ENDDO
-        !
-        CLOSE(iun)
-        !
-     ENDIF
-     !
-  ENDDO
   !
   CALL mp_bcast(et_qp,0,intra_image_comm)
   !

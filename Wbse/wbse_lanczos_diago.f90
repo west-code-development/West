@@ -18,7 +18,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE io_global,            ONLY : stdout
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
-  USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,ipol_input,&
+  USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,wbse_ipol,&
                                  & n_lanczos,beta_store,zeta_store,nbndval0x,l_bse_calculation,&
                                  & n_bse_idx,n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
@@ -94,7 +94,7 @@ SUBROUTINE wbse_lanczos_diago()
   ENDIF
 #endif
   !
-  SELECT CASE(ipol_input)
+  SELECT CASE(wbse_ipol)
   CASE('XX','xx')
      nipol_input = 1
      ALLOCATE(pol_index_input(1))
@@ -124,7 +124,7 @@ SUBROUTINE wbse_lanczos_diago()
      pol_index_input(3) = 3
      pol_label_input(3) = 'ZZ'
   CASE DEFAULT
-     CALL errore('wbse_lanczos_diago','wrong ipol_input',1)
+     CALL errore('wbse_lanczos_diago','wrong wbse_ipol',1)
   END SELECT
   !
   ALLOCATE(beta_store(n_lanczos,nipol_input,nspin))

@@ -30,7 +30,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & bisection_info,chi_kernel,overlap_thr,spin_channel,wbse_calculation,&
                              & solver,qp_correction,scissor_ope,n_liouville_eigen,&
                              & n_liouville_times,n_liouville_maxiter,n_liouville_read_from_file,&
-                             & trev_liouville,trev_liouville_rel,ipol_input,wbse_epsinfty,&
+                             & trev_liouville,trev_liouville_rel,wbse_ipol,wbse_epsinfty,&
                              & spin_excitation,l_preconditioning,l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
@@ -143,7 +143,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.trev_liouville_rel',trev_liouville_rel)
         CALL json%add('input.wbse_control.n_lanczos',n_lanczos)
         CALL json%add('input.wbse_control.n_steps_write_restart',n_steps_write_restart)
-        CALL json%add('input.wbse_control.ipol_input',TRIM(ipol_input))
+        CALL json%add('input.wbse_control.wbse_ipol',TRIM(wbse_ipol))
         CALL json%add('input.wbse_control.macropol_calculation',TRIM(macropol_calculation))
         CALL json%add('input.wbse_control.wbse_epsinfty',wbse_epsinfty)
         CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
@@ -175,7 +175,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & bisection_info,chi_kernel,overlap_thr,spin_channel,wbse_calculation,&
                              & solver,qp_correction,scissor_ope,n_liouville_eigen,&
                              & n_liouville_times,n_liouville_maxiter,n_liouville_read_from_file,&
-                             & trev_liouville,trev_liouville_rel,ipol_input,wbse_epsinfty,&
+                             & trev_liouville,trev_liouville_rel,wbse_ipol,wbse_epsinfty,&
                              & spin_excitation,l_preconditioning,l_reduce_io,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
@@ -484,7 +484,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(trev_liouville_rel, 'trev_liouville_rel')
         IERR = return_dict%get(n_lanczos,'n_lanczos', DUMMY_DEFAULT)
         IERR = return_dict%get(n_steps_write_restart, 'n_steps_write_restart', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(cvalue, 'ipol_input'); ipol_input = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'wbse_ipol'); wbse_ipol = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(wbse_epsinfty, 'wbse_epsinfty')
         IERR = return_dict%getitem(cvalue, 'spin_excitation'); spin_excitation = TRIM(ADJUSTL(cvalue))
@@ -738,7 +738,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(trev_liouville_rel,root,world_comm)
      CALL mp_bcast(n_lanczos,root,world_comm)
      CALL mp_bcast(n_steps_write_restart,root,world_comm)
-     CALL mp_bcast(ipol_input,root,world_comm)
+     CALL mp_bcast(wbse_ipol,root,world_comm)
      CALL mp_bcast(macropol_calculation,root,world_comm)
      CALL mp_bcast(wbse_epsinfty,root,world_comm)
      CALL mp_bcast(spin_excitation,root,world_comm)

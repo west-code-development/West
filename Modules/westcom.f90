@@ -326,7 +326,7 @@ MODULE wbse_center
   INTEGER :: n_liouville_read_from_file
   REAL(DP) :: trev_liouville
   REAL(DP) :: trev_liouville_rel
-  CHARACTER(LEN=3) :: ipol_input
+  CHARACTER(LEN=3) :: wbse_ipol
   LOGICAL :: l_qp_correction
   LOGICAL :: l_preconditioning
   REAL(DP) :: wbse_epsinfty

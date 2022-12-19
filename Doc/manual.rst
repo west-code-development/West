@@ -979,7 +979,7 @@ wbse_control
        - If ( n_steps_write_restart >  0 ) A checkpoint is written every n_steps_write_restart iterations in the Davidson or Lanczos loop.
        - If ( n_steps_write_restart <= 0 ) A checkpoint is NEVER written in the Davidson or Lanczos loop. Restart will not be possible.
 
-.. data:: ipol_input
+.. data:: wbse_ipol
 
 .. list-table::
    :widths: 10 90

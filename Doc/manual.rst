@@ -959,7 +959,7 @@ wbse_control
    * - **Type**
      - int
    * - **Default**
-     - 10
+     - 1000
    * - **Description**
      - Number of Lanczos iterations to be performed. Used only when wbse_calculation is "L" or "l".
 

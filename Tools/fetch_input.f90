@@ -18,8 +18,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
   USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
                              & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,&
-                             & l_kinetic_only,l_minimize_exx_if_active,l_use_ecutrho,qlist,&
-                             & wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
+                             & l_kinetic_only,l_minimize_exx_if_active,n_exx_lowrank,l_use_ecutrho,&
+                             & qlist,wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
                              & l_qdet_verbose,l_enable_off_diagonal,n_pdep_eigen_off_diagonal,&
@@ -67,6 +67,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wstat_control.tr2_dfpt',tr2_dfpt)
         CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
         CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
+        CALL json%add('input.wstat_control.n_exx_lowrank',n_exx_lowrank)
         CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
         CALL json%add('input.wstat_control.qlist',qlist)
         !
@@ -169,8 +170,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
                              & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
                              & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,&
-                             & l_kinetic_only,l_minimize_exx_if_active,l_use_ecutrho,qlist,&
-                             & wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
+                             & l_kinetic_only,l_minimize_exx_if_active,n_exx_lowrank,l_use_ecutrho,&
+                             & qlist,wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
                              & l_qdet_verbose,l_enable_off_diagonal,n_pdep_eigen_off_diagonal,&
@@ -284,6 +285,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(tr2_dfpt, 'tr2_dfpt')
         IERR = return_dict%getitem(l_kinetic_only, 'l_kinetic_only')
         IERR = return_dict%getitem(l_minimize_exx_if_active, 'l_minimize_exx_if_active')
+        IERR = return_dict%get(n_exx_lowrank, 'n_exx_lowrank', DUMMY_DEFAULT)
         IERR = return_dict%getitem(l_use_ecutrho, 'l_use_ecutrho')
         IERR = return_dict%getitem(tmp_obj, 'qlist')
         IERR = cast(tmp_list,tmp_obj)
@@ -536,6 +538,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(tr2_dfpt,root,world_comm)
      CALL mp_bcast(l_kinetic_only,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
+     CALL mp_bcast(n_exx_lowrank,root,world_comm)
      CALL mp_bcast(l_use_ecutrho,root,world_comm)
      IF(mpime == root) nq = SIZE(qlist)
      CALL mp_bcast(nq,root,world_comm)
@@ -563,6 +566,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(n_dfpt_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_dfpt_maxiter',1)
      IF(n_pdep_read_from_file == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_read_from_file',1)
      IF(n_steps_write_restart == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
+     IF(n_exx_lowrank == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_exx_lowrank',1)
      IF(gamma_only) THEN
         IF(SIZE(qlist)/=1) CALL errore('fetch_input','Err: SIZE(qlist)/=1',1)
      ELSE

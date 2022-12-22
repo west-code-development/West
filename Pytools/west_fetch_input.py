@@ -41,6 +41,7 @@ default["wstat_control"]["trev_pdep_rel"] = 1.e-1
 default["wstat_control"]["tr2_dfpt"] = 1.e-12
 default["wstat_control"]["l_kinetic_only"] = False
 default["wstat_control"]["l_minimize_exx_if_active"] = False
+default["wstat_control"]["n_exx_lowrank"] = 0
 default["wstat_control"]["l_use_ecutrho"] = False
 default["wstat_control"]["qlist"] = [ 1 ] # dynamically set to the actual number of q
 # wfreq_control

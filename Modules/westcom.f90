@@ -133,6 +133,7 @@ MODULE wstat_center
   LOGICAL :: l_deflate
   LOGICAL :: l_kinetic_only
   LOGICAL :: l_minimize_exx_if_active
+  INTEGER :: n_exx_lowrank
   LOGICAL :: l_use_ecutrho
   INTEGER, ALLOCATABLE :: qlist(:)
   !

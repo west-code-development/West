@@ -233,6 +233,19 @@ wstat_control
    * - **Description**
      - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
 
+.. data:: n_exx_lowrank
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
+
 .. data:: l_use_ecutrho
 
 .. list-table::

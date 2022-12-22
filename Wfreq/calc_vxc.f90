@@ -30,8 +30,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE fft_at_gamma,         ONLY : single_invfft_gamma
   USE fft_at_k,             ONLY : single_invfft_k
   USE wavefunctions,        ONLY : evc,psic
-  USE westcom,              ONLY : qp_bands,n_bands,iuwfc,lrwfc,l_enable_off_diagonal,sigma_vxcl_full,&
-                                 & sigma_vxcnl_full,ijpmap
+  USE westcom,              ONLY : qp_bands,n_bands,iuwfc,lrwfc,l_enable_off_diagonal,&
+                                 & sigma_vxcl_full,sigma_vxcnl_full,ijpmap
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
@@ -259,6 +259,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   IF (l_enable_off_diagonal) THEN
      CALL mp_sum( sigma_vxcl_full, intra_bgrp_comm )
      CALL mp_sum( sigma_vxcnl_full, intra_bgrp_comm )
+     CALL mp_sum( sigma_vxcl_full, inter_pool_comm )
+     CALL mp_sum( sigma_vxcnl_full, inter_pool_comm )
      CALL mp_sum( sigma_vxcl_full, inter_image_comm )
      CALL mp_sum( sigma_vxcnl_full, inter_image_comm )
   ENDIF

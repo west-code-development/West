@@ -35,7 +35,7 @@ WEST executables can be compiled using the following script (tested on December 
 
    cd West
 
-   make conf PYT=python3 PYT_LDFLAGS="-L/gpfs/fs1/home/software/anaconda3/2021.05/lib -lpython3.9"
+   make conf PYT=python3 PYT_LDFLAGS="-L/gpfs/fs1/home/software/anaconda3/2021.05/lib -lpython3.8"
    make -j 8 all
 
 To use the script do:

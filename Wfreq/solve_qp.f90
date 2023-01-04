@@ -186,11 +186,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      ENDIF
   ELSE
      !
-     ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, n_bands, k_grid%nps ) )
-     ALLOCATE( z_body_rfr( aband%nloc, rfr%nloc, n_bands, k_grid%nps ) )
-     IF( l_enable_lanczos ) THEN
-        ALLOCATE( d_diago( n_lanczos, pert%nloc, n_bands, k_grid%nps ) )
-        ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, n_bands, k_grid%nps ) )
+     IF ( .NOT. l_QDET ) THEN
+        ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, n_bands, k_grid%nps ) )
+        ALLOCATE( z_body_rfr( aband%nloc, rfr%nloc, n_bands, k_grid%nps ) )
+        IF( l_enable_lanczos ) THEN
+           ALLOCATE( d_diago( n_lanczos, pert%nloc, n_bands, k_grid%nps ) )
+           ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, n_bands, k_grid%nps ) )
+        ENDIF
      ENDIF
      !
      d_body1_ifr(:,:,:,:) = 0._DP
@@ -708,19 +710,28 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ENDIF
   !
   IF (l_QDET) THEN
-     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
      !
-     ! sigma_cor_out is not required, the important output is contained in the
-     ! global variable sigma_corr_full
-     !
-     IF (l_enable_off_diagonal) &
-     & CALL calc_corr_gamma( sigma_cor_out, sigma_eqpsec - sigma_diff, .TRUE., .TRUE., .TRUE.)
-     !
-     DEALLOCATE( sigma_cor_out )
+     IF (l_enable_off_diagonal) THEN
+        !
+        ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+        !
+        ! sigma_cor_out is not required, the important output is contained in the
+        ! global variable sigma_corr_full
+        !
+        CALL calc_corr_gamma( sigma_cor_out, sigma_eqpsec - sigma_diff, .TRUE., .TRUE., .TRUE.)
+        !
+        DEALLOCATE( sigma_cor_out )
+        !
+     ELSE
+        !
+        CALL calc_corr_gamma( sigma_sc_eqpsec, sigma_eqpsec - sigma_diff, .TRUE., .FALSE., .TRUE.)
+        !
+     ENDIF
      !
      CALL stop_clock( 'solve_qp' )
      !
      RETURN
+     !
   ENDIF
   !
   IF( l_generate_plot ) THEN

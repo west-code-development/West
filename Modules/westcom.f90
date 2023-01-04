@@ -217,7 +217,6 @@ MODULE wfreq_center
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: proj_c
 #endif
-  REAL(DP),    ALLOCATABLE :: h1e(:,:)
   COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   LOGICAL :: l_qdet_verbose
   !

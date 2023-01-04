@@ -42,6 +42,7 @@ SUBROUTINE wfreq_setup
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: i,ib,jb,ipair,iks,ib_index
   LOGICAL :: l_generate_plot
+  LOGICAL :: l_QDET
   !
   CALL do_setup()
   !
@@ -106,14 +107,14 @@ SUBROUTINE wfreq_setup
   !
   ! Allocate for output
   !
-  ALLOCATE( sigma_exx    (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_vxcl   (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_vxcnl  (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_hf     (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_z      (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_eqplin (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_eqpsec (n_bands,k_grid%nps) )
-  ALLOCATE( sigma_diff   (n_bands,k_grid%nps) )
+  ALLOCATE(sigma_exx    (n_bands,k_grid%nps))
+  ALLOCATE(sigma_vxcl   (n_bands,k_grid%nps))
+  ALLOCATE(sigma_vxcnl  (n_bands,k_grid%nps))
+  ALLOCATE(sigma_hf     (n_bands,k_grid%nps))
+  ALLOCATE(sigma_z      (n_bands,k_grid%nps))
+  ALLOCATE(sigma_eqplin (n_bands,k_grid%nps))
+  ALLOCATE(sigma_eqpsec (n_bands,k_grid%nps))
+  ALLOCATE(sigma_diff   (n_bands,k_grid%nps))
   sigma_exx = 0._DP
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
@@ -123,14 +124,11 @@ SUBROUTINE wfreq_setup
   sigma_eqpsec = 0._DP
   sigma_diff = 0._DP
   !
-  IF ( .NOT. l_enable_off_diagonal ) THEN
-     ALLOCATE( sigma_sc_eks    (n_bands,k_grid%nps) )
-     ALLOCATE( sigma_sc_eqplin (n_bands,k_grid%nps) )
-     ALLOCATE( sigma_sc_eqpsec (n_bands,k_grid%nps) )
-     sigma_sc_eks = 0._DP
-     sigma_sc_eqplin = 0._DP
-     sigma_sc_eqpsec = 0._DP
-  ELSE
+  l_QDET = .FALSE.
+  DO i = 1,9
+     IF(wfreq_calculation(i:i) == 'H') l_QDET = .TRUE.
+  ENDDO
+  IF(l_QDET .OR. l_enable_off_diagonal) THEN
      n_pairs = n_bands*(n_bands+1)/2
      ALLOCATE(ijpmap(n_bands,n_bands))
      ALLOCATE(pijmap(2,n_pairs))
@@ -144,13 +142,23 @@ SUBROUTINE wfreq_setup
            ipair = ipair + 1
         ENDDO
      ENDDO
-     ALLOCATE( sigma_exx_full       (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_vxcl_full      (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_vxcnl_full     (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_hf_full        (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_sc_eks_full    (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_sc_eqplin_full (n_pairs,k_grid%nps) )
-     ALLOCATE( sigma_corr_full      (n_pairs,k_grid%nps) )
+  ENDIF
+  !
+  IF(.NOT. l_enable_off_diagonal) THEN
+     ALLOCATE(sigma_sc_eks    (n_bands,k_grid%nps))
+     ALLOCATE(sigma_sc_eqplin (n_bands,k_grid%nps))
+     ALLOCATE(sigma_sc_eqpsec (n_bands,k_grid%nps))
+     sigma_sc_eks = 0._DP
+     sigma_sc_eqplin = 0._DP
+     sigma_sc_eqpsec = 0._DP
+  ELSE
+     ALLOCATE(sigma_exx_full       (n_pairs,k_grid%nps))
+     ALLOCATE(sigma_vxcl_full      (n_pairs,k_grid%nps))
+     ALLOCATE(sigma_vxcnl_full     (n_pairs,k_grid%nps))
+     ALLOCATE(sigma_hf_full        (n_pairs,k_grid%nps))
+     ALLOCATE(sigma_sc_eks_full    (n_pairs,k_grid%nps))
+     ALLOCATE(sigma_sc_eqplin_full (n_pairs,k_grid%nps))
+     ALLOCATE(sigma_corr_full      (n_pairs,k_grid%nps))
      sigma_exx_full = 0._DP
      sigma_vxcl_full = 0._DP
      sigma_vxcnl_full = 0._DP
@@ -160,38 +168,32 @@ SUBROUTINE wfreq_setup
      sigma_corr_full = 0._DP
   ENDIF
   !
-  DO i = 1,9
-     IF(wfreq_calculation(i:i) == 'H') THEN
+  IF(l_QDET) THEN
+     !
+     IF(real_space) CALL errore('wfreq_setup','QDET with real_space not supported',1)
+     IF(lda_plus_u) CALL errore('wfreq_setup','QDET with lda_plus_u not supported',1)
+     IF(lelfield) CALL errore('wfreq_setup','QDET with lelfield not supported',1)
+     IF(.NOT. gamma_only) CALL errore('wfreq_setup','QDET requires gamma_only',1)
+     !
+     ALLOCATE(proj_c(npwx,n_bands,k_grid%nps))
+     !
+     DO iks = 1, k_grid%nps
         !
-        IF(real_space) CALL errore('wfreq_setup','QDET with real_space not supported',1)
-        IF(lda_plus_u) CALL errore('wfreq_setup','QDET with lda_plus_u not supported',1)
-        IF(lelfield) CALL errore('wfreq_setup','QDET with lelfield not supported',1)
-        IF(.NOT. gamma_only) CALL errore('wfreq_setup','QDET requires gamma_only',1)
+        IF(kpt_pool%nloc > 1) THEN
+           IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+           CALL mp_bcast(evc,0,inter_image_comm)
+        ENDIF
         !
-        ALLOCATE( proj_c(npwx,n_bands,k_grid%nps) )
-        !
-        DO iks = 1, k_grid%nps
-           !
-           IF(kpt_pool%nloc > 1) THEN
-              IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-              CALL mp_bcast( evc, 0, inter_image_comm )
-           ENDIF
-           !
-           DO ib_index = 1, n_bands
-              !
-              ib = qp_bands(ib_index)
-              proj_c(:,ib_index,iks) = evc(:,ib)
-              !
-           ENDDO
-           !
+        DO ib_index = 1, n_bands
+           ib = qp_bands(ib_index)
+           proj_c(:,ib_index,iks) = evc(:,ib)
         ENDDO
         !
-        !$acc enter data copyin(proj_c)
-        !
-        EXIT
-        !
-     ENDIF
-  ENDDO
+     ENDDO
+     !
+     !$acc enter data copyin(proj_c)
+     !
+  ENDIF
   !
   l_generate_plot = .FALSE.
   DO i = 1,9
@@ -199,7 +201,7 @@ SUBROUTINE wfreq_setup
   ENDDO
   IF(l_generate_plot) THEN
      ALLOCATE(sigma_spectralf(n_spectralf,n_bands,k_grid%nps))
-     ALLOCATE(sigma_freq     (n_spectralf))
+     ALLOCATE(sigma_freq(n_spectralf))
      sigma_spectralf = 0._DP
      sigma_freq = 0._DP
   ENDIF

@@ -55,7 +55,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool,pert_offd
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
@@ -97,6 +97,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: braket,overlap
 #endif
+  REAL(DP),ALLOCATABLE :: diago_tmp(:,:),braket_tmp(:,:,:)
   REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
   !$acc declare device_resident(overlap_loc)
 #if defined(__CUDA)
@@ -418,9 +419,27 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 IF(pert_offd%nglob > 0 .AND. ib /= jb) THEN
+                    ALLOCATE(diago_tmp(n_lanczos,pert_offd%nloc))
+                    ALLOCATE(braket_tmp(pert_offd%nglob,n_lanczos,pert_offd%nloc))
+                    !
+                    CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago_tmp, braket_tmp, &
+                       & pert_offd%nloc, pert_offd%nglob, pert_offd%myoffset )
+                    !
+                    diago(:,1:pert_offd%nloc) = diago_tmp
+                    diago(:,pert_offd%nloc+1:pert%nloc) = 0._DP
+                    braket(1:pert_offd%nglob,:,1:pert_offd%nloc) = braket_tmp
+                    braket(pert_offd%nglob+1:pert%nglob,:,pert_offd%nloc+1:pert%nloc) = 0._DP
+                    !
+                    DEALLOCATE(diago_tmp)
+                    DEALLOCATE(braket_tmp)
+                 ELSE
+                    CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, &
+                       & pert%nglob, pert%myoffset )
+                 ENDIF
               ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, &
+                    & pert%nglob, pert%myoffset )
               ENDIF
               !
               !$acc update device(braket)

@@ -53,7 +53,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,band_group,kpt_pool,pert_offd
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_coulomb,        ONLY : pot3D
@@ -459,7 +459,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  ! MPI-IO
                  !
-                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), ipair, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 IF(pert_offd%nglob > 0 .AND. ib /= jb) THEN
+                    CALL writeout_solvegfreq( kpt_pool%l2g(iks), ipair, diago1(:,1:pert_offd%nloc), &
+                    & braket(1:pert_offd%nglob,:,1:pert_offd%nloc), pert_offd%nloc, pert_offd%nglob, pert_offd%myoffset )
+                 ELSE
+                    CALL writeout_solvegfreq( kpt_pool%l2g(iks), ipair, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 ENDIF
                  !
                  CALL update_bar_type( barra, 'glanczos', 1 )
                  !

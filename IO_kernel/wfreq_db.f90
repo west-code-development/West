@@ -50,7 +50,7 @@ MODULE wfreq_db
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iks,ib,ipair
       CHARACTER(LEN=6) :: my_label_k,my_label_b
-      CHARACTER(LEN=10) :: cpair
+      CHARACTER(LEN=10) :: label
       !
       TYPE(json_file) :: json
       INTEGER :: iun,i
@@ -88,10 +88,17 @@ MODULE wfreq_db
          CALL json%add('output.Q.bandmap',ilist)
          DEALLOCATE(ilist)
          !
-         DO ipair = 1,n_pairs
-            WRITE(cpair,'(i10)') ipair
-            CALL json%add('output.Q.indexmap('//cpair//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
-         ENDDO
+         IF(ALLOCATED(pijmap)) THEN
+            DO ipair = 1,n_pairs
+               WRITE(label,'(i10)') ipair
+               CALL json%add('output.Q.indexmap('//label//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
+            ENDDO
+         ELSE
+            DO ib = 1,n_bands
+               WRITE(label,'(i10)') ib
+               CALL json%add('output.Q.indexmap('//label//')',(/ib,ib/))
+            ENDDO
+         ENDIF
          !
          IF(l_generate_plot) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !

@@ -27,5 +27,6 @@ MODULE distribution_center
   TYPE(idistribute) :: band_group
   TYPE(idistribute) :: kpt_pool
   TYPE(idistribute) :: bandpair
+  TYPE(idistribute) :: pert_offd
   !
 END MODULE

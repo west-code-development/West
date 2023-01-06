@@ -22,13 +22,14 @@ SUBROUTINE wfreq_setup
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
                                    & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,sigma_exx_full,&
                                    & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
-                                   & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc
+                                   & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc,&
+                                   & n_pdep_eigen_off_diagonal
   USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
   USE pwcom,                  ONLY : nbnd,nkstot,nks,npwx
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
-  USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool
+  USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool,pert_offd
   USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
   USE io_global,              ONLY : stdout
@@ -82,6 +83,11 @@ SUBROUTINE wfreq_setup
   CALL aband%init(nbnd,'i','nbnd',.TRUE.)
   occband = idistribute()
   band_group = idistribute()
+  pert_offd = idistribute()
+  IF(n_pdep_eigen_off_diagonal > 0 .AND. n_pdep_eigen_off_diagonal < n_pdep_eigen_to_use &
+  & .AND. l_enable_off_diagonal) THEN
+     CALl pert_offd%init(n_pdep_eigen_off_diagonal,'i','npdep_offd',.FALSE.)
+  ENDIF
   !
   kpt_pool = idistribute()
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)

@@ -988,6 +988,7 @@ MODULE west_io
     ! OUTPUT
     !
     SUBROUTINE serial_table_output(lproc,fname,d2dummy,nrow,ncol,header)
+      IMPLICIT NONE
       LOGICAL,INTENT(IN) :: lproc
       CHARACTER(*),INTENT(IN) :: fname
       INTEGER,INTENT(IN) :: nrow,ncol

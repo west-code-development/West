@@ -68,7 +68,6 @@ MODULE pdep_db
       USE json_module,          ONLY : json_file,json_value,json_core
       USE cell_base,            ONLY : celldm,at,bg,tpiba
       !
-      !
       IMPLICIT NONE
       !
       ! I/O

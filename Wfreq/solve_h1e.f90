@@ -82,6 +82,8 @@ SUBROUTINE compute_hartree_double_counting(h1e_tmp)
   USE pwcom,                ONLY : nspin
   USE westcom,              ONLY : n_bands,qp_bands,n_pairs,ijpmap,eri_w,occupation
   !
+  IMPLICIT NONE
+  !
   REAL(DP), INTENT(INOUT) :: h1e_tmp(n_pairs,nspin)
   !
   INTEGER :: is1, is2, ipair, jpair, ib, ib_index

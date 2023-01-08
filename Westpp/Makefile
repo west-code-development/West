@@ -17,10 +17,12 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 WESTPP_OBJS = \
 do_dip.o \
 do_eigenpot2.o \
+do_exc.o \
 do_rho.o \
 do_sxx.o \
 do_wfc2.o \
 do_loc.o \
+do_resp.o \
 dump_r.o \
 westpp.o \
 westpp_readin.o \
@@ -48,9 +50,8 @@ TLDEPS = bindir mods pwlibs pw
 
 all : title tldeps westpp.x
 
-westpp.x : $(PWOBJS) $(WESTPP_OBJS) $(QEMODS) $(WESTLIBS)
-	$(LD) $(LDFLAGS) -o westpp.x \
-		$(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS) $(QELIBS) ${PYT_LDFLAGS}
+westpp.x : $(WESTPP_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
 	- ( cd ../../bin ; ln -fs ../West/Westpp/westpp.x . )
 
 tldeps :

@@ -109,8 +109,6 @@ MODULE dfpt_module
          CALL errore('dfpt', 'fraction occupation only implemented for gamma-only case', 1)
       ENDIF
       !
-      CALL report_dynamical_memory( )
-      !
       ! Allocation
       !
       nbndval = MAXVAL(nbnd_occ)

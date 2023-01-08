@@ -17,11 +17,11 @@ MODULE function3d
  IMPLICIT NONE
  !
  INTERFACE write_function3d
-    MODULE PROCEDURE write_function3d_real !, write_function3d_complex
+    MODULE PROCEDURE write_function3d_real
  END INTERFACE
  !
  INTERFACE read_function3d
-    MODULE PROCEDURE read_function3d_real !, read_function3d_complex
+    MODULE PROCEDURE read_function3d_real
  END INTERFACE
  !
  CONTAINS
@@ -35,11 +35,11 @@ MODULE function3d
    USE mp_bands,                    ONLY : me_bgrp
    USE scatter_mod,                 ONLY : gather_grid
    USE fft_types,                   ONLY : fft_type_descriptor
-   USE forpy_mod,                   ONLY : call_py_noret, import_py, module_py
-   USE forpy_mod,                   ONLY : tuple, tuple_create
-   USE forpy_mod,                   ONLY : dict, dict_create
+   USE forpy_mod,                   ONLY : call_py_noret, import_py, module_py, tuple, &
+                                         & tuple_create, dict, dict_create
    USE conversions,                 ONLY : itoa, dtoa
-   USE base64_module,               ONLY : lenbase64, base64_byteswap_double, base64_encode_double, islittleendian
+   USE base64_module,               ONLY : lenbase64, base64_byteswap_double, &
+                                         & base64_encode_double, islittleendian
    !
    IMPLICIT NONE
    !
@@ -85,10 +85,10 @@ MODULE function3d
       IERR = args%setitem(0, TRIM(ADJUSTL(fname)) )
       IERR = dict_create(kwargs)
       IERR = kwargs%setitem("name","delta_v")
-      IERR = kwargs%setitem("domain",'{'// &
-      & '"a":['//dtoa(celldm(1)*at(1,1))//","//dtoa(celldm(1)*at(2,1))//","//dtoa(celldm(1)*at(3,1))//'],'// &
-      & '"b":['//dtoa(celldm(1)*at(1,2))//","//dtoa(celldm(1)*at(2,2))//","//dtoa(celldm(1)*at(3,2))//'],'// &
-      & '"c":['//dtoa(celldm(1)*at(1,3))//","//dtoa(celldm(1)*at(2,3))//","//dtoa(celldm(1)*at(3,3))//'] }')
+      IERR = kwargs%setitem("domain","{"// &
+      & '"a":['//dtoa(celldm(1)*at(1,1))//","//dtoa(celldm(1)*at(2,1))//","//dtoa(celldm(1)*at(3,1))//"],"// &
+      & '"b":['//dtoa(celldm(1)*at(1,2))//","//dtoa(celldm(1)*at(2,2))//","//dtoa(celldm(1)*at(3,2))//"],"// &
+      & '"c":['//dtoa(celldm(1)*at(1,3))//","//dtoa(celldm(1)*at(2,3))//","//dtoa(celldm(1)*at(3,3))//"] }")
       IERR = kwargs%setitem("grid","["//itoa(dfft%nr1)//","//itoa(dfft%nr2)//","//itoa(dfft%nr3)//"]" )
       IERR = kwargs%setitem("grid_function",charbase64)
       IERR = kwargs%setitem("dtype","double")
@@ -113,11 +113,10 @@ MODULE function3d
    USE mp_bands,                    ONLY : me_bgrp
    USE scatter_mod,                 ONLY : scatter_grid
    USE fft_types,                   ONLY : fft_type_descriptor
-   USE forpy_mod,                   ONLY : call_py, import_py, module_py
-   USE forpy_mod,                   ONLY : tuple, tuple_create
-   USE forpy_mod,                   ONLY : dict, dict_create
-   USE forpy_mod,                   ONLY : object, cast
-   USE base64_module,               ONLY : lenbase64, base64_byteswap_double, base64_decode_double, islittleendian
+   USE forpy_mod,                   ONLY : call_py, import_py, module_py, tuple, tuple_create, &
+                                         & dict, dict_create, object, cast
+   USE base64_module,               ONLY : lenbase64, base64_byteswap_double, &
+                                         & base64_decode_double, islittleendian
    !
    IMPLICIT NONE
    !

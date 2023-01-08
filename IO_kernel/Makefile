@@ -5,6 +5,7 @@ include ../../make.inc
 # location of needed modules
 MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG)../../PW/src \
+           $(MOD_FLAG)../FFT_kernel \
            $(MOD_FLAG)../Libraries/Base64 \
            $(MOD_FLAG)../Libraries/Forpy \
            $(MOD_FLAG)../Libraries/Json \
@@ -16,10 +17,15 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 IO_KERNEL_OBJS = \
 cubefile.o \
 function3d.o \
+lanczos_db.o \
 mod_west_io.o \
 mpiio.o \
 pdep_db.o \
 pdep_io.o \
+plep_db.o \
+plep_io.o \
+qbox_interface.o \
+wbse_io.o \
 wfreq_db.o \
 wfreq_io.o
 

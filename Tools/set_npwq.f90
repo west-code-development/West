@@ -15,7 +15,7 @@ SUBROUTINE set_npwq()
   !-----------------------------------------------------------------------
   !
   USE kinds,                  ONLY : DP
-  USE westcom,                ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,l_use_ecutrho,fftdriver,dfft_io
+  USE westcom,                ONLY : npwq,npwq_g,npwqx,ngq,ngq_g,igq_q,l_use_ecutrho,fftdriver
   USE mp,                     ONLY : mp_max, mp_sum
   USE mp_global,              ONLY : intra_bgrp_comm
   USE gvect,                  ONLY : ig_l2g,ngm,ngmx,g
@@ -23,7 +23,6 @@ SUBROUTINE set_npwq()
   USE pwcom,                  ONLY : npwx
   USE control_flags,          ONLY : gamma_only
   USE types_bz_grid,          ONLY : q_grid
-  USE fft_base,               ONLY : dffts
   USE klist,                  ONLY : ngk
   !
   IMPLICIT NONE
@@ -40,12 +39,10 @@ SUBROUTINE set_npwq()
         npwq      = ngm
         npwqx     = ngmx
         fftdriver = 'Rho'
-        dfft_io   = dffts
      ELSE
         npwq      = ngk(1)
         npwqx     = npwx
         fftdriver = 'Wave'
-        CALL set_dfft_ecutwf( dfft_io )
      ENDIF
      npwq_g=MAXVAL(ig_l2g(1:npwq))
      CALL mp_max(npwq_g,intra_bgrp_comm)
@@ -54,8 +51,6 @@ SUBROUTINE set_npwq()
      !
      IF( l_use_ecutrho ) CALL errore("set_npwq", "Rho grid not implemented with q-points",1)
      fftdriver = 'Wave'
-     !
-     CALL set_dfft_ecutwf( dfft_io )
      !
      npwqx = n_plane_waves( gcutw, q_grid%np, q_grid%p_cart, g, ngm )
      !
@@ -198,7 +193,7 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
      !
      itmp(igk_l2g(ig)) = igk_l2g(ig)
      !
-  END DO
+  ENDDO
   !
   CALL mp_sum( itmp, intra_bgrp_comm )
   !
@@ -211,9 +206,9 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
         !
         igwk_(ngg) = ig
         !
-     END IF
+     ENDIF
      !
-  END DO
+  ENDDO
   !
   IF ( ngg /= ngk_g ) CALL errore( 'gk_l2gmap_kdip', 'unexpected dimension in ngg', 1 )
   !

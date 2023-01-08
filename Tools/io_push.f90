@@ -46,17 +46,11 @@ MODULE io_push
       !
       ! I/O
       !
-      CHARACTER(LEN=*) :: labelin
+      CHARACTER(LEN=*),INTENT(IN) :: labelin
       !
-      ! Workspace
-      !
-      CHARACTER(LEN=68) :: labelout
-      !
-      WRITE(labelout,"(a68)") labelin
-      !
-      WRITE(stdout,'(5x,"  ")')
+      WRITE(stdout,*)
       CALL io_push_bar
-      WRITE(stdout,'(5x,a68)') ADJUSTL(labelout)
+      WRITE(stdout,'(5x,a)') TRIM(ADJUSTL(labelin))
       CALL io_push_bar
       !
     END SUBROUTINE
@@ -66,9 +60,15 @@ MODULE io_push
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
-      CHARACTER(LEN=*) :: l_desc_in
+      !
+      ! I/O
+      !
+      CHARACTER(LEN=*),INTENT(IN) :: l_desc_in
       INTEGER,INTENT(IN) :: numa
       REAL(DP),INTENT(IN) :: d0
+      !
+      ! Workspace
+      !
       CHARACTER(LEN=numa) :: l_desc_out
       !
       WRITE(l_desc_out,'(a)') ADJUSTL(TRIM(l_desc_in))
@@ -82,9 +82,15 @@ MODULE io_push
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
-      CHARACTER(LEN=*) :: l_desc_in
+      !
+      ! I/O
+      !
+      CHARACTER(LEN=*),INTENT(IN) :: l_desc_in
       INTEGER,INTENT(IN) :: numa
       REAL(DP),INTENT(IN) :: es0
+      !
+      ! Workspace
+      !
       CHARACTER(LEN=numa) :: l_desc_out
       !
       WRITE(l_desc_out,'(a)') ADJUSTL(TRIM(l_desc_in))
@@ -98,9 +104,15 @@ MODULE io_push
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
-      CHARACTER(LEN=*) :: l_desc_in
+      !
+      ! I/O
+      !
+      CHARACTER(LEN=*),INTENT(IN) :: l_desc_in
       INTEGER,INTENT(IN) :: numa
       INTEGER,INTENT(IN) :: i0
+      !
+      ! Workspace
+      !
       CHARACTER(LEN=numa) :: l_desc_out
       !
       WRITE(l_desc_out,'(a)') ADJUSTL(TRIM(l_desc_in))
@@ -114,9 +126,15 @@ MODULE io_push
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
-      CHARACTER(LEN=*) :: l_desc_in
+      !
+      ! I/O
+      !
+      CHARACTER(LEN=*),INTENT(IN) :: l_desc_in
       INTEGER,INTENT(IN) :: numa
       LOGICAL,INTENT(IN) :: l0
+      !
+      ! Workspace
+      !
       CHARACTER(LEN=numa) :: l_desc_out
       !
       WRITE(l_desc_out,'(a)') ADJUSTL(TRIM(l_desc_in))
@@ -126,29 +144,19 @@ MODULE io_push
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE io_push_c512(l_desc_in,c512,numa)
-    !-----------------------------------------------------------------------
-      !
-      IMPLICIT NONE
-      CHARACTER(LEN=*) :: l_desc_in
-      INTEGER,INTENT(IN) :: numa
-      CHARACTER(LEN=512),INTENT(IN) :: c512
-      CHARACTER(LEN=numa) :: l_desc_out
-      !
-      WRITE(l_desc_out,'(a)') ADJUSTL(TRIM(l_desc_in))
-      !
-      WRITE(stdout,'(5x,a," = ",a)') l_desc_out, TRIM(c512)
-      !
-    END SUBROUTINE
-    !
-    !-----------------------------------------------------------------------
     SUBROUTINE io_push_c1(l_desc_in,c1,numa)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
-      CHARACTER(LEN=*) :: l_desc_in
+      !
+      ! I/O
+      !
+      CHARACTER(LEN=*),INTENT(IN) :: l_desc_in
       INTEGER,INTENT(IN) :: numa
       CHARACTER(LEN=*),INTENT(IN) :: c1
+      !
+      ! Workspace
+      !
       CHARACTER(LEN=numa) :: l_desc_out
       CHARACTER(LEN=14) :: cout
       !

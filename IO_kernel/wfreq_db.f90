@@ -18,9 +18,7 @@ MODULE wfreq_db
   !
   IMPLICIT NONE
   !
-  !
   CONTAINS
-    !
     !
     ! *****************************
     ! WFREQ WRITE
@@ -47,20 +45,20 @@ MODULE wfreq_db
       !
       IMPLICIT NONE
       !
-      REAL(DP), EXTERNAL    :: GET_CLOCK
+      REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, ib, ipair
-      CHARACTER(LEN=6) :: my_label_k, my_label_b
+      INTEGER :: iks,ib,ipair
+      CHARACTER(LEN=6) :: my_label_k,my_label_b
       CHARACTER(LEN=10) :: ccounter
       INTEGER :: counter
       !
       TYPE(json_file) :: json
-      INTEGER :: iunit, i
+      INTEGER :: iun,i
       INTEGER,ALLOCATABLE :: ilist(:)
       REAL(DP),ALLOCATABLE :: eks(:)
       REAL(DP),ALLOCATABLE :: occ(:)
-      LOGICAL :: l_generate_plot, l_optics
+      LOGICAL :: l_generate_plot,l_optics
       !
       ! MPI BARRIER
       !
@@ -69,9 +67,9 @@ MODULE wfreq_db
       ! TIMING
       !
       CALL start_clock('wfreq_db')
-      time_spent(1)=get_clock('wfreq_db')
+      time_spent(1) = get_clock('wfreq_db')
       !
-      IF ( mpime == root ) THEN
+      IF(mpime == root) THEN
          !
          CALL json%initialize()
          !
@@ -80,8 +78,8 @@ MODULE wfreq_db
          l_generate_plot = .FALSE.
          l_optics = .FALSE.
          DO i = 1,9
-            IF( wfreq_calculation(i:i) == 'P' ) l_generate_plot = .TRUE.
-            IF( wfreq_calculation(i:i) == 'O' ) l_optics = .TRUE.
+            IF(wfreq_calculation(i:i) == 'P') l_generate_plot = .TRUE.
+            IF(wfreq_calculation(i:i) == 'O') l_optics = .TRUE.
          ENDDO
          !
          ALLOCATE(ilist(n_bands))
@@ -94,25 +92,25 @@ MODULE wfreq_db
          IF(l_enable_off_diagonal) THEN
             counter = 0
             DO ipair = 1,n_pairs
-               counter = counter + 1
-               WRITE( ccounter, '(i10)') counter
-               CALL json%add('output.Q.indexmap('//TRIM(ADJUSTL(ccounter))//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
+               counter = counter+1
+               WRITE(ccounter,'(i10)') counter
+               CALL json%add('output.Q.indexmap('//ccounter//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
             ENDDO
          ELSE
             counter = 0
             DO ib = 1,n_bands
-               counter = counter + 1
-               WRITE( ccounter, '(i10)') counter
-               CALL json%add('output.Q.indexmap('//TRIM(ADJUSTL(ccounter))//')',(/ib,ib/))
+               counter = counter+1
+               WRITE(ccounter,'(i10)') counter
+               CALL json%add('output.Q.indexmap('//ccounter//')',(/ib,ib/))
             ENDDO
          ENDIF
          !
-         IF( l_generate_plot ) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
+         IF(l_generate_plot) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
          !
          ALLOCATE(eks(n_bands))
          ALLOCATE(occ(n_bands))
          !
-         DO iks = 1, k_grid%nps
+         DO iks = 1,k_grid%nps
             !
             DO ib = 1,n_bands
                eks(ib) = et(qp_bands(ib),iks)
@@ -123,63 +121,63 @@ MODULE wfreq_db
             !
             WRITE(my_label_k,'(i6.6)') iks
             !
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eks', eks*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.z', sigma_z(1:n_bands,iks))
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpLin', sigma_eqplin(1:n_bands,iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.eqpSec', sigma_eqpsec(1:n_bands,iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigma_diff', sigma_diff(1:n_bands,iks)*rytoev)
-            CALL json%add('output.Q.K'//TRIM(my_label_k)//'.occupation', occ)
-            IF ( .NOT. l_enable_off_diagonal ) THEN
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', sigma_exx(1:n_bands,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', sigma_vxcl(1:n_bands,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl', sigma_vxcnl(1:n_bands,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.hf', sigma_hf(1:n_bands,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.re', &
+            CALL json%add('output.Q.K'//my_label_k//'.eks',eks*rytoev)
+            CALL json%add('output.Q.K'//my_label_k//'.z',sigma_z(1:n_bands,iks))
+            CALL json%add('output.Q.K'//my_label_k//'.eqpLin',sigma_eqplin(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//my_label_k//'.eqpSec',sigma_eqpsec(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//my_label_k//'.sigma_diff',sigma_diff(1:n_bands,iks)*rytoev)
+            CALL json%add('output.Q.K'//my_label_k//'.occupation',occ)
+            IF(.NOT. l_enable_off_diagonal) THEN
+               CALL json%add('output.Q.K'//my_label_k//'.sigmax',sigma_exx(1:n_bands,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.vxcl',sigma_vxcl(1:n_bands,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.vxcnl',sigma_vxcnl(1:n_bands,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.hf',sigma_hf(1:n_bands,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.re',&
                & REAL(sigma_sc_eks(1:n_bands,iks)*rytoev,KIND=DP))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.im', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.im',&
                & AIMAG(sigma_sc_eks(1:n_bands,iks)*rytoev))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.re', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.re',&
                & REAL(sigma_sc_eqplin(1:n_bands,iks)*rytoev,KIND=DP))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.im', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.im',&
                & AIMAG(sigma_sc_eqplin(1:n_bands,iks)*rytoev))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.re', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.re',&
                & REAL(sigma_sc_eqpsec(1:n_bands,iks)*rytoev,KIND=DP))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.im',&
                & AIMAG(sigma_sc_eqpsec(1:n_bands,iks)*rytoev))
             ELSE
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmax', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmax',&
                & sigma_exx_full(1:n_pairs,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcl', &
+               CALL json%add('output.Q.K'//my_label_k//'.vxcl',&
                & sigma_vxcl_full(1:n_pairs,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.vxcnl', &
+               CALL json%add('output.Q.K'//my_label_k//'.vxcnl',&
                & sigma_vxcnl_full(1:n_pairs,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.hf', &
+               CALL json%add('output.Q.K'//my_label_k//'.hf',&
                & sigma_hf_full(1:n_pairs,iks)*rytoev)
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.re', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.re',&
                & REAL(sigma_sc_eks_full(1:n_pairs,iks)*rytoev,KIND=DP))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eks.im', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.im',&
                & AIMAG(sigma_sc_eks_full(1:n_pairs,iks)*rytoev))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.re', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.re',&
                & REAL(sigma_sc_eqplin_full(1:n_pairs,iks)*rytoev,KIND=DP))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpLin.im', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.im',&
                & AIMAG(sigma_sc_eqplin_full(1:n_pairs,iks)*rytoev))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.re', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.re',&
                & REAL(sigma_corr_full(1:n_pairs,iks)*rytoev,KIND=DP))
-               CALL json%add('output.Q.K'//TRIM(my_label_k)//'.sigmac_eqpSec.im', &
+               CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.im',&
                & AIMAG(sigma_corr_full(1:n_pairs,iks)*rytoev))
             ENDIF
             !
-            IF( l_generate_plot ) THEN
-               DO ib = 1, n_bands
+            IF(l_generate_plot) THEN
+               DO ib = 1,n_bands
                   WRITE(my_label_b,'(i6.6)') qp_bands(ib)
-                  CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.re',&
-                  &REAL(sigma_spectralf(1:n_spectralf,ib,iks),KIND=DP)*rytoev)
-                  CALL json%add('output.P.K'//TRIM(my_label_k)//'.B'//TRIM(my_label_b)//'.sigmac.im',&
-                  &AIMAG(sigma_spectralf(1:n_spectralf,ib,iks))*rytoev)
+                  CALL json%add('output.P.K'//my_label_k//'.B'//my_label_b//'.sigmac.re',&
+                  & REAL(sigma_spectralf(1:n_spectralf,ib,iks),KIND=DP)*rytoev)
+                  CALL json%add('output.P.K'//my_label_k//'.B'//my_label_b//'.sigmac.im',&
+                  & AIMAG(sigma_spectralf(1:n_spectralf,ib,iks))*rytoev)
                ENDDO
             ENDIF
             !
-            IF( l_optics) THEN
+            IF(l_optics) THEN
                CALL json%add('output.O',"optics.json")
             ENDIF
             !
@@ -188,26 +186,26 @@ MODULE wfreq_db
          DEALLOCATE(eks)
          DEALLOCATE(occ)
          !
-         OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
-         CALL json%print( iunit )
-         CLOSE( iunit )
+         OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
+         CALL json%print(iun)
+         CLOSE(iun)
          CALL json%destroy()
          !
       ENDIF
       !
       ! MPI BARRIER
       !
-      CALL mp_barrier( world_comm )
+      CALL mp_barrier(world_comm)
       !
       ! TIMING
       !
-      time_spent(2)=get_clock('wfreq_db')
+      time_spent(2) = get_clock('wfreq_db')
       CALL stop_clock('wfreq_db')
       !
-      WRITE(stdout,'(  5x," ")')
+      WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )
+      WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"In location : ",a)') TRIM(wfreq_save_dir)
       CALL io_push_bar()
       !
     END SUBROUTINE
@@ -231,14 +229,14 @@ MODULE wfreq_db
       REAL(DP),INTENT(IN),OPTIONAL:: eri_vc(n_pairs,n_pairs,nspin,nspin)
       COMPLEX(DP),INTENT(IN),OPTIONAL:: eri_w_full(n_pairs,n_pairs,nspin,nspin)
       !
-      REAL(DP), EXTERNAL    :: GET_CLOCK
+      REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks, jks
-      CHARACTER(LEN=6) :: my_label_ik, my_label_jk, my_label_ipair
+      INTEGER :: iks,jks
+      CHARACTER(LEN=6) :: my_label_ik,my_label_jk,my_label_ipair
       !
       TYPE(json_file) :: json
-      INTEGER :: iunit, ipair
+      INTEGER :: iun,ipair
       !
       ! MPI BARRIER
       !
@@ -247,40 +245,37 @@ MODULE wfreq_db
       ! TIMING
       !
       CALL start_clock('qdet_db')
-      time_spent(1)=get_clock('qdet_db')
+      time_spent(1) = get_clock('qdet_db')
       !
-      IF ( mpime == root ) THEN
+      IF(mpime == root) THEN
          !
          CALL json%initialize()
          !
          CALL json%load(filename=TRIM(logfile))
          !
-         DO iks = 1, nspin
-            DO jks = 1, nspin
+         DO iks = 1,nspin
+            DO jks = 1,nspin
                !
                WRITE(my_label_ik,'(i6.6)') iks
                WRITE(my_label_jk,'(i6.6)') jks
                !
                IF(l_enable_off_diagonal) THEN
-                  DO ipair = 1, n_pairs
+                  DO ipair = 1,n_pairs
                      !
                      WRITE(my_label_ipair,'(i6.6)') ipair
                      !
-                     IF (PRESENT(eri_vc)) THEN
-                        CALL json%add('qdet.eri_vc.K'//TRIM(my_label_ik)//'.K'// &
-                        & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                        & eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     IF(PRESENT(eri_vc)) THEN
+                        CALL json%add('qdet.eri_vc.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                        & my_label_ipair,eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
                      ENDIF
                      !
-                     IF (PRESENT(eri_w_full)) THEN
-                        CALL json%add('qdet.eri_w_full.K'//TRIM(my_label_ik)//'.K'// &
-                        & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                        & REAL(eri_w_full(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
+                     IF(PRESENT(eri_w_full)) THEN
+                        CALL json%add('qdet.eri_w_full.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                        & my_label_ipair,REAL(eri_w_full(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
                      ENDIF
                      !
-                     CALL json%add('qdet.eri_w.K'//TRIM(my_label_ik)//'.K'// &
-                     & TRIM(my_label_jk)//'.pair'//TRIM(my_label_ipair), &
-                     & REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
+                     CALL json%add('qdet.eri_w.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                     & my_label_ipair,REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
                      !
                   ENDDO
                ENDIF
@@ -288,26 +283,26 @@ MODULE wfreq_db
             ENDDO
          ENDDO
          !
-         OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
-         CALL json%print( iunit )
-         CLOSE( iunit )
+         OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
+         CALL json%print(iun)
+         CLOSE(iun)
          CALL json%destroy()
          !
       ENDIF
       !
       ! MPI BARRIER
       !
-      CALL mp_barrier( world_comm )
+      CALL mp_barrier(world_comm)
       !
       ! TIMING
       !
-      time_spent(2)=get_clock('qdet_db')
+      time_spent(2) = get_clock('qdet_db')
       CALL stop_clock('qdet_db')
       !
-      WRITE(stdout,'(  5x," ")')
+      WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )
+      WRITE(stdout,'(5x "SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x "In location : ",a)') TRIM(wfreq_save_dir)
       CALL io_push_bar()
       !
     END SUBROUTINE
@@ -329,14 +324,14 @@ MODULE wfreq_db
       !
       REAL(DP),INTENT(IN):: h1e(n_pairs,nspin)
       !
-      REAL(DP), EXTERNAL    :: GET_CLOCK
+      REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iks
       CHARACTER(LEN=6) :: my_label_ik
       !
       TYPE(json_file) :: json
-      INTEGER :: iunit
+      INTEGER :: iun
       !
       ! MPI BARRIER
       !
@@ -345,28 +340,27 @@ MODULE wfreq_db
       ! TIMING
       !
       CALL start_clock('qdet_db')
-      time_spent(1)=get_clock('qdet_db')
+      time_spent(1) = get_clock('qdet_db')
       !
-      IF ( mpime == root ) THEN
+      IF(mpime == root) THEN
          !
          CALL json%initialize()
          !
          CALL json%load(filename=TRIM(logfile))
          !
-         DO iks = 1, nspin
+         DO iks = 1,nspin
             !
             WRITE(my_label_ik,'(i6.6)') iks
             !
             IF(l_enable_off_diagonal) THEN
-               CALL json%add('qdet.h1e.K'//TRIM(my_label_ik), &
-               & h1e(1:n_pairs,iks)*rytoev)
+               CALL json%add('qdet.h1e.K'//my_label_ik,h1e(1:n_pairs,iks)*rytoev)
             ENDIF
             !
          ENDDO
          !
-         OPEN( NEWUNIT=iunit, FILE=TRIM( logfile ) )
-         CALL json%print( iunit )
-         CLOSE( iunit )
+         OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
+         CALL json%print(iun)
+         CLOSE(iun)
          CALL json%destroy()
          !
       ENDIF
@@ -377,13 +371,13 @@ MODULE wfreq_db
       !
       ! TIMING
       !
-      time_spent(2)=get_clock('qdet_db')
+      time_spent(2) = get_clock('qdet_db')
       CALL stop_clock('qdet_db')
       !
-      WRITE(stdout,'(  5x," ")')
+      WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout, "(5x, 'SAVE written in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, 'In location : ',a)") TRIM( wfreq_save_dir )
+      WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"In location : ",a)') TRIM(wfreq_save_dir)
       CALL io_push_bar()
       !
     END SUBROUTINE

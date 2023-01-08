@@ -63,10 +63,10 @@ CONTAINS
     ! Input from (-i), output from (-o)
     !
     CALL parse_command_arguments()
-    CALL fetch_input_yml(1,(/1/),.FALSE.,.FALSE.)
+    CALL fetch_input_yml(1,(/1/),.FALSE.)
     !
-    savedir = TRIM(ADJUSTL(outdir)) // TRIM(ADJUSTL(west_prefix)) // "." // TRIM(lowercase_string(code)) // ".save/"
-    logfile = TRIM(ADJUSTL(savedir)) // TRIM(lowercase_string(code)) // ".json"
+    savedir = TRIM(outdir) // TRIM(west_prefix) // '.' // TRIM(lowercase_string(code)) // '.save/'
+    logfile = TRIM(savedir) // TRIM(lowercase_string(code)) // '.json'
     !
     ! Do not overwrite existing JSON file
     !
@@ -75,16 +75,16 @@ CONTAINS
     INQUIRE(FILE=TRIM(logfile),EXIST=exst)
     !
     DO WHILE(exst)
-       logfile = TRIM(ADJUSTL(savedir))//TRIM(lowercase_string(code))//'_'//TRIM(int_to_char(n_json))//'.json'
+       logfile = TRIM(savedir)//TRIM(lowercase_string(code))//'_'//TRIM(int_to_char(n_json))//'.json'
        INQUIRE(FILE=TRIM(logfile),EXIST=exst)
        n_json = n_json+1
        IF(n_json > n_json_max) CALL errore(TRIM(code),'Too many JSON files',1)
     ENDDO
     !
-    CALL my_mkdir( TRIM(ADJUSTL(savedir)) )
+    CALL my_mkdir( TRIM(savedir) )
     !
-    ! ... use ".FALSE." to disable all clocks except the total cpu time clock
-    ! ... use ".TRUE."  to enable clocks
+    ! ... use .FALSE. to disable all clocks except the total cpu time clock
+    ! ... use .TRUE. to enable clocks
     !
     CALL init_clocks( .TRUE. )
     CALL start_clock( TRIM(code) )
@@ -92,7 +92,7 @@ CONTAINS
     ! ... for compatibility with PWSCF
     !
 #if defined(__MPI)
-    nd_nmbr = TRIM ( int_to_char( me_image+1 ))
+    nd_nmbr = TRIM( int_to_char( me_image+1 ))
 #else
     nd_nmbr = ' '
 #endif
@@ -108,8 +108,8 @@ CONTAINS
              CLOSE( UNIT=crashunit, STATUS='DELETE', IOSTAT=ios )
           ELSE
              WRITE(stdout,'(5x,"Remark: CRASH file could not be deleted")')
-          END IF
-       END IF
+          ENDIF
+       ENDIF
        !
     ELSE
        ! ... one processor per image (other than meta_ionode)
@@ -121,16 +121,16 @@ CONTAINS
        IF (debug ) THEN
           uname = 'out.' // trim(int_to_char( my_image_id )) // '_' // &
                trim(int_to_char( me_image))
-          OPEN ( unit = stdout, file = TRIM(uname),status='unknown')
+          OPEN( UNIT = stdout, FILE = TRIM(uname),STATUS='UNKNOWN')
        ELSE
 #if defined(_WIN32)
-          OPEN ( unit = stdout, file='NUL:', status='unknown' )
+          OPEN( UNIT = stdout, FILE='NUL:', STATUS='UNKNOWN' )
 #else
-          OPEN ( unit = stdout, file='/dev/null', status='unknown' )
+          OPEN( UNIT = stdout, FILE='/dev/null', STATUS='UNKNOWN' )
 #endif
-       END IF
+       ENDIF
        !
-    END IF
+    ENDIF
     !
     ! Initialize base64 tables
     CALL base64_init()
@@ -139,7 +139,7 @@ CONTAINS
 #if defined(__MPI)
     CALL report_parallel_status( )
 #else
-    CALL errore(TRIM(code), 'West need MPI to run', 1 )
+    CALL errore(TRIM(code), 'West needs MPI to run', 1 )
 #endif
     !
 #if defined(__CUDA)
@@ -200,12 +200,12 @@ CONTAINS
        WRITE( stdout,*)
        WRITE( stdout,3334) time_str
        WRITE( stdout,3335)
-    END IF
+    ENDIF
     !
     IF( meta_ionode ) THEN
        WRITE( stdout,'(A)')      '   JOB DONE.'
        WRITE( stdout,3335)
-    END IF
+    ENDIF
 3334 FORMAT(3X,A60,/)
 3335 FORMAT('=',78('-'),'=')
     FLUSH(stdout)
@@ -257,9 +257,9 @@ CONTAINS
     !
     CALL date_and_tim( cdate, ctime )
     !
-    IF ( TRIM (west_git_revision) /= "unknown" ) THEN
+    IF ( TRIM(west_git_revision) /= 'unknown' ) THEN
        WRITE( stdout, '(/5X,"Program ",A," v. ",A," git rev. ",A," starts on ",A9," at ",A9)' ) &
-       & TRIM(code), TRIM(west_version_number), TRIM (west_git_revision), cdate, ctime
+       & TRIM(code), TRIM(west_version_number), TRIM(west_git_revision), cdate, ctime
     ELSE
        WRITE( stdout, '(/5X,"Program ",A," v. ",A," starts on ",A9," at ",A9)' ) &
        & TRIM(code), TRIM(west_version_number), cdate, ctime
@@ -271,7 +271,7 @@ CONTAINS
     &/9X," URL http://www.west-code.org"", ", &
     &/5X,"in publications or presentations arising from this work.")' )
     !
-    WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM (version_number)
+    WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM(version_number)
     !
     IF( islittleendian() ) THEN
        WRITE( stdout, '(/5X,"I/O is Little Endian",A)') ""
@@ -286,12 +286,12 @@ CONTAINS
       CALL json%add('runjob.startdate', TRIM(cdate) )
       CALL json%add('runjob.starttime', TRIM(ctime) )
       CALL json%add('runjob.completed', .FALSE. )
-      CALL json%add('software.package', "WEST" )
+      CALL json%add('software.package', 'WEST' )
       CALL json%add('software.program', TRIM(code) )
       CALL json%add('software.version', TRIM(west_version_number) )
-      IF( TRIM (west_git_revision) /= "unknown" ) CALL json%add('software.westgit', TRIM(west_git_revision) )
-      CALL json%add('software.website',"http://www.west-code.org")
-      CALL json%add('software.citation',"M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).")
+      IF( TRIM(west_git_revision) /= 'unknown' ) CALL json%add('software.westgit', TRIM(west_git_revision) )
+      CALL json%add('software.website','http://www.west-code.org')
+      CALL json%add('software.citation','M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).')
       CALL json%add('software.qeversion', TRIM(version_number) )
       CALL json%add('config.io.islittleendian', islittleendian() )
       !

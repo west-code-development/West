@@ -9,6 +9,7 @@
 *.dSYM
 *.a
 *.out
+*.swp
 Doc/_build/
 Modules/west_version.f90
 west_make.inc

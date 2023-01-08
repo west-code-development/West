@@ -91,7 +91,7 @@ SUBROUTINE do_wfc2 ( )
         !
         WRITE(labelb,'(i6.6)') global_ib
         WRITE(labelk,'(i6.6)') iks
-        fname = TRIM( westpp_save_dir ) // '/wfcK'//TRIM(labelk)//'B'//TRIM(labelb)
+        fname = TRIM( westpp_save_dir ) // '/wfcK'//labelk//'B'//labelb
         CALL dump_r( auxr, fname )
         !
         CALL update_bar_type( barra,'westpp', 1 )

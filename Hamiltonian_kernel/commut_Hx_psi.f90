@@ -12,7 +12,7 @@
 !
 !-----------------------------------------------------------------------
 SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
-  !----------------------------------------------------------------------
+  !-----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >
   ! On output: dpsi(m-bands) = | dpsi_ik > = [H,x_ipol] | psi_ik > in crystal axis
@@ -189,7 +189,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      ELSE
         ALLOCATE( ps2 (nkb,m,2) )
         ps2=0._DP
-     END IF
+     ENDIF
      !
      DO ibnd = 1, m
         IF( noncolin ) THEN
@@ -216,8 +216,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
                                 psc(ikb,is,ibnd,2)=psc(ikb,is,ibnd,2)+ &
                                         (0._DP,-1._DP)* &
                                     becp1%nc(jkb,js,ibnd)*deff_nc(ih,jh,na,ijs)
-                             END DO
-                          END DO
+                             ENDDO
+                          ENDDO
                        ELSEIF( gamma_only ) THEN
                           ! Note the different prefactors due to the factor
                           ! of i introduced to work(:,:), as becp[1,2] are
@@ -231,7 +231,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
                                (0._DP,-1._DP)*deff(ih,jh,na)
                           ps2(ikb,ibnd,2) = ps2(ikb,ibnd,2) + becp1%k(jkb,ibnd) * &
                                (0._DP,-1._DP)*deff(ih,jh,na)
-                       END IF
+                       ENDIF
                     ENDDO
                  ENDDO
                  ijkb0=ijkb0+nh(nt)
@@ -266,7 +266,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      ELSE
         DEALLOCATE( ps2 )
         DEALLOCATE( deff )
-     END IF
+     ENDIF
      DEALLOCATE( work )
      !
   ENDIF
@@ -278,7 +278,7 @@ END SUBROUTINE
 #if defined(__CUDA)
 !-----------------------------------------------------------------------
 SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
-  !----------------------------------------------------------------------
+  !-----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >
   ! On output: dpsi(m-bands) = | dpsi_ik > = [H,x_ipol] | psi_ik > in crystal axis
@@ -585,6 +585,7 @@ END SUBROUTINE
 !-----------------------------------------------------------------------
 SUBROUTINE compute_deff_real_gpu(deff, et)
   !-----------------------------------------------------------------------
+  !
   ! This routine computes the effective value of the D-eS coefficients
   ! which appear often in many expressions in the US or PAW case.
   ! This routine is for the collinear case.

@@ -181,7 +181,7 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
      !
      rhoaux(:,is) = rhoaux(:,is) - fac * rho_core(:)
      !
-  END DO
+  ENDDO
   !
   DEALLOCATE( grho )
   DEALLOCATE( v1x, v2x )
@@ -200,7 +200,7 @@ SUBROUTINE gradcorr_x( rho, rhog, rho_core, rhog_core, etx, vtx, v )
      !
      vtxgc = vtxgc - SUM( dh(:) * rhoaux(:,is) )
      !
-  END DO
+  ENDDO
   !
   vtx = vtx + omega * vtxgc / ( dfftp%nr1 * dfftp%nr2 * dfftp%nr3 )
   etx = etx + omega * etxgc / ( dfftp%nr1 * dfftp%nr2 * dfftp%nr3 )

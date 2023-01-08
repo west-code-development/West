@@ -31,7 +31,7 @@ SUBROUTINE wfreq_readin()
   !
   ! READ INPUT_WEST
   !
-  CALL fetch_input_yml(1,(/1/),.TRUE.,.FALSE.)
+  CALL fetch_input_yml(1,(/1/),.TRUE.)
   !
   ! read the input file produced by the pwscf program
   ! allocate memory and recalculate what is needed
@@ -45,7 +45,7 @@ SUBROUTINE wfreq_readin()
      nkpt = nkstot/2
   ELSE
      nkpt = nkstot
-  END IF
+  ENDIF
   !
   IF(okvan) CALL errore('wfreq_readin','ultrasoft pseudopotential not implemented',1)
   IF(doublegrid) CALL errore('wfreq_readin','double grid not implemented',1)
@@ -54,7 +54,7 @@ SUBROUTINE wfreq_readin()
   !
   ! READ other sections of the input file
   !
-  CALL fetch_input_yml(2,(/2,3/),.TRUE.,.FALSE.)
+  CALL fetch_input_yml(2,(/2,3/),.TRUE.)
   !
   CALL stop_clock('wfreq_readin')
   !

@@ -85,6 +85,7 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   USE conversions,     ONLY : itoa
   USE bar,             ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,         ONLY : io_push_title
+  USE qbox_interface,  ONLY : sleep_and_wait_for_lock_to_be_removed
   !
   IMPLICIT NONE
   !
@@ -184,44 +185,4 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   ENDIF
   CALL stop_bar_type( barra, 'outsourced' )
   !
-END SUBROUTINE
-
-
-SUBROUTINE sleep_and_wait_for_lock_to_be_removed(lockfile)
-    !
-    USE westcom,    ONLY: document
-    USE forpy_mod,  ONLY: call_py, import_py, module_py
-    USE forpy_mod,  ONLY: tuple, tuple_create
-    USE forpy_mod,  ONLY: dict, dict_create
-    USE forpy_mod,  ONLY: object, cast
-    !
-    IMPLICIT NONE
-    !
-    CHARACTER(LEN=*),INTENT(IN) :: lockfile
-    !
-    INTEGER :: IERR
-    TYPE(tuple) :: args
-    TYPE(dict) :: kwargs
-    TYPE(module_py) :: pymod
-    TYPE(object) :: return_obj
-    INTEGER :: return_int
-    !
-    IERR = import_py(pymod, "west_clientserver")
-    !
-    IERR = tuple_create(args, 1)
-    IERR = args%setitem(0, TRIM(ADJUSTL(lockfile)) )
-    IERR = dict_create(kwargs)
-    IERR = kwargs%setitem("document",document)
-    !
-    IERR = call_py(return_obj, pymod, "sleep_and_wait", args, kwargs)
-    !
-    IERR = cast(return_int, return_obj)
-    !
-    IF( return_int /= 0 ) CALL errore("sleep","Did not wake well",return_int)
-    !
-    CALL kwargs%destroy
-    CALL args%destroy
-    CALL return_obj%destroy
-    CALL pymod%destroy
-    !
 END SUBROUTINE

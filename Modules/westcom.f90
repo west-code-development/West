@@ -15,7 +15,6 @@ MODULE scratch_area
   !-----------------------------------------------------------------------
   !
   USE kinds,     ONLY : DP
-  USE fft_types, ONLY : fft_type_descriptor
   !
   IMPLICIT NONE
   !
@@ -28,11 +27,11 @@ MODULE scratch_area
   !
   ! DBS
   !
-  REAL(DP),            ALLOCATABLE :: ev(:)
-  REAL(DP),            ALLOCATABLE :: ev_distr(:)
-  COMPLEX(DP),         ALLOCATABLE :: dng(:,:)
-  COMPLEX(DP),         ALLOCATABLE :: dvg(:,:)
-  LOGICAL,             ALLOCATABLE :: conv(:)
+  REAL(DP),    ALLOCATABLE :: ev(:)
+  REAL(DP),    ALLOCATABLE :: ev_distr(:)
+  COMPLEX(DP), ALLOCATABLE :: dng(:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvg(:,:)
+  LOGICAL,     ALLOCATABLE :: conv(:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dng
   ATTRIBUTES(PINNED) :: dvg
@@ -91,7 +90,8 @@ MODULE scratch_area
   !
   ! I/O
   !
-  TYPE(fft_type_descriptor) :: dfft_io
+  INTEGER, PARAMETER :: iuwfc = 20
+  INTEGER :: lrwfc
   !
 END MODULE
 !
@@ -150,7 +150,7 @@ MODULE server_center
   !
   IMPLICIT NONE
   !
-  ! INPUT for server_control
+  ! INPUT FOR server_control
   !
   CHARACTER(LEN=:), ALLOCATABLE :: document
   !
@@ -273,6 +273,7 @@ MODULE westpp_center
   INTEGER :: westpp_nr
   REAL(DP) :: westpp_rmax
   REAL(DP) :: westpp_epsinfty
+  INTEGER :: westpp_n_liouville_to_use
   !
   ! Common workspace
   !
@@ -281,15 +282,91 @@ MODULE westpp_center
 END MODULE
 !
 !
-MODULE wan_center
+MODULE wbse_init_center
+  !
+  USE kinds, ONLY :  DP
+  !
+  IMPLICIT NONE
+  !
+  ! INPUT FOR wbse_init
+  !
+  CHARACTER(LEN=1) :: wbse_init_calculation
+  CHARACTER(LEN=1) :: localization
+  CHARACTER(LEN=20) :: chi_kernel
+  CHARACTER(LEN=512) :: wfc_from_qbox  ! wavefunction file name, extension is spin channel, e.g. 'qb_wfc.1'
+  CHARACTER(LEN=512) :: bisection_info ! bisection file name, extension is spin channel, e.g. 'bis_info.1'
+  REAL(DP) :: overlap_thr              ! overlap threshold for idx_matrix in wbse_init_qboxcoupling
+  INTEGER :: spin_channel
+  LOGICAL :: l_local_repr
+  LOGICAL :: l_bisect_thr
+  !
+  ! Common workspace
+  !
+  CHARACTER(LEN=512) :: wbse_init_save_dir
+  CHARACTER(LEN=512) :: wbse_init_restart_dir
+  !
+END MODULE
+!
+!
+MODULE wbse_center
   !
   USE kinds, ONLY : DP
   !
   IMPLICIT NONE
   !
-  REAL(DP), ALLOCATABLE :: wanc(:,:)
-  REAL(DP), ALLOCATABLE :: wanu(:,:)
-  INTEGER :: wantot
+  ! INPUT FOR wbse_control
+  !
+  CHARACTER(LEN=1) :: wbse_calculation
+  CHARACTER(LEN=20) :: solver
+  CHARACTER(LEN=512) :: qp_correction
+  REAL(DP) :: scissor_ope
+  INTEGER :: n_liouville_times
+  INTEGER :: n_liouville_eigen
+  INTEGER :: n_liouville_maxiter
+  INTEGER :: n_liouville_read_from_file
+  REAL(DP) :: trev_liouville
+  REAL(DP) :: trev_liouville_rel
+  CHARACTER(LEN=3) :: wbse_ipol
+  LOGICAL :: l_qp_correction
+  LOGICAL :: l_preconditioning
+  REAL(DP) :: wbse_epsinfty
+  CHARACTER(LEN=1) :: spin_excitation
+  !
+  ! FOR global variables
+  !
+  INTEGER :: nbndval0x
+  LOGICAL :: l_bse_calculation ! BSE True, TDDFT False
+  LOGICAL :: l_lanczos
+  LOGICAL :: l_davidson
+  LOGICAL :: l_bse_triplet
+  LOGICAL :: l_reduce_io
+  INTEGER :: n_tau
+  REAL(DP) :: sigma_c_head
+  REAL(DP) :: sigma_x_head
+  !
+  ! FOR global Lanzcos diago vars
+  !
+  COMPLEX(DP), ALLOCATABLE :: d0psi(:,:,:,:)
+  REAL(DP),    ALLOCATABLE :: beta_store(:,:,:)
+  REAL(DP),    ALLOCATABLE :: zeta_store(:,:,:,:)
+  !
+  ! FOR Davidson method
+  !
+  COMPLEX(DP), ALLOCATABLE :: dng_exc(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvg_exc(:,:,:,:)
+  !
+  REAL(DP),    ALLOCATABLE :: et_qp(:,:)
+  COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
+  REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
+  INTEGER,     ALLOCATABLE :: n_bse_idx(:)
+  INTEGER,     ALLOCATABLE :: idx_matrix(:,:,:)
+  INTEGER,     ALLOCATABLE :: tau_is_read(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: tau_all(:,:)
+  !
+  ! Common workspace
+  !
+  CHARACTER(LEN=512) :: wbse_save_dir
+  CHARACTER(LEN=512) :: wbse_restart_dir
   !
 END MODULE
 !
@@ -313,23 +390,13 @@ MODULE occ_center
                                                ! 1 <= ib <= nbnd, 1 <= iks <= nks == kpt_pool%nloc (iks NOT global)
   LOGICAL               :: l_frac_occ          ! If .true. then occupations may be fractional
                                                ! nbnd_occ_full == nbnd_occ when l_frac_occ is .false.
-  REAL(DP)              :: docc_thr = 0.001_DP ! Threshold for comparing occupation numbers
-  REAL(DP)              :: de_thr = 0.001_DP   ! Threshold for comparing single-particle energies
+  REAL(DP), PARAMETER   :: docc_thr = 0.001_DP ! Threshold for comparing occupation numbers
+  REAL(DP), PARAMETER   :: de_thr = 0.001_DP   ! Threshold for comparing single-particle energies
                                                ! When two orbitals' energies differ by less than this threshold,
                                                ! they are considered degenerate. An error will be raised if two
                                                ! orbitals with different occupation numbers are degenerate in
                                                ! the fractional occupation case. See subroutine dfpt and
                                                ! compute_pt1_dpsi for details.
-  !
-END MODULE
-!
-!
-MODULE io_unit_numbers
-  !
-  IMPLICIT NONE
-  !
-  INTEGER, PARAMETER :: iuwfc = 20
-  INTEGER :: lrwfc
   !
 END MODULE
 !
@@ -342,8 +409,8 @@ MODULE westcom
   USE server_center
   USE wfreq_center
   USE westpp_center
-  USE wan_center
+  USE wbse_init_center
+  USE wbse_center
   USE occ_center
-  USE io_unit_numbers
   !
 END MODULE

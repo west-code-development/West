@@ -62,7 +62,7 @@ MODULE wstat_tools
       !
       REAL(DP) :: time_spent(2)
       REAL(DP),EXTERNAL :: GET_CLOCK
-      CHARACTER(20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       LOGICAL :: l_parallel
       INTEGER :: npur,npuc
       CHARACTER(LEN=8) :: aux_label_npur
@@ -100,7 +100,7 @@ MODULE wstat_tools
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
            & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1)))), &
-           & '('//TRIM(ADJUSTL(aux_label_npur))//'x'//TRIM(ADJUSTL(aux_label_npuc))//')'
+           & '('//aux_label_npur//'x'//aux_label_npuc//')'
          !
       ELSE
          !
@@ -142,7 +142,7 @@ MODULE wstat_tools
       !
       REAL(DP) :: time_spent(2)
       REAL(DP),EXTERNAL :: GET_CLOCK
-      CHARACTER(20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       LOGICAL :: l_parallel
       INTEGER :: npur,npuc
       CHARACTER(LEN=8) :: aux_label_npur
@@ -180,7 +180,7 @@ MODULE wstat_tools
          WRITE(stdout,"(5x,'p-DIAGOX done in ',a,' with ScaLAPACK, grid ',a)") &
 #endif
            & TRIM(ADJUSTL(human_readable_time(time_spent(2)-time_spent(1)))), &
-           & '('//TRIM(ADJUSTL(aux_label_npur))//'x'//TRIM(ADJUSTL(aux_label_npuc))//')'
+           & '('//aux_label_npur//'x'//aux_label_npuc//')'
          !
       ELSE
          !
@@ -424,22 +424,25 @@ MODULE wstat_tools
                   DO il2 = l2_s,l2_e
                      reduce = 0._DP
                      !$acc loop reduction(+:reduce)
-                     DO il3 = gstart,npwq
+                     DO il3 = 1,npwq
                         reduce = reduce+REAL(ag(il3,il1),KIND=DP)*REAL(bg(il3,il2),KIND=DP) &
                         & +AIMAG(ag(il3,il1))*AIMAG(bg(il3,il2))
                      ENDDO
-                     c_distr(ig1,il2) = 2._DP*reduce
+                     !
+                     IF(gstart == 2) THEN
+                        c_distr(ig1,il2) = 2._DP*reduce-REAL(ag(1,il1),KIND=DP)*REAL(bg(1,il2),KIND=DP)
+                     ELSE
+                        c_distr(ig1,il2) = 2._DP*reduce
+                     ENDIF
                   ENDDO
                   !$acc end parallel
 #else
                   DO il2 = l2_s,l2_e
+                     c_distr(ig1,il2) = 2._DP*DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
                      !
-                     IF(gstart == 1) THEN
-                        c_distr(ig1,il2) = 2._DP*DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
-                     ELSE
-                        c_distr(ig1,il2) = 2._DP*DDOT(2*npwq-2,ag(2,il1),1,bg(2,il2),1)
+                     IF(gstart == 2) THEN
+                        c_distr(ig1,il2) = c_distr(ig1,il2)-REAL(ag(1,il1),KIND=DP)*REAL(bg(1,il2),KIND=DP)
                      ENDIF
-                     !
                   ENDDO
 #endif
                   !
@@ -553,9 +556,7 @@ MODULE wstat_tools
                   !$acc end parallel
 #else
                   DO il2 = l2_s,l2_e
-                     !
                      c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
-                     !
                   ENDDO
 #endif
                   !
@@ -949,9 +950,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_real(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
-                                     & my_bgrp_id,inter_pool_comm,my_pool_id
-      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_bgrp_id,my_pool_id
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -982,6 +982,8 @@ MODULE wstat_tools
 #else
       CALL start_clock('update_vr')
 #endif
+      !
+      ! ag, bg only needed by pool 0 and band group 0 in the next step
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
@@ -1052,9 +1054,6 @@ MODULE wstat_tools
          !
       ENDIF
       !
-      CALL mp_bcast(ag,0,inter_bgrp_comm)
-      CALL mp_bcast(ag,0,inter_pool_comm)
-      !
 #if defined(__CUDA)
       CALL stop_clock_gpu('update_vr')
 #else
@@ -1067,9 +1066,8 @@ MODULE wstat_tools
     SUBROUTINE update_with_vr_distr_complex(ag,bg,nselect,n,lda,vr_distr,ew)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,&
-                                     & my_bgrp_id,inter_pool_comm,my_pool_id
-      USE mp,                   ONLY : mp_circular_shift_left,mp_bcast
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_bgrp_id,my_pool_id
+      USE mp,                   ONLY : mp_circular_shift_left
       USE distribution_center,  ONLY : pert
       USE westcom,              ONLY : npwq,npwqx
       !
@@ -1099,6 +1097,8 @@ MODULE wstat_tools
 #else
       CALL start_clock('update_vr')
 #endif
+      !
+      ! ag, bg only needed by pool 0 and band group 0 in the next step
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
@@ -1167,9 +1167,6 @@ MODULE wstat_tools
          DEALLOCATE(hg2)
          !
       ENDIF
-      !
-      CALL mp_bcast(ag,0,inter_bgrp_comm)
-      CALL mp_bcast(ag,0,inter_pool_comm)
       !
 #if defined(__CUDA)
       CALL stop_clock_gpu('update_vr')

@@ -14,10 +14,6 @@
 MODULE wfreq_restart
   !----------------------------------------------------------------------------
   !
-  USE kinds,                   ONLY : DP
-  USE io_files,                ONLY : tmp_dir
-  USE json_module,             ONLY : json_file
-  !
   IMPLICIT NONE
   !
   ! BKS: band, k
@@ -83,6 +79,7 @@ MODULE wfreq_restart
     SUBROUTINE write_bks(bks,dirname,fname)
       !------------------------------------------------------------------------
       !
+      USE json_module,          ONLY : json_file
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp,                   ONLY : mp_barrier
       !
@@ -91,13 +88,13 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bks_type),INTENT(IN) :: bks
-      CHARACTER(512),INTENT(IN) :: dirname,fname
+      CHARACTER(LEN=*),INTENT(IN) :: dirname,fname
       !
       ! Workspace
       !
       INTEGER :: iunit
       TYPE(json_file) :: json
-      CHARACTER(*),PARAMETER :: what = 'BKS-SUMMARY.'
+      CHARACTER(LEN=*),PARAMETER :: what = 'BKS-SUMMARY.'
       !
       IF(mpime == root) THEN
          !
@@ -127,6 +124,7 @@ MODULE wfreq_restart
     SUBROUTINE write_bksq(bksq,dirname,fname)
       !------------------------------------------------------------------------
       !
+      USE json_module,          ONLY : json_file
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp,                   ONLY : mp_barrier
       !
@@ -135,13 +133,13 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bksq_type),INTENT(IN) :: bksq
-      CHARACTER(512),INTENT(IN) :: dirname,fname
+      CHARACTER(LEN=*),INTENT(IN) :: dirname,fname
       !
       ! Workspace
       !
       INTEGER :: iunit
       TYPE(json_file) :: json
-      CHARACTER(*),PARAMETER :: what = 'BKSQ-SUMMARY.'
+      CHARACTER(LEN=*),PARAMETER :: what = 'BKSQ-SUMMARY.'
       !
       IF(mpime == root) THEN
          !
@@ -175,6 +173,7 @@ MODULE wfreq_restart
     SUBROUTINE write_bksks(bksks,dirname,fname)
       !------------------------------------------------------------------------
       !
+      USE json_module,          ONLY : json_file
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp,                   ONLY : mp_barrier
       !
@@ -183,13 +182,13 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bksks_type),INTENT(IN) :: bksks
-      CHARACTER(512),INTENT(IN) :: dirname,fname
+      CHARACTER(LEN=*),INTENT(IN) :: dirname,fname
       !
       ! Workspace
       !
       INTEGER :: iunit
       TYPE(json_file) :: json
-      CHARACTER(*),PARAMETER :: what = 'BKSKS-SUMMARY.'
+      CHARACTER(LEN=*),PARAMETER :: what = 'BKSKS-SUMMARY.'
       !
       IF(mpime == root) THEN
          !
@@ -223,6 +222,7 @@ MODULE wfreq_restart
     SUBROUTINE read_bks(bks,dirname,fname)
       !------------------------------------------------------------------------
       !
+      USE json_module,          ONLY : json_file
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp,                   ONLY : mp_bcast
       !
@@ -231,7 +231,7 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bks_type),INTENT(OUT) :: bks
-      CHARACTER(512),INTENT(IN) :: dirname,fname
+      CHARACTER(LEN=*),INTENT(IN) :: dirname,fname
       !
       ! Workspace
       !
@@ -239,7 +239,7 @@ MODULE wfreq_restart
       INTEGER :: ival
       INTEGER :: tmp(8)
       TYPE(json_file) :: json
-      CHARACTER(*),PARAMETER :: what = 'BKS-SUMMARY.'
+      CHARACTER(LEN=*),PARAMETER :: what = 'BKS-SUMMARY.'
       !
       tmp = 0
       !
@@ -286,6 +286,7 @@ MODULE wfreq_restart
     SUBROUTINE read_bksq(bksq,dirname,fname)
       !------------------------------------------------------------------------
       !
+      USE json_module,          ONLY : json_file
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp,                   ONLY : mp_bcast
       !
@@ -294,7 +295,7 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bksq_type),INTENT(OUT) :: bksq
-      CHARACTER(512),INTENT(IN) :: dirname,fname
+      CHARACTER(LEN=*),INTENT(IN) :: dirname,fname
       !
       ! Workspace
       !
@@ -302,7 +303,7 @@ MODULE wfreq_restart
       INTEGER :: ival
       INTEGER :: tmp(12)
       TYPE(json_file) :: json
-      CHARACTER(*),PARAMETER :: what = 'BKSQ-SUMMARY.'
+      CHARACTER(LEN=*),PARAMETER :: what = 'BKSQ-SUMMARY.'
       !
       tmp = 0
       !
@@ -361,6 +362,7 @@ MODULE wfreq_restart
     SUBROUTINE read_bksks(bksks,dirname,fname)
       !------------------------------------------------------------------------
       !
+      USE json_module,          ONLY : json_file
       USE mp_world,             ONLY : mpime,root,world_comm
       USE mp,                   ONLY : mp_bcast
       !
@@ -369,7 +371,7 @@ MODULE wfreq_restart
       ! I/O
       !
       TYPE(bksks_type),INTENT(OUT) :: bksks
-      CHARACTER(512),INTENT(IN) :: dirname,fname
+      CHARACTER(LEN=*),INTENT(IN) :: dirname,fname
       !
       ! Workspace
       !
@@ -377,7 +379,7 @@ MODULE wfreq_restart
       INTEGER :: ival
       INTEGER :: tmp(12)
       TYPE(json_file) :: json
-      CHARACTER(*),PARAMETER :: what = 'BKSKS-SUMMARY.'
+      CHARACTER(LEN=*),PARAMETER :: what = 'BKSKS-SUMMARY.'
       !
       tmp = 0
       !
@@ -444,7 +446,7 @@ MODULE wfreq_restart
       !
       ! I/O
       !
-      CHARACTER(512),INTENT(IN) :: dirname,fname
+      CHARACTER(LEN=*),INTENT(IN) :: dirname,fname
       !
       IF(mpime == root) THEN
          !
@@ -462,9 +464,10 @@ MODULE wfreq_restart
     SUBROUTINE solvewfreq_restart_write_real(bks,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
       USE mp_world,             ONLY : world_comm
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
@@ -480,9 +483,9 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
-      CHARACTER(29) :: my_label
-      CHARACTER(33) :: my_label2
+      CHARACTER(LEN=512) :: fname
+      CHARACTER(LEN=29) :: my_label
+      CHARACTER(LEN=33) :: my_label2
       INTEGER :: ip,ip_glob
       REAL(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -495,8 +498,7 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       ! DMAT
       !
@@ -509,7 +511,7 @@ MODULE wfreq_restart
       CALL mp_sum(tmp_dmat,intra_bgrp_comm)
       !
       WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
       !
@@ -526,7 +528,7 @@ MODULE wfreq_restart
       CALL mp_sum(tmp_zmat,intra_bgrp_comm)
       !
       WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
       !
@@ -539,18 +541,18 @@ MODULE wfreq_restart
             WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
             WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
          ENDIF
       ENDIF
       !
       ! CREATE THE SUMMARY FILE
       !
       fname = 'summary_w.json'
-      CALL write_bks(bks,dirname,fname)
+      CALL write_bks(bks,wfreq_restart_dir,fname)
       !
       CALL stop_clock('sw_restart')
       !
@@ -560,9 +562,10 @@ MODULE wfreq_restart
     SUBROUTINE solvewfreq_restart_write_complex(bks,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
       USE mp_world,             ONLY : world_comm
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
@@ -578,9 +581,9 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
-      CHARACTER(29) :: my_label
-      CHARACTER(33) :: my_label2
+      CHARACTER(LEN=512) :: fname
+      CHARACTER(LEN=29) :: my_label
+      CHARACTER(LEN=33) :: my_label2
       INTEGER :: ip,ip_glob
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -593,8 +596,7 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       ! DMAT
       !
@@ -607,7 +609,7 @@ MODULE wfreq_restart
       CALL mp_sum(tmp_dmat,intra_bgrp_comm)
       !
       WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
       !
@@ -624,7 +626,7 @@ MODULE wfreq_restart
       CALL mp_sum(tmp_zmat,intra_bgrp_comm)
       !
       WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
       !
@@ -637,18 +639,18 @@ MODULE wfreq_restart
             WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
             WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
          ENDIF
       ENDIF
       !
       ! CREATE THE SUMMARY FILE
       !
       fname = 'summary_w.json'
-      CALL write_bks(bks,dirname,fname)
+      CALL write_bks(bks,wfreq_restart_dir,fname)
       !
       CALL stop_clock('sw_restart')
       !
@@ -658,9 +660,10 @@ MODULE wfreq_restart
     SUBROUTINE solvewfreq_restart_write_complex_q(bksq,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
       USE mp_world,             ONLY : world_comm
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
@@ -677,9 +680,9 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
-      CHARACTER(37) :: my_label
-      CHARACTER(41) :: my_label2
+      CHARACTER(LEN=512) :: fname
+      CHARACTER(LEN=37) :: my_label
+      CHARACTER(LEN=41) :: my_label2
       INTEGER :: ip,ip_glob,iq
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
@@ -692,8 +695,7 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       ! DMAT
       !
@@ -709,7 +711,7 @@ MODULE wfreq_restart
       !
       WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
       !
@@ -729,7 +731,7 @@ MODULE wfreq_restart
       !
       WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
       !
@@ -742,18 +744,18 @@ MODULE wfreq_restart
             WRITE(my_label2,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bksq%old_q,bksq%old_ks,bksq%old_band,my_image_id
             fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
             WRITE(my_label2,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
             & bksq%old_q,bksq%old_ks,bksq%old_band,my_image_id
             fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
+            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
          ENDIF
       ENDIF
       !
       ! CREATE THE SUMMARY FILE
       !
       fname = 'summary_w.json'
-      CALL write_bksq(bksq,dirname,fname)
+      CALL write_bksq(bksq,wfreq_restart_dir,fname)
       !
       CALL stop_clock('sw_restart')
       !
@@ -763,10 +765,11 @@ MODULE wfreq_restart
     SUBROUTINE solvewfreq_restart_read_real(bks,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
       USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
@@ -782,11 +785,11 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
-      CHARACTER(20),EXTERNAL :: human_readable_time
-      CHARACTER(29) :: my_label
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=29) :: my_label
       INTEGER :: ip,ip_glob
       REAL(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -798,8 +801,7 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
@@ -807,14 +809,14 @@ MODULE wfreq_restart
       ! CREATE THE SUMMARY FILE
       !
       fname = 'summary_w.json'
-      CALL read_bks(bks,dirname,fname)
+      CALL read_bks(bks,wfreq_restart_dir,fname)
       !
       ! READ
       !
       ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
       !
       WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
       !
@@ -828,7 +830,7 @@ MODULE wfreq_restart
       ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
       !
       WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
       !
@@ -845,9 +847,9 @@ MODULE wfreq_restart
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
-      WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
+      WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -856,10 +858,11 @@ MODULE wfreq_restart
     SUBROUTINE solvewfreq_restart_read_complex(bks,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
       USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
@@ -875,11 +878,11 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
-      CHARACTER(20),EXTERNAL :: human_readable_time
-      CHARACTER(29) :: my_label
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=29) :: my_label
       INTEGER :: ip,ip_glob
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -891,8 +894,7 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
@@ -900,14 +902,14 @@ MODULE wfreq_restart
       ! CREATE THE SUMMARY FILE
       !
       fname = 'summary_w.json'
-      CALL read_bks(bks,dirname,fname)
+      CALL read_bks(bks,wfreq_restart_dir,fname)
       !
       ! READ
       !
       ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
       !
       WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
       !
@@ -921,7 +923,7 @@ MODULE wfreq_restart
       ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
       !
       WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
       !
@@ -938,9 +940,9 @@ MODULE wfreq_restart
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
-      WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
+      WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -949,10 +951,11 @@ MODULE wfreq_restart
     SUBROUTINE solvewfreq_restart_read_complex_q(bksq,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
       USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
@@ -969,11 +972,11 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
+      CHARACTER(LEN=512) :: fname
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
-      CHARACTER(20),EXTERNAL :: human_readable_time
-      CHARACTER(37) :: my_label
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=37) :: my_label
       INTEGER :: ip,ip_glob,iq
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
@@ -985,8 +988,7 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
@@ -994,7 +996,7 @@ MODULE wfreq_restart
       ! CREATE THE SUMMARY FILE
       !
       fname = 'summary_w.json'
-      CALL read_bksq(bksq,dirname,fname)
+      CALL read_bksq(bksq,wfreq_restart_dir,fname)
       !
       ! READ
       !
@@ -1002,7 +1004,7 @@ MODULE wfreq_restart
       !
       WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
       !
@@ -1019,7 +1021,7 @@ MODULE wfreq_restart
       !
       WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(dirname)//'/'//TRIM(my_label)
+      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
       !
@@ -1038,9 +1040,9 @@ MODULE wfreq_restart
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
-      WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
+      WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -1052,7 +1054,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE mp_world,             ONLY : world_comm
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
@@ -1063,7 +1065,7 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
+      CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
       !
       ! BARRIER
       !
@@ -1071,13 +1073,11 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       CALL start_clock('sg_restart')
       !
-      fname = 'summary_g.json'
-      CALL write_bks(bks,dirname,fname)
+      CALL write_bks(bks,wfreq_restart_dir,fname)
       !
       CALL stop_clock('sg_restart')
       !
@@ -1088,7 +1088,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE mp_world,             ONLY : world_comm
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
@@ -1099,7 +1099,7 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
+      CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
       !
       ! BARRIER
       !
@@ -1107,13 +1107,11 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       CALL start_clock('sg_restart')
       !
-      fname = 'summary_g.json'
-      CALL write_bksks(bksks,dirname,fname)
+      CALL write_bksks(bksks,wfreq_restart_dir,fname)
       !
       CALL stop_clock('sg_restart')
       !
@@ -1123,9 +1121,10 @@ MODULE wfreq_restart
     SUBROUTINE solvegfreq_restart_read(bks)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
@@ -1136,10 +1135,10 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
+      CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
-      CHARACTER(20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       !
       ! BARRIER
       !
@@ -1147,14 +1146,12 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       CALL start_clock('sg_restart')
       time_spent(1) = get_clock('sg_restart')
       !
-      fname = 'summary_g.json'
-      CALL read_bks(bks,dirname,fname)
+      CALL read_bks(bks,wfreq_restart_dir,fname)
       !
       ! BARRIER
       !
@@ -1162,9 +1159,9 @@ MODULE wfreq_restart
       time_spent(2) = get_clock('sg_restart')
       CALL stop_clock('sg_restart')
       !
-      WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
+      WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
@@ -1173,9 +1170,10 @@ MODULE wfreq_restart
     SUBROUTINE solvegfreq_restart_read_q(bksks)
       !------------------------------------------------------------------------
       !
+      USE kinds,                ONLY : DP
       USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : west_prefix
+      USE westcom,              ONLY : wfreq_restart_dir
       USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
@@ -1186,10 +1184,10 @@ MODULE wfreq_restart
       !
       ! Workspace
       !
-      CHARACTER(512) :: dirname,fname
+      CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
-      CHARACTER(20),EXTERNAL :: human_readable_time
+      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       !
       ! BARRIER
       !
@@ -1197,14 +1195,12 @@ MODULE wfreq_restart
       !
       ! MKDIR
       !
-      dirname = TRIM(tmp_dir)//TRIM(west_prefix)//'.wfreq.restart'
-      CALL my_mkdir(dirname)
+      CALL my_mkdir(wfreq_restart_dir)
       !
       CALL start_clock('sg_restart')
       time_spent(1) = get_clock('sg_restart')
       !
-      fname = 'summary_g.json'
-      CALL read_bksks(bksks,dirname,fname)
+      CALL read_bksks(bksks,wfreq_restart_dir,fname)
       !
       ! BARRIER
       !
@@ -1212,9 +1208,9 @@ MODULE wfreq_restart
       time_spent(2) = get_clock('sg_restart')
       CALL stop_clock('sg_restart')
       !
-      WRITE(stdout,'(1/, 5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout, "(5x, '[I/O] RESTART read in ',a20)") human_readable_time(time_spent(2)-time_spent(1))
-      WRITE(stdout, "(5x, '[I/O] In location : ',a)") TRIM( dirname )
+      WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE

@@ -75,41 +75,53 @@ class QboxServer(ClientServer) :
    #
    def before_sleep(self):
        #
-       command_suffix = ""
-       if "response" in self.document.keys() :
-          if self.document["response"] == "RPA" :
-             command_suffix += "-RPA "
-          if self.document["response"] == "IPA" :
-             command_suffix += "-IPA "
-       if "amplitude" in self.document.keys() :
-          command_suffix += f'-amplitude {self.document["amplitude"]} '
-       if "nitscf" in self.document.keys() :
-          command_suffix += f'{self.document["nitscf"]} '
-       else :
-          command_suffix += '100 '
-       if "nite" in self.document.keys() :
-          command_suffix += f'{self.document["nite"]}'
-       #
        # Determine the name of the server file
        #
        client_image = self.client_lockfile.split(".")[1]
        self.server_inputfile = f"qb.{client_image}.in" # we assume that server_number = client_image
        #
-       # List of perturbation files
+       # Prepare reponse commands
        #
+       command_suffix = ""
        perturbation_list = []
-       with open(self.client_lockfile,"r") as f:
-          for cnt, line in enumerate(f):
-             perturbation_list.append(line.replace("\n",""))
        #
-       # Create the input file for the server
+       if "response" in self.document.keys() :
+          response = self.document["response"]
+          if "approximation" in response :
+             if response["approximation"] == "RPA" :
+                command_suffix += "-RPA "
+             if response["approximation"] == "IPA" :
+                command_suffix += "-IPA "
+          if "amplitude" in response :
+             command_suffix += f'-amplitude {response["amplitude"]} '
+          if "nitscf" in response :
+             command_suffix += f'{response["nitscf"]} '
+          else :
+             command_suffix += "100 "
+          if "nite" in response :
+             command_suffix += f'{response["nite"]}'
+          #
+          # Read list of perturbation files from lockfile
+          #
+          with open(self.client_lockfile,"r") as f:
+             for cnt, line in enumerate(f):
+                perturbation_list.append(line.replace("\n",""))
+       #
+       # Create the INPUT file for the server
        #
        with open(self.server_inputfile,"w") as f:
+          #
+          # First attempt to write SCRIPT
+          #
           if "script" in self.document.keys() :
              for line in self.document["script"] :
                 f.write(line+"\n")
-          for pert in perturbation_list :
-              f.write(f"response -vext {pert} "+command_suffix+"\n")
+          #
+          # Then attempt to write RESPONSE commands (many)
+          #
+          if "response" in self.document.keys() :
+             for pert in perturbation_list :
+                f.write(f"response -vext {pert} "+command_suffix+"\n")
        #
        # Awake server, by removing its lockfile
        #
@@ -147,6 +159,19 @@ def sleep_and_wait(*args, **kwargs):
     if "document" in kwargs.keys() :
        document = json.loads(kwargs["document"])
     #
+    #  consider_only allows to define a document with selected keys
+    #
+    if "consider_only" in kwargs.keys() :
+        consider_only_list = json.loads(kwargs["consider_only"])
+        temp_document = {}
+        for key in consider_only_list:
+            if key in document.keys() :
+               temp_document[key] = document[key]
+            else :
+               print(f"Could not consider missing key: {key}")
+        #replace document
+        document = temp_document
+    #
     server = QboxServer(client_lockfile,maxsec,sleepsec,document)
     return_int = server.start()
     #
@@ -159,7 +184,7 @@ def sleep_and_wait(*args, **kwargs):
 def test() :
     with open("I.1.lock","w") as f :
        f.write("I.1_P.1.xml")
-    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2,document='{"response": "IPA", "amplitude": 0, "script" : ["set xc PBE"]}')
+    sleep_and_wait("I.1.lock",maxsec=60,sleepsec=2,document='{"response": {"amplitude": 0, "nitscf": 20, "nite": 0}}',consider_only='["response"]')
 
 if __name__ == "__main__":
     # execute only if run as a script

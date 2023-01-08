@@ -10,7 +10,6 @@
 # This file is part of WEST.
 #
 
-from __future__ import print_function
 import sys
 from os import path, remove
 import yaml
@@ -50,7 +49,7 @@ default["wfreq_control"]["wfreq_calculation"] = "XWGQ"
 default["wfreq_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wfreq_control"]["qp_bandrange"] = [1, 2]
 default["wfreq_control"]["qp_bands"] = [0]
-default["wfreq_control"]["macropol_calculation"] = 'N'
+default["wfreq_control"]["macropol_calculation"] = "N"
 default["wfreq_control"]["n_lanczos"] = 30
 default["wfreq_control"]["n_imfreq"] = 128
 default["wfreq_control"]["n_refreq"] = 272
@@ -76,11 +75,40 @@ default["westpp_control"]["westpp_r0"] = [0., 0., 0.]
 default["westpp_control"]["westpp_nr"] = 100
 default["westpp_control"]["westpp_rmax"] = 1.
 default["westpp_control"]["westpp_epsinfty"] = 1.
-default["westpp_control"]["westpp_box"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+default["westpp_control"]["westpp_box"] = [0., 0., 0., 0., 0., 0.]
+default["westpp_control"]["westpp_n_liouville_to_use"] = 1
 # server_control
 default["server_control"] = {}
 default["server_control"]["document"] = "{}"
-
+# wbse_init_control
+default["wbse_init_control"] = {}
+default["wbse_init_control"]["wbse_init_calculation"] = "S"
+default["wbse_init_control"]["localization"] = "N"
+default["wbse_init_control"]["wfc_from_qbox"] = "qb_wfc"
+default["wbse_init_control"]["bisection_info"] = "bis_info"
+default["wbse_init_control"]["chi_kernel"] = "CHI"
+default["wbse_init_control"]["overlap_thr"] = 0.
+default["wbse_init_control"]["spin_channel"] = 0
+# wbse_control
+default["wbse_control"] = {}
+default["wbse_control"]["wbse_calculation"] = "D"
+default["wbse_control"]["solver"] = "BSE"
+default["wbse_control"]["qp_correction"] = ""
+default["wbse_control"]["scissor_ope"] = 0.
+default["wbse_control"]["n_liouville_eigen"] = 1
+default["wbse_control"]["n_liouville_times"] = 4
+default["wbse_control"]["n_liouville_maxiter"] = 100
+default["wbse_control"]["n_liouville_read_from_file"] = 0
+default["wbse_control"]["trev_liouville"] = 0.001
+default["wbse_control"]["trev_liouville_rel"] = 0.1
+default["wbse_control"]["n_lanczos"] = 1000
+default["wbse_control"]["n_steps_write_restart"] = 100
+default["wbse_control"]["wbse_ipol"] = "XX"
+default["wbse_control"]["macropol_calculation"] = "N"
+default["wbse_control"]["wbse_epsinfty"] = 1.
+default["wbse_control"]["spin_excitation"] = "S"
+default["wbse_control"]["l_preconditioning"] = False
+default["wbse_control"]["l_reduce_io"] = True
 
 ############################
 # DYNAMICAL DEFAULT VALUES #
@@ -124,7 +152,7 @@ def open_and_parse_file(fileName="west.in") :
     """
     data = {}
     try :
-       with open(fileName, 'r') as stream:
+       with open(fileName, "r") as stream:
            try:
               data = yaml.load(stream,Loader=yaml.SafeLoader)
            except:
@@ -277,6 +305,8 @@ server_control :
     read_keyword_from_file(fileName,"wfreq_control",True,nelec=10,ecutrho=30.)
     read_keyword_from_file(fileName,"westpp_control",True)
     read_keyword_from_file(fileName,"server_control",True)
+    read_keyword_from_file(fileName,"wbse_init_control",True)
+    read_keyword_from_file(fileName,"wbse_control",True)
     #
     remove(fileName)
 

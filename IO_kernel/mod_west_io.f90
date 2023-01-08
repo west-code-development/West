@@ -18,6 +18,22 @@ MODULE west_io
   !
   IMPLICIT NONE
   !
+  ! Base64 was changed to binary in order to improve I/O performance.
+  !
+  ! A simple format is used here:
+  ! a header consisting of HD_LENGTH=32 integers, followed by raw data.
+  ! Currently only 3 integers are used in the header, storing:
+  ! (1) the version identifier of the format
+  ! (2) the endianness (0 for GE, 1 for LE)
+  ! (3) the length of the raw data (number of COMPLEX DP entries)
+  ! (4-32) not used (yet).
+  !
+  INTEGER, PARAMETER :: HD_LENGTH = 32
+  INTEGER, PARAMETER :: HD_VERSION = 210405
+  INTEGER, PARAMETER :: HD_ID_VERSION = 1
+  INTEGER, PARAMETER :: HD_ID_LITTLE_ENDIAN = 2
+  INTEGER, PARAMETER :: HD_ID_DIMENSION = 3
+  !
 #if defined(__SX6)
 #  define DIRECT_IO_FACTOR 1
 #else
@@ -99,11 +115,11 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr)
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,'("Shape: (",a14,")")') 'scalar'
       WRITE(iunit,'(i14)',IOSTAT=ierr) i0dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -129,12 +145,12 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr)
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,'("Shape: (",i14,")")') n
       DO i = 1,n
          WRITE(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i1dummy(i)
-         IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+         IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -160,13 +176,13 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr)
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,'("Shape: (",i14,",",i14,")")') n,m
       DO j = 1,m
          DO i = 1,n
             WRITE(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i2dummy(i,j)
-            IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+            IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
          ENDDO
          WRITE(iunit,*) ''
       ENDDO
@@ -194,14 +210,14 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr)
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,'("Shape: (",i14,",",i14,",",i14,")")') n,m,l
       DO k = 1,l
          DO j = 1,m
             DO i = 1,n
                WRITE(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i3dummy(i,j,k)
-               IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+               IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
             ENDDO
             WRITE(iunit,*) ''
          ENDDO
@@ -231,7 +247,7 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr)
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,'("Shape: (",i14,",",i14,",",i14,",",i14,")")') n,m,l,q
       DO p = 1,q
@@ -239,7 +255,7 @@ MODULE west_io
             DO j = 1,m
                DO i = 1,n
                   WRITE(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i4dummy(i,j,k,p)
-                  IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+                  IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
                ENDDO
                WRITE(iunit,*) ''
             ENDDO
@@ -269,10 +285,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) d0dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -297,10 +313,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) d1dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -325,10 +341,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) d2dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -353,10 +369,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) d3dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -381,10 +397,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) d4dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -408,10 +424,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) z0dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -436,10 +452,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) z1dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -464,10 +480,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) z2dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -492,10 +508,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) z3dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -520,10 +536,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(iunit,IOSTAT=ierr) z4dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -551,11 +567,11 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,*)
       READ(iunit,'(i14)',IOSTAT=ierr) i0dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -581,12 +597,12 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,*)
       DO i = 1,n
          READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i1dummy(i)
-         IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+         IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -612,13 +628,13 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,*)
       DO j = 1,m
          DO i = 1,n
             READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i2dummy(i,j)
-            IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+            IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
          ENDDO
          READ(iunit,*)
       ENDDO
@@ -646,14 +662,14 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,*)
       DO k = 1,l
          DO j = 1,m
             DO i = 1,n
                READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i3dummy(i,j,k)
-               IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+               IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
             ENDDO
             READ(iunit,*)
          ENDDO
@@ -683,7 +699,7 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,*)
       DO p = 1,q
@@ -691,7 +707,7 @@ MODULE west_io
             DO j = 1,m
                DO i = 1,n
                   READ(iunit,'(i14)',ADVANCE='NO',IOSTAT=ierr) i4dummy(i,j,k,p)
-                  IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+                  IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
                ENDDO
                READ(iunit,*)
             ENDDO
@@ -721,10 +737,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) d0dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -749,10 +765,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) d1dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -777,10 +793,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) d2dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -805,10 +821,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) d3dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -833,10 +849,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) d4dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -860,10 +876,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) z0dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -888,10 +904,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) z1dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -916,10 +932,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) z2dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -944,10 +960,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) z3dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -972,10 +988,10 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr,FORM='unformatted',ACCESS='stream',STATUS='old')
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       READ(iunit,IOSTAT=ierr) z4dummy
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot read file: '//TRIM(fullname),ABS(ierr))
       !
       CLOSE(iunit,IOSTAT=ierr)
       !
@@ -1007,7 +1023,7 @@ MODULE west_io
       ierr = 0
       !
       OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr)
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file:'//TRIM(fullname),ABS(ierr))
+      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
       !
       WRITE(format_string,*) '("#",',ncol,'(a16))'
       WRITE(iunit,TRIM(format_string)) header
@@ -1017,7 +1033,7 @@ MODULE west_io
             help(j) = d2dummy(i,j)
          ENDDO
          WRITE(iunit,TRIM(format_string),IOSTAT=ierr) help(1:ncol)
-         IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file:'//TRIM(fullname),ABS(ierr))
+         IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
       ENDDO
       CLOSE(iunit,IOSTAT=ierr)
       !

@@ -35,8 +35,9 @@ SUBROUTINE exx_go()
   !
   ! Workspace
   !
-  LOGICAL :: exst
   LOGICAL :: is_westpp
+  LOGICAL :: is_wbse_init
+  LOGICAL :: exst
   LOGICAL, EXTERNAL :: matches
   !
   ! See PW/src/setup.f90: setup_exx
@@ -44,8 +45,11 @@ SUBROUTINE exx_go()
   CALL mp_start_exx(nband_,ntg_,intra_pool_comm)
   !
   is_westpp = matches('westpp.x',command_line)
+  is_wbse_init = matches('wbse_init.x',command_line)
   !
-  IF(xclib_dft_is('hybrid') .AND. .NOT. is_westpp) THEN
+  IF(is_westpp .OR. is_wbse_init) RETURN
+  !
+  IF(xclib_dft_is('hybrid')) THEN
      exxdiv_treatment = 'gb'
      erfc_scrlen = get_screening_parameter()
      gau_scrlen = get_gau_parameter()

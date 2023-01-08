@@ -23,6 +23,7 @@ MODULE west_mp
   !
   PUBLIC :: mp_alltoallv
   PUBLIC :: mp_circular_shift_left_begin
+  PUBLIC :: mp_circular_shift_left_c16_4d
   !
   INTERFACE mp_alltoallv
     MODULE PROCEDURE mp_alltoallv_i4_1d, mp_alltoallv_i8_1d, mp_alltoallv_r8_1d, &
@@ -248,6 +249,37 @@ MODULE west_mp
       !
       CALL MPI_IRECV(recv_buf,SIZE(recv_buf),MPI_DOUBLE_COMPLEX,sour,itag,comm,requests(1),ierr)
       CALL MPI_ISEND(send_buf,SIZE(send_buf),MPI_DOUBLE_COMPLEX,dest,itag,comm,requests(2),ierr)
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE mp_circular_shift_left_c16_4d(buf,itag,comm)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP), INTENT(INOUT) :: buf(:,:,:,:)
+      INTEGER, INTENT(IN) :: itag
+      INTEGER, INTENT(IN) :: comm
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      INTEGER :: nproc
+      INTEGER :: mpime
+      INTEGER :: sour
+      INTEGER :: dest
+      INTEGER :: istat(MPI_STATUS_SIZE)
+      !
+      CALL MPI_COMM_SIZE(comm,nproc,ierr)
+      CALL MPI_COMM_RANK(comm,mpime,ierr)
+      !
+      sour = MOD(mpime+1,nproc)
+      dest = MOD(mpime-1+nproc,nproc)
+      !
+      CALL MPI_SENDRECV_REPLACE(buf,SIZE(buf),MPI_DOUBLE_COMPLEX,dest,itag,sour,itag,comm,istat,ierr)
       !
     END SUBROUTINE
     !

@@ -18,7 +18,7 @@ SUBROUTINE wstat_memory_report()
   USE io_global,           ONLY : stdout
   USE wvfct,               ONLY : npwx,nbnd
   USE control_flags,       ONLY : gamma_only
-  USE mp_bands,            ONLY : nbgrp
+  USE mp_global,           ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
   USE westcom,             ONLY : nbnd_occ,n_pdep_basis,npwqx,logfile
   USE distribution_center, ONLY : pert
@@ -83,7 +83,7 @@ SUBROUTINE wstat_memory_report()
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-  WRITE(stdout,'(5x,"[MEM] ")')
+  WRITE(stdout,'(5x,"[MEM]")')
   !
   mem_tot = 0.0_DP
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')

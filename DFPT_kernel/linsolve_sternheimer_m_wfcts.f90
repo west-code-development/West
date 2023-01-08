@@ -135,7 +135,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
         rho(ibnd)=rho(lbnd)
         lbnd = lbnd -1
         anorm = SQRT (rho (ibnd) )
-        IF (anorm .LT. tr2) is_conv (ibnd) = .TRUE.
+        IF (anorm < tr2) is_conv (ibnd) = .TRUE.
      ENDDO
      !
      !
@@ -148,7 +148,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
         !
         !
         CALL DSCAL (2*npwx*npol, - 1._DP, h (1, ibnd), 1)
-        IF (iter .NE. 1) THEN
+        IF (iter /= 1) THEN
            dcgamma = CMPLX( rho (ibnd) / rhoold (ibnd), 0.0_DP, KIND=DP)
            CALL ZAXPY (npwx*npol, dcgamma, hold (1, ibnd), 1, h (1, ibnd), 1)
         ENDIF

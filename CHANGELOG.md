@@ -1,9 +1,12 @@
 Change Log
 ==========
 
-v5.x.x (2022/11/xx)
+v5.3.0 (2023/01/08)
 -------------------
 
+- Release of the Bethe-Salpeter solver in finite field (BSE-FF, Phys. Rev. Lett. 122, 237402 (2019)).
+- Added spin-polariztion to QDET.
+- Added calculation of localization factor with integration using a sphere (supports pbc).
 - Added support for cuSOLVER 64-bit API.
 - Reduced memory usage in `wfreq`.
 - Reduced memory usage in `westpp` when using hybrid functionals.

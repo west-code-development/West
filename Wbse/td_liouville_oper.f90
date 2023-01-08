@@ -8,7 +8,7 @@
 ! This file is part of WEST.
 !
 ! Contributors to this file:
-! Marco Govoni
+! Ngoc Linh Nguyen, Victor Yu
 !
 SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !

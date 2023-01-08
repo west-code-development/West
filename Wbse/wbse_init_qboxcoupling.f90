@@ -8,7 +8,7 @@
 ! This file is part of WEST.
 !
 ! Contributors to this file:
-! Marco Govoni
+! Ngoc Linh Nguyen, Victor Yu
 !
 !-----------------------------------------------------------------------
 SUBROUTINE wbse_init_qboxcoupling_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)

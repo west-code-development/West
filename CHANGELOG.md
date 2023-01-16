@@ -4,9 +4,9 @@ Change Log
 v5.3.0 (2023/01/08)
 -------------------
 
-- Release of the Bethe-Salpeter solver in finite field (BSE-FF, Phys. Rev. Lett. 122, 237402 (2019)).
-- Added spin-polariztion to QDET.
-- Added calculation of localization factor with integration using a sphere (supports pbc).
+- Release of the Bethe-Salpeter solver in finite field (BSE-FF, N. L. Nguyen et al., Phys. Rev. Lett. 122, 237402 (2019)).
+- Added spin-polarization to QDET.
+- Added calculation of localization factor with integration using a sphere (supports periodic boundary conditions).
 - Added support for cuSOLVER 64-bit API.
 - Reduced memory usage in `wfreq`.
 - Reduced memory usage in `westpp` when using hybrid functionals.
@@ -17,7 +17,7 @@ v5.3.0 (2023/01/08)
 v5.2.0 (2022/09/02)
 -------------------
 
-- Release of Quantum Defect Embedding Theory (QDET, N. Sheng et al., JCTC 18 3512 (2022)), enabling the use of WEST to study strongly correlated states of defects in solids.
+- Release of Quantum Defect Embedding Theory (QDET, N. Sheng et al., J. Chem. Theory Comput. 18, 3512 (2022)), enabling the use of WEST to study strongly correlated states of defects in solids.
 - Improved the performance of the k-point case of `wfreq`.
 - Bug fix. Fixed the k-point case of `wfreq` when `qp_bands` is used or when `qp_bandrange` does not start from 1.
 - Updated CI/CD. Added tests to cover the new functionalities.
@@ -26,7 +26,7 @@ v5.2.0 (2022/09/02)
 v5.1.0 (2022/08/19)
 -------------------
 
-- Full release of GPU-accelerated full-frequency GW implementation (V. Yu and M. Govoni, JCTC 18 4690 (2022)), e.g., enabling the use of WEST at OLCF/Summit, NERSC/Perlmutter, ALCF/Polaris. GPU acceleration of `wstat` and `wfreq` is restricted to NVIDIA GPUs.
+- Full release of GPU-accelerated full-frequency GW implementation (V. Yu and M. Govoni, J. Chem. Theory Comput. 18, 4690 (2022)), e.g., enabling the use of WEST at OLCF/Summit, NERSC/Perlmutter, ALCF/Polaris. GPU acceleration of `wstat` and `wfreq` is restricted to NVIDIA GPUs.
 - Introduced infrastructure changes to prepare for QDET release. Enabled calculation with fractional occupation, added the possibility to specify a set of bands, instead of a range in `wfreq`, enabled the computation of the off-diagonal matrix elements in G0W0.
 - Code updated for compatibility with Quantum ESPRESSO 7.1. QE must be compiled without CMake.
 - Added the calculation of inverse participation ratio and localization factor in `westpp`.

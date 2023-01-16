@@ -13,7 +13,7 @@ Perlmutter (Phase I) is a GPU-accelerated supercomputer located at National Ener
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on October 29, 2022):
+WEST executables can be compiled using the following script (tested on January 13, 2023):
 
 .. code-block:: bash
 
@@ -21,10 +21,10 @@ WEST executables can be compiled using the following script (tested on October 2
    #!/bin/bash
 
    module load PrgEnv-nvidia
-   module load nvidia/22.5
+   module load nvidia/22.9
    module load cudatoolkit/11.7
    module load craype-accel-nvidia80
-   module load cray-python/3.9.12.1
+   module load cray-python/3.9.13.1
    module unload darshan
 
    ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.7 --with-cuda-cc=80
@@ -79,10 +79,10 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --cpus-per-task=32
 
    module load PrgEnv-nvidia
-   module load nvidia/22.5
+   module load nvidia/22.9
    module load cudatoolkit/11.7
    module load craype-accel-nvidia80
-   module load cray-python/3.9.12.1
+   module load cray-python/3.9.13.1
    module unload darshan
 
    export OMP_NUM_THREADS=1

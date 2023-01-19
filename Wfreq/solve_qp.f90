@@ -55,7 +55,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool,pert_offd
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
@@ -97,6 +97,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: braket,overlap
 #endif
+  REAL(DP),ALLOCATABLE :: diago_tmp(:,:),braket_tmp(:,:,:)
   REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
   !$acc declare device_resident(overlap_loc)
 #if defined(__CUDA)
@@ -186,11 +187,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      ENDIF
   ELSE
      !
-     ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, n_bands, k_grid%nps ) )
-     ALLOCATE( z_body_rfr( aband%nloc, rfr%nloc, n_bands, k_grid%nps ) )
-     IF( l_enable_lanczos ) THEN
-        ALLOCATE( d_diago( n_lanczos, pert%nloc, n_bands, k_grid%nps ) )
-        ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, n_bands, k_grid%nps ) )
+     IF ( .NOT. l_QDET ) THEN
+        ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, n_bands, k_grid%nps ) )
+        ALLOCATE( z_body_rfr( aband%nloc, rfr%nloc, n_bands, k_grid%nps ) )
+        IF( l_enable_lanczos ) THEN
+           ALLOCATE( d_diago( n_lanczos, pert%nloc, n_bands, k_grid%nps ) )
+           ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, n_bands, k_grid%nps ) )
+        ENDIF
      ENDIF
      !
      d_body1_ifr(:,:,:,:) = 0._DP
@@ -416,9 +419,27 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 IF(pert_offd%nglob > 0 .AND. ib /= jb) THEN
+                    ALLOCATE(diago_tmp(n_lanczos,pert_offd%nloc))
+                    ALLOCATE(braket_tmp(pert_offd%nglob,n_lanczos,pert_offd%nloc))
+                    !
+                    CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago_tmp, braket_tmp, &
+                       & pert_offd%nloc, pert_offd%nglob, pert_offd%myoffset )
+                    !
+                    diago(:,1:pert_offd%nloc) = diago_tmp
+                    diago(:,pert_offd%nloc+1:pert%nloc) = 0._DP
+                    braket(1:pert_offd%nglob,:,1:pert_offd%nloc) = braket_tmp
+                    braket(pert_offd%nglob+1:pert%nglob,:,pert_offd%nloc+1:pert%nloc) = 0._DP
+                    !
+                    DEALLOCATE(diago_tmp)
+                    DEALLOCATE(braket_tmp)
+                 ELSE
+                    CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, &
+                       & pert%nglob, pert%myoffset )
+                 ENDIF
               ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, &
+                    & pert%nglob, pert%myoffset )
               ENDIF
               !
               !$acc update device(braket)
@@ -708,19 +729,28 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ENDIF
   !
   IF (l_QDET) THEN
-     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
      !
-     ! sigma_cor_out is not required, the important output is contained in the
-     ! global variable sigma_corr_full
-     !
-     IF (l_enable_off_diagonal) &
-     & CALL calc_corr_gamma( sigma_cor_out, sigma_eqpsec - sigma_diff, .TRUE., .TRUE., .TRUE.)
-     !
-     DEALLOCATE( sigma_cor_out )
+     IF (l_enable_off_diagonal) THEN
+        !
+        ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
+        !
+        ! sigma_cor_out is not required, the important output is contained in the
+        ! global variable sigma_corr_full
+        !
+        CALL calc_corr_gamma( sigma_cor_out, sigma_eqpsec - sigma_diff, .TRUE., .TRUE., .TRUE.)
+        !
+        DEALLOCATE( sigma_cor_out )
+        !
+     ELSE
+        !
+        CALL calc_corr_gamma( sigma_sc_eqpsec, sigma_eqpsec - sigma_diff, .TRUE., .FALSE., .TRUE.)
+        !
+     ENDIF
      !
      CALL stop_clock( 'solve_qp' )
      !
      RETURN
+     !
   ENDIF
   !
   IF( l_generate_plot ) THEN

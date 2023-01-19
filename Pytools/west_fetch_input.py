@@ -61,6 +61,7 @@ default["wfreq_control"]["trev_secant"] = 0.05 / rytoev
 default["wfreq_control"]["l_enable_lanczos"] = True
 default["wfreq_control"]["l_qdet_verbose"] = False
 default["wfreq_control"]["l_enable_off_diagonal"] = False
+default["wfreq_control"]["n_pdep_eigen_off_diagonal"] = 0
 default["wfreq_control"]["o_restart_time"] = 0.
 default["wfreq_control"]["ecut_spectralf"] = [-2., 1.]
 default["wfreq_control"]["n_spectralf"] = 204

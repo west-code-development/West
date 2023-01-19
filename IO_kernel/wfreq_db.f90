@@ -50,8 +50,7 @@ MODULE wfreq_db
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iks,ib,ipair
       CHARACTER(LEN=6) :: my_label_k,my_label_b
-      CHARACTER(LEN=10) :: ccounter
-      INTEGER :: counter
+      CHARACTER(LEN=10) :: label
       !
       TYPE(json_file) :: json
       INTEGER :: iun,i
@@ -89,19 +88,15 @@ MODULE wfreq_db
          CALL json%add('output.Q.bandmap',ilist)
          DEALLOCATE(ilist)
          !
-         IF(l_enable_off_diagonal) THEN
-            counter = 0
+         IF(ALLOCATED(pijmap)) THEN
             DO ipair = 1,n_pairs
-               counter = counter+1
-               WRITE(ccounter,'(i10)') counter
-               CALL json%add('output.Q.indexmap('//ccounter//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
+               WRITE(label,'(i10)') ipair
+               CALL json%add('output.Q.indexmap('//label//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
             ENDDO
          ELSE
-            counter = 0
             DO ib = 1,n_bands
-               counter = counter+1
-               WRITE(ccounter,'(i10)') counter
-               CALL json%add('output.Q.indexmap('//ccounter//')',(/ib,ib/))
+               WRITE(label,'(i10)') ib
+               CALL json%add('output.Q.indexmap('//label//')',(/ib,ib/))
             ENDDO
          ENDIF
          !
@@ -217,7 +212,7 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,logfile
+      USE westcom,              ONLY : wfreq_save_dir,logfile,n_pairs
       USE pwcom,                ONLY : nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -259,26 +254,24 @@ MODULE wfreq_db
                WRITE(my_label_ik,'(i6.6)') iks
                WRITE(my_label_jk,'(i6.6)') jks
                !
-               IF(l_enable_off_diagonal) THEN
-                  DO ipair = 1,n_pairs
-                     !
-                     WRITE(my_label_ipair,'(i6.6)') ipair
-                     !
-                     IF(PRESENT(eri_vc)) THEN
-                        CALL json%add('qdet.eri_vc.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
-                        & my_label_ipair,eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
-                     ENDIF
-                     !
-                     IF(PRESENT(eri_w_full)) THEN
-                        CALL json%add('qdet.eri_w_full.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
-                        & my_label_ipair,REAL(eri_w_full(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
-                     ENDIF
-                     !
-                     CALL json%add('qdet.eri_w.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
-                     & my_label_ipair,REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
-                     !
-                  ENDDO
-               ENDIF
+               DO ipair = 1,n_pairs
+                  !
+                  WRITE(my_label_ipair,'(i6.6)') ipair
+                  !
+                  IF(PRESENT(eri_vc)) THEN
+                     CALL json%add('qdet.eri_vc.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                     & my_label_ipair,eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                  ENDIF
+                  !
+                  IF(PRESENT(eri_w_full)) THEN
+                     CALL json%add('qdet.eri_w_full.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                     & my_label_ipair,REAL(eri_w_full(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
+                  ENDIF
+                  !
+                  CALL json%add('qdet.eri_w.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
+                  & my_label_ipair,REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
+                  !
+               ENDDO
                !
             ENDDO
          ENDDO
@@ -314,7 +307,7 @@ MODULE wfreq_db
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,l_enable_off_diagonal,n_pairs,logfile
+      USE westcom,              ONLY : wfreq_save_dir,logfile,n_pairs
       USE pwcom,                ONLY : nspin
       USE io_push,              ONLY : io_push_bar
       USE json_module,          ONLY : json_file
@@ -352,9 +345,7 @@ MODULE wfreq_db
             !
             WRITE(my_label_ik,'(i6.6)') iks
             !
-            IF(l_enable_off_diagonal) THEN
-               CALL json%add('qdet.h1e.K'//my_label_ik,h1e(1:n_pairs,iks)*rytoev)
-            ENDIF
+            CALL json%add('qdet.h1e.K'//my_label_ik,h1e(1:n_pairs,iks)*rytoev)
             !
          ENDDO
          !

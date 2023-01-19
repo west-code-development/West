@@ -492,6 +492,19 @@ wfreq_control
        - If (False), then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band).
        - If (True), then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
 
+.. data:: n_pdep_eigen_off_diagonal
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - If ( n_pdep_eigen_off_diagonal > 0 ), then the off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are computed using n_pdep_eigen_off_diagonal PDEPs. This is to reduce file system usage in large-scale QDET calculations. The diagonal matrix elements are always computed using n_pdep_eigen_to_use PDEPs. Used only when l_enable_off_diagonal is True.
+
 .. data:: l_enable_gwetot
 
 .. list-table::

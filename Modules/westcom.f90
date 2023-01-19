@@ -179,6 +179,7 @@ MODULE wfreq_center
   REAL(DP) :: trev_secant
   LOGICAL :: l_enable_lanczos
   LOGICAL :: l_enable_off_diagonal
+  INTEGER :: n_pdep_eigen_off_diagonal
   CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
   REAL(DP) :: o_restart_time
@@ -217,7 +218,6 @@ MODULE wfreq_center
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: proj_c
 #endif
-  REAL(DP),    ALLOCATABLE :: h1e(:,:)
   COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   LOGICAL :: l_qdet_verbose
   !

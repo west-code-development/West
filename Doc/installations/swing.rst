@@ -24,9 +24,9 @@ WEST executables can be compiled using the following script (tested on December 
    export NVHPC_HOME=/gpfs/fs1/soft/swing/spack-0.16.1/opt/spack/linux-ubuntu20.04-x86_64/gcc-9.3.0/nvhpc-21.9-4pt64om/Linux_x86_64/21.9
    export LD_LIBRARY_PATH=$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/lib:$LD_LIBRARY_PATH
    export PATH=$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/bin:$PATH
-   export SCALAPACK_LIBS=$$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/lib/libscalapack.a
+   export SCALAPACK_LIBS=$NVHPC_HOME/comm_libs/openmpi4/openmpi-4.0.5/lib/libscalapack.a
 
-   ./configure --with-cuda=$$NVHPC_HOME/cuda/11.0 --with-cuda-cc=80 --with-cuda-runtime=11.0
+   ./configure --with-cuda=$NVHPC_HOME/cuda/11.0 --with-cuda-cc=80 --with-cuda-runtime=11.0
 
    make -j 8 pw
 

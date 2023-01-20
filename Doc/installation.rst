@@ -52,6 +52,7 @@ Suggested configuration options
 .. toctree::
    :maxdepth: 1
 
+   installations/polaris.rst
    installations/theta.rst
    installations/bebop.rst
    installations/swing.rst

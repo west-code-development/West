@@ -13,7 +13,32 @@ Theta is a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF
 Building WEST
 ~~~~~~~~~~~~~
 
-**Important**: The `ELPA eigensolver library <https://elpa.mpcdf.mpg.de/>`_ is found to greatly improve the performance of Quantum ESPRESSO on Theta. ELPA can be installed following these steps (tested on July 22, 2022):
+Start an interactive job and ssh to a compute node. The <project_name> must be replaced with an active project allocation.
+
+.. code-block:: bash
+
+   # Start interactive job
+   $ qsub -I -n 1 -t 1:00:00 --attrs enable_ssh=1 -q debug-cache-quad -A <project_name>
+     Connecting to thetamom1 for interactive qsub...
+     Job routed to queue "debug-cache-quad".
+     Memory mode set to cache quad for queue debug-cache-quad
+     Wait for job 266815 to start...
+     Opening interactive session to 3835
+
+   # Get compute node number
+   $ echo $COBALT_PARTNAME
+     3835
+
+   # Full name of compute node is nid + 5-digit node number
+   $ ssh nid03835
+
+   # Set up proxy for internet access
+   $ export HTTP_PROXY=http://theta-proxy.tmi.alcf.anl.gov:3128
+   $ export HTTPS_PROXY=http://theta-proxy.tmi.alcf.anl.gov:3128
+   $ export http_proxy=http://theta-proxy.tmi.alcf.anl.gov:3128
+   $ export https_proxy=http://theta-proxy.tmi.alcf.anl.gov:3128
+
+**Important**: The `ELPA eigensolver library <https://elpa.mpcdf.mpg.de/>`_ is found to greatly improve the performance of Quantum ESPRESSO on Theta. ELPA can be installed following these steps (tested on February 3, 2023):
 
 .. code-block:: bash
 
@@ -30,11 +55,9 @@ Building WEST
    export CC=cc
    export CXX=CC
 
-   wget https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2021.11.002/elpa-2021.11.002.tar.gz
-   tar zxf elpa-2021.11.002.tar.gz
-   cd elpa-2021.11.002
-
-   # Manually edit configure: comment out lines 4474 through 4496, otherwise configure would fail due to cross compilation
+   wget https://elpa.mpcdf.mpg.de/software/tarball-archive/Releases/2022.11.001/elpa-2022.11.001.tar.gz
+   tar zxf elpa-2022.11.001.tar.gz
+   cd elpa-2022.11.001
 
    mkdir build
    cd build
@@ -44,7 +67,7 @@ Building WEST
    make -j 8
    make install
 
-WEST executables can be compiled using the following script (tested on July 22, 2022):
+WEST executables can be compiled using the following script (tested on February 3, 2023):
 
 .. code-block:: bash
 
@@ -61,16 +84,19 @@ WEST executables can be compiled using the following script (tested on July 22, 
    export MPIF90=ftn
    export F90=ftn
    export CC=cc
-   export SCALAPACK_LIBS="$MKLROOT/lib/intel64/libmkl_scalapack_lp64.so -Wl,--start-group $MKLROOT/lib/intel64/libmkl_intel_lp64.so $MKLROOT/lib/intel64/libmkl_intel_thread.so $MKLROOT/lib/intel64/libmkl_core.so $MKLROOT/lib/intel64/libmkl_blacs_intelmpi_lp64.so -Wl,--end-group"
+   export DFLAGS="-D__DFTI -D__MPI -D__SCALAPACK -D__ELPA"
+   export BLAS_LIBS="-Wl,--start-group $MKLROOT/lib/intel64/libmkl_intel_lp64.so $MKLROOT/lib/intel64/libmkl_intel_thread.so $MKLROOT/lib/intel64/libmkl_core.so -Wl,--end-group"
+   export LAPACK_LIBS="-Wl,--start-group $MKLROOT/lib/intel64/libmkl_intel_lp64.so $MKLROOT/lib/intel64/libmkl_intel_thread.so $MKLROOT/lib/intel64/libmkl_core.so -Wl,--end-group"
+   export SCALAPACK_LIBS="$MKLROOT/lib/intel64/libmkl_scalapack_lp64.so $MKLROOT/lib/intel64/libmkl_blacs_intelmpi_lp64.so"
 
    # Edit ELPA installation path
-   ./configure --enable-openmp --with-scalapack=intel --with-elpa-include=/path/to/elpa-2021.11.002/build/include/elpa-2021.11.002/modules --with-elpa-lib=/path/to/elpa-2021.11.002/build/lib/libelpa.a
+   ./configure --enable-openmp --with-elpa-include=/path/to/elpa-2022.11.001/build/include/elpa-2022.11.001/modules --with-elpa-lib=/path/to/elpa-2022.11.001/build/lib/libelpa.a
 
    make -j 8 pw
 
    cd West
 
-   make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
+   make conf PYT=python3 PYT_LDFLAGS="-L/opt/python/3.8.2.1/lib -lpython3.8"
    make -j 8 all
 
 To use the script do:
@@ -114,8 +140,6 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    export ROMIO_FSTYPE_FORCE="ufs:"
 
-   echo "Running Cobalt Job $COBALT_JOBID."
-
    export OMP_NUM_THREADS=$NTHREADS
    aprun -n $MPIRANKS -N $MPIRANKS_PERNODE -cc depth -d $NTHREADS -j $HT ./wstat.x -i wstat.in &> wstat.out
 
@@ -132,4 +156,4 @@ Job submission is done with the following:
    $ qsub run_west.sh
 
 .. seealso::
-   For more information, visit the `ALCF user guide <https://www.alcf.anl.gov/user-guides/xc40-system-overview/>`_.
+   For more information, visit the `ALCF user guide <https://docs.alcf.anl.gov/theta/hardware-overview/machine-overview/>`_.

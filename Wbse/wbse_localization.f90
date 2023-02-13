@@ -22,13 +22,14 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   USE fft_at_gamma,         ONLY : double_invfft_gamma
   USE pwcom,                ONLY : npw,npwx
   USE gvect,                ONLY : gstart
-  USE mp_global,            ONLY : intra_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE qbox_interface,       ONLY : load_qbox_wfc
   USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection
   USE wbse_io,              ONLY : write_umatrix_and_omatrix
   USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_joint_d
-  USE io_push,              ONLY : io_push_title
+  USE distribution_center,  ONLY : aband
+  USE class_idistribute,    ONLY : idistribute
   !
   IMPLICIT NONE
   !
@@ -38,7 +39,7 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   LOGICAL,INTENT(IN) :: l_restart
   !
   LOGICAL :: l_wann
-  INTEGER :: ibnd,jbnd,ir,il
+  INTEGER :: ibnd_l,ibnd,jbnd,ir,il
   INTEGER :: bisec_i,bisec_j
   INTEGER,ALLOCATABLE :: bisec_loc(:)
   REAL(DP) :: val(6)
@@ -51,8 +52,6 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   REAL(DP),EXTERNAL :: DDOT
   !
   CALL start_clock('local')
-  !
-  CALL io_push_title('Localization')
   !
   SELECT CASE(TRIM(localization))
   CASE('W','w')
@@ -69,6 +68,9 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
      !
      IF(l_wann) THEN
         !
+        aband = idistribute()
+        CALL aband%init(nbndval,'i','wann_local',.TRUE.)
+        !
         ! compute unitary rotation matrix
         !
         ALLOCATE(a_matrix(nbndval,nbndval,6))
@@ -78,7 +80,10 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         !
         a_matrix(:,:,:) = 0._DP
         !
-        DO ibnd = 1,nbndval
+        DO ibnd_l = 1,aband%nloc
+           !
+           ibnd = aband%l2g(ibnd_l)
+           !
            DO jbnd = ibnd,nbndval
               !
               CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
@@ -94,9 +99,11 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
               IF(ibnd /= jbnd) a_matrix(jbnd,ibnd,1:6) = val(1:6)
               !
            ENDDO
+           !
         ENDDO
         !
         CALL mp_sum(a_matrix,intra_bgrp_comm)
+        CALL mp_sum(a_matrix,inter_image_comm)
         !
         CALL wann_joint_d(nbndval,a_matrix,6,u_matrix)
         !
@@ -110,7 +117,10 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         !
         ! compute overlap
         !
-        DO ibnd = 1,nbndval
+        DO ibnd_l = 1,aband%nloc
+           !
+           ibnd = aband%l2g(ibnd_l)
+           !
            DO jbnd = 1,nbndval
               !
               CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
@@ -119,7 +129,10 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
               ovl_matrix(ibnd,jbnd) = ovl_val
               !
            ENDDO
+           !
         ENDDO
+        !
+        CALL mp_sum(ovl_matrix,inter_image_comm)
         !
      ELSE
         !

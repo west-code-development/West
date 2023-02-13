@@ -27,9 +27,9 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
                              & westpp_n_liouville_to_use,document,wbse_init_calculation,&
-                             & localization,wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,&
-                             & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
-                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
+                             & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
+                             & overlap_thr,spin_channel,wbse_calculation,solver,qp_correction,&
+                             & scissor_ope,n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
                              & wbse_ipol,wbse_epsinfty,spin_excitation,l_preconditioning,l_reduce_io
   USE mp_world,         ONLY : mpime,root
@@ -121,6 +121,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
      IF(ANY(driver(:)==6)) THEN
         !
         CALL json%add('input.wbse_init_control.wbse_init_calculation',TRIM(wbse_init_calculation))
+        CALL json%add('input.wbse_init_control.bse_method',TRIM(bse_method))
+        CALL json%add('input.wbse_init_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
         CALL json%add('input.wbse_init_control.localization',TRIM(localization))
         CALL json%add('input.wbse_init_control.wfc_from_qbox',TRIM(wfc_from_qbox))
         CALL json%add('input.wbse_init_control.bisection_info',TRIM(bisection_info))
@@ -173,9 +175,9 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
                              & westpp_n_liouville_to_use,document,wbse_init_calculation,&
-                             & localization,wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,&
-                             & spin_channel,wbse_calculation,solver,qp_correction,scissor_ope,&
-                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
+                             & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
+                             & overlap_thr,spin_channel,wbse_calculation,solver,qp_correction,&
+                             & scissor_ope,n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
                              & wbse_ipol,wbse_epsinfty,spin_excitation,l_preconditioning,&
                              & l_reduce_io,main_input_file,logfile
@@ -440,6 +442,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = args%setitem(1, 'wbse_init_control')
         IERR = args%setitem(2, verbose)
         IERR = dict_create(kwargs)
+        IERR = kwargs%setitem('nelec',nelec)
         !
         IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
@@ -449,6 +452,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(cvalue, 'wbse_init_calculation'); wbse_init_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'bse_method'); bse_method = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%get(n_pdep_eigen_to_use, 'n_pdep_eigen_to_use', DUMMY_DEFAULT)
         IERR = return_dict%getitem(cvalue, 'localization'); localization = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'wfc_from_qbox'); wfc_from_qbox = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'bisection_info'); bisection_info = TRIM(ADJUSTL(cvalue))
@@ -688,6 +693,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(qlist,root,world_comm)
      !
      CALL mp_bcast(wbse_init_calculation,root,world_comm)
+     CALL mp_bcast(bse_method,root,world_comm)
+     CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(localization,root,world_comm)
      CALL mp_bcast(wfc_from_qbox,root,world_comm)
      CALL mp_bcast(bisection_info,root,world_comm)
@@ -696,10 +703,22 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(spin_channel,root,world_comm)
      !
      IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
+     IF(n_pdep_eigen_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
      IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
      !
+     SELECT CASE(TRIM(bse_method))
+     CASE('PDEP','pdep','FF_QBOX','FF_Qbox','ff_qbox')
+     CASE DEFAULT
+        CALL errore('fetch_input','Err: bse_method/=(PDEP,FF_QBOX)',1)
+     END SELECT
+     !
      SELECT CASE(TRIM(localization))
-     CASE('N','n','B','b','W','w')
+     CASE('N','n','W','w')
+     CASE('B','b')
+        SELECT CASE(TRIM(bse_method))
+        CASE('PDEP','pdep')
+           CALL errore('fetch_input','Err: bisection localization requires FF_QBOX',1)
+        END SELECT
      CASE DEFAULT
         CALL errore('fetch_input','Err: localization/=(N,B,W)',1)
      END SELECT

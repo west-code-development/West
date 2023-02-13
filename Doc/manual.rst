@@ -757,6 +757,22 @@ wbse_init_control
        - "S" : Start from scratch.
        - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
 
+.. data:: bse_method
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "PDEP"
+   * - **Description**
+     - Available options are:
+
+       - "PDEP" : Use the PDEP eigenpotentials to compute screened exchange integrals.
+       - "FF_QBOX" : Use the finite field method with Qbox coupling to compute screened exchange integrals.
+
 .. data:: localization
 
 .. list-table::
@@ -771,7 +787,7 @@ wbse_init_control
      - Available options are:
 
        - "N" : Kohn-Sham orbitals are not localized.
-       - "B" : Bisected orbitals are used.
+       - "B" : Bisected orbitals are used. Valid only when bse_method is "FF_QBOX".
        - "W" : Wannier orbitals are used.
 
 .. data:: wfc_from_qbox
@@ -785,7 +801,7 @@ wbse_init_control
    * - **Default**
      - "qb_wfc"
    * - **Description**
-     - Name of the file that contains Qbox wavefunctions. Used only when localization is "B".
+     - Name of the file that contains Qbox wavefunctions. Used only when bse_method is "FF_QBOX" and localization is "B".
 
 .. data:: bisection_info
 
@@ -798,7 +814,7 @@ wbse_init_control
    * - **Default**
      - "bis_info"
    * - **Description**
-     - Name of the file that contains info about bisection. Used only when localization is "B".
+     - Name of the file that contains info about bisection. Used only when bse_method is "FF_QBOX" and localization is "B".
 
 .. data:: chi_kernel
 

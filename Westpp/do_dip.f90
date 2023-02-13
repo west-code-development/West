@@ -51,8 +51,8 @@ SUBROUTINE do_dip()
   COMPLEX(DP), ALLOCATABLE :: dip_cryst_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: dip_cart_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: Hx_psi(:,:)
-  CHARACTER(5) :: label_k
-  CHARACTER(9) :: label_d
+  CHARACTER(LEN=5) :: label_k
+  CHARACTER(LEN=9) :: label_d
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   TYPE(json_core) :: jcor

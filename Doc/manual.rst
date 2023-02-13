@@ -589,6 +589,7 @@ westpp_control
        - "L" : Output the localization factor and the inverse participation ratio.
        - "X" : Output the exciton state.
        - "P" : Output the density response to exciton state.
+       - "B" : Output the unitary transformation matrix of Boys/Wannier localization.
 
 .. data:: westpp_range
 

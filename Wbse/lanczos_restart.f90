@@ -88,9 +88,9 @@ MODULE lanczos_restart
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
          offset = 1
          WRITE(iun,POS=offset) header
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          WRITE(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input,1:nspin)
-         offset = offset+SIZE(beta_store)*SIZEOF(beta_store(1,1,1))
+         offset = offset+SIZEOF(beta_store)
          WRITE(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input,1:nspin)
          CLOSE(iun)
          !
@@ -157,15 +157,15 @@ MODULE lanczos_restart
          CALL json%load(filename=fname)
          !
          CALL json%get('nipol_input',nipol_input_tmp,found)
-         IF(.NOT. found) CALL errore('lanczos_restart_read','nipol_input not found')
+         IF(.NOT. found) CALL errore('lanczos_restart_read','nipol_input not found',1)
          CALL json%get('n_lanczos',n_lanczos_tmp,found)
-         IF(.NOT. found) CALL errore('lanczos_restart_read','n_lanczos not found')
+         IF(.NOT. found) CALL errore('lanczos_restart_read','n_lanczos not found',1)
          CALL json%get('nspin',nspin_tmp,found)
-         IF(.NOT. found) CALL errore('lanczos_restart_read','nspin not found')
+         IF(.NOT. found) CALL errore('lanczos_restart_read','nspin not found',1)
          CALL json%get('ipol_stopped',ipol_stopped,found)
-         IF(.NOT. found) CALL errore('lanczos_restart_read','ipol_stopped not found')
+         IF(.NOT. found) CALL errore('lanczos_restart_read','ipol_stopped not found',1)
          CALL json%get('ilan_stopped',ilan_stopped,found)
-         IF(.NOT. found) CALL errore('lanczos_restart_read','ilan_stopped not found')
+         IF(.NOT. found) CALL errore('lanczos_restart_read','ilan_stopped not found',1)
          !
          CALL json%destroy()
          !
@@ -196,9 +196,9 @@ MODULE lanczos_restart
             CALL errore('lanczos_restart_read','Endianness mismatch: '//TRIM(fname),1)
          ENDIF
          !
-         offset = 1+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          READ(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input,1:nspin)
-         offset = offset+SIZE(beta_store)*SIZEOF(beta_store(1,1,1))
+         offset = offset+SIZEOF(beta_store)
          READ(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input,1:nspin)
          CLOSE(iun)
          !

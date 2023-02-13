@@ -14,10 +14,6 @@ MODULE check_ovl_wfc
   !
   IMPLICIT NONE
   !
-  INTERFACE check_ovl_wannier
-     MODULE PROCEDURE check_ovl_wannier_real, check_ovl_wannier_cmplx
-  ENDINTERFACE
-  !
   CONTAINS
     !
     SUBROUTINE read_bisection_loc(current_spin, numband, bisec_loc)
@@ -134,7 +130,7 @@ MODULE check_ovl_wfc
       !
     END SUBROUTINE
     !
-    SUBROUTINE check_ovl_wannier_real(orb_real_i, orb_real_j, ovl_value)
+    SUBROUTINE check_ovl_wannier(orb_i, orb_j, ovl_value)
       !
       USE kinds,                ONLY : DP
       USE fft_base,             ONLY : dfftp
@@ -144,22 +140,21 @@ MODULE check_ovl_wfc
       !
       IMPLICIT NONE
       !
-      REAL(DP), INTENT(IN) :: orb_real_i(dfftp%nnr)
-      REAL(DP), INTENT(IN) :: orb_real_j(dfftp%nnr)
+      REAL(DP), INTENT(IN) :: orb_i(dfftp%nnr)
+      REAL(DP), INTENT(IN) :: orb_j(dfftp%nnr)
       REAL(DP), INTENT(OUT) :: ovl_value
       !
       INTEGER :: ir
       REAL(DP) :: summ_ib, summ_jb, summ_ij
       !
-      ovl_value = 0._DP
       summ_ib = 0._DP
       summ_jb = 0._DP
       summ_ij = 0._DP
       !
       DO ir = 1, dfftp%nnr
-         summ_ib = summ_ib + orb_real_i(ir)**4
-         summ_jb = summ_jb + orb_real_j(ir)**4
-         summ_ij = summ_ij + orb_real_i(ir)**2 * orb_real_j(ir)**2
+         summ_ib = summ_ib + orb_i(ir)**4
+         summ_jb = summ_jb + orb_j(ir)**4
+         summ_ij = summ_ij + orb_i(ir)**2 * orb_j(ir)**2
       ENDDO
       !
       summ_ib = summ_ib * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
@@ -170,48 +165,7 @@ MODULE check_ovl_wfc
       CALL mp_sum(summ_jb, intra_bgrp_comm)
       CALL mp_sum(summ_ij, intra_bgrp_comm)
       !
-      ovl_value = summ_ij/SQRT(summ_ib*summ_jb)
-      !
-    END SUBROUTINE
-    !
-    SUBROUTINE check_ovl_wannier_cmplx(orb_cmpl_i, orb_cmpl_j, ovl_value)
-      !
-      USE kinds,                ONLY : DP
-      USE fft_base,             ONLY : dfftp
-      USE cell_base,            ONLY : omega
-      USE mp_global,            ONLY : intra_bgrp_comm
-      USE mp,                   ONLY : mp_sum
-      !
-      IMPLICIT NONE
-      !
-      COMPLEX(DP), INTENT(IN) :: orb_cmpl_i(dfftp%nnr)
-      COMPLEX(DP), INTENT(IN) :: orb_cmpl_j(dfftp%nnr)
-      REAL(DP), INTENT(OUT) :: ovl_value
-      !
-      INTEGER :: ir
-      REAL(DP) :: summ_ib, summ_jb, summ_ij
-      !
-      ovl_value = 0._DP
-      summ_ib = 0._DP
-      summ_jb = 0._DP
-      summ_ij = 0._DP
-      !
-      DO ir = 1, dfftp%nnr
-         summ_ib = summ_ib + ((REAL(orb_cmpl_i(ir),KIND=DP))**4 + (AIMAG(orb_cmpl_i(ir)))**4)
-         summ_jb = summ_jb + ((REAL(orb_cmpl_j(ir),KIND=DP))**4 + (AIMAG(orb_cmpl_j(ir)))**4)
-         summ_ij = summ_ij + (((REAL(orb_cmpl_i(ir),KIND=DP))**2 + (AIMAG(orb_cmpl_i(ir)))**2) &
-                           * ((REAL(orb_cmpl_j(ir),KIND=DP))**2 + (AIMAG(orb_cmpl_j(ir)))**2))
-      ENDDO
-      !
-      summ_ib = summ_ib * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
-      summ_jb = summ_jb * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
-      summ_ij = summ_ij * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
-      !
-      CALL mp_sum(summ_ib, intra_bgrp_comm)
-      CALL mp_sum(summ_jb, intra_bgrp_comm)
-      CALL mp_sum(summ_ij, intra_bgrp_comm)
-      !
-      ovl_value = summ_ij/SQRT(summ_ib*summ_jb)
+      ovl_value = summ_ij / SQRT(summ_ib*summ_jb)
       !
     END SUBROUTINE
     !

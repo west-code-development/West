@@ -37,6 +37,7 @@ set_nbndocc.o \
 set_npwq.o \
 types_bz_grid.o \
 v_x.o \
+wannier.o \
 west_environment.o \
 west_print_clocks.o
 

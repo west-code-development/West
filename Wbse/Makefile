@@ -20,16 +20,15 @@ MODFLAGS = $(BASEMOD_FLAGS) \
            $(MOD_FLAG).
 
 WBSE_OBJS = \
+bse_kernel.o \
+calc_tau.o \
 check_ovl_wfc.o \
 lanczos_restart.o \
 td_liouville_oper.o \
-wbse_bse_kernel.o \
 wbse_calc_dens.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
 wbse_dv.o \
-wbse_init_methods.o \
-wbse_init_qboxcoupling.o \
 wbse_init_readin.o \
 wbse_init_restart.o \
 wbse_init_setup.o \

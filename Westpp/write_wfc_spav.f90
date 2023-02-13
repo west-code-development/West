@@ -99,7 +99,7 @@ SUBROUTINE write_wfc_spav(iu, fname, wfc, r0, nr, rmax)
   !
   ! Workspace
   !
-  INTEGER :: ig, ir
+  INTEGER :: ir
   REAL(DP) :: dr
   REAL(DP) :: spav(nr+1)
   !

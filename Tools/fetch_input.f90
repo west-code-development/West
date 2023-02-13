@@ -699,28 +699,14 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
      !
      SELECT CASE(TRIM(localization))
-     CASE('N','n','B','b')
+     CASE('N','n','B','b','W','w')
      CASE DEFAULT
-        CALL errore('fetch_input','Err: localization/=(N,B)',1)
+        CALL errore('fetch_input','Err: localization/=(N,B,W)',1)
      END SELECT
      !
      IF(spin_channel < 0 .OR. spin_channel > 2) THEN
         CALL errore('fetch_input','Err: spin_channel/=0,1,2',spin_channel)
      ENDIF
-     !
-     !use_qbox = .FALSE.
-     !use_wstat_pdep = .FALSE.
-     !SELECT CASE(TRIM(which_bse_method))
-     !CASE('finite-field','FF')
-     !use_qbox = .TRUE.
-     !CASE('PDEP','pdep')
-     !use_wstat_pdep = .TRUE.
-     !CASE DEFAULT
-     !   CALL errore('fetch_input','Err: which_bse_method != FF/PDEP', 1)
-     !END SELECT
-     !
-     !CALL mp_bcast(use_qbox,root,world_comm)
-     !CALL mp_bcast(use_wstat_pdep,root,world_comm)
      !
   ENDIF
   !

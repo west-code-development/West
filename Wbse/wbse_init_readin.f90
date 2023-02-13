@@ -27,10 +27,12 @@ SUBROUTINE wbse_init_readin()
   !
   CALL start_clock('wbse_init_readin')
   !
-  CALL fetch_input_yml(3,(/1,5,6/),.TRUE.)
+  ! READ INPUT_WEST
   !
-  !  read the input file produced by the pwscf program
-  !  allocate memory and recalculate what is needed
+  CALL fetch_input_yml(1,(/1/),.TRUE.)
+  !
+  ! read the input file produced by the pwscf program
+  ! allocate memory and recalculate what is needed
   !
   needwf = .TRUE.
   CALL read_file_new(needwf)
@@ -42,6 +44,10 @@ SUBROUTINE wbse_init_readin()
   IF(doublegrid) CALL errore('wbse_init_readin','double grid not implemented',1)
   IF(nbgrp > 1) CALL errore('wbse_init_readin','band groups not implemented',1)
   IF(npool > 1) CALL errore('wbse_init_readin','pools not implemented',1)
+  !
+  ! READ other sections of the input file
+  !
+  CALL fetch_input_yml(2,(/5,6/),.TRUE.)
   !
   CALL stop_clock('wbse_init_readin')
   !

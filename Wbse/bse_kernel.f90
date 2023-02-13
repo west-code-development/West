@@ -11,44 +11,7 @@
 ! Ngoc Linh Nguyen, Victor Yu
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbse_bse_kernel(current_spin,nbndval_k,evc1,bse_kd1)
-  !-----------------------------------------------------------------------
-  !
-  USE kinds,                ONLY : DP
-  USE control_flags,        ONLY : gamma_only
-  USE pwcom,                ONLY : npwx,nks
-  USE westcom,              ONLY : nbndval0x
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  INTEGER, INTENT(IN) :: current_spin,nbndval_k
-  COMPLEX(DP), INTENT(IN) :: evc1(npwx,nbndval0x,nks)
-  COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,nbndval0x)
-  !
-#if defined(__CUDA)
-  CALL start_clock_gpu('bse_kernel')
-#else
-  CALL start_clock('bse_kernel')
-#endif
-  !
-  IF(gamma_only) THEN
-     CALL bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
-  ELSE
-     CALL errore('wbse_bse_kernel','Only Gamma is supported',1)
-  ENDIF
-  !
-#if defined(__CUDA)
-  CALL stop_clock_gpu('bse_kernel')
-#else
-  CALL stop_clock('bse_kernel')
-#endif
-  !
-END SUBROUTINE
-!
-!-----------------------------------------------------------------------
-SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
+SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
@@ -91,6 +54,12 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   COMPLEX(DP), PARAMETER :: zero = (0._DP,0._DP)
   COMPLEX(DP), PARAMETER :: one = (1._DP,0._DP)
   COMPLEX(DP), PARAMETER :: mone = (-1._DP,0._DP)
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('bse_kernel')
+#else
+  CALL start_clock('bse_kernel')
+#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -340,6 +309,12 @@ SUBROUTINE bse_kernel_finite_field_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      DEALLOCATE(raux2)
   ENDIF
   DEALLOCATE(gaux)
+#endif
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('bse_kernel')
+#else
+  CALL stop_clock('bse_kernel')
 #endif
   !
 END SUBROUTINE

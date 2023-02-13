@@ -73,7 +73,7 @@ MODULE plep_io
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
          offset = 1
          WRITE(iun,POS=offset) header
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          !
       ENDIF
       !
@@ -91,7 +91,7 @@ MODULE plep_io
          !
          IF(me_bgrp == root_bgrp) THEN
             WRITE(iun,POS=offset) tmp_vec(1:npwq_g)
-            offset = offset+SIZE(tmp_vec)*SIZEOF(tmp_vec(1))
+            offset = offset+SIZEOF(tmp_vec)
          ENDIF
          !
       ENDDO
@@ -159,7 +159,7 @@ MODULE plep_io
             CALL errore('plep_read','Endianness mismatch: '//TRIM(fname),1)
          ENDIF
          !
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          !
       ENDIF
       !
@@ -169,7 +169,7 @@ MODULE plep_io
          !
          IF(me_bgrp == root_bgrp) THEN
             READ(iun,POS=offset) tmp_vec(1:npwq_g)
-            offset = offset+SIZE(tmp_vec)*SIZEOF(tmp_vec(1))
+            offset = offset+SIZEOF(tmp_vec)
          ENDIF
          !
          CALL splitwf(plepg(:,ibnd),tmp_vec,npwq,ig_l2g(1:npwq),me_bgrp,nproc_bgrp,root_bgrp,intra_bgrp_comm)
@@ -228,7 +228,7 @@ MODULE plep_io
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
          offset = 1
          WRITE(iun,POS=offset) header
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          !
       ENDIF
       !
@@ -247,7 +247,7 @@ MODULE plep_io
             !
             IF(me_bgrp == root_bgrp) THEN
                WRITE(iun,POS=offset) tmp_vec(1:npwx_g)
-               offset = offset+SIZE(tmp_vec)*SIZEOF(tmp_vec(1))
+               offset = offset+SIZEOF(tmp_vec)
             ENDIF
             !
          ENDDO
@@ -319,7 +319,7 @@ MODULE plep_io
             CALL errore('plep_read','Endianness mismatch: '//TRIM(fname),1)
          ENDIF
          !
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          !
       ENDIF
       !
@@ -330,7 +330,7 @@ MODULE plep_io
             !
             IF(me_bgrp == root_bgrp) THEN
                READ(iun,POS=offset) tmp_vec(1:npwx_g)
-               offset = offset+SIZE(tmp_vec)*SIZEOF(tmp_vec(1))
+               offset = offset+SIZEOF(tmp_vec)
             ENDIF
             !
             CALL splitwf(plepg(:,ibnd,ik),tmp_vec,npwx,ig_l2g(1:npwx),me_bgrp,nproc_bgrp,root_bgrp,intra_bgrp_comm)

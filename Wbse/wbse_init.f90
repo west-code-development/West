@@ -19,7 +19,6 @@ PROGRAM wbse_init
   USE check_stop,           ONLY : check_stop_init
   USE mp_global,            ONLY : mp_startup,mp_global_end
   USE west_environment,     ONLY : west_environment_start,west_environment_end
-  USE qbox_interface,       ONLY : init_qbox,finalize_qbox
   !
   IMPLICIT NONE
   !
@@ -41,11 +40,7 @@ PROGRAM wbse_init
   !
   CALL wbse_init_setup( )
   !
-  CALL init_qbox( )
-  !
-  CALL wbse_init_methods( )
-  !
-  CALL finalize_qbox( )
+  CALL calc_tau( )
   !
   CALL exx_ungo( )
   !

@@ -14,7 +14,7 @@
 SUBROUTINE wbse_init_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,        ONLY : localization,l_local_repr,l_bisect_thr,l_use_ecutrho,wbse_init_save_dir
+  USE westcom,        ONLY : localization,l_local_repr,l_use_ecutrho,wbse_init_save_dir
   USE kinds,          ONLY : DP
   USE types_coulomb,  ONLY : pot3D
   !
@@ -27,17 +27,15 @@ SUBROUTINE wbse_init_setup()
   SELECT CASE(TRIM(localization))
   CASE('N','n')
      l_local_repr = .FALSE.
-     l_bisect_thr = .FALSE.
-  CASE('B','b')
+  CASE('B','b','W','w')
      l_local_repr = .TRUE.
-     l_bisect_thr = .TRUE.
   END SELECT
   !
   l_use_ecutrho = .FALSE.
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Rho',.FALSE.,'gb')
+  CALL pot3D%init('Wave',.FALSE.,'default')
   !
   CALL set_nbndocc()
   !

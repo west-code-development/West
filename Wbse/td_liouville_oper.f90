@@ -319,7 +319,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !$acc update device(evc1_new(1:npwx*npol,1:nbndval0x,iks:iks))
      !
      IF(l_bse_calculation) THEN
-        CALL wbse_bse_kernel(current_spin,nbndval,evc1,evc1_new(:,:,iks))
+        CALL bse_kernel_gamma(current_spin,nbndval,evc1,evc1_new(:,:,iks))
      ENDIF
      !
      IF(gamma_only) THEN

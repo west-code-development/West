@@ -64,8 +64,6 @@ SUBROUTINE do_sxx ( )
   INTEGER :: iunit
   LOGICAL :: l_print_pdep_read
   !
-  CALL io_push_title('(S)creened eXact eXchange')
-  !
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !
@@ -91,6 +89,8 @@ SUBROUTINE do_sxx ( )
      ALLOCATE( phase(dffts%nnr) )
      ALLOCATE( evckmq(npwx*npol,nbnd) )
   ENDIF
+  !
+  CALL io_push_title('(S)creened eXact eXchange')
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * (westpp_range(2)-westpp_range(1)+1)  )
   !

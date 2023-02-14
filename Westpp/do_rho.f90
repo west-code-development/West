@@ -40,8 +40,6 @@ SUBROUTINE do_rho ( )
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
   !
-  CALL io_push_title('(R)ho')
-  !
   aband = idistribute()
   CALL aband%init(nbnd,'i','nbnd',.TRUE.)
   !
@@ -49,6 +47,8 @@ SUBROUTINE do_rho ( )
   !
   auxr = 0._DP
   psic = 0._DP
+  !
+  CALL io_push_title('(R)ho')
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps )
   !

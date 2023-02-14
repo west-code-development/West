@@ -41,12 +41,12 @@ SUBROUTINE do_eigenpot2 ( )
   CHARACTER(LEN=5) :: labelq
   LOGICAL :: l_print_pdep_read
   !
-  CALL io_push_title('(E)igenpotentials')
-  !
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !
   ALLOCATE(auxr(dffts%nnr))
+  !
+  CALL io_push_title('(E)igenpotentials')
   !
   CALL start_bar_type( barra, 'westpp', pert%nloc*q_grid%np)
   !

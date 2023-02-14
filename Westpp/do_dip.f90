@@ -60,8 +60,6 @@ SUBROUTINE do_dip()
   !
   IF(nspin == 4) CALL errore('do_dip','nspin 4 not yet implemented',1)
   !
-  CALL io_push_title('(D)ipole matrix')
-  !
   nstate = westpp_range(2)-westpp_range(1)+1
   IF(gamma_only) THEN
      ALLOCATE(dip_cryst_r(nstate,nstate,3))
@@ -76,6 +74,8 @@ SUBROUTINE do_dip()
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
   ENDIF
+  !
+  CALL io_push_title('(D)ipole matrix')
   !
   CALL start_bar_type(barra,'westpp',k_grid%nps*3)
   !

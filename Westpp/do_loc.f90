@@ -55,8 +55,6 @@ SUBROUTINE do_loc ( )
   TYPE(json_core) :: json
   TYPE(json_value), POINTER :: json_root, localization_object, ipr_object
   !
-  CALL io_push_title('(L)ocalization Factor')
-  !
   nbnd_ = westpp_range(2) - westpp_range(1) + 1
   aband = idistribute()
   CALL aband%init(nbnd_,'i','westpp_range',.TRUE.)
@@ -76,6 +74,8 @@ SUBROUTINE do_loc ( )
   ENDIF
   ALLOCATE(local_fac(nbnd_,k_grid%nps))
   ALLOCATE(ipr(nbnd_,k_grid%nps))
+  !
+  CALL io_push_title('(L)ocalization Factor')
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) )
   !

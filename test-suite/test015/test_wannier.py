@@ -38,6 +38,9 @@ def test_trans_matrix():
     """
     Test unitary transformation matrix.
     """
+    # get parameters from JSON file
+    with open("./parameters.json", "r") as f:
+        parameters = json.load(f)
 
     ref_trans = read_trans_matrix_from_json("./test015/ref/westpp.json")
     test_trans = read_trans_matrix_from_json("./test015/test.westpp.save/westpp.json")
@@ -53,6 +56,9 @@ def test_wannier_center():
     """
     Test Wannier centers.
     """
+    # get parameters from JSON file
+    with open("./parameters.json", "r") as f:
+        parameters = json.load(f)
 
     ref_wanc = read_wannier_center_from_json("./test015/ref/westpp.json")
     test_wanc = read_wannier_center_from_json("./test015/test.westpp.save/westpp.json")

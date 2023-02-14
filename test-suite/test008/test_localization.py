@@ -28,6 +28,9 @@ def test_localization():
     """
     Test localization factor.
     """
+    # get parameters from JSON file
+    with open("./parameters.json", "r") as f:
+        parameters = json.load(f)
 
     ref_loc = read_localization_from_json("./test008/ref/localization.json")
     test_loc = read_localization_from_json(
@@ -45,6 +48,9 @@ def test_ipr():
     """
     Test IPR.
     """
+    # get parameters from JSON file
+    with open("./parameters.json", "r") as f:
+        parameters = json.load(f)
 
     ref_ipr = read_ipr_from_json("./test008/ref/localization.json")
     test_ipr = read_ipr_from_json("./test008/test.westpp.save/localization.json")

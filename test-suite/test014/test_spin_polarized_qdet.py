@@ -1,6 +1,7 @@
 import numpy as np
 import json
 
+
 def read_parameters_from_JSON(filename):
     """
     Read basic calculation parameters from JSON file.
@@ -16,6 +17,7 @@ def read_parameters_from_JSON(filename):
     bands = np.array(raw_["input"]["wfreq_control"]["qp_bands"], dtype=int)
 
     return nspin, npair, bands, indexmap
+
 
 def read_one_body_terms_from_JSON(filename):
     """
@@ -40,6 +42,7 @@ def read_one_body_terms_from_JSON(filename):
         h1e_pair[ispin, :] = np.array(raw_["qdet"]["h1e"][string1], dtype=float)
 
     return h1e_pair
+
 
 def read_two_body_terms_from_JSON(filename):
     """
@@ -72,13 +75,14 @@ def read_two_body_terms_from_JSON(filename):
 
     return eri_pair
 
+
 def test_qdet_parameters():
     """
     Test indexmap and other parameters in JSON file/
     """
 
-    ref_data = read_parameters_from_JSON('./test014/ref/wfreq.json')
-    test_data = read_parameters_from_JSON('./test014/test.wfreq.save/wfreq.json')
+    ref_data = read_parameters_from_JSON("./test014/ref/wfreq.json")
+    test_data = read_parameters_from_JSON("./test014/test.wfreq.save/wfreq.json")
 
     # test npair
     assert ref_data[0] == test_data[0]
@@ -89,31 +93,32 @@ def test_qdet_parameters():
     # test indexmap
     np.testing.assert_array_equal(ref_data[3], test_data[3])
 
+
 def test_qdet_one_body_terms():
     """
     Test one-body terms of spin-polarized QDET calculation.
     """
     # get parameter from JSON
-    with open('./parameters.json', 'r') as f:
+    with open("./parameters.json", "r") as f:
         parameters = json.load(f)
-    tolerance = np.log10(float(parameters['tolerance']['pdep_eigenvalue']))
+    tolerance = np.log10(float(parameters["tolerance"]["pdep_eigenvalue"]))
 
-    h1e_ref = read_one_body_terms_from_JSON('./test014/ref/wfreq.json')
-    h1e_test = read_one_body_terms_from_JSON('./test014/test.wfreq.save/wfreq.json')
+    h1e_ref = read_one_body_terms_from_JSON("./test014/ref/wfreq.json")
+    h1e_test = read_one_body_terms_from_JSON("./test014/test.wfreq.save/wfreq.json")
 
     np.testing.assert_almost_equal(h1e_ref, h1e_test, decimal=tolerance)
+
 
 def test_qdet_two_body_terms():
     """
     Test two-body terms of spin-polarized QDET calculation.
     """
     # get parameter from JSON
-    with open('./parameters.json', 'r') as f:
+    with open("./parameters.json", "r") as f:
         parameters = json.load(f)
-    tolerance = np.log10(float(parameters['tolerance']['pdep_eigenvalue']))
+    tolerance = np.log10(float(parameters["tolerance"]["pdep_eigenvalue"]))
 
-    eri_ref = read_two_body_terms_from_JSON('./test014/ref/wfreq.json')
-    eri_test = read_two_body_terms_from_JSON('./test014/test.wfreq.save/wfreq.json')
+    eri_ref = read_two_body_terms_from_JSON("./test014/ref/wfreq.json")
+    eri_test = read_two_body_terms_from_JSON("./test014/test.wfreq.save/wfreq.json")
 
     np.testing.assert_almost_equal(eri_ref, eri_test, decimal=tolerance)
-

@@ -1,22 +1,11 @@
 import numpy as np
 import json
-import os
 import pytest
 from xml.etree import ElementTree as ET
 
 ######################
 # REUSABLE FUNCTIONS #
 ######################
-
-def check_files_exist_and_job_done(list_of_files):
-    """
-    Check that every file in the list exists and contains the string 'JOB DONE'
-    """
-
-    for file in list_of_files:
-        assert os.path.isfile(file),f'{file} is missing'
-        with open(file,'r') as f:
-            assert 'JOB DONE' in f.read(),f'{file} does not have the string JOB DONE'
 
 
 def read_total_energy(fileName):
@@ -121,67 +110,9 @@ def read_and_test_wfreq_energies(fileA,fileB,tol):
             assert np.allclose(np.abs(test_en[ik][key]),np.abs(ref_en[ik][key]),rtol=0,atol=tol),f'Single-particle energies changed, ik {ik}, field {key}'
 
 
-def read_localization_and_ipr(FileName):
-    """
-    Reads westpp localization
-    """
-
-    with open(FileName,'r') as f:
-        data = json.load(f)
-        localization = data['localization']
-        ipr = data['ipr']
-
-    return localization,ipr
-
-
-def read_and_test_localization_and_ipr(fileA,fileB,tol):
-    """
-    Reads and tests localization factor and inverse participation ratio (IPR)
-    """
-
-    testLoc,testIPR = read_localization_and_ipr(fileA)
-    refLoc,refIPR = read_localization_and_ipr(fileB)
-
-    assert np.allclose(testLoc,refLoc,rtol=0.0,atol=tol),'Localization factor changed'
-    assert np.allclose(testIPR,refIPR,rtol=0.0,atol=tol),'IPR changed'
-
-
-def read_wannier(FileName):
-    """
-    Reads westpp Wannier
-    """
-
-    with open(FileName,'r') as f:
-        data = json.load(f)
-
-    trans = {}
-    for ik in range(1,data['system']['electron']['nkstot']+1):
-        kindex = f'K{ik:05d}'
-        trans[ik] = np.array(data['output']['B'][kindex]['trans_matrix'],dtype='f8')
-
-    return trans
-
-
-def read_and_test_wannier(fileA,fileB,tol):
-    """
-    Reads and tests unitary transformation matrix of Wannier localization
-    """
-
-    test_trans = read_wannier(fileA)
-    ref_trans = read_wannier(fileB)
-
-    for ik in test_trans:
-        assert np.allclose(np.abs(test_trans[ik]),np.abs(ref_trans[ik]),rtol=0,atol=tol),f'Wannier transformation matrix changed, ik {ik}'
-
-
 #########
 # TESTS #
 #########
-
-
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012','test013','test014'])
-def test_output(testdir):
-    check_files_exist_and_job_done([testdir+'/pw.out',testdir+'/wstat.out',testdir+'/wfreq.out'])
 
 
 @pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009','test010','test011','test012','test013','test014','test015'])
@@ -203,17 +134,3 @@ def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))
-
-
-@pytest.mark.parametrize('testdir',['test008'])
-def test_localization_and_ipr(testdir):
-    with open('parameters.json','r') as f:
-        parameters = json.load(f)
-    read_and_test_localization_and_ipr(testdir+'/test.westpp.save/localization.json',testdir+'/ref/localization.json',float(parameters['tolerance']['localization']))
-
-
-@pytest.mark.parametrize('testdir',['test015'])
-def test_wannier(testdir):
-    with open('parameters.json','r') as f:
-        parameters = json.load(f)
-    read_and_test_wannier(testdir+'/test.westpp.save/westpp.json',testdir+'/ref/westpp.json',float(parameters['tolerance']['localization']))

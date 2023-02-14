@@ -56,15 +56,13 @@ SUBROUTINE do_sxx ( )
   REAL(DP),ALLOCATABLE :: sigma_sxx( :, : )
   REAL(DP) :: peso
   REAL(DP), EXTERNAL :: DDOT
-  CHARACTER(LEN=6) :: myglobk
+  CHARACTER(LEN=5) :: label_k
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   COMPLEX(DP),ALLOCATABLE :: zproj(:,:)
   REAL(DP),ALLOCATABLE :: dproj(:,:)
   TYPE(json_file) :: json
   INTEGER :: iunit
   LOGICAL :: l_print_pdep_read
-  !
-  CALL io_push_title('(S)creened eXact eXchange')
   !
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
@@ -91,6 +89,8 @@ SUBROUTINE do_sxx ( )
      ALLOCATE( phase(dffts%nnr) )
      ALLOCATE( evckmq(npwx*npol,nbnd) )
   ENDIF
+  !
+  CALL io_push_title('(S)creened eXact eXchange')
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * (westpp_range(2)-westpp_range(1)+1)  )
   !
@@ -275,19 +275,15 @@ SUBROUTINE do_sxx ( )
         & iks, ib, et(ib,iks)*rytoev, sigma_exx(ib,iks)*rytoev, sigma_sxx(ib,iks)*rytoev, sigma_sxx(ib,iks)/sigma_exx(ib,iks)
      ENDDO
      IF (k_grid%nps>1.AND.iks<k_grid%nps) CALL io_push_bar()
-     WRITE(myglobk,'(i5.5)') iks
-     !
-     !CALL serial_table_output(mpime==root,4000,'sxx_K'//myglobk,out_tab,&
-     !& westpp_range(2)-westpp_range(1)+1,5,&
-     !& (/'      band','    E0[eV]','    Sx[eV]','   Sxx[eV]','    Sxx/Sx'/))
+     WRITE(label_k,'(i5.5)') iks
      !
      IF(mpime==root) THEN
         !
-        CALL json%add('output.S.K'//TRIM(myglobk)//'.bandmap',out_tab(:,1))
-        CALL json%add('output.S.K'//TRIM(myglobk)//'.eks',out_tab(:,2))
-        CALL json%add('output.S.K'//TRIM(myglobk)//'.sx',out_tab(:,3))
-        CALL json%add('output.S.K'//TRIM(myglobk)//'.sxx',out_tab(:,4))
-        CALL json%add('output.S.K'//TRIM(myglobk)//'.fraction',out_tab(:,5))
+        CALL json%add('output.S.K'//label_k//'.bandmap',out_tab(:,1))
+        CALL json%add('output.S.K'//label_k//'.eks',out_tab(:,2))
+        CALL json%add('output.S.K'//label_k//'.sx',out_tab(:,3))
+        CALL json%add('output.S.K'//label_k//'.sxx',out_tab(:,4))
+        CALL json%add('output.S.K'//label_k//'.fraction',out_tab(:,5))
         !
      ENDIF
   ENDDO

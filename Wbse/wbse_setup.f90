@@ -14,12 +14,12 @@
 SUBROUTINE wbse_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,          ONLY : localization,l_local_repr,l_bisect_thr,macropol_calculation,&
-                             & l_macropol,solver,l_bse_calculation,wbse_calculation,l_davidson,&
-                             & l_lanczos,qp_correction,l_qp_correction,spin_excitation,&
-                             & l_bse_triplet,wstat_calculation,n_pdep_times,n_pdep_eigen,&
-                             & n_pdep_basis,n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,&
-                             & trev_pdep,n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
+  USE westcom,          ONLY : localization,l_local_repr,macropol_calculation,l_macropol,solver,&
+                             & l_bse_calculation,wbse_calculation,l_davidson,l_lanczos,&
+                             & qp_correction,l_qp_correction,spin_excitation,l_bse_triplet,&
+                             & wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_basis,&
+                             & n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,trev_pdep,&
+                             & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
                              & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
                              & alphapv_dfpt,l_use_ecutrho,wbse_save_dir
   USE kinds,            ONLY : DP
@@ -37,10 +37,8 @@ SUBROUTINE wbse_setup()
   SELECT CASE(TRIM(localization))
   CASE('N','n')
      l_local_repr = .FALSE.
-     l_bisect_thr = .FALSE.
-  CASE('B','b')
+  CASE('B','b','W','w')
      l_local_repr = .TRUE.
-     l_bisect_thr = .TRUE.
   END SELECT
   !
   SELECT CASE(macropol_calculation)
@@ -150,8 +148,7 @@ SUBROUTINE bse_start()
   !
   sigma_x_head = pot3D%div
   !
-  ! compute macroscopic term, it needs macroscopic dielectric constant
-  ! from input.
+  ! compute macroscopic term, it needs macroscopic dielectric constant from input
   !
   sigma_c_head = ((1._DP/wbse_epsinfty) - 1._DP) * (2._DP*e2/pi) * ((6._DP*pi*pi/omega)**(1._DP/3._DP))
   !
@@ -170,101 +167,45 @@ SUBROUTINE bse_start()
      !
   ENDIF
   !
-  !IF(.NOT. use_wstat_pdep) THEN
+  ALLOCATE(idx_matrix(nbndval0x*nbndval0x,2,nspin))
+  !
+  idx_matrix(:,:,:) = 0
+  !
+  ALLOCATE(n_bse_idx(nspin))
+  !
+  n_bse_idx(:) = 0
+  !
+  DO iks = 1,nks
      !
-     ! Using coupling approach, single k and q
-     ! define idx_matrix
+     nbndval = nbnd_occ(iks)
+     current_spin = isk(iks)
+     do_idx = 0
      !
-     ALLOCATE(idx_matrix(nbndval0x*nbndval0x,2,nspin))
-     !
-     idx_matrix(:,:,:) = 0
-     !
-     ALLOCATE(n_bse_idx(nspin))
-     !
-     n_bse_idx(:) = 0
-     !
-     DO iks = 1,nks
-        !
-        nbndval = nbnd_occ(iks)
-        current_spin = isk(iks)
-        do_idx = 0
-        !
-        DO ibnd = 1,nbndval
-           DO jbnd = 1,nbndval
-              IF(l_local_repr) THEN
-                 ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
-              ELSE
-                 ovl_value = 0._DP
-              ENDIF
-              !
-              IF(l_local_repr) THEN
-                 IF(ovl_value >= overlap_thr) THEN
-                    do_idx = do_idx + 1
-                    idx_matrix(do_idx,1,current_spin) = ibnd
-                    idx_matrix(do_idx,2,current_spin) = jbnd
-                 ENDIF
-              ELSE
+     DO ibnd = 1,nbndval
+        DO jbnd = 1,nbndval
+           IF(l_local_repr) THEN
+              ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
+           ELSE
+              ovl_value = 0._DP
+           ENDIF
+           !
+           IF(l_local_repr) THEN
+              IF(ovl_value >= overlap_thr) THEN
                  do_idx = do_idx + 1
                  idx_matrix(do_idx,1,current_spin) = ibnd
                  idx_matrix(do_idx,2,current_spin) = jbnd
               ENDIF
-           ENDDO
+           ELSE
+              do_idx = do_idx + 1
+              idx_matrix(do_idx,1,current_spin) = ibnd
+              idx_matrix(do_idx,2,current_spin) = jbnd
+           ENDIF
         ENDDO
-        !
-        n_bse_idx(current_spin) = do_idx
-        !
      ENDDO
      !
-!  ELSE
-!     !
-!     ! Using coupling approach, single k and q
-!     ! define idx_matrix
-!     !
-!     ALLOCATE(idx_matrix(nbndval0x*nbndval0x*n_pdep_eigen,3,nspin))
-!     !
-!     idx_matrix(:,:,:) = 0
-!     !
-!     ALLOCATE(n_bse_idx(nspin))
-!     !
-!     n_bse_idx(:) = 0
-!     !
-!     DO iks = 1,nks
-!        !
-!        nbndval = nbnd_occ(iks)
-!        current_spin = isk(iks)
-!        do_idx = 0
-!        !
-!        DO alnd = 1,n_pdep_eigen
-!           DO ibnd = 1,nbndval
-!              DO jbnd = 1,nbndval
-!                 IF(l_local_repr) THEN
-!                    ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
-!                 ELSE
-!                    ovl_value = 0._DP
-!                 ENDIF
-!                 !
-!                 IF(ovl_value >= overlap_thr) THEN
-!                    IF (gamma_only) THEN
-!                       do_idx = do_idx + 1
-!                       idx_matrix(do_idx,1,current_spin) = ibnd
-!                       idx_matrix(do_idx,2,current_spin) = jbnd
-!                       idx_matrix(do_idx,3,current_spin) = alnd
-!                    ENDIF
-!                 ELSE
-!                    do_idx = do_idx + 1
-!                    idx_matrix(do_idx,1,current_spin) = ibnd
-!                    idx_matrix(do_idx,2,current_spin) = jbnd
-!                    idx_matrix(do_idx,3,current_spin) = alnd
-!                 ENDIF
-!              ENDDO
-!           ENDDO
-!        ENDDO
-!        !
-!        n_bse_idx(current_spin) = do_idx
-!        !
-!     ENDDO
-!     !
-!  ENDIF
+     n_bse_idx(current_spin) = do_idx
+     !
+  ENDDO
   !
   IF(l_reduce_io) THEN
      !

@@ -25,7 +25,7 @@ PROGRAM westpp
   !
   CHARACTER(LEN=9) :: code = 'WESTPP'
   INTEGER :: i
-  LOGICAL :: lgate(8)
+  LOGICAL :: lgate(9)
   !
   ! *** START ***
   !
@@ -44,7 +44,7 @@ PROGRAM westpp
   CALL westpp_setup( )
   !
   lgate = .FALSE.
-  DO i = 1, 8
+  DO i = 1, 9
      IF( westpp_calculation(i:i) == 'r' .OR. westpp_calculation(i:i) == 'R' ) lgate(1) = .TRUE. ! Rho --> density
      IF( westpp_calculation(i:i) == 'w' .OR. westpp_calculation(i:i) == 'W' ) lgate(2) = .TRUE. ! Wavefunction
      IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Eigenpotentials
@@ -53,6 +53,7 @@ PROGRAM westpp
      IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(6) = .TRUE. ! Localization
      IF( westpp_calculation(i:i) == 'x' .OR. westpp_calculation(i:i) == 'X' ) lgate(7) = .TRUE. ! Exciton
      IF( westpp_calculation(i:i) == 'p' .OR. westpp_calculation(i:i) == 'P' ) lgate(8) = .TRUE. ! Density response to exciton
+     IF( westpp_calculation(i:i) == 'b' .OR. westpp_calculation(i:i) == 'B' ) lgate(9) = .TRUE. ! Boys / Wannier localization
   ENDDO
   !
   IF( lgate(1) ) CALL do_rho( )
@@ -63,6 +64,7 @@ PROGRAM westpp
   IF( lgate(6) ) CALL do_loc( )
   IF( lgate(7) ) CALL do_exc( )
   IF( lgate(8) ) CALL do_resp( )
+  IF( lgate(9) ) CALL do_wann( )
   !
   CALL exx_ungo( )
   !

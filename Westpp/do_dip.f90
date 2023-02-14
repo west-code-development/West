@@ -51,16 +51,14 @@ SUBROUTINE do_dip()
   COMPLEX(DP), ALLOCATABLE :: dip_cryst_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: dip_cart_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: Hx_psi(:,:)
-  CHARACTER(5) :: label_k
-  CHARACTER(9) :: label_d
+  CHARACTER(LEN=5) :: label_k
+  CHARACTER(LEN=9) :: label_d
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   TYPE(json_core) :: jcor
   TYPE(json_value), POINTER :: jval
   !
   IF(nspin == 4) CALL errore('do_dip','nspin 4 not yet implemented',1)
-  !
-  CALL io_push_title('(D)ipole matrix')
   !
   nstate = westpp_range(2)-westpp_range(1)+1
   IF(gamma_only) THEN
@@ -76,6 +74,8 @@ SUBROUTINE do_dip()
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
   ENDIF
+  !
+  CALL io_push_title('(D)ipole matrix')
   !
   CALL start_bar_type(barra,'westpp',k_grid%nps*3)
   !

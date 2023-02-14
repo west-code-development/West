@@ -41,8 +41,6 @@ SUBROUTINE do_wfc2 ( )
   TYPE(bar_type) :: barra
   CHARACTER(LEN=6) :: labelb,labelk
   !
-  CALL io_push_title('(W)avefunctions')
-  !
   aband = idistribute()
   CALL aband%init(westpp_range(2)-westpp_range(1)+1,'i','westpp_range',.TRUE.)
   !
@@ -50,6 +48,8 @@ SUBROUTINE do_wfc2 ( )
   !
   auxr = 0._DP
   psic = 0._DP
+  !
+  CALL io_push_title('(W)avefunctions')
   !
   CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) )
   !

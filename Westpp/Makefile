@@ -20,6 +20,7 @@ do_eigenpot2.o \
 do_exc.o \
 do_rho.o \
 do_sxx.o \
+do_wann.o \
 do_wfc2.o \
 do_loc.o \
 do_resp.o \

@@ -75,8 +75,8 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   REAL(DP),ALLOCATABLE :: rho(:), rhoold(:), eu(:), a(:), c(:)
   REAL(DP) :: anorm
   LOGICAL,ALLOCATABLE :: is_conv(:)
-  REAL(KIND=DP),EXTERNAL :: DDOT
-  COMPLEX(KIND=DP),EXTERNAL :: ZDOTC
+  REAL(DP),EXTERNAL :: DDOT
+  COMPLEX(DP),EXTERNAL :: ZDOTC
   !
   CALL start_clock ('linstern')
   !

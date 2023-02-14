@@ -589,6 +589,7 @@ westpp_control
        - "L" : Output the localization factor and the inverse participation ratio.
        - "X" : Output the exciton state.
        - "P" : Output the density response to exciton state.
+       - "B" : Output the unitary transformation matrix of Boys/Wannier localization.
 
 .. data:: westpp_range
 
@@ -771,6 +772,7 @@ wbse_init_control
 
        - "N" : Kohn-Sham orbitals are not localized.
        - "B" : Bisected orbitals are used.
+       - "W" : Wannier orbitals are used.
 
 .. data:: wfc_from_qbox
 
@@ -829,7 +831,7 @@ wbse_init_control
    * - **Default**
      - 0.0
    * - **Description**
-     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization is "B".
+     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization is "B" or "W".
 
 |
 

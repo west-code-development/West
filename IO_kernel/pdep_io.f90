@@ -103,7 +103,7 @@ MODULE pdep_io
             OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
             offset = 1
             WRITE(iun,POS=offset) header
-            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            offset = offset+SIZEOF(header)
             WRITE(iun,POS=offset) tmp_vec(1:ndim)
             CLOSE(iun)
             !
@@ -135,7 +135,7 @@ MODULE pdep_io
             OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
             offset = 1
             WRITE(iun,POS=offset) header
-            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            offset = offset+SIZEOF(header)
             WRITE(iun,POS=offset) tmp_vec(1:ndim)
             CLOSE(iun)
             !
@@ -222,7 +222,7 @@ MODULE pdep_io
                CALL errore('pdep_read','Endianness mismatch: '//TRIM(fname),1)
             ENDIF
             !
-            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            offset = offset+SIZEOF(header)
             READ(iun,POS=offset) tmp_vec(1:ndim)
             CLOSE(iun)
             !
@@ -276,7 +276,7 @@ MODULE pdep_io
                CALL errore('pdep_read','Endianness mismatch: '//TRIM(fname),1)
             ENDIF
             !
-            offset = 1+HD_LENGTH*SIZEOF(header(1))
+            offset = offset+SIZEOF(header)
             READ(iun,POS=offset) tmp_vec(1:ndim)
             CLOSE(iun)
             !

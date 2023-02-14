@@ -175,9 +175,9 @@ MODULE wbse_io
        OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
        offset = 1
        WRITE(iun,POS=offset) header
-       offset = offset+HD_LENGTH*SIZEOF(header(1))
+       offset = offset+SIZEOF(header)
        WRITE(iun,POS=offset) umatrix(1:oumat_dim,1:oumat_dim)
-       offset = offset+SIZE(umatrix)*SIZEOF(umatrix(1,1))
+       offset = offset+SIZEOF(umatrix)
        WRITE(iun,POS=offset) omatrix(1:oumat_dim,1:oumat_dim)
        CLOSE(iun)
        !
@@ -255,9 +255,9 @@ MODULE wbse_io
     !
     IF(ionode) THEN
        !
-       offset = offset+HD_LENGTH*SIZEOF(header(1))
+       offset = offset+SIZEOF(header)
        READ(iun,POS=offset) umatrix_tmp(1:oumat_dim_tmp,1:oumat_dim_tmp)
-       offset = offset+SIZE(umatrix_tmp)*SIZEOF(umatrix(1,1))
+       offset = offset+SIZEOF(umatrix_tmp)
        READ(iun,POS=offset) omatrix_tmp(1:oumat_dim_tmp,1:oumat_dim_tmp)
        CLOSE(iun)
        !
@@ -275,100 +275,5 @@ MODULE wbse_io
     DEALLOCATE(omatrix_tmp)
     !
   END SUBROUTINE
-  !
-  !SUBROUTINE read_pwscf_wannier_orbs(ne,npw,c_emp,fname)
-  !  !
-  !  USE kinds,          ONLY : DP
-  !  USE io_global,      ONLY : stdout
-  !  USE gvect,          ONLY : ig_l2g
-  !  USE mp_wave,        ONLY : splitwf
-  !  USE mp,             ONLY : mp_get,mp_size,mp_rank,mp_bcast,mp_max
-  !  USE mp_global,      ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm,my_pool_id,my_bgrp_id,&
-  !                           & inter_bgrp_comm,inter_pool_comm
-  !  USE klist,          ONLY : ngk,igk_k
-  !  USE wvfct,          ONLY : npwx
-  !  !
-  !  IMPLICIT NONE
-  !  !
-  !  INTEGER, INTENT(IN) :: npw,ne
-  !  COMPLEX(DP), INTENT(INOUT) :: c_emp(npw,ne)
-  !  CHARACTER(LEN=*), INTENT(IN):: fname
-  !  !
-  !  INTEGER :: ierr,iun,ig,i
-  !  INTEGER :: ngw_l,ngw_g
-  !  COMPLEX(DP), ALLOCATABLE :: ctmp(:)
-  !  INTEGER, ALLOCATABLE :: igk_l2g(:)
-  !  !
-  !  ALLOCATE(igk_l2g(npwx))
-  !  !
-  !  ! ... the igk_l2g_kdip local-to-global map is needed to read wfcs
-  !  !
-  !  igk_l2g = 0
-  !  DO ig = 1,ngk(1)
-  !     igk_l2g(ig) = ig_l2g(igk_k(ig,1))
-  !  ENDDO
-  !  !
-  !  WRITE(stdout,'(/,5X,"Reading Wannier orbitals from ",A)') TRIM(fname)
-  !  !
-  !  ngw_l = npw
-  !  ngw_g = MAXVAL(igk_l2g(:))
-  !  CALL mp_max(ngw_g,intra_bgrp_comm)
-  !  !
-  !  ALLOCATE(ctmp(ngw_g))
-  !  !
-  !  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-  !     !
-  !     ! ONLY ROOT W/IN BGRP READS
-  !     !
-  !     IF(me_bgrp == root_bgrp) THEN
-  !        CALL iotk_free_unit(iun,ierr)
-  !        CALL iotk_open_read(iun,FILE=TRIM(fname),BINARY=.TRUE.,IERR=ierr)
-  !     ENDIF
-  !     !
-  !  ENDIF
-  !  !
-  !  CALL mp_bcast(ierr,0,inter_bgrp_comm)
-  !  !
-  !  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-  !     !
-  !     ! ONLY ROOT W/IN BGRP READS
-  !     !
-  !     IF(me_bgrp == root_bgrp) THEN
-  !        CALL iotk_scan_begin(iun,'WANWFC_GSPACE')
-  !     ENDIF
-  !     !
-  !  ENDIF
-  !  !
-  !  DO i = 1,ne
-  !     IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-  !        !
-  !        ! ONLY ROOT W/IN BGRP READS
-  !        !
-  !        IF(me_bgrp == root_bgrp) THEN
-  !           CALL iotk_scan_dat(iun,'wfc'//iotk_index(i),ctmp(:))
-  !        ENDIF
-  !        !
-  !        CALL splitwf(c_emp(:,i),ctmp,ngw_l,igk_l2g,me_bgrp,nproc_bgrp,root_bgrp,intra_bgrp_comm)
-  !        !
-  !     ENDIF
-  !  ENDDO
-  !  !
-  !  IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-  !     !
-  !     ! ONLY ROOT W/IN BGRP READS
-  !     !
-  !     IF(me_bgrp == root_bgrp) THEN
-  !        CALL iotk_scan_end(iun,'WANWFC_GSPACE')
-  !        CALL iotk_close_read(iun)
-  !     ENDIF
-  !     !
-  !  ENDIF
-  !  !
-  !  DEALLOCATE(ctmp,igk_l2g)
-  !  !
-  !  CALL mp_bcast(c_emp,0,inter_bgrp_comm)
-  !  CALL mp_bcast(c_emp,0,inter_pool_comm)
-  !  !
-  !END SUBROUTINE
   !
 END MODULE

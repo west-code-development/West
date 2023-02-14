@@ -60,7 +60,7 @@ MODULE wbse_init_restart
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
          offset = 1
          WRITE(iun,POS=offset) header
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          WRITE(iun,POS=offset) idx_matrix(1:size_list,1:size_column)
          CLOSE(iun)
          !
@@ -116,7 +116,7 @@ MODULE wbse_init_restart
          ENDIF
          !
          size_list1 = header(HD_ID_DIMENSION)
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          !
       ENDIF
       !
@@ -182,7 +182,7 @@ MODULE wbse_init_restart
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED')
          offset = 1
          WRITE(iun,POS=offset) header
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          WRITE(iun,POS=offset) restart_matrix(1:size_list)
          CLOSE(iun)
          !
@@ -239,7 +239,7 @@ MODULE wbse_init_restart
          ENDIF
          !
          size_list_tmp = header(HD_ID_DIMENSION)
-         offset = offset+HD_LENGTH*SIZEOF(header(1))
+         offset = offset+SIZEOF(header)
          !
       ENDIF
       !

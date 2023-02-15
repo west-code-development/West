@@ -299,6 +299,7 @@ MODULE wbse_init_center
   REAL(DP) :: overlap_thr              ! overlap threshold for idx_matrix in wbse_init_qboxcoupling
   INTEGER :: spin_channel
   LOGICAL :: l_local_repr
+  LOGICAL :: l_pdep
   !
   ! Common workspace
   !

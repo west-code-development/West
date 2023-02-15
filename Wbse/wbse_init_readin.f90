@@ -17,7 +17,7 @@ SUBROUTINE wbse_init_readin()
   USE gvecs,            ONLY : doublegrid
   USE uspp,             ONLY : okvan
   USE noncollin_module, ONLY : domag
-  USE mp_global,        ONLY : nbgrp,npool
+  USE mp_global,        ONLY : npool
   !
   IMPLICIT NONE
   !
@@ -42,7 +42,6 @@ SUBROUTINE wbse_init_readin()
   IF(domag) CALL errore('wbse_init_readin','domag version not available',1)
   IF(okvan) CALL errore('wbse_init_readin','ultrasoft pseudopotential not implemented',1)
   IF(doublegrid) CALL errore('wbse_init_readin','double grid not implemented',1)
-  IF(nbgrp > 1) CALL errore('wbse_init_readin','band groups not implemented',1)
   IF(npool > 1) CALL errore('wbse_init_readin','pools not implemented',1)
   !
   ! READ other sections of the input file

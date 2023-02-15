@@ -14,15 +14,26 @@
 SUBROUTINE wbse_init_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,        ONLY : localization,l_local_repr,l_use_ecutrho,wbse_init_save_dir
-  USE kinds,          ONLY : DP
-  USE types_coulomb,  ONLY : pot3D
+  USE westcom,          ONLY : bse_method,l_pdep,localization,l_local_repr,l_use_ecutrho,&
+                             & wbse_init_save_dir
+  USE kinds,            ONLY : DP
+  USE types_coulomb,    ONLY : pot3D
+  USE mp_global,        ONLY : nbgrp
   !
   IMPLICIT NONE
   !
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   CALL do_setup()
+  !
+  SELECT CASE(TRIM(bse_method))
+  CASE('PDEP','pdep')
+     l_pdep = .TRUE.
+  CASE('FF_QBOX','FF_Qbox','ff_qbox')
+     l_pdep = .FALSE.
+  END SELECT
+  !
+  IF(.NOT. l_pdep .AND. nbgrp > 1) CALL errore('wbse_init_setup','band groups not implemented for FF_Qbox',1)
   !
   SELECT CASE(TRIM(localization))
   CASE('N','n')

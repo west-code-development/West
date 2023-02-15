@@ -18,7 +18,7 @@ SUBROUTINE calc_tau()
   USE pwcom,                ONLY : isk,nks,npw,ngk
   USE wavefunctions,        ONLY : evc
   USE westcom,              ONLY : lrwfc,iuwfc,ev,dvg,n_pdep_eigen_to_use,npwqx,nbnd_occ,&
-                                 & wbse_init_calculation,bse_method,spin_channel
+                                 & wbse_init_calculation,l_pdep,spin_channel
   USE lsda_mod,             ONLY : nspin
   USE pdep_db,              ONLY : pdep_db_read
   USE mp,                   ONLY : mp_bcast
@@ -34,7 +34,7 @@ SUBROUTINE calc_tau()
   !
   INTEGER :: iks,current_spin
   INTEGER :: iq,nkq,ikq
-  LOGICAL :: l_restart_calc,l_pdep,spin_resolve
+  LOGICAL :: l_restart_calc,spin_resolve
   !
   SELECT CASE(wbse_init_calculation)
   CASE('r','R')
@@ -43,13 +43,6 @@ SUBROUTINE calc_tau()
      l_restart_calc = .FALSE.
   CASE DEFAULT
      CALL errore('wbse_init','invalid wbse_init_calculation',1)
-  END SELECT
-  !
-  SELECT CASE(TRIM(bse_method))
-  CASE('PDEP','pdep')
-     l_pdep = .TRUE.
-  CASE('FF_QBOX','FF_Qbox','ff_qbox')
-     l_pdep = .FALSE.
   END SELECT
   !
   IF(l_pdep) THEN
@@ -109,7 +102,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE cell_base,            ONLY : omega
   USE io_push,              ONLY : io_push_title
   USE types_coulomb,        ONLY : pot3D
-  USE westcom,              ONLY : ev,dvg,wbse_init_save_dir,bse_method,chi_kernel,l_local_repr,&
+  USE westcom,              ONLY : ev,dvg,wbse_init_save_dir,l_pdep,chi_kernel,l_local_repr,&
                                  & overlap_thr
   USE wavefunctions,        ONLY : evc,psic
   USE fft_base,             ONLY : dffts
@@ -166,16 +159,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   LOGICAL :: l_xcchi
   LOGICAL :: calc_is_done
   LOGICAL :: l_skip
-  LOGICAL :: l_pdep
   !
   TYPE(bar_type) :: barra
-  !
-  SELECT CASE(TRIM(bse_method))
-  CASE('PDEP','pdep')
-     l_pdep = .TRUE.
-  CASE('FF_QBOX','FF_Qbox','ff_qbox')
-     l_pdep = .FALSE.
-  END SELECT
   !
   IF(.NOT. l_pdep) THEN
      !

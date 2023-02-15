@@ -130,36 +130,42 @@ MODULE check_ovl_wfc
       !
     END SUBROUTINE
     !
-    SUBROUTINE check_ovl_wannier(orb_i, orb_j, ovl_value)
+    SUBROUTINE check_ovl_wannier(orb_ij, ovl_value)
       !
       USE kinds,                ONLY : DP
-      USE fft_base,             ONLY : dfftp
+      USE fft_base,             ONLY : dffts
       USE cell_base,            ONLY : omega
       USE mp_global,            ONLY : intra_bgrp_comm
       USE mp,                   ONLY : mp_sum
       !
       IMPLICIT NONE
       !
-      REAL(DP), INTENT(IN) :: orb_i(dfftp%nnr)
-      REAL(DP), INTENT(IN) :: orb_j(dfftp%nnr)
+      COMPLEX(DP), INTENT(IN) :: orb_ij(dffts%nnr)
+#if defined(__CUDA)
+      ATTRIBUTES(DEVICE) :: orb_ij
+#endif
       REAL(DP), INTENT(OUT) :: ovl_value
       !
-      INTEGER :: ir
+      INTEGER :: dffts_nnr, ir
       REAL(DP) :: summ_ib, summ_jb, summ_ij
+      !
+      dffts_nnr = dffts%nnr
       !
       summ_ib = 0._DP
       summ_jb = 0._DP
       summ_ij = 0._DP
       !
-      DO ir = 1, dfftp%nnr
-         summ_ib = summ_ib + orb_i(ir)**4
-         summ_jb = summ_jb + orb_j(ir)**4
-         summ_ij = summ_ij + orb_i(ir)**2 * orb_j(ir)**2
+      !$acc parallel loop reduction(+:summ_ib,summ_jb,summ_ij)
+      DO ir = 1, dffts_nnr
+         summ_ib = summ_ib + REAL(orb_ij(ir),KIND=DP)**4
+         summ_jb = summ_jb + AIMAG(orb_ij(ir))**4
+         summ_ij = summ_ij + REAL(orb_ij(ir),KIND=DP)**2 * AIMAG(orb_ij(ir))**2
       ENDDO
+      !$acc end parallel
       !
-      summ_ib = summ_ib * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
-      summ_jb = summ_jb * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
-      summ_ij = summ_ij * omega / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
+      summ_ib = summ_ib * omega / (dffts%nr1*dffts%nr2*dffts%nr3)
+      summ_jb = summ_jb * omega / (dffts%nr1*dffts%nr2*dffts%nr3)
+      summ_ij = summ_ij * omega / (dffts%nr1*dffts%nr2*dffts%nr3)
       !
       CALL mp_sum(summ_ib, intra_bgrp_comm)
       CALL mp_sum(summ_jb, intra_bgrp_comm)

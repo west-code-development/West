@@ -27,6 +27,9 @@ SUBROUTINE calc_tau()
   USE class_idistribute,    ONLY : idistribute
   USE distribution_center,  ONLY : pert
   USE qbox_interface,       ONLY : init_qbox,finalize_qbox
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
+#endif
   !
   IMPLICIT NONE
   !
@@ -72,6 +75,11 @@ SUBROUTINE calc_tau()
            IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc,0,inter_image_comm)
         ENDIF
+        !
+#if defined(__CUDA)
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#endif
         !
         IF((.NOT. spin_resolve) .OR. (spin_resolve .AND. current_spin == spin_channel)) THEN
            CALL calc_tau_single_q(iks,iq,current_spin,nbnd_occ(iks),l_restart_calc)
@@ -119,7 +127,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_dv_of_drho
   USE distribution_center,  ONLY : pert
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions_gpum,   ONLY : evc_work=>evc_d,psic=>psic_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,memcpy_H2D
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -182,6 +190,13 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !
   dffts_nnr = dffts%nnr
   !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+  !
+  ALLOCATE(sqvc(npwx))
+  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwx)
+#endif
+  !
   WRITE(flabel,'(A,I6.6,A,I6.6,A,I1,A)') '_iq',ikq,'_ik',iks,'_spin',current_spin,'.dat'
   !
   tmp_size = nbndval*nbndval
@@ -192,8 +207,12 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   idx_matrix(:,:) = 0
   !
   IF(l_local_repr) THEN
+     !
      ALLOCATE(evc_loc(npwx,nbndval))
+     !$acc enter data create(evc_loc)
+     !
      CALL wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart_calc)
+     !
   ENDIF
   !
   ! compute idx_matrix
@@ -246,20 +265,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
      !
      bandpair = idistribute()
      CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
-     !
-#if defined(__CUDA)
-     CALL allocate_gpu()
-     !
-     IF(l_local_repr) THEN
-        !$acc enter data copyin(evc_loc)
-     ELSE
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-     ENDIF
-     !
-     ALLOCATE(sqvc(npwx))
-     CALL memcpy_H2D(sqvc,pot3D%sqvc,npwx)
-#endif
      !
      ALLOCATE(tau(npwx))
      ALLOCATE(aux_r(dffts%nnr))
@@ -537,16 +542,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
      !
      CALL stop_bar_type(barra,'tau')
      !
-#if defined(__CUDA)
-     CALL deallocate_gpu()
-     !
-     DEALLOCATE(sqvc)
-#endif
-     !
-     IF(l_local_repr) THEN
-        !$acc exit data delete(evc_loc)
-     ENDIF
-     !
      !$acc exit data delete(dvg,tau,aux1_g)
      DEALLOCATE(tau)
      DEALLOCATE(aux_r)
@@ -558,8 +553,18 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
      !
   ENDIF
   !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+  !
+  DEALLOCATE(sqvc)
+#endif
+  !
   DEALLOCATE(idx_matrix)
   DEALLOCATE(restart_matrix)
-  IF(l_local_repr) DEALLOCATE(evc_loc)
+  !
+  IF(l_local_repr) THEN
+     !$acc exit data delete(evc_loc)
+     DEALLOCATE(evc_loc)
+  ENDIF
   !
 END SUBROUTINE

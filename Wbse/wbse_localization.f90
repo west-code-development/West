@@ -16,7 +16,6 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   !
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : localization,wbse_init_save_dir
-  USE wavefunctions,        ONLY : evc,psic
   USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : double_invfft_gamma
@@ -30,6 +29,12 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_joint_d
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : evc=>evc_d,psic=>psic_d
+  USE cublas
+#else
+  USE wavefunctions,        ONLY : evc,psic
+#endif
   !
   IMPLICIT NONE
   !
@@ -41,7 +46,9 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   LOGICAL :: l_wann
   INTEGER :: ibnd_l,ibnd,jbnd,ir,il
   INTEGER :: bisec_i,bisec_j
+  INTEGER :: dffts_nnr
   INTEGER,ALLOCATABLE :: bisec_loc(:)
+  REAL(DP) :: reduce
   REAL(DP) :: val(6)
   REAL(DP) :: ovl_val
   REAL(DP),ALLOCATABLE :: proj(:,:)
@@ -49,7 +56,9 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   COMPLEX(DP),ALLOCATABLE :: u_matrix(:,:)
   CHARACTER(LEN=256) :: fname
   CHARACTER :: labels
+#if !defined(__CUDA)
   REAL(DP),EXTERNAL :: DDOT
+#endif
   !
   CALL start_clock('local')
   !
@@ -59,6 +68,8 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   CASE('B','b')
      l_wann = .FALSE.
   END SELECT
+  !
+  dffts_nnr = dffts%nnr
   !
   IF(.NOT. l_restart) THEN
      !
@@ -78,6 +89,8 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         !
         CALL wann_calc_proj(proj)
         !
+        !$acc enter data copyin(proj)
+        !
         a_matrix(:,:,:) = 0._DP
         !
         DO ibnd_l = 1,aband%nloc
@@ -88,11 +101,18 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
               !
               CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
               !
-              val = 0._DP
               DO il = 1,6
-                 DO ir = 1,dffts%nnr
-                    val(il) = val(il) + REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))*proj(ir,il)
+                 !
+                 reduce = 0._DP
+                 !
+                 !$acc parallel loop reduction(+:reduce) present(proj)
+                 DO ir = 1,dffts_nnr
+                    reduce = reduce+REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))*proj(ir,il)
                  ENDDO
+                 !$acc end parallel
+                 !
+                 val(il) = reduce
+                 !
               ENDDO
               !
               a_matrix(ibnd,jbnd,1:6) = val(1:6)
@@ -108,12 +128,20 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         CALL wann_joint_d(nbndval,a_matrix,6,u_matrix)
         !
         DEALLOCATE(a_matrix)
+        !$acc exit data delete(proj)
         DEALLOCATE(proj)
         !
         ! compute localized wfc
         !
+        !$acc enter data copyin(u_matrix)
+        !
+        !$acc host_data use_device(u_matrix,evc_loc)
         CALL ZGEMM('N','N',npw,nbndval,nbndval,(1._DP,0._DP),evc,npwx,u_matrix,nbndval,&
         & (0._DP,0._DP),evc_loc,npwx)
+        !$acc end host_data
+        !
+        !$acc update host(evc_loc)
+        !$acc exit data delete(u_matrix)
         !
         ! compute overlap
         !
@@ -123,8 +151,11 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
            !
            DO jbnd = 1,nbndval
               !
+              !$acc host_data use_device(evc_loc)
               CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
-              CALL check_ovl_wannier(REAL(psic,KIND=DP),AIMAG(psic),ovl_val)
+              !$acc end host_data
+              !
+              CALL check_ovl_wannier(psic,ovl_val)
               !
               ovl_matrix(ibnd,jbnd) = ovl_val
               !
@@ -147,7 +178,9 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         DO ibnd = 1,nbndval
            DO jbnd = 1,nbndval
               !
+#if !defined(__CUDA)
               u_matrix(ibnd,jbnd) = 2._DP*DDOT(2*npwx,evc(:,ibnd),1,evc_loc(:,jbnd),1)
+#endif
               !
               IF(gstart == 2) THEN
                  u_matrix(ibnd,jbnd) = u_matrix(ibnd,jbnd) &

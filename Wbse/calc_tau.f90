@@ -53,10 +53,8 @@ SUBROUTINE calc_tau()
      ALLOCATE(ev(n_pdep_eigen_to_use))
      !
      CALL pdep_db_read(n_pdep_eigen_to_use)
-     CALL start_clock('tau_pdep')
   ELSE
      CALL init_qbox()
-     CALL start_clock('tau_qbox')
   ENDIF
   !
   spin_resolve = spin_channel > 0 .AND. nspin > 1
@@ -83,12 +81,9 @@ SUBROUTINE calc_tau()
   ENDDO
   !
   IF(l_pdep) THEN
-     CALL stop_clock('tau_pdep')
-     !
      DEALLOCATE(dvg)
      DEALLOCATE(ev)
   ELSE
-     CALL stop_clock('tau_qbox')
      CALL finalize_qbox()
   ENDIF
   !
@@ -104,7 +99,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE types_coulomb,        ONLY : pot3D
   USE westcom,              ONLY : ev,dvg,wbse_init_save_dir,l_pdep,chi_kernel,l_local_repr,&
                                  & overlap_thr
-  USE wavefunctions,        ONLY : evc,psic
   USE fft_base,             ONLY : dffts
   USE noncollin_module,     ONLY : npol
   USE pwcom,                ONLY : npw,npwx,lsda
@@ -124,6 +118,12 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_dv_of_drho
   USE distribution_center,  ONLY : pert
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,memcpy_H2D
+#else
+  USE wavefunctions,        ONLY : evc_work=>evc,psic
+#endif
   !
   IMPLICIT NONE
   !
@@ -137,6 +137,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   INTEGER :: ibnd,jbnd,tmp_size
   INTEGER :: il1,ig1,ir,do_idx
   INTEGER :: iu,ig,ierr,ip,ip_g
+  INTEGER :: dffts_nnr
   REAL(DP) :: factor
   REAL(DP) :: ovl_value
   REAL(DP), ALLOCATABLE :: ovl_matrix(:,:)
@@ -149,6 +150,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   REAL(DP), ALLOCATABLE :: aux_rr(:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux1_r(:,:),aux1_g(:)
   REAL(DP), ALLOCATABLE :: frspin(:,:)
+  REAL(DP), ALLOCATABLE :: sqvc(:)
+  !$acc declare device_resident(aux_r,sqvc)
   !
   CHARACTER(LEN=:), ALLOCATABLE :: lockfile
   CHARACTER(LEN=:), ALLOCATABLE :: fname
@@ -177,6 +180,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
      !
   ENDIF
   !
+  dffts_nnr = dffts%nnr
+  !
   WRITE(flabel,'(A,I6.6,A,I6.6,A,I1,A)') '_iq',ikq,'_ik',iks,'_spin',current_spin,'.dat'
   !
   tmp_size = nbndval*nbndval
@@ -204,7 +209,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            !
            IF(ovl_value >= overlap_thr) THEN
               IF(jbnd >= ibnd) THEN
-                 do_idx = do_idx + 1
+                 do_idx = do_idx+1
                  !
                  idx_matrix(do_idx,1) = ibnd
                  idx_matrix(do_idx,2) = jbnd
@@ -242,13 +247,36 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
      bandpair = idistribute()
      CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
      !
+#if defined(__CUDA)
+     CALL allocate_gpu()
+     !
+     IF(l_local_repr) THEN
+        !$acc enter data copyin(evc_loc)
+     ELSE
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+     ENDIF
+     !
+     ALLOCATE(sqvc(npwx))
+     CALL memcpy_H2D(sqvc,pot3D%sqvc,npwx)
+#endif
+     !
+     ALLOCATE(tau(npwx))
+     ALLOCATE(aux_r(dffts%nnr))
+     ALLOCATE(aux1_g(npwx))
+     !$acc enter data create(tau,aux1_g) copyin(dvg)
+     IF(l_pdep) THEN
+        ALLOCATE(dotp(pert%nloc))
+        !$acc enter data create(dotp)
+     ENDIF
+     !
      IF(l_pdep) THEN
         CALL io_push_title('Applying CHI kernel with PDEP')
      ELSE
         CALL io_push_title('Applying '//TRIM(chi_kernel)//' kernel with FF_Qbox')
      ENDIF
      !
-     CALL start_bar_type(barra,'CHI',bandpair%nlocx)
+     CALL start_bar_type(barra,'tau',bandpair%nlocx)
      !
      ! parallel loop
      !
@@ -268,60 +296,98 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
         !
         IF(.NOT. l_skip) THEN
            !
-           ALLOCATE(tau(npwx))
-           ALLOCATE(aux_r(dffts%nnr))
-           ALLOCATE(aux1_g(npwx))
-           !
            IF(l_local_repr) THEN
+              !$acc host_data use_device(evc_loc)
               CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
+              !$acc end host_data
            ELSE
-              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
            ENDIF
            !
-           aux_r(:) = CMPLX(REAL(psic,KIND=DP)*AIMAG(psic)/omega,KIND=DP)
+           !$acc parallel loop present(aux_r)
+           DO ir = 1,dffts_nnr
+              aux_r(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))/omega,KIND=DP)
+           ENDDO
+           !$acc end parallel
            !
            ! aux_r -> aux1_g
            !
+           !$acc host_data use_device(aux_r,aux1_g)
            CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
+           !$acc end host_data
            !
            ! vc in fock like term
            !
+           !$acc kernels present(tau)
            tau(:) = (0._DP,0._DP)
+           !$acc end kernels
+           !
+           !$acc parallel loop present(tau,aux1_g,sqvc)
            DO ig = 1,npw
-              tau(ig) = aux1_g(ig) * pot3D%sqvc(ig)**2
+#if defined(__CUDA)
+              tau(ig) = aux1_g(ig)*(sqvc(ig)**2)
+#else
+              tau(ig) = aux1_g(ig)*(pot3D%sqvc(ig)**2)
+#endif
            ENDDO
+           !$acc end parallel
            !
            IF(l_pdep) THEN
               !
-              ALLOCATE(dotp(pert%nloc))
-              !
+              !$acc parallel loop present(aux1_g,sqvc)
               DO ig = 1,npw
-                 aux1_g(ig) = aux1_g(ig) * pot3D%sqvc(ig)
+#if defined(__CUDA)
+                 aux1_g(ig) = aux1_g(ig)*sqvc(ig)
+#else
+                 aux1_g(ig) = aux1_g(ig)*pot3D%sqvc(ig)
+#endif
               ENDDO
+              !$acc end parallel
               !
+#if defined(__CUDA)
+              !$acc host_data use_device(aux1_g,dvg,dotp)
+              CALL glbrak_gamma_gpu(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
+              !$acc end host_data
+              !
+              !$acc update host(dotp)
+#else
               CALL glbrak_gamma(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
+#endif
+              !
               CALL mp_sum(dotp,intra_bgrp_comm)
               !
+              !$acc kernels present(aux1_g)
               aux1_g(:) = (0._DP,0._DP)
+              !$acc end kernels
               !
               DO ip = 1,pert%nloc
                  !
                  ip_g = pert%l2g(ip)
                  factor = dotp(ip)*ev(ip_g)/(1._DP-ev(ip_g))
                  !
+                 !$acc parallel loop present(aux1_g,dvg)
                  DO ig = 1,npw
                     aux1_g(ig) = aux1_g(ig)+dvg(ig,ip)*factor
                  ENDDO
+                 !$acc end parallel
                  !
               ENDDO
               !
+              !$acc update host(aux1_g)
               CALL mp_sum(aux1_g,inter_bgrp_comm)
+              !$acc update device(aux1_g)
               !
+              !$acc parallel loop present(tau,aux1_g,sqvc)
               DO ig = 1,npw
-                 tau(ig) = tau(ig) + aux1_g(ig)*pot3D%sqvc(ig)
+#if defined(__CUDA)
+                 tau(ig) = tau(ig)+aux1_g(ig)*sqvc(ig)
+#else
+                 tau(ig) = tau(ig)+aux1_g(ig)*pot3D%sqvc(ig)
+#endif
               ENDDO
+              !$acc end parallel
               !
-              DEALLOCATE(dotp)
+              !$acc update host(tau)
               !
            ELSE
               !
@@ -346,7 +412,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
               ! Send data to Qbox to compute X|vc rho>
               !
               aux_rr(:) = REAL(aux_r,KIND=DP)/SQRT(omega) ! scale down pert.
-              aux_rr(:) = 0.5_DP * aux_rr ! change from rydberg to hartree
+              aux_rr(:) = 0.5_DP*aux_rr ! change from rydberg to hartree
               !
               ! Write aux_rr --> fname.xml
               !
@@ -378,7 +444,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
                  fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
                  CALL read_function3d(fname,frspin(:,2),dffts)
                  !
-                 aux_rr(:) = frspin(:,1) + frspin(:,2)
+                 aux_rr(:) = frspin(:,1)+frspin(:,2)
                  !
                  DEALLOCATE(frspin)
               ELSE
@@ -409,7 +475,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
               !
               ! vc + vc/fxc X vc
               !
-              tau(:) = tau + aux1_g
+              tau(:) = tau+aux1_g
               !
               DEALLOCATE(aux1_r)
               DEALLOCATE(aux_rr)
@@ -424,10 +490,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            !
            fname = TRIM(wbse_init_save_dir)//'/E'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
            CALL pdep_merge_and_write_G(fname,tau)
-           !
-           DEALLOCATE(tau)
-           DEALLOCATE(aux_r)
-           DEALLOCATE(aux1_g)
            !
            restart_matrix(ig1) = 1
            !
@@ -466,14 +528,33 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            ENDIF
         ENDIF
         !
-        CALL update_bar_type(barra,'CHI',1)
+        CALL update_bar_type(barra,'tau',1)
         !
      ENDDO
      !
      fname = TRIM(wbse_init_save_dir)//'/restart_matrix'//flabel
      CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
      !
-     CALL stop_bar_type(barra,'CHI')
+     CALL stop_bar_type(barra,'tau')
+     !
+#if defined(__CUDA)
+     CALL deallocate_gpu()
+     !
+     DEALLOCATE(sqvc)
+#endif
+     !
+     IF(l_local_repr) THEN
+        !$acc exit data delete(evc_loc)
+     ENDIF
+     !
+     !$acc exit data delete(dvg,tau,aux1_g)
+     DEALLOCATE(tau)
+     DEALLOCATE(aux_r)
+     DEALLOCATE(aux1_g)
+     IF(l_pdep) THEN
+        !$acc exit data delete(dotp)
+        DEALLOCATE(dotp)
+     ENDIF
      !
   ENDIF
   !

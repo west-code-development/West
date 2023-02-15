@@ -35,6 +35,10 @@ SUBROUTINE wbse_init_setup()
   !
   IF(.NOT. l_pdep .AND. nbgrp > 1) CALL errore('wbse_init_setup','band groups not implemented for FF_Qbox',1)
   !
+#if defined(__CUDA)
+  IF(.NOT. l_pdep) CALL errore('wbse_init_setup','CUDA not implemented for FF_Qbox',1)
+#endif
+  !
   SELECT CASE(TRIM(localization))
   CASE('N','n')
      l_local_repr = .FALSE.

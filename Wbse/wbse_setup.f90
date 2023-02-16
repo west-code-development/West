@@ -25,6 +25,7 @@ SUBROUTINE wbse_setup()
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
   USE wbse_dv,          ONLY : wbse_dv_setup
+  USE mp_global,        ONLY : nbgrp
   !
   IMPLICIT NONE
   !
@@ -62,7 +63,9 @@ SUBROUTINE wbse_setup()
      l_davidson = .FALSE.
   END SELECT
   !
-  IF (TRIM(qp_correction) == '') THEN
+  IF(l_lanczos .AND. nbgrp > 1) CALL errore('wbse_setup','band groups not implemented for Lanczos',1)
+  !
+  IF(TRIM(qp_correction) == '') THEN
      l_qp_correction = .FALSE.
   ELSE
      l_qp_correction = .TRUE.
@@ -108,13 +111,13 @@ SUBROUTINE wbse_setup()
   !
   CALL my_mkdir(wbse_save_dir)
   !
-  IF (l_qp_correction) THEN
+  IF(l_qp_correction) THEN
      CALL read_qp_eigs()
   ENDIF
   !
   ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
   !
-  IF (l_bse_calculation) THEN
+  IF(l_bse_calculation) THEN
      CALL bse_start()
   ENDIF
   !

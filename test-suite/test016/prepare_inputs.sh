@@ -49,19 +49,32 @@ wstat_control:
 EOF
 
 
-cat > westpp.in << EOF
+cat > wbse_init.in << EOF
 input_west:
   qe_prefix: test
   west_prefix: test
   outdir: ./
 
-wstat_control:
-  wstat_calculation: S
-  n_pdep_eigen: 50
+wbse_init_control:
+  wbse_init_calculation: S
+  bse_method: PDEP
+  n_pdep_eigen_to_use: 50
+EOF
 
-westpp_control:
-  westpp_calculation: E
-  westpp_range: [1,2]
-  westpp_format: C
-  westpp_sign: True
+
+cat > wbse.in << EOF
+input_west:
+  qe_prefix: test
+  west_prefix: test
+  outdir: ./
+
+wbse_init_control:
+  wbse_init_calculation: S
+  bse_method: PDEP
+  n_pdep_eigen_to_use: 50
+
+wbse_control:
+  wbse_calculation: L
+  scissor_ope: 0.4476
+  n_lanczos: 200
 EOF

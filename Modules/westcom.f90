@@ -291,6 +291,7 @@ MODULE wbse_init_center
   ! INPUT FOR wbse_init
   !
   CHARACTER(LEN=1) :: wbse_init_calculation
+  CHARACTER(LEN=7) :: bse_method
   CHARACTER(LEN=1) :: localization
   CHARACTER(LEN=20) :: chi_kernel
   CHARACTER(LEN=512) :: wfc_from_qbox  ! wavefunction file name, extension is spin channel, e.g. 'qb_wfc.1'
@@ -298,6 +299,7 @@ MODULE wbse_init_center
   REAL(DP) :: overlap_thr              ! overlap threshold for idx_matrix in wbse_init_qboxcoupling
   INTEGER :: spin_channel
   LOGICAL :: l_local_repr
+  LOGICAL :: l_pdep
   !
   ! Common workspace
   !

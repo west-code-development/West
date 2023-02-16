@@ -338,7 +338,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! Write the eigenvalues & time spent
      !
-     CALL wbse_output_ev_and_time(nvec,ev,time_spent)
+     CALL wbse_output_ev_and_time(nvec,ev,conv,time_spent,dav_iter,notcnv)
      !
      dav_iter = 0
      IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
@@ -545,7 +545,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! Write the eigenvalues & time spent
      !
-     CALL wbse_output_ev_and_time(nvec,ev,time_spent)
+     CALL wbse_output_ev_and_time(nvec,ev,conv,time_spent,dav_iter,notcnv)
      !
      ! ... if overall convergence has been achieved, or the dimension of
      ! ... the reduced basis set is becoming too large, or in any case if
@@ -1019,35 +1019,78 @@ END SUBROUTINE
 !
 !
 !----------------------------------------------------------------------------
-SUBROUTINE wbse_output_ev_and_time(nvec,ev,time)
+SUBROUTINE wbse_output_ev_and_time(nvec,ev_,conv_,time,dav_iter,notcnv)
   !----------------------------------------------------------------------------
   !
+  USE json_module,          ONLY : json_file
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE io_push,              ONLY : io_push_bar
+  USE mp_world,             ONLY : mpime,root
+  USE westcom,              ONLY : logfile
   !
   ! I/O
   !
   IMPLICIT NONE
   !
   INTEGER,INTENT(IN) :: nvec
-  REAL(DP),INTENT(IN) :: ev(nvec)
+  REAL(DP),INTENT(IN) :: ev_(nvec)
+  LOGICAL,INTENT(IN) :: conv_(nvec)
   REAL(DP),INTENT(IN) :: time(2)
+  INTEGER,INTENT(IN) :: dav_iter,notcnv
   !
   ! Workspace
   !
+  TYPE(json_file) :: json
   INTEGER :: i,j
   CHARACTER(20),EXTERNAL :: human_readable_time
+  CHARACTER(LEN=6) :: cdav
+  INTEGER :: ndav,iunit
+  LOGICAL :: found
   !
   WRITE(stdout,*)
   DO i = 1, INT( nvec / 9 )
-     WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*(i-1)+1,9*i)
+     WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
   ENDDO
-  IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev(j), j=9*INT(nvec/9)+1,nvec)
+  IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
   WRITE(stdout,*)
   CALL io_push_bar()
   WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &
   TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
   CALL io_push_bar()
+  !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     !
+     CALL json%load(filename=TRIM(logfile))
+     !
+     CALL json%get('exec.ndav', ndav, found)
+     !
+     IF( found ) THEN
+        ndav = ndav+1
+     ELSE
+        ndav = 1
+     ENDIF
+     !
+     WRITE(cdav,'(i6)') ndav
+     !
+     CALL json%update('exec.ndav', ndav, found)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').dav_iter', dav_iter)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').ev', ev_(1:nvec))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').conv', conv_(1:nvec))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').notcnv', notcnv)
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:sec', time(2))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_elap:hum', TRIM(human_readable_time(time(2))))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:sec', (time(2)-time(1)))
+     CALL json%add('exec.davitr('//TRIM(ADJUSTL(cdav))//').time_iter:hum', TRIM(human_readable_time(time(2)-time(1))))
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
   !
 END SUBROUTINE

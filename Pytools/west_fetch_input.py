@@ -84,6 +84,8 @@ default["server_control"]["document"] = "{}"
 # wbse_init_control
 default["wbse_init_control"] = {}
 default["wbse_init_control"]["wbse_init_calculation"] = "S"
+default["wbse_init_control"]["bse_method"] = "PDEP"
+default["wbse_init_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wbse_init_control"]["localization"] = "N"
 default["wbse_init_control"]["wfc_from_qbox"] = "qb_wfc"
 default["wbse_init_control"]["bisection_info"] = "bis_info"
@@ -137,6 +139,12 @@ def update_default_values(key,kwargs) :
        assert("ecutrho") in kwargs.keys()
        ecutrho = kwargs["ecutrho"]
        default[key]["ecut_imfreq"] = ecutrho
+    #
+    if key == "wbse_init_control" :
+       #
+       assert("nelec") in kwargs.keys()
+       nelec = kwargs["nelec"]
+       default[key]["n_pdep_eigen_to_use"] = int(nelec)
 
 ################
 # OPEN & PARSE #

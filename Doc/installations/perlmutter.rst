@@ -4,14 +4,14 @@
 NERSC-Perlmutter
 ================
 
-Perlmutter (Phase I) is a GPU-accelerated supercomputer located at National Energy Research Scientific Computing Center (`NERSC <https://www.nersc.gov/>`_).
+Perlmutter is an HPE Cray EX supercomputer located at National Energy Research Scientific Computing Center (`NERSC <https://www.nersc.gov/>`_). Perlmutter has both GPU-accelerated nodes and CPU-only nodes.
 
 .. code-block:: bash
 
    $ ssh <username>@saul-p1.nersc.gov
 
-Building WEST
-~~~~~~~~~~~~~
+Building WEST (GPU)
+~~~~~~~~~~~~~~~~~~~
 
 WEST executables can be compiled using the following script (tested on January 13, 2023):
 
@@ -25,7 +25,6 @@ WEST executables can be compiled using the following script (tested on January 1
    module load cudatoolkit/11.7
    module load craype-accel-nvidia80
    module load cray-python/3.9.13.1
-   module unload darshan
 
    ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.7 --with-cuda-cc=80
 
@@ -52,10 +51,10 @@ To use the script do:
 
    $ bash build_west.sh
 
-Running WEST Jobs
-~~~~~~~~~~~~~~~~~
+Running WEST Jobs (GPU)
+~~~~~~~~~~~~~~~~~~~~~~~
 
-The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Perlmutter with 4 MPI ranks and 4 GPUs per node. The <project_name> must be replaced with an active project allocation.
+The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two GPU nodes of Perlmutter with 4 MPI ranks and 4 GPUs per node. The <project_name> must be replaced with an active project allocation.
 
 **Important**: The following environment variable is needed to work around a bug in ROMIO, Cray MPICH.
 
@@ -83,14 +82,96 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    module load cudatoolkit/11.7
    module load craype-accel-nvidia80
    module load cray-python/3.9.13.1
-   module unload darshan
 
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
-   export MPICH_MPIIO_HINTS=*:romio_cb_write=enable:romio_ds_write=disable
+   export MPICH_MPIIO_HINTS="*:romio_cb_write=enable:romio_ds_write=disable"
    export ROMIO_FSTYPE_FORCE="ufs:"
 
    srun -N 2 -n 8 -c 32 -G 8 ./wstat.x -i wstat.in &> wstat.out
+
+Job submission is done with the following:
+
+.. code-block:: bash
+
+   $ sbatch run_west.sh
+
+Building WEST (CPU)
+~~~~~~~~~~~~~~~~~~~
+
+WEST executables can be compiled using the following script (tested on February 17, 2023):
+
+.. code-block:: bash
+
+   $ cat build_west.sh
+   #!/bin/bash
+
+   module load cpu
+   module load cray-fftw/3.3.10.2
+   module load cray-python/3.9.13.1
+
+   export CRAYPE_LINK_TYPE=dynamic
+   export MPIF90=ftn
+   export F90=ftn
+   export CC=cc
+
+   ./configure --enable-openmp --with-scalapack
+
+   # Manually edit make.inc:
+
+   # DFLAGS = -D__FFTW3 -D__MPI -D__SCALAPACK
+   # IFLAGS = -I. -I$(TOPDIR)/include -I$(TOPDIR)/FoX/finclude -I/opt/cray/pe/fftw/3.3.10.2/x86_milan/include
+   # BLAS_LIBS = # leave blank
+   # LAPACK_LIBS = # leave blank
+
+   make -j 8 pw
+
+   cd West
+
+   make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
+   make -j 8 all
+
+To use the script do:
+
+.. code-block:: bash
+
+   $ bash build_west.sh
+
+Running WEST Jobs (CPU)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two CPU nodes of Perlmutter with 128 MPI ranks per node. The <project_name> must be replaced with an active project allocation.
+
+**Important**: The following environment variable is needed to work around a bug in ROMIO, Cray MPICH.
+
+.. code-block:: bash
+
+   export ROMIO_FSTYPE_FORCE="ufs:"
+
+.. code-block:: bash
+
+   $ cat run_west.sh
+   #!/bin/bash
+
+   #SBATCH --job-name=WEST
+   #SBATCH --time=00:20:00
+   #SBATCH --account=<project_name>
+   #SBATCH --constraint=cpu
+   #SBATCH --qos=debug
+   #SBATCH --nodes=2
+   #SBATCH --ntasks-per-node=128
+   #SBATCH --cpus-per-task=2
+
+   module load cpu
+   module load cray-fftw/3.3.10.2
+   module load cray-python/3.9.13.1
+
+   export OMP_NUM_THREADS=1
+   export SLURM_CPU_BIND=cores
+   export MPICH_MPIIO_HINTS="*:romio_cb_write=enable:romio_ds_write=disable"
+   export ROMIO_FSTYPE_FORCE="ufs:"
+
+   srun -N 2 -n 256 -c 2 ./wstat.x -i wstat.in &> wstat.out
 
 Job submission is done with the following:
 

@@ -136,7 +136,7 @@ MODULE plep_db
       !------------------------------------------------------------------------
       !
       USE pwcom,               ONLY : nks,npwx
-      USE westcom,             ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x
+      USE westcom,             ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x,n_trunc_bands
       USE io_global,           ONLY : stdout
       USE mp,                  ONLY : mp_bcast,mp_barrier
       USE mp_world,            ONLY : world_comm,mpime,root
@@ -211,7 +211,7 @@ MODULE plep_db
       ! 3) READ THE EIGENVECTOR FILES
       !
       IF(.NOT. ALLOCATED(dvg_exc)) THEN
-         ALLOCATE(dvg_exc(npwx,nbndval0x,nks,pert%nlocx))
+         ALLOCATE(dvg_exc(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx))
          dvg_exc = 0._DP
       ENDIF
       !

@@ -37,6 +37,7 @@ SUBROUTINE calc_tau()
   !
   INTEGER :: iks,current_spin
   INTEGER :: iq,nkq,ikq
+  INTEGER :: nbndval
   LOGICAL :: l_restart_calc,spin_resolve
   !
   SELECT CASE(wbse_init_calculation)
@@ -70,6 +71,7 @@ SUBROUTINE calc_tau()
         current_spin = isk(iks)
         ikq = 1
         npw = ngk(iks)
+        nbndval = nbnd_occ(iks)
         !
         IF(nks > 1) THEN
            IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
@@ -82,7 +84,7 @@ SUBROUTINE calc_tau()
 #endif
         !
         IF((.NOT. spin_resolve) .OR. (spin_resolve .AND. current_spin == spin_channel)) THEN
-           CALL calc_tau_single_q(iks,iq,current_spin,nbnd_occ(iks),l_restart_calc)
+           CALL calc_tau_single_q(iks,iq,current_spin,nbndval,l_restart_calc)
         ENDIF
         !
      ENDDO
@@ -106,7 +108,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE io_push,              ONLY : io_push_title
   USE types_coulomb,        ONLY : pot3D
   USE westcom,              ONLY : ev,dvg,wbse_init_save_dir,l_pdep,chi_kernel,l_local_repr,&
-                                 & overlap_thr
+                                 & overlap_thr,n_trunc_bands
   USE fft_base,             ONLY : dffts
   USE noncollin_module,     ONLY : npol
   USE pwcom,                ONLY : npw,npwx,lsda
@@ -142,9 +144,10 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !
   ! Workspace
   !
-  INTEGER :: ibnd,jbnd,tmp_size
+  INTEGER :: ibnd,jbnd,ibnd_g,jbnd_g,tmp_size
   INTEGER :: il1,ig1,ir,do_idx
   INTEGER :: iu,ig,ierr,ip,ip_g
+  INTEGER :: nbnd_do
   INTEGER :: dffts_nnr
   REAL(DP) :: factor
   REAL(DP) :: ovl_value
@@ -188,6 +191,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
      !
   ENDIF
   !
+  nbnd_do = nbndval-n_trunc_bands
   dffts_nnr = dffts%nnr
   !
 #if defined(__CUDA)
@@ -199,19 +203,19 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !
   WRITE(flabel,'(A,I6.6,A,I6.6,A,I1,A)') '_iq',ikq,'_ik',iks,'_spin',current_spin,'.dat'
   !
-  tmp_size = nbndval*nbndval
+  tmp_size = nbnd_do*nbnd_do
   ALLOCATE(idx_matrix(tmp_size,2))
-  ALLOCATE(ovl_matrix(nbndval,nbndval))
+  ALLOCATE(ovl_matrix(nbnd_do,nbnd_do))
   !
   ovl_matrix(:,:) = 0._DP
   idx_matrix(:,:) = 0
   !
   IF(l_local_repr) THEN
      !
-     ALLOCATE(evc_loc(npwx,nbndval))
+     ALLOCATE(evc_loc(npwx,nbnd_do))
      !$acc enter data create(evc_loc)
      !
-     CALL wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart_calc)
+     CALL wbse_localization(current_spin,n_trunc_bands+1,nbndval,evc_loc,ovl_matrix,l_restart_calc)
      !
   ENDIF
   !
@@ -221,8 +225,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !
   IF(.NOT. l_restart_calc) THEN
      !
-     DO jbnd = 1,nbndval
-        DO ibnd = 1,nbndval
+     DO jbnd = 1,nbnd_do
+        DO ibnd = 1,nbnd_do
            !
            ovl_value = ovl_matrix(ibnd,jbnd)
            !
@@ -230,8 +234,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
               IF(jbnd >= ibnd) THEN
                  do_idx = do_idx+1
                  !
-                 idx_matrix(do_idx,1) = ibnd
-                 idx_matrix(do_idx,2) = jbnd
+                 idx_matrix(do_idx,1) = ibnd+n_trunc_bands
+                 idx_matrix(do_idx,2) = jbnd+n_trunc_bands
               ENDIF
            ENDIF
            !
@@ -289,10 +293,13 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
         !
         ig1  = bandpair%l2g(il1) ! global index of n_total
         !
-        ibnd = idx_matrix(ig1,1)
-        jbnd = idx_matrix(ig1,2)
+        ibnd_g = idx_matrix(ig1,1)
+        jbnd_g = idx_matrix(ig1,2)
+        ibnd = ibnd_g-n_trunc_bands
+        jbnd = jbnd_g-n_trunc_bands
         !
         l_skip = .FALSE.
+        !
         IF(l_restart_calc) THEN
            IF(restart_matrix(ig1) > 0) l_skip = .TRUE.
         ENDIF
@@ -306,7 +313,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
               CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
               !$acc end host_data
            ELSE
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd_g),evc_work(:,jbnd_g),psic,'Wave')
            ENDIF
            !
            !$acc parallel loop present(aux_r)
@@ -489,8 +496,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            !
            ! write dvg vc_rho + vc_rho X vc_rho to disk
            !
-           WRITE(ilabel,'(i6.6)') ibnd
-           WRITE(jlabel,'(i6.6)') jbnd
+           WRITE(ilabel,'(i6.6)') ibnd_g
+           WRITE(jlabel,'(i6.6)') jbnd_g
            WRITE(slabel,'(i1)') current_spin
            !
            fname = TRIM(wbse_init_save_dir)//'/E'//ilabel//'_'//jlabel//'_'//slabel//'.dat'

@@ -21,8 +21,8 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
                                   & double_fwfft_gamma
   USE mp_global,             ONLY : inter_image_comm,inter_bgrp_comm
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
-  USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,l_local_repr,u_matrix,idx_matrix,&
-                                  & n_bse_idx
+  USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,n_trunc_bands,l_local_repr,&
+                                  & u_matrix,idx_matrix,n_bse_idx
   USE distribution_center,   ONLY : aband,bandpair
   USE wbse_io,               ONLY : read_bse_pots_g2r,read_bse_pots_g2g
 #if defined(__CUDA)
@@ -38,14 +38,15 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   ! I/O
   !
   INTEGER, INTENT(IN) :: current_spin,nbndval_k
-  COMPLEX(DP), INTENT(IN) :: evc1(npwx,nbndval0x,nks)
-  COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,nbndval0x)
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx,nbndval0x-n_trunc_bands,nks)
+  COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,nbndval0x-n_trunc_bands)
   !
   ! Workspace
   !
   INTEGER :: ibnd,jbnd,do_idx,n_done,ig,ir
   INTEGER :: ibnd_index,jbnd_index,il1,ig1
   INTEGER :: nbndval_q,current_spin_ikq,ikq
+  INTEGER :: nbnd_do
   INTEGER :: dffts_nnr
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
@@ -61,13 +62,14 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   CALL start_clock('bse_kernel')
 #endif
   !
+  nbnd_do = nbndval0x-n_trunc_bands
   dffts_nnr = dffts%nnr
   !
 #if !defined(__CUDA)
   IF(l_local_repr) THEN
-     ALLOCATE(caux1(npwx,nbndval0x))
+     ALLOCATE(caux1(npwx,nbnd_do))
   ENDIF
-  ALLOCATE(caux2(npwx,nbndval0x))
+  ALLOCATE(caux2(npwx,nbnd_do))
   do_idx = MAXVAL(n_bse_idx)
   ALLOCATE(raux1(dffts%nnr))
   IF(.NOT. l_lanczos) THEN
@@ -87,8 +89,8 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      !
      IF(l_local_repr) THEN
         !$acc host_data use_device(evc1,u_matrix,caux1)
-        CALL ZGEMM('N','N',npw,nbndval0x,nbndval0x,one,evc1(:,:,ikq),npwx,&
-        & u_matrix(:,:,current_spin),nbndval0x,zero,caux1,npwx)
+        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,one,evc1(:,:,ikq),npwx,u_matrix(:,:,current_spin),&
+        & nbnd_do,zero,caux1,npwx)
         !$acc end host_data
      ENDIF
      !
@@ -110,8 +112,8 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
         !
         IF(ig1 < 1 .OR. ig1 > do_idx) CYCLE
         !
-        ibnd_index = idx_matrix(ig1,1,current_spin)
-        jbnd_index = idx_matrix(ig1,2,current_spin)
+        ibnd_index = idx_matrix(ig1,1,current_spin)-n_trunc_bands
+        jbnd_index = idx_matrix(ig1,2,current_spin)-n_trunc_bands
         !
         IF(l_lanczos) THEN
            !
@@ -196,10 +198,10 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
            !
            DO ig1 = 1, do_idx
               !
-              IF(n_done > MIN(do_idx,(nbndval_q+nbndval_k))) CYCLE
+              IF(n_done > MIN(do_idx,(nbndval_q-n_trunc_bands+nbndval_k-n_trunc_bands))) CYCLE
               !
-              ibnd_index = idx_matrix(ig1,1,current_spin)
-              jbnd_index = idx_matrix(ig1,2,current_spin)
+              ibnd_index = idx_matrix(ig1,1,current_spin)-n_trunc_bands
+              jbnd_index = idx_matrix(ig1,2,current_spin)-n_trunc_bands
               !
               IF(ibnd_index == ibnd) THEN
                  n_done = n_done+1
@@ -280,14 +282,14 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
         ! U^{+}(\xi)
         !
         !$acc host_data use_device(caux2,u_matrix,bse_kd1)
-        CALL ZGEMM('N','C',npw,nbndval0x,nbndval0x,mone,caux2,npwx,u_matrix(:,:,current_spin),&
-        & nbndval0x,one,bse_kd1,npwx)
+        CALL ZGEMM('N','C',npw,nbnd_do,nbnd_do,mone,caux2,npwx,u_matrix(:,:,current_spin),nbnd_do,&
+        & one,bse_kd1,npwx)
         !$acc end host_data
         !
      ELSE
         !
         !$acc parallel loop collapse(2) present(bse_kd1,caux2)
-        DO ibnd = 1, nbndval0x
+        DO ibnd = 1, nbnd_do
            DO ig = 1, npw
               bse_kd1(ig,ibnd) = bse_kd1(ig,ibnd)-caux2(ig,ibnd)
            ENDDO

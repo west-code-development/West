@@ -47,7 +47,7 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_sum,mp_bcast
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw,ngk
-      USE westcom,              ONLY : nbnd_occ,nbndval0x
+      USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands
       USE gvect,                ONLY : gstart
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
@@ -55,8 +55,8 @@ MODULE wbse_tools
       !
       ! I/O
       !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x,nks,pert%nlocx)
-      COMPLEX(DP),INTENT(IN) :: bg(npwx,nbndval0x,nks,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx)
+      COMPLEX(DP),INTENT(IN) :: bg(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx)
       INTEGER,INTENT(IN) :: l2_s,l2_e
       REAL(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
       INTEGER,INTENT(IN) :: g_e
@@ -113,7 +113,7 @@ MODULE wbse_tools
                         npw = ngk(iks)
                         !
                         !$acc loop collapse(2) reduction(+:reduce)
-                        DO ibnd = 1,nbndval
+                        DO ibnd = 1,nbndval-n_trunc_bands
                            DO il3 = 1,npw
                               reduce = reduce+REAL(ag(il3,ibnd,iks,il1),KIND=DP)*REAL(bg(il3,ibnd,iks,il2),KIND=DP) &
                               & +AIMAG(ag(il3,ibnd,iks,il1))*AIMAG(bg(il3,ibnd,iks,il2))
@@ -124,7 +124,7 @@ MODULE wbse_tools
                         !
                         IF(gstart == 2) THEN
                            !$acc loop reduction(+:reduce)
-                           DO ibnd = 1,nbndval
+                           DO ibnd = 1,nbndval-n_trunc_bands
                               reduce = reduce-REAL(ag(1,ibnd,iks,il1),KIND=DP)*REAL(bg(1,ibnd,iks,il2),KIND=DP)
                            ENDDO
                         ENDIF
@@ -175,15 +175,15 @@ MODULE wbse_tools
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_bgrp_id,my_pool_id
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw,ngk
-      USE westcom,              ONLY : nbnd_occ,nbndval0x
+      USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x,nks,pert%nlocx)
-      COMPLEX(DP),INTENT(INOUT) :: bg(npwx,nbndval0x,nks,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: bg(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect,n,lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       REAL(DP),INTENT(IN) :: ew(lda)
@@ -205,7 +205,7 @@ MODULE wbse_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
+         ALLOCATE(hg(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx))
          !
          !$acc enter data create(ag,bg,hg)
          !
@@ -239,7 +239,7 @@ MODULE wbse_tools
                      npw = ngk(iks)
                      !
                      !$acc parallel loop collapse(2) async present(hg,ag)
-                     DO ibnd = 1,nbndval
+                     DO ibnd = 1,nbndval-n_trunc_bands
                         DO il3 = 1,npw
                            hg(il3,ibnd,iks,il2) = dconst*ag(il3,ibnd,iks,il1)+hg(il3,ibnd,iks,il2)
                         ENDDO
@@ -273,7 +273,7 @@ MODULE wbse_tools
                npw = ngk(iks)
                !
                !$acc parallel loop collapse(2) async present(ag,hg)
-               DO ibnd = 1,nbndval
+               DO ibnd = 1,nbndval-n_trunc_bands
                   DO il3 = 1,npw
                      ag(:,ibnd,iks,il2) = dconst*hg(:,ibnd,iks,il2)
                   ENDDO
@@ -315,7 +315,7 @@ MODULE wbse_tools
                      npw = ngk(iks)
                      !
                      !$acc parallel loop collapse(2) async present(hg,bg)
-                     DO ibnd = 1,nbndval
+                     DO ibnd = 1,nbndval-n_trunc_bands
                         DO il3 = 1,npw
                            hg(il3,ibnd,iks,il2) = dconst*bg(il3,ibnd,iks,il1)+hg(il3,ibnd,iks,il2)
                         ENDDO
@@ -347,7 +347,7 @@ MODULE wbse_tools
                npw = ngk(iks)
                !
                !$acc parallel loop collapse(2) async present(ag,hg)
-               DO ibnd = 1,nbndval
+               DO ibnd = 1,nbndval-n_trunc_bands
                   DO il3 = 1,npw
                      ag(il3,ibnd,iks,il2) = ag(il3,ibnd,iks,il2)+hg(il3,ibnd,iks,il2)
                   ENDDO
@@ -381,14 +381,14 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx,npw,ngk
-      USE westcom,              ONLY : nbnd_occ,nbndval0x
+      USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands
       USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x,nks,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect,n,lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       !
@@ -407,7 +407,7 @@ MODULE wbse_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         ALLOCATE(hg(npwx,nbndval0x,nks,pert%nlocx))
+         ALLOCATE(hg(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx))
          !
          !$acc enter data create(ag,hg)
          !
@@ -441,7 +441,7 @@ MODULE wbse_tools
                      npw = ngk(iks)
                      !
                      !$acc parallel loop collapse(2) async present(hg,ag)
-                     DO ibnd = 1,nbndval
+                     DO ibnd = 1,nbndval-n_trunc_bands
                         DO il3 = 1,npw
                            hg(il3,ibnd,iks,il2) = dconst*ag(il3,ibnd,iks,il1)+hg(il3,ibnd,iks,il2)
                         ENDDO
@@ -473,7 +473,7 @@ MODULE wbse_tools
                   npw = ngk(iks)
                   !
                   !$acc parallel loop collapse(2) async present(ag)
-                  DO ibnd = 1,nbndval
+                  DO ibnd = 1,nbndval-n_trunc_bands
                      DO il3 = 1,npw
                         ag(il3,ibnd,iks,il2) = 0._DP
                      ENDDO
@@ -488,7 +488,7 @@ MODULE wbse_tools
                   npw = ngk(iks)
                   !
                   !$acc parallel loop collapse(2) async present(ag,hg)
-                  DO ibnd = 1,nbndval
+                  DO ibnd = 1,nbndval-n_trunc_bands
                      DO il3 = 1,npw
                         ag(il3,ibnd,iks,il2) = hg(il3,ibnd,iks,il2)
                      ENDDO
@@ -526,14 +526,14 @@ MODULE wbse_tools
       USE mp,                   ONLY : mp_max
       USE distribution_center,  ONLY : pert
       USE pwcom,                ONLY : nks,npwx
-      USE westcom,              ONLY : nbnd_occ,nbndval0x
+      USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands
       USE wvfct,                ONLY : g2kin,et
       !
       IMPLICIT NONE
       !
       ! I/O
       !
-      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x,nks,pert%nlocx)
+      COMPLEX(DP),INTENT(INOUT) :: ag(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect,n
       LOGICAL,INTENT(IN) :: turn_shift
       !
@@ -574,10 +574,10 @@ MODULE wbse_tools
             CALL g2_kin(iks)
             !
             IF(.NOT. (ig1 <= n .OR. ig1 > n+nselect)) THEN
-               DO ibnd = 1,nbndval
+               DO ibnd = 1,nbndval-n_trunc_bands
                   DO ig = 1,npwx
                      IF(turn_shift) THEN
-                        temp = (g2kin(ig) - et(ibnd,iks))
+                        temp = (g2kin(ig) - et(ibnd+n_trunc_bands,iks))
                      ELSE
                         temp = g2kin(ig)
                      ENDIF

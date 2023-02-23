@@ -29,9 +29,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,scissor_ope,nbndval0x,l_bse_calculation,&
-                                 & l_qp_correction,l_bse_triplet,l_lanczos,sigma_c_head,&
-                                 & sigma_x_head,et_qp
+  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,scissor_ope,nbndval0x,n_trunc_bands,&
+                                 & l_bse_calculation,l_qp_correction,l_bse_triplet,l_lanczos,&
+                                 & sigma_c_head,sigma_x_head,et_qp
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
 #if defined(__CUDA)
@@ -48,13 +48,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,nbndval0x,nks)
-  COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,nbndval0x,nks)
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,nbndval0x-n_trunc_bands,nks)
+  COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,nbndval0x-n_trunc_bands,nks)
   !
   ! Local variables
   !
   LOGICAL :: lrpa
-  INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbvalloc,il1
+  INTEGER :: ibnd,jbnd,ibnd_g,jbnd_g,iks,ir,ig,nbndval,nbnd_do,il1
   INTEGER :: dffts_nnr
   COMPLEX(DP) :: factor
 #if !defined(__CUDA)
@@ -96,11 +96,11 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   DO iks = 1,nks
      !
      nbndval = nbnd_occ(iks)
-     nbvalloc = 0
+     nbnd_do = 0
      DO il1 = 1,aband%nloc
-        ibnd = aband%l2g(il1)
+        ibnd = aband%l2g(il1)+n_trunc_bands
         IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
-        nbvalloc = nbvalloc+1
+        nbnd_do = nbnd_do+1
      ENDDO
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -155,11 +155,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
            !
            ! double bands @ gamma
            !
-           DO il1 = 1,nbvalloc-MOD(nbvalloc,2),2
+           DO il1 = 1,nbnd_do-MOD(nbnd_do,2),2
               ibnd = aband%l2g(il1)
               jbnd = aband%l2g(il1+1)
+              ibnd_g = ibnd+n_trunc_bands
+              jbnd_g = jbnd+n_trunc_bands
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd_g),evc_work(:,jbnd_g),psic,'Wave')
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -174,10 +176,11 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
            !
            ! single band @ gamma
            !
-           IF(MOD(nbvalloc,2) == 1) THEN
-              ibnd = aband%l2g(nbvalloc)
+           IF(MOD(nbnd_do,2) == 1) THEN
+              ibnd = aband%l2g(nbnd_do)
+              ibnd_g = ibnd+n_trunc_bands
               !
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd_g),psic,'Wave')
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -194,7 +197,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
            !
            ! only single bands
            !
-           DO il1 = 1,nbvalloc
+           DO il1 = 1,nbnd_do
               ibnd = aband%l2g(il1)
               !
               CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
@@ -211,7 +214,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
            ENDDO
            !
            IF(npol == 2) THEN
-              DO il1 = 1,nbvalloc
+              DO il1 = 1,nbnd_do
                  ibnd = aband%l2g(il1)
                  !
                  CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
@@ -233,7 +236,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      ENDIF
      !
      !$acc parallel loop collapse(2) present(evc1_loc,evc1)
-     DO il1 = 1,nbvalloc
+     DO il1 = 1,nbnd_do
         !
         ! ibnd = aband%l2g(il1)
         !
@@ -254,36 +257,37 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
 #if defined(__CUDA)
      !$acc host_data use_device(evc1_loc,hevc1)
-     CALL h_psi__gpu(npwx,npw,nbvalloc,evc1_loc,hevc1)
+     CALL h_psi__gpu(npwx,npw,nbnd_do,evc1_loc,hevc1)
      !$acc end host_data
 #else
-     CALL h_psi_(npwx,npw,nbvalloc,evc1_loc,hevc1)
+     CALL h_psi_(npwx,npw,nbnd_do,evc1_loc,hevc1)
 #endif
      !
      IF(l_qp_correction) THEN
 #if defined(__CUDA)
-        CALL reallocate_ps_gpu(nbnd,nbvalloc)
+        CALL reallocate_ps_gpu(nbnd,nbnd_do)
 #endif
-        CALL apply_hqp_to_m_wfcs(iks,nbvalloc,evc1_loc,hevc1)
+        CALL apply_hqp_to_m_wfcs(iks,nbnd_do,evc1_loc,hevc1)
      ENDIF
      !
      ! Subtract the eigenvalues
      !
-     DO il1 = 1,nbvalloc
+     DO il1 = 1,nbnd_do
         !
         ibnd = aband%l2g(il1)
+        ibnd_g = ibnd+n_trunc_bands
         !
         IF(l_qp_correction) THEN
            IF(l_bse_calculation) THEN
-              factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
+              factor = CMPLX(-(et_qp(ibnd_g,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
-              factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope),KIND=DP)
+              factor = CMPLX(-(et_qp(ibnd_g,iks)-scissor_ope),KIND=DP)
            ENDIF
         ELSE
            IF(l_bse_calculation) THEN
-              factor = CMPLX(-(et(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
+              factor = CMPLX(-(et(ibnd_g,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
-              factor = CMPLX(-(et(ibnd,iks)-scissor_ope),KIND=DP)
+              factor = CMPLX(-(et(ibnd_g,iks)-scissor_ope),KIND=DP)
            ENDIF
         ENDIF
         !
@@ -294,7 +298,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      ENDDO
      !
      !$acc parallel loop collapse(2) present(evc1_new,hevc1)
-     DO il1 = 1,nbvalloc
+     DO il1 = 1,nbnd_do
         !
         ! ibnd = aband%l2g(il1)
         !
@@ -325,7 +329,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      IF(gamma_only) THEN
         IF(gstart == 2) THEN
            !$acc parallel loop present(evc1_new)
-           DO ibnd = 1,nbndval0x
+           DO ibnd = 1,nbndval0x-n_trunc_bands
               evc1_new(1,ibnd,iks) = CMPLX(REAL(evc1_new(1,ibnd,iks),KIND=DP),KIND=DP)
            ENDDO
            !$acc end parallel
@@ -334,7 +338,10 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
      ! Pc[k]*evc1_new(k)
      !
-     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval,evc1_new(:,:,iks),(1._DP,0._DP))
+#if defined(__CUDA)
+     CALL reallocate_ps_gpu(nbndval,nbndval-n_trunc_bands)
+#endif
+     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval-n_trunc_bands,evc1_new(:,:,iks),(1._DP,0._DP))
      !
   ENDDO
   !

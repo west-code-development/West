@@ -28,10 +28,11 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
                              & westpp_n_liouville_to_use,document,wbse_init_calculation,&
                              & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,wbse_calculation,solver,qp_correction,&
-                             & scissor_ope,n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & wbse_ipol,wbse_epsinfty,spin_excitation,l_preconditioning,l_reduce_io
+                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,solver,&
+                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
+                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
+                             & trev_liouville_rel,wbse_ipol,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -129,6 +130,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_init_control.chi_kernel',TRIM(chi_kernel))
         CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
         CALL json%add('input.wbse_init_control.spin_channel',spin_channel)
+        CALL json%add('input.wbse_init_control.n_trunc_bands',n_trunc_bands)
         !
      ENDIF
      !
@@ -176,11 +178,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
                              & westpp_n_liouville_to_use,document,wbse_init_calculation,&
                              & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,wbse_calculation,solver,qp_correction,&
-                             & scissor_ope,n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & wbse_ipol,wbse_epsinfty,spin_excitation,l_preconditioning,&
-                             & l_reduce_io,main_input_file,logfile
+                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,solver,&
+                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
+                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
+                             & trev_liouville_rel,wbse_ipol,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_reduce_io,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -460,6 +462,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(cvalue, 'chi_kernel'); chi_kernel = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(overlap_thr, 'overlap_thr')
         IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
+        IERR = return_dict%get(n_trunc_bands, 'n_trunc_bands', DUMMY_DEFAULT)
         !
         CALL return_dict%destroy
         !
@@ -701,10 +704,16 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(chi_kernel,root,world_comm)
      CALL mp_bcast(overlap_thr,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
+     CALL mp_bcast(n_trunc_bands,root,world_comm)
+     !
+     ! CHECKS
      !
      IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
+     IF(n_pdep_eigen_to_use < 1) CALL errore('fetch_input','Err: n_pdep_eigen_to_use<1',1)
+     IF(n_trunc_bands < 0) CALL errore('fetch_input','Err: n_trunc_bands<0',1)
      IF(n_pdep_eigen_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
      IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
+     IF(n_trunc_bands == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_trunc_bands',1)
      !
      SELECT CASE(TRIM(bse_method))
      CASE('PDEP','pdep','FF_QBOX','FF_Qbox','ff_qbox')
@@ -753,12 +762,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      ! CHECKS
      !
      IF(.NOT. gamma_only) CALL errore('fetch_input','Err: BSE requires gamma_only',1)
-     IF(n_liouville_eigen == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_eigen',1)
-     IF(n_liouville_times == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_times',1)
-     IF(n_liouville_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_maxiter',1)
-     IF(n_liouville_read_from_file == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
-     IF(n_lanczos == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
-     IF(n_steps_write_restart == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
      !
      SELECT CASE(macropol_calculation)
      CASE('N','n','C','c')
@@ -773,7 +776,25 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      END SELECT
      !
      SELECT CASE(wbse_calculation)
-     CASE('D','d','L','l')
+     CASE('D','d')
+        IF(n_liouville_times < 2) CALL errore('fetch_input','Err: n_liouville_times<2',1)
+        IF(n_liouville_eigen < 1) CALL errore('fetch_input','Err: n_liouville_eigen<1',1)
+        IF(n_liouville_eigen*n_liouville_times < nimage) &
+        & CALL errore('fetch_input','Err: n_liouville_eigen*n_liouville_times<nimage',1)
+        IF(n_liouville_maxiter < 1) CALL errore('fetch_input','Err: n_liouville_maxiter<1',1)
+        IF(n_liouville_read_from_file < 0) CALL errore('fetch_input','Err: n_liouville_read_from_file<0',1)
+        IF(n_liouville_read_from_file > n_liouville_eigen) &
+        & CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
+        IF(trev_liouville <= 0._DP) CALL errore('fetch_input','Err: trev_liouville<0.',1)
+        IF(trev_liouville_rel <= 0._DP) CALL errore('fetch_input','Err: trev_liouville_rel<0.',1)
+        IF(n_liouville_eigen == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_eigen',1)
+        IF(n_liouville_times == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_times',1)
+        IF(n_liouville_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_maxiter',1)
+        IF(n_liouville_read_from_file == DUMMY_DEFAULT) &
+        & CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
+     CASE('L','l')
+        IF(n_lanczos < 1) CALL errore('fetch_input','Err: n_lanczos<1',1)
+        IF(n_lanczos == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
      CASE DEFAULT
         CALL errore('fetch_input','Err: wbse_calculation/=(D,L)',1)
      END SELECT
@@ -784,16 +805,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         CALL errore('fetch_input','Err: spin_excitation/=(S,T)',1)
      END SELECT
      !
-     IF(wbse_calculation == 'D' .OR. wbse_calculation == 'd') THEN
-        IF(n_liouville_times < 2) CALL errore('fetch_input','Err: n_liouville_times<2',1)
-        IF(n_liouville_eigen < 1) CALL errore('fetch_input','Err: n_liouville_eigen<1',1)
-        IF(n_liouville_eigen*n_liouville_times < nimage) &
-        & CALL errore('fetch_input','Err: n_liouville_eigen*n_liouville_times<nimage',1)
-        IF(n_liouville_maxiter < 1) CALL errore('fetch_input','Err: n_liouville_maxiter<1',1)
-        IF(n_liouville_read_from_file < 0) CALL errore('fetch_input','Err: n_liouville_read_from_file<0',1)
-        IF(n_liouville_read_from_file > n_liouville_eigen) &
-        & CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
-     ENDIF
+     IF(n_steps_write_restart == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_steps_write_restart',1)
+     IF(wbse_epsinfty < 1._DP) CALL errore('fetch_input','Err: wbse_epsinfty<1.',1)
      !
   ENDIF
   !

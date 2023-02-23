@@ -298,6 +298,7 @@ MODULE wbse_init_center
   CHARACTER(LEN=512) :: bisection_info ! bisection file name, extension is spin channel, e.g. 'bis_info.1'
   REAL(DP) :: overlap_thr              ! overlap threshold for idx_matrix in wbse_init_qboxcoupling
   INTEGER :: spin_channel
+  INTEGER :: n_trunc_bands
   LOGICAL :: l_local_repr
   LOGICAL :: l_pdep
   !

@@ -131,8 +131,8 @@ SUBROUTINE bse_start()
   USE io_global,        ONLY : stdout
   USE pwcom,            ONLY : isk,nks,npwx
   USE westcom,          ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
-                             & sigma_c_head,sigma_x_head,wbse_epsinfty,l_local_repr,overlap_thr,&
-                             & u_matrix,ovl_matrix,n_bse_idx,idx_matrix
+                             & n_trunc_bands,sigma_c_head,sigma_x_head,wbse_epsinfty,l_local_repr,&
+                             & overlap_thr,u_matrix,ovl_matrix,n_bse_idx,idx_matrix
   USE lsda_mod,         ONLY : nspin
   USE constants,        ONLY : e2,pi
   USE cell_base,        ONLY : omega
@@ -143,7 +143,7 @@ SUBROUTINE bse_start()
   !
   ! Workspace
   !
-  INTEGER :: do_idx,nbndval,is
+  INTEGER :: do_idx,nbnd_do,nbndval,is
   INTEGER :: ibnd,jbnd,iks,current_spin
   REAL(DP) :: ovl_value
   !
@@ -157,20 +157,22 @@ SUBROUTINE bse_start()
   !
   WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:",f9.5)') sigma_c_head
   !
+  nbnd_do = nbndval0x-n_trunc_bands
+  !
   ! allocate and read unitary matrix and overlap matrix, if any
   !
   IF(l_local_repr) THEN
      !
-     ALLOCATE(u_matrix(nbndval0x,nbndval0x,nspin))
-     ALLOCATE(ovl_matrix(nbndval0x,nbndval0x,nspin))
+     ALLOCATE(u_matrix(nbnd_do,nbnd_do,nspin))
+     ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,nspin))
      !
      DO is = 1,nspin
-        CALL read_umatrix_and_omatrix(nbndval0x,is,u_matrix(:,:,is),ovl_matrix(:,:,is))
+        CALL read_umatrix_and_omatrix(nbnd_do,is,u_matrix(:,:,is),ovl_matrix(:,:,is))
      ENDDO
      !
   ENDIF
   !
-  ALLOCATE(idx_matrix(nbndval0x*nbndval0x,2,nspin))
+  ALLOCATE(idx_matrix(nbnd_do*nbnd_do,2,nspin))
   !
   idx_matrix(:,:,:) = 0
   !
@@ -184,8 +186,8 @@ SUBROUTINE bse_start()
      current_spin = isk(iks)
      do_idx = 0
      !
-     DO ibnd = 1,nbndval
-        DO jbnd = 1,nbndval
+     DO ibnd = 1,nbndval-n_trunc_bands
+        DO jbnd = 1,nbndval-n_trunc_bands
            IF(l_local_repr) THEN
               ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
            ELSE
@@ -195,13 +197,13 @@ SUBROUTINE bse_start()
            IF(l_local_repr) THEN
               IF(ovl_value >= overlap_thr) THEN
                  do_idx = do_idx + 1
-                 idx_matrix(do_idx,1,current_spin) = ibnd
-                 idx_matrix(do_idx,2,current_spin) = jbnd
+                 idx_matrix(do_idx,1,current_spin) = ibnd+n_trunc_bands
+                 idx_matrix(do_idx,2,current_spin) = jbnd+n_trunc_bands
               ENDIF
            ELSE
               do_idx = do_idx + 1
-              idx_matrix(do_idx,1,current_spin) = ibnd
-              idx_matrix(do_idx,2,current_spin) = jbnd
+              idx_matrix(do_idx,1,current_spin) = ibnd+n_trunc_bands
+              idx_matrix(do_idx,2,current_spin) = jbnd+n_trunc_bands
            ENDIF
         ENDDO
      ENDDO
@@ -214,7 +216,7 @@ SUBROUTINE bse_start()
      !
      do_idx = SUM(n_bse_idx)
      !
-     ALLOCATE(tau_is_read(nbndval0x,nbndval0x,nspin))
+     ALLOCATE(tau_is_read(nbnd_do,nbnd_do,nspin))
      ALLOCATE(tau_all(npwx,do_idx))
      !
      tau_is_read(:,:,:) = 0

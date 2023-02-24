@@ -1,6 +1,17 @@
 Change Log
 ==========
 
+v5.4.0 (2023/02/xx)
+-------------------
+
+- Release of the Bethe-Salpeter solver using density matrix perturbation theory (DMPT, D. Rocca et al., J. Chem. Phys. 133, 164109 (2010) and D. Rocca et al., Phys. Rev. B 85, 045116 (2012)).
+- Added truncation of lowest occupied bands in BSE.
+- Added an option to include fewer PDEPs when computing off-diagonal terms of the self-energy, reducing file system usage in large-scale QDET runs.
+- Added support for Wannier localization in BSE.
+- Added Wannier localization to `westpp`.
+- Updated CI/CD. Added tests to cover the new functionalities.
+- Updated documentation. Updated build instructions for ALCF/Theta and NERSC/Perlmutter. Added build instructions for ALCF/Polaris. Added more tutorials.
+
 v5.3.0 (2023/01/08)
 -------------------
 

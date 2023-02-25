@@ -11,7 +11,7 @@
 ! Ngoc Linh Nguyen, Victor Yu
 !
 !-----------------------------------------------------------------------
-SUBROUTINE wbse_dot(x,y,nbnd,nks,dotp)
+SUBROUTINE wbse_dot(x,y,m,nks,dotp)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -20,20 +20,20 @@ SUBROUTINE wbse_dot(x,y,nbnd,nks,dotp)
   USE mp,                   ONLY : mp_sum
   USE pwcom,                ONLY : isk,wg,nspin,npw,npwx,ngk
   USE gvect,                ONLY : gstart
-  USE westcom,              ONLY : nbnd_occ
+  USE westcom,              ONLY : nbnd_occ,n_trunc_bands
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: nbnd,nks
-  COMPLEX(DP), INTENT(IN) :: x(npwx,nbnd,nks)
-  COMPLEX(DP), INTENT(IN) :: y(npwx,nbnd,nks)
+  INTEGER, INTENT(IN) :: m,nks
+  COMPLEX(DP), INTENT(IN) :: x(npwx,m,nks)
+  COMPLEX(DP), INTENT(IN) :: y(npwx,m,nks)
   COMPLEX(DP), INTENT(OUT) :: dotp(nspin)
   !
   ! Workspace
   !
-  INTEGER :: ig, ibnd, iks, is, current_spin, nbndval
+  INTEGER :: ig, ibnd, ibnd_g, iks, is, current_spin, nbndval
   REAL(DP) :: tmp_r
   COMPLEX(DP) :: tmp_c
   !
@@ -52,9 +52,10 @@ SUBROUTINE wbse_dot(x,y,nbnd,nks,dotp)
         IF(gamma_only) THEN
            !
            !$acc parallel loop collapse(2) reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
-           DO ibnd = 1, nbndval
+           DO ibnd_g = n_trunc_bands+1, nbndval
               DO ig = 1, npw
-                 tmp_r = tmp_r + wg(ibnd,iks)*(REAL(x(ig,ibnd,iks),KIND=DP)*REAL(y(ig,ibnd,iks),KIND=DP) &
+                 ibnd = ibnd_g - n_trunc_bands
+                 tmp_r = tmp_r + wg(ibnd_g,iks)*(REAL(x(ig,ibnd,iks),KIND=DP)*REAL(y(ig,ibnd,iks),KIND=DP) &
                  & + AIMAG(x(ig,ibnd,iks))*AIMAG(y(ig,ibnd,iks)))
               ENDDO
            ENDDO
@@ -64,8 +65,9 @@ SUBROUTINE wbse_dot(x,y,nbnd,nks,dotp)
            !
            IF(gstart == 2) THEN
               !$acc parallel loop reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
-              DO ibnd = 1, nbndval
-                 tmp_r = tmp_r - wg(ibnd,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
+              DO ibnd_g = n_trunc_bands+1, nbndval
+                 ibnd = ibnd_g - n_trunc_bands
+                 tmp_r = tmp_r - wg(ibnd_g,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
               ENDDO
               !$acc end parallel
            ENDIF
@@ -73,9 +75,10 @@ SUBROUTINE wbse_dot(x,y,nbnd,nks,dotp)
         ELSE
            !
            !$acc parallel loop collapse(2) reduction(+:tmp_c) present(wg,x,y) copy(tmp_c)
-           DO ibnd = 1, nbndval
+           DO ibnd_g = n_trunc_bands+1, nbndval
               DO ig = 1, npw
-                 tmp_c = tmp_c + wg(ibnd,iks)*CONJG(x(ig,ibnd,iks))*y(ig,ibnd,iks)
+                 ibnd = ibnd_g - n_trunc_bands
+                 tmp_c = tmp_c + wg(ibnd_g,iks)*CONJG(x(ig,ibnd,iks))*y(ig,ibnd,iks)
               ENDDO
            ENDDO
            !$acc end parallel

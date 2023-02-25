@@ -22,7 +22,7 @@ MODULE wbse_io
     !
     USE kinds,          ONLY : DP
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
-    USE westcom,        ONLY : wbse_init_save_dir,l_reduce_io,tau_is_read,tau_all,n_tau
+    USE westcom,        ONLY : wbse_init_save_dir,l_reduce_io,tau_is_read,tau_all,n_tau,n_trunc_bands
     USE pwcom,          ONLY : npwx
     !
     IMPLICIT NONE
@@ -52,8 +52,8 @@ MODULE wbse_io
        !
     ENDIF
     !
-    WRITE(my_labeli,'(i6.6)') band_i
-    WRITE(my_labelj,'(i6.6)') band_j
+    WRITE(my_labeli,'(i6.6)') band_i+n_trunc_bands
+    WRITE(my_labelj,'(i6.6)') band_j+n_trunc_bands
     WRITE(my_spin,'(i1)') ispin
     !
     fname = TRIM(wbse_init_save_dir)//'/E'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'

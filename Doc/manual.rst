@@ -849,6 +849,19 @@ wbse_init_control
    * - **Description**
      - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization is "B" or "W".
 
+.. data:: n_trunc_bands
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - If n_trunc_bands > 0, then the n_trunc_bands lowest occupied bands are not considered when summing over occupied bands.
+
 |
 
 

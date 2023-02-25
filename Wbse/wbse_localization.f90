@@ -11,7 +11,7 @@
 ! Ngoc Linh Nguyen, Victor Yu
 !
 !----------------------------------------------------------------------------
-SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
+SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_restart)
   !----------------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
@@ -38,15 +38,16 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   !
   IMPLICIT NONE
   !
-  INTEGER,INTENT(IN) :: current_spin,nbndval
-  REAL(DP),INTENT(OUT) :: ovl_matrix(nbndval,nbndval)
-  COMPLEX(DP),INTENT(OUT) :: evc_loc(npwx,nbndval)
+  INTEGER,INTENT(IN) :: current_spin,nbnd_s,nbnd_e
+  REAL(DP),INTENT(OUT) :: ovl_matrix(nbnd_e-nbnd_s+1,nbnd_e-nbnd_s+1)
+  COMPLEX(DP),INTENT(OUT) :: evc_loc(npwx,nbnd_e-nbnd_s+1)
   LOGICAL,INTENT(IN) :: l_restart
   !
   LOGICAL :: l_wann
-  INTEGER :: ibnd_l,ibnd,jbnd,ir,il
+  INTEGER :: ibnd,jbnd,ibnd_l,ibnd_g,jbnd_g,ir,il
   INTEGER :: bisec_i,bisec_j
   INTEGER :: dffts_nnr
+  INTEGER :: nbnd_do
   INTEGER,ALLOCATABLE :: bisec_loc(:)
   REAL(DP) :: reduce
   REAL(DP) :: val(6)
@@ -54,6 +55,7 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
   REAL(DP),ALLOCATABLE :: proj(:,:)
   REAL(DP),ALLOCATABLE :: a_matrix(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: u_matrix(:,:)
+  COMPLEX(DP),ALLOCATABLE :: evc_tmp(:,:)
   CHARACTER(LEN=256) :: fname
   CHARACTER :: labels
 #if !defined(__CUDA)
@@ -69,22 +71,23 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
      l_wann = .FALSE.
   END SELECT
   !
+  nbnd_do = nbnd_e-nbnd_s+1
   dffts_nnr = dffts%nnr
   !
   IF(.NOT. l_restart) THEN
      !
      ovl_matrix(:,:) = 0._DP
      !
-     ALLOCATE(u_matrix(nbndval,nbndval))
+     ALLOCATE(u_matrix(nbnd_do,nbnd_do))
      !
      IF(l_wann) THEN
         !
         aband = idistribute()
-        CALL aband%init(nbndval,'i','wann_local',.TRUE.)
+        CALL aband%init(nbnd_do,'i','wann_local',.TRUE.)
         !
         ! compute unitary rotation matrix
         !
-        ALLOCATE(a_matrix(nbndval,nbndval,6))
+        ALLOCATE(a_matrix(nbnd_do,nbnd_do,6))
         ALLOCATE(proj(dffts%nnr,6))
         !
         CALL wann_calc_proj(proj)
@@ -96,10 +99,13 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         DO ibnd_l = 1,aband%nloc
            !
            ibnd = aband%l2g(ibnd_l)
+           ibnd_g = ibnd+nbnd_s-1
            !
-           DO jbnd = ibnd,nbndval
+           DO jbnd = ibnd,nbnd_do
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
+              jbnd_g = jbnd+nbnd_s-1
+              !
+              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd_g),evc(:,jbnd_g),psic,'Wave')
               !
               DO il = 1,6
                  !
@@ -125,7 +131,7 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         CALL mp_sum(a_matrix,intra_bgrp_comm)
         CALL mp_sum(a_matrix,inter_image_comm)
         !
-        CALL wann_joint_d(nbndval,a_matrix,6,u_matrix)
+        CALL wann_joint_d(nbnd_do,a_matrix,6,u_matrix)
         !
         DEALLOCATE(a_matrix)
         !$acc exit data delete(proj)
@@ -136,8 +142,8 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         !$acc enter data copyin(u_matrix)
         !
         !$acc host_data use_device(u_matrix,evc_loc)
-        CALL ZGEMM('N','N',npw,nbndval,nbndval,(1._DP,0._DP),evc,npwx,u_matrix,nbndval,&
-        & (0._DP,0._DP),evc_loc,npwx)
+        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,&
+        & u_matrix,nbnd_do,(0._DP,0._DP),evc_loc,npwx)
         !$acc end host_data
         !
         !$acc update host(evc_loc)
@@ -149,7 +155,7 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
            !
            ibnd = aband%l2g(ibnd_l)
            !
-           DO jbnd = 1,nbndval
+           DO jbnd = 1,nbnd_do
               !
               !$acc host_data use_device(evc_loc)
               CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
@@ -169,22 +175,31 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         !
         ! load localized wfc
         !
-        CALL load_qbox_wfc(current_spin,nbndval,evc_loc)
+        ALLOCATE(evc_tmp(npwx,nbnd_e))
+        !
+        CALL load_qbox_wfc(current_spin,nbnd_e,evc_tmp)
+        !
+        evc_loc(:,:) = evc_tmp(:,nbnd_s:nbnd_e)
+        !
+        DEALLOCATE(evc_tmp)
         !
         ! compute unitary rotation matrix
         !
         u_matrix(:,:) = (0._DP,0._DP)
         !
-        DO ibnd = 1,nbndval
-           DO jbnd = 1,nbndval
+        DO ibnd = 1,nbnd_do
+           !
+           ibnd_g = ibnd+nbnd_s-1
+           !
+           DO jbnd = 1,nbnd_do
               !
 #if !defined(__CUDA)
-              u_matrix(ibnd,jbnd) = 2._DP*DDOT(2*npwx,evc(:,ibnd),1,evc_loc(:,jbnd),1)
+              u_matrix(ibnd,jbnd) = 2._DP*DDOT(2*npwx,evc(:,ibnd_g),1,evc_loc(:,jbnd),1)
 #endif
               !
               IF(gstart == 2) THEN
                  u_matrix(ibnd,jbnd) = u_matrix(ibnd,jbnd) &
-                 & - CMPLX(REAL(evc(1,ibnd),KIND=DP)*REAL(evc_loc(1,jbnd),KIND=DP),KIND=DP)
+                 & - CMPLX(REAL(evc(1,ibnd_g),KIND=DP)*REAL(evc_loc(1,jbnd),KIND=DP),KIND=DP)
               ENDIF
               !
            ENDDO
@@ -192,19 +207,23 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
         !
         CALL mp_sum(u_matrix,intra_bgrp_comm)
         !
-        ALLOCATE(bisec_loc(nbndval))
+        ALLOCATE(bisec_loc(nbnd_e))
         !
         ! read bisection localization from file
         !
-        CALL read_bisection_loc(current_spin,nbndval,bisec_loc)
+        CALL read_bisection_loc(current_spin,nbnd_e,bisec_loc)
         !
         ! compute overlap
         !
-        DO ibnd = 1,nbndval
-           DO jbnd = 1,nbndval
+        DO ibnd = 1,nbnd_do
+           ibnd_g = ibnd+nbnd_s-1
+           !
+           DO jbnd = 1,nbnd_do
               !
-              bisec_i = bisec_loc(ibnd)
-              bisec_j = bisec_loc(jbnd)
+              jbnd_g = jbnd+nbnd_s-1
+              !
+              bisec_i = bisec_loc(ibnd_g)
+              bisec_j = bisec_loc(jbnd_g)
               !
               CALL check_ovl_bisection(bisec_i,bisec_j,ovl_val)
               !
@@ -221,9 +240,9 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
      !
      WRITE(labels,'(i1)') current_spin
      fname = TRIM(wbse_init_save_dir)//'/evc_loc.'//labels//'.dat'
-     CALL plep_merge_and_write_G(fname,evc_loc,nbndval)
+     CALL plep_merge_and_write_G(fname,evc_loc,nbnd_do)
      !
-     CALL write_umatrix_and_omatrix(nbndval,current_spin,u_matrix,ovl_matrix)
+     CALL write_umatrix_and_omatrix(nbnd_do,current_spin,u_matrix,ovl_matrix)
      !
      DEALLOCATE(u_matrix)
      !
@@ -231,7 +250,7 @@ SUBROUTINE wbse_localization(current_spin,nbndval,evc_loc,ovl_matrix,l_restart)
      !
      WRITE(labels,'(i1)') current_spin
      fname = TRIM(wbse_init_save_dir)//'/evc_loc.'//labels//'.dat'
-     CALL plep_read_G_and_distribute(fname,evc_loc,nbndval)
+     CALL plep_read_G_and_distribute(fname,evc_loc,nbnd_do)
      !
   ENDIF
   !

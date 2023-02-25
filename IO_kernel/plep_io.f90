@@ -14,14 +14,6 @@
 MODULE plep_io
   !----------------------------------------------------------------------------
   !
-  USE kinds,         ONLY : DP,i8b
-  USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
-  USE westcom,       ONLY : npwq,npwq_g,nbndval0x
-  USE gvect,         ONLY : ig_l2g
-  USE pwcom,         ONLY : nks,npwx
-  USE base64_module, ONLY : islittleendian
-  USE west_io,       ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
-  !
   IMPLICIT NONE
   !
   INTERFACE plep_merge_and_write_G
@@ -42,7 +34,14 @@ MODULE plep_io
     !
     SUBROUTINE plep_merge_and_write_G_2d(fname,plepg,nbndval)
       !
-      USE mp_wave,      ONLY : mergewf
+      USE kinds,         ONLY : DP,i8b
+      USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
+      USE westcom,       ONLY : npwq,npwq_g
+      USE gvect,         ONLY : ig_l2g
+      USE pwcom,         ONLY : npwx
+      USE base64_module, ONLY : islittleendian
+      USE west_io,       ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
+      USE mp_wave,       ONLY : mergewf
       !
       IMPLICIT NONE
       !
@@ -114,7 +113,14 @@ MODULE plep_io
     !
     SUBROUTINE plep_read_G_and_distribute_2d(fname,plepg,nbndval)
       !
-      USE mp_wave,      ONLY : splitwf
+      USE kinds,         ONLY : DP,i8b
+      USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
+      USE westcom,       ONLY : npwq,npwq_g
+      USE gvect,         ONLY : ig_l2g
+      USE pwcom,         ONLY : npwx
+      USE base64_module, ONLY : islittleendian
+      USE west_io,       ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
+      USE mp_wave,       ONLY : splitwf
       !
       IMPLICIT NONE
       !
@@ -194,15 +200,22 @@ MODULE plep_io
     !
     SUBROUTINE plep_merge_and_write_G_3d(fname,plepg)
       !
-      USE mp_wave,      ONLY : mergewf
-      USE mp,           ONLY : mp_max
+      USE kinds,         ONLY : DP,i8b
+      USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
+      USE westcom,       ONLY : npwq,npwq_g,nbndval0x,n_trunc_bands
+      USE gvect,         ONLY : ig_l2g
+      USE pwcom,         ONLY : nks,npwx
+      USE base64_module, ONLY : islittleendian
+      USE west_io,       ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
+      USE mp_wave,       ONLY : mergewf
+      USE mp,            ONLY : mp_max
       !
       IMPLICIT NONE
       !
       ! I/O
       !
       CHARACTER(LEN=*),INTENT(IN) :: fname
-      COMPLEX(DP),INTENT(IN) :: plepg(npwx,nbndval0x,nks)
+      COMPLEX(DP),INTENT(IN) :: plepg(npwx,nbndval0x-n_trunc_bands,nks)
       !
       ! Workspae
       !
@@ -237,7 +250,7 @@ MODULE plep_io
       ALLOCATE(tmp_vec(npwx_g))
       !
       DO ik = 1,nks
-         DO ibnd = 1,nbndval0x
+         DO ibnd = 1,nbndval0x-n_trunc_bands
             !
             tmp_vec = 0._DP
             !
@@ -271,15 +284,22 @@ MODULE plep_io
     !
     SUBROUTINE plep_read_G_and_distribute_3d(fname,plepg)
       !
-      USE mp_wave,      ONLY : splitwf
-      USE mp,           ONLY : mp_max
+      USE kinds,         ONLY : DP,i8b
+      USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
+      USE westcom,       ONLY : npwq,npwq_g,nbndval0x,n_trunc_bands
+      USE gvect,         ONLY : ig_l2g
+      USE pwcom,         ONLY : nks,npwx
+      USE base64_module, ONLY : islittleendian
+      USE west_io,       ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
+      USE mp_wave,       ONLY : splitwf
+      USE mp,            ONLY : mp_max
       !
       IMPLICIT NONE
       !
       ! I/O
       !
       CHARACTER(LEN=*),INTENT(IN) :: fname
-      COMPLEX(DP),INTENT(OUT) :: plepg(npwx,nbndval0x,nks)
+      COMPLEX(DP),INTENT(OUT) :: plepg(npwx,nbndval0x-n_trunc_bands,nks)
       !
       ! Workspace
       !
@@ -324,7 +344,7 @@ MODULE plep_io
       ENDIF
       !
       DO ik = 1,nks
-         DO ibnd = 1,nbndval0x
+         DO ibnd = 1,nbndval0x-n_trunc_bands
             !
             ! ONLY ROOT W/IN BGRP READS
             !

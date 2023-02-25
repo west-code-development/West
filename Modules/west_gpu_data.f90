@@ -670,7 +670,8 @@ MODULE west_gpu_data
    USE wvfct,                 ONLY : npwx
    USE noncollin_module,      ONLY : npol
    USE fft_base,              ONLY : dffts
-   USE westcom,               ONLY : nbndval0x,n_bse_idx,l_local_repr,l_lanczos,et_qp,u_matrix
+   USE westcom,               ONLY : nbndval0x,n_trunc_bands,n_bse_idx,l_local_repr,l_lanczos,&
+                                   & et_qp,u_matrix
    !
    IMPLICIT NONE
    !
@@ -685,9 +686,9 @@ MODULE west_gpu_data
       !$acc enter data create(kd1_ij)
    ENDIF
    IF(l_local_repr) THEN
-      ALLOCATE(caux1(npwx,nbndval0x))
+      ALLOCATE(caux1(npwx,nbndval0x-n_trunc_bands))
    ENDIF
-   ALLOCATE(caux2(npwx,nbndval0x))
+   ALLOCATE(caux2(npwx,nbndval0x-n_trunc_bands))
    ALLOCATE(hevc1(npwx*npol,nbndloc))
    ALLOCATE(evc1_loc(npwx*npol,nbndloc))
    ALLOCATE(dvrs(dffts%nnr,nspin))

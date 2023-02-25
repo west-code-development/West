@@ -32,7 +32,7 @@ MODULE plep_io
     !       then merged and written in R space
     ! ******************************************
     !
-    SUBROUTINE plep_merge_and_write_G_2d(fname,plepg,nbnd)
+    SUBROUTINE plep_merge_and_write_G_2d(fname,plepg,nbndval)
       !
       USE kinds,         ONLY : DP,i8b
       USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
@@ -48,8 +48,8 @@ MODULE plep_io
       ! I/O
       !
       CHARACTER(LEN=*),INTENT(IN) :: fname
-      INTEGER,INTENT(IN) :: nbnd
-      COMPLEX(DP),INTENT(IN) :: plepg(npwx,nbnd)
+      INTEGER,INTENT(IN) :: nbndval
+      COMPLEX(DP),INTENT(IN) :: plepg(npwx,nbndval)
       !
       ! Workspace
       !
@@ -80,7 +80,7 @@ MODULE plep_io
       !
       ALLOCATE(tmp_vec(npwq_g))
       !
-      DO ibnd = 1,nbnd
+      DO ibnd = 1,nbndval
          !
          tmp_vec = 0._DP
          !
@@ -111,7 +111,7 @@ MODULE plep_io
     !       then split in G space
     ! ******************************************
     !
-    SUBROUTINE plep_read_G_and_distribute_2d(fname,plepg,nbnd)
+    SUBROUTINE plep_read_G_and_distribute_2d(fname,plepg,nbndval)
       !
       USE kinds,         ONLY : DP,i8b
       USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
@@ -127,8 +127,8 @@ MODULE plep_io
       ! I/O
       !
       CHARACTER(LEN=*),INTENT(IN) :: fname
-      INTEGER,INTENT(IN) :: nbnd
-      COMPLEX(DP),INTENT(OUT) :: plepg(npwx,nbnd)
+      INTEGER,INTENT(IN) :: nbndval
+      COMPLEX(DP),INTENT(OUT) :: plepg(npwx,nbndval)
       !
       ! Workspace
       !
@@ -169,7 +169,7 @@ MODULE plep_io
          !
       ENDIF
       !
-      DO ibnd = 1,nbnd
+      DO ibnd = 1,nbndval
          !
          ! ONLY ROOT W/IN BGRP READS
          !

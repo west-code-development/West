@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v5.4.0 (2023/02/xx)
+v5.4.0 (2023/03/10)
 -------------------
 
 - Release of the Bethe-Salpeter solver using density matrix perturbation theory (DMPT, D. Rocca et al., J. Chem. Phys. 133, 164109 (2010) and D. Rocca et al., Phys. Rev. B 85, 045116 (2012)).

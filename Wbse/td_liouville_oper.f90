@@ -21,17 +21,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k,nbnd
   USE control_flags,        ONLY : gamma_only
-  USE mp,                   ONLY : mp_sum,mp_bcast
-  USE mp_global,            ONLY : nimage,my_image_id,inter_image_comm,nbgrp,my_bgrp_id,&
-                                 & inter_bgrp_comm
+  USE mp,                   ONLY : mp_bcast
+  USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,scissor_ope,nbndval0x,n_trunc_bands,&
-                                 & l_bse_calculation,l_qp_correction,l_bse_triplet,l_lanczos,&
-                                 & sigma_c_head,sigma_x_head,et_qp
+  USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
+                                 & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
 #if defined(__CUDA)
@@ -39,7 +37,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   USE wavefunctions,        ONLY : evc_host=>evc
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wbse_dv,              ONLY : wbse_dv_of_drho_gpu
-  USE west_gpu,             ONLY : dvrs,hevc1,evc1_loc,reallocate_ps_gpu
+  USE west_gpu,             ONLY : dvrs,hevc1,reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -48,20 +46,18 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,nbndval0x-n_trunc_bands,nks)
-  COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,nbndval0x-n_trunc_bands,nks)
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,aband%nlocx,nks)
+  COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,aband%nlocx,nks)
   !
   ! Local variables
   !
   LOGICAL :: lrpa
-  INTEGER :: ibnd,jbnd,ibnd_g,jbnd_g,iks,ir,ig,nbndval,nbnd_do,il1
+  INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
   COMPLEX(DP) :: factor
 #if !defined(__CUDA)
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
-  COMPLEX(DP), ALLOCATABLE :: evc1_loc(:,:)
-  !$acc declare device_resident(hevc1,evc1_loc)
 #endif
   !
 #if defined(__CUDA)
@@ -78,7 +74,6 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !
 #if !defined(__CUDA)
   ALLOCATE(hevc1(npwx*npol,aband%nloc))
-  ALLOCATE(evc1_loc(npwx*npol,aband%nloc))
   ALLOCATE(dvrs(dffts%nnr,nspin))
 #endif
   !
@@ -86,7 +81,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !
   CALL wbse_calc_dens(evc1,dvrs)
   !
-  lrpa = l_bse_calculation
+  lrpa = l_bse
 #if defined(__CUDA)
   CALL wbse_dv_of_drho_gpu(dvrs,lrpa,.FALSE.)
 #else
@@ -97,10 +92,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
      nbndval = nbnd_occ(iks)
      nbnd_do = 0
-     DO il1 = 1,aband%nloc
-        ibnd = aband%l2g(il1)+n_trunc_bands
-        IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
-        nbnd_do = nbnd_do+1
+     DO lbnd = 1,aband%nloc
+        ibnd = aband%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -155,13 +149,12 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
            !
            ! double bands @ gamma
            !
-           DO il1 = 1,nbnd_do-MOD(nbnd_do,2),2
-              ibnd = aband%l2g(il1)
-              jbnd = aband%l2g(il1+1)
-              ibnd_g = ibnd+n_trunc_bands
-              jbnd_g = jbnd+n_trunc_bands
+           DO lbnd = 1,nbnd_do-MOD(nbnd_do,2),2
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd_g),evc_work(:,jbnd_g),psic,'Wave')
+              ibnd = aband%l2g(lbnd)+n_trunc_bands
+              jbnd = aband%l2g(lbnd+1)+n_trunc_bands
+              !
+              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -170,17 +163,19 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
               !$acc end parallel
               !
               !$acc host_data use_device(evc1_new)
-              CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),evc1_new(:,jbnd,iks),'Wave')
+              CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),evc1_new(:,lbnd+1,iks),'Wave')
               !$acc end host_data
+              !
            ENDDO
            !
            ! single band @ gamma
            !
            IF(MOD(nbnd_do,2) == 1) THEN
-              ibnd = aband%l2g(nbnd_do)
-              ibnd_g = ibnd+n_trunc_bands
               !
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd_g),psic,'Wave')
+              lbnd = nbnd_do
+              ibnd = aband%l2g(lbnd)+n_trunc_bands
+              !
+              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -189,16 +184,18 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
               !$acc end parallel
               !
               !$acc host_data use_device(evc1_new)
-              CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave')
+              CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),'Wave')
               !$acc end host_data
+              !
            ENDIF
            !
         ELSE
            !
            ! only single bands
            !
-           DO il1 = 1,nbnd_do
-              ibnd = aband%l2g(il1)
+           DO lbnd = 1,nbnd_do
+              !
+              ibnd = aband%l2g(lbnd)+n_trunc_bands
               !
               CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
               !
@@ -209,13 +206,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
               !$acc end parallel
               !
               !$acc host_data use_device(evc1_new)
-              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(:,ibnd,iks),'Wave',igk_k(:,current_k))
+              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),'Wave',igk_k(:,current_k))
               !$acc end host_data
+              !
            ENDDO
            !
            IF(npol == 2) THEN
-              DO il1 = 1,nbnd_do
-                 ibnd = aband%l2g(il1)
+              DO lbnd = 1,nbnd_do
+                 !
+                 ibnd = aband%l2g(lbnd)+n_trunc_bands
                  !
                  CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
                  !
@@ -226,8 +225,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
                  !$acc end parallel
                  !
                  !$acc host_data use_device(evc1_new)
-                 CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1:npwx*2,ibnd,iks),'Wave',igk_k(:,current_k))
+                 CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1:npwx*2,lbnd,iks),'Wave',igk_k(:,current_k))
                  !$acc end host_data
+                 !
               ENDDO
            ENDIF
            !
@@ -235,102 +235,67 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
         !
      ENDIF
      !
-     !$acc parallel loop collapse(2) present(evc1_loc,evc1)
-     DO il1 = 1,nbnd_do
-        !
-        ! ibnd = aband%l2g(il1)
-        !
-        DO ig = 1,npw
-           IF(l_lanczos) THEN
-              ibnd = nimage*(il1-1)+my_image_id+1
-           ELSE
-              ibnd = nbgrp*(il1-1)+my_bgrp_id+1
-           ENDIF
-           evc1_loc(ig,il1) = evc1(ig,ibnd,iks)
-        ENDDO
-        !
-     ENDDO
-     !$acc end parallel
-     !
      ! use h_psi_, i.e. h_psi without band parallelization, as west
      ! handles band parallelization separately
      !
 #if defined(__CUDA)
-     !$acc host_data use_device(evc1_loc,hevc1)
-     CALL h_psi__gpu(npwx,npw,nbnd_do,evc1_loc,hevc1)
+     !$acc host_data use_device(evc1,hevc1)
+     CALL h_psi__gpu(npwx,npw,nbnd_do,evc1(:,:,iks),hevc1)
      !$acc end host_data
 #else
-     CALL h_psi_(npwx,npw,nbnd_do,evc1_loc,hevc1)
+     CALL h_psi_(npwx,npw,nbnd_do,evc1(:,:,iks),hevc1)
 #endif
      !
      IF(l_qp_correction) THEN
 #if defined(__CUDA)
         CALL reallocate_ps_gpu(nbnd,nbnd_do)
 #endif
-        CALL apply_hqp_to_m_wfcs(iks,nbnd_do,evc1_loc,hevc1)
+        CALL apply_hqp_to_m_wfcs(iks,nbnd_do,evc1(:,:,iks),hevc1)
      ENDIF
      !
      ! Subtract the eigenvalues
      !
-     DO il1 = 1,nbnd_do
+     DO lbnd = 1,nbnd_do
         !
-        ibnd = aband%l2g(il1)
-        ibnd_g = ibnd+n_trunc_bands
+        ibnd = aband%l2g(lbnd)+n_trunc_bands
         !
         IF(l_qp_correction) THEN
-           IF(l_bse_calculation) THEN
-              factor = CMPLX(-(et_qp(ibnd_g,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
+           IF(l_bse) THEN
+              factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
-              factor = CMPLX(-(et_qp(ibnd_g,iks)-scissor_ope),KIND=DP)
+              factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope),KIND=DP)
            ENDIF
         ELSE
-           IF(l_bse_calculation) THEN
-              factor = CMPLX(-(et(ibnd_g,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
+           IF(l_bse) THEN
+              factor = CMPLX(-(et(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
-              factor = CMPLX(-(et(ibnd_g,iks)-scissor_ope),KIND=DP)
+              factor = CMPLX(-(et(ibnd,iks)-scissor_ope),KIND=DP)
            ENDIF
         ENDIF
         !
         !$acc host_data use_device(evc1,hevc1)
-        CALL ZAXPY(npw,factor,evc1(:,ibnd,iks),1,hevc1(:,il1),1)
+        CALL ZAXPY(npw,factor,evc1(:,lbnd,iks),1,hevc1(:,lbnd),1)
         !$acc end host_data
         !
      ENDDO
      !
      !$acc parallel loop collapse(2) present(evc1_new,hevc1)
-     DO il1 = 1,nbnd_do
-        !
-        ! ibnd = aband%l2g(il1)
-        !
+     DO lbnd = 1,nbnd_do
         DO ig = 1,npw
-           IF(l_lanczos) THEN
-              ibnd = nimage*(il1-1)+my_image_id+1
-           ELSE
-              ibnd = nbgrp*(il1-1)+my_bgrp_id+1
-           ENDIF
-           evc1_new(ig,ibnd,iks) = evc1_new(ig,ibnd,iks)+hevc1(ig,il1)
+           evc1_new(ig,lbnd,iks) = evc1_new(ig,lbnd,iks)+hevc1(ig,lbnd)
         ENDDO
-        !
      ENDDO
      !$acc end parallel
      !
-     !$acc update host(evc1_new(1:npwx*npol,1:nbndval0x,iks:iks))
-     IF(l_lanczos) THEN
-        CALL mp_sum(evc1_new(:,:,iks),inter_image_comm)
-     ELSE
-        CALL mp_sum(evc1_new(:,:,iks),inter_bgrp_comm)
-     ENDIF
-     !$acc update device(evc1_new(1:npwx*npol,1:nbndval0x,iks:iks))
-     !
-     IF(l_bse_calculation) THEN
+     IF(l_bse) THEN
         CALL bse_kernel_gamma(current_spin,nbndval,evc1,evc1_new(:,:,iks))
      ENDIF
      !
      IF(gamma_only) THEN
         IF(gstart == 2) THEN
            !$acc parallel loop present(evc1_new)
-           DO ibnd = 1,nbndval0x-n_trunc_bands
-              evc1_new(1,ibnd,iks) = CMPLX(REAL(evc1_new(1,ibnd,iks),KIND=DP),KIND=DP)
+           DO lbnd = 1,nbnd_do
+              evc1_new(1,lbnd,iks) = CMPLX(REAL(evc1_new(1,lbnd,iks),KIND=DP),KIND=DP)
            ENDDO
            !$acc end parallel
         ENDIF
@@ -339,16 +304,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      ! Pc[k]*evc1_new(k)
      !
 #if defined(__CUDA)
-     CALL reallocate_ps_gpu(nbndval,nbndval-n_trunc_bands)
+     CALL reallocate_ps_gpu(nbndval,nbnd_do)
 #endif
-     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval-n_trunc_bands,evc1_new(:,:,iks),(1._DP,0._DP))
+     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,evc1_new(:,:,iks),(1._DP,0._DP))
      !
   ENDDO
   !
 #if !defined(__CUDA)
   DEALLOCATE(dvrs)
   DEALLOCATE(hevc1)
-  DEALLOCATE(evc1_loc)
 #endif
   !
 #if defined(__CUDA)

@@ -94,15 +94,14 @@ MODULE west_gpu_data
    !
    REAL(DP), ALLOCATABLE :: raux1(:)
    REAL(DP), ALLOCATABLE :: raux2(:)
-   COMPLEX(DP), ALLOCATABLE :: kd1_ij(:,:)
-   COMPLEX(DP), ALLOCATABLE :: caux1(:,:)
-   COMPLEX(DP), ALLOCATABLE :: caux2(:,:)
+   COMPLEX(DP), PINNED, ALLOCATABLE :: kd1_ij(:,:)
+   COMPLEX(DP), PINNED, ALLOCATABLE :: caux1(:,:)
+   COMPLEX(DP), PINNED, ALLOCATABLE :: caux2(:,:)
    COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
    COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
-   COMPLEX(DP), ALLOCATABLE :: evc1_loc(:,:)
    COMPLEX(DP), ALLOCATABLE :: psic2(:)
    COMPLEX(DP), ALLOCATABLE :: dvhart(:)
-   !$acc declare device_resident(raux2,caux1,hevc1,evc1_loc,psic2,dvhart)
+   !$acc declare device_resident(raux2,hevc1,psic2,dvhart)
    COMPLEX(DP), PINNED, ALLOCATABLE :: gaux(:)
    !
    ! Workspace
@@ -178,14 +177,14 @@ MODULE west_gpu_data
    !
    USE fft_base,              ONLY : dffts
    USE pwcom,                 ONLY : wg,ngk
-   USE westcom,               ONLY : igq_q,nbnd_occ
+   USE westcom,               ONLY : igq_q
    !
    IMPLICIT NONE
    !
    dfft_nl_d => dffts%nl_d
    dfft_nlm_d => dffts%nlm_d
    !
-   !$acc enter data copyin(wg,ngk,igq_q,nbnd_occ)
+   !$acc enter data copyin(wg,ngk,igq_q)
    !
    END SUBROUTINE
    !
@@ -194,7 +193,7 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE pwcom,                 ONLY : wg,ngk
-   USE westcom,               ONLY : igq_q,nbnd_occ
+   USE westcom,               ONLY : igq_q
    !
    IMPLICIT NONE
    !
@@ -205,7 +204,7 @@ MODULE west_gpu_data
       NULLIFY(dfft_nlm_d)
    ENDIF
    !
-   !$acc exit data delete(wg,ngk,igq_q,nbnd_occ)
+   !$acc exit data delete(wg,ngk,igq_q)
    !
    END SUBROUTINE
    !
@@ -670,8 +669,8 @@ MODULE west_gpu_data
    USE wvfct,                 ONLY : npwx
    USE noncollin_module,      ONLY : npol
    USE fft_base,              ONLY : dffts
-   USE westcom,               ONLY : nbndval0x,n_trunc_bands,n_bse_idx,l_local_repr,l_lanczos,&
-                                   & et_qp,u_matrix
+   USE westcom,               ONLY : nbndval0x,n_trunc_bands,n_bse_idx,l_bse,l_lanczos,et_qp,&
+                                   & u_matrix
    !
    IMPLICIT NONE
    !
@@ -679,21 +678,21 @@ MODULE west_gpu_data
    !
    INTEGER, INTENT(IN) :: nbndloc
    !
-   ALLOCATE(raux1(dffts%nnr))
-   IF(.NOT. l_lanczos) THEN
-      ALLOCATE(raux2(dffts%nnr))
-      ALLOCATE(kd1_ij(npwx,MAXVAL(n_bse_idx)))
-      !$acc enter data create(kd1_ij)
-   ENDIF
-   IF(l_local_repr) THEN
+   IF(l_bse) THEN
+      IF(.NOT. l_lanczos) THEN
+         ALLOCATE(raux2(dffts%nnr))
+         ALLOCATE(kd1_ij(npwx,MAXVAL(n_bse_idx)))
+         !$acc enter data create(kd1_ij)
+      ENDIF
+      ALLOCATE(raux1(dffts%nnr))
       ALLOCATE(caux1(npwx,nbndval0x-n_trunc_bands))
+      ALLOCATE(caux2(npwx,nbndval0x-n_trunc_bands))
+      ALLOCATE(gaux(npwx))
+      !$acc enter data create(raux1,caux1,caux2,gaux)
    ENDIF
-   ALLOCATE(caux2(npwx,nbndval0x-n_trunc_bands))
    ALLOCATE(hevc1(npwx*npol,nbndloc))
-   ALLOCATE(evc1_loc(npwx*npol,nbndloc))
    ALLOCATE(dvrs(dffts%nnr,nspin))
-   ALLOCATE(gaux(npwx))
-   !$acc enter data create(raux1,caux2,gaux,dvrs)
+   !$acc enter data create(dvrs)
    IF(gamma_only) THEN
       ALLOCATE(tmp_r(dffts%nnr))
       !$acc enter data create(tmp_r)
@@ -717,10 +716,6 @@ MODULE west_gpu_data
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(raux1)) THEN
-      !$acc exit data delete(raux1)
-      DEALLOCATE(raux1)
-   ENDIF
    IF(ALLOCATED(raux2)) THEN
       DEALLOCATE(raux2)
    ENDIF
@@ -728,26 +723,28 @@ MODULE west_gpu_data
       !$acc exit data delete(kd1_ij)
       DEALLOCATE(kd1_ij)
    ENDIF
+   IF(ALLOCATED(raux1)) THEN
+      !$acc exit data delete(raux1)
+      DEALLOCATE(raux1)
+   ENDIF
    IF(ALLOCATED(caux1)) THEN
+      !$acc exit data delete(caux1)
       DEALLOCATE(caux1)
    ENDIF
    IF(ALLOCATED(caux2)) THEN
       !$acc exit data delete(caux2)
       DEALLOCATE(caux2)
    ENDIF
+   IF(ALLOCATED(gaux)) THEN
+      !$acc exit data delete(gaux)
+      DEALLOCATE(gaux)
+   ENDIF
    IF(ALLOCATED(hevc1)) THEN
       DEALLOCATE(hevc1)
-   ENDIF
-   IF(ALLOCATED(evc1_loc)) THEN
-      DEALLOCATE(evc1_loc)
    ENDIF
    IF(ALLOCATED(dvrs)) THEN
       !$acc exit data delete(dvrs)
       DEALLOCATE(dvrs)
-   ENDIF
-   IF(ALLOCATED(gaux)) THEN
-      !$acc exit data delete(gaux)
-      DEALLOCATE(gaux)
    ENDIF
    IF(ALLOCATED(tmp_r)) THEN
       !$acc exit data delete(tmp_r)

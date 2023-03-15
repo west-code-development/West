@@ -16,7 +16,7 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
   !
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
-  USE mp_global,            ONLY : intra_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE pwcom,                ONLY : isk,wg,nspin,npw,npwx,ngk
   USE gvect,                ONLY : gstart
@@ -33,7 +33,7 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
   !
   ! Workspace
   !
-  INTEGER :: ig, ibnd, ibnd_g, iks, is, current_spin, nbndval
+  INTEGER :: ig, lbnd, ibnd, iks, is, current_spin, nbndval
   REAL(DP) :: tmp_r
   COMPLEX(DP) :: tmp_c
   !
@@ -52,11 +52,11 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
         IF(gamma_only) THEN
            !
            !$acc parallel loop collapse(2) reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
-           DO ibnd_g = n_trunc_bands+1, nbndval
+           DO lbnd = 1, m
               DO ig = 1, npw
-                 ibnd = ibnd_g - n_trunc_bands
-                 tmp_r = tmp_r + wg(ibnd_g,iks)*(REAL(x(ig,ibnd,iks),KIND=DP)*REAL(y(ig,ibnd,iks),KIND=DP) &
-                 & + AIMAG(x(ig,ibnd,iks))*AIMAG(y(ig,ibnd,iks)))
+                 ibnd = nimage*(lbnd-1) + my_image_id + 1 + n_trunc_bands
+                 tmp_r = tmp_r + wg(ibnd,iks)*(REAL(x(ig,lbnd,iks),KIND=DP)*REAL(y(ig,lbnd,iks),KIND=DP) &
+                 & + AIMAG(x(ig,lbnd,iks))*AIMAG(y(ig,lbnd,iks)))
               ENDDO
            ENDDO
            !$acc end parallel
@@ -65,9 +65,9 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
            !
            IF(gstart == 2) THEN
               !$acc parallel loop reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
-              DO ibnd_g = n_trunc_bands+1, nbndval
-                 ibnd = ibnd_g - n_trunc_bands
-                 tmp_r = tmp_r - wg(ibnd_g,iks)*REAL(x(1,ibnd,iks),KIND=DP)*REAL(y(1,ibnd,iks),KIND=DP)
+              DO lbnd = 1, m
+                 ibnd = nimage*(lbnd-1) + my_image_id + 1 + n_trunc_bands
+                 tmp_r = tmp_r - wg(ibnd,iks)*REAL(x(1,lbnd,iks),KIND=DP)*REAL(y(1,lbnd,iks),KIND=DP)
               ENDDO
               !$acc end parallel
            ENDIF
@@ -75,10 +75,10 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
         ELSE
            !
            !$acc parallel loop collapse(2) reduction(+:tmp_c) present(wg,x,y) copy(tmp_c)
-           DO ibnd_g = n_trunc_bands+1, nbndval
+           DO lbnd = 1, m
               DO ig = 1, npw
-                 ibnd = ibnd_g - n_trunc_bands
-                 tmp_c = tmp_c + wg(ibnd_g,iks)*CONJG(x(ig,ibnd,iks))*y(ig,ibnd,iks)
+                 ibnd = nimage*(lbnd-1) + my_image_id + 1 + n_trunc_bands
+                 tmp_c = tmp_c + wg(ibnd,iks)*CONJG(x(ig,lbnd,iks))*y(ig,lbnd,iks)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -89,9 +89,11 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
      !
      IF(gamma_only) THEN
         CALL mp_sum(tmp_r,intra_bgrp_comm)
+        CALL mp_sum(tmp_r,inter_image_comm)
         dotp(is) = CMPLX(tmp_r*nspin/2._DP,KIND=DP)
      ELSE
         CALL mp_sum(tmp_c,intra_bgrp_comm)
+        CALL mp_sum(tmp_c,inter_image_comm)
         dotp(is) = tmp_c*nspin/2._DP
      ENDIF
      !

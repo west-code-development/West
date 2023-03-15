@@ -20,7 +20,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,wbse_ipol,&
                                  & n_lanczos,beta_store,zeta_store,nbndval0x,n_trunc_bands,&
-                                 & l_bse_calculation,n_bse_idx,n_steps_write_restart
+                                 & l_bse,n_bse_idx,n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,&
@@ -47,7 +47,7 @@ SUBROUTINE wbse_lanczos_diago()
   LOGICAL :: l_from_scratch
   INTEGER :: ip,iip,pol_index,nipol_input
   INTEGER :: iter
-  INTEGER :: iks,is,nbndval,ig,ibnd
+  INTEGER :: iks,is,nbndval,ig,lbnd,ibnd
   INTEGER :: ilan_restart,ilan_stopped,ipol_restart,ipol_stopped
   INTEGER :: do_idx,nbnd_do
   INTEGER, PARAMETER :: n_ipol = 3
@@ -57,22 +57,17 @@ SUBROUTINE wbse_lanczos_diago()
   REAL(DP) :: beta(nspin)
   COMPLEX(DP) :: dotp(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
-#if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: evc1_new
-#endif
   TYPE(bar_type) :: barra
-  !
-  nbnd_do = nbndval0x-n_trunc_bands
   !
   ! ... DISTRIBUTE lanczos
   !
   aband = idistribute()
   !
-  CALL aband%init(nbnd_do,'i','nbndval',.TRUE.)
+  CALL aband%init(nbndval0x-n_trunc_bands,'i','nbndval',.TRUE.)
   !
   ! ... DISTRIBUTE bse_kernel
   !
-  IF(l_bse_calculation) THEN
+  IF(l_bse) THEN
      do_idx = MAXVAL(n_bse_idx)
      bandpair = idistribute()
      CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
@@ -135,10 +130,10 @@ SUBROUTINE wbse_lanczos_diago()
   beta_store(:,:,:) = 0._DP
   zeta_store(:,:,:,:) = 0._DP
   !
-  ALLOCATE(d0psi(npwx,nbnd_do,nks,n_ipol))
-  ALLOCATE(evc1(npwx,nbnd_do,nks))
-  ALLOCATE(evc1_old(npwx,nbnd_do,nks))
-  ALLOCATE(evc1_new(npwx,nbnd_do,nks))
+  ALLOCATE(d0psi(npwx,aband%nlocx,nks,n_ipol))
+  ALLOCATE(evc1(npwx,aband%nlocx,nks))
+  ALLOCATE(evc1_old(npwx,aband%nlocx,nks))
+  ALLOCATE(evc1_new(npwx,aband%nlocx,nks))
   !$acc enter data create(d0psi,evc1,evc1_old,evc1_new)
   !
   SELECT CASE(wbse_calculation)
@@ -218,7 +213,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
-        CALL wbse_dot(evc1,evc1_new,nbnd_do,nks,dotp)
+        CALL wbse_dot(evc1,evc1_new,aband%nlocx,nks,dotp)
         !
         beta(:) = REAL(dotp,KIND=DP)
         !
@@ -241,19 +236,20 @@ SUBROUTINE wbse_lanczos_diago()
            npw = ngk(iks)
            current_spin = isk(iks)
            factor = 1._DP/beta(current_spin)
+           nbnd_do = aband%nlocx
            !
            !$acc parallel loop collapse(2) present(evc1)
-           DO ibnd = 1,nbnd_do
+           DO lbnd = 1,nbnd_do
               DO ig = 1,npw
-                 evc1(ig,ibnd,iks) = factor*evc1(ig,ibnd,iks)
+                 evc1(ig,lbnd,iks) = factor*evc1(ig,lbnd,iks)
               ENDDO
            ENDDO
            !$acc end parallel
            !
            !$acc parallel loop collapse(2) present(evc1_new)
-           DO ibnd = 1,nbnd_do
+           DO lbnd = 1,nbnd_do
               DO ig = 1,npw
-                 evc1_new(ig,ibnd,iks) = factor*evc1_new(ig,ibnd,iks)
+                 evc1_new(ig,lbnd,iks) = factor*evc1_new(ig,lbnd,iks)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -265,7 +261,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         IF(MOD(iter,2) == 0) THEN
            DO iip = 1,n_ipol
-              CALL wbse_dot(d0psi(:,:,:,iip),evc1,nbnd_do,nks,dotp)
+              CALL wbse_dot(d0psi(:,:,:,iip),evc1,aband%nlocx,nks,dotp)
               !
               zeta_store(iter,iip,ip,:) = dotp
            ENDDO
@@ -280,11 +276,12 @@ SUBROUTINE wbse_lanczos_diago()
            npw = ngk(iks)
            current_spin = isk(iks)
            factor = beta(current_spin)
+           nbnd_do = aband%nlocx
            !
            !$acc parallel loop collapse(2) present(evc1_new)
-           DO ibnd = 1,nbnd_do
+           DO lbnd = 1,nbnd_do
               DO ig = 1,npw
-                 evc1_new(ig,ibnd,iks) = evc1_new(ig,ibnd,iks)-factor*evc1_old(ig,ibnd,iks)
+                 evc1_new(ig,lbnd,iks) = evc1_new(ig,lbnd,iks)-factor*evc1_old(ig,lbnd,iks)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -297,6 +294,12 @@ SUBROUTINE wbse_lanczos_diago()
            !
            nbndval = nbnd_occ(iks)
            npw = ngk(iks)
+           !
+           nbnd_do = 0
+           DO lbnd = 1,aband%nloc
+              ibnd = aband%l2g(lbnd)+n_trunc_bands
+              IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+           ENDDO
            !
            ! ... Read GS wavefunctions
            !
@@ -311,9 +314,9 @@ SUBROUTINE wbse_lanczos_diago()
            ENDIF
            !
 #if defined(__CUDA)
-           CALL reallocate_ps_gpu(nbndval,nbndval-n_trunc_bands)
+           CALL reallocate_ps_gpu(nbndval,nbnd_do)
 #endif
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval-n_trunc_bands,evc1_new(:,:,iks),(1._DP,0._DP))
+           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,evc1_new(:,:,iks),(1._DP,0._DP))
            !
         ENDDO
         !

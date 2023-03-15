@@ -117,7 +117,7 @@ SUBROUTINE v_x( rho, rho_core, rhog_core, etx, vtx, v )
      rhoneg = 0.5_DP * rhoneg
      !
      !
-  ELSE IF ( nspin == 4 ) THEN
+  ELSEIF ( nspin == 4 ) THEN
      ! ... noncolinear case
      !
      CALL xc( dfftp%nnr, 4, 2, rho%of_r, ex, ec, vx, vc )

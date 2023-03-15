@@ -27,7 +27,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   USE mp,                     ONLY : mp_sum,mp_bcast
   USE mp_global,              ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
   USE buffers,                ONLY : get_buffer
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_lanczos
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands,l_lanczos
   USE fft_at_gamma,           ONLY : double_invfft_gamma
   USE fft_at_k,               ONLY : single_invfft_k
   USE distribution_center,    ONLY : aband
@@ -43,12 +43,12 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   !
   ! I/O
   !
-  COMPLEX(DP), INTENT(IN) :: devc(npwx*npol,nbndval0x-n_trunc_bands,nks)
+  COMPLEX(DP), INTENT(IN) :: devc(npwx*npol,aband%nlocx,nks)
   COMPLEX(DP), INTENT(OUT) :: drho(dffts%nnr,nspin)
   !
   ! Workspace
   !
-  INTEGER :: ir, ibnd, ibnd_g, iks, nbndval, lbnd, dffts_nnr
+  INTEGER :: ir, ibnd, iks, nbndval, lbnd, dffts_nnr
   REAL(DP) :: w1
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: tmp_r(:)
@@ -111,14 +111,13 @@ SUBROUTINE wbse_calc_dens(devc, drho)
         !
         DO lbnd = 1, aband%nloc
            !
-           ibnd = aband%l2g(lbnd)
-           ibnd_g = ibnd+n_trunc_bands
-           IF(ibnd_g < 1 .OR. ibnd_g > nbndval) CYCLE
+           ibnd = aband%l2g(lbnd)+n_trunc_bands
+           IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
            !
-           w1 = wg(ibnd_g,iks)/omega
+           w1 = wg(ibnd,iks)/omega
            !
            !$acc host_data use_device(devc)
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd_g),devc(:,ibnd,iks),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),devc(:,lbnd,iks),psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(tmp_r)
@@ -143,15 +142,14 @@ SUBROUTINE wbse_calc_dens(devc, drho)
         !
         DO lbnd = 1, aband%nloc
            !
-           ibnd = aband%l2g(lbnd)
-           ibnd_g = ibnd+n_trunc_bands
-           IF(ibnd_g < 1 .OR. ibnd_g > nbndval) CYCLE
+           ibnd = aband%l2g(lbnd)+n_trunc_bands
+           IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
            !
-           w1 = wg(ibnd_g,iks)/omega
+           w1 = wg(ibnd,iks)/omega
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd_g),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !$acc host_data use_device(devc,psic2)
-           CALL single_invfft_k(dffts,npw,npwx,devc(:,ibnd,iks),psic2,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,devc(:,lbnd,iks),psic2,'Wave',igk_k(:,current_k))
            !$acc end host_data
            !
            !$acc parallel loop present(tmp_c,psic2)
@@ -162,9 +160,9 @@ SUBROUTINE wbse_calc_dens(devc, drho)
            !
            IF(npol == 2) THEN
               !
-              CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd_g),psic,'Wave',igk_k(:,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
               !$acc host_data use_device(devc,psic2)
-              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,ibnd,iks),psic2,'Wave',igk_k(:,current_k))
+              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,lbnd,iks),psic2,'Wave',igk_k(:,current_k))
               !$acc end host_data
               !
               !$acc parallel loop present(tmp_c,psic2)

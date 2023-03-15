@@ -337,7 +337,7 @@ MODULE wbse_center
   ! FOR global variables
   !
   INTEGER :: nbndval0x
-  LOGICAL :: l_bse_calculation ! BSE True, TDDFT False
+  LOGICAL :: l_bse ! BSE True, TDDFT False
   LOGICAL :: l_lanczos
   LOGICAL :: l_davidson
   LOGICAL :: l_bse_triplet

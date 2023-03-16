@@ -33,16 +33,18 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_write_real(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,&
-                                     & nimage
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg,dng,dvg_exc,dng_exc,&
-                                     & wstat_restart_dir,wbse_restart_dir
       USE mp,                   ONLY : mp_barrier,mp_get
+      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_pool_id,&
+                                     & inter_bgrp_comm,my_bgrp_id,me_bgrp
+      USE io_global,            ONLY : stdout
+      USE pwcom,                ONLY : npwx,nks
+      USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg,dng,dvg_exc,dng_exc,nbndval0x,&
+                                     & n_trunc_bands,wstat_restart_dir,wbse_restart_dir
       USE pdep_io,              ONLY : pdep_merge_and_write_G
       USE plep_io,              ONLY : plep_merge_and_write_G
-      USE distribution_center,  ONLY : pert
+      USE distribution_center,  ONLY : pert,aband
+      USE west_mp,              ONLY : mp_root_sum_c16_3d
       !
       IMPLICIT NONE
       !
@@ -62,10 +64,12 @@ MODULE davidson_restart
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       CHARACTER(6) :: my_label
+      INTEGER :: lbnd,ibnd
       INTEGER :: local_j,global_j
       INTEGER :: im
       LOGICAL :: l_bse
       REAL(DP),ALLOCATABLE :: tmp_distr(:,:)
+      COMPLEX(DP),ALLOCATABLE :: tmp_exc(:,:,:)
       !
       TYPE(json_file) :: json
       INTEGER :: iun
@@ -75,13 +79,19 @@ MODULE davidson_restart
       CALL mp_barrier(world_comm)
       !
       IF(ALLOCATED(dvg_exc)) THEN
+         !
          l_bse = .TRUE.
          which = 'wbse_restart'
          dirname = wbse_restart_dir
+         !
+         ALLOCATE(tmp_exc(npwx,nbndval0x-n_trunc_bands,nks))
+         !
       ELSE
+         !
          l_bse = .FALSE.
          which = 'wstat_restart'
          dirname = wstat_restart_dir
+         !
       ENDIF
       !
       ! MKDIR
@@ -148,18 +158,54 @@ MODULE davidson_restart
          IF(global_j > nbase) CYCLE
          !
          IF(l_bse) THEN
-            fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
-            CALL plep_merge_and_write_G(fname,dvg_exc(:,:,:,local_j))
-            fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
-            CALL plep_merge_and_write_G(fname,dng_exc(:,:,:,local_j))
+            !
+            tmp_exc(:,:,:) = (0._DP,0._DP)
+            !
+            DO lbnd = 1,aband%nloc
+               ibnd = aband%l2g(lbnd)
+               tmp_exc(:,ibnd,:) = dvg_exc(:,lbnd,:,local_j)
+            ENDDO
+            !
+            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_bgrp_comm)
+            !
+            IF(my_bgrp_id == 0) THEN
+               fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
+               CALL plep_merge_and_write_G(fname,tmp_exc)
+            ENDIF
+            !
+            tmp_exc(:,:,:) = (0._DP,0._DP)
+            !
+            DO lbnd = 1,aband%nloc
+               ibnd = aband%l2g(lbnd)
+               tmp_exc(:,ibnd,:) = dng_exc(:,lbnd,:,local_j)
+            ENDDO
+            !
+            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_bgrp_comm)
+            !
+            IF(my_bgrp_id == 0) THEN
+               fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
+               CALL plep_merge_and_write_G(fname,tmp_exc)
+            ENDIF
+            !
          ELSE
-            fname = TRIM(dirname)//'/V'//my_label//'.dat'
-            CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
-            fname = TRIM(dirname)//'/N'//my_label//'.dat'
-            CALL pdep_merge_and_write_G(fname,dng(:,local_j))
+            !
+            IF(my_bgrp_id == 0) THEN
+               fname = TRIM(dirname)//'/V'//my_label//'.dat'
+               CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
+            ENDIF
+            !
+            IF(my_bgrp_id == 0) THEN
+               fname = TRIM(dirname)//'/N'//my_label//'.dat'
+               CALL pdep_merge_and_write_G(fname,dng(:,local_j))
+            ENDIF
+            !
          ENDIF
          !
       ENDDO
+      !
+      IF(l_bse) THEN
+         DEALLOCATE(tmp_exc)
+      ENDIF
       !
       ! BARRIER
       !
@@ -178,12 +224,12 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_write_complex(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr,lastdone_iq)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,&
-                                     & nimage
+      USE mp,                   ONLY : mp_barrier,mp_get
       USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_pool_id,my_bgrp_id,&
+                                     & me_bgrp
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg,dng,wstat_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_get
       USE pdep_io,              ONLY : pdep_merge_and_write_G
       USE distribution_center,  ONLY : pert
       !
@@ -281,17 +327,24 @@ MODULE davidson_restart
          WRITE(my_label,'(i6.6)') global_j
          IF(global_j > nbase) CYCLE
          !
-         fname = TRIM(wstat_restart_dir)//'/V'//my_label//'.dat'
-         IF(PRESENT(lastdone_iq)) THEN
-            CALL pdep_merge_and_write_G(fname,dvg(:,local_j),lastdone_iq)
-         ELSE
-            CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
+         IF(my_bgrp_id == 0) THEN
+            fname = TRIM(wstat_restart_dir)//'/V'//my_label//'.dat'
+            !
+            IF(PRESENT(lastdone_iq)) THEN
+               CALL pdep_merge_and_write_G(fname,dvg(:,local_j),lastdone_iq)
+            ELSE
+               CALL pdep_merge_and_write_G(fname,dvg(:,local_j))
+            ENDIF
          ENDIF
-         fname = TRIM(wstat_restart_dir)//'/N'//my_label//'.dat'
-         IF(PRESENT(lastdone_iq)) THEN
-            CALL pdep_merge_and_write_G(fname,dng(:,local_j),lastdone_iq)
-         ELSE
-            CALL pdep_merge_and_write_G(fname,dng(:,local_j))
+         !
+         IF(my_bgrp_id == 0) THEN
+            fname = TRIM(wstat_restart_dir)//'/N'//my_label//'.dat'
+            !
+            IF(PRESENT(lastdone_iq)) THEN
+               CALL pdep_merge_and_write_G(fname,dng(:,local_j),lastdone_iq)
+            ELSE
+               CALL pdep_merge_and_write_G(fname,dng(:,local_j))
+            ENDIF
          ENDIF
          !
       ENDDO
@@ -313,8 +366,8 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_clear()
       !------------------------------------------------------------------------
       !
-      USE mp_world,             ONLY : root,mpime,world_comm
       USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp_world,             ONLY : root,mpime,world_comm
       USE westcom,              ONLY : dvg_exc,n_pdep_basis,wstat_restart_dir,wbse_restart_dir
       USE clib_wrappers,        ONLY : f_rmdir
       USE west_io,              ONLY : remove_if_present
@@ -344,8 +397,10 @@ MODULE davidson_restart
       ! ... clear the main restart directory
       !
       IF(mpime == root) THEN
+         !
          CALL remove_if_present(TRIM(dirname)//'/summary.json')
          CALL remove_if_present(TRIM(dirname)//'/hr_vr.dat')
+         !
          DO ip = 1,n_pdep_basis
             WRITE(my_label,'(i6.6)') ip
             fname = 'V'//my_label//'.dat'
@@ -353,7 +408,9 @@ MODULE davidson_restart
             fname = 'N'//my_label//'.dat'
             CALL remove_if_present(TRIM(dirname)//'/'//TRIM(fname))
          ENDDO
+         !
          ierr = f_rmdir(TRIM(dirname))
+         !
       ENDIF
       !
       CALL mp_bcast(ierr,root,world_comm)
@@ -370,10 +427,10 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_read_real(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : world_comm
       USE mp,                   ONLY : mp_barrier
-      USE westcom,              ONLY : dvg_exc,n_pdep_basis,wstat_restart_dir,wbse_restart_dir
+      USE mp_global,            ONLY : world_comm
       USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : dvg_exc,n_pdep_basis,wstat_restart_dir,wbse_restart_dir
       USE distribution_center,  ONLY : pert
       !
       IMPLICIT NONE
@@ -432,10 +489,10 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_read_complex(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr,lastdone_iq,iq)
       !------------------------------------------------------------------------
       !
-      USE mp_global,            ONLY : world_comm
       USE mp,                   ONLY : mp_barrier
-      USE westcom,              ONLY : n_pdep_basis,wstat_restart_dir
+      USE mp_global,            ONLY : world_comm
       USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : n_pdep_basis,wstat_restart_dir
       USE distribution_center,  ONLY : pert
       USE types_bz_grid,        ONLY : q_grid
       !
@@ -492,10 +549,10 @@ MODULE davidson_restart
     SUBROUTINE read_restart12_(dav_iter,notcnv,nbase,ew,iq)
       !------------------------------------------------------------------------
       !
+      USE mp,                   ONLY : mp_bcast
+      USE mp_world,             ONLY : world_comm,mpime,root
       USE westcom,              ONLY : dvg_exc,conv,n_pdep_eigen,n_pdep_basis,ev,wstat_restart_dir,&
                                      & wbse_restart_dir
-      USE mp_world,             ONLY : world_comm,mpime,root
-      USE mp,                   ONLY : mp_bcast
       !
       IMPLICIT NONE
       !
@@ -563,12 +620,12 @@ MODULE davidson_restart
     SUBROUTINE read_restart3d_(hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : dvg_exc,n_pdep_basis,wstat_restart_dir,wbse_restart_dir
-      USE mp_world,             ONLY : mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
+      USE mp_world,             ONLY : mpime,root
+      USE mp_global,            ONLY : inter_image_comm,intra_image_comm,nimage,my_image_id,&
+                                     & my_pool_id,my_bgrp_id,me_bgrp
+      USE westcom,              ONLY : dvg_exc,n_pdep_basis,wstat_restart_dir,wbse_restart_dir
       USE distribution_center,  ONLY : pert
-      USE mp_global,            ONLY : nimage,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,&
-                                     & intra_image_comm,my_image_id
       !
       IMPLICIT NONE
       !
@@ -587,6 +644,7 @@ MODULE davidson_restart
       ALLOCATE(tmp_distr(n_pdep_basis,pert%nlocx))
       !
       IF(mpime == root) THEN
+         !
          IF(ALLOCATED(dvg_exc)) THEN
             dirname = wbse_restart_dir
          ELSE
@@ -594,6 +652,7 @@ MODULE davidson_restart
          ENDIF
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(dirname)//'/hr_vr.dat',FORM='unformatted')
+         !
       ENDIF
       !
       DO im = 0,nimage-1
@@ -621,12 +680,12 @@ MODULE davidson_restart
     SUBROUTINE read_restart3z_(hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : n_pdep_basis,wstat_restart_dir
-      USE mp_world,             ONLY : mpime,root
       USE mp,                   ONLY : mp_bcast,mp_get
+      USE mp_world,             ONLY : mpime,root
+      USE mp_global,            ONLY : inter_image_comm,intra_image_comm,nimage,my_image_id,&
+                                     & my_pool_id,my_bgrp_id,me_bgrp
+      USE westcom,              ONLY : n_pdep_basis,wstat_restart_dir
       USE distribution_center,  ONLY : pert
-      USE mp_global,            ONLY : nimage,my_pool_id,my_bgrp_id,me_bgrp,inter_image_comm,&
-                                     & intra_image_comm,my_image_id
       !
       IMPLICIT NONE
       !
@@ -670,10 +729,12 @@ MODULE davidson_restart
     SUBROUTINE read_restart4_(nbase,iq)
       !------------------------------------------------------------------------
       !
-      USE westcom,              ONLY : dvg,dng,dvg_exc,dng_exc,wstat_restart_dir,wbse_restart_dir
+      USE pwcom,                ONLY : npwx,nks
+      USE westcom,              ONLY : dvg,dng,dvg_exc,dng_exc,nbndval0x,n_trunc_bands,&
+                                     & wstat_restart_dir,wbse_restart_dir
       USE pdep_io,              ONLY : pdep_read_G_and_distribute
       USE plep_io,              ONLY : plep_read_G_and_distribute
-      USE distribution_center,  ONLY : pert
+      USE distribution_center,  ONLY : pert,aband
       !
       IMPLICIT NONE
       !
@@ -685,18 +746,26 @@ MODULE davidson_restart
       ! Workspace
       !
       LOGICAL :: l_bse
+      INTEGER :: lbnd,ibnd
       INTEGER :: global_j,local_j
       CHARACTER(6) :: my_label
       CHARACTER(LEN=512) :: fname
+      COMPLEX(DP),ALLOCATABLE :: tmp_exc(:,:,:)
       !
       IF(ALLOCATED(dvg_exc)) THEN
-          l_bse = .TRUE.
-          dvg_exc(:,:,:,:) = (0._DP,0._DP)
-          dng_exc(:,:,:,:) = (0._DP,0._DP)
+         !
+         l_bse = .TRUE.
+         dvg_exc(:,:,:,:) = (0._DP,0._DP)
+         dng_exc(:,:,:,:) = (0._DP,0._DP)
+         !
+         ALLOCATE(tmp_exc(npwx,nbndval0x-n_trunc_bands,nks))
+         !
       ELSE
-          l_bse = .FALSE.
-          dvg(:,:) = (0._DP,0._DP)
-          dng(:,:) = (0._DP,0._DP)
+         !
+         l_bse = .FALSE.
+         dvg(:,:) = (0._DP,0._DP)
+         dng(:,:) = (0._DP,0._DP)
+         !
       ENDIF
       !
       DO local_j = 1,pert%nloc
@@ -708,26 +777,46 @@ MODULE davidson_restart
          IF(global_j > nbase) CYCLE
          !
          IF(l_bse) THEN
+            !
             fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
-            CALL plep_read_G_and_distribute(fname,dvg_exc(:,:,:,local_j))
+            CALL plep_read_G_and_distribute(fname,tmp_exc)
+            !
+            DO lbnd = 1,aband%nloc
+               ibnd = aband%l2g(lbnd)
+               dvg_exc(:,lbnd,:,local_j) = tmp_exc(:,ibnd,:)
+            ENDDO
+            !
             fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
-            CALL plep_read_G_and_distribute(fname,dng_exc(:,:,:,local_j))
+            CALL plep_read_G_and_distribute(fname,tmp_exc)
+            !
+            DO lbnd = 1,aband%nloc
+               ibnd = aband%l2g(lbnd)
+               dng_exc(:,lbnd,:,local_j) = tmp_exc(:,ibnd,:)
+            ENDDO
+            !
          ELSE
+            !
             fname = TRIM(wstat_restart_dir)//'/V'//my_label//'.dat'
             IF(PRESENT(iq)) THEN
                CALL pdep_read_G_and_distribute(fname,dvg(:,local_j),iq)
             ELSE
                CALL pdep_read_G_and_distribute(fname,dvg(:,local_j))
             ENDIF
+            !
             fname = TRIM(wstat_restart_dir)//'/N'//my_label//'.dat'
             IF(PRESENT(iq)) THEN
                CALL pdep_read_G_and_distribute(fname,dng(:,local_j),iq)
             ELSE
                CALL pdep_read_G_and_distribute(fname,dng(:,local_j))
             ENDIF
+            !
          ENDIF
          !
       ENDDO
+      !
+      IF(l_bse) THEN
+         DEALLOCATE(tmp_exc)
+      ENDIF
       !
     END SUBROUTINE
     !

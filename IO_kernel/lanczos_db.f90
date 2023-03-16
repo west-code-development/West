@@ -30,20 +30,26 @@ MODULE lanczos_db
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : inter_image_comm,my_image_id
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wbse_save_dir,d0psi
+      USE pwcom,                ONLY : npwx,nks
+      USE westcom,              ONLY : wbse_save_dir,d0psi,nbndval0x,n_trunc_bands
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
+      USE distribution_center,  ONLY : aband
+      USE west_mp,              ONLY : mp_root_sum_c16_3d
       !
       IMPLICIT NONE
       !
       INTEGER :: ipol
+      INTEGER :: lbnd,ibnd
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20), EXTERNAL :: human_readable_time
       CHARACTER(LEN=6) :: my_label
       INTEGER, PARAMETER :: n_ipol = 3
+      COMPLEX(DP), ALLOCATABLE :: d0psi_tmp(:,:,:)
       !
       ! MPI BARRIER
       !
@@ -54,13 +60,31 @@ MODULE lanczos_db
       CALL start_clock('lan_d0psi_write')
       time_spent(1) = get_clock('lan_d0psi_write')
       !
-      ! 1) WRITE TO DISK THE D0PSI
+      ! WRITE D0PSI TO DISK
+      !
+      ALLOCATE(d0psi_tmp(npwx,nbndval0x-n_trunc_bands,nks))
       !
       DO ipol = 1,n_ipol
+         !
          WRITE(my_label,'(i6.6)') ipol
-         fname = TRIM(wbse_save_dir)//'/d0psi_'//my_label//'.dat'
-         CALL plep_merge_and_write_G(fname,d0psi(:,:,:,ipol))
+         !
+         d0psi_tmp(:,:,:) = (0._DP,0._DP)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            d0psi_tmp(:,ibnd,:) = d0psi(:,lbnd,:,ipol)
+         ENDDO
+         !
+         CALL mp_root_sum_c16_3d(d0psi_tmp,0,inter_image_comm)
+         !
+         IF(my_image_id == 0) THEN
+            fname = TRIM(wbse_save_dir)//'/d0psi_'//my_label//'.dat'
+            CALL plep_merge_and_write_G(fname,d0psi_tmp)
+         ENDIF
+         !
       ENDDO
+      !
+      DEALLOCATE(d0psi_tmp)
       !
       ! MPI BARRIER
       !
@@ -87,22 +111,26 @@ MODULE lanczos_db
     SUBROUTINE lanczos_d0psi_read()
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : wbse_save_dir,d0psi
-      USE io_global,           ONLY : stdout
-      USE mp,                  ONLY : mp_bcast,mp_barrier
-      USE mp_world,            ONLY : world_comm
-      USE plep_io,             ONLY : plep_read_G_and_distribute
-      USE io_push,             ONLY : io_push_bar
+      USE mp,                   ONLY : mp_bcast,mp_barrier
+      USE mp_world,             ONLY : world_comm
+      USE io_global,            ONLY : stdout
+      USE pwcom,                ONLY : npwx,nks
+      USE westcom,              ONLY : wbse_save_dir,d0psi,nbndval0x,n_trunc_bands
+      USE plep_io,              ONLY : plep_read_G_and_distribute
+      USE io_push,              ONLY : io_push_bar
+      USE distribution_center,  ONLY : aband
       !
       IMPLICIT NONE
       !
       INTEGER :: ipol
+      INTEGER :: lbnd,ibnd
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20), EXTERNAL :: human_readable_time
       CHARACTER(LEN=6) :: my_label
       INTEGER, PARAMETER :: n_ipol = 3
+      COMPLEX(DP), ALLOCATABLE :: d0psi_tmp(:,:,:)
       !
       ! MPI BARRIER
       !
@@ -111,11 +139,23 @@ MODULE lanczos_db
       CALL start_clock('lan_d0psi_read')
       time_spent(1) = get_clock('lan_d0psi_read')
       !
+      ALLOCATE(d0psi_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+      !
       DO ipol = 1,n_ipol
+         !
          WRITE(my_label,'(i6.6)') ipol
          fname = TRIM(wbse_save_dir)//'/d0psi_'//my_label//'.dat'
-         CALL plep_read_G_and_distribute(fname,d0psi(:,:,:,ipol))
+         !
+         CALL plep_read_G_and_distribute(fname,d0psi_tmp)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            d0psi(:,lbnd,:,ipol) = d0psi_tmp(:,ibnd,:)
+         ENDDO
+         !
       ENDDO
+      !
+      DEALLOCATE(d0psi_tmp)
       !
       ! MPI BARRIER
       !
@@ -140,20 +180,26 @@ MODULE lanczos_db
       !
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : inter_image_comm,my_image_id
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wbse_save_dir
+      USE pwcom,                ONLY : npwx,nks
+      USE westcom,              ONLY : wbse_save_dir,nbndval0x,n_trunc_bands
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
+      USE distribution_center,  ONLY : aband
+      USE west_mp,              ONLY : mp_root_sum_c16_3d
       !
       IMPLICIT NONE
       !
-      COMPLEX(DP), INTENT(IN) :: evc1(:,:,:)
-      COMPLEX(DP), INTENT(IN) :: evc1_old(:,:,:)
+      COMPLEX(DP), INTENT(IN) :: evc1(npwx,aband%nlocx,nks)
+      COMPLEX(DP), INTENT(IN) :: evc1_old(npwx,aband%nlocx,nks)
       !
+      INTEGER :: lbnd,ibnd
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20), EXTERNAL :: human_readable_time
+      COMPLEX(DP), ALLOCATABLE :: evc1_tmp(:,:,:)
       !
       ! MPI BARRIER
       !
@@ -164,13 +210,39 @@ MODULE lanczos_db
       CALL start_clock('lan_evc_write')
       time_spent(1) = get_clock('lan_evc_write')
       !
-      ! 1) WRITE TO DISK THE D0PSI
+      ! WRITE EVC1 & EVC1_OLD TO DISK
       !
-      fname = TRIM(wbse_save_dir)//'/evc1.dat'
-      CALL plep_merge_and_write_G(fname,evc1)
+      ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
       !
-      fname = TRIM(wbse_save_dir)//'/evc1_old.dat'
-      CALL plep_merge_and_write_G(fname,evc1_old)
+      evc1_tmp(:,:,:) = (0._DP,0._DP)
+      !
+      DO lbnd = 1,aband%nloc
+         ibnd = aband%l2g(lbnd)
+         evc1_tmp(:,ibnd,:) = evc1(:,lbnd,:)
+      ENDDO
+      !
+      CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_image_comm)
+      !
+      IF(my_image_id == 0) THEN
+         fname = TRIM(wbse_save_dir)//'/evc1.dat'
+         CALL plep_merge_and_write_G(fname,evc1_tmp)
+      ENDIF
+      !
+      evc1_tmp(:,:,:) = (0._DP,0._DP)
+      !
+      DO lbnd = 1,aband%nloc
+         ibnd = aband%l2g(lbnd)
+         evc1_tmp(:,ibnd,:) = evc1_old(:,lbnd,:)
+      ENDDO
+      !
+      CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_image_comm)
+      !
+      IF(my_image_id == 0) THEN
+         fname = TRIM(wbse_save_dir)//'/evc1_old.dat'
+         CALL plep_merge_and_write_G(fname,evc1_tmp)
+      ENDIF
+      !
+      DEALLOCATE(evc1_tmp)
       !
       ! MPI BARRIER
       !
@@ -197,22 +269,26 @@ MODULE lanczos_db
     SUBROUTINE lanczos_evcs_read(evc1, evc1_old)
       !------------------------------------------------------------------------
       !
-      USE westcom,             ONLY : wbse_save_dir
-      USE io_global,           ONLY : stdout
-      USE mp,                  ONLY : mp_bcast,mp_barrier
-      USE mp_world,            ONLY : world_comm
-      USE plep_io,             ONLY : plep_read_G_and_distribute
-      USE io_push,             ONLY : io_push_bar
+      USE mp,                   ONLY : mp_bcast,mp_barrier
+      USE mp_world,             ONLY : world_comm
+      USE io_global,            ONLY : stdout
+      USE pwcom,                ONLY : npwx,nks
+      USE westcom,              ONLY : wbse_save_dir,nbndval0x,n_trunc_bands
+      USE plep_io,              ONLY : plep_read_G_and_distribute
+      USE io_push,              ONLY : io_push_bar
+      USE distribution_center,  ONLY : aband
       !
       IMPLICIT NONE
       !
-      COMPLEX(DP), INTENT(INOUT) :: evc1(:,:,:)
-      COMPLEX(DP), INTENT(INOUT) :: evc1_old(:,:,:)
+      COMPLEX(DP), INTENT(OUT) :: evc1(npwx,aband%nlocx,nks)
+      COMPLEX(DP), INTENT(OUT) :: evc1_old(npwx,aband%nlocx,nks)
       !
+      INTEGER :: lbnd,ibnd
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20), EXTERNAL :: human_readable_time
+      COMPLEX(DP), ALLOCATABLE :: evc1_tmp(:,:,:)
       !
       ! MPI BARRIER
       !
@@ -221,10 +297,25 @@ MODULE lanczos_db
       CALL start_clock('lan_evc_read')
       time_spent(1) = get_clock('lan_evc_read')
       !
+      ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+      !
       fname = TRIM(wbse_save_dir)//'/evc1.dat'
-      CALL plep_read_G_and_distribute(fname,evc1)
+      CALL plep_read_G_and_distribute(fname,evc1_tmp)
+      !
+      DO lbnd = 1,aband%nloc
+         ibnd = aband%l2g(lbnd)
+         evc1(:,lbnd,:) = evc1_tmp(:,ibnd,:)
+      ENDDO
+      !
       fname = TRIM(wbse_save_dir)//'/evc1_old.dat'
-      CALL plep_read_G_and_distribute(fname,evc1_old)
+      CALL plep_read_G_and_distribute(fname,evc1_tmp)
+      !
+      DO lbnd = 1,aband%nloc
+         ibnd = aband%l2g(lbnd)
+         evc1_old(:,lbnd,:) = evc1_tmp(:,ibnd,:)
+      ENDDO
+      !
+      DEALLOCATE(evc1_tmp)
       !
       ! MPI BARRIER
       !

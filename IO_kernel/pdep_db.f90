@@ -58,6 +58,7 @@ MODULE pdep_db
       !
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_global,            ONLY : my_bgrp_id
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_eigen,ev,dvg,wstat_save_dir
       USE pdep_io,              ONLY : pdep_merge_and_write_G
@@ -185,17 +186,20 @@ MODULE pdep_db
       !
       ! Dump eigenvectors
       !
-      DO local_j = 1,pert%nloc
-         !
-         ! local -> global
-         !
-         global_j = pert%l2g(local_j)
-         IF(global_j > n_pdep_eigen) CYCLE
-         !
-         fname = TRIM(wstat_save_dir)//'/'//TRIM(ADJUSTL(eigenpot_filename(global_j)))
-         CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
-         !
-      ENDDO
+      IF(my_bgrp_id == 0) THEN
+         DO local_j = 1,pert%nloc
+            !
+            ! local -> global
+            !
+            global_j = pert%l2g(local_j)
+            IF(global_j > n_pdep_eigen) CYCLE
+            !
+            fname = TRIM(wstat_save_dir)//'/'//TRIM(ADJUSTL(eigenpot_filename(global_j)))
+            !
+            CALL pdep_merge_and_write_G(fname,dvg(:,local_j),iq_)
+            !
+         ENDDO
+      ENDIF
       !
       ! MPI barrier
       !

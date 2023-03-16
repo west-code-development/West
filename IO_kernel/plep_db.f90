@@ -30,12 +30,15 @@ MODULE plep_db
       !
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_global,            ONLY : inter_bgrp_comm,my_bgrp_id
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc
+      USE pwcom,                ONLY : npwx,nks
+      USE westcom,              ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x,n_trunc_bands
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
-      USE distribution_center,  ONLY : pert
+      USE distribution_center,  ONLY : pert,aband
       USE json_module,          ONLY : json_file
+      USE west_mp,              ONLY : mp_root_sum_c16_3d
       !
       IMPLICIT NONE
       !
@@ -44,11 +47,13 @@ MODULE plep_db
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
+      INTEGER :: lbnd,ibnd
       INTEGER :: iun,global_j,local_j
       CHARACTER(LEN=6) :: label_j
       CHARACTER(LEN=256) :: fname
       TYPE(json_file) :: json
       LOGICAL :: lexists
+      COMPLEX(DP),ALLOCATABLE :: dvg_tmp(:,:,:)
       !
       ! MPI barrier
       !
@@ -97,6 +102,8 @@ MODULE plep_db
       !
       ! Dump eigenvectors
       !
+      ALLOCATE(dvg_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+      !
       DO local_j = 1,pert%nloc
          !
          ! local -> global
@@ -105,10 +112,24 @@ MODULE plep_db
          IF(global_j > n_pdep_eigen) CYCLE
          !
          WRITE(label_j,'(i6.6)') global_j
-         fname = TRIM(wbse_save_dir)//'/E'//label_j//'.dat'
-         CALL plep_merge_and_write_G(TRIM(fname),dvg_exc(:,:,:,local_j))
+         !
+         dvg_tmp(:,:,:) = (0._DP,0._DP)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            dvg_tmp(:,ibnd,:) = dvg_exc(:,lbnd,:,local_j)
+         ENDDO
+         !
+         CALL mp_root_sum_c16_3d(dvg_tmp,0,inter_bgrp_comm)
+         !
+         IF(my_bgrp_id == 0) THEN
+            fname = TRIM(wbse_save_dir)//'/E'//label_j//'.dat'
+            CALL plep_merge_and_write_G(TRIM(fname),dvg_tmp)
+         ENDIF
          !
       ENDDO
+      !
+      DEALLOCATE(dvg_tmp)
       !
       ! MPI barrier
       !
@@ -135,15 +156,15 @@ MODULE plep_db
     SUBROUTINE plep_db_read(nglob_to_be_read)
       !------------------------------------------------------------------------
       !
-      USE pwcom,               ONLY : nks,npwx
-      USE westcom,             ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x,n_trunc_bands
-      USE io_global,           ONLY : stdout
-      USE mp,                  ONLY : mp_bcast,mp_barrier
-      USE mp_world,            ONLY : world_comm,mpime,root
-      USE plep_io,             ONLY : plep_read_G_and_distribute
-      USE io_push,             ONLY : io_push_bar
-      USE distribution_center, ONLY : pert
-      USE json_module,         ONLY : json_file
+      USE mp,                   ONLY : mp_bcast,mp_barrier
+      USE mp_world,             ONLY : mpime,root,world_comm
+      USE io_global,            ONLY : stdout
+      USE pwcom,                ONLY : nks,npwx
+      USE westcom,              ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x,n_trunc_bands
+      USE plep_io,              ONLY : plep_read_G_and_distribute
+      USE io_push,              ONLY : io_push_bar
+      USE distribution_center,  ONLY : pert,aband
+      USE json_module,          ONLY : json_file
       !
       IMPLICIT NONE
       !
@@ -156,6 +177,7 @@ MODULE plep_db
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
+      INTEGER :: lbnd,ibnd
       INTEGER :: n_eigen_to_get
       INTEGER :: tmp_n_pdep_eigen
       INTEGER :: global_j,local_j
@@ -163,6 +185,7 @@ MODULE plep_db
       REAL(DP),ALLOCATABLE :: tmp_ev(:)
       TYPE(json_file) :: json
       CHARACTER(LEN=256) :: fname
+      COMPLEX(DP),ALLOCATABLE :: dvg_tmp(:,:,:)
       !
       ! MPI barrier
       !
@@ -211,9 +234,10 @@ MODULE plep_db
       ! 3) READ THE EIGENVECTOR FILES
       !
       IF(.NOT. ALLOCATED(dvg_exc)) THEN
-         ALLOCATE(dvg_exc(npwx,nbndval0x-n_trunc_bands,nks,pert%nlocx))
-         dvg_exc = 0._DP
+         ALLOCATE(dvg_exc(npwx,aband%nlocx,nks,pert%nlocx))
       ENDIF
+      !
+      ALLOCATE(dvg_tmp(npwx,nbndval0x-n_trunc_bands,nks))
       !
       DO local_j = 1,pert%nloc
          !
@@ -224,9 +248,17 @@ MODULE plep_db
          !
          WRITE(label_j,'(i6.6)') global_j
          fname = TRIM(wbse_save_dir)//'/E'//label_j//'.dat'
-         CALL plep_read_G_and_distribute(TRIM(fname),dvg_exc(:,:,:,local_j))
+         !
+         CALL plep_read_G_and_distribute(TRIM(fname),dvg_tmp)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            dvg_exc(:,lbnd,:,local_j) = dvg_tmp(:,ibnd,:)
+         ENDDO
          !
       ENDDO
+      !
+      DEALLOCATE(dvg_tmp)
       !
       ! MPI barrier
       !

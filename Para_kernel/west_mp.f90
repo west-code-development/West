@@ -24,6 +24,7 @@ MODULE west_mp
   PUBLIC :: mp_alltoallv
   PUBLIC :: mp_circular_shift_left_begin
   PUBLIC :: mp_circular_shift_left_c16_4d
+  PUBLIC :: mp_root_sum_c16_3d
   !
   INTERFACE mp_alltoallv
     MODULE PROCEDURE mp_alltoallv_i4_1d, mp_alltoallv_i8_1d, mp_alltoallv_r8_1d, &
@@ -280,6 +281,33 @@ MODULE west_mp
       dest = MOD(mpime-1+nproc,nproc)
       !
       CALL MPI_SENDRECV_REPLACE(buf,SIZE(buf),MPI_DOUBLE_COMPLEX,dest,itag,sour,itag,comm,istat,ierr)
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE mp_root_sum_c16_3d(buf,root,comm)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP), INTENT(INOUT) :: buf(:,:,:)
+      INTEGER, INTENT(IN) :: root
+      INTEGER, INTENT(IN) :: comm
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      INTEGER :: mpime
+      !
+      CALL MPI_COMM_RANK(comm,mpime,ierr)
+      !
+      IF(mpime == root) THEN
+         CALL MPI_REDUCE(MPI_IN_PLACE,buf,SIZE(buf),MPI_DOUBLE_COMPLEX,MPI_SUM,root,comm,ierr)
+      ELSE
+         CALL MPI_REDUCE(buf,MPI_IN_PLACE,SIZE(buf),MPI_DOUBLE_COMPLEX,MPI_SUM,root,comm,ierr)
+      ENDIF
       !
     END SUBROUTINE
     !

@@ -288,7 +288,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !$acc end parallel
      !
      IF(l_bse) THEN
-        CALL bse_kernel_gamma(current_spin,nbndval,evc1,evc1_new(:,:,iks))
+        CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks))
      ENDIF
      !
      IF(gamma_only) THEN

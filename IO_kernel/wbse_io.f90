@@ -18,7 +18,7 @@ MODULE wbse_io
   !
   CONTAINS
   !
-  SUBROUTINE read_bse_pots_g2g(rhog,fixed_band_i,fixed_band_j,ispin)
+  SUBROUTINE read_bse_pots_g(rhog,fixed_band_i,fixed_band_j,ispin)
     !
     USE kinds,          ONLY : DP
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
@@ -66,66 +66,6 @@ MODULE wbse_io
        tau_all(:,n_tau) = rhog
        !
     ENDIF
-    !
-  END SUBROUTINE
-  !
-  SUBROUTINE read_bse_pots_g2r(rhor,fixed_band_i,fixed_band_j,ispin)
-    !
-    USE kinds,          ONLY : DP
-    USE control_flags,  ONLY : gamma_only
-    USE fft_base,       ONLY : dffts
-    USE pwcom,          ONLY : npw,npwx
-    USE fft_at_gamma,   ONLY : single_invfft_gamma
-    USE fft_at_k,       ONLY : single_invfft_k
-#if defined(__CUDA)
-    USE west_gpu,       ONLY : gaux,tmp_c
-#endif
-    !
-    IMPLICIT NONE
-    !
-    ! I/O
-    !
-    REAL(DP), INTENT(OUT) :: rhor(dffts%nnr)
-    INTEGER, INTENT(IN) :: fixed_band_i,fixed_band_j,ispin
-    !
-    ! Workspace
-    !
-    INTEGER :: dffts_nnr,ir
-#if !defined(__CUDA)
-    COMPLEX(DP), ALLOCATABLE :: gaux(:),tmp_c(:)
-#endif
-    !
-#if !defined(__CUDA)
-    ALLOCATE(gaux(npwx))
-    ALLOCATE(tmp_c(dffts%nnr))
-#endif
-    !
-    CALL read_bse_pots_g2g(gaux,fixed_band_i,fixed_band_j,ispin)
-    !
-    !$acc update device(gaux)
-    !
-    ! G -> R
-    !
-    !$acc host_data use_device(gaux,tmp_c)
-    IF(gamma_only) THEN
-       CALL single_invfft_gamma(dffts,npw,npwx,gaux,tmp_c,'Wave')
-    ELSE
-       CALL single_invfft_k(dffts,npw,npwx,gaux,tmp_c,'Wave') ! no igk
-    ENDIF
-    !$acc end host_data
-    !
-    dffts_nnr = dffts%nnr
-    !
-    !$acc parallel loop present(rhor,tmp_c)
-    DO ir = 1,dffts_nnr
-       rhor(ir) = REAL(tmp_c(ir),KIND=DP)
-    ENDDO
-    !$acc end parallel
-    !
-#if !defined(__CUDA)
-    DEALLOCATE(gaux)
-    DEALLOCATE(tmp_c)
-#endif
     !
   END SUBROUTINE
   !

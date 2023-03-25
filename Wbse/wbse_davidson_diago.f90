@@ -22,14 +22,13 @@ SUBROUTINE wbse_davidson_diago ( )
   USE mp,                   ONLY : mp_max,mp_bcast
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : nks,npw,npwx,ngk
-  USE distribution_center,  ONLY : pert,aband,bandpair
+  USE distribution_center,  ONLY : pert,aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
-  USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
-                                 & wstat_calculation,ev,conv,n_pdep_read_from_file,&
-                                 & n_steps_write_restart,trev_pdep_rel,l_is_wstat_converged,&
-                                 & nbnd_occ,lrwfc,iuwfc,dvg_exc,dng_exc,nbndval0x,n_trunc_bands,&
-                                 & l_preconditioning,l_bse,n_bse_idx
+  USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,ev,conv,&
+                                 & wstat_calculation,n_pdep_read_from_file,n_steps_write_restart,&
+                                 & trev_pdep_rel,l_is_wstat_converged,nbnd_occ,lrwfc,iuwfc,dvg_exc,&
+                                 & dng_exc,nbndval0x,n_trunc_bands,l_preconditioning
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
                                  & davidson_restart_read
@@ -74,7 +73,6 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   INTEGER :: iks,il1,ig1,lbnd,ibnd
   INTEGER :: nbndval,nbnd_do
-  INTEGER :: do_idx
   REAL(DP) :: time_spent(2)
   CHARACTER(LEN=8) :: iter_label
   !
@@ -98,14 +96,6 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   aband = idistribute()
   CALL aband%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)
-  !
-  ! ... DISTRIBUTE bse_kernel
-  !
-  do_idx = MAXVAL(n_bse_idx)
-  IF (l_bse) THEN
-     bandpair = idistribute()
-     CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
-  ENDIF
   !
   CALL wbse_memory_report() ! Before allocating I report the memory required.
   !

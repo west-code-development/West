@@ -11,24 +11,23 @@
 ! Ngoc Linh Nguyen, Victor Yu
 !
 !-----------------------------------------------------------------------
-SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
+SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
   USE fft_base,              ONLY : dffts
   USE mp,                    ONLY : mp_sum
-  USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma,double_invfft_gamma,&
-                                  & double_fwfft_gamma
+  USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma,double_fwfft_gamma
   USE mp_global,             ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,nbgrp,&
                                   & my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
-  USE westcom,               ONLY : l_lanczos,nbnd_occ,nbndval0x,n_trunc_bands,l_local_repr,&
-                                  & u_matrix,idx_matrix,n_bse_idx
-  USE distribution_center,   ONLY : aband,bandpair
-  USE wbse_io,               ONLY : read_bse_pots_g2r,read_bse_pots_g2g
+  USE westcom,               ONLY : l_lanczos,nbndval0x,n_trunc_bands,l_local_repr,u_matrix,&
+                                  & idx_matrix,n_bse_idx
+  USE distribution_center,   ONLY : aband
+  USE wbse_io,               ONLY : read_bse_pots_g
 #if defined(__CUDA)
   USE wavefunctions_gpum,    ONLY : psic=>psic_d
-  USE west_gpu,              ONLY : raux1,raux2,caux1,caux2,kd1_ij,gaux
+  USE west_gpu,              ONLY : raux1,raux2,caux1,caux2,gaux
   USE cublas
 #else
   USE wavefunctions,         ONLY : psic
@@ -38,19 +37,19 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: current_spin,nbndval_k
+  INTEGER, INTENT(IN) :: current_spin
   COMPLEX(DP), INTENT(IN) :: evc1(npwx,aband%nlocx,nks)
   COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,aband%nlocx)
   !
   ! Workspace
   !
-  INTEGER :: ibnd,jbnd,my_ibnd,my_jbnd,lbnd,do_idx,n_done,ig,ir,il1,ig1
-  INTEGER :: nbndval_q,current_spin_ikq,ikq
-  INTEGER :: nbnd_do
+  INTEGER :: ibnd,jbnd,my_ibnd,my_jbnd,lbnd,ipair
+  INTEGER :: ig,ir
+  INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq
   INTEGER :: dffts_nnr,aband_nloc
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
-  COMPLEX(DP), ALLOCATABLE :: caux1(:,:),caux2(:,:),kd1_ij(:,:),gaux(:)
+  COMPLEX(DP), ALLOCATABLE :: caux1(:,:),caux2(:,:),gaux(:)
 #endif
   COMPLEX(DP), PARAMETER :: zero = (0._DP,0._DP)
   COMPLEX(DP), PARAMETER :: one = (1._DP,0._DP)
@@ -67,14 +66,10 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   aband_nloc = aband%nloc
   !
 #if !defined(__CUDA)
+  ALLOCATE(raux1(dffts%nnr))
+  ALLOCATE(raux2(dffts%nnr))
   ALLOCATE(caux1(npwx,nbnd_do))
   ALLOCATE(caux2(npwx,nbnd_do))
-  do_idx = MAXVAL(n_bse_idx)
-  ALLOCATE(raux1(dffts%nnr))
-  IF(.NOT. l_lanczos) THEN
-     ALLOCATE(kd1_ij(npwx,do_idx))
-     ALLOCATE(raux2(dffts%nnr))
-  ENDIF
   ALLOCATE(gaux(npwx))
 #endif
   !
@@ -83,7 +78,6 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      current_spin_ikq = isk(ikq)
      IF(current_spin_ikq /= current_spin) CYCLE
      !
-     nbndval_q = nbnd_occ(ikq)
      npw = ngk(ikq)
      !
      IF(l_local_repr) THEN
@@ -126,113 +120,42 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
      ENDIF
      !$acc update device(caux1)
      !
-     do_idx = n_bse_idx(current_spin)
-     !
-     IF(.NOT. l_lanczos) THEN
-        !$acc kernels present(kd1_ij)
-        kd1_ij(:,:) = zero
-        !$acc end kernels
-     ENDIF
+     ! LOOP OVER BANDS AT KPOINT
      !
      !$acc kernels present(caux2)
      caux2(:,:) = zero
      !$acc end kernels
      !
-     DO il1 = 1, bandpair%nloc
-        !
-        ig1 = bandpair%l2g(il1) ! global index of n_total
-        !
-        IF(ig1 < 1 .OR. ig1 > do_idx) CYCLE
-        !
-        ibnd = idx_matrix(ig1,1,current_spin)-n_trunc_bands
-        jbnd = idx_matrix(ig1,2,current_spin)-n_trunc_bands
-        !
-        IF(l_lanczos) THEN
-           !
-           ! READ response at iq,ik,ispin
-           !
-           CALL read_bse_pots_g2r(raux1,ibnd,jbnd,current_spin)
-           !
-           !$acc host_data use_device(caux1)
-           CALL single_invfft_gamma(dffts,npw,npwx,caux1(:,jbnd),psic,'Wave')
-           !$acc end host_data
-           !
-           !$acc parallel loop present(raux1)
-           DO ir = 1, dffts_nnr
-              psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*raux1(ir),KIND=DP)
-           ENDDO
-           !$acc end parallel
-           !
-           !$acc host_data use_device(gaux)
-           CALL single_fwfft_gamma(dffts,npw,npwx,psic,gaux,'Wave')
-           !$acc end host_data
-           !
-           !$acc parallel loop present(caux2,gaux)
-           DO ig = 1, npw
-              caux2(ig,ibnd) = caux2(ig,ibnd)+gaux(ig)
-           ENDDO
-           !$acc end parallel
-           !
-        ELSE
-           !
-           CALL read_bse_pots_g2g(gaux,ibnd,jbnd,current_spin)
-           !
-           !$acc update device(gaux)
-           !
-           !$acc parallel loop present(kd1_ij,gaux)
-           DO ig = 1, npw
-              kd1_ij(ig,ig1) = gaux(ig)
-           ENDDO
-           !$acc end parallel
-           !
-        ENDIF
-        !
-     ENDDO
+     do_idx = n_bse_idx(current_spin)
      !
-     IF(l_lanczos) THEN
-        !$acc update host(caux2)
-        CALL mp_sum(caux2,inter_image_comm)
-        !$acc update device(caux2)
-     ELSE
-        !$acc update host(kd1_ij)
-        CALL mp_sum(kd1_ij,inter_image_comm)
-        !$acc update device(kd1_ij)
-     ENDIF
-     !
-     ! LOOP OVER BANDS AT KPOINT
-     !
-     IF(.NOT. l_lanczos) THEN
+     DO lbnd = 1, aband%nloc, 2
         !
-        ! Davidson method
+        my_ibnd = aband%l2g(lbnd)
+        my_jbnd = aband%l2g(lbnd+1)
         !
-        DO lbnd = 1, aband%nloc, 2
+        !$acc kernels present(raux1,raux2)
+        raux1(:) = 0._DP
+        raux2(:) = 0._DP
+        !$acc end kernels
+        !
+        ! LOOP OVER BANDS AT QPOINT
+        !
+        DO ipair = 1, do_idx
            !
-           my_ibnd = aband%l2g(lbnd)
-           my_jbnd = aband%l2g(lbnd+1)
+           ibnd = idx_matrix(ipair,1,current_spin)-n_trunc_bands
+           jbnd = idx_matrix(ipair,2,current_spin)-n_trunc_bands
            !
-           !$acc kernels present(raux1,raux2)
-           raux1(:) = 0._DP
-           raux2(:) = 0._DP
-           !$acc end kernels
-           !
-           n_done = 0
-           !
-           ! LOOP OVER BANDS AT QPOINT
-           !
-           DO ig1 = 1, do_idx
+           IF(ibnd == my_ibnd .OR. ibnd == my_jbnd) THEN
               !
-              IF(n_done > MIN(do_idx,(nbndval_q-n_trunc_bands+nbndval_k-n_trunc_bands))) EXIT
+              CALL read_bse_pots_g(gaux,ibnd,jbnd,current_spin)
               !
-              ibnd = idx_matrix(ig1,1,current_spin)-n_trunc_bands
-              jbnd = idx_matrix(ig1,2,current_spin)-n_trunc_bands
+              !$acc update device(gaux)
+              !
+              !$acc host_data use_device(caux1,gaux)
+              CALL double_invfft_gamma(dffts,npw,npwx,caux1(:,jbnd),gaux,psic,'Wave')
+              !$acc end host_data
               !
               IF(ibnd == my_ibnd) THEN
-                 n_done = n_done+1
-                 !
-                 !$acc host_data use_device(caux1,kd1_ij)
-                 CALL double_invfft_gamma(dffts,npw,npwx,caux1(:,jbnd),kd1_ij(:,ig1),psic,'Wave')
-                 !$acc end host_data
-                 !
                  !$acc parallel loop present(raux1)
                  DO ir = 1, dffts_nnr
                     raux1(ir) = raux1(ir)+REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
@@ -241,12 +164,6 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
               ENDIF
               !
               IF(ibnd == my_jbnd) THEN
-                 n_done = n_done+1
-                 !
-                 !$acc host_data use_device(caux1,kd1_ij)
-                 CALL double_invfft_gamma(dffts,npw,npwx,caux1(:,jbnd),kd1_ij(:,ig1),psic,'Wave')
-                 !$acc end host_data
-                 !
                  !$acc parallel loop present(raux2)
                  DO ir = 1, dffts_nnr
                     raux2(ir) = raux2(ir)+REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
@@ -254,41 +171,45 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
                  !$acc end parallel
               ENDIF
               !
-           ENDDO
-           !
-           ! Back to reciprocal space
-           !
-           IF(lbnd < aband%nloc) THEN
-              !$acc parallel loop present(raux1,raux2)
-              DO ir = 1, dffts_nnr
-                 psic(ir) = CMPLX(raux1(ir),raux2(ir),KIND=DP)
-              ENDDO
-              !$acc end parallel
-           ELSE
-              !$acc parallel loop present(raux1)
-              DO ir = 1, dffts_nnr
-                 psic(ir) = CMPLX(raux1(ir),KIND=DP)
-              ENDDO
-              !$acc end parallel
-           ENDIF
-           !
-           IF(lbnd < aband%nloc) THEN
-              !$acc host_data use_device(caux2)
-              CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),caux2(:,my_jbnd),'Wave')
-              !$acc end host_data
-           ELSE
-              !$acc host_data use_device(caux2)
-              CALL single_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),'Wave')
-              !$acc end host_data
            ENDIF
            !
         ENDDO
         !
-        !$acc update host(caux2)
-        CALL mp_sum(caux2,inter_bgrp_comm)
-        !$acc update device(caux2)
+        ! Back to reciprocal space
         !
+        IF(lbnd < aband%nloc) THEN
+           !$acc parallel loop present(raux1,raux2)
+           DO ir = 1, dffts_nnr
+              psic(ir) = CMPLX(raux1(ir),raux2(ir),KIND=DP)
+           ENDDO
+           !$acc end parallel
+        ELSE
+           !$acc parallel loop present(raux1)
+           DO ir = 1, dffts_nnr
+              psic(ir) = CMPLX(raux1(ir),KIND=DP)
+           ENDDO
+           !$acc end parallel
+        ENDIF
+        !
+        IF(lbnd < aband%nloc) THEN
+           !$acc host_data use_device(caux2)
+           CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),caux2(:,my_jbnd),'Wave')
+           !$acc end host_data
+        ELSE
+           !$acc host_data use_device(caux2)
+           CALL single_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),'Wave')
+           !$acc end host_data
+        ENDIF
+        !
+     ENDDO
+     !
+     !$acc update host(caux2)
+     IF(l_lanczos) THEN
+        CALL mp_sum(caux2,inter_image_comm)
+     ELSE
+        CALL mp_sum(caux2,inter_bgrp_comm)
      ENDIF
+     !$acc update device(caux2)
      !
      IF(l_local_repr) THEN
         !
@@ -322,13 +243,10 @@ SUBROUTINE bse_kernel_gamma(current_spin,nbndval_k,evc1,bse_kd1)
   ENDDO
   !
 #if !defined(__CUDA)
+  DEALLOCATE(raux1)
+  DEALLOCATE(raux2)
   DEALLOCATE(caux1)
   DEALLOCATE(caux2)
-  DEALLOCATE(raux1)
-  IF(.NOT. l_lanczos) THEN
-     DEALLOCATE(kd1_ij)
-     DEALLOCATE(raux2)
-  ENDIF
   DEALLOCATE(gaux)
 #endif
   !

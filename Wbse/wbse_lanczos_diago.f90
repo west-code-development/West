@@ -20,7 +20,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,wbse_ipol,&
                                  & n_lanczos,beta_store,zeta_store,nbndval0x,n_trunc_bands,&
-                                 & l_bse,n_bse_idx,n_steps_write_restart
+                                 & n_steps_write_restart
   USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
                                  & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,&
@@ -29,7 +29,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE mp,                   ONLY : mp_bcast
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
-  USE distribution_center,  ONLY : aband,bandpair
+  USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -49,7 +49,7 @@ SUBROUTINE wbse_lanczos_diago()
   INTEGER :: iter
   INTEGER :: iks,is,nbndval,ig,lbnd,ibnd
   INTEGER :: ilan_restart,ilan_stopped,ipol_restart,ipol_stopped
-  INTEGER :: do_idx,nbnd_do
+  INTEGER :: nbnd_do
   INTEGER, PARAMETER :: n_ipol = 3
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
@@ -64,14 +64,6 @@ SUBROUTINE wbse_lanczos_diago()
   aband = idistribute()
   !
   CALL aband%init(nbndval0x-n_trunc_bands,'i','nbndval',.TRUE.)
-  !
-  ! ... DISTRIBUTE bse_kernel
-  !
-  IF(l_bse) THEN
-     do_idx = MAXVAL(n_bse_idx)
-     bandpair = idistribute()
-     CALL bandpair%init(do_idx,'i','n_pairs',.TRUE.)
-  ENDIF
   !
   ! Main Lanzcos program
   !

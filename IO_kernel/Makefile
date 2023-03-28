@@ -17,7 +17,6 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 IO_KERNEL_OBJS = \
 cubefile.o \
 function3d.o \
-lanczos_db.o \
 mod_west_io.o \
 mpiio.o \
 pdep_db.o \

@@ -21,8 +21,6 @@ SUBROUTINE wbse_lanczos_diago()
   USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,wbse_ipol,&
                                  & n_lanczos,beta_store,zeta_store,nbndval0x,n_trunc_bands,&
                                  & n_steps_write_restart
-  USE lanczos_db,           ONLY : lanczos_d0psi_read,lanczos_d0psi_write,lanczos_evcs_write,&
-                                 & lanczos_evcs_read
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,&
                                  & lanczos_restart_clear,lanczos_log
   USE mp_global,            ONLY : my_image_id,inter_image_comm
@@ -133,33 +131,18 @@ SUBROUTINE wbse_lanczos_diago()
      !
      ! RESTART
      !
-     CALL lanczos_restart_read(nipol_input,ipol_stopped,ilan_stopped)
+     CALL lanczos_restart_read(nipol_input,ipol_stopped,ilan_stopped,evc1,evc1_old)
      !
-     ! 1) read ipol_stopped
-     ! 2) read ilan_stopped
-     ! 3) read beta_store, zeta_store
+     !$acc update device(evc1,evc1_old)
      !
      ipol_restart = ipol_stopped
      ilan_restart = ilan_stopped+1
-     !
-     ! 4) read d0psi evc1, evc_old, saved on files
-     !
-     CALL lanczos_d0psi_read()
-     CALL lanczos_evcs_read(evc1,evc1_old)
-     !
-     !$acc update device(d0psi,evc1,evc1_old)
      !
      l_from_scratch = .FALSE.
      !
   CASE('L')
      !
      ! FROM SCRATCH
-     !
-     CALL solve_e_psi()
-     !
-     !$acc update host(d0psi)
-     !
-     CALL lanczos_d0psi_write()
      !
      ipol_restart = 1
      ilan_restart = 1
@@ -169,6 +152,10 @@ SUBROUTINE wbse_lanczos_diago()
   CASE DEFAULT
      CALL errore('wbse_lanczos_diago','wrong wlzcos_calculation',1)
   END SELECT
+  !
+  CALL solve_e_psi()
+  !
+  !$acc update host(d0psi)
   !
   CALL io_push_title('Lanczos linear-response absorption spectrum calculation')
   WRITE(stdout,'(5x,"Using Tamm-Dancoff Liouvillian operator")')
@@ -323,8 +310,7 @@ SUBROUTINE wbse_lanczos_diago()
         IF(n_steps_write_restart > 0 .AND. MOD(iter,n_steps_write_restart) == 0) THEN
            !$acc update host(evc1,evc1_old)
            !
-           CALL lanczos_restart_write(nipol_input,ip,iter)
-           CALL lanczos_evcs_write(evc1,evc1_old)
+           CALL lanczos_restart_write(nipol_input,ip,iter,evc1,evc1_old)
         ENDIF
         !
         CALL update_bar_type(barra,'lan_diago',1)

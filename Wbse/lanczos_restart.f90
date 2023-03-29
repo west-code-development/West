@@ -24,7 +24,7 @@ MODULE lanczos_restart
       !
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
-      USE mp_global,           ONLY : inter_image_comm,my_image_id
+      USE mp_global,           ONLY : my_image_id,inter_bgrp_comm,my_bgrp_id
       USE mp,                  ONLY : mp_barrier
       USE io_global,           ONLY : stdout
       USE pwcom,               ONLY : npwx,nks
@@ -108,37 +108,41 @@ MODULE lanczos_restart
       !
       ! WRITE EVC1 & EVC1_OLD
       !
-      ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
-      !
-      evc1_tmp(:,:,:) = (0._DP,0._DP)
-      !
-      DO lbnd = 1,aband%nloc
-         ibnd = aband%l2g(lbnd)
-         evc1_tmp(:,ibnd,:) = evc1(:,lbnd,:)
-      ENDDO
-      !
-      CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_image_comm)
-      !
       IF(my_image_id == 0) THEN
-         fname = TRIM(wbse_restart_dir)//'/evc1.dat'
-         CALL plep_merge_and_write_G(fname,evc1_tmp)
+         !
+         ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+         !
+         evc1_tmp(:,:,:) = (0._DP,0._DP)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            evc1_tmp(:,ibnd,:) = evc1(:,lbnd,:)
+         ENDDO
+         !
+         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
+         !
+         IF(my_bgrp_id == 0) THEN
+            fname = TRIM(wbse_restart_dir)//'/evc1.dat'
+            CALL plep_merge_and_write_G(fname,evc1_tmp)
+         ENDIF
+         !
+         evc1_tmp(:,:,:) = (0._DP,0._DP)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            evc1_tmp(:,ibnd,:) = evc1_old(:,lbnd,:)
+         ENDDO
+         !
+         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
+         !
+         IF(my_bgrp_id == 0) THEN
+            fname = TRIM(wbse_restart_dir)//'/evc1_old.dat'
+            CALL plep_merge_and_write_G(fname,evc1_tmp)
+         ENDIF
+         !
+         DEALLOCATE(evc1_tmp)
+         !
       ENDIF
-      !
-      evc1_tmp(:,:,:) = (0._DP,0._DP)
-      !
-      DO lbnd = 1,aband%nloc
-         ibnd = aband%l2g(lbnd)
-         evc1_tmp(:,ibnd,:) = evc1_old(:,lbnd,:)
-      ENDDO
-      !
-      CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_image_comm)
-      !
-      IF(my_image_id == 0) THEN
-         fname = TRIM(wbse_restart_dir)//'/evc1_old.dat'
-         CALL plep_merge_and_write_G(fname,evc1_tmp)
-      ENDIF
-      !
-      DEALLOCATE(evc1_tmp)
       !
       ! BARRIER
       !

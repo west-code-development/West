@@ -25,7 +25,7 @@ SUBROUTINE wbse_setup()
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup
-  USE mp_global,            ONLY : nbgrp
+  USE mp_global,            ONLY : nimage
   !
   IMPLICIT NONE
   !
@@ -63,7 +63,7 @@ SUBROUTINE wbse_setup()
      l_davidson = .FALSE.
   END SELECT
   !
-  IF(l_lanczos .AND. nbgrp > 1) CALL errore('wbse_setup','band groups not implemented for Lanczos',1)
+  IF(l_lanczos .AND. nimage > 1) CALL errore('wbse_setup','images not implemented for Lanczos',1)
   !
   IF(TRIM(qp_correction) == '') THEN
      l_qp_correction = .FALSE.
@@ -130,8 +130,8 @@ SUBROUTINE bse_start()
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : isk,nks,npwx
-  USE westcom,              ONLY : l_lanczos,l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,&
-                                 & nbndval0x,n_trunc_bands,sigma_c_head,sigma_x_head,wbse_epsinfty,&
+  USE westcom,              ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
+                                 & n_trunc_bands,sigma_c_head,sigma_x_head,wbse_epsinfty,&
                                  & l_local_repr,overlap_thr,u_matrix,ovl_matrix,n_bse_idx,idx_matrix
   USE lsda_mod,             ONLY : nspin
   USE constants,            ONLY : e2,pi
@@ -164,11 +164,7 @@ SUBROUTINE bse_start()
   !
   aband = idistribute()
   !
-  IF(l_lanczos) THEN
-     CALL aband%init(nbnd_do,'i','nbndval',.FALSE.)
-  ELSE
-     CALL aband%init(nbnd_do,'b','nbndval',.FALSE.)
-  ENDIF
+  CALL aband%init(nbnd_do,'b','nbndval',.FALSE.)
   !
   ! allocate and read unitary matrix and overlap matrix, if any
   !

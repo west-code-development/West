@@ -27,7 +27,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   USE mp,                     ONLY : mp_sum,mp_bcast
   USE mp_global,              ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
   USE buffers,                ONLY : get_buffer
-  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands,l_lanczos
+  USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands
   USE fft_at_gamma,           ONLY : double_invfft_gamma
   USE fft_at_k,               ONLY : single_invfft_k
   USE distribution_center,    ONLY : aband
@@ -183,11 +183,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
      !
   ENDDO
   !
-  IF(l_lanczos) THEN
-     CALL mp_sum(drho,inter_image_comm)
-  ELSE
-     CALL mp_sum(drho,inter_bgrp_comm)
-  ENDIF
+  CALL mp_sum(drho,inter_bgrp_comm)
   !
   !$acc update device(drho)
   !

@@ -61,7 +61,7 @@ SUBROUTINE wbse_lanczos_diago()
   !
   aband = idistribute()
   !
-  CALL aband%init(nbndval0x-n_trunc_bands,'i','nbndval',.TRUE.)
+  CALL aband%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)
   !
   ! Main Lanzcos program
   !

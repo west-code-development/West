@@ -16,7 +16,7 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
   !
   USE kinds,                ONLY : DP
   USE control_flags,        ONLY : gamma_only
-  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
+  USE mp_global,            ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE pwcom,                ONLY : isk,wg,nspin,npw,npwx,ngk
   USE gvect,                ONLY : gstart
@@ -54,7 +54,7 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
            !$acc parallel loop collapse(2) reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
            DO lbnd = 1, m
               DO ig = 1, npw
-                 ibnd = nimage*(lbnd-1) + my_image_id + 1 + n_trunc_bands
+                 ibnd = nbgrp*(lbnd-1) + my_bgrp_id + 1 + n_trunc_bands
                  tmp_r = tmp_r + wg(ibnd,iks)*(REAL(x(ig,lbnd,iks),KIND=DP)*REAL(y(ig,lbnd,iks),KIND=DP) &
                  & + AIMAG(x(ig,lbnd,iks))*AIMAG(y(ig,lbnd,iks)))
               ENDDO
@@ -66,7 +66,7 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
            IF(gstart == 2) THEN
               !$acc parallel loop reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
               DO lbnd = 1, m
-                 ibnd = nimage*(lbnd-1) + my_image_id + 1 + n_trunc_bands
+                 ibnd = nbgrp*(lbnd-1) + my_bgrp_id + 1 + n_trunc_bands
                  tmp_r = tmp_r - wg(ibnd,iks)*REAL(x(1,lbnd,iks),KIND=DP)*REAL(y(1,lbnd,iks),KIND=DP)
               ENDDO
               !$acc end parallel
@@ -77,7 +77,7 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
            !$acc parallel loop collapse(2) reduction(+:tmp_c) present(wg,x,y) copy(tmp_c)
            DO lbnd = 1, m
               DO ig = 1, npw
-                 ibnd = nimage*(lbnd-1) + my_image_id + 1 + n_trunc_bands
+                 ibnd = nbgrp*(lbnd-1) + my_bgrp_id + 1 + n_trunc_bands
                  tmp_c = tmp_c + wg(ibnd,iks)*CONJG(x(ig,lbnd,iks))*y(ig,lbnd,iks)
               ENDDO
            ENDDO
@@ -89,11 +89,11 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
      !
      IF(gamma_only) THEN
         CALL mp_sum(tmp_r,intra_bgrp_comm)
-        CALL mp_sum(tmp_r,inter_image_comm)
+        CALL mp_sum(tmp_r,inter_bgrp_comm)
         dotp(is) = CMPLX(tmp_r*nspin/2._DP,KIND=DP)
      ELSE
         CALL mp_sum(tmp_c,intra_bgrp_comm)
-        CALL mp_sum(tmp_c,inter_image_comm)
+        CALL mp_sum(tmp_c,inter_bgrp_comm)
         dotp(is) = tmp_c*nspin/2._DP
      ENDIF
      !

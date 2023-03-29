@@ -18,7 +18,7 @@ SUBROUTINE wbse_memory_report()
   USE io_global,           ONLY : stdout
   USE wvfct,               ONLY : npwx
   USE control_flags,       ONLY : gamma_only
-  USE mp_global,           ONLY : nimage,nbgrp
+  USE mp_global,           ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
   USE pwcom,               ONLY : nks
   USE westcom,             ONLY : l_bse,l_lanczos,nbnd_occ,n_trunc_bands,n_pdep_basis,npwqx,logfile
@@ -44,11 +44,7 @@ SUBROUTINE wbse_memory_report()
      !
   ENDIF
   !
-  IF( l_lanczos ) THEN
-     nbndloc = (nbnd_occ(1)-n_trunc_bands-1)/nimage+1
-  ELSE
-     nbndloc = (nbnd_occ(1)-n_trunc_bands-1)/nbgrp+1
-  ENDIF
+  nbndloc = (nbnd_occ(1)-n_trunc_bands-1)/nbgrp+1
   !
   IF( .NOT. l_lanczos ) THEN
      mem_tot = 0._DP

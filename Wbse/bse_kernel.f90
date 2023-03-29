@@ -18,11 +18,10 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
   USE fft_base,              ONLY : dffts
   USE mp,                    ONLY : mp_sum
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma,double_fwfft_gamma
-  USE mp_global,             ONLY : inter_image_comm,nimage,my_image_id,inter_bgrp_comm,nbgrp,&
-                                  & my_bgrp_id
+  USE mp_global,             ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
-  USE westcom,               ONLY : l_lanczos,nbndval0x,n_trunc_bands,l_local_repr,u_matrix,&
-                                  & idx_matrix,n_bse_idx
+  USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_local_repr,u_matrix,idx_matrix,&
+                                  & n_bse_idx
   USE distribution_center,   ONLY : aband
   USE wbse_io,               ONLY : read_bse_pots_g
 #if defined(__CUDA)
@@ -99,11 +98,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
            ! ibnd = aband%l2g(lbnd)
            !
            DO ig = 1, npw
-              IF(l_lanczos) THEN
-                 ibnd = nimage*(lbnd-1)+my_image_id+1
-              ELSE
-                 ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
-              ENDIF
+              ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
               caux1(ig,ibnd) = evc1(ig,lbnd,ikq)
            ENDDO
            !
@@ -113,11 +108,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
      ENDIF
      !
      !$acc update host(caux1)
-     IF(l_lanczos) THEN
-        CALL mp_sum(caux1,inter_image_comm)
-     ELSE
-        CALL mp_sum(caux1,inter_bgrp_comm)
-     ENDIF
+     CALL mp_sum(caux1,inter_bgrp_comm)
      !$acc update device(caux1)
      !
      ! LOOP OVER BANDS AT KPOINT
@@ -204,11 +195,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
      ENDDO
      !
      !$acc update host(caux2)
-     IF(l_lanczos) THEN
-        CALL mp_sum(caux2,inter_image_comm)
-     ELSE
-        CALL mp_sum(caux2,inter_bgrp_comm)
-     ENDIF
+     CALL mp_sum(caux2,inter_bgrp_comm)
      !$acc update device(caux2)
      !
      IF(l_local_repr) THEN
@@ -228,11 +215,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
            ! ibnd = aband%l2g(lbnd)
            !
            DO ig = 1, npw
-              IF(l_lanczos) THEN
-                 ibnd = nimage*(lbnd-1)+my_image_id+1
-              ELSE
-                 ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
-              ENDIF
+              ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
               bse_kd1(ig,lbnd) = bse_kd1(ig,lbnd)-caux2(ig,ibnd)
            ENDDO
         ENDDO

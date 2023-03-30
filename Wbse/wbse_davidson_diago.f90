@@ -18,7 +18,7 @@ SUBROUTINE wbse_davidson_diago ( )
   ! ... ( L - ev ) * dvg = 0
   !
   USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_max,mp_bcast
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : nks,npw,npwx,ngk
@@ -89,10 +89,14 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   ! ... DISTRIBUTE nvecx
   !
+  IF(nimage > nvecx) CALL errore('chidiago','nimage>nvecx',1)
+  !
   pert = idistribute()
   CALL pert%init(nvecx,'i','nvecx',.TRUE.)
   !
-  ! ... DISTRIBUTE nband
+  ! ... DISTRIBUTE nbndval
+  !
+  IF(nbgrp > nbndval0x-n_trunc_bands) CALL errore('chidiago','nbgrp>nbndval',1)
   !
   aband = idistribute()
   CALL aband%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)

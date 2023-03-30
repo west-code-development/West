@@ -25,7 +25,6 @@ SUBROUTINE wbse_setup()
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup
-  USE mp_global,            ONLY : nimage
   !
   IMPLICIT NONE
   !
@@ -62,8 +61,6 @@ SUBROUTINE wbse_setup()
      l_lanczos = .TRUE.
      l_davidson = .FALSE.
   END SELECT
-  !
-  IF(l_lanczos .AND. nimage > 1) CALL errore('wbse_setup','images not implemented for Lanczos',1)
   !
   IF(TRIM(qp_correction) == '') THEN
      l_qp_correction = .FALSE.

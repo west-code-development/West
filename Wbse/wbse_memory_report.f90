@@ -112,9 +112,9 @@ SUBROUTINE wbse_memory_report()
      IF( mpime == root ) CALL json%add( 'memory.dpsi', mem_partial )
      mem_tot = mem_tot + mem_partial
   ELSE
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*nks
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*nks*3
      WRITE(stdout,'(5x,"[MEM] d0psi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, nbndloc*nks
+        mem_partial, npwx, nbndloc*nks*3
      IF( mpime == root ) CALL json%add( 'memory.d0psi', mem_partial )
      mem_tot = mem_tot + mem_partial
      !

@@ -23,11 +23,11 @@ SUBROUTINE wbse_lanczos_diago()
                                  & n_steps_write_restart
   USE lanczos_restart,      ONLY : lanczos_restart_write,lanczos_restart_read,&
                                  & lanczos_restart_clear,lanczos_log
-  USE mp_global,            ONLY : my_image_id,inter_image_comm
-  USE mp,                   ONLY : mp_bcast
+  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,me_image,nbgrp
+  USE mp,                   ONLY : mp_sum,mp_bcast
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
-  USE distribution_center,  ONLY : aband
+  USE distribution_center,  ONLY : pert,aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -43,7 +43,7 @@ SUBROUTINE wbse_lanczos_diago()
   ! Local variables
   !
   LOGICAL :: l_from_scratch
-  INTEGER :: ip,iip,pol_index,nipol_input
+  INTEGER :: lp,ip,iip,pol_index,nipol_input
   INTEGER :: iter
   INTEGER :: iks,is,nbndval,ig,lbnd,ibnd
   INTEGER :: ilan_restart,ilan_stopped,ipol_restart,ipol_stopped
@@ -56,30 +56,6 @@ SUBROUTINE wbse_lanczos_diago()
   COMPLEX(DP) :: dotp(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
   TYPE(bar_type) :: barra
-  !
-  ! ... DISTRIBUTE lanczos
-  !
-  aband = idistribute()
-  !
-  CALL aband%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)
-  !
-  ! Main Lanzcos program
-  !
-  IF(n_lanczos < 1) CALL errore('wbse_lanczos_diago','n_lanczos must be > 0',1)
-  !
-  CALL wbse_memory_report()
-  !
-#if defined(__CUDA)
-  CALL allocate_gpu()
-  CALL allocate_bse_gpu(aband%nloc)
-  !
-  CALL using_et(2)
-  CALL using_et_d(0)
-  IF(nks == 1) THEN
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-  ENDIF
-#endif
   !
   SELECT CASE(wbse_ipol)
   CASE('XX','xx')
@@ -114,6 +90,36 @@ SUBROUTINE wbse_lanczos_diago()
      CALL errore('wbse_lanczos_diago','wrong wbse_ipol',1)
   END SELECT
   !
+  ! ... DISTRIBUTE nipol_input
+  !
+  IF(MOD(nipol_input,nimage) /= 0) CALL errore('wbse_lanczos_diago','bad nimage')
+  !
+  pert = idistribute()
+  CALL pert%init(nipol_input,'i','nipol_input',.TRUE.)
+  !
+  ! ... DISTRIBUTE nbndval
+  !
+  IF(nbgrp > nbndval0x-n_trunc_bands) CALL errore('wbse_lanczos_diago','nbgrp>nbndval')
+  !
+  aband = idistribute()
+  CALL aband%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)
+  !
+  CALL wbse_memory_report()
+  !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+  CALL allocate_bse_gpu(aband%nloc)
+  !
+  CALL using_et(2)
+  CALL using_et_d(0)
+  IF(nks == 1) THEN
+     CALL using_evc(2)
+     CALL using_evc_d(0)
+  ENDIF
+#endif
+  !
+  ! Main Lanczos code
+  !
   ALLOCATE(beta_store(n_lanczos,nipol_input,nspin))
   ALLOCATE(zeta_store(n_lanczos,n_ipol,nipol_input,nspin))
   !
@@ -128,6 +134,8 @@ SUBROUTINE wbse_lanczos_diago()
   !
   SELECT CASE(wbse_calculation)
   CASE('l')
+     !
+     IF(nimage > 1) CALL errore('wbse_lanczos_diago','restart with nimage>1 not implemented',1)
      !
      ! RESTART
      !
@@ -160,12 +168,13 @@ SUBROUTINE wbse_lanczos_diago()
   CALL io_push_title('Lanczos linear-response absorption spectrum calculation')
   WRITE(stdout,'(5x,"Using Tamm-Dancoff Liouvillian operator")')
   !
-  polarization_loop : DO ip = ipol_restart,nipol_input
+  polarization_loop : DO lp = ipol_restart,pert%nloc
      !
+     ip = pert%l2g(lp)
      pol_index = pol_index_input(ip)
      !
      IF(l_from_scratch) THEN
-        CALL io_push_title('Starting new Lanczos loop at ipol: '//TRIM(pol_label_input(ip)))
+        CALL io_push_title('Starting new Lanczos loop')
         !
         !$acc kernels present(evc1_old,evc1_new,evc1,d0psi)
         evc1_old(:,:,:) = (0._DP,0._DP)
@@ -173,7 +182,7 @@ SUBROUTINE wbse_lanczos_diago()
         evc1(:,:,:) = d0psi(:,:,:,pol_index)
         !$acc end kernels
      ELSE
-        CALL io_push_title('Retarting Lanczos loop at ipol: '//TRIM(pol_label_input(ip)))
+        CALL io_push_title('Retarting Lanczos loop')
      ENDIF
      !
      CALL start_bar_type(barra,'lan_diago',n_lanczos-ilan_restart+1)
@@ -307,7 +316,8 @@ SUBROUTINE wbse_lanczos_diago()
         evc1(:,:,:) = evc1_new
         !$acc end kernels
         !
-        IF(n_steps_write_restart > 0 .AND. MOD(iter,n_steps_write_restart) == 0) THEN
+        IF(n_steps_write_restart > 0 .AND. MOD(iter,n_steps_write_restart) == 0 &
+           & .AND. nimage == 1) THEN
            !$acc update host(evc1,evc1_old)
            !
            CALL lanczos_restart_write(nipol_input,ip,iter,evc1,evc1_old)
@@ -317,7 +327,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
      ENDDO lancz_loop
      !
-     CALL lanczos_log(ip,pol_label_input(ip))
+     IF(nimage == 1) CALL lanczos_log(ip,pol_label_input(ip))
      !
      ilan_restart = 1
      l_from_scratch = .TRUE.
@@ -325,6 +335,17 @@ SUBROUTINE wbse_lanczos_diago()
      CALL stop_bar_type(barra,'lan_diago')
      !
   ENDDO polarization_loop
+  !
+  IF(nimage > 1) THEN
+     IF(me_image == 0) THEN
+        CALL mp_sum(beta_store,inter_image_comm)
+        CALL mp_sum(zeta_store,inter_image_comm)
+     ENDIF
+     !
+     DO ip = 1,nipol_input
+        CALL lanczos_log(ip,pol_label_input(ip))
+     ENDDO
+  ENDIF
   !
   CALL lanczos_restart_clear()
   !

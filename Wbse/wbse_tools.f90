@@ -65,6 +65,7 @@ MODULE wbse_tools
       !
       INTEGER :: il1,il2,il3,ig1,lbnd,ibnd,iks,nbndval
       INTEGER :: icycl,idx,nloc
+      INTEGER :: pert_nglob
       REAL(DP):: reduce
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       !
@@ -73,6 +74,8 @@ MODULE wbse_tools
 #else
       CALL start_clock('build_hr')
 #endif
+      !
+      pert_nglob = pert%nglob
       !
       IF(my_pool_id == 0) THEN
          !
@@ -94,9 +97,9 @@ MODULE wbse_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            !$acc enter data create(ag,c_distr(1:pert%nglob,l2_s:l2_e)) copyin(bg)
+            !$acc enter data create(ag,c_distr(1:pert_nglob,l2_s:l2_e)) copyin(bg)
             !
-            !$acc kernels present(c_distr(1:pert%nglob,l2_s:l2_e))
+            !$acc kernels present(c_distr(1:pert_nglob,l2_s:l2_e))
             c_distr(1:pert%nglob,l2_s:l2_e) = 0._DP
             !$acc end kernels
             !
@@ -117,7 +120,7 @@ MODULE wbse_tools
                   ig1 = pert%l2g(il1,idx)
                   IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
                   !
-                  !$acc parallel async present(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e),nbnd_loc,ngk)
+                  !$acc parallel async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e),nbnd_loc,ngk)
                   !$acc loop
                   DO il2 = l2_s,l2_e
                      !
@@ -165,8 +168,8 @@ MODULE wbse_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            !$acc update host(c_distr(1:pert%nglob,l2_s:l2_e)) wait
-            !$acc exit data delete(ag,bg,c_distr(1:pert%nglob,l2_s:l2_e))
+            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e)) wait
+            !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
             !
             CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
             CALL mp_sum(c_distr(:,l2_s:l2_e),inter_bgrp_comm)

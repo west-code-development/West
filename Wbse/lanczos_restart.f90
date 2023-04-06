@@ -19,15 +19,21 @@ MODULE lanczos_restart
   CONTAINS
     !
     !------------------------------------------------------------------
-    SUBROUTINE lanczos_restart_write(nipol_input,ipol_stopped,ilan_stopped)
+    SUBROUTINE lanczos_restart_write(nipol_input,ipol_stopped,ilan_stopped,evc1,evc1_old)
       !----------------------------------------------------------------
       !
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
+      USE mp_global,           ONLY : my_image_id,inter_bgrp_comm,my_bgrp_id
       USE mp,                  ONLY : mp_barrier
       USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store
+      USE pwcom,               ONLY : npwx,nks
+      USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store,nbndval0x,&
+                                    & n_trunc_bands
       USE lsda_mod,            ONLY : nspin
+      USE plep_io,             ONLY : plep_merge_and_write_G
+      USE distribution_center, ONLY : aband
+      USE west_mp,             ONLY : mp_root_sum_c16_3d
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
       USE base64_module,       ONLY : islittleendian
@@ -37,9 +43,13 @@ MODULE lanczos_restart
       ! I/O
       !
       INTEGER, INTENT(IN) :: nipol_input,ipol_stopped,ilan_stopped
+      COMPLEX(DP), INTENT(IN) :: evc1(npwx,aband%nlocx,nks)
+      COMPLEX(DP), INTENT(IN) :: evc1_old(npwx,aband%nlocx,nks)
       !
       ! Workspace
       !
+      INTEGER :: lbnd,ibnd
+      COMPLEX(DP), ALLOCATABLE :: evc1_tmp(:,:,:)
       INTEGER :: iun
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
@@ -96,6 +106,44 @@ MODULE lanczos_restart
          !
       ENDIF
       !
+      ! WRITE EVC1 & EVC1_OLD
+      !
+      IF(my_image_id == 0) THEN
+         !
+         ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+         !
+         evc1_tmp(:,:,:) = (0._DP,0._DP)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            evc1_tmp(:,ibnd,:) = evc1(:,lbnd,:)
+         ENDDO
+         !
+         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
+         !
+         IF(my_bgrp_id == 0) THEN
+            fname = TRIM(wbse_restart_dir)//'/evc1.dat'
+            CALL plep_merge_and_write_G(fname,evc1_tmp)
+         ENDIF
+         !
+         evc1_tmp(:,:,:) = (0._DP,0._DP)
+         !
+         DO lbnd = 1,aband%nloc
+            ibnd = aband%l2g(lbnd)
+            evc1_tmp(:,ibnd,:) = evc1_old(:,lbnd,:)
+         ENDDO
+         !
+         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
+         !
+         IF(my_bgrp_id == 0) THEN
+            fname = TRIM(wbse_restart_dir)//'/evc1_old.dat'
+            CALL plep_merge_and_write_G(fname,evc1_tmp)
+         ENDIF
+         !
+         DEALLOCATE(evc1_tmp)
+         !
+      ENDIF
+      !
       ! BARRIER
       !
       CALL mp_barrier(world_comm)
@@ -110,14 +158,18 @@ MODULE lanczos_restart
       !
     END SUBROUTINE
     !
-    SUBROUTINE lanczos_restart_read(nipol_input,ipol_stopped,ilan_stopped)
+    SUBROUTINE lanczos_restart_read(nipol_input,ipol_stopped,ilan_stopped,evc1,evc1_old)
       !
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
       USE mp,                  ONLY : mp_barrier,mp_bcast
       USE io_global,           ONLY : stdout
-      USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store
+      USE pwcom,               ONLY : npwx,nks
+      USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store,nbndval0x,&
+                                    & n_trunc_bands
       USE lsda_mod,            ONLY : nspin
+      USE distribution_center, ONLY : aband
+      USE plep_io,             ONLY : plep_read_G_and_distribute
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
       USE base64_module,       ONLY : islittleendian
@@ -128,11 +180,15 @@ MODULE lanczos_restart
       !
       INTEGER, INTENT(IN) :: nipol_input
       INTEGER, INTENT(OUT) :: ipol_stopped,ilan_stopped
+      COMPLEX(DP), INTENT(OUT) :: evc1(npwx,aband%nlocx,nks)
+      COMPLEX(DP), INTENT(OUT) :: evc1_old(npwx,aband%nlocx,nks)
       !
       ! Workspace
       !
-      INTEGER :: iun,ierr
+      INTEGER :: lbnd,ibnd
       INTEGER :: nipol_input_tmp,n_lanczos_tmp,nspin_tmp
+      COMPLEX(DP), ALLOCATABLE :: evc1_tmp(:,:,:)
+      INTEGER :: iun,ierr
       LOGICAL :: found
       CHARACTER(LEN=256) :: fname
       REAL(DP), EXTERNAL :: GET_CLOCK
@@ -148,6 +204,8 @@ MODULE lanczos_restart
       !
       CALL start_clock('lan_restart')
       time_spent(1) = get_clock('lan_restart')
+      !
+      ! READ THE SUMMARY FILE
       !
       IF(mpime == root) THEN
          !
@@ -208,6 +266,28 @@ MODULE lanczos_restart
       CALL mp_bcast(ilan_stopped,root,world_comm)
       CALL mp_bcast(beta_store,root,world_comm)
       CALL mp_bcast(zeta_store,root,world_comm)
+      !
+      ! READ EVC1 & EVC1_OLD
+      !
+      ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+      !
+      fname = TRIM(wbse_restart_dir)//'/evc1.dat'
+      CALL plep_read_G_and_distribute(fname,evc1_tmp)
+      !
+      DO lbnd = 1,aband%nloc
+         ibnd = aband%l2g(lbnd)
+         evc1(:,lbnd,:) = evc1_tmp(:,ibnd,:)
+      ENDDO
+      !
+      fname = TRIM(wbse_restart_dir)//'/evc1_old.dat'
+      CALL plep_read_G_and_distribute(fname,evc1_tmp)
+      !
+      DO lbnd = 1,aband%nloc
+         ibnd = aband%l2g(lbnd)
+         evc1_old(:,lbnd,:) = evc1_tmp(:,ibnd,:)
+      ENDDO
+      !
+      DEALLOCATE(evc1_tmp)
       !
       ! BARRIER
       !
@@ -301,6 +381,9 @@ MODULE lanczos_restart
       !
       IF(mpime == root) THEN
          CALL remove_if_present(TRIM(wbse_restart_dir)//'/summary.json')
+         CALL remove_if_present(TRIM(wbse_restart_dir)//'/lanczos.dat')
+         CALL remove_if_present(TRIM(wbse_restart_dir)//'/evc1.dat')
+         CALL remove_if_present(TRIM(wbse_restart_dir)//'/evc1_old.dat')
          ierr = f_rmdir(TRIM(wbse_restart_dir))
       ENDIF
       !

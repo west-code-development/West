@@ -1097,4 +1097,4 @@ wbse_control
    * - **Default**
      - True
    * - **Description**
-     - Speeds up the Lanczos iterations by reducing I/O, at the price of increasing memory consumption. Turn off to save memory. Used only when wbse_calculation is "L" or "l".
+     - Speeds up the calculation by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.

@@ -18,10 +18,10 @@ SUBROUTINE wbse_memory_report()
   USE io_global,           ONLY : stdout
   USE wvfct,               ONLY : npwx
   USE control_flags,       ONLY : gamma_only
-  USE mp_global,           ONLY : nimage,nbgrp
+  USE mp_global,           ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
   USE pwcom,               ONLY : nks
-  USE westcom,             ONLY : l_lanczos,nbnd_occ,n_trunc_bands,n_pdep_basis,npwqx,logfile
+  USE westcom,             ONLY : l_bse,l_lanczos,nbnd_occ,n_trunc_bands,n_pdep_basis,npwqx,logfile
   USE distribution_center, ONLY : pert
   USE noncollin_module,    ONLY : npol
   USE json_module,         ONLY : json_file
@@ -31,6 +31,7 @@ SUBROUTINE wbse_memory_report()
   TYPE(json_file) :: json
   INTEGER :: iunit
   INTEGER, PARAMETER :: Mb=1024*1024, complex_size=16, real_size=8
+  INTEGER :: nbndloc
   REAL(DP) :: mem_tot, mem_partial
   !
   CALL pw_memory_report()
@@ -43,6 +44,8 @@ SUBROUTINE wbse_memory_report()
      !
   ENDIF
   !
+  nbndloc = (nbnd_occ(1)-n_trunc_bands-1)/nbgrp+1
+  !
   IF( .NOT. l_lanczos ) THEN
      mem_tot = 0._DP
      WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
@@ -51,15 +54,15 @@ SUBROUTINE wbse_memory_report()
      WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
      WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwqx*(nbnd_occ(1)-n_trunc_bands)*pert%nlocx
+     mem_partial = (1.0_DP/Mb)*complex_size*npwqx*nbndloc*pert%nlocx
      WRITE(stdout,'(5x,"[MEM] dvg_exc                 ",f10.2," Mb", 5x,"(",i7,",",i5,",",i5,")")') &
-        mem_partial, npwqx, nbnd_occ(1)-n_trunc_bands, pert%nlocx
+        mem_partial, npwqx, nbndloc, pert%nlocx
      IF( mpime == root ) CALL json%add( 'memory.dvg_exc', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwqx*(nbnd_occ(1)-n_trunc_bands)*pert%nlocx
+     mem_partial = (1.0_DP/Mb)*complex_size*npwqx*nbndloc*pert%nlocx
      WRITE(stdout,'(5x,"[MEM] dng_exc                 ",f10.2," Mb", 5x,"(",i7,","i5,",",i5,")")') &
-        mem_partial, npwqx, nbnd_occ(1)-n_trunc_bands, pert%nlocx
+        mem_partial, npwqx, nbndloc, pert%nlocx
      IF( mpime == root ) CALL json%add( 'memory.dng_exc', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
@@ -97,54 +100,50 @@ SUBROUTINE wbse_memory_report()
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
   IF( .NOT. l_lanczos ) THEN
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*(nbnd_occ(1)-n_trunc_bands)
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbndloc
      WRITE(stdout,'(5x,"[MEM] dvpsi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx*npol, nbnd_occ(1)-n_trunc_bands
+        mem_partial, npwx*npol, nbndloc
      IF( mpime == root ) CALL json%add( 'memory.dvpsi', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*(nbnd_occ(1)-n_trunc_bands)
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbndloc
      WRITE(stdout,'(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx*npol, nbnd_occ(1)-n_trunc_bands
+        mem_partial, npwx*npol, nbndloc
      IF( mpime == root ) CALL json%add( 'memory.dpsi', mem_partial )
      mem_tot = mem_tot + mem_partial
-     !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*((nbnd_occ(1)-n_trunc_bands-1)/nbgrp+1)*2
-     WRITE(stdout,'(5x,"[MEM] Liouville workspace     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, ((nbnd_occ(1)-n_trunc_bands-1)/nbgrp+1)*2
-     IF( mpime == root ) CALL json%add( 'memory.liouville', mem_partial )
-     mem_tot = mem_tot + mem_partial
   ELSE
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*(nbnd_occ(1)-n_trunc_bands)*nks
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*nks*3
      WRITE(stdout,'(5x,"[MEM] d0psi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, (nbnd_occ(1)-n_trunc_bands)*nks
+        mem_partial, npwx, nbndloc*nks*3
      IF( mpime == root ) CALL json%add( 'memory.d0psi', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*(nbnd_occ(1)-n_trunc_bands)
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc
      WRITE(stdout,'(5x,"[MEM] evc1                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, nbnd_occ(1)-n_trunc_bands
+        mem_partial, npwx, nbndloc
      IF( mpime == root ) CALL json%add( 'memory.evc1', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*(nbnd_occ(1)-n_trunc_bands)*2
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*2
      WRITE(stdout,'(5x,"[MEM] Lanczos workspace       ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, (nbnd_occ(1)-n_trunc_bands)*2
+        mem_partial, npwx, nbndloc*2
      IF( mpime == root ) CALL json%add( 'memory.lanczos', mem_partial )
-     mem_tot = mem_tot + mem_partial
-     !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*((nbnd_occ(1)-n_trunc_bands-1)/nimage+1)*2
-     WRITE(stdout,'(5x,"[MEM] Liouville workspace     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, ((nbnd_occ(1)-n_trunc_bands-1)/nimage+1)*2
-     IF( mpime == root ) CALL json%add( 'memory.liouville', mem_partial )
      mem_tot = mem_tot + mem_partial
   ENDIF
   !
-  mem_partial = (1.0_DP/Mb)*complex_size*npwx*(nbnd_occ(1)-n_trunc_bands)*2
-  WRITE(stdout,'(5x,"[MEM] kernel                  ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx, (nbnd_occ(1)-n_trunc_bands)*2
-  IF( mpime == root ) CALL json%add( 'memory.kernel', mem_partial )
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*2
+  WRITE(stdout,'(5x,"[MEM] Liouville workspace     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+     mem_partial, npwx, nbndloc*2
+  IF( mpime == root ) CALL json%add( 'memory.liouville', mem_partial )
   mem_tot = mem_tot + mem_partial
+  !
+  IF( l_bse ) THEN
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*(nbnd_occ(1)-n_trunc_bands)*2
+     WRITE(stdout,'(5x,"[MEM] kernel                  ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+        mem_partial, npwx, (nbnd_occ(1)-n_trunc_bands)*2
+     IF( mpime == root ) CALL json%add( 'memory.kernel', mem_partial )
+     mem_tot = mem_tot + mem_partial
+  ENDIF
   !
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   WRITE(stdout,'(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot

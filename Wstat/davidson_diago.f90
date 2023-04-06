@@ -384,7 +384,7 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            EXIT iterate
            !
-        ELSE IF ( kter == n_pdep_maxiter ) THEN
+        ELSEIF ( kter == n_pdep_maxiter ) THEN
            !
            ! ... last iteration, some roots not converged: return
            !
@@ -852,7 +852,7 @@ SUBROUTINE davidson_diago_k ( )
               !
               EXIT iterate
               !
-           ELSE IF ( kter == n_pdep_maxiter ) THEN
+           ELSEIF ( kter == n_pdep_maxiter ) THEN
               !
               ! ... last iteration, some roots not converged: return
               !

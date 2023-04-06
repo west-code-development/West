@@ -30,6 +30,7 @@ SUBROUTINE wstat_memory_report()
   TYPE(json_file) :: json
   INTEGER :: iunit
   INTEGER, PARAMETER :: Mb=1024*1024, complex_size=16, real_size=8
+  INTEGER :: nbndloc
   REAL(DP) :: mem_tot, mem_partial
   !
   CALL pw_memory_report()
@@ -41,6 +42,8 @@ SUBROUTINE wstat_memory_report()
      CALL json%add( 'memory.units', 'Mb' )
      !
   ENDIF
+  !
+  nbndloc = (nbnd_occ(1)-1)/nbgrp+1
   !
   mem_tot = 0.0_DP
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
@@ -92,15 +95,15 @@ SUBROUTINE wstat_memory_report()
   WRITE(stdout,'(5x,"[MEM] Allocated arrays      ",5x,"est. size (Mb)", 5x,"dimensions")')
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
-  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbndloc
   WRITE(stdout,'(5x,"[MEM] dvpsi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)
+     mem_partial, npwx*npol, nbndloc
   IF( mpime == root ) CALL json%add( 'memory.dvpsi', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
-  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbndloc
   WRITE(stdout,'(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)
+     mem_partial, npwx*npol, nbndloc
   IF( mpime == root ) CALL json%add( 'memory.dpsi', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
@@ -112,9 +115,9 @@ SUBROUTINE wstat_memory_report()
      mem_tot = mem_tot + mem_partial
   ENDIF
   !
-  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*((nbnd_occ(1)-1)/nbgrp+1)*4
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbndloc*4
   WRITE(stdout,'(5x,"[MEM] Sternheimer workspace   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx*npol, ((nbnd_occ(1)-1)/nbgrp+1)*4
+     mem_partial, npwx*npol, nbndloc*4
   IF( mpime == root ) CALL json%add( 'memory.sternheimer', mem_partial )
   mem_tot = mem_tot + mem_partial
   !

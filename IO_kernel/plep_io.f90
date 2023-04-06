@@ -202,7 +202,7 @@ MODULE plep_io
       !
       USE kinds,         ONLY : DP,i8b
       USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
-      USE westcom,       ONLY : npwq,npwq_g,nbndval0x,n_trunc_bands
+      USE westcom,       ONLY : nbndval0x,n_trunc_bands
       USE gvect,         ONLY : ig_l2g
       USE pwcom,         ONLY : nks,npwx
       USE base64_module, ONLY : islittleendian
@@ -286,7 +286,7 @@ MODULE plep_io
       !
       USE kinds,         ONLY : DP,i8b
       USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
-      USE westcom,       ONLY : npwq,npwq_g,nbndval0x,n_trunc_bands
+      USE westcom,       ONLY : nbndval0x,n_trunc_bands
       USE gvect,         ONLY : ig_l2g
       USE pwcom,         ONLY : nks,npwx
       USE base64_module, ONLY : islittleendian

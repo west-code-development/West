@@ -14,18 +14,17 @@
 SUBROUTINE wbse_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,          ONLY : localization,l_local_repr,macropol_calculation,l_macropol,solver,&
-                             & l_bse_calculation,wbse_calculation,l_davidson,l_lanczos,&
-                             & qp_correction,l_qp_correction,spin_excitation,l_bse_triplet,&
-                             & wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_basis,&
-                             & n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,trev_pdep,&
-                             & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
-                             & alphapv_dfpt,l_use_ecutrho,wbse_save_dir
-  USE kinds,            ONLY : DP
-  USE types_coulomb,    ONLY : pot3D
-  USE wbse_dv,          ONLY : wbse_dv_setup
-  USE mp_global,        ONLY : nbgrp
+  USE westcom,              ONLY : localization,l_local_repr,macropol_calculation,l_macropol,&
+                                 & solver,l_bse,wbse_calculation,l_davidson,l_lanczos,&
+                                 & qp_correction,l_qp_correction,spin_excitation,l_bse_triplet,&
+                                 & wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_basis,&
+                                 & n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,trev_pdep,&
+                                 & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
+                                 & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
+                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir
+  USE kinds,                ONLY : DP
+  USE types_coulomb,        ONLY : pot3D
+  USE wbse_dv,              ONLY : wbse_dv_setup
   !
   IMPLICIT NONE
   !
@@ -49,9 +48,9 @@ SUBROUTINE wbse_setup()
   !
   SELECT CASE(TRIM(solver))
   CASE('BSE','bse')
-     l_bse_calculation = .TRUE.
+     l_bse = .TRUE.
   CASE('TDDFT','tddft')
-     l_bse_calculation = .FALSE.
+     l_bse = .FALSE.
   END SELECT
   !
   SELECT CASE(wbse_calculation)
@@ -62,8 +61,6 @@ SUBROUTINE wbse_setup()
      l_lanczos = .TRUE.
      l_davidson = .FALSE.
   END SELECT
-  !
-  IF(l_lanczos .AND. nbgrp > 1) CALL errore('wbse_setup','band groups not implemented for Lanczos',1)
   !
   IF(TRIM(qp_correction) == '') THEN
      l_qp_correction = .FALSE.
@@ -107,7 +104,7 @@ SUBROUTINE wbse_setup()
   !
   CALL set_nbndocc()
   !
-  CALL wbse_dv_setup(l_bse_calculation)
+  CALL wbse_dv_setup(l_bse)
   !
   CALL my_mkdir(wbse_save_dir)
   !
@@ -117,7 +114,7 @@ SUBROUTINE wbse_setup()
   !
   ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
   !
-  IF(l_bse_calculation) THEN
+  IF(l_bse) THEN
      CALL bse_start()
   ENDIF
   !
@@ -127,25 +124,28 @@ END SUBROUTINE
 SUBROUTINE bse_start()
   !-----------------------------------------------------------------------
   !
-  USE kinds,            ONLY : DP
-  USE io_global,        ONLY : stdout
-  USE pwcom,            ONLY : isk,nks,npwx
-  USE westcom,          ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
-                             & n_trunc_bands,sigma_c_head,sigma_x_head,wbse_epsinfty,l_local_repr,&
-                             & overlap_thr,u_matrix,ovl_matrix,n_bse_idx,idx_matrix
-  USE lsda_mod,         ONLY : nspin
-  USE constants,        ONLY : e2,pi
-  USE cell_base,        ONLY : omega
-  USE types_coulomb,    ONLY : pot3D
-  USE wbse_io,          ONLY : read_umatrix_and_omatrix
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE pwcom,                ONLY : isk,nks,npwx
+  USE westcom,              ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
+                                 & n_trunc_bands,sigma_c_head,sigma_x_head,wbse_epsinfty,&
+                                 & l_local_repr,overlap_thr,u_matrix,ovl_matrix,n_bse_idx,idx_matrix
+  USE lsda_mod,             ONLY : nspin
+  USE constants,            ONLY : e2,pi
+  USE cell_base,            ONLY : omega
+  USE types_coulomb,        ONLY : pot3D
+  USE wbse_io,              ONLY : read_umatrix_and_omatrix
+  USE distribution_center,  ONLY : aband
+  USE class_idistribute,    ONLY : idistribute
   !
   IMPLICIT NONE
   !
   ! Workspace
   !
   INTEGER :: do_idx,nbnd_do,nbndval,is
-  INTEGER :: ibnd,jbnd,iks,current_spin
+  INTEGER :: lbnd,ibnd,jbnd,iks,current_spin
   REAL(DP) :: ovl_value
+  COMPLEX(DP), ALLOCATABLE :: u_tmp(:,:)
   !
   ! the divergence term in Fock potential
   !
@@ -159,16 +159,30 @@ SUBROUTINE bse_start()
   !
   nbnd_do = nbndval0x-n_trunc_bands
   !
+  aband = idistribute()
+  !
+  CALL aband%init(nbnd_do,'b','nbndval',.FALSE.)
+  !
   ! allocate and read unitary matrix and overlap matrix, if any
   !
   IF(l_local_repr) THEN
      !
-     ALLOCATE(u_matrix(nbnd_do,nbnd_do,nspin))
+     ALLOCATE(u_tmp(nbnd_do,nbnd_do))
+     ALLOCATE(u_matrix(aband%nloc,nbnd_do,nspin))
      ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,nspin))
      !
      DO is = 1,nspin
-        CALL read_umatrix_and_omatrix(nbnd_do,is,u_matrix(:,:,is),ovl_matrix(:,:,is))
+        !
+        CALL read_umatrix_and_omatrix(nbnd_do,is,u_tmp,ovl_matrix(:,:,is))
+        !
+        DO lbnd = 1,aband%nloc
+           ibnd = aband%l2g(lbnd)
+           u_matrix(lbnd,:,is) = u_tmp(ibnd,:)
+        ENDDO
+        !
      ENDDO
+     !
+     DEALLOCATE(u_tmp)
      !
   ENDIF
   !
@@ -232,14 +246,14 @@ SUBROUTINE read_qp_eigs()
   !
   ! read qp eigenvalues from JSON file
   !
-  USE kinds,            ONLY : DP
-  USE constants,        ONLY : RYTOEV
-  USE io_global,        ONLY : ionode
-  USE mp,               ONLY : mp_bcast
-  USE mp_global,        ONLY : intra_image_comm
-  USE westcom,          ONLY : et_qp,qp_correction
-  USE pwcom,            ONLY : nspin,nbnd
-  USE json_module,      ONLY : json_file
+  USE kinds,                ONLY : DP
+  USE constants,            ONLY : RYTOEV
+  USE io_global,            ONLY : ionode
+  USE mp,                   ONLY : mp_bcast
+  USE mp_global,            ONLY : intra_image_comm
+  USE westcom,              ONLY : et_qp,qp_correction
+  USE pwcom,                ONLY : nspin,nbnd
+  USE json_module,          ONLY : json_file
   !
   IMPLICIT NONE
   !

@@ -62,7 +62,8 @@ SUBROUTINE compute_d0psi_rs()
   USE noncollin_module,     ONLY : npol
   USE io_push,              ONLY : io_push_title
   USE pwcom,                ONLY : isk,igk_k,ngk,lsda,npw,npwx,nks
-  USE westcom,              ONLY : nbndval0x,nbnd_occ,n_trunc_bands,iuwfc,lrwfc,d0psi
+  USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,d0psi
+  USE distribution_center,  ONLY : aband
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -77,7 +78,7 @@ SUBROUTINE compute_d0psi_rs()
   !
   INTEGER :: i, j, k, ip, ir, ir_end, index0
   REAL(DP) :: inv_nr1, inv_nr2, inv_nr3
-  INTEGER :: ibnd, lbnd, nbndval
+  INTEGER :: ibnd, jbnd, lbnd, nbndval, nbnd_do
   INTEGER :: iks, current_k, current_spin
   INTEGER :: dffts_nnr
   INTEGER, PARAMETER :: n_ipol = 3
@@ -138,6 +139,12 @@ SUBROUTINE compute_d0psi_rs()
      npw = ngk(iks)
      nbndval = nbnd_occ(iks)
      !
+     nbnd_do = 0
+     DO lbnd = 1, aband%nloc
+        ibnd = aband%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+     ENDDO
+     !
      ! ... read in wavefunctions from the previous iteration
      !
      IF(nks > 1) THEN
@@ -155,15 +162,16 @@ SUBROUTINE compute_d0psi_rs()
      !
      IF(gamma_only) THEN
         !
-        DO ibnd = n_trunc_bands+1, nbndval, 2
+        DO lbnd = 1, nbnd_do, 2
            !
-           lbnd = ibnd-n_trunc_bands
+           ibnd = aband%l2g(lbnd)+n_trunc_bands
+           jbnd = aband%l2g(lbnd+1)+n_trunc_bands
            !
-           IF(ibnd < nbndval) THEN
+           IF(lbnd < nbnd_do) THEN
               !
               ! double bands @ gamma
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,ibnd+1),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
               !
               !$acc kernels present(aux_r)
               aux_r(:) = psic
@@ -215,9 +223,9 @@ SUBROUTINE compute_d0psi_rs()
         !
         ! only single bands
         !
-        DO ibnd = n_trunc_bands+1, nbndval
+        DO lbnd = 1, nbnd_do
            !
-           lbnd = ibnd-n_trunc_bands
+           ibnd = aband%l2g(lbnd)+n_trunc_bands
            !
            CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !
@@ -243,9 +251,9 @@ SUBROUTINE compute_d0psi_rs()
         !
         IF(npol == 2) THEN
            !
-           DO ibnd = n_trunc_bands+1, nbndval
+           DO lbnd = 1, nbnd_do
               !
-              lbnd = ibnd-n_trunc_bands
+              ibnd = aband%l2g(lbnd)+n_trunc_bands
               !
               CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
               !
@@ -274,23 +282,25 @@ SUBROUTINE compute_d0psi_rs()
      ENDIF
      !
 #if defined(__CUDA)
-     CALL reallocate_ps_gpu(nbndval,nbndval-n_trunc_bands)
+     CALL reallocate_ps_gpu(nbndval,nbnd_do)
 #endif
      !
      ! P_c|d0psi>
      !
      DO ip = 1, n_ipol
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval-n_trunc_bands,d0psi(:,:,iks,ip),(1._DP,0._DP))
+        CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,d0psi(:,:,iks,ip),(1._DP,0._DP))
      ENDDO
      !
   ENDDO
   !
   IF(gstart == 2 .AND. gamma_only) THEN
+     nbnd_do = aband%nlocx
+     !
      !$acc parallel loop collapse(3) present(d0psi)
      DO ip = 1, n_ipol
         DO iks = 1, nks
-           DO ibnd = 1, nbndval0x-n_trunc_bands
-              d0psi(1,ibnd,iks,ip) = CMPLX(REAL(d0psi(1,ibnd,iks,ip),KIND=DP),KIND=DP)
+           DO lbnd = 1, nbnd_do
+              d0psi(1,lbnd,iks,ip) = CMPLX(REAL(d0psi(1,lbnd,iks,ip),KIND=DP),KIND=DP)
            ENDDO
         ENDDO
      ENDDO
@@ -371,8 +381,8 @@ SUBROUTINE compute_d0psi_dfpt()
   !
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,inter_bgrp_comm
-  USE mp,                   ONLY : mp_sum,mp_bcast
+  USE mp_global,            ONLY : my_image_id,inter_image_comm
+  USE mp,                   ONLY : mp_bcast
   USE buffers,              ONLY : get_buffer
   USE uspp_init,            ONLY : init_us_2
   USE control_flags,        ONLY : gamma_only
@@ -380,9 +390,8 @@ SUBROUTINE compute_d0psi_dfpt()
   USE noncollin_module,     ONLY : npol
   USE io_push,              ONLY : io_push_title
   USE pwcom,                ONLY : npw,npwx,nks,current_spin,isk,xk,lsda,igk_k,current_k,ngk
-  USE westcom,              ONLY : nbndval0x,nbnd_occ,n_trunc_bands,iuwfc,lrwfc,tr2_dfpt,&
-                                 & n_dfpt_maxiter,l_kinetic_only,d0psi,l_lanczos,&
-                                 & l_skip_nl_part_of_hcomr
+  USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,&
+                                 & l_kinetic_only,d0psi,l_skip_nl_part_of_hcomr
   USE distribution_center,  ONLY : aband
 #if defined(__CUDA)
   USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
@@ -401,8 +410,8 @@ SUBROUTINE compute_d0psi_dfpt()
   !
   ! ... Local variables
   !
-  INTEGER :: il1, iv, lv, ip, ibnd, iks, ie, ierr
-  INTEGER :: nbndval
+  INTEGER :: iv, ip, ibnd, lbnd, iks, ie, ierr
+  INTEGER :: nbndval, nbnd_do
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
@@ -419,6 +428,12 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      npw = ngk(iks)
      nbndval = nbnd_occ(iks)
+     !
+     nbnd_do = 0
+     DO lbnd = 1, aband%nloc
+        ibnd = aband%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+     ENDDO
      !
 #if defined(__CUDA)
      CALL g2_kin_gpu(iks)
@@ -475,10 +490,9 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      d0psi(:,:,iks,:) = (0._DP,0._DP)
      !
-     DO il1 = 1, aband%nloc
+     DO lbnd = 1, aband%nloc
         !
-        lv = aband%l2g(il1)
-        iv = lv+n_trunc_bands
+        iv = aband%l2g(lbnd)+n_trunc_bands
         !
 #if defined(__CUDA)
         !$acc host_data use_device(phi_tmp)
@@ -521,9 +535,11 @@ SUBROUTINE compute_d0psi_dfpt()
         !
         !$acc update host(phi)
         !
-        d0psi(:,lv,iks,:) = phi
+        d0psi(:,lbnd,iks,:) = phi
         !
      ENDDO
+     !
+     !$acc update device(d0psi)
      !
      DEALLOCATE(eprec)
      DEALLOCATE(e)
@@ -535,31 +551,26 @@ SUBROUTINE compute_d0psi_dfpt()
      CALL deallocate_macropol_gpu()
 #endif
      !
-     IF(l_lanczos) THEN
-        CALL mp_sum(d0psi(:,:,iks,:),inter_image_comm)
-     ELSE
-        CALL mp_sum(d0psi(:,:,iks,:),inter_bgrp_comm)
-     ENDIF
-     !$acc update device(d0psi)
-     !
 #if defined(__CUDA)
-     CALL reallocate_ps_gpu(nbndval,nbndval-n_trunc_bands)
+     CALL reallocate_ps_gpu(nbndval,nbnd_do)
 #endif
      !
      ! P_c|d0psi>
      !
      DO ip = 1, n_ipol
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,nbndval-n_trunc_bands,d0psi(:,:,iks,ip),(1._DP,0._DP))
+        CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,d0psi(:,:,iks,ip),(1._DP,0._DP))
      ENDDO
      !
   ENDDO
   !
   IF(gstart == 2 .AND. gamma_only) THEN
+     nbnd_do = aband%nlocx
+     !
      !$acc parallel loop collapse(3) present(d0psi)
      DO ip = 1, n_ipol
         DO iks = 1, nks
-           DO ibnd = 1, nbndval0x-n_trunc_bands
-              d0psi(1,ibnd,iks,ip) = CMPLX(REAL(d0psi(1,ibnd,iks,ip),KIND=DP),KIND=DP)
+           DO lbnd = 1, nbnd_do
+              d0psi(1,lbnd,iks,ip) = CMPLX(REAL(d0psi(1,lbnd,iks,ip),KIND=DP),KIND=DP)
            ENDDO
         ENDDO
      ENDDO

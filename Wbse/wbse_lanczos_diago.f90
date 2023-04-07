@@ -174,7 +174,11 @@ SUBROUTINE wbse_lanczos_diago()
      pol_index = pol_index_input(ip)
      !
      IF(l_from_scratch) THEN
-        CALL io_push_title('Starting new Lanczos loop')
+        IF(nimage == 3) THEN
+           CALL io_push_title('Starting new Lanczos loops (XX,YY,ZZ)')
+        ELSE
+           CALL io_push_title('Starting new Lanczos loop ('//TRIM(pol_label_input(ip))//')')
+        ENDIF
         !
         !$acc kernels present(evc1_old,evc1_new,evc1,d0psi)
         evc1_old(:,:,:) = (0._DP,0._DP)
@@ -182,7 +186,7 @@ SUBROUTINE wbse_lanczos_diago()
         evc1(:,:,:) = d0psi(:,:,:,pol_index)
         !$acc end kernels
      ELSE
-        CALL io_push_title('Retarting Lanczos loop')
+        CALL io_push_title('Retarting Lanczos loop ('//TRIM(pol_label_input(ip))//')')
      ENDIF
      !
      CALL start_bar_type(barra,'lan_diago',n_lanczos-ilan_restart+1)

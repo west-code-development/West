@@ -27,7 +27,7 @@ SUBROUTINE do_wann()
   USE pwcom,                ONLY : npw,npwx,current_k,ngk
   USE buffers,              ONLY : get_buffer
   USE types_bz_grid,        ONLY : k_grid
-  USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_joint_d
+  USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_jade
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
@@ -134,7 +134,7 @@ SUBROUTINE do_wann()
      CALL mp_sum(amat,intra_bgrp_comm)
      CALL mp_sum(amat,inter_image_comm)
      !
-     CALL wann_joint_d(nstate,amat,6,umat)
+     CALL wann_jade(nstate,amat,6,umat)
      !
      IF(mpime == root) THEN
         !

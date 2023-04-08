@@ -98,8 +98,12 @@ MODULE wann_loc_wfc
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE wann_joint_d(m,a,na,u)
+    SUBROUTINE wann_jade(m,a,na,u)
       !------------------------------------------------------------------------
+      !
+      ! Joint approximate diagonalization of eigen-matrices
+      !
+      ! Gygi et al., Computer Physics Communications 155, 1-6 (2003)
       !
       USE kinds,                 ONLY : DP
       !
@@ -122,10 +126,14 @@ MODULE wann_loc_wfc
       INTEGER,PARAMETER :: itermax = 5000
       REAL(DP),PARAMETER :: spread_thr = 1.E-9_DP
       !
-      u = 0._DP
+      ! Initialize U = I
+      !
+      u(:,:) = (0._DP,0._DP)
       DO i = 1,m
-         u(i,i) = 1._DP
+         u(i,i) = (1._DP,0._DP)
       ENDDO
+      !
+      ! Compute initial spread
       !
       sigma_old = 0._DP
       DO ia = 1,na
@@ -145,6 +153,8 @@ MODULE wann_loc_wfc
                g12 = 0._DP
                g22 = 0._DP
                !
+               ! Compute 2x2 matrix G (equation 12)
+               !
                DO ia = 1,na
                   h1 = a(i,i,ia)-a(j,j,ia)
                   h2 = 2._DP*a(i,j,ia)
@@ -158,6 +168,8 @@ MODULE wann_loc_wfc
                e1 = g11
                e2 = g22
                !
+               ! Compute eigenvalues and eigenvectors of G
+               !
                IF(g12*g12 > 1.E-16_DP*ABS(g11*g22)) THEN
                   tau = 0.5_DP * (g22-g11) / g12
                   t = 1.0_DP / (ABS(tau) + SQRT(1._DP+tau**2))
@@ -168,6 +180,8 @@ MODULE wann_loc_wfc
                   e2 = e2 + t*g12
                ENDIF
                !
+               ! Use the eigenvector with the largest eigenvalue
+               !
                IF(e1 > e2) THEN
                   x = c
                   y = -s
@@ -176,13 +190,19 @@ MODULE wann_loc_wfc
                   y = c
                ENDIF
                !
+               ! Choose x >= 0 to ensure small rotation angle
+               !
                IF(x < 0._DP) THEN
                   x = -x
                   y = -y
                ENDIF
                !
+               ! Compute 2x2 rotation matrix R (equations 10 and 11)
+               !
                c = SQRT(0.5_DP*(x+1._DP))
                s = y / SQRT(2._DP*(x+1._DP))
+               !
+               ! Apply rotation R to the i and j columns of A
                !
                DO ia = 1,na
                   DO k = 1,m
@@ -193,14 +213,18 @@ MODULE wann_loc_wfc
                   ENDDO
                ENDDO
                !
+               ! Apply rotation R to the i and j rows of A
+               !
                DO ia = 1,na
                   DO k = 1,m
-                     tmpi =  c*a(i,k,ia) + s*a(j,k,ia)
-                     tmpj = -s*a(i,k,ia) + c*a(j,k,ia)
+                     tmpi =  a(i,k,ia)*c + a(j,k,ia)*s
+                     tmpj = -a(i,k,ia)*s + a(j,k,ia)*c
                      a(i,k,ia) = tmpi
                      a(j,k,ia) = tmpj
                   ENDDO
                ENDDO
+               !
+               ! Accumulate orthogonal transformation U = UR
                !
                DO k = 1,m
                   tmpi =  u(k,i)*c + u(k,j)*s
@@ -212,12 +236,16 @@ MODULE wann_loc_wfc
             ENDDO
          ENDDO
          !
+         ! Compute new spread
+         !
          sigma = 0._DP
          DO ia = 1,na
             DO j = 1,m
                sigma = sigma + a(j,j,ia)*a(j,j,ia)
             ENDDO
          ENDDO
+         !
+         ! Check convergence
          !
          IF(ABS(sigma-sigma_old) < spread_thr) THEN
             conv = .TRUE.

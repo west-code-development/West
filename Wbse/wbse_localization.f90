@@ -26,7 +26,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   USE qbox_interface,       ONLY : load_qbox_wfc
   USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection
   USE wbse_io,              ONLY : write_umatrix_and_omatrix
-  USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_joint_d
+  USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_jade
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
@@ -204,7 +204,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         CALL stop_bar_type(barra,'wann')
         !
-        CALL wann_joint_d(nbnd_do,a_matrix,6,u_matrix)
+        CALL wann_jade(nbnd_do,a_matrix,6,u_matrix)
         !
         !$acc exit data delete(proj)
         DEALLOCATE(proj)

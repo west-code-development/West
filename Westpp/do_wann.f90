@@ -46,8 +46,7 @@ SUBROUTINE do_wann()
   REAL(DP) :: wan_center(3)
   REAL(DP), ALLOCATABLE :: proj(:,:)
   REAL(DP), ALLOCATABLE :: amat(:,:,:)
-  REAL(DP), ALLOCATABLE :: umat_r(:)
-  COMPLEX(DP), ALLOCATABLE :: umat(:,:)
+  REAL(DP), ALLOCATABLE :: umat(:,:)
   CHARACTER(LEN=5) :: label_k
   CHARACTER(LEN=9) :: label_b
   TYPE(bar_type) :: barra
@@ -167,13 +166,7 @@ SUBROUTINE do_wann()
         !
         ! output transformation matrix
         !
-        ALLOCATE(umat_r(nstate*nstate))
-        !
-        umat_r = RESHAPE(REAL(umat,KIND=DP),(/nstate*nstate/))
-        !
-        CALL json%add('output.B.K'//label_k//'.trans_matrix',umat_r)
-        !
-        DEALLOCATE(umat_r)
+        CALL json%add('output.B.K'//label_k//'.trans_matrix',RESHAPE(umat,(/nstate*nstate/)))
         !
      ENDIF
      !

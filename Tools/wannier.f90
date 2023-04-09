@@ -114,31 +114,53 @@ MODULE wann_loc_wfc
       INTEGER,INTENT(IN) :: m
       INTEGER,INTENT(IN) :: na
       REAL(DP),INTENT(INOUT) :: a(m,m,na)
-      COMPLEX(DP),INTENT(OUT) :: u(m,m)
+      REAL(DP),INTENT(OUT) :: u(m,m)
       !
       ! Workspace
       !
       LOGICAL :: conv
-      INTEGER :: ia,i,j,k,iter
-      REAL(DP) :: sigma,sigma_old,tmpi,tmpj
+      INTEGER :: ia,i,k,mwork,iter,sweep,p,q
+      REAL(DP) :: sigma,sigma_old
       REAL(DP) :: c,s,h1,h2,e1,e2,g11,g22,g12,x,y,t,tau
+      !
+      INTEGER,ALLOCATABLE :: top(:),bot(:)
+      REAL(DP),ALLOCATABLE :: rot(:,:),aux(:,:)
       !
       INTEGER,PARAMETER :: itermax = 5000
       REAL(DP),PARAMETER :: spread_thr = 1.E-9_DP
       !
+      ALLOCATE(rot(m,m))
+      ALLOCATE(aux(m,m))
+      !
+      ! Handle odd m
+      !
+      IF(MOD(m,2) == 0) THEN
+         mwork = m
+      ELSE
+         mwork = m+1
+      ENDIF
+      !
+      ALLOCATE(top(mwork/2))
+      ALLOCATE(bot(mwork/2))
+      !
+      DO k = 1,mwork/2
+         top(k) = k*2 - 1
+         bot(k) = k*2
+      ENDDO
+      !
       ! Initialize U = I
       !
-      u(:,:) = (0._DP,0._DP)
+      u(:,:) = 0._DP
       DO i = 1,m
-         u(i,i) = (1._DP,0._DP)
+         u(i,i) = 1._DP
       ENDDO
       !
       ! Compute initial spread
       !
       sigma_old = 0._DP
       DO ia = 1,na
-         DO j = 1,m
-            sigma_old = sigma_old+a(j,j,ia)*a(j,j,ia)
+         DO i = 1,m
+            sigma_old = sigma_old+a(i,i,ia)*a(i,i,ia)
          ENDDO
       ENDDO
       !
@@ -146,18 +168,31 @@ MODULE wann_loc_wfc
       !
       DO iter = 1,itermax
          !
-         DO i = 1,m
-            DO j = i+1,m
+         DO sweep = 1,m-1
+            !
+            rot(:,:) = 0._DP
+            !
+            DO k = 1,mwork/2
+               !
+               p = MIN(top(k),bot(k))
+               q = MAX(top(k),bot(k))
+               !
+               ! Handle odd m
+               !
+               IF(q > m) THEN
+                  rot(p,p) = 1._DP
+                  CYCLE
+               ENDIF
+               !
+               ! Compute 2x2 matrix G
                !
                g11 = 0._DP
                g12 = 0._DP
                g22 = 0._DP
                !
-               ! Compute 2x2 matrix G (equation 12)
-               !
                DO ia = 1,na
-                  h1 = a(i,i,ia)-a(j,j,ia)
-                  h2 = 2._DP*a(i,j,ia)
+                  h1 = a(p,p,ia)-a(q,q,ia)
+                  h2 = 2._DP*a(p,q,ia)
                   g11 = g11+h1*h1
                   g12 = g12+h1*h2
                   g22 = g22+h2*h2
@@ -197,51 +232,43 @@ MODULE wann_loc_wfc
                   y = -y
                ENDIF
                !
-               ! Compute 2x2 rotation matrix R (equations 10 and 11)
+               ! Compute 2x2 rotation matrix R
                !
                c = SQRT(0.5_DP*(x+1._DP))
                s = y / SQRT(2._DP*(x+1._DP))
                !
-               ! Apply rotation R to the i and j columns of A
-               !
-               DO ia = 1,na
-                  DO k = 1,m
-                     tmpi =  a(k,i,ia)*c + a(k,j,ia)*s
-                     tmpj = -a(k,i,ia)*s + a(k,j,ia)*c
-                     a(k,i,ia) = tmpi
-                     a(k,j,ia) = tmpj
-                  ENDDO
-               ENDDO
-               !
-               ! Apply rotation R to the i and j rows of A
-               !
-               DO ia = 1,na
-                  DO k = 1,m
-                     tmpi =  a(i,k,ia)*c + a(j,k,ia)*s
-                     tmpj = -a(i,k,ia)*s + a(j,k,ia)*c
-                     a(i,k,ia) = tmpi
-                     a(j,k,ia) = tmpj
-                  ENDDO
-               ENDDO
-               !
-               ! Accumulate orthogonal transformation U = UR
-               !
-               DO k = 1,m
-                  tmpi =  u(k,i)*c + u(k,j)*s
-                  tmpj = -u(k,i)*s + u(k,j)*c
-                  u(k,i) = CMPLX(tmpi,KIND=DP)
-                  u(k,j) = CMPLX(tmpj,KIND=DP)
-               ENDDO
+               rot(p,p) = c
+               rot(q,p) = s
+               rot(p,q) = -s
+               rot(q,q) = c
                !
             ENDDO
+            !
+            ! Apply rotation R to rows and columns of A
+            !
+            DO ia = 1,na
+               CALL DGEMM('T','N',m,m,m,1._DP,rot,m,a(:,:,ia),m,0._DP,aux,m)
+               CALL DGEMM('N','N',m,m,m,1._DP,aux,m,rot,m,0._DP,a(:,:,ia),m)
+            ENDDO
+            !
+            ! Accumulate unitary transformation matrix U
+            !
+            CALL DGEMM('N','N',m,m,m,1._DP,u,m,rot,m,0._DP,aux,m)
+            !
+            u(:,:) = aux
+            !
+            ! Go to next round of tournament
+            !
+            CALL wann_tournament(top,bot,mwork)
+            !
          ENDDO
          !
          ! Compute new spread
          !
          sigma = 0._DP
          DO ia = 1,na
-            DO j = 1,m
-               sigma = sigma + a(j,j,ia)*a(j,j,ia)
+            DO i = 1,m
+               sigma = sigma + a(i,i,ia)**2
             ENDDO
          ENDDO
          !
@@ -256,7 +283,42 @@ MODULE wann_loc_wfc
          !
       ENDDO
       !
+      DEALLOCATE(rot)
+      DEALLOCATE(aux)
+      DEALLOCATE(top)
+      DEALLOCATE(bot)
+      !
       IF(.NOT. conv) CALL errore('wann','convergence not achieved',itermax)
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE wann_tournament(top,bot,m)
+      !------------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      INTEGER,INTENT(IN) :: m
+      INTEGER,INTENT(INOUT) :: top(m/2)
+      INTEGER,INTENT(INOUT) :: bot(m/2)
+      !
+      INTEGER,ALLOCATABLE :: new_top(:)
+      INTEGER,ALLOCATABLE :: new_bot(:)
+      !
+      ALLOCATE(new_top(m/2))
+      ALLOCATE(new_bot(m/2))
+      !
+      new_top(1) = top(1)
+      new_top(3:m/2) = top(2:m/2-1)
+      new_top(2) = bot(1)
+      new_bot(1:m/2-1) = bot(2:m/2)
+      new_bot(m/2) = top(m/2)
+      !
+      top(:) = new_top
+      bot(:) = new_bot
+      !
+      DEALLOCATE(new_top)
+      DEALLOCATE(new_bot)
       !
     END SUBROUTINE
     !

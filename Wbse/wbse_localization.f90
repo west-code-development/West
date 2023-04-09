@@ -56,6 +56,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   REAL(DP) :: val(6)
   REAL(DP) :: ovl_val
   REAL(DP),ALLOCATABLE :: proj(:,:)
+  REAL(DP),ALLOCATABLE :: u_real(:,:)
   REAL(DP),ALLOCATABLE :: a_matrix(:,:,:)
   REAL(DP),ALLOCATABLE :: aux(:)
   REAL(DP),ALLOCATABLE :: aux2(:)
@@ -98,6 +99,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         ALLOCATE(a_matrix(nbnd_do,nbnd_do,6))
         ALLOCATE(aux(dffts_nnr))
         ALLOCATE(aux2(dffts_nnr))
+        ALLOCATE(u_real(nbnd_do,nbnd_do))
         !
         CALL wann_calc_proj(proj)
         !
@@ -204,11 +206,14 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         CALL stop_bar_type(barra,'wann')
         !
-        CALL wann_jade(nbnd_do,a_matrix,6,u_matrix)
+        CALL wann_jade(nbnd_do,a_matrix,6,u_real)
+        !
+        u_matrix(:,:) = CMPLX(u_real,KIND=DP)
         !
         !$acc exit data delete(proj)
         DEALLOCATE(proj)
         DEALLOCATE(a_matrix)
+        DEALLOCATE(u_real)
         !
         ! compute localized wfc
         !

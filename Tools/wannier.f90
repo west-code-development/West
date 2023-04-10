@@ -106,6 +106,9 @@ MODULE wann_loc_wfc
       ! Gygi et al., Computer Physics Communications 155, 1-6 (2003)
       !
       USE kinds,                 ONLY : DP
+#if defined(__CUDA)
+      USE cublas
+#endif
       !
       IMPLICIT NONE
       !
@@ -125,9 +128,12 @@ MODULE wann_loc_wfc
       !
       INTEGER,ALLOCATABLE :: top(:),bot(:)
       REAL(DP),ALLOCATABLE :: rot(:,:),aux(:,:)
+      !$acc declare device_resident(rot,aux)
       !
       INTEGER,PARAMETER :: itermax = 5000
       REAL(DP),PARAMETER :: spread_thr = 1.E-9_DP
+      !
+      CALL start_clock('jade')
       !
       ALLOCATE(rot(m,m))
       ALLOCATE(aux(m,m))
@@ -155,6 +161,8 @@ MODULE wann_loc_wfc
          u(i,i) = 1._DP
       ENDDO
       !
+      !$acc enter data copyin(a,u,top,bot)
+      !
       ! Compute initial spread
       !
       sigma_old = 0._DP
@@ -170,8 +178,11 @@ MODULE wann_loc_wfc
          !
          DO sweep = 1,m-1
             !
+            !$acc kernels present(rot)
             rot(:,:) = 0._DP
+            !$acc end kernels
             !
+            !$acc parallel loop present(rot,a)
             DO k = 1,mwork/2
                !
                p = MIN(top(k),bot(k))
@@ -179,98 +190,112 @@ MODULE wann_loc_wfc
                !
                ! Handle odd m
                !
-               IF(q > m) THEN
-                  rot(p,p) = 1._DP
-                  CYCLE
-               ENDIF
-               !
-               ! Compute 2x2 matrix G
-               !
-               g11 = 0._DP
-               g12 = 0._DP
-               g22 = 0._DP
-               !
-               DO ia = 1,na
-                  h1 = a(p,p,ia)-a(q,q,ia)
-                  h2 = 2._DP*a(p,q,ia)
-                  g11 = g11+h1*h1
-                  g12 = g12+h1*h2
-                  g22 = g22+h2*h2
-               ENDDO
-               !
-               c = 1._DP
-               s = 0._DP
-               e1 = g11
-               e2 = g22
-               !
-               ! Compute eigenvalues and eigenvectors of G
-               !
-               IF(g12*g12 > 1.E-16_DP*ABS(g11*g22)) THEN
-                  tau = 0.5_DP * (g22-g11) / g12
-                  t = 1.0_DP / (ABS(tau) + SQRT(1._DP+tau**2))
-                  IF(tau < 0._DP) t = -t
-                  c = 1._DP / SQRT(1._DP+t**2)
-                  s = t * c
-                  e1 = e1 - t*g12
-                  e2 = e2 + t*g12
-               ENDIF
-               !
-               ! Use the eigenvector with the largest eigenvalue
-               !
-               IF(e1 > e2) THEN
-                  x = c
-                  y = -s
+               IF(q <= m) THEN
+                  !
+                  ! Compute 2x2 matrix G
+                  !
+                  g11 = 0._DP
+                  g12 = 0._DP
+                  g22 = 0._DP
+                  !
+                  DO ia = 1,na
+                     h1 = a(p,p,ia)-a(q,q,ia)
+                     h2 = 2._DP*a(p,q,ia)
+                     g11 = g11+h1*h1
+                     g12 = g12+h1*h2
+                     g22 = g22+h2*h2
+                  ENDDO
+                  !
+                  c = 1._DP
+                  s = 0._DP
+                  e1 = g11
+                  e2 = g22
+                  !
+                  ! Compute eigenvalues and eigenvectors of G
+                  !
+                  IF(g12*g12 > 1.E-16_DP*ABS(g11*g22)) THEN
+                     tau = 0.5_DP * (g22-g11) / g12
+                     t = 1.0_DP / (ABS(tau) + SQRT(1._DP+tau**2))
+                     IF(tau < 0._DP) t = -t
+                     c = 1._DP / SQRT(1._DP+t**2)
+                     s = t * c
+                     e1 = e1 - t*g12
+                     e2 = e2 + t*g12
+                  ENDIF
+                  !
+                  ! Use the eigenvector with the largest eigenvalue
+                  !
+                  IF(e1 > e2) THEN
+                     x = c
+                     y = -s
+                  ELSE
+                     x = s
+                     y = c
+                  ENDIF
+                  !
+                  ! Choose x >= 0 to ensure small rotation angle
+                  !
+                  IF(x < 0._DP) THEN
+                     x = -x
+                     y = -y
+                  ENDIF
+                  !
+                  ! Compute 2x2 rotation matrix R
+                  !
+                  c = SQRT(0.5_DP*(x+1._DP))
+                  s = y / SQRT(2._DP*(x+1._DP))
+                  !
+                  rot(p,p) = c
+                  rot(q,p) = s
+                  rot(p,q) = -s
+                  rot(q,q) = c
+                  !
                ELSE
-                  x = s
-                  y = c
+                  !
+                  rot(p,p) = 1._DP
+                  !
                ENDIF
-               !
-               ! Choose x >= 0 to ensure small rotation angle
-               !
-               IF(x < 0._DP) THEN
-                  x = -x
-                  y = -y
-               ENDIF
-               !
-               ! Compute 2x2 rotation matrix R
-               !
-               c = SQRT(0.5_DP*(x+1._DP))
-               s = y / SQRT(2._DP*(x+1._DP))
-               !
-               rot(p,p) = c
-               rot(q,p) = s
-               rot(p,q) = -s
-               rot(q,q) = c
                !
             ENDDO
+            !$acc end parallel
             !
             ! Apply rotation R to rows and columns of A
             !
+            !$acc host_data use_device(rot,a,aux)
             DO ia = 1,na
                CALL DGEMM('T','N',m,m,m,1._DP,rot,m,a(:,:,ia),m,0._DP,aux,m)
                CALL DGEMM('N','N',m,m,m,1._DP,aux,m,rot,m,0._DP,a(:,:,ia),m)
             ENDDO
+            !$acc end host_data
             !
             ! Accumulate unitary transformation matrix U
             !
+            !$acc host_data use_device(u,rot,aux)
             CALL DGEMM('N','N',m,m,m,1._DP,u,m,rot,m,0._DP,aux,m)
+            !$acc end host_data
             !
+            !$acc kernels present(u,aux)
             u(:,:) = aux
+            !$acc end kernels
             !
             ! Go to next round of tournament
             !
             CALL wann_tournament(top,bot,mwork)
+            !
+            !$acc update device(top,bot)
             !
          ENDDO
          !
          ! Compute new spread
          !
          sigma = 0._DP
+         !$acc parallel loop collapse(2) reduction(+:sigma) present(a) copy(sigma)
          DO ia = 1,na
             DO i = 1,m
                sigma = sigma + a(i,i,ia)**2
             ENDDO
          ENDDO
+         !$acc end parallel
          !
          ! Check convergence
          !
@@ -283,12 +308,15 @@ MODULE wann_loc_wfc
          !
       ENDDO
       !
+      !$acc exit data delete(top,bot) copyout(a,u)
       DEALLOCATE(rot)
       DEALLOCATE(aux)
       DEALLOCATE(top)
       DEALLOCATE(bot)
       !
       IF(.NOT. conv) CALL errore('wann','convergence not achieved',itermax)
+      !
+      CALL stop_clock('jade')
       !
     END SUBROUTINE
     !

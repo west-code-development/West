@@ -30,8 +30,8 @@ MODULE wbse_tools
      MODULE PROCEDURE refresh_with_vr_distr_real
   END INTERFACE
   !
-  INTERFACE apply_preconditioning_dvg
-     MODULE PROCEDURE preconditioner_complex
+  INTERFACE wbse_precondition_dvg
+     MODULE PROCEDURE precondition_dvg_complex
   END INTERFACE
   !
   CONTAINS
@@ -571,16 +571,20 @@ MODULE wbse_tools
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE preconditioner_complex(ag,nselect,n,turn_shift)
+    SUBROUTINE precondition_dvg_complex(ag,nselect,n,turn_shift)
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : inter_image_comm
-      USE mp,                   ONLY : mp_max
+      USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,my_pool_id,nbgrp,my_bgrp_id
+      USE mp,                   ONLY : mp_bcast,mp_max
       USE distribution_center,  ONLY : pert,aband
       USE pwcom,                ONLY : nks,npwx
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
+#if defined(__CUDA)
+      USE wvfct_gpum,           ONLY : g2kin=>g2kin_d,et=>et_d
+#else
       USE wvfct,                ONLY : g2kin,et
+#endif
       !
       IMPLICIT NONE
       !
@@ -593,77 +597,119 @@ MODULE wbse_tools
       ! Workspace
       !
       INTEGER :: il1,ig1,ig,lbnd,ibnd,nbndval
-      INTEGER :: iks,current_k
+      INTEGER :: iks
       INTEGER :: mloc,mstart,max_mloc
-      REAL(DP):: temp,minimum
+      REAL(DP):: tmp,tmp_abs,tmp_sgn
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
+      REAL(DP),ALLOCATABLE :: g2kin_save(:,:)
+      REAL(DP),PARAMETER :: minimum = 0.01_DP
       !
-      minimum = 0.001_DP
-      !
+#if defined(__CUDA)
+      CALL start_clock_gpu('precd_ag')
+#else
       CALL start_clock('precd_ag')
+#endif
       !
-      mloc = 0
-      mstart = 1
-      DO il1 = 1,pert%nloc
-         ig1 = pert%l2g(il1)
-         IF(ig1 <= n .OR. ig1 > n+nselect) CYCLE
-         IF(mloc == 0) mstart = il1
-         mloc = mloc + 1
-      ENDDO
-      !
-      ALLOCATE(nbnd_loc(nks))
-      !
-      DO iks = 1,nks
+      IF(my_pool_id == 0) THEN
          !
-         nbndval = nbnd_occ(iks)
-         !
-         nbnd_loc(iks) = 0
-         DO lbnd = 1,aband%nloc
-            ibnd = aband%l2g(lbnd)+n_trunc_bands
-            IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_loc(iks) = nbnd_loc(iks)+1
-         ENDDO
-         !
-      ENDDO
-      !
-      ! Apply Liouville operator
-      !
-      max_mloc = mloc
-      CALL mp_max(max_mloc,inter_image_comm)
-      !
-      DO il1 = mstart,mstart+max_mloc-1
-         !
-         ig1 = pert%l2g(il1)
+         ALLOCATE(g2kin_save(npwx,nks))
+         !$acc enter data create(g2kin_save) copyin(ag)
+         ALLOCATE(nbnd_loc(nks))
          !
          DO iks = 1,nks
             !
-            nbndval = nbnd_loc(iks)
-            current_k = iks
-            !
+#if defined(__CUDA)
+            CALL g2_kin_gpu(iks)
+#else
             CALL g2_kin(iks)
+#endif
             !
-            IF(.NOT. (ig1 <= n .OR. ig1 > n+nselect)) THEN
-               DO lbnd = 1,nbndval
-                  ibnd = aband%l2g(lbnd)
-                  DO ig = 1,npwx
-                     IF(turn_shift) THEN
-                        temp = (g2kin(ig) - et(ibnd+n_trunc_bands,iks))
-                     ELSE
-                        temp = g2kin(ig)
-                     ENDIF
-                     !
-                     IF(ABS(temp) < minimum) temp = SIGN(minimum,temp)
-                     ag(ig,lbnd,iks,il1) = ag(ig,lbnd,iks,il1)/temp
-                  ENDDO
-               ENDDO
-            ENDIF
+            !$acc kernels present(g2kin_save)
+            g2kin_save(:,iks) = g2kin
+            !$acc end kernels
+            !
+            nbndval = nbnd_occ(iks)
+            !
+            nbnd_loc(iks) = 0
+            DO lbnd = 1,aband%nloc
+               ibnd = aband%l2g(lbnd)+n_trunc_bands
+               IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_loc(iks) = nbnd_loc(iks)+1
+            ENDDO
             !
          ENDDO
          !
-      ENDDO
+         mloc = 0
+         mstart = 1
+         DO il1 = 1,pert%nloc
+            ig1 = pert%l2g(il1)
+            IF(ig1 <= n .OR. ig1 > n+nselect) CYCLE
+            IF(mloc == 0) mstart = il1
+            mloc = mloc + 1
+         ENDDO
+         !
+         max_mloc = mloc
+         CALL mp_max(max_mloc,inter_image_comm)
+         !
+         ! Apply Liouville operator
+         !
+         DO il1 = mstart,mstart+max_mloc-1
+            !
+            ig1 = pert%l2g(il1)
+            !
+            DO iks = 1,nks
+               !
+               nbndval = nbnd_loc(iks)
+               !
+               IF(.NOT. (ig1 <= n .OR. ig1 > n+nselect)) THEN
+                  !
+                  !$acc parallel loop collapse(2) present(g2kin_save,ag)
+                  DO lbnd = 1,nbndval
+                     !
+                     DO ig = 1,npwx
+                        !
+                        ! ibnd = aband%l2g(lbnd)
+                        !
+                        ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+                        !
+                        IF(turn_shift) THEN
+                           tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks)
+                        ELSE
+                           tmp = g2kin_save(ig,iks)
+                        ENDIF
+                        !
+                        ! Same as the following line but without thread divergence
+                        ! IF(ABS(tmp) < minimum) tmp = SIGN(minimum,tmp)
+                        !
+                        tmp_abs = MAX(ABS(tmp),minimum)
+                        tmp_sgn = SIGN(1._DP,tmp)
+                        tmp = tmp_sgn*tmp_abs
+                        !
+                        ag(ig,lbnd,iks,il1) = ag(ig,lbnd,iks,il1)/tmp
+                        !
+                     ENDDO
+                     !
+                  ENDDO
+                  !$acc end parallel
+                  !
+               ENDIF
+               !
+            ENDDO
+            !
+         ENDDO
+         !
+         !$acc exit data delete(g2kin_save) copyout(ag)
+         DEALLOCATE(g2kin_save)
+         DEALLOCATE(nbnd_loc)
+         !
+      ENDIF
       !
-      DEALLOCATE(nbnd_loc)
+      CALL mp_bcast(ag,0,inter_pool_comm)
       !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('precd_ag')
+#else
       CALL stop_clock('precd_ag')
+#endif
       !
     END SUBROUTINE
     !

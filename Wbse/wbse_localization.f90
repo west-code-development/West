@@ -18,7 +18,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   USE westcom,              ONLY : localization,wbse_init_save_dir
   USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
   USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : double_invfft_gamma
+  USE fft_at_gamma,         ONLY : double_invfft_gamma,single_invfft_gamma
   USE pwcom,                ONLY : npw,npwx
   USE gvect,                ONLY : gstart
   USE mp_global,            ONLY : inter_image_comm,intra_bgrp_comm
@@ -29,6 +29,8 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_joint_d
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
+  USE io_push,              ONLY : io_push_title
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : evc=>evc_d,psic=>psic_d
   USE cublas
@@ -48,16 +50,21 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   INTEGER :: bisec_i,bisec_j
   INTEGER :: dffts_nnr
   INTEGER :: nbnd_do
+  INTEGER :: barra_load
   INTEGER,ALLOCATABLE :: bisec_loc(:)
   REAL(DP) :: reduce
   REAL(DP) :: val(6)
   REAL(DP) :: ovl_val
   REAL(DP),ALLOCATABLE :: proj(:,:)
   REAL(DP),ALLOCATABLE :: a_matrix(:,:,:)
+  REAL(DP),ALLOCATABLE :: aux(:)
+  REAL(DP),ALLOCATABLE :: aux2(:)
+  !$acc declare device_resident(aux,aux2)
   COMPLEX(DP),ALLOCATABLE :: u_matrix(:,:)
   COMPLEX(DP),ALLOCATABLE :: evc_tmp(:,:)
   CHARACTER(LEN=256) :: fname
   CHARACTER :: labels
+  TYPE(bar_type) :: barra
 #if !defined(__CUDA)
   REAL(DP),EXTERNAL :: DDOT
 #endif
@@ -87,8 +94,10 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         ! compute unitary rotation matrix
         !
+        ALLOCATE(proj(dffts_nnr,6))
         ALLOCATE(a_matrix(nbnd_do,nbnd_do,6))
-        ALLOCATE(proj(dffts%nnr,6))
+        ALLOCATE(aux(dffts_nnr))
+        ALLOCATE(aux2(dffts_nnr))
         !
         CALL wann_calc_proj(proj)
         !
@@ -96,46 +105,110 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         a_matrix(:,:,:) = 0._DP
         !
+        barra_load = 0
+        DO ibnd_l = 1,aband%nloc
+           ibnd = aband%l2g(ibnd_l)
+           DO jbnd = ibnd,nbnd_do
+              barra_load = barra_load+1
+           ENDDO
+        ENDDO
+        !
+        CALL io_push_title('Wannier localization')
+        !
+        CALL start_bar_type(barra,'wann',barra_load)
+        !
         DO ibnd_l = 1,aband%nloc
            !
            ibnd = aband%l2g(ibnd_l)
            ibnd_g = ibnd+nbnd_s-1
            !
-           DO jbnd = ibnd,nbnd_do
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd_g),psic,'Wave')
+           !
+           !$acc kernels present(aux)
+           aux(:) = REAL(psic,KIND=DP)
+           !$acc end kernels
+           !
+           DO jbnd = ibnd,nbnd_do,2
               !
               jbnd_g = jbnd+nbnd_s-1
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd_g),evc(:,jbnd_g),psic,'Wave')
-              !
-              DO il = 1,6
+              IF(jbnd < nbnd_do) THEN
                  !
-                 reduce = 0._DP
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc(:,jbnd_g),evc(:,jbnd_g+1),psic,'Wave')
                  !
-                 !$acc parallel loop reduction(+:reduce) present(proj)
-                 DO ir = 1,dffts_nnr
-                    reduce = reduce+REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))*proj(ir,il)
+                 DO il = 1,6
+                    !
+                    reduce = 0._DP
+                    !
+                    !$acc parallel loop reduction(+:reduce) present(proj)
+                    DO ir = 1,dffts_nnr
+                       reduce = reduce+aux(ir)*REAL(psic(ir),KIND=DP)*proj(ir,il)
+                    ENDDO
+                    !$acc end parallel
+                    !
+                    val(il) = reduce
+                    !
                  ENDDO
-                 !$acc end parallel
                  !
-                 val(il) = reduce
+                 a_matrix(ibnd,jbnd,1:6) = val(1:6)
+                 IF(ibnd /= jbnd) a_matrix(jbnd,ibnd,1:6) = val(1:6)
                  !
-              ENDDO
-              !
-              a_matrix(ibnd,jbnd,1:6) = val(1:6)
-              IF(ibnd /= jbnd) a_matrix(jbnd,ibnd,1:6) = val(1:6)
+                 DO il = 1,6
+                    !
+                    reduce = 0._DP
+                    !
+                    !$acc parallel loop reduction(+:reduce) present(proj)
+                    DO ir = 1,dffts_nnr
+                       reduce = reduce+aux(ir)*AIMAG(psic(ir))*proj(ir,il)
+                    ENDDO
+                    !$acc end parallel
+                    !
+                    val(il) = reduce
+                    !
+                 ENDDO
+                 !
+                 a_matrix(ibnd,jbnd+1,1:6) = val(1:6)
+                 IF(ibnd /= jbnd+1) a_matrix(jbnd+1,ibnd,1:6) = val(1:6)
+                 !
+              ELSE
+                 !
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc(:,jbnd_g),psic,'Wave')
+                 !
+                 DO il = 1,6
+                    !
+                    reduce = 0._DP
+                    !
+                    !$acc parallel loop reduction(+:reduce) present(proj)
+                    DO ir = 1,dffts_nnr
+                       reduce = reduce+aux(ir)*REAL(psic(ir),KIND=DP)*proj(ir,il)
+                    ENDDO
+                    !$acc end parallel
+                    !
+                    val(il) = reduce
+                    !
+                 ENDDO
+                 !
+                 a_matrix(ibnd,jbnd,1:6) = val(1:6)
+                 IF(ibnd /= jbnd) a_matrix(jbnd,ibnd,1:6) = val(1:6)
+                 !
+              ENDIF
               !
            ENDDO
+           !
+           CALL update_bar_type(barra,'wann',nbnd_do-ibnd+1)
            !
         ENDDO
         !
         CALL mp_sum(a_matrix,intra_bgrp_comm)
         CALL mp_sum(a_matrix,inter_image_comm)
         !
+        CALL stop_bar_type(barra,'wann')
+        !
         CALL wann_joint_d(nbnd_do,a_matrix,6,u_matrix)
         !
-        DEALLOCATE(a_matrix)
         !$acc exit data delete(proj)
         DEALLOCATE(proj)
+        DEALLOCATE(a_matrix)
         !
         ! compute localized wfc
         !
@@ -151,25 +224,77 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         ! compute overlap
         !
+        CALL io_push_title('Wannier overlap')
+        !
+        CALL start_bar_type(barra,'wann',barra_load)
+        !
         DO ibnd_l = 1,aband%nloc
            !
            ibnd = aband%l2g(ibnd_l)
            !
-           DO jbnd = 1,nbnd_do
+           !$acc host_data use_device(evc_loc)
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave')
+           !$acc end host_data
+           !
+           !$acc kernels present(aux)
+           aux(:) = REAL(psic,KIND=DP)
+           !$acc end kernels
+           !
+           DO jbnd = ibnd,nbnd_do,2
               !
-              !$acc host_data use_device(evc_loc)
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
-              !$acc end host_data
-              !
-              CALL check_ovl_wannier(psic,ovl_val)
-              !
-              ovl_matrix(ibnd,jbnd) = ovl_val
+              IF(jbnd < nbnd_do) THEN
+                 !
+                 !$acc host_data use_device(evc_loc)
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,jbnd),evc_loc(:,jbnd+1),psic,'Wave')
+                 !$acc end host_data
+                 !
+                 !$acc kernels present(aux2)
+                 aux2(:) = REAL(psic,KIND=DP)
+                 !$acc end kernels
+                 !
+                 CALL check_ovl_wannier(aux,aux2,ovl_val)
+                 !
+                 ovl_matrix(ibnd,jbnd) = ovl_val
+                 ovl_matrix(jbnd,ibnd) = ovl_val
+                 !
+                 !$acc kernels present(aux2)
+                 aux2(:) = AIMAG(psic)
+                 !$acc end kernels
+                 !
+                 CALL check_ovl_wannier(aux,aux2,ovl_val)
+                 !
+                 ovl_matrix(ibnd,jbnd+1) = ovl_val
+                 ovl_matrix(jbnd+1,ibnd) = ovl_val
+                 !
+              ELSE
+                 !
+                 !$acc host_data use_device(evc_loc)
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc_loc(:,jbnd),psic,'Wave')
+                 !$acc end host_data
+                 !
+                 !$acc kernels present(aux2)
+                 aux2(:) = REAL(psic,KIND=DP)
+                 !$acc end kernels
+                 !
+                 CALL check_ovl_wannier(aux,aux2,ovl_val)
+                 !
+                 ovl_matrix(ibnd,jbnd) = ovl_val
+                 ovl_matrix(jbnd,ibnd) = ovl_val
+                 !
+              ENDIF
               !
            ENDDO
+           !
+           CALL update_bar_type(barra,'wann',nbnd_do-ibnd+1)
            !
         ENDDO
         !
         CALL mp_sum(ovl_matrix,inter_image_comm)
+        !
+        CALL stop_bar_type(barra,'wann')
+        !
+        DEALLOCATE(aux)
+        DEALLOCATE(aux2)
         !
      ELSE
         !

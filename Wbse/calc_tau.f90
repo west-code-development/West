@@ -108,7 +108,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE io_push,              ONLY : io_push_title
   USE types_coulomb,        ONLY : pot3D
   USE westcom,              ONLY : ev,dvg,wbse_init_save_dir,l_pdep,chi_kernel,l_local_repr,&
-                                 & overlap_thr,n_trunc_bands
+                                 & overlap_thr,n_trunc_bands,o_restart_time
   USE fft_base,             ONLY : dffts
   USE noncollin_module,     ONLY : npol
   USE pwcom,                ONLY : npw,npwx,lsda
@@ -173,6 +173,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   LOGICAL :: l_xcchi
   LOGICAL :: calc_is_done
   LOGICAL :: l_skip
+  !
+  REAL(DP) :: time_spent(2)
+  REAL(DP), EXTERNAL :: get_clock
   !
   TYPE(bar_type) :: barra
   !
@@ -286,6 +289,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
      ENDIF
      !
      CALL start_bar_type(barra,'tau',bandpair%nlocx)
+     !
+     time_spent(1) = get_clock('tau')
      !
      ! parallel loop
      !
@@ -509,14 +514,22 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
         !
         ! for restarting, update status of restart_matrix
         !
-        CALL mp_sum(restart_matrix(1:do_idx),inter_image_comm)
+        time_spent(2) = get_clock('tau')
         !
-        DO ir = 1,do_idx
-           IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
-        ENDDO
-        !
-        fname = TRIM(wbse_init_save_dir)//'/restart_matrix'//flabel
-        CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
+        IF(o_restart_time >= 0._DP .AND. time_spent(2)-time_spent(1) > o_restart_time*60._DP) THEN
+           !
+           CALL mp_sum(restart_matrix(1:do_idx),inter_image_comm)
+           !
+           DO ir = 1,do_idx
+              IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
+           ENDDO
+           !
+           fname = TRIM(wbse_init_save_dir)//'/restart_matrix'//flabel
+           CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
+           !
+           time_spent(1) = get_clock('tau')
+           !
+        ENDIF
         !
         ! clean up
         !
@@ -543,9 +556,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
         CALL update_bar_type(barra,'tau',1)
         !
      ENDDO
-     !
-     fname = TRIM(wbse_init_save_dir)//'/restart_matrix'//flabel
-     CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
      !
      CALL stop_bar_type(barra,'tau')
      !

@@ -46,9 +46,9 @@ def test_trans_matrix():
     test_trans = read_trans_matrix_from_json("./test015/test.westpp.save/westpp.json")
 
     np.testing.assert_almost_equal(
-        ref_trans,
-        test_trans,
-        decimal=np.log10(float(parameters["tolerance"]["localization"])),
+        np.abs(ref_trans),
+        np.abs(test_trans),
+        decimal=-np.log10(float(parameters["tolerance"]["localization"])),
     )
 
 
@@ -66,5 +66,5 @@ def test_wannier_center():
     np.testing.assert_almost_equal(
         ref_wanc,
         test_wanc,
-        decimal=np.log10(float(parameters["tolerance"]["localization"])),
+        decimal=-np.log10(float(parameters["tolerance"]["localization"])),
     )

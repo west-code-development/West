@@ -38,7 +38,7 @@ def test_beta():
     np.testing.assert_almost_equal(
         ref_beta,
         test_beta,
-        decimal=np.log10(float(parameters["tolerance"]["bse"])),
+        decimal=-np.log10(float(parameters["tolerance"]["bse"])),
     )
 
 
@@ -56,5 +56,5 @@ def test_zeta():
     np.testing.assert_almost_equal(
         ref_zeta,
         test_zeta,
-        decimal=np.log10(float(parameters["tolerance"]["bse"])),
+        decimal=-np.log10(float(parameters["tolerance"]["bse"])),
     )

@@ -27,5 +27,5 @@ def test_wbse_eigenvalues():
     np.testing.assert_almost_equal(
         ref_bse_eig,
         test_bse_eig,
-        decimal=np.log10(float(parameters["tolerance"]["bse"])),
+        decimal=-np.log10(float(parameters["tolerance"]["bse"])),
     )

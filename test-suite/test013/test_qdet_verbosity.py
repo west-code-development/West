@@ -62,5 +62,5 @@ def test_eri():
         np.testing.assert_almost_equal(
             ref_eri,
             test_eri,
-            decimal=np.log10(float(parameters["tolerance"]["pdep_eigenvalue"])),
+            decimal=-np.log10(float(parameters["tolerance"]["pdep_eigenvalue"])),
         )

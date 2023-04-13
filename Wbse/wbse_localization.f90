@@ -15,8 +15,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   !----------------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : localization,wbse_init_save_dir
-  USE plep_io,              ONLY : plep_merge_and_write_G,plep_read_G_and_distribute
+  USE westcom,              ONLY : localization
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : double_invfft_gamma,single_invfft_gamma
   USE pwcom,                ONLY : npw,npwx
@@ -25,7 +24,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   USE mp,                   ONLY : mp_sum
   USE qbox_interface,       ONLY : load_qbox_wfc
   USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection
-  USE wbse_io,              ONLY : write_umatrix_and_omatrix
+  USE wbse_io,              ONLY : write_umatrix_and_omatrix,read_umatrix_and_omatrix
   USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_jade
   USE distribution_center,  ONLY : aband
   USE class_idistribute,    ONLY : idistribute
@@ -63,8 +62,6 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   !$acc declare device_resident(aux,aux2)
   COMPLEX(DP),ALLOCATABLE :: u_matrix(:,:)
   COMPLEX(DP),ALLOCATABLE :: evc_tmp(:,:)
-  CHARACTER(LEN=256) :: fname
-  CHARACTER :: labels
   TYPE(bar_type) :: barra
 #if !defined(__CUDA)
   REAL(DP),EXTERNAL :: DDOT
@@ -220,11 +217,10 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !$acc enter data copyin(u_matrix)
         !
         !$acc host_data use_device(u_matrix,evc_loc)
-        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,&
-        & u_matrix,nbnd_do,(0._DP,0._DP),evc_loc,npwx)
+        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,u_matrix,&
+        & nbnd_do,(0._DP,0._DP),evc_loc,npwx)
         !$acc end host_data
         !
-        !$acc update host(evc_loc)
         !$acc exit data delete(u_matrix)
         !
         ! compute overlap
@@ -366,11 +362,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
      ENDIF
      !
-     ! save to file
-     !
-     WRITE(labels,'(i1)') current_spin
-     fname = TRIM(wbse_init_save_dir)//'/evc_loc.'//labels//'.dat'
-     CALL plep_merge_and_write_G(fname,evc_loc,nbnd_do)
+     ! save overlap matrix and unitary transformation matrix
      !
      CALL write_umatrix_and_omatrix(nbnd_do,current_spin,u_matrix,ovl_matrix)
      !
@@ -378,9 +370,21 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
      !
   ELSE
      !
-     WRITE(labels,'(i1)') current_spin
-     fname = TRIM(wbse_init_save_dir)//'/evc_loc.'//labels//'.dat'
-     CALL plep_read_G_and_distribute(fname,evc_loc,nbnd_do)
+     ALLOCATE(u_matrix(nbnd_do,nbnd_do))
+     !
+     ! read overlap matrix and unitary transformation matrix
+     !
+     CALL read_umatrix_and_omatrix(nbnd_do,current_spin,u_matrix,ovl_matrix)
+     !
+     !$acc enter data copyin(u_matrix)
+     !
+     !$acc host_data use_device(u_matrix,evc_loc)
+     CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,u_matrix,&
+     & nbnd_do,(0._DP,0._DP),evc_loc,npwx)
+     !$acc end host_data
+     !
+     !$acc exit data delete(u_matrix)
+     DEALLOCATE(u_matrix)
      !
   ENDIF
   !

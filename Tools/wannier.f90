@@ -106,6 +106,7 @@ MODULE wann_loc_wfc
       ! Gygi et al., Computer Physics Communications 155, 1-6 (2003)
       !
       USE kinds,                 ONLY : DP
+      USE linear_algebra_kernel, ONLY : matdiago_dsy
 #if defined(__CUDA)
       USE cublas
 #endif
@@ -127,11 +128,12 @@ MODULE wann_loc_wfc
       REAL(DP) :: c,s,h1,h2,e1,e2,g11,g22,g12,x,y,t,tau
       !
       INTEGER,ALLOCATABLE :: top(:),bot(:)
+      REAL(DP),ALLOCATABLE :: ev(:)
       REAL(DP),ALLOCATABLE :: rot(:,:),aux(:,:)
       !$acc declare device_resident(rot,aux)
       !
       INTEGER,PARAMETER :: itermax = 5000
-      REAL(DP),PARAMETER :: spread_thr = 1.E-9_DP
+      REAL(DP),PARAMETER :: avg_spread_thr = 1.E-9_DP
       !
       CALL start_clock('jade')
       !
@@ -154,23 +156,33 @@ MODULE wann_loc_wfc
          bot(k) = k*2
       ENDDO
       !
-      ! Initialize U = I
+      u(:,:) = a(:,:,1)
       !
-      u(:,:) = 0._DP
-      DO i = 1,m
-         u(i,i) = 1._DP
-      ENDDO
+      ALLOCATE(ev(m))
+      !
+      CALL matdiago_dsy(m,u,ev,.FALSE.)
+      !
+      DEALLOCATE(ev)
       !
       !$acc enter data copyin(a,u,top,bot)
+      !
+      !$acc host_data use_device(u,a,aux)
+      DO ia = 1,na
+         CALL DGEMM('T','N',m,m,m,1._DP,u,m,a(:,:,ia),m,0._DP,aux,m)
+         CALL DGEMM('N','N',m,m,m,1._DP,aux,m,u,m,0._DP,a(:,:,ia),m)
+      ENDDO
+      !$acc end host_data
       !
       ! Compute initial spread
       !
       sigma_old = 0._DP
+      !$acc parallel loop collapse(2) reduction(+:sigma_old) present(a) copy(sigma_old)
       DO ia = 1,na
          DO i = 1,m
-            sigma_old = sigma_old+a(i,i,ia)*a(i,i,ia)
+            sigma_old = sigma_old + a(i,i,ia)**2
          ENDDO
       ENDDO
+      !$acc end parallel
       !
       conv = .FALSE.
       !
@@ -299,7 +311,7 @@ MODULE wann_loc_wfc
          !
          ! Check convergence
          !
-         IF(ABS(sigma-sigma_old) < spread_thr) THEN
+         IF(ABS(sigma-sigma_old) < m*avg_spread_thr) THEN
             conv = .TRUE.
             EXIT
          ELSE

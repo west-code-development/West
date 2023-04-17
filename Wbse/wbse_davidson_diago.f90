@@ -34,7 +34,7 @@ SUBROUTINE wbse_davidson_diago ( )
                                  & davidson_restart_read
   USE wstat_tools,          ONLY : diagox,redistribute_vr_distr
   USE wbse_tools,           ONLY : wbse_build_hr,wbse_update_with_vr_distr,&
-                                 & wbse_refresh_with_vr_distr,apply_preconditioning_dvg
+                                 & wbse_refresh_with_vr_distr,wbse_precondition_dvg
   USE buffers,              ONLY : get_buffer
   USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
@@ -393,9 +393,9 @@ SUBROUTINE wbse_davidson_diago ( )
      IF (l_preconditioning) THEN
         !
         IF (dav_iter < 4) THEN
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, .FALSE. )
+           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .FALSE. )
         ELSE
-           CALL apply_preconditioning_dvg( dvg_exc, notcnv, nbase, .TRUE. )
+           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .TRUE. )
         ENDIF
         !
      ENDIF

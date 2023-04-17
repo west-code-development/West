@@ -98,10 +98,18 @@ MODULE wann_loc_wfc
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE wann_joint_d(m,a,na,u)
+    SUBROUTINE wann_jade(m,a,na,u)
       !------------------------------------------------------------------------
       !
+      ! Joint approximate diagonalization of eigen-matrices
+      !
+      ! Gygi et al., Computer Physics Communications 155, 1-6 (2003)
+      !
       USE kinds,                 ONLY : DP
+      USE linear_algebra_kernel, ONLY : matdiago_dsy
+#if defined(__CUDA)
+      USE cublas
+#endif
       !
       IMPLICIT NONE
       !
@@ -110,116 +118,200 @@ MODULE wann_loc_wfc
       INTEGER,INTENT(IN) :: m
       INTEGER,INTENT(IN) :: na
       REAL(DP),INTENT(INOUT) :: a(m,m,na)
-      COMPLEX(DP),INTENT(OUT) :: u(m,m)
+      REAL(DP),INTENT(OUT) :: u(m,m)
       !
       ! Workspace
       !
       LOGICAL :: conv
-      INTEGER :: ia,i,j,k,iter
-      REAL(DP) :: sigma,sigma_old,tmpi,tmpj
+      INTEGER :: ia,i,k,mwork,iter,sweep,p,q
+      REAL(DP) :: sigma,sigma_old
       REAL(DP) :: c,s,h1,h2,e1,e2,g11,g22,g12,x,y,t,tau
       !
-      INTEGER,PARAMETER :: itermax = 5000
-      REAL(DP),PARAMETER :: spread_thr = 1.E-9_DP
+      INTEGER,ALLOCATABLE :: top(:),bot(:)
+      REAL(DP),ALLOCATABLE :: ev(:)
+      REAL(DP),ALLOCATABLE :: rot(:,:),aux(:,:)
+      !$acc declare device_resident(rot,aux)
       !
-      u = 0._DP
-      DO i = 1,m
-         u(i,i) = 1._DP
+      INTEGER,PARAMETER :: itermax = 5000
+      REAL(DP),PARAMETER :: avg_spread_thr = 1.E-9_DP
+      !
+      CALL start_clock('jade')
+      !
+      ALLOCATE(rot(m,m))
+      ALLOCATE(aux(m,m))
+      !
+      ! Handle odd m
+      !
+      IF(MOD(m,2) == 0) THEN
+         mwork = m
+      ELSE
+         mwork = m+1
+      ENDIF
+      !
+      ALLOCATE(top(mwork/2))
+      ALLOCATE(bot(mwork/2))
+      !
+      DO k = 1,mwork/2
+         top(k) = k*2 - 1
+         bot(k) = k*2
       ENDDO
+      !
+      u(:,:) = a(:,:,1)
+      !
+      ALLOCATE(ev(m))
+      !
+      CALL matdiago_dsy(m,u,ev,.FALSE.)
+      !
+      DEALLOCATE(ev)
+      !
+      !$acc enter data copyin(a,u,top,bot)
+      !
+      !$acc host_data use_device(u,a,aux)
+      DO ia = 1,na
+         CALL DGEMM('T','N',m,m,m,1._DP,u,m,a(:,:,ia),m,0._DP,aux,m)
+         CALL DGEMM('N','N',m,m,m,1._DP,aux,m,u,m,0._DP,a(:,:,ia),m)
+      ENDDO
+      !$acc end host_data
+      !
+      ! Compute initial spread
       !
       sigma_old = 0._DP
+      !$acc parallel loop collapse(2) reduction(+:sigma_old) present(a) copy(sigma_old)
       DO ia = 1,na
-         DO j = 1,m
-            sigma_old = sigma_old+a(j,j,ia)*a(j,j,ia)
+         DO i = 1,m
+            sigma_old = sigma_old + a(i,i,ia)**2
          ENDDO
       ENDDO
+      !$acc end parallel
       !
       conv = .FALSE.
       !
       DO iter = 1,itermax
          !
-         DO i = 1,m
-            DO j = i+1,m
+         DO sweep = 1,m-1
+            !
+            !$acc kernels present(rot)
+            rot(:,:) = 0._DP
+            !$acc end kernels
+            !
+            !$acc parallel loop present(rot,a)
+            DO k = 1,mwork/2
                !
-               g11 = 0._DP
-               g12 = 0._DP
-               g22 = 0._DP
+               p = MIN(top(k),bot(k))
+               q = MAX(top(k),bot(k))
                !
-               DO ia = 1,na
-                  h1 = a(i,i,ia)-a(j,j,ia)
-                  h2 = 2._DP*a(i,j,ia)
-                  g11 = g11+h1*h1
-                  g12 = g12+h1*h2
-                  g22 = g22+h2*h2
-               ENDDO
+               ! Handle odd m
                !
-               c = 1._DP
-               s = 0._DP
-               e1 = g11
-               e2 = g22
-               !
-               IF(g12*g12 > 1.E-16_DP*ABS(g11*g22)) THEN
-                  tau = 0.5_DP * (g22-g11) / g12
-                  t = 1.0_DP / (ABS(tau) + SQRT(1._DP+tau**2))
-                  IF(tau < 0._DP) t = -t
-                  c = 1._DP / SQRT(1._DP+t**2)
-                  s = t * c
-                  e1 = e1 - t*g12
-                  e2 = e2 + t*g12
-               ENDIF
-               !
-               IF(e1 > e2) THEN
-                  x = c
-                  y = -s
+               IF(q <= m) THEN
+                  !
+                  ! Compute 2x2 matrix G
+                  !
+                  g11 = 0._DP
+                  g12 = 0._DP
+                  g22 = 0._DP
+                  !
+                  DO ia = 1,na
+                     h1 = a(p,p,ia)-a(q,q,ia)
+                     h2 = 2._DP*a(p,q,ia)
+                     g11 = g11+h1*h1
+                     g12 = g12+h1*h2
+                     g22 = g22+h2*h2
+                  ENDDO
+                  !
+                  c = 1._DP
+                  s = 0._DP
+                  e1 = g11
+                  e2 = g22
+                  !
+                  ! Compute eigenvalues and eigenvectors of G
+                  !
+                  IF(g12*g12 > 1.E-16_DP*ABS(g11*g22)) THEN
+                     tau = 0.5_DP * (g22-g11) / g12
+                     t = 1.0_DP / (ABS(tau) + SQRT(1._DP+tau**2))
+                     IF(tau < 0._DP) t = -t
+                     c = 1._DP / SQRT(1._DP+t**2)
+                     s = t * c
+                     e1 = e1 - t*g12
+                     e2 = e2 + t*g12
+                  ENDIF
+                  !
+                  ! Use the eigenvector with the largest eigenvalue
+                  !
+                  IF(e1 > e2) THEN
+                     x = c
+                     y = -s
+                  ELSE
+                     x = s
+                     y = c
+                  ENDIF
+                  !
+                  ! Choose x >= 0 to ensure small rotation angle
+                  !
+                  IF(x < 0._DP) THEN
+                     x = -x
+                     y = -y
+                  ENDIF
+                  !
+                  ! Compute 2x2 rotation matrix R
+                  !
+                  c = SQRT(0.5_DP*(x+1._DP))
+                  s = y / SQRT(2._DP*(x+1._DP))
+                  !
+                  rot(p,p) = c
+                  rot(q,p) = s
+                  rot(p,q) = -s
+                  rot(q,q) = c
+                  !
                ELSE
-                  x = s
-                  y = c
+                  !
+                  rot(p,p) = 1._DP
+                  !
                ENDIF
-               !
-               IF(x < 0._DP) THEN
-                  x = -x
-                  y = -y
-               ENDIF
-               !
-               c = SQRT(0.5_DP*(x+1._DP))
-               s = y / SQRT(2._DP*(x+1._DP))
-               !
-               DO ia = 1,na
-                  DO k = 1,m
-                     tmpi =  a(k,i,ia)*c + a(k,j,ia)*s
-                     tmpj = -a(k,i,ia)*s + a(k,j,ia)*c
-                     a(k,i,ia) = tmpi
-                     a(k,j,ia) = tmpj
-                  ENDDO
-               ENDDO
-               !
-               DO ia = 1,na
-                  DO k = 1,m
-                     tmpi =  c*a(i,k,ia) + s*a(j,k,ia)
-                     tmpj = -s*a(i,k,ia) + c*a(j,k,ia)
-                     a(i,k,ia) = tmpi
-                     a(j,k,ia) = tmpj
-                  ENDDO
-               ENDDO
-               !
-               DO k = 1,m
-                  tmpi =  u(k,i)*c + u(k,j)*s
-                  tmpj = -u(k,i)*s + u(k,j)*c
-                  u(k,i) = CMPLX(tmpi,KIND=DP)
-                  u(k,j) = CMPLX(tmpj,KIND=DP)
-               ENDDO
                !
             ENDDO
+            !$acc end parallel
+            !
+            ! Apply rotation R to rows and columns of A
+            !
+            !$acc host_data use_device(rot,a,aux)
+            DO ia = 1,na
+               CALL DGEMM('T','N',m,m,m,1._DP,rot,m,a(:,:,ia),m,0._DP,aux,m)
+               CALL DGEMM('N','N',m,m,m,1._DP,aux,m,rot,m,0._DP,a(:,:,ia),m)
+            ENDDO
+            !$acc end host_data
+            !
+            ! Accumulate unitary transformation matrix U
+            !
+            !$acc host_data use_device(u,rot,aux)
+            CALL DGEMM('N','N',m,m,m,1._DP,u,m,rot,m,0._DP,aux,m)
+            !$acc end host_data
+            !
+            !$acc kernels present(u,aux)
+            u(:,:) = aux
+            !$acc end kernels
+            !
+            ! Go to next round of tournament
+            !
+            CALL wann_tournament(top,bot,mwork)
+            !
+            !$acc update device(top,bot)
+            !
          ENDDO
+         !
+         ! Compute new spread
          !
          sigma = 0._DP
+         !$acc parallel loop collapse(2) reduction(+:sigma) present(a) copy(sigma)
          DO ia = 1,na
-            DO j = 1,m
-               sigma = sigma + a(j,j,ia)*a(j,j,ia)
+            DO i = 1,m
+               sigma = sigma + a(i,i,ia)**2
             ENDDO
          ENDDO
+         !$acc end parallel
          !
-         IF(ABS(sigma-sigma_old) < spread_thr) THEN
+         ! Check convergence
+         !
+         IF(ABS(sigma-sigma_old) < m*avg_spread_thr) THEN
             conv = .TRUE.
             EXIT
          ELSE
@@ -228,7 +320,45 @@ MODULE wann_loc_wfc
          !
       ENDDO
       !
+      !$acc exit data delete(top,bot) copyout(a,u)
+      DEALLOCATE(rot)
+      DEALLOCATE(aux)
+      DEALLOCATE(top)
+      DEALLOCATE(bot)
+      !
       IF(.NOT. conv) CALL errore('wann','convergence not achieved',itermax)
+      !
+      CALL stop_clock('jade')
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE wann_tournament(top,bot,m)
+      !------------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      INTEGER,INTENT(IN) :: m
+      INTEGER,INTENT(INOUT) :: top(m/2)
+      INTEGER,INTENT(INOUT) :: bot(m/2)
+      !
+      INTEGER,ALLOCATABLE :: new_top(:)
+      INTEGER,ALLOCATABLE :: new_bot(:)
+      !
+      ALLOCATE(new_top(m/2))
+      ALLOCATE(new_bot(m/2))
+      !
+      new_top(1) = top(1)
+      new_top(3:m/2) = top(2:m/2-1)
+      new_top(2) = bot(1)
+      new_bot(1:m/2-1) = bot(2:m/2)
+      new_bot(m/2) = top(m/2)
+      !
+      top(:) = new_top
+      bot(:) = new_bot
+      !
+      DEALLOCATE(new_top)
+      DEALLOCATE(new_bot)
       !
     END SUBROUTINE
     !

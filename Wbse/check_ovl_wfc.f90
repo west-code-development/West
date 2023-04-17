@@ -130,7 +130,7 @@ MODULE check_ovl_wfc
       !
     END SUBROUTINE
     !
-    SUBROUTINE check_ovl_wannier(orb_ij, ovl_value)
+    SUBROUTINE check_ovl_wannier(orb_i, orb_j, ovl_value)
       !
       USE kinds,                ONLY : DP
       USE fft_base,             ONLY : dffts
@@ -140,10 +140,8 @@ MODULE check_ovl_wfc
       !
       IMPLICIT NONE
       !
-      COMPLEX(DP), INTENT(IN) :: orb_ij(dffts%nnr)
-#if defined(__CUDA)
-      ATTRIBUTES(DEVICE) :: orb_ij
-#endif
+      REAL(DP), INTENT(IN) :: orb_i(dffts%nnr)
+      REAL(DP), INTENT(IN) :: orb_j(dffts%nnr)
       REAL(DP), INTENT(OUT) :: ovl_value
       !
       INTEGER :: dffts_nnr, ir
@@ -155,11 +153,11 @@ MODULE check_ovl_wfc
       summ_jb = 0._DP
       summ_ij = 0._DP
       !
-      !$acc parallel loop reduction(+:summ_ib,summ_jb,summ_ij)
+      !$acc parallel loop reduction(+:summ_ib,summ_jb,summ_ij) present(orb_i,orb_j)
       DO ir = 1, dffts_nnr
-         summ_ib = summ_ib + REAL(orb_ij(ir),KIND=DP)**4
-         summ_jb = summ_jb + AIMAG(orb_ij(ir))**4
-         summ_ij = summ_ij + REAL(orb_ij(ir),KIND=DP)**2 * AIMAG(orb_ij(ir))**2
+         summ_ib = summ_ib + orb_i(ir)**4
+         summ_jb = summ_jb + orb_j(ir)**4
+         summ_ij = summ_ij + orb_i(ir)**2 * orb_j(ir)**2
       ENDDO
       !$acc end parallel
       !

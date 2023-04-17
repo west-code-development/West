@@ -862,6 +862,23 @@ wbse_init_control
    * - **Description**
      - If n_trunc_bands > 0, then the n_trunc_bands lowest occupied bands are not considered when summing over occupied bands.
 
+.. data:: o_restart_time
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 0.0
+   * - **Description**
+     - Available options are:
+
+       - If ( o_restart_time == 0 ) A checkpoint is written at every iteration of the loop that computes screened exchange integrals.
+       - If ( o_restart_time >  0 ) A checkpoint is written every o_restart_time minutes.
+       - If ( o_restart_time <  0 ) A checkpoint is NEVER written. Restart will not be possible.
+
 |
 
 

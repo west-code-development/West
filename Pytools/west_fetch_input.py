@@ -93,6 +93,7 @@ default["wbse_init_control"]["chi_kernel"] = "CHI"
 default["wbse_init_control"]["overlap_thr"] = 0.
 default["wbse_init_control"]["spin_channel"] = 0
 default["wbse_init_control"]["n_trunc_bands"] = 0
+default["wbse_init_control"]["o_restart_time"] = 0.
 # wbse_control
 default["wbse_control"] = {}
 default["wbse_control"]["wbse_calculation"] = "D"

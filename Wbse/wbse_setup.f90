@@ -142,8 +142,9 @@ SUBROUTINE bse_start()
   !
   ! Workspace
   !
-  INTEGER :: do_idx,nbnd_do,nbndval,is
-  INTEGER :: lbnd,ibnd,jbnd,iks,current_spin
+  INTEGER :: iks,current_spin
+  INTEGER :: lbnd,ibnd,jbnd,my_ibnd,nbnd_do,nbndval
+  INTEGER :: ipair,do_idx
   REAL(DP) :: ovl_value
   COMPLEX(DP), ALLOCATABLE :: u_tmp(:,:)
   !
@@ -171,13 +172,13 @@ SUBROUTINE bse_start()
      ALLOCATE(u_matrix(aband%nloc,nbnd_do,nspin))
      ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,nspin))
      !
-     DO is = 1,nspin
+     DO current_spin = 1,nspin
         !
-        CALL read_umatrix_and_omatrix(nbnd_do,is,u_tmp,ovl_matrix(:,:,is))
+        CALL read_umatrix_and_omatrix(nbnd_do,current_spin,u_tmp,ovl_matrix(:,:,current_spin))
         !
         DO lbnd = 1,aband%nloc
            ibnd = aband%l2g(lbnd)
-           u_matrix(lbnd,:,is) = u_tmp(ibnd,:)
+           u_matrix(lbnd,:,current_spin) = u_tmp(ibnd,:)
         ENDDO
         !
      ENDDO
@@ -228,10 +229,46 @@ SUBROUTINE bse_start()
   !
   IF(l_reduce_io) THEN
      !
-     do_idx = SUM(n_bse_idx)
+     ! I/O is reduced by reading tau only once
      !
      ALLOCATE(tau_is_read(nbnd_do,nbnd_do,nspin))
-     ALLOCATE(tau_all(npwx,do_idx))
+     !
+     tau_is_read(:,:,:) = 0
+     n_tau = 0
+     !
+     DO iks = 1,nks
+        !
+        current_spin = isk(iks)
+        do_idx = n_bse_idx(current_spin)
+        !
+        ! count number of tau needed by my band group
+        !
+        DO lbnd = 1,aband%nloc
+           !
+           my_ibnd = aband%l2g(lbnd)
+           !
+           DO ipair = 1, do_idx
+              !
+              ibnd = idx_matrix(ipair,1,current_spin)-n_trunc_bands
+              jbnd = idx_matrix(ipair,2,current_spin)-n_trunc_bands
+              !
+              IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,current_spin) = 1
+              !
+           ENDDO
+           !
+        ENDDO
+        !
+        DO jbnd = 1,nbnd_do
+           DO ibnd = jbnd,nbnd_do
+              IF(tau_is_read(ibnd,jbnd,current_spin) == 1) n_tau = n_tau+1
+           ENDDO
+        ENDDO
+        !
+     ENDDO
+     !
+     ALLOCATE(tau_all(npwx,n_tau))
+     !
+     ! reset counter for actual reading in wbse_io
      !
      tau_is_read(:,:,:) = 0
      n_tau = 0

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/H_ONCV_PBE-1.0.upf
 ${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Si_ONCV_PBE-1.1.upf
 
 cat > pw.in << EOF
@@ -12,27 +13,28 @@ prefix       = 'test'
 wf_collect   = .true.
 /
 &system
-ibrav     = 2
-a         = 5.43
-nat       = 2
-ntyp      = 1
-ecutwfc   = 25.0
-nbnd      = 16
-noinv     = .true.
-nosym     = .true.
-input_dft = 'pbe0'
+ibrav           = 1
+celldm(1)       = 20
+nat             = 5
+ntyp            = 2
+ecutwfc         = 25.0
+nbnd            = 30
+assume_isolated = 'mp'
+input_dft       = 'pbe0'
 /
 &electrons
 diago_full_acc = .true.
-conv_thr       = 1.e-12
 /
 ATOMIC_SPECIES
-Si 28.085   Si_ONCV_PBE-1.1.upf
-ATOMIC_POSITIONS (crystal)
-Si  0.0000  0.0000  0.0000
-Si  0.2500  0.2500  0.2500
-K_POINTS (automatic)
-1 1 2   0 0 0
+Si 28.0855  Si_ONCV_PBE-1.1.upf
+H  1.00794   H_ONCV_PBE-1.0.upf
+ATOMIC_POSITIONS bohr
+Si      10.000000   10.000000  10.000000
+H       11.614581   11.614581  11.614581
+H        8.385418    8.385418  11.614581
+H        8.385418   11.614581   8.385418
+H       11.614581    8.385418   8.385418
+K_POINTS {gamma}
 EOF
 
 
@@ -44,9 +46,9 @@ input_west:
 
 wstat_control:
   wstat_calculation: S
-  n_pdep_eigen: 10
+  n_pdep_eigen: 30
   l_minimize_exx_if_active: True
-  n_exx_lowrank: 30
+  n_exx_lowrank: 0
 EOF
 
 
@@ -58,15 +60,14 @@ input_west:
 
 wstat_control:
   wstat_calculation: S
-  n_pdep_eigen: 10
+  n_pdep_eigen: 30
   l_minimize_exx_if_active: True
-  n_exx_lowrank: 30
+  n_exx_lowrank: 0
 
 wfreq_control:
   wfreq_calculation: XWGQ
-  n_pdep_eigen_to_use: 10
+  n_pdep_eigen_to_use: 30
   qp_bandrange: [1,5]
   n_refreq: 300
   ecut_refreq: 2.0
-  macropol_calculation: C
 EOF

@@ -757,6 +757,22 @@ wbse_init_control
        - "S" : Start from scratch.
        - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
 
+.. data:: solver
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "BSE"
+   * - **Description**
+     - Available options are:
+
+       - "BSE" : Bethe-Salpeter equation.
+       - "TDDFT" : Time-dependent density-functional theory.
+
 .. data:: bse_method
 
 .. list-table::

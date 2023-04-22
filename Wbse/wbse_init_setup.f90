@@ -14,8 +14,8 @@
 SUBROUTINE wbse_init_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,          ONLY : bse_method,l_pdep,localization,l_local_repr,l_use_ecutrho,&
-                             & wbse_init_save_dir
+  USE westcom,          ONLY : solver,l_bse,bse_method,l_pdep,localization,l_local_repr,&
+                             & l_use_ecutrho,wbse_init_save_dir
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
   USE mp_global,        ONLY : nbgrp
@@ -25,6 +25,13 @@ SUBROUTINE wbse_init_setup()
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   CALL do_setup()
+  !
+  SELECT CASE(TRIM(solver))
+  CASE('BSE','bse')
+     l_bse = .TRUE.
+  CASE('TDDFT','tddft')
+     l_bse = .FALSE.
+  END SELECT
   !
   SELECT CASE(TRIM(bse_method))
   CASE('PDEP','pdep')

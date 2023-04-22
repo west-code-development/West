@@ -26,9 +26,9 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,document,wbse_init_calculation,&
+                             & westpp_n_liouville_to_use,document,wbse_init_calculation,solver,&
                              & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,solver,&
+                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
                              & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
                              & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
                              & trev_liouville_rel,wbse_ipol,wbse_epsinfty,spin_excitation,&
@@ -122,6 +122,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
      IF(ANY(driver(:)==6)) THEN
         !
         CALL json%add('input.wbse_init_control.wbse_init_calculation',TRIM(wbse_init_calculation))
+        CALL json%add('input.wbse_init_control.solver',TRIM(solver))
         CALL json%add('input.wbse_init_control.bse_method',TRIM(bse_method))
         CALL json%add('input.wbse_init_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
         CALL json%add('input.wbse_init_control.localization',TRIM(localization))
@@ -138,7 +139,6 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
      IF(ANY(driver(:)==7)) THEN
         !
         CALL json%add('input.wbse_control.wbse_calculation',TRIM(wbse_calculation))
-        CALL json%add('input.wbse_control.solver',TRIM(solver))
         CALL json%add('input.wbse_control.qp_correction',TRIM(qp_correction))
         CALL json%add('input.wbse_control.scissor_ope',scissor_ope)
         CALL json%add('input.wbse_control.n_liouville_eigen',n_liouville_eigen)
@@ -177,9 +177,9 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,document,wbse_init_calculation,&
+                             & westpp_n_liouville_to_use,document,wbse_init_calculation,solver,&
                              & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,solver,&
+                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
                              & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
                              & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
                              & trev_liouville_rel,wbse_ipol,wbse_epsinfty,spin_excitation,&
@@ -455,6 +455,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(cvalue, 'wbse_init_calculation'); wbse_init_calculation = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(cvalue, 'solver'); solver = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'bse_method'); bse_method = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(n_pdep_eigen_to_use, 'n_pdep_eigen_to_use', DUMMY_DEFAULT)
         IERR = return_dict%getitem(cvalue, 'localization'); localization = TRIM(ADJUSTL(cvalue))
@@ -486,7 +487,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         CALL return_obj%destroy
         !
         IERR = return_dict%getitem(cvalue, 'wbse_calculation'); wbse_calculation = TRIM(ADJUSTL(cvalue))
-        IERR = return_dict%getitem(cvalue, 'solver'); solver = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'qp_correction'); qp_correction = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(scissor_ope, 'scissor_ope')
         IERR = return_dict%get(n_liouville_eigen, 'n_liouville_eigen', DUMMY_DEFAULT)
@@ -698,6 +698,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(qlist,root,world_comm)
      !
      CALL mp_bcast(wbse_init_calculation,root,world_comm)
+     CALL mp_bcast(solver,root,world_comm)
      CALL mp_bcast(bse_method,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(localization,root,world_comm)
@@ -717,6 +718,12 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(n_pdep_eigen_to_use == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_to_use',1)
      IF(spin_channel == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch spin_channel',1)
      IF(n_trunc_bands == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_trunc_bands',1)
+     !
+     SELECT CASE(TRIM(solver))
+     CASE('BSE','bse','TDDFT','tddft')
+     CASE DEFAULT
+        CALL errore('fetch_input','Err: solver must be BSE or TDDFT',1)
+     END SELECT
      !
      SELECT CASE(TRIM(bse_method))
      CASE('PDEP','pdep','FF_QBOX','FF_Qbox','ff_qbox')
@@ -744,7 +751,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   IF(ANY(driver(:)==7)) THEN
      !
      CALL mp_bcast(wbse_calculation,root,world_comm)
-     CALL mp_bcast(solver,root,world_comm)
      CALL mp_bcast(qp_correction,root,world_comm)
      CALL mp_bcast(scissor_ope,root,world_comm)
      CALL mp_bcast(n_liouville_eigen,root,world_comm)
@@ -770,12 +776,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CASE('N','n','C','c')
      CASE DEFAULT
         CALL errore('fetch_input','Err: macropol_calculation/=(N,C)',1)
-     END SELECT
-     !
-     SELECT CASE(TRIM(solver))
-     CASE('BSE','bse','TDDFT','tddft')
-     CASE DEFAULT
-        CALL errore('fetch_input','Err: solver must be BSE or TDDFT',1)
      END SELECT
      !
      SELECT CASE(wbse_calculation)

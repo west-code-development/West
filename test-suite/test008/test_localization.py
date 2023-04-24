@@ -10,7 +10,7 @@ def read_localization_from_json(fileName):
     with open(fileName, "r") as f:
         raw_ = json.load(f)
 
-    return np.array(raw_["localization"], dtype=float)
+    return np.array(raw_["output"]["L"]["K00001"]["local_factor"], dtype=float)
 
 
 def read_ipr_from_json(fileName):
@@ -21,7 +21,7 @@ def read_ipr_from_json(fileName):
     with open(fileName, "r") as f:
         raw_ = json.load(f)
 
-    return np.array(raw_["ipr"], dtype=float)
+    return np.array(raw_["output"]["L"]["K00001"]["ipr"], dtype=float)
 
 
 def test_localization():
@@ -32,10 +32,8 @@ def test_localization():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_loc = read_localization_from_json("./test008/ref/localization.json")
-    test_loc = read_localization_from_json(
-        "./test008/test.westpp.save/localization.json"
-    )
+    ref_loc = read_localization_from_json("./test008/ref/westpp.json")
+    test_loc = read_localization_from_json("./test008/test.westpp.save/westpp.json")
 
     np.testing.assert_almost_equal(
         ref_loc,
@@ -52,8 +50,8 @@ def test_ipr():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_ipr = read_ipr_from_json("./test008/ref/localization.json")
-    test_ipr = read_ipr_from_json("./test008/test.westpp.save/localization.json")
+    ref_ipr = read_ipr_from_json("./test008/ref/westpp.json")
+    test_ipr = read_ipr_from_json("./test008/test.westpp.save/westpp.json")
 
     np.testing.assert_almost_equal(
         ref_ipr,

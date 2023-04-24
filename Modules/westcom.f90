@@ -264,7 +264,7 @@ MODULE westpp_center
   !
   ! INPUT FOR westpp_control
   !
-  CHARACTER(LEN=8) :: westpp_calculation
+  CHARACTER(LEN=9) :: westpp_calculation
   CHARACTER(LEN=7) :: westpp_format
   INTEGER :: westpp_n_pdep_eigen_to_use
   INTEGER :: westpp_range(2)

@@ -409,8 +409,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
                  ENDDO
                  !$acc end parallel
                  !
-                 !$acc update host(tau)
-                 !
               ELSE
                  !
                  ALLOCATE(aux1_r(dffts%nnr,nspin))
@@ -517,6 +515,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            ELSE
               fname = TRIM(wbse_init_save_dir)//'/tau_u'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
            ENDIF
+           !
+           !$acc update host(tau)
+           !
            CALL pdep_merge_and_write_G(fname,tau)
            !
            restart_matrix(ig1) = 1

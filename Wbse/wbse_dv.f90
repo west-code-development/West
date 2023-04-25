@@ -244,50 +244,78 @@ MODULE wbse_dv
     !
     USE kinds,             ONLY : DP
     USE constants,         ONLY : e2, fpi
-    USE fft_base,          ONLY : dffts
+    USE fft_base,          ONLY : dfftp
     USE fft_interfaces,    ONLY : fwfft, invfft
     USE gvect,             ONLY : ngm, g
     USE cell_base,         ONLY : tpiba2
+    USE noncollin_module,  ONLY : nspin_gga
     USE lsda_mod,          ONLY : nspin
+    USE xc_lib,            ONLY : xclib_dft_is
+    USE scf,               ONLY : rho
     USE control_flags,     ONLY : gamma_only
     USE martyna_tuckerman, ONLY : do_comp_mt
     USE qpoint,            ONLY : xq
-    USE west_gpu,          ONLY : dvhart,dfft_nl_d,dfft_nlm_d
+    USE gc_lr,             ONLY : grho,dvxc_rr,dvxc_sr,dvxc_ss,dvxc_s
+    USE eqv,               ONLY : dmuxc
+    USE west_gpu,          ONLY : dvaux,dvhart,dfft_nl_d,dfft_nlm_d
     !
     IMPLICIT NONE
     !
     ! I/O
     !
-    COMPLEX(DP), INTENT(INOUT) :: dvscf(dffts%nnr, nspin)
+    COMPLEX(DP), INTENT(INOUT) :: dvscf(dfftp%nnr, nspin)
     LOGICAL, INTENT(IN) :: lrpa
     LOGICAL, INTENT(IN) :: add_nlcc
     !
     ! Workspace
     !
-    INTEGER :: is, ig, ir, dffts_nnr
+    INTEGER :: is, is1, ig, ir, dfftp_nnr
     REAL(DP) :: xq1, xq2, xq3, qg2
     !
     CALL start_clock_gpu('dv_of_drho')
     !
     IF(add_nlcc) CALL errore('wbse_dv_of_drho_gpu', 'add_nlcc is not supported', 1)
-    IF(.NOT. lrpa) CALL errore('wbse_dv_of_drho_gpu', 'only lrpa is supported', 1)
     IF(do_comp_mt) CALL errore('wbse_dv_of_drho_gpu', 'do_comp_mt is not supported', 1)
     !
-    dffts_nnr = dffts%nnr
+    IF(.NOT. lrpa) THEN
+       !
+       ! Compute exchange-correlation contribution in real space
+       !
+       dvaux(:,:) = (0._DP,0._DP)
+       DO is = 1, nspin
+          DO is1 = 1, nspin
+             dvaux(:,is) = dvaux(:,is) + dmuxc(:,is,is1) * dvscf(:,is1)
+          ENDDO
+       ENDDO
+       !
+       ! Add gradient correction to the response XC potential
+       !
+       IF(xclib_dft_is('gradient')) THEN
+          CALL dgradcorr(dfftp, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
+               & dvscf, nspin, nspin_gga, g, dvaux)
+       ENDIF
+       !
+       !$acc update device(dvaux)
+       !
+    ENDIF
+    !
+    ! Compute Hartree contribution in reciprocal space
+    !
+    dfftp_nnr = dfftp%nnr
     xq1 = xq(1)
     xq2 = xq(2)
     xq3 = xq(3)
     !
     IF(nspin == 2) THEN
        !$acc parallel loop present(dvscf)
-       DO ir = 1, dffts_nnr
+       DO ir = 1, dfftp_nnr
           dvscf(ir,1) = dvscf(ir,1) + dvscf(ir,2)
        ENDDO
        !$acc end parallel
     ENDIF
     !
     !$acc host_data use_device(dvscf)
-    CALL fwfft('Rho', dvscf(:,1), dffts)
+    CALL fwfft('Rho', dvscf(:,1), dfftp)
     !$acc end host_data
     !
     !$acc kernels present(dvhart)
@@ -315,16 +343,26 @@ MODULE wbse_dv
     ENDIF
     !
     !$acc host_data use_device(dvhart)
-    CALL invfft('Rho', dvhart, dffts)
+    CALL invfft('Rho', dvhart, dfftp)
     !$acc end host_data
     !
-    !$acc parallel loop collapse(2) present(dvscf,dvhart)
-    DO is = 1, nspin
-       DO ir = 1, dffts_nnr
-          dvscf(ir,is) = dvhart(ir)
+    IF(lrpa) THEN
+       !$acc parallel loop collapse(2) present(dvscf,dvhart)
+       DO is = 1, nspin
+          DO ir = 1, dfftp_nnr
+             dvscf(ir,is) = dvhart(ir)
+          ENDDO
        ENDDO
-    ENDDO
-    !$acc end parallel
+       !$acc end parallel
+    ELSE
+       !$acc parallel loop collapse(2) present(dvscf,dvhart,dvaux)
+       DO is = 1, nspin
+          DO ir = 1, dfftp_nnr
+             dvscf(ir,is) = dvhart(ir) + dvaux(ir,is)
+          ENDDO
+       ENDDO
+       !$acc end parallel
+    ENDIF
     !
     CALL stop_clock_gpu('dv_of_drho')
     !

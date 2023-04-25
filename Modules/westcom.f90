@@ -338,6 +338,10 @@ MODULE wbse_center
   !
   INTEGER :: nbndval0x
   LOGICAL :: l_bse ! BSE True, TDDFT False
+  LOGICAL :: l_hybrid_tddft = .FALSE.
+  REAL(DP) :: l_exx_fraction = 0._DP
+  REAL(DP) :: l_exx_scrlen = 0._DP
+  CHARACTER(LEN=7) :: l_exxdiv_treatment
   LOGICAL :: l_lanczos
   LOGICAL :: l_davidson
   LOGICAL :: l_bse_triplet

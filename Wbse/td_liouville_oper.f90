@@ -29,7 +29,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
                                  & double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
-                                 & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc
+                                 & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
+                                 & l_hybrid_tddft, l_exx_fraction
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
 #if defined(__CUDA)
@@ -263,13 +264,21 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
            IF(l_bse) THEN
               factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
-              factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope),KIND=DP)
+              IF (l_hybrid_tddft) THEN
+                 factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope+sigma_x_head*l_exx_fraction),KIND=DP)
+              ELSE
+                 factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope),KIND=DP)
+              ENDIF
            ENDIF
         ELSE
            IF(l_bse) THEN
               factor = CMPLX(-(et(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
-              factor = CMPLX(-(et(ibnd,iks)-scissor_ope),KIND=DP)
+              IF (l_hybrid_tddft) THEN
+                 factor = CMPLX(-(et(ibnd,iks)-scissor_ope+sigma_x_head*l_exx_fraction),KIND=DP)
+              ELSE
+                 factor = CMPLX(-(et(ibnd,iks)-scissor_ope),KIND=DP)
+              ENDIF
            ENDIF
         ENDIF
         !
@@ -289,6 +298,10 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
      IF(l_bse) THEN
         CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks))
+     ELSE
+        IF(l_hybrid_tddft) THEN
+           CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks))
+        ENDIF
      ENDIF
      !
      IF(gamma_only) THEN

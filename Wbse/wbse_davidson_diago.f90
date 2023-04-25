@@ -544,6 +544,9 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      notcnv = COUNT( .NOT. conv(:) )
      !
+     ! prind the max difference
+     WRITE(stdout, '(A16, E10.3)') '     Max diff = ', MAXVAL(ABS( ew(1:nvec) - ev(1:nvec)))
+     !
      ev(1:nvec) = ew(1:nvec)
      !
      ! Write the eigenvalues & time spent
@@ -1085,10 +1088,14 @@ SUBROUTINE wbse_output_ev_and_time(nvec,ev_,conv_,time,dav_iter,notcnv)
   LOGICAL :: found
   !
   WRITE(stdout,*)
-  DO i = 1, INT( nvec / 9 )
-     WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
+!  DO i = 1, INT( nvec / 9 )
+!     WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*(i-1)+1,9*i)
+!  ENDDO
+  DO i = 1, INT( nvec / 6 )
+     WRITE(stdout,'(6X, 6(f12.8,1x))') (ev_(j), j=6*(i-1)+1,6*i)
   ENDDO
-  IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
+!  IF( MOD(nvec,9) > 0 ) WRITE(stdout,'(6X, 9(f9.5,1x))') (ev_(j), j=9*INT(nvec/9)+1,nvec)
+  IF( MOD(nvec,6) > 0 ) WRITE(stdout,'(6X, 6(f12.8,1x))') (ev_(j), j=6*INT(nvec/6)+1,nvec)
   WRITE(stdout,*)
   CALL io_push_bar()
   WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last iteration ',a) ") &

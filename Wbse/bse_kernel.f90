@@ -21,7 +21,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
   USE mp_global,             ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_local_repr,u_matrix,idx_matrix,&
-                                  & n_bse_idx
+                                  & n_bse_idx,l_hybrid_tddft,l_exx_fraction
   USE distribution_center,   ONLY : aband
   USE wbse_io,               ONLY : read_bse_pots_g
 #if defined(__CUDA)
@@ -197,6 +197,9 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
      !$acc update host(caux2)
      CALL mp_sum(caux2,inter_bgrp_comm)
      !$acc update device(caux2)
+     !
+     ! multiply the fraction of exx for hybrid tddft calculations
+     IF (l_hybrid_tddft) caux2 = caux2 * l_exx_fraction
      !
      IF(l_local_repr) THEN
         !

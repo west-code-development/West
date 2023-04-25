@@ -21,10 +21,15 @@ SUBROUTINE wbse_setup()
                                  & n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,trev_pdep,&
                                  & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
                                  & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
-                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir
+                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir,l_hybrid_tddft,&
+                                 & l_exx_fraction,l_exx_scrlen,l_exxdiv_treatment
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup
+  USE xc_lib,               ONLY : xclib_dft_is
+  USE exx,                  ONLY : exxinit,ecutfock,exxalfa,use_ace
+  USE exx_base,             ONLY : exxdiv_treatment,exx_grid_init,exx_div_check,exxdiv,&
+                                   exx_divergence,exx_mp_init,gau_scrlen,erfc_scrlen
   !
   IMPLICIT NONE
   !
@@ -33,6 +38,29 @@ SUBROUTINE wbse_setup()
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   CALL do_setup()
+  !
+  IF (xclib_dft_is('hybrid')) THEN
+     !
+     l_hybrid_tddft = .TRUE.
+     l_exx_fraction = exxalfa
+     l_exx_scrlen = erfc_scrlen
+     !
+     SELECT CASE ( TRIM(exxdiv_treatment) )
+     CASE ( "gygi-baldereschi", "gygi-bald", "g-b", "gb" )
+        !
+        l_exxdiv_treatment = 'gb'
+        !
+     CASE ( "vcut_spherical" )
+        !
+        l_exxdiv_treatment = 'default'
+        !
+     CASE DEFAULT
+        !
+        CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
+        !
+     END SELECT
+     !
+  ENDIF
   !
   SELECT CASE(TRIM(localization))
   CASE('N','n')
@@ -100,7 +128,26 @@ SUBROUTINE wbse_setup()
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Rho',.FALSE.,'gb')
+  IF (l_hybrid_tddft) THEN
+     !
+     IF (l_exx_scrlen > 0._DP) THEN
+        !
+        ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = l_exx_scflen
+        CALL pot3D%init2('Rho',.FALSE.,l_exxdiv_treatment, 1._DP, -1._DP, l_exx_scrlen)
+        !
+     ELSE
+        !
+        ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid
+        ! divergence
+        CALL pot3D%init2('Rho',.FALSE.,l_exxdiv_treatment, 1._DP, 0._DP, 1._DP)
+        !
+     ENDIF
+     !
+  ELSE
+     !
+     CALL pot3D%init('Rho',.FALSE.,'gb')
+     !
+  ENDIF
   !
   CALL set_nbndocc()
   !
@@ -116,6 +163,8 @@ SUBROUTINE wbse_setup()
   !
   IF(l_bse) THEN
      CALL bse_start()
+  ELSE
+     IF (l_hybrid_tddft) CALL bse_start()
   ENDIF
   !
 END SUBROUTINE

@@ -18,7 +18,7 @@ SUBROUTINE calc_tau()
   USE pwcom,                ONLY : isk,nks,npw,ngk
   USE wavefunctions,        ONLY : evc
   USE westcom,              ONLY : lrwfc,iuwfc,ev,dvg,n_pdep_eigen_to_use,npwqx,nbnd_occ,&
-                                 &wbse_init_calculation,l_pdep,spin_channel,l_bse
+                                 & wbse_init_calculation,l_pdep,spin_channel,l_bse
   USE lsda_mod,             ONLY : nspin
   USE pdep_db,              ONLY : pdep_db_read
   USE mp,                   ONLY : mp_bcast
@@ -56,9 +56,9 @@ SUBROUTINE calc_tau()
      ALLOCATE(dvg(npwqx,pert%nlocx))
      ALLOCATE(ev(n_pdep_eigen_to_use))
      !
-     IF (l_bse) CALL pdep_db_read(n_pdep_eigen_to_use)
+     IF(l_bse) CALL pdep_db_read(n_pdep_eigen_to_use)
   ELSE
-     IF (l_bse) CALL init_qbox()
+     IF(l_bse) CALL init_qbox()
   ENDIF
   !
   spin_resolve = spin_channel > 0 .AND. nspin > 1

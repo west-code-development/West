@@ -21,15 +21,12 @@ SUBROUTINE wbse_setup()
                                  & n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,trev_pdep,&
                                  & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
                                  & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
-                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir,l_hybrid_tddft,&
-                                 & l_exx_fraction,l_exx_scrlen,l_exxdiv_treatment
+                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir,l_hybrid_tddft
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup
   USE xc_lib,               ONLY : xclib_dft_is
-  USE exx,                  ONLY : exxinit,ecutfock,exxalfa,use_ace
-  USE exx_base,             ONLY : exxdiv_treatment,exx_grid_init,exx_div_check,exxdiv,&
-                                   exx_divergence,exx_mp_init,gau_scrlen,erfc_scrlen
+  USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
   !
   IMPLICIT NONE
   !
@@ -59,28 +56,8 @@ SUBROUTINE wbse_setup()
   END SELECT
   !
   ! ground state hybrid DFT + TDDFT -> TD-hybrid-DFT
-  IF (xclib_dft_is('hybrid') .AND. (.NOT. l_bse)) THEN
-     !
-     l_hybrid_tddft = .TRUE.
-     l_exx_fraction = exxalfa
-     l_exx_scrlen = erfc_scrlen
-     !
-     SELECT CASE ( TRIM(exxdiv_treatment) )
-     CASE ( "gygi-baldereschi", "gygi-bald", "g-b", "gb" )
-        !
-        l_exxdiv_treatment = 'gb'
-        !
-     CASE ( "vcut_spherical" )
-        !
-        l_exxdiv_treatment = 'default'
-        !
-     CASE DEFAULT
-        !
-        CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
-        !
-     END SELECT
-     !
-  ENDIF
+  !
+  IF((.NOT. l_bse) .AND. xclib_dft_is('hybrid')) l_hybrid_tddft = .TRUE.
   !
   SELECT CASE(wbse_calculation)
   CASE('D','d')
@@ -129,18 +106,19 @@ SUBROUTINE wbse_setup()
   !
   CALL set_npwq()
   !
-  IF (l_hybrid_tddft) THEN
+  IF(l_hybrid_tddft) THEN
      !
-     IF (l_exx_scrlen > 0._DP) THEN
+     IF(erfc_scrlen > 0._DP) THEN
         !
-        ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = l_exx_scflen
-        CALL pot3D%init2('Rho',.FALSE.,l_exxdiv_treatment, 1._DP, -1._DP, l_exx_scrlen)
+        ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = erfc_scrlen
+        !
+        CALL pot3D%init2('Rho',.FALSE.,exxdiv_treatment,1._DP,-1._DP,erfc_scrlen)
         !
      ELSE
         !
-        ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid
-        ! divergence
-        CALL pot3D%init2('Rho',.FALSE.,l_exxdiv_treatment, 1._DP, 0._DP, 1._DP)
+        ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid divergence
+        !
+        CALL pot3D%init2('Rho',.FALSE.,exxdiv_treatment,1._DP,0._DP,1._DP)
         !
      ENDIF
      !
@@ -162,11 +140,7 @@ SUBROUTINE wbse_setup()
   !
   ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
   !
-  IF(l_bse) THEN
-     CALL bse_start()
-  ELSE
-     IF (l_hybrid_tddft) CALL bse_start()
-  ENDIF
+  IF(l_bse .OR. l_hybrid_tddft) CALL bse_start()
   !
 END SUBROUTINE
 !

@@ -20,8 +20,9 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma,double_fwfft_gamma
   USE mp_global,             ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
+  USE exx,                   ONLY : exxalfa
   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_local_repr,u_matrix,idx_matrix,&
-                                  & n_bse_idx,l_hybrid_tddft,l_exx_fraction
+                                  & n_bse_idx,l_hybrid_tddft
   USE distribution_center,   ONLY : aband
   USE wbse_io,               ONLY : read_bse_pots_g
 #if defined(__CUDA)
@@ -198,12 +199,17 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
      CALL mp_sum(caux2,inter_bgrp_comm)
      !$acc update device(caux2)
      !
-     ! multiply the fraction of exx for hybrid tddft calculations
-     IF (l_hybrid_tddft) caux2 = caux2 * l_exx_fraction
+     IF(l_hybrid_tddft) THEN
+        !
+        ! multiply the fraction of exx for hybrid tddft calculations
+        !
+        !$acc kernels present(caux2)
+        caux2(:,:) = caux2*exxalfa
+        !$acc end kernels
+        !
+     ENDIF
      !
      IF(l_local_repr) THEN
-        !
-        ! U^{+}(\xi)
         !
         !$acc host_data use_device(caux2,u_matrix,bse_kd1)
         CALL ZGEMM('N','C',npw,aband_nloc,nbnd_do,mone,caux2,npwx,u_matrix(:,:,current_spin),&

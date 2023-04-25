@@ -36,7 +36,6 @@ SUBROUTINE exx_go()
   ! Workspace
   !
   LOGICAL :: is_westpp
-  LOGICAL :: is_wbse_init
   LOGICAL :: exst
   LOGICAL, EXTERNAL :: matches
   !
@@ -45,9 +44,7 @@ SUBROUTINE exx_go()
   CALL mp_start_exx(nband_,ntg_,intra_pool_comm)
   !
   is_westpp = matches('westpp.x',command_line)
-  is_wbse_init = matches('wbse_init.x',command_line)
   !
-!  IF(is_westpp .OR. is_wbse_init) RETURN
   IF(is_westpp) RETURN
   !
   IF(xclib_dft_is('hybrid')) THEN

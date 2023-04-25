@@ -18,19 +18,63 @@ MODULE sort_tools
   !
   IMPLICIT NONE
   !
+  PRIVATE
+  !
+  PUBLIC :: heapsort
+  !
   INTERFACE swap
-     MODULE PROCEDURE swap_i4, swap_i8
+     MODULE PROCEDURE swap_r8, swap_i8, swap_i4
   END INTERFACE
 
   INTERFACE downheap
-     MODULE PROCEDURE downheap_i4, downheap_i8
+     MODULE PROCEDURE downheap_r8, downheap_i8, downheap_i4
   END INTERFACE
 
   INTERFACE heapsort
-     MODULE PROCEDURE heapsort_i4, heapsort_i8
+     MODULE PROCEDURE heapsort_r8, heapsort_i8, heapsort_i4
   END INTERFACE
   !
   CONTAINS
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE heapsort_r8(length,array,idx)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER, INTENT(IN) :: length
+      REAL(DP), INTENT(INOUT) :: array(length)
+      INTEGER, INTENT(OUT) :: idx(length)
+      !
+      ! Workspace
+      !
+      INTEGER :: top
+      INTEGER :: i
+      !
+      DO i = 1,length
+         idx(i) = i
+      ENDDO
+      !
+      top = length/2
+      !
+      DO i = top,1,-1
+         CALL downheap(length,array,idx,i,length)
+      ENDDO
+      !
+      i = length
+      !
+      DO WHILE(i > 1)
+         CALL swap(length,array,1,i)
+         CALL swap(length,idx,1,i)
+         !
+         i = i-1
+         !
+         CALL downheap(length,array,idx,1,i)
+      ENDDO
+      !
+    END SUBROUTINE
     !
     !-----------------------------------------------------------------------
     SUBROUTINE heapsort_i8(length,array,idx)
@@ -68,6 +112,88 @@ MODULE sort_tools
          i = i-1
          !
          CALL downheap(length,array,idx,1,i)
+      ENDDO
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE heapsort_i4(length,array,idx)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER, INTENT(IN) :: length
+      INTEGER, INTENT(INOUT) :: array(length)
+      INTEGER, INTENT(OUT) :: idx(length)
+      !
+      ! Workspace
+      !
+      INTEGER :: top
+      INTEGER :: i
+      !
+      DO i = 1,length
+         idx(i) = i
+      ENDDO
+      !
+      top = length/2
+      !
+      DO i = top,1,-1
+         CALL downheap(length,array,idx,i,length)
+      ENDDO
+      !
+      i = length
+      !
+      DO WHILE(i > 1)
+         CALL swap(length,array,1,i)
+         CALL swap(length,idx,1,i)
+         !
+         i = i-1
+         !
+         CALL downheap(length,array,idx,1,i)
+      ENDDO
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE downheap_r8(length,a,b,top,bottom)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER, INTENT(IN) :: length
+      REAL(DP), INTENT(INOUT) :: a(length)
+      INTEGER, INTENT(INOUT) :: b(length)
+      INTEGER, INTENT(IN) :: top
+      INTEGER, INTENT(IN) :: bottom
+      !
+      ! Workspace
+      !
+      INTEGER :: v
+      INTEGER :: w
+      !
+      v = top
+      w = 2*v
+      !
+      DO WHILE(w <= bottom)
+         IF(w+1 <= bottom) then
+            IF(a(w+1) > a(w)) THEN
+               w = w+1
+            ENDIF
+         ENDIF
+         !
+         IF(a(v) >= a(w)) THEN
+            RETURN
+         ELSE
+            CALL swap(length,a,v,w)
+            CALL swap(length,b,v,w)
+            !
+            v = w
+            w = 2*v
+         ENDIF
       ENDDO
       !
     END SUBROUTINE
@@ -115,46 +241,6 @@ MODULE sort_tools
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE heapsort_i4(length,array,idx)
-    !-----------------------------------------------------------------------
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      INTEGER, INTENT(IN) :: length
-      INTEGER, INTENT(INOUT) :: array(length)
-      INTEGER, INTENT(OUT) :: idx(length)
-      !
-      ! Workspace
-      !
-      INTEGER :: top
-      INTEGER :: i
-      !
-      DO i = 1,length
-         idx(i) = i
-      ENDDO
-      !
-      top = length/2
-      !
-      DO i = top,1,-1
-         CALL downheap(length,array,idx,i,length)
-      ENDDO
-      !
-      i = length
-      !
-      DO WHILE(i > 1)
-         CALL swap(length,array,1,i)
-         CALL swap(length,idx,1,i)
-         !
-         i = i-1
-         !
-         CALL downheap(length,array,idx,1,i)
-      ENDDO
-      !
-    END SUBROUTINE
-    !
-    !-----------------------------------------------------------------------
     SUBROUTINE downheap_i4(length,a,b,top,bottom)
     !-----------------------------------------------------------------------
       !
@@ -193,6 +279,29 @@ MODULE sort_tools
             w = 2*v
          ENDIF
       ENDDO
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE swap_r8(length,array,i,j)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER, INTENT(IN) :: length
+      REAL(DP), INTENT(INOUT) :: array(length)
+      INTEGER, INTENT(IN) :: i
+      INTEGER, INTENT(IN) :: j
+      !
+      ! Workspace
+      !
+      REAL(DP) :: tmp
+      !
+      tmp = array(i)
+      array(i) = array(j)
+      array(j) = tmp
       !
     END SUBROUTINE
     !

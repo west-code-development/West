@@ -39,7 +39,27 @@ SUBROUTINE wbse_setup()
   !
   CALL do_setup()
   !
-  IF (xclib_dft_is('hybrid')) THEN
+  SELECT CASE(TRIM(localization))
+  CASE('N','n')
+     l_local_repr = .FALSE.
+  CASE('B','b','W','w')
+     l_local_repr = .TRUE.
+  END SELECT
+  !
+  SELECT CASE(macropol_calculation)
+  CASE('c','C')
+     l_macropol = .TRUE.
+  END SELECT
+  !
+  SELECT CASE(TRIM(solver))
+  CASE('BSE','bse')
+     l_bse = .TRUE.
+  CASE('TDDFT','tddft')
+     l_bse = .FALSE.
+  END SELECT
+  !
+  ! ground state hybrid DFT + TDDFT -> TD-hybrid-DFT
+  IF (xclib_dft_is('hybrid') .AND. (.NOT. l_bse)) THEN
      !
      l_hybrid_tddft = .TRUE.
      l_exx_fraction = exxalfa
@@ -61,25 +81,6 @@ SUBROUTINE wbse_setup()
      END SELECT
      !
   ENDIF
-  !
-  SELECT CASE(TRIM(localization))
-  CASE('N','n')
-     l_local_repr = .FALSE.
-  CASE('B','b','W','w')
-     l_local_repr = .TRUE.
-  END SELECT
-  !
-  SELECT CASE(macropol_calculation)
-  CASE('c','C')
-     l_macropol = .TRUE.
-  END SELECT
-  !
-  SELECT CASE(TRIM(solver))
-  CASE('BSE','bse')
-     l_bse = .TRUE.
-  CASE('TDDFT','tddft')
-     l_bse = .FALSE.
-  END SELECT
   !
   SELECT CASE(wbse_calculation)
   CASE('D','d')

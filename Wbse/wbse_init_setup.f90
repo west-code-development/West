@@ -31,7 +31,15 @@ SUBROUTINE wbse_init_setup()
   !
   CALL do_setup()
   !
-  IF (xclib_dft_is('hybrid')) THEN
+  SELECT CASE(TRIM(solver))
+  CASE('BSE','bse')
+     l_bse = .TRUE.
+  CASE('TDDFT','tddft')
+     l_bse = .FALSE.
+  END SELECT
+  !
+  ! ground state hybrid DFT + TDDFT -> TD-hybrid-DFT
+  IF (xclib_dft_is('hybrid') .AND. (.NOT. l_bse)) THEN
      !
      l_hybrid_tddft = .TRUE.
      l_exx_fraction = exxalfa
@@ -53,13 +61,6 @@ SUBROUTINE wbse_init_setup()
      END SELECT
      !
   ENDIF
-  !
-  SELECT CASE(TRIM(solver))
-  CASE('BSE','bse')
-     l_bse = .TRUE.
-  CASE('TDDFT','tddft')
-     l_bse = .FALSE.
-  END SELECT
   !
   SELECT CASE(TRIM(bse_method))
   CASE('PDEP','pdep')

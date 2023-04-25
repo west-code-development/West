@@ -38,19 +38,6 @@ K_POINTS {gamma}
 EOF
 
 
-cat > wstat.in << EOF
-input_west:
-  qe_prefix: test
-  west_prefix: test
-  outdir: ./
-
-wstat_control:
-  wstat_calculation: S
-  n_pdep_eigen: 30
-  l_minimize_exx_if_active: True
-EOF
-
-
 cat > wbse_init.in << EOF
 input_west:
   qe_prefix: test
@@ -60,8 +47,6 @@ input_west:
 wbse_init_control:
   wbse_init_calculation: S
   solver: TDDFT
-  bse_method: PDEP
-  n_pdep_eigen_to_use: 30
 EOF
 
 
@@ -74,11 +59,8 @@ input_west:
 wbse_init_control:
   wbse_init_calculation: S
   solver: TDDFT
-  bse_method: PDEP
-  n_pdep_eigen_to_use: 30
 
 wbse_control:
   wbse_calculation: L
-  scissor_ope: 0.4476
   n_lanczos: 200
 EOF

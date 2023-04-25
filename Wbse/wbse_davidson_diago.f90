@@ -78,6 +78,8 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   REAL(DP), EXTERNAL :: GET_CLOCK
   !
+  LOGICAL, PARAMETER :: l_vc_init = .TRUE.
+  !
   ! ... INITIALIZATION
   !
   l_is_wstat_converged = .FALSE.
@@ -184,9 +186,15 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      IF(n_pdep_read_from_file>0) CALL plep_db_read( n_pdep_read_from_file )
      !
-     ! ... Eventually randomize
+     ! ... Eventually initialize or randomize
      !
-     IF(n_pdep_read_from_file<nvec) CALL wbse_do_randomize ( dvg_exc, n_pdep_read_from_file+1, nvec  )
+     IF(n_pdep_read_from_file<nvec) THEN
+        IF(l_vc_init) THEN
+           CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec  )
+        ELSE
+           CALL wbse_do_randomize ( dvg_exc, n_pdep_read_from_file+1, nvec  )
+        ENDIF
+     ENDIF
      !
      ! ... MGS
      !
@@ -938,7 +946,7 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
   REAL(DP),ALLOCATABLE :: random_num_debug(:,:)
   INTEGER :: il1,ig1,ig,lbnd,ibnd,iks,nbndval,nbnd_do
   INTEGER :: mloc,mstart,max_mloc
-  INTEGER :: this_bgrp_id
+  INTEGER :: owner
   REAL(DP) :: aux_real
   REAL(DP) :: rr, arg
 #if defined(__CUDA)
@@ -989,13 +997,13 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
         !
         DO ibnd = 1, nbndval-n_trunc_bands
            !
-           CALL aband%g2l(ibnd,lbnd,this_bgrp_id)
+           CALL aband%g2l(ibnd,lbnd,owner)
            !
            DO ig=1,ngm_g
               random_num_debug(1:2,ig) = (/ randy(), randy() /)
            ENDDO
            !
-           IF(my_bgrp_id == this_bgrp_id) THEN
+           IF(my_bgrp_id == owner) THEN
               !
               amat(:,lbnd,iks,il1) = 0._DP
               !
@@ -1132,5 +1140,116 @@ SUBROUTINE wbse_output_ev_and_time(nvec,ev_,conv_,time,dav_iter,notcnv)
      CALL json%destroy()
      !
   ENDIF
+  !
+END SUBROUTINE
+!
+!
+!----------------------------------------------------------------------------
+SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend)
+  !----------------------------------------------------------------------------
+  !
+  ! Adapted from lr_dav_set_init in Turbo-TDDFPT
+  !
+  ! Use couples of occ/vir states as initial guess
+  !
+  USE kinds,                ONLY : DP
+  USE io_global,            ONLY : stdout
+  USE wavefunctions,        ONLY : evc
+  USE buffers,              ONLY : get_buffer
+  USE pwcom,                ONLY : nks,npwx,nbnd,et
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,my_bgrp_id
+  USE mp,                   ONLY : mp_bcast,mp_max
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands
+  USE distribution_center,  ONLY : aband,pert
+  USE sort_tools,           ONLY : heapsort
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  INTEGER,INTENT(IN) :: mglobalstart,mglobalend
+  COMPLEX(DP),INTENT(INOUT) :: amat(npwx,aband%nlocx,nks,pert%nlocx)
+  !
+  ! Workspace
+  !
+  INTEGER :: iks,iv,ic,ib,lv,nbndval
+  INTEGER :: nbnd_v_window,nbnd_c_window,npair
+  INTEGER :: il1,ig1,nvec
+  INTEGER :: itmp1,itmp2
+  INTEGER :: mloc,mstart,max_mloc
+  INTEGER :: owner
+  INTEGER,ALLOCATABLE :: e_diff_order(:)
+  REAL(DP),ALLOCATABLE :: e_diff(:)
+  !
+  CALL start_clock ('vc_init')
+  !
+  WRITE(stdout,'(5x,"Using lowest energy electron-hole pairs as initial guess")')
+  !
+  nvec = mglobalend-mglobalstart+1
+  nbnd_v_window = MIN(CEILING(SQRT(REAL(4*nvec,KIND=DP))), MINVAL(nbnd_occ))
+  nbnd_c_window = MIN(CEILING(SQRT(REAL(4*nvec,KIND=DP))), nbnd-MAXVAL(nbnd_occ))
+  npair = nbnd_v_window*nbnd_c_window
+  !
+  ALLOCATE(e_diff(nks*npair))
+  ALLOCATE(e_diff_order(nks*npair))
+  !
+  ib = 0
+  DO iks = 1,nks
+     !
+     nbndval = nbnd_occ(iks)
+     !
+     DO iv = nbndval-nbnd_v_window+1, nbndval
+        DO ic = nbndval+1, nbndval+nbnd_c_window
+           ib = ib + 1
+           e_diff(ib) = et(ic,iks) - et(iv,iks)
+        ENDDO
+     ENDDO
+     !
+  ENDDO
+  !
+  CALL heapsort(nks*npair,e_diff,e_diff_order)
+  !
+  mloc = 0
+  mstart = 1
+  DO il1 = 1,pert%nloc
+     ig1 = pert%l2g(il1)
+     IF(ig1 < mglobalstart .OR. ig1 > mglobalend) CYCLE
+     IF(mloc == 0) mstart = il1
+     mloc = mloc + 1
+  ENDDO
+  !
+  max_mloc = mloc
+  CALL mp_max(max_mloc,inter_image_comm)
+  !
+  amat(:,:,:,mstart:mstart+max_mloc-1) = (0._DP,0._DP)
+  !
+  DO il1 = mstart,mstart+max_mloc-1
+     !
+     ig1 = pert%l2g(il1)
+     !
+     itmp1 = e_diff_order(ig1)
+     itmp2 = MOD(itmp1-1, npair) + 1
+     !
+     iks = (itmp1-1)/npair + 1
+     nbndval = nbnd_occ(iks)
+     !
+     IF(nks > 1) THEN
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+     ENDIF
+     !
+     iv = (itmp2-1)/nbnd_c_window + 1 + nbndval - nbnd_v_window - n_trunc_bands
+     ic = MOD(itmp2-1, nbnd_c_window) + 1 + nbndval
+     !
+     CALL aband%g2l(iv,lv,owner)
+     !
+     IF(owner == my_bgrp_id) amat(:,lv,iks,il1) = evc(:,ic)
+     !
+  ENDDO
+  !
+  DEALLOCATE(e_diff)
+  DEALLOCATE(e_diff_order)
+  !
+  CALL stop_clock ('vc_init')
   !
 END SUBROUTINE

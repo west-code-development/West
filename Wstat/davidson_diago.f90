@@ -147,7 +147,7 @@ SUBROUTINE davidson_diago_gamma ( )
   dav_iter = -2
   !
   CALL pot3D%init(fftdriver,.FALSE.,'default')
-  CALL pot3d%print_divergence()
+  CALL pot3D%print_divergence()
   !
   ! KIND OF CALCULATION
   !
@@ -576,7 +576,7 @@ SUBROUTINE davidson_diago_k ( )
      ! compute Coulomb potential
      !
      CALL pot3D%init('Wave',.TRUE.,'default',iq)
-     CALL pot3d%print_divergence()
+     CALL pot3D%print_divergence()
      !
      IF ( q_grid%np > 1 ) THEN
         !

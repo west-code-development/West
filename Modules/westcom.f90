@@ -338,7 +338,7 @@ MODULE wbse_center
   !
   INTEGER :: nbndval0x
   LOGICAL :: l_bse ! BSE True, TDDFT False
-  LOGICAL :: l_hybrid_tddft = .FALSE.
+  LOGICAL :: l_hybrid_tddft
   LOGICAL :: l_lanczos
   LOGICAL :: l_davidson
   LOGICAL :: l_bse_triplet

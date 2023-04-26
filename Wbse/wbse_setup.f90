@@ -57,7 +57,11 @@ SUBROUTINE wbse_setup()
   !
   ! ground state hybrid DFT + TDDFT -> TD-hybrid-DFT
   !
-  IF((.NOT. l_bse) .AND. xclib_dft_is('hybrid')) l_hybrid_tddft = .TRUE.
+  IF((.NOT. l_bse) .AND. xclib_dft_is('hybrid')) THEN
+     l_hybrid_tddft = .TRUE.
+  ELSE
+     l_hybrid_tddft = .FALSE.
+  ENDIF
   !
   SELECT CASE(wbse_calculation)
   CASE('D','d')
@@ -112,13 +116,13 @@ SUBROUTINE wbse_setup()
         !
         ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = erfc_scrlen
         !
-        CALL pot3D%init2('Rho',.FALSE.,exxdiv_treatment,1._DP,-1._DP,erfc_scrlen)
+        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=-1._DP,mymu=erfc_scrlen)
         !
      ELSE
         !
         ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid divergence
         !
-        CALL pot3D%init2('Rho',.FALSE.,exxdiv_treatment,1._DP,0._DP,1._DP)
+        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=0._DP,mymu=1._DP)
         !
      ENDIF
      !
@@ -127,6 +131,8 @@ SUBROUTINE wbse_setup()
      CALL pot3D%init('Rho',.FALSE.,'gb')
      !
   ENDIF
+  !
+  CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()
   !

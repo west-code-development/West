@@ -350,7 +350,7 @@ wfreq_control
    * - **Type**
      - string
    * - **Default**
-     - "N"
+     - "C"
    * - **Description**
      - Available options are:
 
@@ -1096,7 +1096,7 @@ wbse_control
    * - **Type**
      - string
    * - **Default**
-     - "N"
+     - "C"
    * - **Description**
      - Available options are:
 

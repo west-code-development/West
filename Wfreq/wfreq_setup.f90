@@ -102,6 +102,8 @@ SUBROUTINE wfreq_setup
   SELECT CASE(macropol_calculation)
   CASE('c','C')
      l_macropol = .TRUE.
+  CASE('n','N')
+     l_macropol = .FALSE.
   END SELECT
   !
   IF(xclib_dft_is('hybrid')) THEN

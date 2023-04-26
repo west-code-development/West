@@ -19,8 +19,8 @@ SUBROUTINE do_loc ( )
   USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk
   USE gvect,                 ONLY : ngm
   USE io_push,               ONLY : io_push_title
-  USE westcom,               ONLY : iuwfc,lrwfc,westpp_save_dir,westpp_format,westpp_range,&
-                                  & westpp_box,westpp_r0,westpp_nr,westpp_rmax
+  USE westcom,               ONLY : iuwfc,lrwfc,logfile,westpp_format,westpp_range,westpp_box,&
+                                  & westpp_r0,westpp_nr,westpp_rmax
   USE mp_global,             ONLY : intra_bgrp_comm,me_bgrp,root_bgrp,inter_image_comm,my_image_id
   USE mp_world,              ONLY : mpime,root
   USE mp,                    ONLY : mp_bcast,mp_sum
@@ -36,7 +36,7 @@ SUBROUTINE do_loc ( )
   USE control_flags,         ONLY : gamma_only
   USE types_bz_grid,         ONLY : k_grid
   USE cell_base,             ONLY : alat,at,omega
-  USE json_module,           ONLY : json_core,json_value
+  USE json_module,           ONLY : json_file
   !
   IMPLICIT NONE
   !
@@ -50,10 +50,9 @@ SUBROUTINE do_loc ( )
   COMPLEX(DP), ALLOCATABLE :: auxc(:), auxg(:)
   REAL(DP) :: rho, r_vec(3)
   REAL(DP) :: r, dr
-  CHARACTER(LEN=4) :: labelk
+  CHARACTER(LEN=5) :: label_k
   TYPE(bar_type) :: barra
-  TYPE(json_core) :: json
-  TYPE(json_value), POINTER :: json_root, localization_object, ipr_object
+  TYPE(json_file) :: json
   !
   nbnd_ = westpp_range(2) - westpp_range(1) + 1
   aband = idistribute()
@@ -223,44 +222,25 @@ SUBROUTINE do_loc ( )
   !
   ! root writes JSON file
   !
-  IF (mpime == root) THEN
+  IF(mpime == root) THEN
      !
-     CALL json%initialize
-     CALL json%create_object(json_root, '')
+     CALL json%initialize()
+     CALL json%load(filename=TRIM(logfile))
      !
-     IF (k_grid%nps == 1) THEN
-        !
-        ! write localization factor and IPR to JSON file directly
-        !
-        CALL json%add(json_root, 'localization', local_fac(:,1))
-        CALL json%add(json_root, 'ipr', ipr(:,1))
-     ELSE
-        !
-        ! add localization object to root
-        !
-        CALL json%create_object(localization_object, 'localization')
-        CALL json%create_object(ipr_object, 'ipr')
-        CALL json%add(json_root, localization_object)
-        CALL json%add(json_root, ipr_object)
-        !
-        DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
-           WRITE(labelk, '(I4)') iks
-           !
-           ! write localization factor and IPR for each iks-point
-           !
-           CALL json%add(localization_object, labelk, local_fac(:,iks))
-           CALL json%add(ipr_object, labelk, ipr(:,iks))
-        ENDDO
-        !
-        NULLIFY(localization_object)
-        NULLIFY(ipr_object)
-        !
-     ENDIF
+     ! output localization factor and IPR
      !
-     OPEN( NEWUNIT=iunit, FILE=TRIM(westpp_save_dir)//'/localization.json' )
-     CALL json%print(json_root,iunit)
-     CLOSE( iunit )
+     DO iks = 1,k_grid%nps
+        !
+        WRITE(label_k,'(I5.5)') iks
+        !
+        CALL json%add('output.L.K'//label_k//'.local_factor',local_fac(:,iks))
+        CALL json%add('output.L.K'//label_k//'.ipr',ipr(:,iks))
+        !
+     ENDDO
      !
+     OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))
+     CALL json%print(iunit)
+     CLOSE(iunit)
      CALL json%destroy()
      !
   ENDIF

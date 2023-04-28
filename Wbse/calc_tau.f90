@@ -511,9 +511,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            WRITE(slabel,'(i1)') current_spin
            !
            IF(l_bse) THEN
-              fname = TRIM(wbse_init_save_dir)//'/tau'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
+              fname = TRIM(wbse_init_save_dir)//'/int_W'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
            ELSE
-              fname = TRIM(wbse_init_save_dir)//'/tau_u'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
+              fname = TRIM(wbse_init_save_dir)//'/int_v'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
            ENDIF
            !
            !$acc update host(tau)

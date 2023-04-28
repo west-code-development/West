@@ -58,9 +58,9 @@ MODULE wbse_io
     WRITE(my_spin,'(i1)') ispin
     !
     IF(l_bse) THEN
-       fname = TRIM(wbse_init_save_dir)//'/tau'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
+       fname = TRIM(wbse_init_save_dir)//'/int_W'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
     ELSE
-       fname = TRIM(wbse_init_save_dir)//'/tau_u'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
+       fname = TRIM(wbse_init_save_dir)//'/int_v'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
     ENDIF
     CALL pdep_read_G_and_distribute(fname,rhog)
     !

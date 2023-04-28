@@ -194,7 +194,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   USE start_k,          ONLY : nk1,nk2,nk3
   USE control_flags,    ONLY : gamma_only
   USE json_module,      ONLY : json_file
-  USE pwcom,            ONLY : nelec
+  USE pwcom,            ONLY : nelec,nbnd
   !
   IMPLICIT NONE
   !
@@ -265,6 +265,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = dict_create(kwargs)
         IERR = kwargs%setitem('nq',nq)
         IERR = kwargs%setitem('nelec',nelec)
+        IERR = kwargs%setitem('nbnd',nbnd)
         !
         IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)

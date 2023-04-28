@@ -41,7 +41,7 @@ default["wstat_control"]["trev_pdep_rel"] = 1.e-1
 default["wstat_control"]["tr2_dfpt"] = 1.e-12
 default["wstat_control"]["l_kinetic_only"] = False
 default["wstat_control"]["l_minimize_exx_if_active"] = False
-default["wstat_control"]["n_exx_lowrank"] = 0
+default["wstat_control"]["n_exx_lowrank"] = 0 # dynamically set to the number of bands
 default["wstat_control"]["l_use_ecutrho"] = False
 default["wstat_control"]["qlist"] = [ 1 ] # dynamically set to the actual number of q
 # wfreq_control
@@ -132,6 +132,10 @@ def update_default_values(key,kwargs) :
        assert("nelec") in kwargs.keys()
        nelec = kwargs["nelec"]
        default[key]["n_pdep_eigen"] = int(nelec)
+       #
+       assert("nbnd") in kwargs.keys()
+       nbnd = kwargs["nbnd"]
+       default[key]["n_exx_lowrank"] = int(nbnd)
     #
     if key == "wfreq_control" :
        #

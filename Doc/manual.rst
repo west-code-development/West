@@ -242,7 +242,7 @@ wstat_control
    * - **Type**
      - int
    * - **Default**
-     - 0
+     - dynamically set to match the number of bands, read from the ground state
    * - **Description**
      - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
 

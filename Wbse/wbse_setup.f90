@@ -172,7 +172,7 @@ SUBROUTINE bse_start()
   !
   ! Workspace
   !
-  INTEGER :: iks,current_spin
+  INTEGER :: iks,is
   INTEGER :: lbnd,ibnd,jbnd,my_ibnd,nbnd_do,nbndval
   INTEGER :: ipair,do_idx
   REAL(DP) :: ovl_value
@@ -202,13 +202,13 @@ SUBROUTINE bse_start()
      ALLOCATE(u_matrix(aband%nloc,nbnd_do,nspin))
      ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,nspin))
      !
-     DO current_spin = 1,nspin
+     DO is = 1,nspin
         !
-        CALL read_umatrix_and_omatrix(nbnd_do,current_spin,u_tmp,ovl_matrix(:,:,current_spin))
+        CALL read_umatrix_and_omatrix(nbnd_do,is,u_tmp,ovl_matrix(:,:,is))
         !
         DO lbnd = 1,aband%nloc
            ibnd = aband%l2g(lbnd)
-           u_matrix(lbnd,:,current_spin) = u_tmp(ibnd,:)
+           u_matrix(lbnd,:,is) = u_tmp(ibnd,:)
         ENDDO
         !
      ENDDO
@@ -228,13 +228,13 @@ SUBROUTINE bse_start()
   DO iks = 1,nks
      !
      nbndval = nbnd_occ(iks)
-     current_spin = isk(iks)
+     is = isk(iks)
      do_idx = 0
      !
      DO ibnd = 1,nbndval-n_trunc_bands
         DO jbnd = 1,nbndval-n_trunc_bands
            IF(l_local_repr) THEN
-              ovl_value = ovl_matrix(ibnd,jbnd,current_spin)
+              ovl_value = ovl_matrix(ibnd,jbnd,is)
            ELSE
               ovl_value = 0._DP
            ENDIF
@@ -242,18 +242,18 @@ SUBROUTINE bse_start()
            IF(l_local_repr) THEN
               IF(ovl_value >= overlap_thr) THEN
                  do_idx = do_idx + 1
-                 idx_matrix(do_idx,1,current_spin) = ibnd+n_trunc_bands
-                 idx_matrix(do_idx,2,current_spin) = jbnd+n_trunc_bands
+                 idx_matrix(do_idx,1,is) = ibnd+n_trunc_bands
+                 idx_matrix(do_idx,2,is) = jbnd+n_trunc_bands
               ENDIF
            ELSE
               do_idx = do_idx + 1
-              idx_matrix(do_idx,1,current_spin) = ibnd+n_trunc_bands
-              idx_matrix(do_idx,2,current_spin) = jbnd+n_trunc_bands
+              idx_matrix(do_idx,1,is) = ibnd+n_trunc_bands
+              idx_matrix(do_idx,2,is) = jbnd+n_trunc_bands
            ENDIF
         ENDDO
      ENDDO
      !
-     n_bse_idx(current_spin) = do_idx
+     n_bse_idx(is) = do_idx
      !
   ENDDO
   !
@@ -268,8 +268,8 @@ SUBROUTINE bse_start()
      !
      DO iks = 1,nks
         !
-        current_spin = isk(iks)
-        do_idx = n_bse_idx(current_spin)
+        is = isk(iks)
+        do_idx = n_bse_idx(is)
         !
         ! count number of tau needed by my band group
         !
@@ -279,10 +279,10 @@ SUBROUTINE bse_start()
            !
            DO ipair = 1, do_idx
               !
-              ibnd = idx_matrix(ipair,1,current_spin)-n_trunc_bands
-              jbnd = idx_matrix(ipair,2,current_spin)-n_trunc_bands
+              ibnd = idx_matrix(ipair,1,is)-n_trunc_bands
+              jbnd = idx_matrix(ipair,2,is)-n_trunc_bands
               !
-              IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,current_spin) = 1
+              IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,is) = 1
               !
            ENDDO
            !
@@ -290,7 +290,7 @@ SUBROUTINE bse_start()
         !
         DO jbnd = 1,nbnd_do
            DO ibnd = jbnd,nbnd_do
-              IF(tau_is_read(ibnd,jbnd,current_spin) == 1) n_tau = n_tau+1
+              IF(tau_is_read(ibnd,jbnd,is) == 1 .OR. tau_is_read(jbnd,ibnd,is) == 1) n_tau = n_tau+1
            ENDDO
         ENDDO
         !

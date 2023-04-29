@@ -42,7 +42,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE xc_lib,               ONLY : xclib_dft_is
   USE class_idistribute,    ONLY : idistribute
   USE distribution_center,  ONLY : kpt_pool
-  USE exx,                  ONLY : vexx
+  USE exx,                  ONLY : use_ace,vexx,vexxace_gamma,vexxace_k
   USE types_bz_grid,        ONLY : k_grid
   !
   IMPLICIT NONE
@@ -56,6 +56,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   REAL(DP) :: etxc_
   REAL(DP) :: vtxc_
+  REAL(DP) :: ee_
   REAL(DP), ALLOCATABLE :: vxc(:,:)
   INTEGER :: ib,ir,iks,iks_g,jb_glob,ipair
   COMPLEX(DP) :: braket
@@ -181,7 +182,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      !
      ! HYBRID CONTRIBUTION TO VXC
      !
-     IF(  xclib_dft_is('hybrid') ) THEN
+     IF( xclib_dft_is('hybrid') ) THEN
         !
         IF( gwbnd%nloc>0 ) THEN
            !
@@ -192,8 +193,17 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
            DO ib=1,gwbnd%nloc
               xpsi(:,ib) = evc(:,qp_bands(gwbnd%l2g(ib)))
            ENDDO
+           !
            vxpsi = 0._DP
-           CALL vexx( npwx, npw, gwbnd%nloc, xpsi, vxpsi )
+           IF( use_ace ) THEN
+              IF( gamma_only ) THEN
+                 CALL vexxace_gamma( npwx, gwbnd%nloc, xpsi, ee_, vxpsi )
+              ELSE
+                 CALL vexxace_k( npwx, gwbnd%nloc, xpsi, ee_, vxpsi )
+              ENDIF
+           ELSE
+              CALL vexx( npwx, npw, gwbnd%nloc, xpsi, vxpsi )
+           ENDIF
            !
            IF( gamma_only ) THEN
               !

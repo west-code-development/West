@@ -22,7 +22,8 @@ MODULE wbse_io
     !
     USE kinds,          ONLY : DP
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
-    USE westcom,        ONLY : wbse_init_save_dir,l_reduce_io,tau_is_read,tau_all,n_tau,n_trunc_bands
+    USE westcom,        ONLY : wbse_init_save_dir,l_bse,l_reduce_io,tau_is_read,tau_all,n_tau,&
+                             & n_trunc_bands
     USE pwcom,          ONLY : npwx
     !
     IMPLICIT NONE
@@ -56,7 +57,11 @@ MODULE wbse_io
     WRITE(my_labelj,'(i6.6)') band_j+n_trunc_bands
     WRITE(my_spin,'(i1)') ispin
     !
-    fname = TRIM(wbse_init_save_dir)//'/E'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
+    IF(l_bse) THEN
+       fname = TRIM(wbse_init_save_dir)//'/int_W'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
+    ELSE
+       fname = TRIM(wbse_init_save_dir)//'/int_v'//my_labeli//'_'//my_labelj//'_'//my_spin//'.dat'
+    ENDIF
     CALL pdep_read_G_and_distribute(fname,rhog)
     !
     IF(l_reduce_io) THEN

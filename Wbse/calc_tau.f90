@@ -18,7 +18,7 @@ SUBROUTINE calc_tau()
   USE pwcom,                ONLY : isk,nks,npw,ngk
   USE wavefunctions,        ONLY : evc
   USE westcom,              ONLY : lrwfc,iuwfc,ev,dvg,n_pdep_eigen_to_use,npwqx,nbnd_occ,&
-                                 & wbse_init_calculation,l_pdep,spin_channel
+                                 & wbse_init_calculation,l_pdep,spin_channel,l_bse
   USE lsda_mod,             ONLY : nspin
   USE pdep_db,              ONLY : pdep_db_read
   USE mp,                   ONLY : mp_bcast
@@ -56,9 +56,9 @@ SUBROUTINE calc_tau()
      ALLOCATE(dvg(npwqx,pert%nlocx))
      ALLOCATE(ev(n_pdep_eigen_to_use))
      !
-     CALL pdep_db_read(n_pdep_eigen_to_use)
+     IF(l_bse) CALL pdep_db_read(n_pdep_eigen_to_use)
   ELSE
-     CALL init_qbox()
+     IF(l_bse) CALL init_qbox()
   ENDIF
   !
   spin_resolve = spin_channel > 0 .AND. nspin > 1
@@ -103,11 +103,14 @@ END SUBROUTINE
 SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !-----------------------------------------------------------------------
   !
+  ! Compute and store screened exchange integrals tau in case of BSE, or unscreened exchange
+  ! integrals tau_u in case of hybrid TDDFT
+  !
   USE kinds,                ONLY : DP
   USE cell_base,            ONLY : omega
   USE io_push,              ONLY : io_push_title
   USE types_coulomb,        ONLY : pot3D
-  USE westcom,              ONLY : ev,dvg,wbse_init_save_dir,l_pdep,chi_kernel,l_local_repr,&
+  USE westcom,              ONLY : ev,dvg,wbse_init_save_dir,l_bse,l_pdep,chi_kernel,l_local_repr,&
                                  & overlap_thr,n_trunc_bands,o_restart_time
   USE fft_base,             ONLY : dffts
   USE noncollin_module,     ONLY : npol
@@ -349,153 +352,155 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            ENDDO
            !$acc end parallel
            !
-           IF(l_pdep) THEN
+           IF(l_bse) THEN
               !
-              !$acc parallel loop present(aux1_g,sqvc)
-              DO ig = 1,npw
-#if defined(__CUDA)
-                 aux1_g(ig) = aux1_g(ig)*sqvc(ig)
-#else
-                 aux1_g(ig) = aux1_g(ig)*pot3D%sqvc(ig)
-#endif
-              ENDDO
-              !$acc end parallel
-              !
-#if defined(__CUDA)
-              !$acc host_data use_device(aux1_g,dvg,dotp)
-              CALL glbrak_gamma_gpu(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
-              !$acc end host_data
-              !
-              !$acc update host(dotp)
-#else
-              CALL glbrak_gamma(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
-#endif
-              !
-              CALL mp_sum(dotp,intra_bgrp_comm)
-              !
-              !$acc kernels present(aux1_g)
-              aux1_g(:) = (0._DP,0._DP)
-              !$acc end kernels
-              !
-              DO ip = 1,pert%nloc
+              IF(l_pdep) THEN
                  !
-                 ip_g = pert%l2g(ip)
-                 factor = dotp(ip)*ev(ip_g)/(1._DP-ev(ip_g))
-                 !
-                 !$acc parallel loop present(aux1_g,dvg)
+                 !$acc parallel loop present(aux1_g,sqvc)
                  DO ig = 1,npw
-                    aux1_g(ig) = aux1_g(ig)+dvg(ig,ip)*factor
+#if defined(__CUDA)
+                    aux1_g(ig) = aux1_g(ig)*sqvc(ig)
+#else
+                    aux1_g(ig) = aux1_g(ig)*pot3D%sqvc(ig)
+#endif
                  ENDDO
                  !$acc end parallel
                  !
-              ENDDO
-              !
-              !$acc update host(aux1_g)
-              CALL mp_sum(aux1_g,inter_bgrp_comm)
-              !$acc update device(aux1_g)
-              !
-              !$acc parallel loop present(tau,aux1_g,sqvc)
-              DO ig = 1,npw
 #if defined(__CUDA)
-                 tau(ig) = tau(ig)+aux1_g(ig)*sqvc(ig)
+                 !$acc host_data use_device(aux1_g,dvg,dotp)
+                 CALL glbrak_gamma_gpu(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
+                 !$acc end host_data
+                 !
+                 !$acc update host(dotp)
 #else
-                 tau(ig) = tau(ig)+aux1_g(ig)*pot3D%sqvc(ig)
+                 CALL glbrak_gamma(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
 #endif
-              ENDDO
-              !$acc end parallel
-              !
-              !$acc update host(tau)
-              !
-           ELSE
-              !
-              ALLOCATE(aux1_r(dffts%nnr,nspin))
-              ALLOCATE(aux_rr(dffts%nnr))
-              !
-              ! vc in correlation like term G->0 = 0
-              !
-              ! aux1_g -> aux_r
-              !
-              CALL single_invfft_gamma(dffts,npw,npwx,aux1_g,aux_r,'Wave')
-              !
-              aux1_r(:,:) = (0._DP,0._DP)
-              aux1_r(:,current_spin) = aux_r
-              !
-              ! aux1_r = vc*aux1_r()
-              !
-              CALL wbse_dv_of_drho(aux1_r,.TRUE.,.FALSE.)
-              !
-              aux_r(:) = aux1_r(:,current_spin)
-              !
-              ! Send data to Qbox to compute X|vc rho>
-              !
-              aux_rr(:) = REAL(aux_r,KIND=DP)/SQRT(omega) ! scale down pert.
-              aux_rr(:) = 0.5_DP*aux_rr ! change from rydberg to hartree
-              !
-              ! Write aux_rr --> fname.xml
-              !
-              fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
-              !
-              CALL write_function3d(fname,aux_rr,dffts)
-              !
-              ! DUMP A LOCK FILE
-              !
-              IF(me_bgrp == 0) THEN
-                 lockfile = 'I.'//itoa(my_image_id)//'.lock'
-                 OPEN(NEWUNIT=iu,FILE=lockfile)
-                 fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
-                 WRITE(iu,'(A)') fname
-                 CLOSE(iu)
                  !
-                 CALL sleep_and_wait_for_lock_to_be_removed(lockfile,'["response"]')
-              ENDIF
-              !
-              CALL mp_barrier(intra_image_comm)
-              !
-              ! READ RESPONSES
-              !
-              IF(lsda) THEN
-                 ALLOCATE(frspin(dffts%nnr,2))
+                 CALL mp_sum(dotp,intra_bgrp_comm)
                  !
-                 fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
-                 CALL read_function3d(fname,frspin(:,1),dffts)
-                 fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
-                 CALL read_function3d(fname,frspin(:,2),dffts)
+                 !$acc kernels present(aux1_g)
+                 aux1_g(:) = (0._DP,0._DP)
+                 !$acc end kernels
                  !
-                 aux_rr(:) = frspin(:,1)+frspin(:,2)
+                 DO ip = 1,pert%nloc
+                    !
+                    ip_g = pert%l2g(ip)
+                    factor = dotp(ip)*ev(ip_g)/(1._DP-ev(ip_g))
+                    !
+                    !$acc parallel loop present(aux1_g,dvg)
+                    DO ig = 1,npw
+                       aux1_g(ig) = aux1_g(ig)+dvg(ig,ip)*factor
+                    ENDDO
+                    !$acc end parallel
+                    !
+                 ENDDO
                  !
-                 DEALLOCATE(frspin)
+                 !$acc update host(aux1_g)
+                 CALL mp_sum(aux1_g,inter_bgrp_comm)
+                 !$acc update device(aux1_g)
+                 !
+                 !$acc parallel loop present(tau,aux1_g,sqvc)
+                 DO ig = 1,npw
+#if defined(__CUDA)
+                    tau(ig) = tau(ig)+aux1_g(ig)*sqvc(ig)
+#else
+                    tau(ig) = tau(ig)+aux1_g(ig)*pot3D%sqvc(ig)
+#endif
+                 ENDDO
+                 !$acc end parallel
+                 !
               ELSE
-                 fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
-                 CALL read_function3d(fname,aux_rr,dffts)
-              ENDIF
-              !
-              DO ir = 1,dffts%nnr
-                 aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega),KIND=DP) ! rescale response
-              ENDDO
-              !
-              aux1_r(:,:) = (0._DP,0._DP)
-              aux1_r(:,current_spin) = aux_r
-              !
-              ! aux1_r = vc*aux1_r()
-              !
-              IF(l_xcchi) THEN
-                 CALL wbse_dv_of_drho(aux1_r,.FALSE.,.FALSE.)
-              ELSE
+                 !
+                 ALLOCATE(aux1_r(dffts%nnr,nspin))
+                 ALLOCATE(aux_rr(dffts%nnr))
+                 !
+                 ! vc in correlation like term G->0 = 0
+                 !
+                 ! aux1_g -> aux_r
+                 !
+                 CALL single_invfft_gamma(dffts,npw,npwx,aux1_g,aux_r,'Wave')
+                 !
+                 aux1_r(:,:) = (0._DP,0._DP)
+                 aux1_r(:,current_spin) = aux_r
+                 !
+                 ! aux1_r = vc*aux1_r()
+                 !
                  CALL wbse_dv_of_drho(aux1_r,.TRUE.,.FALSE.)
+                 !
+                 aux_r(:) = aux1_r(:,current_spin)
+                 !
+                 ! Send data to Qbox to compute X|vc rho>
+                 !
+                 aux_rr(:) = REAL(aux_r,KIND=DP)/SQRT(omega) ! scale down pert.
+                 aux_rr(:) = 0.5_DP*aux_rr ! change from rydberg to hartree
+                 !
+                 ! Write aux_rr --> fname.xml
+                 !
+                 fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+                 !
+                 CALL write_function3d(fname,aux_rr,dffts)
+                 !
+                 ! DUMP A LOCK FILE
+                 !
+                 IF(me_bgrp == 0) THEN
+                    lockfile = 'I.'//itoa(my_image_id)//'.lock'
+                    OPEN(NEWUNIT=iu,FILE=lockfile)
+                    fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml'
+                    WRITE(iu,'(A)') fname
+                    CLOSE(iu)
+                    !
+                    CALL sleep_and_wait_for_lock_to_be_removed(lockfile,'["response"]')
+                 ENDIF
+                 !
+                 CALL mp_barrier(intra_image_comm)
+                 !
+                 ! READ RESPONSES
+                 !
+                 IF(lsda) THEN
+                    ALLOCATE(frspin(dffts%nnr,2))
+                    !
+                    fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin0'
+                    CALL read_function3d(fname,frspin(:,1),dffts)
+                    fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response.spin1'
+                    CALL read_function3d(fname,frspin(:,2),dffts)
+                    !
+                    aux_rr(:) = frspin(:,1)+frspin(:,2)
+                    !
+                    DEALLOCATE(frspin)
+                 ELSE
+                    fname = 'I.'//itoa(my_image_id)//'_P.'//itoa(il1)//'.xml.response'
+                    CALL read_function3d(fname,aux_rr,dffts)
+                 ENDIF
+                 !
+                 DO ir = 1,dffts%nnr
+                    aux_r(ir) = CMPLX(aux_rr(ir)*SQRT(omega),KIND=DP) ! rescale response
+                 ENDDO
+                 !
+                 aux1_r(:,:) = (0._DP,0._DP)
+                 aux1_r(:,current_spin) = aux_r
+                 !
+                 ! aux1_r = vc*aux1_r()
+                 !
+                 IF(l_xcchi) THEN
+                    CALL wbse_dv_of_drho(aux1_r,.FALSE.,.FALSE.)
+                 ELSE
+                    CALL wbse_dv_of_drho(aux1_r,.TRUE.,.FALSE.)
+                 ENDIF
+                 !
+                 aux_r(:) = aux1_r(:,current_spin)
+                 !
+                 ! aux_r -> aux_g
+                 !
+                 CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
+                 !
+                 ! vc + vc/fxc X vc
+                 !
+                 tau(:) = tau+aux1_g
+                 !
+                 DEALLOCATE(aux1_r)
+                 DEALLOCATE(aux_rr)
+                 !
               ENDIF
-              !
-              aux_r(:) = aux1_r(:,current_spin)
-              !
-              ! aux_r -> aux_g
-              !
-              CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
-              !
-              ! vc + vc/fxc X vc
-              !
-              tau(:) = tau+aux1_g
-              !
-              DEALLOCATE(aux1_r)
-              DEALLOCATE(aux_rr)
               !
            ENDIF
            !
@@ -505,7 +510,14 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            WRITE(jlabel,'(i6.6)') jbnd_g
            WRITE(slabel,'(i1)') current_spin
            !
-           fname = TRIM(wbse_init_save_dir)//'/E'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
+           IF(l_bse) THEN
+              fname = TRIM(wbse_init_save_dir)//'/int_W'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
+           ELSE
+              fname = TRIM(wbse_init_save_dir)//'/int_v'//ilabel//'_'//jlabel//'_'//slabel//'.dat'
+           ENDIF
+           !
+           !$acc update host(tau)
+           !
            CALL pdep_merge_and_write_G(fname,tau)
            !
            restart_matrix(ig1) = 1

@@ -233,6 +233,19 @@ wstat_control
    * - **Description**
      - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
 
+.. data:: n_exx_lowrank
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - dynamically set to match the number of bands, read from the ground state
+   * - **Description**
+     - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
+
 .. data:: l_use_ecutrho
 
 .. list-table::
@@ -756,6 +769,22 @@ wbse_init_control
 
        - "S" : Start from scratch.
        - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
+
+.. data:: solver
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "BSE"
+   * - **Description**
+     - Available options are:
+
+       - "BSE" : Bethe-Salpeter equation.
+       - "TDDFT" : Time-dependent density-functional theory.
 
 .. data:: bse_method
 

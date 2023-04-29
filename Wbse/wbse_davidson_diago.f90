@@ -544,6 +544,10 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      notcnv = COUNT( .NOT. conv(:) )
      !
+     ! Print max difference
+     !
+     WRITE(stdout,'(5X,A,E10.3)') 'Max diff = ', MAXVAL(ABS(ew(1:nvec) - ev(1:nvec)))
+     !
      ev(1:nvec) = ew(1:nvec)
      !
      ! Write the eigenvalues & time spent

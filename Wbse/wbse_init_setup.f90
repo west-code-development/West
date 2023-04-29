@@ -14,17 +14,36 @@
 SUBROUTINE wbse_init_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,          ONLY : bse_method,l_pdep,localization,l_local_repr,l_use_ecutrho,&
-                             & wbse_init_save_dir
+  USE westcom,          ONLY : solver,l_bse,bse_method,l_pdep,localization,l_local_repr,&
+                             & l_use_ecutrho,wbse_init_save_dir,l_hybrid_tddft
   USE kinds,            ONLY : DP
   USE types_coulomb,    ONLY : pot3D
   USE mp_global,        ONLY : nbgrp
+  USE xc_lib,           ONLY : xclib_dft_is
+  USE exx_base,         ONLY : exxdiv_treatment,erfc_scrlen
   !
   IMPLICIT NONE
+  !
+  ! Workspace
   !
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   CALL do_setup()
+  !
+  SELECT CASE(TRIM(solver))
+  CASE('BSE','bse')
+     l_bse = .TRUE.
+  CASE('TDDFT','tddft')
+     l_bse = .FALSE.
+  END SELECT
+  !
+  ! ground state hybrid DFT + TDDFT -> TD-hybrid-DFT
+  !
+  IF((.NOT. l_bse) .AND. xclib_dft_is('hybrid')) THEN
+     l_hybrid_tddft = .TRUE.
+  ELSE
+     l_hybrid_tddft = .FALSE.
+  ENDIF
   !
   SELECT CASE(TRIM(bse_method))
   CASE('PDEP','pdep')
@@ -33,7 +52,7 @@ SUBROUTINE wbse_init_setup()
      l_pdep = .FALSE.
   END SELECT
   !
-  IF(.NOT. l_pdep .AND. nbgrp > 1) CALL errore('wbse_init_setup','band groups not implemented for FF_Qbox',1)
+  IF((.NOT. l_pdep) .AND. nbgrp > 1) CALL errore('wbse_init_setup','band groups not implemented for FF_Qbox',1)
   !
 #if defined(__CUDA)
   IF(.NOT. l_pdep) CALL errore('wbse_init_setup','CUDA not implemented for FF_Qbox',1)
@@ -50,7 +69,29 @@ SUBROUTINE wbse_init_setup()
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Wave',.FALSE.,'default')
+  IF(l_hybrid_tddft) THEN
+     !
+     IF(erfc_scrlen > 0._DP) THEN
+        !
+        ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = erfc_scrlen
+        !
+        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=-1._DP,mymu=erfc_scrlen)
+        !
+     ELSE
+        !
+        ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid divergence
+        !
+        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=0._DP,mymu=1._DP)
+        !
+     ENDIF
+     !
+  ELSE
+     !
+     CALL pot3D%init('Wave',.FALSE.,'default')
+     !
+  ENDIF
+  !
+  CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()
   !

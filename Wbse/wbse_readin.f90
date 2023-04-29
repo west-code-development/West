@@ -37,16 +37,16 @@ SUBROUTINE wbse_readin()
   needwf = .TRUE.
   CALL read_file_new(needwf)
   !
-  ! PW checks
-  !
-  IF(domag) CALL errore('wbse_readin','domag version not available',1)
-  IF(okvan) CALL errore('wbse_readin','ultrasoft pseudopotential not implemented',1)
-  IF(doublegrid) CALL errore('wbse_readin','double grid not implemented',1)
-  IF(npool > 1) CALL errore('wbse_readin','pools not implemented',1)
-  !
   ! READ other sections of the input file
   !
   CALL fetch_input_yml(2,(/6,7/),.TRUE.)
+  !
+  ! checks
+  !
+  IF(domag) CALL errore('wbse_readin','domag not implemented',1)
+  IF(okvan) CALL errore('wbse_readin','ultrasoft pseudopotential not implemented',1)
+  IF(doublegrid) CALL errore('wbse_readin','double grid not implemented',1)
+  IF(npool > 1) CALL errore('wbse_readin','pools not implemented',1)
   !
   CALL stop_clock('wbse_readin')
   !

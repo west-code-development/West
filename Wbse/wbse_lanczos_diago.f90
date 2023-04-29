@@ -92,14 +92,14 @@ SUBROUTINE wbse_lanczos_diago()
   !
   ! ... DISTRIBUTE nipol_input
   !
-  IF(MOD(nipol_input,nimage) /= 0) CALL errore('wbse_lanczos_diago','bad nimage')
+  IF(MOD(nipol_input,nimage) /= 0) CALL errore('wbse_lanczos_diago','bad nimage',1)
   !
   pert = idistribute()
   CALL pert%init(nipol_input,'i','nipol_input',.TRUE.)
   !
   ! ... DISTRIBUTE nbndval
   !
-  IF(nbgrp > nbndval0x-n_trunc_bands) CALL errore('wbse_lanczos_diago','nbgrp>nbndval')
+  IF(nbgrp > nbndval0x-n_trunc_bands) CALL errore('wbse_lanczos_diago','nbgrp>nbndval',1)
   !
   aband = idistribute()
   CALL aband%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)

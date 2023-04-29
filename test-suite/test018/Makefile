@@ -9,16 +9,16 @@ all: prepare_inputs run
 prepare_inputs:
 	bash prepare_inputs.sh
 
-run: pw wstat wfreq
+run: pw wbse_init wbse
 
 pw:
 	${PARA_PREFIX_QE} ${BINDIR}/pw.x -i pw.in > pw.out 2> pw.err
 
-wstat: pw
-	${PARA_PREFIX} ${BINDIR}/wstat.x -nimage ${NIMAGE} -nband ${NBAND} -i wstat.in > wstat.out 2> wstat.err
+wbse_init: pw
+	${PARA_PREFIX} ${BINDIR}/wbse_init.x -nimage ${NIMAGE} -nband ${NBAND} -i wbse_init.in > wbse_init.out 2> wbse_init.err
 
-wfreq: wstat
-	${PARA_PREFIX} ${BINDIR}/wfreq.x -nimage ${NIMAGE} -nband ${NBAND} -i wfreq.in > wfreq.out 2> wfreq.err
+wbse: wbse_init
+	${PARA_PREFIX} ${BINDIR}/wbse.x -nband ${NBAND} -i wbse.in > wbse.out 2> wbse.err
 
 clean:
 	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1
@@ -26,11 +26,11 @@ clean:
 title:
 	@echo
 	@echo "###############"
-	@echo "### test007 ###"
+	@echo "### test018 ###"
 	@echo "###############"
 	@echo
 
 description:
 	@echo
-	@echo "Si bulk kmesh 1x1x2 test hybrid ACE"
+	@echo "SiH4 molecule test hybrid TDDFT Lanczos"
 	@echo

@@ -26,11 +26,11 @@ clean:
 title:
 	@echo
 	@echo "###############"
-	@echo "### test007 ###"
+	@echo "### test020 ###"
 	@echo "###############"
 	@echo
 
 description:
 	@echo
-	@echo "Si bulk kmesh 1x1x2 test hybrid ACE"
+	@echo "SiH4 molecule gamma_only test hybrid no ACE"
 	@echo

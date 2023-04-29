@@ -99,6 +99,7 @@ MODULE west_gpu_data
    COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
    COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
    COMPLEX(DP), ALLOCATABLE :: psic2(:)
+   COMPLEX(DP), PINNED, ALLOCATABLE :: dvaux(:,:)
    COMPLEX(DP), ALLOCATABLE :: dvhart(:)
    !$acc declare device_resident(raux1,raux2,hevc1,psic2,dvhart)
    COMPLEX(DP), PINNED, ALLOCATABLE :: gaux(:)
@@ -668,8 +669,8 @@ MODULE west_gpu_data
    USE wvfct,                 ONLY : npwx
    USE noncollin_module,      ONLY : npol
    USE fft_base,              ONLY : dffts
-   USE westcom,               ONLY : nbndval0x,n_trunc_bands,n_bse_idx,l_bse,l_lanczos,et_qp,&
-                                   & u_matrix
+   USE westcom,               ONLY : nbndval0x,n_trunc_bands,n_bse_idx,l_bse,l_hybrid_tddft,&
+                                   & l_lanczos,et_qp,u_matrix
    !
    IMPLICIT NONE
    !
@@ -677,7 +678,7 @@ MODULE west_gpu_data
    !
    INTEGER, INTENT(IN) :: nbndloc
    !
-   IF(l_bse) THEN
+   IF(l_bse .OR. l_hybrid_tddft) THEN
       ALLOCATE(raux1(dffts%nnr))
       ALLOCATE(raux2(dffts%nnr))
       ALLOCATE(caux1(npwx,nbndval0x-n_trunc_bands))
@@ -696,6 +697,10 @@ MODULE west_gpu_data
    !$acc enter data create(tmp_c)
    IF(.NOT. gamma_only) THEN
       ALLOCATE(psic2(dffts%nnr))
+   ENDIF
+   IF(.NOT. l_bse) THEN
+      ALLOCATE(dvaux(dffts%nnr,nspin))
+      !$acc enter data create(dvaux)
    ENDIF
    ALLOCATE(dvhart(dffts%nnr))
    !
@@ -746,6 +751,10 @@ MODULE west_gpu_data
    ENDIF
    IF(ALLOCATED(psic2)) THEN
       DEALLOCATE(psic2)
+   ENDIF
+   IF(ALLOCATED(dvaux)) THEN
+      !$acc exit data delete(dvaux)
+      DEALLOCATE(dvaux)
    ENDIF
    IF(ALLOCATED(dvhart)) THEN
       DEALLOCATE(dvhart)

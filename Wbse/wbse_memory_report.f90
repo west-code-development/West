@@ -21,7 +21,8 @@ SUBROUTINE wbse_memory_report()
   USE mp_global,           ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
   USE pwcom,               ONLY : nks
-  USE westcom,             ONLY : l_bse,l_lanczos,nbnd_occ,n_trunc_bands,n_pdep_basis,npwqx,logfile
+  USE westcom,             ONLY : l_bse,l_hybrid_tddft,l_lanczos,nbnd_occ,n_trunc_bands,&
+                                & n_pdep_basis,npwqx,logfile
   USE distribution_center, ONLY : pert
   USE noncollin_module,    ONLY : npol
   USE json_module,         ONLY : json_file
@@ -137,7 +138,7 @@ SUBROUTINE wbse_memory_report()
   IF( mpime == root ) CALL json%add( 'memory.liouville', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
-  IF( l_bse ) THEN
+  IF( l_bse .OR. l_hybrid_tddft ) THEN
      mem_partial = (1.0_DP/Mb)*complex_size*npwx*(nbnd_occ(1)-n_trunc_bands)*2
      WRITE(stdout,'(5x,"[MEM] kernel                  ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
         mem_partial, npwx, (nbnd_occ(1)-n_trunc_bands)*2

@@ -133,6 +133,7 @@ MODULE wstat_center
   LOGICAL :: l_deflate
   LOGICAL :: l_kinetic_only
   LOGICAL :: l_minimize_exx_if_active
+  INTEGER :: n_exx_lowrank
   LOGICAL :: l_use_ecutrho
   INTEGER, ALLOCATABLE :: qlist(:)
   !
@@ -263,7 +264,7 @@ MODULE westpp_center
   !
   ! INPUT FOR westpp_control
   !
-  CHARACTER(LEN=8) :: westpp_calculation
+  CHARACTER(LEN=9) :: westpp_calculation
   CHARACTER(LEN=7) :: westpp_format
   INTEGER :: westpp_n_pdep_eigen_to_use
   INTEGER :: westpp_range(2)
@@ -338,6 +339,7 @@ MODULE wbse_center
   !
   INTEGER :: nbndval0x
   LOGICAL :: l_bse ! BSE True, TDDFT False
+  LOGICAL :: l_hybrid_tddft
   LOGICAL :: l_lanczos
   LOGICAL :: l_davidson
   LOGICAL :: l_bse_triplet

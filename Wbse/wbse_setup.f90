@@ -21,10 +21,12 @@ SUBROUTINE wbse_setup()
                                  & n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,trev_pdep,&
                                  & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
                                  & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
-                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir
+                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir,l_hybrid_tddft
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup
+  USE xc_lib,               ONLY : xclib_dft_is
+  USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
   !
   IMPLICIT NONE
   !
@@ -52,6 +54,14 @@ SUBROUTINE wbse_setup()
   CASE('TDDFT','tddft')
      l_bse = .FALSE.
   END SELECT
+  !
+  ! ground state hybrid DFT + TDDFT -> TD-hybrid-DFT
+  !
+  IF((.NOT. l_bse) .AND. xclib_dft_is('hybrid')) THEN
+     l_hybrid_tddft = .TRUE.
+  ELSE
+     l_hybrid_tddft = .FALSE.
+  ENDIF
   !
   SELECT CASE(wbse_calculation)
   CASE('D','d')
@@ -100,7 +110,29 @@ SUBROUTINE wbse_setup()
   !
   CALL set_npwq()
   !
-  CALL pot3D%init('Rho',.FALSE.,'gb')
+  IF(l_hybrid_tddft) THEN
+     !
+     IF(erfc_scrlen > 0._DP) THEN
+        !
+        ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = erfc_scrlen
+        !
+        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=-1._DP,mymu=erfc_scrlen)
+        !
+     ELSE
+        !
+        ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid divergence
+        !
+        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=0._DP,mymu=1._DP)
+        !
+     ENDIF
+     !
+  ELSE
+     !
+     CALL pot3D%init('Rho',.FALSE.,'gb')
+     !
+  ENDIF
+  !
+  CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()
   !
@@ -114,9 +146,7 @@ SUBROUTINE wbse_setup()
   !
   ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
   !
-  IF(l_bse) THEN
-     CALL bse_start()
-  ENDIF
+  IF(l_bse .OR. l_hybrid_tddft) CALL bse_start()
   !
 END SUBROUTINE
 !
@@ -142,8 +172,9 @@ SUBROUTINE bse_start()
   !
   ! Workspace
   !
-  INTEGER :: do_idx,nbnd_do,nbndval,is
-  INTEGER :: lbnd,ibnd,jbnd,iks,current_spin
+  INTEGER :: iks,current_spin
+  INTEGER :: lbnd,ibnd,jbnd,my_ibnd,nbnd_do,nbndval
+  INTEGER :: ipair,do_idx
   REAL(DP) :: ovl_value
   COMPLEX(DP), ALLOCATABLE :: u_tmp(:,:)
   !
@@ -171,13 +202,13 @@ SUBROUTINE bse_start()
      ALLOCATE(u_matrix(aband%nloc,nbnd_do,nspin))
      ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,nspin))
      !
-     DO is = 1,nspin
+     DO current_spin = 1,nspin
         !
-        CALL read_umatrix_and_omatrix(nbnd_do,is,u_tmp,ovl_matrix(:,:,is))
+        CALL read_umatrix_and_omatrix(nbnd_do,current_spin,u_tmp,ovl_matrix(:,:,current_spin))
         !
         DO lbnd = 1,aband%nloc
            ibnd = aband%l2g(lbnd)
-           u_matrix(lbnd,:,is) = u_tmp(ibnd,:)
+           u_matrix(lbnd,:,current_spin) = u_tmp(ibnd,:)
         ENDDO
         !
      ENDDO
@@ -228,10 +259,46 @@ SUBROUTINE bse_start()
   !
   IF(l_reduce_io) THEN
      !
-     do_idx = SUM(n_bse_idx)
+     ! I/O is reduced by reading tau only once
      !
      ALLOCATE(tau_is_read(nbnd_do,nbnd_do,nspin))
-     ALLOCATE(tau_all(npwx,do_idx))
+     !
+     tau_is_read(:,:,:) = 0
+     n_tau = 0
+     !
+     DO iks = 1,nks
+        !
+        current_spin = isk(iks)
+        do_idx = n_bse_idx(current_spin)
+        !
+        ! count number of tau needed by my band group
+        !
+        DO lbnd = 1,aband%nloc
+           !
+           my_ibnd = aband%l2g(lbnd)
+           !
+           DO ipair = 1, do_idx
+              !
+              ibnd = idx_matrix(ipair,1,current_spin)-n_trunc_bands
+              jbnd = idx_matrix(ipair,2,current_spin)-n_trunc_bands
+              !
+              IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,current_spin) = 1
+              !
+           ENDDO
+           !
+        ENDDO
+        !
+        DO jbnd = 1,nbnd_do
+           DO ibnd = jbnd,nbnd_do
+              IF(tau_is_read(ibnd,jbnd,current_spin) == 1) n_tau = n_tau+1
+           ENDDO
+        ENDDO
+        !
+     ENDDO
+     !
+     ALLOCATE(tau_all(npwx,n_tau))
+     !
+     ! reset counter for actual reading in wbse_io
      !
      tau_is_read(:,:,:) = 0
      n_tau = 0

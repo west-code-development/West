@@ -36,16 +36,16 @@ SUBROUTINE westpp_readin()
   needwf = .TRUE.
   CALL read_file_new(needwf)
   !
-  ! PW checks
+  ! READ other sections of the input file
+  !
+  CALL fetch_input_yml(2,(/2,4/),.TRUE.)
+  !
+  ! checks
   !
   IF(okvan) CALL errore('westpp_readin','ultrasoft pseudopotential not implemented',1)
   IF(doublegrid) CALL errore('westpp_readin', 'double grid not implemented',1)
   IF(nbgrp > 1) CALL errore('westpp_readin','band groups not implemented',1)
   IF(npool > 1) CALL errore('westpp_readin','pools not implemented',1)
-  !
-  ! READ other sections of the input file
-  !
-  CALL fetch_input_yml(2,(/2,4/),.TRUE.)
   !
   CALL stop_clock('westpp_readin')
   !

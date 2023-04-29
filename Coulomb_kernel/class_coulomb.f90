@@ -24,10 +24,16 @@ MODULE class_coulomb
       !
       REAL(DP) :: div                              ! divergence
       CHARACTER(LEN=7) :: singularity_removal_mode ! singularity_removal_mode
-      CHARACTER(LEN=5) :: cdriver                  ! FFT driver = "Wave", "Rho"
+      CHARACTER(LEN=5) :: cdriver                  ! FFT driver = 'Wave', 'Rho'
       LOGICAL :: l_use_igq                         ! use igq map
       INTEGER :: iq                                ! q-point
-      REAL(DP),ALLOCATABLE :: sqvc(:)              ! square root of Coulomb potential in PW
+      REAL(DP), ALLOCATABLE :: sqvc(:)             ! square root of Coulomb potential in PW
+      REAL(DP) :: mya, myb, mymu                   ! mya and mya + myb denote the factor of the short-range and of the
+                                                   ! long-range parts of Fock exchange, respectively 
+                                                   ! mymu is inverse screening length in bohr^{-1}
+                                                   ! See Eq. (3) of Phys. Rev. Mater. 2, 073803 (2018) for details
+                                                   ! For HSE functional, mya = 1, myb = -1, mymu = 0.106
+                                                   ! For PBE functional, mya = 1, myb = 0, mymu = c
       !
       CONTAINS
       !
@@ -40,16 +46,16 @@ MODULE class_coulomb
    CONTAINS
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE sqvc_init(this,cdriver,l_use_igq,singularity_removal_mode,iq)
+   SUBROUTINE sqvc_init(this,cdriver,l_use_igq,singularity_removal_mode,iq,mya,myb,mymu)
       !-----------------------------------------------------------------------
       !
       ! This routine computes results of applying sqVc to a potential
       ! associated with vector q. Coulomb cutoff technique can be used
       !
       USE kinds,                ONLY : DP
-      USE constants,            ONLY : fpi, e2, eps8
-      USE cell_base,            ONLY : at, tpiba2
-      USE gvect,                ONLY : g, ngm
+      USE constants,            ONLY : fpi,e2,eps8
+      USE cell_base,            ONLY : at,tpiba2
+      USE gvect,                ONLY : g,ngm
       USE westcom,              ONLY : igq_q,npwqx,npwq
       USE types_bz_grid,        ONLY : q_grid
       USE control_flags,        ONLY : gamma_only
@@ -63,10 +69,12 @@ MODULE class_coulomb
       LOGICAL, INTENT(IN) :: l_use_igq
       CHARACTER(LEN=*), INTENT(IN) :: singularity_removal_mode
       INTEGER, INTENT(IN), OPTIONAL :: iq
+      REAL(DP), INTENT(IN), OPTIONAL :: mya,myb,mymu
       !
       ! Workspace
       !
-      REAL(DP) :: qgnorm2,qg(3),x
+      LOGICAL :: l_abmu
+      REAL(DP) :: qgnorm2, qg(3), x, einv
       INTEGER :: numg, numgx
       INTEGER :: ig, ipol
       LOGICAL :: on_double_grid
@@ -76,21 +84,33 @@ MODULE class_coulomb
       !
       this%cdriver = cdriver
       this%l_use_igq = l_use_igq
-      this%singularity_removal_mode = singularity_removal_mode
       IF ( PRESENT(iq) ) THEN
          this%iq = iq
       ELSE
          this%iq = 1   ! gamma-only
       ENDIF
       !
+      IF ( PRESENT(mya) .AND. PRESENT(myb) .AND. PRESENT(mymu) ) THEN
+         this%mya = mya
+         this%myb = myb
+         this%mymu = mymu
+         l_abmu = .TRUE.
+      ELSEIF ( PRESENT(mya) .OR. PRESENT(myb) .OR. PRESENT(mymu) ) THEN
+         CALL errore('sqvc_init','mya, myb, mymu must be specified together',1)
+      ELSE
+         l_abmu = .FALSE.
+      ENDIF
+      !
       ! ... Check compatibility between singularity removal mode and FFT driver
       !
-      SELECT CASE ( this%singularity_removal_mode )
-      CASE ( 'default' )
-      CASE ( 'gb' )
-         IF ( this%cdriver == 'Wave' ) CALL errore("sqvc_init", "gb singularity removal mode requires Rho grid",1)
+      SELECT CASE ( singularity_removal_mode )
+      CASE ( 'vcut_spherical', 'default' )
+         this%singularity_removal_mode = 'default'
+      CASE ( 'gygi-baldereschi', 'gygi-bald', 'g-b', 'gb' )
+         this%singularity_removal_mode = 'gb'
+         IF ( this%cdriver == 'Wave' ) CALL errore('sqvc_init','gb singularity removal mode requires Rho grid',1)
       CASE DEFAULT
-         CALL errore( 'sqvc_init', 'singularity removal mode not supported, supported only default and gb', 1 )
+         CALL errore('sqvc_init','singularity removal mode not supported, supported only default and gb',1)
       END SELECT
       !
       ! ... Check compatibility between FFT driver and use of igq map
@@ -98,18 +118,18 @@ MODULE class_coulomb
       SELECT CASE ( this%cdriver )
       CASE ( 'Wave' )
          IF (.NOT.gamma_only .AND. .NOT.this%l_use_igq) THEN
-            CALL errore("sqvc_init", "q-points case requires igq map when using Wave grid",1)
+            CALL errore('sqvc_init','q-points case requires igq map when using Wave grid',1)
          ELSEIF (gamma_only .AND. this%l_use_igq) THEN
-            CALL errore("sqvc_init", "igq map not needed in gamma-only case",1)
+            CALL errore('sqvc_init','igq map not needed in gamma-only case',1)
          ENDIF
          numg = npwq
          numgx = npwqx
       CASE ( 'Rho' )
-         IF (this%l_use_igq) CALL errore("sqvc_init", "igq map not used with Rho grid",1)
+         IF (this%l_use_igq) CALL errore('sqvc_init','igq map not used with Rho grid',1)
          numg = ngm
          numgx = ngm
       CASE DEFAULT
-         CALL errore("sqvc_init", "cdriver value not supported, supported only Wave and Rho",1)
+         CALL errore('sqvc_init','cdriver value not supported, supported only Wave and Rho',1)
       END SELECT
       !
       IF( ALLOCATED(this%sqvc) )  DEALLOCATE( this%sqvc )
@@ -131,7 +151,7 @@ MODULE class_coulomb
          grid_factor = 1._DP
          on_double_grid = .FALSE.
          !
-         IF( this%singularity_removal_mode == "gb" ) THEN
+         IF( this%singularity_removal_mode == 'gb' ) THEN
             !
             ! In this case we use Gygi-Baldereschi method
             !
@@ -145,28 +165,41 @@ MODULE class_coulomb
          ENDIF
          !
          IF( on_double_grid ) CYCLE
-         this%sqvc(ig) = SQRT(e2*fpi*grid_factor/qgnorm2)
+         !
+         IF( l_abmu ) THEN
+            einv = mya + myb * EXP(- qgnorm2 / 4._DP / mymu**2)
+            this%sqvc(ig) = SQRT(e2*fpi*grid_factor/qgnorm2 * einv)
+         ELSE
+            this%sqvc(ig) = SQRT(e2*fpi*grid_factor/qgnorm2)
+         ENDIF
          !
       ENDDO
       !
-      IF ( q_grid%l_pIsGamma(this%iq) ) CALL this%compute_divergence()
+      IF ( q_grid%l_pIsGamma(this%iq) ) THEN
+         IF ( l_abmu ) THEN
+            CALL this%compute_divergence(singularity_removal_mode,mya,myb,mymu)
+         ELSE
+            CALL this%compute_divergence()
+         ENDIF
+      ENDIF
       !
       CALL stop_clock('sqvc_init')
       !
    END SUBROUTINE
    !
-   !
-   SUBROUTINE compute_divergence( this, singularity_removal_mode )
+   !-----------------------------------------------------------------------
+   SUBROUTINE compute_divergence(this,singularity_removal_mode,mya,myb,mymu)
+      !-----------------------------------------------------------------------
       !
-      USE constants,            ONLY : pi, tpi, fpi, e2, eps8
-      USE cell_base,            ONLY : omega, at, bg, tpiba2
+      USE constants,            ONLY : pi,tpi,fpi,e2,eps8
+      USE cell_base,            ONLY : omega,at,bg,tpiba2
       USE mp,                   ONLY : mp_sum
-      USE mp_global,            ONLY : nimage, my_image_id, nproc_image, inter_image_comm, &
-                                     & intra_bgrp_comm, me_bgrp, nproc_bgrp
+      USE mp_global,            ONLY : nimage,my_image_id,nproc_image,inter_image_comm,&
+                                     & intra_bgrp_comm,me_bgrp,nproc_bgrp
       USE control_flags,        ONLY : gamma_only
       USE gvecw,                ONLY : ecutwfc
       USE random_numbers,       ONLY : randy
-      USE gvect,                ONLY : g, ngm
+      USE gvect,                ONLY : g,ngm
       USE types_bz_grid,        ONLY : q_grid
       !
       IMPLICIT NONE
@@ -175,16 +208,21 @@ MODULE class_coulomb
       !
       CLASS(coulomb) :: this
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: singularity_removal_mode
+      REAL(DP), INTENT(IN), OPTIONAL :: mya, myb, mymu
       !
       ! Workspace
       !
+      LOGICAL :: l_abmu
       CHARACTER(LEN=7) :: singularity_removal_mode_use
       REAL(DP) :: div
-      LOGICAL :: try_ort_div=.TRUE., i_am_ort, on_double_grid
+      LOGICAL :: i_am_ort, on_double_grid
       REAL(DP) :: qg(3), qgnorm2, alpha, peso
-      REAL(DP) :: grid_factor = 8._DP/7._DP
       INTEGER :: i1, i2, i3, iq, ig, ipol
       REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp, intcounter, x
+      REAL(DP) :: q_, qq, aa, dq1
+      LOGICAL, PARAMETER :: try_ort_div = .TRUE.
+      INTEGER, PARAMETER :: nqq = 100000
+      REAL(DP), PARAMETER :: grid_factor = 8._DP/7._DP
       !
       IF ( PRESENT(singularity_removal_mode) ) THEN
          singularity_removal_mode_use = singularity_removal_mode
@@ -192,11 +230,19 @@ MODULE class_coulomb
          singularity_removal_mode_use = this%singularity_removal_mode
       ENDIF
       !
+      IF ( PRESENT(mya) .AND. PRESENT(myb) .AND. PRESENT(mymu) ) THEN
+         l_abmu = .TRUE.
+      ELSEIF ( PRESENT(mya) .OR. PRESENT(myb) .OR. PRESENT(mymu) ) THEN
+         CALL errore('sqvc_init','mya, myb, mymu must be specified together',1)
+      ELSE
+         l_abmu = .FALSE.
+      ENDIF
+      !
       div = 0._DP
       !
       SELECT CASE( singularity_removal_mode_use )
       !
-      CASE("default")
+      CASE( 'vcut_spherical', 'default' )
          !
          ! In this case we use the spherical region
          !
@@ -246,7 +292,7 @@ MODULE class_coulomb
                div = 0._DP
                intcounter = 0
                !
-               DO i1 = 1, 100000
+               DO i1 = 1, nqq
                   qmo=0._DP
                   DO i2 = 1, 3
                      qbz(i2) = randy() * edge(i2)
@@ -274,7 +320,9 @@ MODULE class_coulomb
             !
          ENDIF
          !
-      CASE("gb")
+         IF ( l_abmu ) div = div * (mya + myb) - e2 * pi * myb/(mymu**2)
+         !
+      CASE( 'gygi-baldereschi', 'gygi-bald', 'g-b', 'gb' )
          !
          ! In this case we use Gygi-Baldereschi method
          !
@@ -293,7 +341,20 @@ MODULE class_coulomb
                   on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
                ENDDO
                IF( .NOT.on_double_grid .AND. qgnorm2 > eps8 ) THEN
-                  div = div - EXP( -alpha * qgnorm2 ) / qgnorm2
+                  !
+                  ! with range separation
+                  ! need to be fixed for mya != myb
+                  !
+                  IF ( l_abmu ) THEN
+                     IF ( ABS(myb) > 0._DP ) THEN
+                        div = div - EXP( -alpha * qgnorm2 ) / qgnorm2 &
+                        & * (1._DP - EXP(-qgnorm2/4._DP/mymu**2))
+                     ELSE
+                        div = div - EXP( -alpha * qgnorm2 ) / qgnorm2
+                     ENDIF
+                  ELSE
+                     div = div - EXP( -alpha * qgnorm2 ) / qgnorm2
+                  ENDIF
                ENDIF
             ENDDO
             !
@@ -307,7 +368,25 @@ MODULE class_coulomb
             peso = 1._DP
          ENDIF
          !
-         div = div * grid_factor * e2 * fpi / (omega * REAL(q_grid%np,KIND=DP)) * peso + e2 / SQRT( alpha * pi )
+         IF( l_abmu ) THEN
+            div = div * grid_factor * e2 * fpi / (omega * REAL(q_grid%np,KIND=DP)) * peso
+            !
+            dq1 = 5._DP / SQRT(alpha) / nqq
+            aa = 0._DP
+            IF ( ABS(myb) > 0._DP ) THEN
+               DO iq = 0, nqq
+                  q_ = dq1 * (iq+0.5_DP)
+                  qq = q_**2
+                  aa = aa - EXP(-alpha * qq) * EXP(-qq/4._DP/mymu**2) * dq1
+               ENDDO
+            ENDIF
+            aa = aa * 8._DP / fpi
+            aa = aa + 1._DP / SQRT(alpha * pi)
+            !
+            div = div + e2 * aa
+         ELSE
+            div = div * grid_factor * e2 * fpi / (omega * REAL(q_grid%np,KIND=DP)) * peso + e2 / SQRT( alpha * pi )
+         ENDIF
          !
       END SELECT
       !
@@ -315,11 +394,12 @@ MODULE class_coulomb
       !
    END SUBROUTINE
    !
-   !
+   !-----------------------------------------------------------------------
    SUBROUTINE print_divergence( this )
+      !-----------------------------------------------------------------------
       !
-      USE io_global,      ONLY : stdout
-      USE types_bz_grid,   ONLY : q_grid
+      USE io_global,            ONLY : stdout
+      USE types_bz_grid,        ONLY : q_grid
       !
       IMPLICIT NONE
       !
@@ -331,200 +411,5 @@ MODULE class_coulomb
       WRITE(stdout,"(5X,'Divergence = ',es14.6)") this%div
       !
    END SUBROUTINE
-   !
-   !
-   !
-!  SUBROUTINE store_sqvc_sphcut(sqvc_tmp,numg,iq,l_use_igq,rcut)
-!     !
-!     ! This routine computes results of applying sqVc to a potential
-!     ! associated with vector q. Coulomb cutoff technique can be used
-!     !
-!     IMPLICIT NONE
-!     !
-!     ! I/O
-!     !
-!     INTEGER,INTENT(IN) :: numg
-!     REAL(DP),INTENT(OUT) :: sqvc_tmp(numg)
-!     INTEGER, INTENT(IN) :: iq
-!     LOGICAL, INTENT(IN) :: l_use_igq
-!     REAL(DP),INTENT(IN) :: rcut
-!     !
-!     ! Workspace
-!     !
-!     REAL(DP) :: qg(3), qgnorm2, qgnorm
-!     INTEGER :: ig
-!     !
-!     !
-!     CALL start_clock('storesqvc')
-!     !
-!     !
-!     !IF(gstart==2) sqvc_tmp(1)=SQRT(tpi*e2*rcut*rcut)
-!     !
-!!$OMP PARALLEL private(ig,qgnorm2,qgnorm,qg)
-!!$OMP DO
-!     sqvc_tmp = 0._DP
-!     DO ig = 1,numg
-!        IF ( l_use_igq ) THEN
-!           qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq))
-!        ELSE
-!           qg(:) = q_grid%p_cart(:,iq) + g(:,ig)
-!        ENDIF
-!        qgnorm2 = ( SUM(qg(:))**2 ) * tpiba2
-!        IF ( qgnorm2 < eps8 ) THEN
-!           sqvc_tmp(ig)=SQRT(tpi*e2*rcut*rcut)
-!        ELSE
-!           qgnorm  = SQRT(qgnorm2)
-!           sqvc_tmp(ig) = SQRT(e2*fpi/qgnorm2 * (1._DP-COS(qgnorm*rcut)))
-!        ENDIF
-!     ENDDO
-!!$OMP ENDDO
-!!$OMP END PARALLEL
-!     !
-!     CALL stop_clock('storesqvc')
-!     !
-!  END SUBROUTINE
-   !
-   !
-   !
-   !!---------------------------------------------------------------------------------
-   !SUBROUTINE store_sqvc_q(sqvc_tmp,numg,singularity_removal_mode,iq,l_use_igq)
-   !  !-------------------------------------------------------------------------------
-   !  !
-   !  ! This routine computes results of applying sqVc to a potential
-   !  ! associated with vector q.
-   !  !
-   !  USE kinds,                ONLY : DP
-   !  USE io_global,            ONLY : stdout
-   !  USE constants,            ONLY : fpi, e2, tpi, pi
-   !  USE cell_base,            ONLY : tpiba2,tpiba,omega,at,alat,bg
-   !  USE gvect,                ONLY : g, gstart
-   !  USE mp,                   ONLY : mp_sum
-   !  USE mp_global,            ONLY : intra_bgrp_comm
-   !  USE mp_world,             ONLY : mpime,world_comm,nproc
-   !  USE gvecw,                ONLY : ecutwfc
-   !  USE gvect,                ONLY : g, gstart
-   !  USE westcom,              ONLY : igq_q
-   !  USE coulomb_vcut_module,  ONLY : vcut_init, vcut_type, vcut_info, &
-   !                                  vcut_get,  vcut_spheric_get, vcut_destroy
-   !  USE random_numbers,       ONLY : randy
-   !  USE class_bz_grid,        ONLY : bz_grid
-   !  USE types_bz_grid,        ONLY : q_grid
-   !  USE constants,            ONLY : eps8
-   !  !
-   !  IMPLICIT NONE
-   !  !
-   !  ! I/O
-   !  !
-   !  INTEGER, INTENT(IN) :: numg
-   !  REAL(DP), INTENT(OUT) :: sqvc_tmp(numg)
-   !  INTEGER, INTENT(IN) :: singularity_removal_mode
-   !  INTEGER, INTENT(IN) :: iq
-   !  LOGICAL, INTENT(IN) :: l_use_igq
-   !  !
-   !  ! Workspace
-   !  !
-   !  REAL(DP) :: gnorm2,nq(3),q(3),qq(3),ecutvcut,atws(3,3),alpha,x
-   !  INTEGER :: ig, ipol, i1, i2, i3
-   !  LOGICAL :: on_double_grid
-   !  REAL(DP) :: grid_factor = 8._DP/7._DP
-   !! REAL(DP) :: grid_factor = 1._DP
-   !  TYPE(vcut_type)   :: vcut
-   !  LOGICAL :: try_ort_div=.TRUE.,i_am_ort
-   !  REAL(DP) :: prod(3,3), qhelp, edge(3), qbz(3), rand, qmo, vbz, vhelp
-   !  REAL(DP) :: intcounter
-   !  !
-   !  CALL start_clock( 'storesqvcq' )
-   !  !
-   !  nq(1) = REAL( q_grid%ngrid(1), KIND=DP )
-   !  nq(2) = REAL( q_grid%ngrid(2), KIND=DP )
-   !  nq(3) = REAL( q_grid%ngrid(3), KIND=DP )
-   !  !
-   !  q(:) = q_grid%p_cart(:,iq)
-   !  !
-   !  ! =======
-   !  !  BODY
-   !  ! =======
-   !  !
-   !  SELECT CASE(singularity_removal_mode)
-   !     !
-   !  CASE(1)
-   !     !
-   !     ! In this case we use the spherical region
-   !     !
-   !     DO ig = 1,numg
-   !        IF (l_use_igq) THEN
-   !           qq(:) = q(:) + g(:,igq_q(ig,iq))
-   !        ELSE
-   !           qq(:) = q(:) + g(:,ig)
-   !        ENDIF
-   !        gnorm2 = SUM(qq(:)**2) * tpiba2
-   !        IF ( gnorm2 < eps8 ) THEN
-   !           sqvc_tmp(ig) = 0._DP
-   !        ELSE
-   !           sqvc_tmp(ig) = SQRT(e2*fpi/gnorm2)
-   !        ENDIF
-   !     ENDDO
-   !     !
-   !  CASE(2)
-   !     !
-   !     ! In this case we use Gygi-Baldereschi method
-   !     !
-   !     DO ig = 1,numg
-   !        IF (l_use_igq) THEN
-   !           qq(:) = q(:) + g(:,igq_q(ig,iq))
-   !        ELSE
-   !           qq(:) = q(:) + g(:,ig)
-   !        ENDIF
-   !        gnorm2 = SUM(qq(:)**2) * tpiba2
-   !        on_double_grid = .TRUE.
-   !        DO ipol = 1,3
-   !           x = 0.5_DP*( qq(1)*at(1,ipol)+qq(2)*at(2,ipol)+qq(3)*at(3,ipol) )*nq(ipol)
-   !           on_double_grid = on_double_grid .AND. (ABS(x-NINT(x))<eps8)
-   !        ENDDO
-   !        IF( on_double_grid .OR. gnorm2 < eps8 ) THEN
-   !           sqvc_tmp(ig)=0._DP
-   !        ELSE
-   !           sqvc_tmp(ig)=SQRT(e2*fpi*grid_factor/gnorm2)
-   !        ENDIF
-   !     ENDDO
-   !     !
-   !  CASE(3)
-   !     !
-   !     ! In this case we use CUT_WS
-   !     !
-   !     !
-   !     ecutvcut = 0.7_DP
-   !     !
-   !     ! build the superperiodicity direct lattice
-   !     !
-   !     atws = alat * at
-   !     !
-   !     DO ipol=1,3
-   !        atws(:,ipol) = atws(:,ipol) * nq(ipol)
-   !     ENDDO
-   !     !
-   !     CALL vcut_init( vcut, atws, ecutvcut )
-   !     !
-   !     DO ig = 1,numg
-   !        !
-   !        IF (l_use_igq) THEN
-   !           qq(:) = (q(:) + g(:,igq_q(ig,iq))) * tpiba
-   !        ELSE
-   !           qq(:) = (q(:) + g(:,ig)) * tpiba
-   !        ENDIF
-   !        !
-   !        sqvc_tmp( ig ) = SQRT( vcut_get(vcut,qq) )
-   !        !
-   !     ENDDO
-   !     !
-   !     CALL vcut_destroy(vcut)
-   !     !
-   !  END SELECT
-   !  !
-   !  CALL stop_clock( 'storesqvcq' )
-   !  !
-   !END SUBROUTINE
-   !
-   !
    !
 END MODULE

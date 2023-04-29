@@ -41,6 +41,7 @@ default["wstat_control"]["trev_pdep_rel"] = 1.e-1
 default["wstat_control"]["tr2_dfpt"] = 1.e-12
 default["wstat_control"]["l_kinetic_only"] = False
 default["wstat_control"]["l_minimize_exx_if_active"] = False
+default["wstat_control"]["n_exx_lowrank"] = 0 # dynamically set to the number of bands
 default["wstat_control"]["l_use_ecutrho"] = False
 default["wstat_control"]["qlist"] = [ 1 ] # dynamically set to the actual number of q
 # wfreq_control
@@ -84,6 +85,7 @@ default["server_control"]["document"] = "{}"
 # wbse_init_control
 default["wbse_init_control"] = {}
 default["wbse_init_control"]["wbse_init_calculation"] = "S"
+default["wbse_init_control"]["solver"] = "BSE"
 default["wbse_init_control"]["bse_method"] = "PDEP"
 default["wbse_init_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wbse_init_control"]["localization"] = "N"
@@ -97,7 +99,6 @@ default["wbse_init_control"]["o_restart_time"] = 0.
 # wbse_control
 default["wbse_control"] = {}
 default["wbse_control"]["wbse_calculation"] = "D"
-default["wbse_control"]["solver"] = "BSE"
 default["wbse_control"]["qp_correction"] = ""
 default["wbse_control"]["scissor_ope"] = 0.
 default["wbse_control"]["n_liouville_eigen"] = 1
@@ -131,6 +132,10 @@ def update_default_values(key,kwargs) :
        assert("nelec") in kwargs.keys()
        nelec = kwargs["nelec"]
        default[key]["n_pdep_eigen"] = int(nelec)
+       #
+       assert("nbnd") in kwargs.keys()
+       nbnd = kwargs["nbnd"]
+       default[key]["n_exx_lowrank"] = int(nbnd)
     #
     if key == "wfreq_control" :
        #

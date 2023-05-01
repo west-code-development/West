@@ -27,6 +27,9 @@ SUBROUTINE wbse_setup()
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_sf_kernel_setup
   USE xc_lib,               ONLY : xclib_dft_is
   USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
+  USE pwcom,                ONLY : nkstot,nks
+  USE distribution_center,  ONLY : kpt_pool
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   !
   IMPLICIT NONE
   !
@@ -139,6 +142,11 @@ SUBROUTINE wbse_setup()
   !
   CALL my_mkdir(wbse_save_dir)
   !
+  kpt_pool = idistribute()
+  CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
+  !
+  IF(kpt_pool%nloc /= nks) CALL errore('wbse_init_setup','unexpected kpt_pool init error',1)
+  !
   IF(l_qp_correction) THEN
      CALL read_qp_eigs()
   ENDIF
@@ -155,23 +163,22 @@ SUBROUTINE bse_start()
   !
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
-  USE pwcom,                ONLY : isk,nks,npwx
+  USE pwcom,                ONLY : isk,npwx
   USE westcom,              ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
                                  & n_trunc_bands,sigma_c_head,sigma_x_head,wbse_epsinfty,&
                                  & l_local_repr,overlap_thr,u_matrix,ovl_matrix,n_bse_idx,idx_matrix
-  USE lsda_mod,             ONLY : nspin
   USE constants,            ONLY : e2,pi
   USE cell_base,            ONLY : omega
   USE types_coulomb,        ONLY : pot3D
   USE wbse_io,              ONLY : read_umatrix_and_omatrix
-  USE distribution_center,  ONLY : aband
+  USE distribution_center,  ONLY : kpt_pool,band_group
   USE class_idistribute,    ONLY : idistribute
   !
   IMPLICIT NONE
   !
   ! Workspace
   !
-  INTEGER :: iks,is
+  INTEGER :: iks,is,is_g
   INTEGER :: lbnd,ibnd,jbnd,my_ibnd,nbnd_do,nbndval
   INTEGER :: ipair,do_idx
   REAL(DP) :: ovl_value
@@ -189,24 +196,25 @@ SUBROUTINE bse_start()
   !
   nbnd_do = nbndval0x-n_trunc_bands
   !
-  aband = idistribute()
-  !
-  CALL aband%init(nbnd_do,'b','nbndval',.FALSE.)
+  band_group = idistribute()
+  CALL band_group%init(nbnd_do,'b','nbndval',.FALSE.)
   !
   ! allocate and read unitary matrix and overlap matrix, if any
   !
   IF(l_local_repr) THEN
      !
      ALLOCATE(u_tmp(nbnd_do,nbnd_do))
-     ALLOCATE(u_matrix(aband%nloc,nbnd_do,nspin))
-     ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,nspin))
+     ALLOCATE(u_matrix(band_group%nloc,nbnd_do,kpt_pool%nloc))
+     ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,kpt_pool%nloc))
      !
-     DO is = 1,nspin
+     DO is = 1,kpt_pool%nloc
         !
-        CALL read_umatrix_and_omatrix(nbnd_do,is,u_tmp,ovl_matrix(:,:,is))
+        is_g = kpt_pool%l2g(is)
         !
-        DO lbnd = 1,aband%nloc
-           ibnd = aband%l2g(lbnd)
+        CALL read_umatrix_and_omatrix(nbnd_do,is_g,u_tmp,ovl_matrix(:,:,is))
+        !
+        DO lbnd = 1,band_group%nloc
+           ibnd = band_group%l2g(lbnd)
            u_matrix(lbnd,:,is) = u_tmp(ibnd,:)
         ENDDO
         !
@@ -216,24 +224,23 @@ SUBROUTINE bse_start()
      !
   ENDIF
   !
-  ALLOCATE(idx_matrix(nbnd_do*nbnd_do,2,nspin))
+  ALLOCATE(idx_matrix(nbnd_do*nbnd_do,2,kpt_pool%nloc))
   !
   idx_matrix(:,:,:) = 0
   !
-  ALLOCATE(n_bse_idx(nspin))
+  ALLOCATE(n_bse_idx(kpt_pool%nloc))
   !
   n_bse_idx(:) = 0
   !
-  DO iks = 1,nks
+  DO iks = 1,kpt_pool%nloc
      !
      nbndval = nbnd_occ(iks)
-     is = isk(iks)
      do_idx = 0
      !
      DO ibnd = 1,nbndval-n_trunc_bands
         DO jbnd = 1,nbndval-n_trunc_bands
            IF(l_local_repr) THEN
-              ovl_value = ovl_matrix(ibnd,jbnd,is)
+              ovl_value = ovl_matrix(ibnd,jbnd,iks)
            ELSE
               ovl_value = 0._DP
            ENDIF
@@ -241,18 +248,18 @@ SUBROUTINE bse_start()
            IF(l_local_repr) THEN
               IF(ovl_value >= overlap_thr) THEN
                  do_idx = do_idx + 1
-                 idx_matrix(do_idx,1,is) = ibnd+n_trunc_bands
-                 idx_matrix(do_idx,2,is) = jbnd+n_trunc_bands
+                 idx_matrix(do_idx,1,iks) = ibnd+n_trunc_bands
+                 idx_matrix(do_idx,2,iks) = jbnd+n_trunc_bands
               ENDIF
            ELSE
               do_idx = do_idx + 1
-              idx_matrix(do_idx,1,is) = ibnd+n_trunc_bands
-              idx_matrix(do_idx,2,is) = jbnd+n_trunc_bands
+              idx_matrix(do_idx,1,iks) = ibnd+n_trunc_bands
+              idx_matrix(do_idx,2,iks) = jbnd+n_trunc_bands
            ENDIF
         ENDDO
      ENDDO
      !
-     n_bse_idx(is) = do_idx
+     n_bse_idx(iks) = do_idx
      !
   ENDDO
   !
@@ -260,28 +267,27 @@ SUBROUTINE bse_start()
      !
      ! I/O is reduced by reading tau only once
      !
-     ALLOCATE(tau_is_read(nbnd_do,nbnd_do,nspin))
+     ALLOCATE(tau_is_read(nbnd_do,nbnd_do,kpt_pool%nloc))
      !
      tau_is_read(:,:,:) = 0
      n_tau = 0
      !
-     DO iks = 1,nks
+     DO iks = 1,kpt_pool%nloc
         !
-        is = isk(iks)
-        do_idx = n_bse_idx(is)
+        do_idx = n_bse_idx(iks)
         !
         ! count number of tau needed by my band group
         !
-        DO lbnd = 1,aband%nloc
+        DO lbnd = 1,band_group%nloc
            !
-           my_ibnd = aband%l2g(lbnd)
+           my_ibnd = band_group%l2g(lbnd)
            !
            DO ipair = 1, do_idx
               !
-              ibnd = idx_matrix(ipair,1,is)-n_trunc_bands
-              jbnd = idx_matrix(ipair,2,is)-n_trunc_bands
+              ibnd = idx_matrix(ipair,1,iks)-n_trunc_bands
+              jbnd = idx_matrix(ipair,2,iks)-n_trunc_bands
               !
-              IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,is) = 1
+              IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,iks) = 1
               !
            ENDDO
            !
@@ -289,7 +295,7 @@ SUBROUTINE bse_start()
         !
         DO jbnd = 1,nbnd_do
            DO ibnd = jbnd,nbnd_do
-              IF(tau_is_read(ibnd,jbnd,is) == 1 .OR. tau_is_read(jbnd,ibnd,is) == 1) n_tau = n_tau+1
+              IF(tau_is_read(ibnd,jbnd,iks) == 1 .OR. tau_is_read(jbnd,ibnd,iks) == 1) n_tau = n_tau+1
            ENDDO
         ENDDO
         !
@@ -320,18 +326,19 @@ SUBROUTINE read_qp_eigs()
   USE westcom,              ONLY : et_qp,qp_correction
   USE pwcom,                ONLY : nspin,nbnd
   USE json_module,          ONLY : json_file
+  USE distribution_center,  ONLY : kpt_pool
   !
   IMPLICIT NONE
   !
   ! Workspace
   !
   LOGICAL :: found
-  INTEGER :: is,nspin_tmp
+  INTEGER :: is,is_g,nspin_tmp
   CHARACTER(LEN=6) :: labels
   REAL(DP),ALLOCATABLE :: rvals(:)
   TYPE(json_file) :: json
   !
-  ALLOCATE(et_qp(nbnd,nspin))
+  ALLOCATE(et_qp(nbnd,kpt_pool%nloc))
   !
   IF(ionode) THEN
      !
@@ -342,9 +349,11 @@ SUBROUTINE read_qp_eigs()
      IF(.NOT. found) CALL errore('read_qp_eigs','nspin not found',1)
      IF(nspin_tmp /= nspin) CALL errore('read_qp_eigs','nspin mismatch',1)
      !
-     DO is = 1,nspin
+     DO is = 1,kpt_pool%nloc
         !
-        WRITE(labels,'(i6.6)') is
+        is_g = kpt_pool%l2g(is)
+        !
+        WRITE(labels,'(i6.6)') is_g
         !
         CALL json%get('output.Q.K'//labels//'.eqpSec',rvals,found)
         IF(.NOT. found) CALL errore('read_qp_eigs','eqpSec not found',1)

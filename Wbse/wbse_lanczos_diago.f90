@@ -17,7 +17,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE lsda_mod,             ONLY : nspin
-  USE pwcom,                ONLY : npw,npwx,ngk,nks,isk,current_spin
+  USE pwcom,                ONLY : npw,npwx,ngk,isk,current_spin
   USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,nbnd_occ,wbse_calculation,d0psi,wbse_ipol,&
                                  & n_lanczos,beta_store,zeta_store,nbndval0x,n_trunc_bands,&
                                  & n_steps_write_restart
@@ -27,7 +27,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
-  USE distribution_center,  ONLY : pert,aband
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -101,18 +101,18 @@ SUBROUTINE wbse_lanczos_diago()
   !
   IF(nbgrp > nbndval0x-n_trunc_bands) CALL errore('wbse_lanczos_diago','nbgrp>nbndval',1)
   !
-  aband = idistribute()
-  CALL aband%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)
+  band_group = idistribute()
+  CALL band_group%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)
   !
   CALL wbse_memory_report()
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  CALL allocate_bse_gpu(aband%nloc)
+  CALL allocate_bse_gpu(band_group%nloc)
   !
   CALL using_et(2)
   CALL using_et_d(0)
-  IF(nks == 1) THEN
+  IF(kpt_pool%nloc == 1) THEN
      CALL using_evc(2)
      CALL using_evc_d(0)
   ENDIF
@@ -126,10 +126,10 @@ SUBROUTINE wbse_lanczos_diago()
   beta_store(:,:,:) = 0._DP
   zeta_store(:,:,:,:) = 0._DP
   !
-  ALLOCATE(d0psi(npwx,aband%nlocx,nks,n_ipol))
-  ALLOCATE(evc1(npwx,aband%nlocx,nks))
-  ALLOCATE(evc1_old(npwx,aband%nlocx,nks))
-  ALLOCATE(evc1_new(npwx,aband%nlocx,nks))
+  ALLOCATE(d0psi(npwx,band_group%nlocx,kpt_pool%nloc,n_ipol))
+  ALLOCATE(evc1(npwx,band_group%nlocx,kpt_pool%nloc))
+  ALLOCATE(evc1_old(npwx,band_group%nlocx,kpt_pool%nloc))
+  ALLOCATE(evc1_new(npwx,band_group%nlocx,kpt_pool%nloc))
   !$acc enter data create(d0psi,evc1,evc1_old,evc1_new)
   !
   SELECT CASE(wbse_calculation)
@@ -205,7 +205,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! Orthogonality requirement: <v|\bar{L}|v> = 1
         !
-        CALL wbse_dot(evc1,evc1_new,aband%nlocx,nks,dotp)
+        CALL wbse_dot(evc1,evc1_new,band_group%nlocx,dotp)
         !
         beta(:) = REAL(dotp,KIND=DP)
         !
@@ -223,12 +223,12 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! Renormalize q(i) and Lq(i)
         !
-        DO iks = 1,nks
+        DO iks = 1,kpt_pool%nloc
            !
            npw = ngk(iks)
            current_spin = isk(iks)
            factor = 1._DP/beta(current_spin)
-           nbnd_do = aband%nlocx
+           nbnd_do = band_group%nlocx
            !
            !$acc parallel loop collapse(2) present(evc1)
            DO lbnd = 1,nbnd_do
@@ -253,7 +253,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         IF(MOD(iter,2) == 0) THEN
            DO iip = 1,n_ipol
-              CALL wbse_dot(d0psi(:,:,:,iip),evc1,aband%nlocx,nks,dotp)
+              CALL wbse_dot(d0psi(:,:,:,iip),evc1,band_group%nlocx,dotp)
               !
               zeta_store(iter,iip,ip,:) = dotp
            ENDDO
@@ -263,12 +263,12 @@ SUBROUTINE wbse_lanczos_diago()
            ENDDO
         ENDIF
         !
-        DO iks = 1,nks
+        DO iks = 1,kpt_pool%nloc
            !
            npw = ngk(iks)
            current_spin = isk(iks)
            factor = beta(current_spin)
-           nbnd_do = aband%nlocx
+           nbnd_do = band_group%nlocx
            !
            !$acc parallel loop collapse(2) present(evc1_new,evc1_old)
            DO lbnd = 1,nbnd_do
@@ -282,20 +282,20 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! Apply P_c|evc1_new>
         !
-        DO iks = 1,nks
+        DO iks = 1,kpt_pool%nloc
            !
            nbndval = nbnd_occ(iks)
            npw = ngk(iks)
            !
            nbnd_do = 0
-           DO lbnd = 1,aband%nloc
-              ibnd = aband%l2g(lbnd)+n_trunc_bands
+           DO lbnd = 1,band_group%nloc
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
               IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
            ENDDO
            !
            ! ... Read GS wavefunctions
            !
-           IF(nks > 1) THEN
+           IF(kpt_pool%nloc > 1) THEN
               IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
               CALL mp_bcast(evc,0,inter_image_comm)
               !

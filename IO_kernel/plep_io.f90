@@ -26,22 +26,23 @@ MODULE plep_io
     !
     SUBROUTINE plep_merge_and_write_G(fname,plepg)
       !
-      USE kinds,         ONLY : DP,i8b
-      USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
-      USE westcom,       ONLY : nbndval0x,n_trunc_bands
-      USE gvect,         ONLY : ig_l2g
-      USE pwcom,         ONLY : nks,npwx
-      USE base64_module, ONLY : islittleendian
-      USE west_io,       ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
-      USE mp_wave,       ONLY : mergewf
-      USE mp,            ONLY : mp_max
+      USE kinds,               ONLY : DP,i8b
+      USE mp_global,           ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
+      USE westcom,             ONLY : nbndval0x,n_trunc_bands
+      USE gvect,               ONLY : ig_l2g
+      USE pwcom,               ONLY : npwx
+      USE base64_module,       ONLY : islittleendian
+      USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
+      USE mp_wave,             ONLY : mergewf
+      USE mp,                  ONLY : mp_max
+      USE distribution_center, ONLY : kpt_pool
       !
       IMPLICIT NONE
       !
       ! I/O
       !
       CHARACTER(LEN=*),INTENT(IN) :: fname
-      COMPLEX(DP),INTENT(IN) :: plepg(npwx,nbndval0x-n_trunc_bands,nks)
+      COMPLEX(DP),INTENT(IN) :: plepg(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob)
       !
       ! Workspae
       !
@@ -75,7 +76,7 @@ MODULE plep_io
       !
       ALLOCATE(tmp_vec(npwx_g))
       !
-      DO ik = 1,nks
+      DO ik = 1,kpt_pool%nglob
          DO ibnd = 1,nbndval0x-n_trunc_bands
             !
             tmp_vec = 0._DP
@@ -110,22 +111,23 @@ MODULE plep_io
     !
     SUBROUTINE plep_read_G_and_distribute(fname,plepg)
       !
-      USE kinds,         ONLY : DP,i8b
-      USE mp_global,     ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
-      USE westcom,       ONLY : nbndval0x,n_trunc_bands
-      USE gvect,         ONLY : ig_l2g
-      USE pwcom,         ONLY : nks,npwx
-      USE base64_module, ONLY : islittleendian
-      USE west_io,       ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
-      USE mp_wave,       ONLY : splitwf
-      USE mp,            ONLY : mp_max
+      USE kinds,               ONLY : DP,i8b
+      USE mp_global,           ONLY : me_bgrp,root_bgrp,nproc_bgrp,intra_bgrp_comm
+      USE westcom,             ONLY : nbndval0x,n_trunc_bands
+      USE gvect,               ONLY : ig_l2g
+      USE pwcom,               ONLY : npwx
+      USE base64_module,       ONLY : islittleendian
+      USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
+      USE mp_wave,             ONLY : splitwf
+      USE mp,                  ONLY : mp_max
+      USE distribution_center, ONLY : kpt_pool
       !
       IMPLICIT NONE
       !
       ! I/O
       !
       CHARACTER(LEN=*),INTENT(IN) :: fname
-      COMPLEX(DP),INTENT(OUT) :: plepg(npwx,nbndval0x-n_trunc_bands,nks)
+      COMPLEX(DP),INTENT(OUT) :: plepg(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob)
       !
       ! Workspace
       !
@@ -169,7 +171,7 @@ MODULE plep_io
          !
       ENDIF
       !
-      DO ik = 1,nks
+      DO ik = 1,kpt_pool%nglob
          DO ibnd = 1,nbndval0x-n_trunc_bands
             !
             ! ONLY ROOT W/IN BGRP READS

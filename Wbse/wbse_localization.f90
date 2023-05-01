@@ -26,7 +26,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   USE check_ovl_wfc,        ONLY : check_ovl_wannier,read_bisection_loc,check_ovl_bisection
   USE wbse_io,              ONLY : write_umatrix_and_omatrix,read_umatrix_and_omatrix
   USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_jade
-  USE distribution_center,  ONLY : aband
+  USE distribution_center,  ONLY : band_group
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -87,8 +87,8 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
      !
      IF(l_wann) THEN
         !
-        aband = idistribute()
-        CALL aband%init(nbnd_do,'i','wann_local',.TRUE.)
+        band_group = idistribute()
+        CALL band_group%init(nbnd_do,'i','wann_local',.TRUE.)
         !
         ! compute unitary rotation matrix
         !
@@ -105,8 +105,8 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         a_matrix(:,:,:) = 0._DP
         !
         barra_load = 0
-        DO ibnd_l = 1,aband%nloc
-           ibnd = aband%l2g(ibnd_l)
+        DO ibnd_l = 1,band_group%nloc
+           ibnd = band_group%l2g(ibnd_l)
            DO jbnd = ibnd,nbnd_do
               barra_load = barra_load+1
            ENDDO
@@ -116,9 +116,9 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         CALL start_bar_type(barra,'wann',barra_load)
         !
-        DO ibnd_l = 1,aband%nloc
+        DO ibnd_l = 1,band_group%nloc
            !
-           ibnd = aband%l2g(ibnd_l)
+           ibnd = band_group%l2g(ibnd_l)
            ibnd_g = ibnd+nbnd_s-1
            !
            CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd_g),psic,'Wave')
@@ -229,9 +229,9 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         CALL start_bar_type(barra,'wann',barra_load)
         !
-        DO ibnd_l = 1,aband%nloc
+        DO ibnd_l = 1,band_group%nloc
            !
-           ibnd = aband%l2g(ibnd_l)
+           ibnd = band_group%l2g(ibnd_l)
            !
            !$acc host_data use_device(evc_loc)
            CALL single_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave')

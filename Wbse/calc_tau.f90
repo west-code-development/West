@@ -15,7 +15,7 @@ SUBROUTINE calc_tau()
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE pwcom,                ONLY : isk,nks,npw,ngk
+  USE pwcom,                ONLY : isk,npw,ngk
   USE wavefunctions,        ONLY : evc
   USE westcom,              ONLY : lrwfc,iuwfc,ev,dvg,n_pdep_eigen_to_use,npwqx,nbnd_occ,&
                                  & wbse_init_calculation,l_pdep,spin_channel,l_bse
@@ -25,7 +25,7 @@ SUBROUTINE calc_tau()
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE buffers,              ONLY : get_buffer
   USE class_idistribute,    ONLY : idistribute
-  USE distribution_center,  ONLY : pert
+  USE distribution_center,  ONLY : pert,kpt_pool
   USE qbox_interface,       ONLY : init_qbox,finalize_qbox
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
@@ -35,7 +35,7 @@ SUBROUTINE calc_tau()
   !
   ! Workspace
   !
-  INTEGER :: iks,current_spin
+  INTEGER :: iks,iks_g,current_spin
   INTEGER :: iq,nkq,ikq
   INTEGER :: nbndval
   LOGICAL :: l_restart_calc,spin_resolve
@@ -49,16 +49,18 @@ SUBROUTINE calc_tau()
      CALL errore('wbse_init','invalid wbse_init_calculation',1)
   END SELECT
   !
-  IF(l_pdep) THEN
-     pert = idistribute()
-     CALL pert%init(n_pdep_eigen_to_use,'b','nvecx',.TRUE.)
-     !
-     ALLOCATE(dvg(npwqx,pert%nlocx))
-     ALLOCATE(ev(n_pdep_eigen_to_use))
-     !
-     IF(l_bse) CALL pdep_db_read(n_pdep_eigen_to_use)
-  ELSE
-     IF(l_bse) CALL init_qbox()
+  IF(l_bse) THEN
+     IF(l_pdep) THEN
+        pert = idistribute()
+        CALL pert%init(n_pdep_eigen_to_use,'b','nvecx',.TRUE.)
+        !
+        ALLOCATE(dvg(npwqx,pert%nlocx))
+        ALLOCATE(ev(n_pdep_eigen_to_use))
+        !
+        CALL pdep_db_read(n_pdep_eigen_to_use)
+     ELSE
+        CALL init_qbox()
+     ENDIF
   ENDIF
   !
   spin_resolve = spin_channel > 0 .AND. nspin > 1
@@ -66,14 +68,15 @@ SUBROUTINE calc_tau()
   nkq = 1
   !
   DO iq = 1,nkq
-     DO iks = 1,nks
+     DO iks = 1,kpt_pool%nloc
         !
+        iks_g = kpt_pool%l2g(iks)
         current_spin = isk(iks)
         ikq = 1
         npw = ngk(iks)
         nbndval = nbnd_occ(iks)
         !
-        IF(nks > 1) THEN
+        IF(kpt_pool%nloc > 1) THEN
            IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc,0,inter_image_comm)
         ENDIF
@@ -84,17 +87,19 @@ SUBROUTINE calc_tau()
 #endif
         !
         IF((.NOT. spin_resolve) .OR. (spin_resolve .AND. current_spin == spin_channel)) THEN
-           CALL calc_tau_single_q(iks,iq,current_spin,nbndval,l_restart_calc)
+           CALL calc_tau_single_q(iks_g,iq,current_spin,nbndval,l_restart_calc)
         ENDIF
         !
      ENDDO
   ENDDO
   !
-  IF(l_pdep) THEN
-     DEALLOCATE(dvg)
-     DEALLOCATE(ev)
-  ELSE
-     CALL finalize_qbox()
+  IF(l_bse) THEN
+     IF(l_pdep) THEN
+        DEALLOCATE(dvg)
+        DEALLOCATE(ev)
+     ELSE
+        CALL finalize_qbox()
+     ENDIF
   ENDIF
   !
 END SUBROUTINE

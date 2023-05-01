@@ -24,15 +24,16 @@ MODULE lanczos_restart
       !
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
-      USE mp_global,           ONLY : my_image_id,inter_bgrp_comm,my_bgrp_id
+      USE mp_global,           ONLY : my_image_id,inter_pool_comm,my_pool_id,inter_bgrp_comm,&
+                                    & my_bgrp_id
       USE mp,                  ONLY : mp_barrier
       USE io_global,           ONLY : stdout
-      USE pwcom,               ONLY : npwx,nks
+      USE pwcom,               ONLY : npwx
       USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store,nbndval0x,&
                                     & n_trunc_bands
       USE lsda_mod,            ONLY : nspin
       USE plep_io,             ONLY : plep_merge_and_write_G
-      USE distribution_center, ONLY : aband
+      USE distribution_center, ONLY : kpt_pool,band_group
       USE west_mp,             ONLY : mp_root_sum_c16_3d
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
@@ -43,12 +44,12 @@ MODULE lanczos_restart
       ! I/O
       !
       INTEGER, INTENT(IN) :: nipol_input,ipol_stopped,ilan_stopped
-      COMPLEX(DP), INTENT(IN) :: evc1(npwx,aband%nlocx,nks)
-      COMPLEX(DP), INTENT(IN) :: evc1_old(npwx,aband%nlocx,nks)
+      COMPLEX(DP), INTENT(IN) :: evc1(npwx,band_group%nlocx,kpt_pool%nloc)
+      COMPLEX(DP), INTENT(IN) :: evc1_old(npwx,band_group%nlocx,kpt_pool%nloc)
       !
       ! Workspace
       !
-      INTEGER :: lbnd,ibnd
+      INTEGER :: lbnd,ibnd,iks,iks_g
       COMPLEX(DP), ALLOCATABLE :: evc1_tmp(:,:,:)
       INTEGER :: iun
       CHARACTER(LEN=256) :: fname
@@ -110,32 +111,40 @@ MODULE lanczos_restart
       !
       IF(my_image_id == 0) THEN
          !
-         ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+         ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob))
          !
          evc1_tmp(:,:,:) = (0._DP,0._DP)
          !
-         DO lbnd = 1,aband%nloc
-            ibnd = aband%l2g(lbnd)
-            evc1_tmp(:,ibnd,:) = evc1(:,lbnd,:)
+         DO iks = 1,kpt_pool%nloc
+            iks_g = kpt_pool%l2g(iks)
+            DO lbnd = 1,band_group%nloc
+               ibnd = band_group%l2g(lbnd)
+               evc1_tmp(:,ibnd,iks_g) = evc1(:,lbnd,iks)
+            ENDDO
          ENDDO
          !
+         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_pool_comm)
          CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
          !
-         IF(my_bgrp_id == 0) THEN
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             fname = TRIM(wbse_restart_dir)//'/evc1.dat'
             CALL plep_merge_and_write_G(fname,evc1_tmp)
          ENDIF
          !
          evc1_tmp(:,:,:) = (0._DP,0._DP)
          !
-         DO lbnd = 1,aband%nloc
-            ibnd = aband%l2g(lbnd)
-            evc1_tmp(:,ibnd,:) = evc1_old(:,lbnd,:)
+         DO iks = 1,kpt_pool%nloc
+            iks_g = kpt_pool%l2g(iks)
+            DO lbnd = 1,band_group%nloc
+               ibnd = band_group%l2g(lbnd)
+               evc1_tmp(:,ibnd,iks_g) = evc1_old(:,lbnd,iks)
+            ENDDO
          ENDDO
          !
+         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_pool_comm)
          CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
          !
-         IF(my_bgrp_id == 0) THEN
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             fname = TRIM(wbse_restart_dir)//'/evc1_old.dat'
             CALL plep_merge_and_write_G(fname,evc1_tmp)
          ENDIF
@@ -164,11 +173,11 @@ MODULE lanczos_restart
       USE mp_world,            ONLY : mpime,root,world_comm
       USE mp,                  ONLY : mp_barrier,mp_bcast
       USE io_global,           ONLY : stdout
-      USE pwcom,               ONLY : npwx,nks
+      USE pwcom,               ONLY : npwx
       USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store,nbndval0x,&
                                     & n_trunc_bands
       USE lsda_mod,            ONLY : nspin
-      USE distribution_center, ONLY : aband
+      USE distribution_center, ONLY : kpt_pool,band_group
       USE plep_io,             ONLY : plep_read_G_and_distribute
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
@@ -180,12 +189,12 @@ MODULE lanczos_restart
       !
       INTEGER, INTENT(IN) :: nipol_input
       INTEGER, INTENT(OUT) :: ipol_stopped,ilan_stopped
-      COMPLEX(DP), INTENT(OUT) :: evc1(npwx,aband%nlocx,nks)
-      COMPLEX(DP), INTENT(OUT) :: evc1_old(npwx,aband%nlocx,nks)
+      COMPLEX(DP), INTENT(OUT) :: evc1(npwx,band_group%nlocx,kpt_pool%nloc)
+      COMPLEX(DP), INTENT(OUT) :: evc1_old(npwx,band_group%nlocx,kpt_pool%nloc)
       !
       ! Workspace
       !
-      INTEGER :: lbnd,ibnd
+      INTEGER :: lbnd,ibnd,iks,iks_g
       INTEGER :: nipol_input_tmp,n_lanczos_tmp,nspin_tmp
       COMPLEX(DP), ALLOCATABLE :: evc1_tmp(:,:,:)
       INTEGER :: iun,ierr
@@ -269,22 +278,28 @@ MODULE lanczos_restart
       !
       ! READ EVC1 & EVC1_OLD
       !
-      ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+      ALLOCATE(evc1_tmp(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob))
       !
       fname = TRIM(wbse_restart_dir)//'/evc1.dat'
       CALL plep_read_G_and_distribute(fname,evc1_tmp)
       !
-      DO lbnd = 1,aband%nloc
-         ibnd = aband%l2g(lbnd)
-         evc1(:,lbnd,:) = evc1_tmp(:,ibnd,:)
+      DO iks = 1,kpt_pool%nloc
+         iks_g = kpt_pool%l2g(iks)
+         DO lbnd = 1,band_group%nloc
+            ibnd = band_group%l2g(lbnd)
+            evc1(:,lbnd,iks) = evc1_tmp(:,ibnd,iks_g)
+         ENDDO
       ENDDO
       !
       fname = TRIM(wbse_restart_dir)//'/evc1_old.dat'
       CALL plep_read_G_and_distribute(fname,evc1_tmp)
       !
-      DO lbnd = 1,aband%nloc
-         ibnd = aband%l2g(lbnd)
-         evc1_old(:,lbnd,:) = evc1_tmp(:,ibnd,:)
+      DO iks = 1,kpt_pool%nloc
+         iks_g = kpt_pool%l2g(iks)
+         DO lbnd = 1,band_group%nloc
+            ibnd = band_group%l2g(lbnd)
+            evc1_old(:,lbnd,iks) = evc1_tmp(:,ibnd,iks_g)
+         ENDDO
       ENDDO
       !
       DEALLOCATE(evc1_tmp)

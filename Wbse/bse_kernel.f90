@@ -19,11 +19,11 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   USE mp,                    ONLY : mp_sum
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma,double_fwfft_gamma
   USE mp_global,             ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id
-  USE pwcom,                 ONLY : npw,npwx,nks,isk,ngk
+  USE pwcom,                 ONLY : npw,npwx,isk,ngk
   USE exx,                   ONLY : exxalfa
   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_local_repr,u_matrix,idx_matrix,&
                                   & n_bse_idx,l_hybrid_tddft
-  USE distribution_center,   ONLY : aband
+  USE distribution_center,   ONLY : kpt_pool,band_group
   USE wbse_io,               ONLY : read_bse_pots_g
 #if defined(__CUDA)
   USE wavefunctions_gpum,    ONLY : psic=>psic_d
@@ -38,16 +38,16 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   ! I/O
   !
   INTEGER, INTENT(IN) :: current_spin
-  COMPLEX(DP), INTENT(IN) :: evc1(npwx,aband%nlocx,nks)
-  COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,aband%nlocx)
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx,band_group%nlocx,kpt_pool%nloc)
+  COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,band_group%nlocx)
   LOGICAL, INTENT(IN) :: sf
   !
   ! Workspace
   !
   INTEGER :: ibnd,jbnd,my_ibnd,my_jbnd,lbnd,ipair
   INTEGER :: ig,ir
-  INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq,iks_do
-  INTEGER :: dffts_nnr,aband_nloc
+  INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq,ikq_g,ikq_do
+  INTEGER :: dffts_nnr,band_group_nloc
   INTEGER, PARAMETER :: flks(2) = [2,1]
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
@@ -65,7 +65,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   !
   nbnd_do = nbndval0x-n_trunc_bands
   dffts_nnr = dffts%nnr
-  aband_nloc = aband%nloc
+  band_group_nloc = band_group%nloc
   !
 #if !defined(__CUDA)
   ALLOCATE(raux1(dffts%nnr))
@@ -75,24 +75,25 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   ALLOCATE(gaux(npwx))
 #endif
   !
-  DO ikq = 1, nks
+  DO ikq = 1, kpt_pool%nloc
      !
+     ikq_g = kpt_pool%l2g(ikq)
      current_spin_ikq = isk(ikq)
      IF(current_spin_ikq /= current_spin) CYCLE
      !
      npw = ngk(ikq)
      !
      IF(sf) THEN
-        iks_do = flks(ikq)
+        ikq_do = flks(ikq_g)
      ELSE
-        iks_do = ikq
+        ikq_do = ikq_g
      ENDIF
      !
      IF(l_local_repr) THEN
         !
         !$acc host_data use_device(evc1,u_matrix,caux1)
-        CALL ZGEMM('N','N',npw,nbnd_do,aband_nloc,one,evc1(:,:,ikq),npwx,u_matrix(:,:,iks_do),&
-        & aband_nloc,zero,caux1,npwx)
+        CALL ZGEMM('N','N',npw,nbnd_do,band_group_nloc,one,evc1(:,:,ikq),npwx,u_matrix(:,:,ikq_do),&
+        & band_group_nloc,zero,caux1,npwx)
         !$acc end host_data
         !
      ELSE
@@ -102,9 +103,9 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !$acc end kernels
         !
         !$acc parallel loop collapse(2) present(caux1,evc1)
-        DO lbnd = 1, aband_nloc
+        DO lbnd = 1, band_group_nloc
            !
-           ! ibnd = aband%l2g(lbnd)
+           ! ibnd = band_group%l2g(lbnd)
            !
            DO ig = 1, npw
               ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
@@ -126,12 +127,12 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
      caux2(:,:) = zero
      !$acc end kernels
      !
-     do_idx = n_bse_idx(iks_do)
+     do_idx = n_bse_idx(ikq_do)
      !
-     DO lbnd = 1, aband%nloc, 2
+     DO lbnd = 1, band_group%nloc, 2
         !
-        my_ibnd = aband%l2g(lbnd)
-        my_jbnd = aband%l2g(lbnd+1)
+        my_ibnd = band_group%l2g(lbnd)
+        my_jbnd = band_group%l2g(lbnd+1)
         !
         !$acc kernels present(raux1,raux2)
         raux1(:) = 0._DP
@@ -142,12 +143,12 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
         DO ipair = 1, do_idx
            !
-           ibnd = idx_matrix(ipair,1,iks_do)-n_trunc_bands
-           jbnd = idx_matrix(ipair,2,iks_do)-n_trunc_bands
+           ibnd = idx_matrix(ipair,1,ikq_do)-n_trunc_bands
+           jbnd = idx_matrix(ipair,2,ikq_do)-n_trunc_bands
            !
            IF(ibnd == my_ibnd .OR. ibnd == my_jbnd) THEN
               !
-              CALL read_bse_pots_g(gaux,ibnd,jbnd,iks_do)
+              CALL read_bse_pots_g(gaux,ibnd,jbnd,ikq_do)
               !
               !$acc update device(gaux)
               !
@@ -177,7 +178,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
         ! Back to reciprocal space
         !
-        IF(lbnd < aband%nloc) THEN
+        IF(lbnd < band_group%nloc) THEN
            !$acc parallel loop present(raux1,raux2)
            DO ir = 1, dffts_nnr
               psic(ir) = CMPLX(raux1(ir),raux2(ir),KIND=DP)
@@ -191,7 +192,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
            !$acc end parallel
         ENDIF
         !
-        IF(lbnd < aband%nloc) THEN
+        IF(lbnd < band_group%nloc) THEN
            !$acc host_data use_device(caux2)
            CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),caux2(:,my_jbnd),'Wave')
            !$acc end host_data
@@ -220,16 +221,16 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
      IF(l_local_repr) THEN
         !
         !$acc host_data use_device(caux2,u_matrix,bse_kd1)
-        CALL ZGEMM('N','C',npw,aband_nloc,nbnd_do,mone,caux2,npwx,u_matrix(:,:,iks_do),aband_nloc,&
-        & one,bse_kd1,npwx)
+        CALL ZGEMM('N','C',npw,band_group_nloc,nbnd_do,mone,caux2,npwx,u_matrix(:,:,ikq_do),&
+        & band_group_nloc,one,bse_kd1,npwx)
         !$acc end host_data
         !
      ELSE
         !
         !$acc parallel loop collapse(2) present(bse_kd1,caux2)
-        DO lbnd = 1, aband_nloc
+        DO lbnd = 1, band_group_nloc
            !
-           ! ibnd = aband%l2g(lbnd)
+           ! ibnd = band_group%l2g(lbnd)
            !
            DO ig = 1, npw
               ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1

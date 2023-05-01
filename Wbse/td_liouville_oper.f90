@@ -19,7 +19,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE gvect,                ONLY : gstart
   USE uspp,                 ONLY : vkb,nkb
   USE lsda_mod,             ONLY : nspin
-  USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,nks,xk,ngk,igk_k,nbnd
+  USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,xk,ngk,igk_k,nbnd
   USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_bcast
   USE mp_global,            ONLY : my_image_id,inter_image_comm
@@ -31,7 +31,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
                                  & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
                                  & l_hybrid_tddft,l_spin_flip_kernel
-  USE distribution_center,  ONLY : aband
+  USE distribution_center,  ONLY : kpt_pool,band_group
   USE uspp_init,            ONLY : init_us_2
   USE exx,                  ONLY : exxalfa
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
@@ -47,15 +47,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !
   IMPLICIT NONE
   !
-  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,aband%nlocx,nks)
-  COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,aband%nlocx,nks)
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,band_group%nlocx,kpt_pool%nloc)
+  COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,band_group%nlocx,kpt_pool%nloc)
   LOGICAL, INTENT(IN) :: sf
   ! if sf = .True., then the code will operate in the spin-flip mode
   !
   ! Local variables
   !
   LOGICAL :: lrpa,do_k1e
-  INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbnd_do,lbnd,iks_do,flnbndval
+  INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
   COMPLEX(DP) :: factor
   INTEGER, PARAMETER :: flks(2) = [2,1]
@@ -77,7 +77,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !$acc end kernels
   !
 #if !defined(__CUDA)
-  ALLOCATE(hevc1(npwx*npol,aband%nloc))
+  ALLOCATE(hevc1(npwx*npol,band_group%nloc))
   ALLOCATE(dvrs(dffts%nnr,nspin))
 #endif
   !
@@ -93,7 +93,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
   ENDIF
   !
-  DO iks = 1,nks
+  DO iks = 1,kpt_pool%nloc
      !
      IF(sf) THEN
         iks_do = flks(iks)
@@ -105,8 +105,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      flnbndval = nbnd_occ(iks_do)
      !
      nbnd_do = 0
-     DO lbnd = 1,aband%nloc
-        ibnd = aband%l2g(lbnd)+n_trunc_bands
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
         IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
@@ -135,7 +135,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      ! ... read in GS wavefunctions iks
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
         CALL mp_bcast(evc_host,0,inter_image_comm)
@@ -174,8 +174,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            !
            DO lbnd = 1,nbnd_do-MOD(nbnd_do,2),2
               !
-              ibnd = aband%l2g(lbnd)+n_trunc_bands
-              jbnd = aband%l2g(lbnd+1)+n_trunc_bands
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
+              jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
               !
               CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
               !
@@ -196,7 +196,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            IF(MOD(nbnd_do,2) == 1) THEN
               !
               lbnd = nbnd_do
-              ibnd = aband%l2g(lbnd)+n_trunc_bands
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
               !
               CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
               !
@@ -218,7 +218,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            !
            DO lbnd = 1,nbnd_do
               !
-              ibnd = aband%l2g(lbnd)+n_trunc_bands
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
               !
               CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
               !
@@ -237,7 +237,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            IF(npol == 2) THEN
               DO lbnd = 1,nbnd_do
                  !
-                 ibnd = aband%l2g(lbnd)+n_trunc_bands
+                 ibnd = band_group%l2g(lbnd)+n_trunc_bands
                  !
                  CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
                  !
@@ -280,7 +280,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      DO lbnd = 1,nbnd_do
         !
-        ibnd = aband%l2g(lbnd)+n_trunc_bands
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
         !
         IF(l_qp_correction) THEN
            IF(l_bse) THEN
@@ -336,7 +336,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      ! load evc from iks to apply Pc of the current spin channel
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)

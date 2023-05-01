@@ -58,7 +58,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group,macropert,ifr,rfr,occband
   USE class_idistribute,    ONLY : idistribute
   USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
   USE types_bz_grid,        ONLY : k_grid

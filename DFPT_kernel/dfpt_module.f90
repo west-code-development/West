@@ -45,7 +45,7 @@ MODULE dfpt_module
       USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
       USE westcom,               ONLY : iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,l_frac_occ,nbnd_occ,&
                                       & nbnd_occ_full,occupation,docc_thr,de_thr
-      USE distribution_center,   ONLY : band_group,kpt_pool
+      USE distribution_center,   ONLY : kpt_pool,band_group
 #if defined(__CUDA)
       USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
       USE wavefunctions,         ONLY : evc_host=>evc

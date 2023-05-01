@@ -31,7 +31,7 @@ SUBROUTINE wfreq_setup
   USE noncollin_module,       ONLY : npol
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
-  USE distribution_center,    ONLY : pert,macropert,ifr,rfr,aband,occband,band_group,kpt_pool,pert_offd
+  USE distribution_center,    ONLY : pert,kpt_pool,band_group,macropert,ifr,rfr,aband,occband,pert_offd
   USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
   USE io_global,              ONLY : stdout
@@ -97,7 +97,7 @@ SUBROUTINE wfreq_setup
   kpt_pool = idistribute()
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
   !
-  IF(kpt_pool%nloc /= nks) CALL errore('wfreq_setup','unexpected kpt_pool initialization error',1)
+  IF(kpt_pool%nloc /= nks) CALL errore('wfreq_setup','unexpected kpt_pool init error',1)
   IF(nbgrp > n_bands) CALL errore('wfreq_setup','nbgrp>nbnd_qp',1)
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('wfreq_setup','nbgrp>nbnd_occ',1)
   !

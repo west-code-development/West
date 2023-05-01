@@ -55,7 +55,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool,pert_offd
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband,pert_offd
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
@@ -820,7 +820,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE constants,            ONLY : rytoev,pi
   USE west_io,              ONLY : serial_table_output
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write

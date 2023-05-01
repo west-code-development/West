@@ -23,6 +23,8 @@ SUBROUTINE set_nbndocc()
   USE noncollin_module,       ONLY : noncolin
   USE westcom,                ONLY : nbndval0x,nbnd_occ,l_frac_occ,occupation,nbnd_occ_full,docc_thr
   USE control_flags,          ONLY : gamma_only
+  USE mp_global,              ONLY : inter_pool_comm
+  USE mp,                     ONLY : mp_max
   !
   IMPLICIT NONE
   !
@@ -113,5 +115,7 @@ SUBROUTINE set_nbndocc()
   IF(MAXVAL(nbnd_occ) == 0) CALL errore("set_nbndocc", "nbnd_occ was not set", 1)
   !
   nbndval0x = MAXVAL(nbnd_occ)
+  !
+  CALL mp_max(nbndval0x,inter_pool_comm)
   !
 END SUBROUTINE

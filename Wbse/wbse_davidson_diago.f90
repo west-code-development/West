@@ -28,7 +28,7 @@ SUBROUTINE wbse_davidson_diago ( )
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,ev,conv,&
                                  & wstat_calculation,n_pdep_read_from_file,n_steps_write_restart,&
                                  & trev_pdep_rel,l_is_wstat_converged,nbnd_occ,lrwfc,iuwfc,dvg_exc,&
-                                 & dng_exc,nbndval0x,n_trunc_bands,l_preconditioning
+                                 & dng_exc,nbndval0x,n_trunc_bands,l_preconditioning,l_pre_shift
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
                                  & davidson_restart_read
@@ -403,7 +403,7 @@ SUBROUTINE wbse_davidson_diago ( )
         IF (dav_iter < 4) THEN
            CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .FALSE. )
         ELSE
-           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .TRUE. )
+           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, l_pre_shift )
         ENDIF
         !
      ENDIF

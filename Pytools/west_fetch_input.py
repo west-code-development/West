@@ -114,6 +114,7 @@ default["wbse_control"]["l_dipole_realspace"] = False
 default["wbse_control"]["wbse_epsinfty"] = 1.
 default["wbse_control"]["spin_excitation"] = "S"
 default["wbse_control"]["l_preconditioning"] = True
+default["wbse_control"]["l_pre_shift"] = False
 default["wbse_control"]["l_reduce_io"] = True
 
 ############################

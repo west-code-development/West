@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
+SUBROUTINE apply_alpha_pa_to_m_wfcs(iks,m,f,alpha)
   !-----------------------------------------------------------------------
   !
   ! | f_i > = alpha * P_a | f_i >            forall i = 1:n_bands
@@ -33,7 +33,7 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: m
+  INTEGER, INTENT(IN) :: iks,m
   COMPLEX(DP), INTENT(IN) :: alpha
   COMPLEX(DP), INTENT(INOUT) :: f(npwx*npol,m)
 #if defined(__CUDA)
@@ -62,17 +62,17 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
      !
      !$acc host_data use_device(proj_c,ps_r)
 #if defined(__CUDA)
-     CALL glbrak_gamma_gpu( proj_c, f, ps_r, npw, npwx, n_bands, m, n_bands, npol )
+     CALL glbrak_gamma_gpu( proj_c(:,:,iks), f, ps_r, npw, npwx, n_bands, m, n_bands, npol )
 #else
      ALLOCATE( ps_r(n_bands,m) )
      ps_r = 0.0_DP
      !
-     CALL glbrak_gamma( proj_c, f, ps_r, npw, npwx, n_bands, m, n_bands, npol)
+     CALL glbrak_gamma( proj_c(:,:,iks), f, ps_r, npw, npwx, n_bands, m, n_bands, npol)
 #endif
      !
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !
-     CALL DGEMM('N','N',2*npwx*npol,m,n_bands,alpha_r,proj_c,2*npwx*npol,ps_r,n_bands,0.0_DP,f,2*npwx*npol)
+     CALL DGEMM('N','N',2*npwx*npol,m,n_bands,alpha_r,proj_c(:,:,iks),2*npwx*npol,ps_r,n_bands,0.0_DP,f,2*npwx*npol)
      !$acc end host_data
      !
 #if !defined(__CUDA)
@@ -83,17 +83,17 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(m,f,alpha)
      !
      !$acc host_data use_device(proj_c,ps_c)
 #if defined(__CUDA)
-     CALL glbrak_k_gpu( proj_c, f, ps_c, npw, npwx, n_bands, m, n_bands, npol )
+     CALL glbrak_k_gpu( proj_c(:,:,iks), f, ps_c, npw, npwx, n_bands, m, n_bands, npol )
 #else
      ALLOCATE( ps_c(n_bands,m) )
      ps_c = (0.0_DP,0.0_DP)
      !
-     CALL glbrak_k( proj_c, f, ps_c, npw, npwx, n_bands, m, n_bands, npol)
+     CALL glbrak_k( proj_c(:,:,iks), f, ps_c, npw, npwx, n_bands, m, n_bands, npol)
 #endif
      !
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !
-     CALL ZGEMM('N','N',npwx*npol,m,n_bands,alpha,proj_c,npwx*npol,ps_c,n_bands,(0.0_DP,0.0_DP),f,npwx*npol)
+     CALL ZGEMM('N','N',npwx*npol,m,n_bands,alpha,proj_c(:,:,iks),npwx*npol,ps_c,n_bands,(0.0_DP,0.0_DP),f,npwx*npol)
      !$acc end host_data
      !
 #if !defined(__CUDA)

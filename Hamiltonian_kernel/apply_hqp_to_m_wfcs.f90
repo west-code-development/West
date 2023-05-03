@@ -38,7 +38,7 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
   !
   ! I/O
   !
-  INTEGER, INTENT(IN) :: iks, m
+  INTEGER, INTENT(IN) :: iks,m
   COMPLEX(DP), INTENT(IN) :: f(npwx*npol,m)
   COMPLEX(DP), INTENT(INOUT) :: g(npwx*npol,m)
   !

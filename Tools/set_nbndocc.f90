@@ -49,9 +49,9 @@ SUBROUTINE set_nbndocc()
   ALLOCATE(nbnd_occ(nks))
   ALLOCATE(nbnd_occ_full(nks))
   !
-  occupation = 0._DP
-  nbnd_occ_full = 0
-  nbnd_occ = 0
+  occupation(:,:) = 0._DP
+  nbnd_occ_full(:) = 0
+  nbnd_occ(:) = 0
   !
   IF(l_frac_occ) THEN
      !
@@ -106,11 +106,11 @@ SUBROUTINE set_nbndocc()
      DO iks = 1,nks
         occupation(1:nbnd_occ(iks),iks) = 1._DP
      ENDDO
-     nbnd_occ_full = nbnd_occ
+     nbnd_occ_full(:) = nbnd_occ
      !
   ENDIF
   !
-  IF(MAXVAL(nbnd_occ(:)) == 0) CALL errore("set_nbndocc", "nbnd_occ was not set", 1)
+  IF(MAXVAL(nbnd_occ) == 0) CALL errore("set_nbndocc", "nbnd_occ was not set", 1)
   !
   nbndval0x = MAXVAL(nbnd_occ)
   !

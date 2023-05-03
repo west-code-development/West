@@ -98,27 +98,33 @@ def test_qdet_one_body_terms():
     """
     Test one-body terms of spin-polarized QDET calculation.
     """
-    # get parameter from JSON
+    # get parameters from JSON file
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
-    tolerance = np.log10(float(parameters["tolerance"]["pdep_eigenvalue"]))
 
     h1e_ref = read_one_body_terms_from_JSON("./test014/ref/wfreq.json")
     h1e_test = read_one_body_terms_from_JSON("./test014/test.wfreq.save/wfreq.json")
 
-    np.testing.assert_almost_equal(h1e_ref, h1e_test, decimal=tolerance)
+    np.testing.assert_almost_equal(
+        h1e_ref,
+        h1e_test,
+        decimal=-np.log10(float(parameters["tolerance"]["pdep_eigenvalue"])),
+    )
 
 
 def test_qdet_two_body_terms():
     """
     Test two-body terms of spin-polarized QDET calculation.
     """
-    # get parameter from JSON
+    # get parameters from JSON file
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
-    tolerance = np.log10(float(parameters["tolerance"]["pdep_eigenvalue"]))
 
     eri_ref = read_two_body_terms_from_JSON("./test014/ref/wfreq.json")
     eri_test = read_two_body_terms_from_JSON("./test014/test.wfreq.save/wfreq.json")
 
-    np.testing.assert_almost_equal(eri_ref, eri_test, decimal=tolerance)
+    np.testing.assert_almost_equal(
+        eri_ref,
+        eri_test,
+        decimal=-np.log10(float(parameters["tolerance"]["pdep_eigenvalue"])),
+    )

@@ -201,7 +201,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   IF(l_read_restart) THEN
      CALL solvewfreq_restart_read( bks, dmati, zmatr, mypara%nglob, mypara%nloc )
      !
-     IF(.NOT. l_QDET) THEN
+     IF(l_QDET) THEN
+        bks%lastdone_ks   = 0
+        bks%lastdone_band = 0
+        bks%old_ks        = 0
+        bks%old_band      = 0
+        bks%max_ks        = k_grid%nps
+        bks%min_ks        = 1
+     ELSE
         !$acc update device(dmati,zmatr)
      ENDIF
   ELSE
@@ -235,7 +242,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         barra_load = barra_load+1
      ENDDO
   ENDDO
-  IF(l_QDET) barra_load = kpt_pool%nloc*band_group%nloc
   !
   IF( barra_load == 0 ) THEN
      CALL start_bar_type ( barra, 'wlanczos', 1 )
@@ -370,7 +376,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #if defined(__CUDA)
         CALL reallocate_ps_gpu(n_bands,nbnd)
 #endif
-        CALL apply_alpha_pa_to_m_wfcs(nbnd,evc_work,(1.0_DP,0.0_DP))
+        CALL apply_alpha_pa_to_m_wfcs(iks_g,nbnd,evc_work,(1.0_DP,0.0_DP))
         !
      ENDIF
      !
@@ -588,7 +594,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            CALL reallocate_ps_gpu(n_bands,mypara%nloc)
 #endif
            !$acc host_data use_device(dvpsi)
-           CALL apply_alpha_pa_to_m_wfcs(mypara%nloc,dvpsi,(1._DP,0._DP))
+           CALL apply_alpha_pa_to_m_wfcs(iks_g,mypara%nloc,dvpsi,(1._DP,0._DP))
            !$acc end host_data
         ENDIF
         !
@@ -623,7 +629,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            overlap(:,1:nbnd-nbndval_full) = 0._DP
            !$acc end kernels
            !
-           !$acc parallel loop collapse(2) present(overlap,ps_r)
+           !$acc parallel loop collapse(2) present(overlap,l2g,ps_r)
            DO ic = 1,nbnd-nbndval_full
               DO ip = 1,mypara_nloc
                  overlap(l2g(ip),ic) = ps_r(ic,ip)
@@ -653,7 +659,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
               IF(l_frac_occ) docc = occupation(iv,iks)-occupation(ic+nbndval_full,iks)
               !
               IF(l_QDET) THEN
-                 !$acc parallel loop collapse(3) present(imfreq_list,dmati_a,overlap)
+                 !$acc parallel loop collapse(3) present(imfreq_list,dmati_a,overlap,l2g)
                  DO ifreq = 1,ifr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
@@ -667,7 +673,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                  ENDDO ! ifreq
                  !$acc end parallel
               ELSE
-                 !$acc parallel loop collapse(3) present(imfreq_list,dmati,overlap)
+                 !$acc parallel loop collapse(3) present(imfreq_list,dmati,overlap,l2g)
                  DO ifreq = 1,ifr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
@@ -696,7 +702,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
               IF(l_frac_occ) docc = occupation(iv,iks)-occupation(ic+nbndval_full,iks)
               !
               IF(l_QDET) THEN
-                 !$acc parallel loop collapse(3) present(refreq_list,zmatr_a,overlap)
+                 !$acc parallel loop collapse(3) present(refreq_list,zmatr_a,overlap,l2g)
                  DO ifreq = 1,rfr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
@@ -712,7 +718,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                  ENDDO ! ifreq
                  !$acc end parallel
               ELSE
-                 !$acc parallel loop collapse(3) present(refreq_list,zmatr,overlap)
+                 !$acc parallel loop collapse(3) present(refreq_list,zmatr,overlap,l2g)
                  DO ifreq = 1,rfr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
@@ -896,7 +902,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
   ENDIF
   !
-  IF(l_QDET) THEN
+  IF(npool*nbgrp > 1 .AND. l_QDET) THEN
      CALL mp_sum(dmati_a,inter_bgrp_comm)
      CALL mp_sum(dmati_a,inter_pool_comm)
      CALL mp_sum(zmatr_a,inter_bgrp_comm)
@@ -1702,7 +1708,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               overlap(:,1:nbnd-nbndval) = 0._DP
               !$acc end kernels
               !
-              !$acc parallel loop collapse(2) present(overlap,ps_c)
+              !$acc parallel loop collapse(2) present(overlap,l2g,ps_c)
               DO ic = 1,nbnd-nbndval
                  DO ip = 1,mypara_nloc
                     overlap(l2g(ip),ic) = ps_c(ic,ip)
@@ -1726,7 +1732,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
                  ecv = et(ic+nbndval,iks)-et(iv,ikqs)
                  !
-                 !$acc parallel loop collapse(3) present(imfreq_list,zmati_q,overlap)
+                 !$acc parallel loop collapse(3) present(imfreq_list,zmati_q,overlap,l2g)
                  DO ifreq = 1,ifr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob
@@ -1747,7 +1753,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
                  ecv = et(ic+nbndval,iks)-et(iv,ikqs)
                  !
-                 !$acc parallel loop collapse(3) present(refreq_list,zmatr_q,overlap)
+                 !$acc parallel loop collapse(3) present(refreq_list,zmatr_q,overlap,l2g)
                  DO ifreq = 1,rfr_nloc
                     DO ip = 1,mypara_nloc
                        DO glob_jp = 1,mypara_nglob

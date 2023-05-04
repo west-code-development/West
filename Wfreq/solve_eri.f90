@@ -165,14 +165,14 @@ SUBROUTINE compute_braket(braket)
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : wstat_save_dir,npwq,npwqx,n_pdep_eigen_to_use,fftdriver,&
                                  & proj_c,n_pairs,pijmap
-  USE mp_global,            ONLY : intra_bgrp_comm,inter_bgrp_comm,inter_image_comm
+  USE mp_global,            ONLY : intra_bgrp_comm,inter_bgrp_comm,inter_pool_comm,inter_image_comm
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,double_invfft_gamma
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE mp,                   ONLY : mp_sum
   USE types_coulomb,        ONLY : pot3D
   USE io_push,              ONLY : io_push_title
-  USE distribution_center,  ONLY : macropert,bandpair
+  USE distribution_center,  ONLY : kpt_pool,macropert,bandpair
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
 #if defined(__CUDA)
@@ -191,7 +191,7 @@ SUBROUTINE compute_braket(braket)
   REAL(DP),ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(rho_r,rho_g,sqvc)
   !
-  INTEGER :: s, m, p1, p1loc, i, j, ig, ir, mloc
+  INTEGER :: s, s_g, m, p1, p1loc, i, j, ig, ir, mloc
   INTEGER :: barra_load
   INTEGER :: dffts_nnr
   CHARACTER(LEN=25) :: filepot
@@ -224,12 +224,15 @@ SUBROUTINE compute_braket(braket)
      IF (m > n_pdep_eigen_to_use) CYCLE
      barra_load = barra_load+1
   ENDDO
-  barra_load = barra_load*nspin
+  barra_load = barra_load*kpt_pool%nloc
   CALL start_bar_type ( barra, 'eri_brak', barra_load )
   !
-  braket = 0._DP
+  braket(:,:,:) = 0._DP
   !
-  DO s = 1, nspin
+  DO s = 1, kpt_pool%nloc
+     !
+     s_g = kpt_pool%l2g(s)
+     !
      DO mloc = 1, macropert%nloc
         !
         m = macropert%l2g(mloc)
@@ -264,7 +267,7 @@ SUBROUTINE compute_braket(braket)
            j = pijmap(2,p1)
            !
            !$acc host_data use_device(proj_c)
-           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s),proj_c(:,j,s),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s_g),proj_c(:,j,s_g),psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(rho_r)
@@ -293,17 +296,19 @@ SUBROUTINE compute_braket(braket)
               !$acc end serial
            ENDIF
            !
-           braket(p1,s,m) = 2._DP*reduce
+           braket(p1,s_g,m) = 2._DP*reduce
            !
         ENDDO
         !
         CALL update_bar_type( barra,'eri_brak', 1 )
         !
      ENDDO
+     !
   ENDDO
   !
   CALL mp_sum(braket, intra_bgrp_comm)
   CALL mp_sum(braket, inter_bgrp_comm)
+  CALL mp_sum(braket, inter_pool_comm)
   CALL mp_sum(braket, inter_image_comm)
   !
   CALL stop_bar_type( barra,'eri_brak' )
@@ -325,8 +330,8 @@ SUBROUTINE compute_eri_vc(eri_vc)
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
   USE westcom,              ONLY : n_pairs,pijmap,proj_c,npwq,npwqx
-  USE mp_global,            ONLY : intra_bgrp_comm,inter_image_comm
-  USE distribution_center,  ONLY : bandpair
+  USE mp_global,            ONLY : intra_bgrp_comm,inter_pool_comm,inter_image_comm
+  USE distribution_center,  ONLY : kpt_pool,bandpair
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,double_invfft_gamma
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -350,7 +355,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   REAL(DP),ALLOCATABLE :: sqvc(:)
   !$acc declare device_resident(rho_g1,rho_g2,rho_r,sqvc)
   !
-  INTEGER :: i, j, k, l, p1, p1loc, p2, s1, s2
+  INTEGER :: i, j, k, l, p1, p1loc, p2, s1, s1_g, s2
   INTEGER :: ir, ig
   INTEGER :: dffts_nnr
   TYPE(bar_type) :: barra
@@ -378,9 +383,12 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   ! eri_vc with SAME SPIN --> compute only p2>=p1, obtain p2<p1 by symmetry
   !
-  CALL start_bar_type ( barra, 'eri_vc_s1s1', nspin*bandpair%nloc )
+  CALL start_bar_type ( barra, 'eri_vc_s1s1', kpt_pool%nloc*bandpair%nloc )
   !
-  DO s1 = 1, nspin
+  DO s1 = 1, kpt_pool%nloc
+     !
+     s1_g = kpt_pool%l2g(s1)
+     !
      DO p1loc = 1, bandpair%nloc
         !
         p1 = bandpair%l2g(p1loc)
@@ -388,7 +396,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
         j = pijmap(2,p1)
         !
         !$acc host_data use_device(proj_c)
-        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s1),psic,'Wave')
+        CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1_g),proj_c(:,j,s1_g),psic,'Wave')
         !$acc end host_data
         !
         !$acc parallel loop present(rho_r)
@@ -420,9 +428,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
         ENDDO
         !$acc end parallel
         !
-        eri_vc(p1,p1,s1,s1) = eri_vc(p1,p1,s1,s1) + 2._DP*reduce/omega
+        eri_vc(p1,p1,s1_g,s1_g) = eri_vc(p1,p1,s1_g,s1_g) + 2._DP*reduce/omega
         IF(i==j .AND. gstart==2) THEN
-           eri_vc(p1,p1,s1,s1) = eri_vc(p1,p1,s1,s1) + pot3D%div
+           eri_vc(p1,p1,s1_g,s1_g) = eri_vc(p1,p1,s1_g,s1_g) + pot3D%div
         ENDIF
         !
         ! (s1 = s2); (p2 > p1)
@@ -433,7 +441,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            l = pijmap(2,p2)
            !
            !$acc host_data use_device(proj_c)
-           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s1),proj_c(:,l,s1),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s1_g),proj_c(:,l,s1_g),psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(rho_r)
@@ -464,27 +472,32 @@ SUBROUTINE compute_eri_vc(eri_vc)
            ENDDO
            !$acc end parallel
            !
-           eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + 2._DP*reduce/omega
+           eri_vc(p1,p2,s1_g,s1_g) = eri_vc(p1,p2,s1_g,s1_g) + 2._DP*reduce/omega
            IF(i==j .AND. k==l .AND. gstart==2) THEN
-              eri_vc(p1,p2,s1,s1) = eri_vc(p1,p2,s1,s1) + pot3D%div
+              eri_vc(p1,p2,s1_g,s1_g) = eri_vc(p1,p2,s1_g,s1_g) + pot3D%div
            ENDIF
            !
            ! Apply symmetry
            !
-           eri_vc(p2,p1,s1,s1) = eri_vc(p1,p2,s1,s1)
+           eri_vc(p2,p1,s1_g,s1_g) = eri_vc(p1,p2,s1_g,s1_g)
            !
         ENDDO
         !
         CALL update_bar_type ( barra, 'eri_vc_s1s1', 1 )
         !
      ENDDO
+     !
   ENDDO
+  !
+  CALL mp_sum(eri_vc,inter_pool_comm)
   !
   CALL stop_bar_type ( barra, 'eri_vc_s1s1' )
   !
   ! eri_vc with DIFFERENT SPIN --> compute only s2>s1, obtain s2<s1 by symmetry
   !
   IF (nspin==2) THEN
+     !
+     CALL io_push_title('pair density')
      !
      CALL start_bar_type ( barra, 'eri_vc_s1s2', bandpair%nloc )
      !
@@ -678,7 +691,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
                  ENDDO
               ENDDO ! iterate over m, n
               !
-              IF(l_macropol .AND. i == j .AND. k == l) THEN
+              IF(l_macropol .AND. my_image_id == 0 .AND. i == j .AND. k == l) THEN
                  reduce = reduce + chi_head*div
               ENDIF
               !

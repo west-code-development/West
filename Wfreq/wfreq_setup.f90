@@ -14,7 +14,8 @@
 SUBROUTINE wfreq_setup
   !-----------------------------------------------------------------------
   !
-  USE mp_global,              ONLY : nbgrp,inter_image_comm,my_image_id,mp_bcast
+  USE mp_global,              ONLY : inter_image_comm,my_image_id,inter_pool_comm,nbgrp
+  USE mp,                     ONLY : mp_bcast,mp_sum
   USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
                                    & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
                                    & wfreq_calculation,qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
@@ -41,7 +42,7 @@ SUBROUTINE wfreq_setup
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: i,ib,jb,ipair,iks,ib_index
+  INTEGER :: i,ib,jb,ipair,iks,iks_g,ib_index
   LOGICAL :: l_generate_plot
   LOGICAL :: l_QDET
   !
@@ -183,7 +184,10 @@ SUBROUTINE wfreq_setup
      !
      ALLOCATE(proj_c(npwx,n_bands,k_grid%nps))
      !
-     DO iks = 1, k_grid%nps
+     proj_c(:,:,:) = 0._DP
+     DO iks = 1, kpt_pool%nloc
+        !
+        iks_g = kpt_pool%l2g(iks)
         !
         IF(kpt_pool%nloc > 1) THEN
            IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
@@ -192,10 +196,12 @@ SUBROUTINE wfreq_setup
         !
         DO ib_index = 1, n_bands
            ib = qp_bands(ib_index)
-           proj_c(:,ib_index,iks) = evc(:,ib)
+           proj_c(:,ib_index,iks_g) = evc(:,ib)
         ENDDO
         !
      ENDDO
+     !
+     CALL mp_sum(proj_c,inter_pool_comm)
      !
      !$acc enter data copyin(proj_c)
      !

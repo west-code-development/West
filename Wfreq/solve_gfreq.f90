@@ -361,7 +361,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         overlap(:,:) = 0._DP
         !$acc end kernels
         !
-        !$acc parallel loop collapse(2) present(overlap,ps_r)
+        !$acc parallel loop collapse(2) present(overlap,l2g,ps_r)
         DO im = 1,nbnd
            DO ip = 1,pert_nloc
               overlap(l2g(ip),im) = ps_r(im,ip)
@@ -979,7 +979,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            overlap(:,:) = 0._DP
            !$acc end kernels
            !
-           !$acc parallel loop collapse(2) present(overlap,ps_c)
+           !$acc parallel loop collapse(2) present(overlap,l2g,ps_c)
            DO im = 1,nbnd
               DO ip = 1,pert_nloc
                  overlap(l2g(ip),im) = ps_c(im,ip)

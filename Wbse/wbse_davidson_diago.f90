@@ -196,85 +196,21 @@ SUBROUTINE wbse_davidson_diago ( )
         ENDIF
      ENDIF
      !
-     ! ... MGS
-     !
-     CALL wbse_do_mgs( dvg_exc, 1, nvec)
-     !
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, &
-         & "(   5x,'#     Iteration = | ', a8,' |','   ','WBSE_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 1/2')")&
-         & 'starting', nbase, nbase
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
-     !
-     ! Apply Liouville operator
-     !
-     mloc = 0
-     mstart = 1
-     DO il1 = 1, pert%nloc
-        ig1 = pert%l2g(il1)
-        IF( ig1 < 1 .OR. ig1 > nvec ) CYCLE
-        IF( mloc==0 ) mstart = il1
-        mloc = mloc + 1
-     ENDDO
-     !
-     ! Apply Liouville operator
-     !
-     max_mloc = mloc
-     CALL mp_max (max_mloc, inter_image_comm)
-     !
-#if defined(__CUDA)
-     CALL allocate_bse_gpu(aband%nloc)
-#endif
-     !
-     DO ip = mstart, mstart+max_mloc-1
-        !
-        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*aband%nlocx*nks)
-#else
-           dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-#endif
-        ELSE
-           !$acc kernels present(dvg_exc_tmp)
-           dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
-           !$acc end kernels
-        ENDIF
-        !
-        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp)
-        !
-        IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*aband%nlocx*nks)
-#else
-           dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-#endif
-        ENDIF
-        !
-     ENDDO
-     !
-#if defined(__CUDA)
-     CALL deallocate_bse_gpu()
-#endif
-     !
      dav_iter = -1
-     IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   CASE DEFAULT
      CALL errore('chidiago', 'Wrong wstat_calculation',1)
   END SELECT
   !
-  IF( dav_iter == -2 ) CALL errore( 'chidiago','Cannot find the 1st starting loop',1)
-  !
   IF( dav_iter == -1 ) THEN
      !
      ! < EXTRA STEP >
      !
-     dvg_exc = dng_exc
      CALL wbse_do_mgs( dvg_exc, 1, nvec)
      !
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, &
-         & "(   5x,'#     Iteration = | ', a8,' |','   ','WBSE_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 2/2')")&
+         & "(   5x,'#     Iteration = | ', a8,' |','   ','WBSE_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
          & 'starting', nbase, nbase
      WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
      !

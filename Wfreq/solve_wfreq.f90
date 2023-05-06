@@ -871,11 +871,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #endif
   !
   IF(l_QDET) THEN
-     !$acc update host(dmati_a,zmatr_a)
-     !$acc exit data delete(dmati_a,zmatr_a)
+     !$acc exit data copyout(dmati_a,zmatr_a)
   ELSE
-     !$acc update host(dmati,zmatr)
-     !$acc exit data delete(dmati,zmatr)
+     !$acc exit data copyout(dmati,zmatr)
   ENDIF
   !$acc exit data delete(bg,imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
@@ -1910,8 +1908,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   DEALLOCATE(phase)
   DEALLOCATE(evckpq)
   !
-  !$acc update host(zmati_q,zmatr_q)
-  !$acc exit data delete(zmati_q,zmatr_q)
+  !$acc exit data copyout(zmati_q,zmatr_q)
   !$acc exit data delete(bg,imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)

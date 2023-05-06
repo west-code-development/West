@@ -669,8 +669,7 @@ MODULE west_gpu_data
    USE wvfct,                 ONLY : npwx
    USE noncollin_module,      ONLY : npol
    USE fft_base,              ONLY : dffts
-   USE westcom,               ONLY : nbndval0x,n_trunc_bands,n_bse_idx,l_bse,l_hybrid_tddft,&
-                                   & l_lanczos,et_qp,u_matrix
+   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_bse,l_hybrid_tddft,et_qp,u_matrix
    !
    IMPLICIT NONE
    !

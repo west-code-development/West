@@ -270,7 +270,7 @@ SUBROUTINE wbse_lanczos_diago()
            factor = beta(current_spin)
            nbnd_do = aband%nlocx
            !
-           !$acc parallel loop collapse(2) present(evc1_new)
+           !$acc parallel loop collapse(2) present(evc1_new,evc1_old)
            DO lbnd = 1,nbnd_do
               DO ig = 1,npw
                  evc1_new(ig,lbnd,iks) = evc1_new(ig,lbnd,iks)-factor*evc1_old(ig,lbnd,iks)

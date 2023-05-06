@@ -139,7 +139,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
                     !
                     reduce = 0._DP
                     !
-                    !$acc parallel loop reduction(+:reduce) present(proj)
+                    !$acc parallel loop reduction(+:reduce) present(proj) copy(reduce)
                     DO ir = 1,dffts_nnr
                        reduce = reduce+aux(ir)*REAL(psic(ir),KIND=DP)*proj(ir,il)
                     ENDDO
@@ -156,7 +156,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
                     !
                     reduce = 0._DP
                     !
-                    !$acc parallel loop reduction(+:reduce) present(proj)
+                    !$acc parallel loop reduction(+:reduce) present(proj) copy(reduce)
                     DO ir = 1,dffts_nnr
                        reduce = reduce+aux(ir)*AIMAG(psic(ir))*proj(ir,il)
                     ENDDO
@@ -177,7 +177,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
                     !
                     reduce = 0._DP
                     !
-                    !$acc parallel loop reduction(+:reduce) present(proj)
+                    !$acc parallel loop reduction(+:reduce) present(proj) copy(reduce)
                     DO ir = 1,dffts_nnr
                        reduce = reduce+aux(ir)*REAL(psic(ir),KIND=DP)*proj(ir,il)
                     ENDDO

@@ -32,7 +32,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
                              & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
                              & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_reduce_io
+                             & spin_excitation,l_preconditioning,l_pre_shift,l_sf,l_sf_kernel,&
+                             & l_sf_alda0,l_print_sf_kernel,l_sf_cut1,l_sf_cut2,l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -156,6 +157,12 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
         CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
         CALL json%add('input.wbse_control.l_pre_shift',l_pre_shift)
+        CALL json%add('input.wbse_control.l_sf',l_sf)
+        CALL json%add('input.wbse_control.l_sf_kernel',l_sf_kernel)
+        CALL json%add('input.wbse_control.l_sf_alda0',l_sf_alda0)
+        CALL json%add('input.wbse_control.l_print_sf_kernel',l_print_sf_kernel)
+        CALL json%add('input.wbse_control.l_sf_cut1',l_sf_cut1)
+        CALL json%add('input.wbse_control.l_sf_cut2',l_sf_cut2)
         CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
         !
      ENDIF
@@ -185,7 +192,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
                              & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
                              & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_reduce_io,&
+                             & spin_excitation,l_preconditioning,l_pre_shift,l_sf,l_sf_kernel,&
+                             & l_sf_alda0,l_print_sf_kernel,l_sf_cut1,l_sf_cut2,l_reduce_io,&
                              & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
@@ -508,6 +516,12 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(cvalue, 'spin_excitation'); spin_excitation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(l_preconditioning, 'l_preconditioning')
         IERR = return_dict%getitem(l_pre_shift, 'l_pre_shift')
+        IERR = return_dict%getitem(l_sf, 'l_sf')
+        IERR = return_dict%getitem(l_sf_kernel, 'l_sf_kernel')
+        IERR = return_dict%getitem(l_sf_alda0, 'l_sf_alda0')
+        IERR = return_dict%getitem(l_print_sf_kernel, 'l_print_sf_kernel')
+        IERR = return_dict%getitem(l_sf_cut1, 'l_sf_cut1')
+        IERR = return_dict%getitem(l_sf_cut2, 'l_sf_cut2')
         IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
         !
         CALL return_dict%destroy
@@ -775,6 +789,12 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(spin_excitation,root,world_comm)
      CALL mp_bcast(l_preconditioning,root,world_comm)
      CALL mp_bcast(l_pre_shift,root,world_comm)
+     CALL mp_bcast(l_sf,root,world_comm)
+     CALL mp_bcast(l_sf_kernel,root,world_comm)
+     CALL mp_bcast(l_sf_alda0,root,world_comm)
+     CALL mp_bcast(l_print_sf_kernel,root,world_comm)
+     CALL mp_bcast(l_sf_cut1,root,world_comm)
+     CALL mp_bcast(l_sf_cut2,root,world_comm)
      CALL mp_bcast(l_reduce_io,root,world_comm)
      !
      ! CHECKS

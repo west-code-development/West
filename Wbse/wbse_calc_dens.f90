@@ -11,7 +11,7 @@
 ! Ngoc Linh Nguyen, Victor Yu
 !
 !---------------------------------------------------------------------
-SUBROUTINE wbse_calc_dens(devc, drho)
+SUBROUTINE wbse_calc_dens(devc, drho, sf)
   !---------------------------------------------------------------------
   !
   ! This subroutine calculates the response charge density
@@ -45,10 +45,12 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   !
   COMPLEX(DP), INTENT(IN) :: devc(npwx*npol,aband%nlocx,nks)
   COMPLEX(DP), INTENT(OUT) :: drho(dffts%nnr,nspin)
+  LOGICAL, INTENT(IN) :: sf
   !
   ! Workspace
   !
-  INTEGER :: ir, ibnd, iks, nbndval, lbnd, dffts_nnr
+  INTEGER :: ir, ibnd, iks, nbndval, lbnd, dffts_nnr, iks_do
+  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
   REAL(DP) :: w1
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: tmp_r(:)
@@ -75,7 +77,13 @@ SUBROUTINE wbse_calc_dens(devc, drho)
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
      !
-     nbndval = nbnd_occ(iks)
+     IF (sf) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
+     nbndval = nbnd_occ(iks_do)
      !
      ! ... Set k-point and spin
      !
@@ -90,13 +98,13 @@ SUBROUTINE wbse_calc_dens(devc, drho)
      !
      IF(nks > 1) THEN
 #if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
         CALL mp_bcast(evc_host,0,inter_image_comm)
         !
         CALL using_evc(2)
         CALL using_evc_d(0)
 #else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
@@ -114,7 +122,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
            ibnd = aband%l2g(lbnd)+n_trunc_bands
            IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
            !
-           w1 = wg(ibnd,iks)/omega
+           w1 = wg(ibnd,iks_do)/omega
            !
            !$acc host_data use_device(devc)
            CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),devc(:,lbnd,iks),psic,'Wave')
@@ -145,7 +153,7 @@ SUBROUTINE wbse_calc_dens(devc, drho)
            ibnd = aband%l2g(lbnd)+n_trunc_bands
            IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
            !
-           w1 = wg(ibnd,iks)/omega
+           w1 = wg(ibnd,iks_do)/omega
            !
            CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !$acc host_data use_device(devc,psic2)

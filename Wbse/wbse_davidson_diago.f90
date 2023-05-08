@@ -28,7 +28,8 @@ SUBROUTINE wbse_davidson_diago ( )
   USE westcom,              ONLY : n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,ev,conv,&
                                  & wstat_calculation,n_pdep_read_from_file,n_steps_write_restart,&
                                  & trev_pdep_rel,l_is_wstat_converged,nbnd_occ,lrwfc,iuwfc,dvg_exc,&
-                                 & dng_exc,nbndval0x,n_trunc_bands,l_preconditioning,l_pre_shift
+                                 & dng_exc,nbndval0x,n_trunc_bands,l_preconditioning,l_pre_shift,&
+                                 & l_sf
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
                                  & davidson_restart_read
@@ -71,8 +72,9 @@ SUBROUTINE wbse_davidson_diago ( )
   !$acc declare device_resident(caux1)
 #endif
   !
-  INTEGER :: iks,il1,ig1,lbnd,ibnd
-  INTEGER :: nbndval,nbnd_do
+  INTEGER :: iks,il1,ig1,lbnd,ibnd,iks_do
+  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
+  INTEGER :: nbndval,nbnd_do,flnbndval
   REAL(DP) :: time_spent(2)
   CHARACTER(LEN=8) :: iter_label
   !
@@ -190,9 +192,9 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      IF(n_pdep_read_from_file<nvec) THEN
         IF(l_vc_init) THEN
-           CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec  )
+           CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_sf )
         ELSE
-           CALL wbse_do_randomize ( dvg_exc, n_pdep_read_from_file+1, nvec  )
+           CALL wbse_do_randomize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_sf  )
         ENDIF
      ENDIF
      !
@@ -206,7 +208,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! < EXTRA STEP >
      !
-     CALL wbse_do_mgs( dvg_exc, 1, nvec)
+     CALL wbse_do_mgs( dvg_exc, 1, nvec, l_sf )
      !
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, &
@@ -248,7 +250,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !$acc end kernels
         ENDIF
         !
-        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp)
+        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_sf)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
 #if defined(__CUDA)
@@ -268,7 +270,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec )
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec, l_sf)
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -329,17 +331,17 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... expand the basis set with new basis vectors ( H - e*S )|psi> ...
      !
-     CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift )
+     CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift)
      CALL mp_bcast(vr_distr,0,inter_bgrp_comm)
      DEALLOCATE(ishift)
-     CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew )
+     CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew, l_sf )
      !
      IF (l_preconditioning) THEN
         !
         IF (dav_iter < 4) THEN
-           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .FALSE. )
+           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .FALSE., l_sf )
         ELSE
-           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, l_pre_shift )
+           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, l_pre_shift, l_sf )
         ENDIF
         !
      ENDIF
@@ -368,13 +370,20 @@ SUBROUTINE wbse_davidson_diago ( )
         !
         DO iks  = 1, nks
            !
+           IF(l_sf) THEN
+              iks_do = flks(iks)
+           ELSE
+              iks_do = iks
+           ENDIF
+           !
+           flnbndval = nbnd_occ(iks_do)
            nbndval = nbnd_occ(iks)
            npw = ngk(iks)
            !
            nbnd_do = 0
            DO lbnd = 1, aband%nloc
               ibnd = aband%l2g(lbnd)+n_trunc_bands
-              IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+              IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
            ENDDO
            !
            ! ... read in GS wavefunctions iks
@@ -414,7 +423,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... MGS
      !
-     CALL wbse_do_mgs(dvg_exc,nbase+1,nbase+notcnv)
+     CALL wbse_do_mgs(dvg_exc,nbase+1,nbase+notcnv,l_sf)
      !
      ! apply the response function to new vectors
      !
@@ -452,7 +461,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !$acc end kernels
         ENDIF
         !
-        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp)
+        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_sf)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
 #if defined(__CUDA)
@@ -472,7 +481,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+notcnv )
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+notcnv, l_sf )
      !
      nbase = nbase + notcnv
      !
@@ -514,7 +523,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            CALL stop_clock( 'chidiago:last' )
            !
-           CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr )
+           CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_sf )
            !
            CALL plep_db_write( )
            CALL davidson_restart_clear()
@@ -541,8 +550,8 @@ SUBROUTINE wbse_davidson_diago ( )
         !
         WRITE(stdout,'(/,7x,"Refresh the basis set")')
         !
-        CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr )
-        CALL wbse_refresh_with_vr_distr( dng_exc, nvec, nbase, nvecx, vr_distr )
+        CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_sf )
+        CALL wbse_refresh_with_vr_distr( dng_exc, nvec, nbase, nvecx, vr_distr, l_sf )
         !
         ! ... refresh the reduced hamiltonian
         !
@@ -590,7 +599,7 @@ END SUBROUTINE
 !
 !
 !----------------------------------------------------------------------------
-SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
+SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   !----------------------------------------------------------------------------
   !
   ! MGS of the vectors beloging to the interval [ m_global_start, m_global_end ]
@@ -615,13 +624,15 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
   !
   INTEGER,INTENT(IN) :: m_global_start,m_global_end
   COMPLEX(DP),INTENT(INOUT) :: amat(npwx,aband%nlocx,nks,pert%nlocx)
+  LOGICAL, INTENT(IN) :: sf
   !
   ! Workspace
   !
   LOGICAL :: unfinished
-  INTEGER :: ig,ip,ncol,lbnd,ibnd,iks,nbndval,nbnd_do
+  INTEGER :: ig,ip,ncol,lbnd,ibnd,iks,nbndval,nbnd_do,iks_do
   INTEGER :: k_global,k_local,j_local,k_id
   INTEGER :: m_local_start,m_local_end
+  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
   REAL(DP) :: anorm
   COMPLEX(DP) :: za,anormc
   COMPLEX(DP),ALLOCATABLE :: zbraket(:)
@@ -687,7 +698,13 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               anorm = 0._DP
               DO iks = 1, nks
                  !
-                 nbndval = nbnd_occ(iks)
+                 IF(sf) THEN
+                    iks_do = flks(iks)
+                 ELSE
+                    iks_do = iks
+                 ENDIF
+                 !
+                 nbndval = nbnd_occ(iks_do)
                  npw = ngk(iks)
                  !
                  nbnd_do = 0
@@ -699,14 +716,19 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
                  !$acc parallel loop collapse(2) reduction(+:anorm) present(amat) copy(anorm)
                  DO lbnd = 1, nbnd_do
                     DO ig = 1, npw
-                       anorm = anorm+REAL(amat(ig,lbnd,iks,k_local),KIND=DP)**2 &
-                       & +AIMAG(amat(ig,lbnd,iks,k_local))**2
+                       IF(gamma_only) THEN
+                           anorm = anorm+2._DP*REAL(amat(ig,lbnd,iks,k_local),KIND=DP)**2 &
+                           & +2._DP*AIMAG(amat(ig,lbnd,iks,k_local))**2
+                       ELSE
+                           anorm = anorm+REAL(amat(ig,lbnd,iks,k_local),KIND=DP)**2 &
+                           & +AIMAG(amat(ig,lbnd,iks,k_local))**2
+                       ENDIF
                     ENDDO
                  ENDDO
                  !$acc end parallel
                  !
                  IF(gamma_only) THEN
-                    anorm = 2._DP*anorm
+                    !anorm = 2._DP*anorm
                     IF(gstart == 2) THEN
                        !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
                        DO lbnd = 1, nbnd_do
@@ -767,7 +789,13 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
               !
               DO iks = 1, nks
                  !
-                 nbndval = nbnd_occ(iks)
+                 IF(sf) THEN
+                    iks_do = flks(iks)
+                 ELSE
+                    iks_do = iks
+                 ENDIF
+                 !
+                 nbndval = nbnd_occ(iks_do)
                  npw = ngk(iks)
                  !
                  nbnd_do = 0
@@ -780,13 +808,13 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end)
                     !$acc parallel loop collapse(2) reduction(+:anorm) present(vec,amat) copy(anorm)
                     DO lbnd = 1, nbnd_do
                        DO ig = 1, npw
-                          anorm = anorm+REAL(vec(ig,lbnd,iks),KIND=DP)*REAL(amat(ig,lbnd,iks,ip),KIND=DP) &
-                          & +AIMAG(vec(ig,lbnd,iks))*AIMAG(amat(ig,lbnd,iks,ip))
+                          anorm = anorm+2._DP*REAL(vec(ig,lbnd,iks),KIND=DP)*REAL(amat(ig,lbnd,iks,ip),KIND=DP) &
+                          & +2._DP*AIMAG(vec(ig,lbnd,iks))*AIMAG(amat(ig,lbnd,iks,ip))
                        ENDDO
                     ENDDO
                     !$acc end parallel
                     !
-                    anorm = 2._DP*anorm
+                    !anorm = 2._DP*anorm
                     IF(gstart == 2) THEN
                        !$acc parallel loop reduction(+:anorm) present(vec,amat) copy(anorm)
                        DO lbnd = 1, nbnd_do
@@ -849,7 +877,7 @@ END SUBROUTINE
 !
 !
 !----------------------------------------------------------------------------
-SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
+SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend, sf )
   !----------------------------------------------------------------------------
   !
   ! Randomize in dvg the vectors belonging to [ mglobalstart, mglobalend ]
@@ -876,11 +904,13 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
   !
   INTEGER,INTENT(IN) :: mglobalstart, mglobalend
   COMPLEX(DP),INTENT(INOUT) :: amat(npwx,aband%nlocx,nks,pert%nlocx)
+  LOGICAL, INTENT(IN) :: sf
   !
   ! Workspace
   !
   REAL(DP),ALLOCATABLE :: random_num_debug(:,:)
-  INTEGER :: il1,ig1,ig,lbnd,ibnd,iks,nbndval,nbnd_do
+  INTEGER :: il1,ig1,ig,lbnd,ibnd,iks,nbndval,nbnd_do,iks_do,flnbndval
+  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
   INTEGER :: mloc,mstart,max_mloc
   INTEGER :: owner
   REAL(DP) :: aux_real
@@ -922,16 +952,23 @@ SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend )
      !
      DO iks = 1, nks
         !
+        IF(sf) THEN
+           iks_do = flks(iks)
+        ELSE
+           iks_do = iks
+        ENDIF
+        !
         nbndval = nbnd_occ(iks)
+        flnbndval = nbnd_occ(iks_do)
         npw = ngk(iks)
         !
         nbnd_do = 0
         DO lbnd = 1, aband%nloc
            ibnd = aband%l2g(lbnd)+n_trunc_bands
-           IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+           IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
         ENDDO
         !
-        DO ibnd = 1, nbndval-n_trunc_bands
+        DO ibnd = 1, flnbndval-n_trunc_bands
            !
            CALL aband%g2l(ibnd,lbnd,owner)
            !
@@ -1081,7 +1118,7 @@ END SUBROUTINE
 !
 !
 !----------------------------------------------------------------------------
-SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend)
+SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend,sf)
   !----------------------------------------------------------------------------
   !
   ! Adapted from lr_dav_set_init in Turbo-TDDFPT
@@ -1105,10 +1142,12 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend)
   !
   INTEGER,INTENT(IN) :: mglobalstart,mglobalend
   COMPLEX(DP),INTENT(INOUT) :: amat(npwx,aband%nlocx,nks,pert%nlocx)
+  LOGICAL,INTENT(IN) :: sf
   !
   ! Workspace
   !
-  INTEGER :: iks,iv,ic,ib,lv,nbndval
+  INTEGER :: iks,iv,ic,ib,lv,nbndval,flnbndval,iks_do
+  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
   INTEGER :: nbnd_v_window,nbnd_c_window,npair
   INTEGER :: il1,ig1,nvec
   INTEGER :: itmp1,itmp2
@@ -1132,12 +1171,19 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend)
   ib = 0
   DO iks = 1,nks
      !
-     nbndval = nbnd_occ(iks)
+     IF(sf) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
      !
-     DO iv = nbndval-nbnd_v_window+1, nbndval
+     nbndval = nbnd_occ(iks)
+     flnbndval = nbnd_occ(iks_do)
+     !
+     DO iv = flnbndval-nbnd_v_window+1, flnbndval
         DO ic = nbndval+1, nbndval+nbnd_c_window
            ib = ib + 1
-           e_diff(ib) = et(ic,iks) - et(iv,iks)
+           e_diff(ib) = et(ic,iks) - et(iv,iks_do)
         ENDDO
      ENDDO
      !
@@ -1167,14 +1213,22 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend)
      itmp2 = MOD(itmp1-1, npair) + 1
      !
      iks = (itmp1-1)/npair + 1
+     !
+     IF(sf) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
      nbndval = nbnd_occ(iks)
+     flnbndval = nbnd_occ(iks_do)
      !
      IF(nks > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
-     iv = (itmp2-1)/nbnd_c_window + 1 + nbndval - nbnd_v_window - n_trunc_bands
+     iv = (itmp2-1)/nbnd_c_window + 1 + flnbndval - nbnd_v_window - n_trunc_bands
      ic = MOD(itmp2-1, nbnd_c_window) + 1 + nbndval
      !
      CALL aband%g2l(iv,lv,owner)

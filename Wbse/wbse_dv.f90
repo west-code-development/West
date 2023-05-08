@@ -369,4 +369,381 @@ MODULE wbse_dv
   END SUBROUTINE
 #endif
   !
+  !
+  !-----------------------------------------------------------------------
+  SUBROUTINE wbse_sf_kernel_setup()
+    !-----------------------------------------------------------------------
+    !
+    !  This subroutine computes the spin-flip kernel for spin-flip TDDFT
+    !
+    USE kinds,                 ONLY : DP
+    USE ions_base,             ONLY : ntyp => nsp
+    USE fft_base,              ONLY : dfftp
+    USE uspp_param,            ONLY : upf
+    USE uspp,                  ONLY : nlcc_any
+    USE eqv,                   ONLY : dmuxc
+    USE xc_lib,                ONLY : xclib_dft_is
+    USE lsda_mod,              ONLY : nspin
+    USE westcom,               ONLY : sf_kernel, l_sf_alda0, l_sf_cut1, l_print_sf_kernel
+    USE scf,                   ONLY : rho, rho_core, rhog_core
+    USE xc_lib,                ONLY : xc
+    USE martyna_tuckerman,     ONLY : do_comp_mt
+    USE cell_base,             ONLY : omega
+    USE funct,                 ONLY : nlc, dft_is_nonlocc
+    USE mp_bands,              ONLY : intra_bgrp_comm
+    USE mp,                    ONLY : mp_sum, mp_barrier
+    USE mp_world,              ONLY : world_comm
+    USE constants,             ONLY : e2, eps8
+    USE cubefile,              ONLY : write_wfc_cube_r
+    !
+    IMPLICIT NONE
+    !
+    ! local variables
+    !
+    INTEGER :: ir
+    REAL(DP), ALLOCATABLE :: vxc(:,:), ex(:), ec(:), vx(:,:), vc(:,:)
+    REAL(DP) :: etxc, vtxc
+    REAL(DP) :: rho_up, rho_down, rho_diff
+    REAL(DP), PARAMETER :: small = 1.E-30_DP, medium = 1.E-15_DP, large = 1.E-10_DP
+    CHARACTER(LEN=20) :: prefix, ind, filename
+    !
+    CALL start_clock('sf_kernel_setup')
+    !
+    nlcc_any = ANY(upf(1:ntyp)%nlcc)
+    !
+    IF(nlcc_any) CALL errore('wbse_sf_kernel_setup', 'add_nlcc is not supported', 1)
+    IF(do_comp_mt) CALL errore('wbse_sf_kernel_setup', 'do_comp_mt is not supported', 1)
+    !
+    ALLOCATE(sf_kernel(dfftp%nnr))
+    sf_kernel(:) = 0._DP
+    !
+    ALLOCATE(vxc(dfftp%nnr,nspin))
+    vxc(:,:) = 0._DP
+    !
+    etxc = 0.D0
+    vtxc = 0.D0
+    !
+    !$acc data copyin( rho%of_r, rho%of_g )
+    !
+    ALLOCATE( ex(dfftp%nnr), vx(dfftp%nnr,nspin) )
+    ALLOCATE( ec(dfftp%nnr), vc(dfftp%nnr,nspin) )
+    ex(:) = 0._DP
+    ec(:) = 0._DP
+    vx(:,:) = 0._DP
+    vc(:,:) = 0._DP
+    !
+    !$acc data create( ex, ec, vx, vc )
+    !
+    ! ... spin-polarized case
+    !
+    CALL xc( dfftp%nnr, 2, 2, rho%of_r, ex, ec, vx, vc, gpu_args_=.TRUE. )
+    !
+    !$acc parallel loop reduction(+:etxc,vtxc) reduction(-:rhoneg1,rhoneg2) &
+    !$acc&              present(rho)
+    DO ir = 1, dfftp%nnr
+       vxc(ir,1) = e2*( vx(ir,1) + vc(ir,1) )
+       vxc(ir,2) = e2*( vx(ir,2) + vc(ir,2) )
+       etxc = etxc + e2*( (ex(ir) + ec(ir))*rho%of_r(ir,1) )
+       vtxc = vtxc + ( ( vxc(ir,1) + vxc(ir,2) )*rho%of_r(ir,1) + &
+                       ( vxc(ir,1) - vxc(ir,2) )*rho%of_r(ir,2) )*0.5d0
+    ENDDO
+    !
+    !$acc end data
+    DEALLOCATE( ex, vx )
+    DEALLOCATE( ec, vc )
+    !
+    ! ... energy terms, local-density contribution
+    !
+    vtxc = omega * vtxc / ( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
+    etxc = omega * etxc / ( dfftp%nr1*dfftp%nr2*dfftp%nr3 )
+    !
+    ! ... add gradient corrections (if any)
+    !
+    IF(xclib_dft_is('gradient')) THEN
+       !
+       IF(.NOT. l_sf_alda0) THEN
+          !
+          CALL gradcorr( rho%of_r, rho%of_g, rho_core, rhog_core, etxc, vtxc, vxc )
+          !
+       ENDIF
+       !
+    ENDIF
+    !
+    !$acc end data
+    !$acc end data
+    !
+    ! ... add non local corrections (if any)
+    ! ... should not work in principle
+    IF(dft_is_nonlocc()) CALL errore('wbse_sf_kernel_setup', 'dft_is_nonlocc is not supported', 1)
+    !IF ( dft_is_nonlocc() ) CALL nlc( rho%of_r, rho_core, nspin, etxc, vtxc, v )
+    !
+    CALL mp_sum(  vtxc , intra_bgrp_comm )
+    CALL mp_sum(  etxc , intra_bgrp_comm )
+    !
+    vtxc = omega * vtxc / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
+    etxc = omega * etxc / (dfftp%nr1*dfftp%nr2*dfftp%nr3)
+    !
+    DO ir = 1, dfftp%nnr
+       !
+       !rho_up   = rho%of_r (ir, 1)
+       !rho_down = rho%of_r (ir, 2)
+       rho_up   = 0.5_DP * (rho%of_r(ir,1) + rho%of_r(ir,2))
+       rho_down = 0.5_DP * (rho%of_r(ir,1) - rho%of_r(ir,2))
+       !
+       rho_diff = 0.0_DP
+       rho_diff = rho_up - rho_down
+       !
+       sf_kernel(ir) = (vxc(ir,1) - vxc(ir,2)) / rho_diff
+       !
+       IF (.NOT. l_sf_alda0) THEN
+          !
+          IF (xclib_dft_is('gradient') .AND. ABS(sf_kernel(ir)) > l_sf_cut1) THEN
+             ! remove the divergent part
+             sf_kernel(ir) = 0.0_DP
+             !
+          ENDIF
+          !
+       ENDIF
+       !
+    ENDDO
+    !
+    DEALLOCATE(vxc)
+    !
+    ! TEST print sflip_kernel
+    !
+    CALL mp_barrier( world_comm )
+    !
+    IF (l_print_sf_kernel) THEN
+       !
+       prefix='sf_kernel'
+       !
+       filename=TRIM(prefix)//'.cube'
+       !
+       CALL write_wfc_cube_r(dfftp, 1002, filename, sf_kernel)
+       !
+    ENDIF
+    !
+    CALL mp_barrier( world_comm )
+    !
+    CALL stop_clock('sf_kernel_setup')
+    !
+  END SUBROUTINE
+  !
+!  !-----------------------------------------------------------------------
+!  SUBROUTINE wbse_sf_kernel_setup()
+!    !-----------------------------------------------------------------------
+!    !
+!    !  This subroutine computes the spin-flip kernel for spin-flip TDDFT
+!    !
+!    USE kinds,                 ONLY : DP
+!    USE ions_base,             ONLY : ntyp => nsp
+!    USE fft_base,              ONLY : dfftp
+!    USE uspp_param,            ONLY : upf
+!    USE uspp,                  ONLY : nlcc_any
+!    USE eqv,                   ONLY : dmuxc
+!    USE xc_lib,                ONLY : xclib_dft_is
+!    USE lsda_mod,              ONLY : nspin
+!    USE westcom,               ONLY : sf_kernel, l_sf_alda0, l_sf_cut1, l_print_sf_kernel
+!    USE scf,                   ONLY : rho, rho_core, rhog_core
+!    USE xc_lib,                ONLY : xc
+!    USE martyna_tuckerman,     ONLY : do_comp_mt
+!    USE cell_base,             ONLY : omega
+!    USE funct,                 ONLY : nlc, dft_is_nonlocc
+!    USE mp_bands,              ONLY : intra_bgrp_comm
+!    USE mp,                    ONLY : mp_sum, mp_barrier
+!    USE mp_world,              ONLY : world_comm
+!    USE constants,             ONLY : e2, eps8
+!    USE cubefile,              ONLY : write_wfc_cube_r
+!    !
+!    IMPLICIT NONE
+!    !
+!    ! local variables
+!    !
+!    INTEGER :: ir
+!    REAL(DP), ALLOCATABLE :: vxc(:,:), ex(:), ec(:), vx(:,:), vc(:,:)
+!    REAL(DP) :: etxc, vtxc
+!    REAL(DP) :: rho_up, rho_down, rho_diff
+!    REAL(DP), PARAMETER :: small = 1.E-30_DP, medium = 1.E-15_DP, large = 1.E-10_DP
+!    CHARACTER(LEN=20) :: prefix, ind, filename
+!    !
+!    CALL start_clock('sf_kernel_setup')
+!    !
+!    nlcc_any = ANY(upf(1:ntyp)%nlcc)
+!    !
+!    IF(nlcc_any) CALL errore('wbse_sf_kernel_setup', 'add_nlcc is not supported', 1)
+!    IF(do_comp_mt) CALL errore('wbse_sf_kernel_setup', 'do_comp_mt is not supported', 1)
+!    !
+!    ALLOCATE(sf_kernel(dfftp%nnr))
+!    sf_kernel(:) = 0._DP
+!    !
+!    ALLOCATE (vxc(dfftp%nnr,nspin))
+!    CALL v_xc (rho, rho_core, rhog_core, etxc, vtxc, vxc)
+!    !
+!    DO ir = 1, dfftp%nnr
+!       !
+!       rho_up   = rho%of_r (ir, 1)
+!       rho_down = rho%of_r (ir, 2)
+!       !
+!       rho_diff = 0.0_DP
+!       rho_diff = rho_up - rho_down
+!       !
+!       sf_kernel(ir) = (vxc(ir,1) - vxc(ir,2)) / rho_diff
+!       !
+!       IF (.NOT. l_sf_alda0) THEN
+!          !
+!          IF (xclib_dft_is('gradient') .AND. ABS(sf_kernel(ir)) > l_sf_cut1) THEN
+!             ! remove the divergent part
+!             sf_kernel(ir) = 0.0_DP
+!             !
+!          ENDIF
+!          !
+!       ENDIF
+!       !
+!    ENDDO
+!    !
+!    DEALLOCATE(vxc)
+!    !
+!    ! TEST print sflip_kernel
+!    !
+!    CALL mp_barrier( world_comm )
+!    !
+!    IF (l_print_sf_kernel) THEN
+!       !
+!       prefix='sf_kernel'
+!       !
+!       filename=TRIM(prefix)//'.cube'
+!       !
+!       CALL write_wfc_cube_r(dfftp, 1002, filename, sf_kernel)
+!       !
+!    ENDIF
+!    !
+!    CALL mp_barrier( world_comm )
+!    !
+!    CALL stop_clock('sf_kernel_setup')
+!    !
+!  END SUBROUTINE
+
+  !-----------------------------------------------------------------------
+  SUBROUTINE wbse_dv_of_drho_sf(dvscf)
+    !-----------------------------------------------------------------------
+    !
+    !  This routine computes the change of the self consistent potential
+    !  (XC) due to the perturbation in spin-flip calculations
+    !  Note: gamma_only is disregarded for PHonon calculations,
+    !  TDDFPT purposes only.
+    !
+    USE kinds,             ONLY : DP
+    USE constants,         ONLY : e2, fpi
+    USE fft_base,          ONLY : dfftp
+    USE fft_interfaces,    ONLY : fwfft, invfft
+    USE gvect,             ONLY : ngm, g
+    USE cell_base,         ONLY : tpiba2, omega
+    USE noncollin_module,  ONLY : nspin_gga
+    USE lsda_mod,          ONLY : nspin
+    USE xc_lib,            ONLY : xclib_dft_is
+    USE funct,             ONLY : dft_is_nonlocc
+    USE scf,               ONLY : rho, rho_core
+    USE uspp,              ONLY : nlcc_any
+    USE control_flags,     ONLY : gamma_only
+    USE martyna_tuckerman, ONLY : do_comp_mt
+    USE qpoint,            ONLY : xq
+    USE gc_lr,             ONLY : grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s
+    USE westcom,           ONLY : sf_kernel
+    !
+    IMPLICIT NONE
+    !
+    COMPLEX(DP), INTENT(INOUT) :: dvscf(dfftp%nnr, nspin)
+    ! input:  response charge density
+    ! output: response XC potential
+    !
+    INTEGER :: is
+    ! counter on r vectors
+    ! counter on spin polarizations
+    ! counter on g vectors
+    !
+    COMPLEX(DP), ALLOCATABLE :: dvaux(:,:)
+    ! dvaux: response XC potential
+    !
+    CALL start_clock('dv_of_drho_sf')
+    !
+    IF(nlcc_any) CALL errore('wbse_dv_of_drho_sf', 'nlcc_any is not supported', 1)
+    IF(do_comp_mt) CALL errore('wbse_dv_of_drho_sf', 'do_comp_mt is not supported', 1)
+    !
+    ALLOCATE(dvaux(dfftp%nnr, nspin))
+    !
+    dvaux(:,:) = (0._DP,0._DP)
+    DO is = 1, nspin
+       dvaux(:,is) = sf_kernel(:) * dvscf(:,is)
+    ENDDO
+    !
+    dvscf(:,:) = dvaux(:,:)
+    !
+    DEALLOCATE(dvaux)
+    !
+    CALL stop_clock('dv_of_drho_sf')
+    !
+  END SUBROUTINE
+  !
+#if defined(__CUDA)
+  !-----------------------------------------------------------------------
+  SUBROUTINE wbse_dv_of_drho_sf_gpu(dvscf)
+    !-----------------------------------------------------------------------
+    !
+    USE kinds,             ONLY : DP
+    USE constants,         ONLY : e2, fpi
+    USE fft_base,          ONLY : dfftp
+    USE fft_interfaces,    ONLY : fwfft, invfft
+    USE gvect,             ONLY : ngm, g
+    USE cell_base,         ONLY : tpiba2
+    USE noncollin_module,  ONLY : nspin_gga
+    USE lsda_mod,          ONLY : nspin
+    USE xc_lib,            ONLY : xclib_dft_is
+    USE scf,               ONLY : rho
+    USE control_flags,     ONLY : gamma_only
+    USE martyna_tuckerman, ONLY : do_comp_mt
+    USE qpoint,            ONLY : xq
+    USE gc_lr,             ONLY : grho,dvxc_rr,dvxc_sr,dvxc_ss,dvxc_s
+    USE eqv,               ONLY : dmuxc
+    USE west_gpu,          ONLY : dvaux,dvhart,dfft_nl_d,dfft_nlm_d
+    USE westcom,           ONLY : sf_kernel
+    !
+    IMPLICIT NONE
+    !
+    ! I/O
+    !
+    COMPLEX(DP), INTENT(INOUT) :: dvscf(dfftp%nnr, nspin)
+    LOGICAL, INTENT(IN) :: lrpa
+    LOGICAL, INTENT(IN) :: add_nlcc
+    !
+    ! Workspace
+    !
+    INTEGER :: is, is1, ig, ir, dfftp_nnr
+    REAL(DP) :: xq1, xq2, xq3, qg2
+    !
+    CALL start_clock_gpu('dv_of_drho_sf')
+    !
+    IF(nlcc_any) CALL errore('wbse_dv_of_drho_sf_gpu', 'nlcc_any is not supported', 1)
+    IF(do_comp_mt) CALL errore('wbse_dv_of_drho_sf_gpu', 'do_comp_mt is not supported', 1)
+    !
+    ! Compute exchange-correlation contribution in real space
+    !
+    dvaux(:,:) = (0._DP,0._DP)
+    DO is = 1, nspin
+       dvaux(:,is) = dvaux(:,is) + sf_kernel(:) * dvscf(:,is)
+    ENDDO
+    !
+    !$acc parallel loop collapse(2) present(dvscf,dvhart,dvaux)
+    DO is = 1, nspin
+       DO ir = 1, dfftp_nnr
+          dvscf(ir,is) = dvaux(ir,is)
+       ENDDO
+    ENDDO
+    !$acc end parallel
+    ENDIF
+    !
+    CALL stop_clock_gpu('dv_of_drho_sf')
+    !
+  END SUBROUTINE
+#endif
+  !
 END MODULE

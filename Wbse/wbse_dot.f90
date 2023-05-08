@@ -55,13 +55,13 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
            DO lbnd = 1, m
               DO ig = 1, npw
                  ibnd = nbgrp*(lbnd-1) + my_bgrp_id + 1 + n_trunc_bands
-                 tmp_r = tmp_r + wg(ibnd,iks)*(REAL(x(ig,lbnd,iks),KIND=DP)*REAL(y(ig,lbnd,iks),KIND=DP) &
+                 tmp_r = tmp_r + wg(ibnd,iks)*2._DP*(REAL(x(ig,lbnd,iks),KIND=DP)*REAL(y(ig,lbnd,iks),KIND=DP) &
                  & + AIMAG(x(ig,lbnd,iks))*AIMAG(y(ig,lbnd,iks)))
               ENDDO
            ENDDO
            !$acc end parallel
            !
-           tmp_r = tmp_r*2._DP
+           !tmp_r = tmp_r*2._DP
            !
            IF(gstart == 2) THEN
               !$acc parallel loop reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)

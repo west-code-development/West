@@ -37,7 +37,7 @@ MODULE wbse_tools
   CONTAINS
     !
     !------------------------------------------------------------------------
-    SUBROUTINE build_hr_real(ag,bg,l2_s,l2_e,c_distr,g_e)
+    SUBROUTINE build_hr_real(ag,bg,l2_s,l2_e,c_distr,g_e,sf)
       !------------------------------------------------------------------------
       !
       !  c_distr = < ag | bg >
@@ -60,10 +60,12 @@ MODULE wbse_tools
       INTEGER,INTENT(IN) :: l2_s,l2_e
       REAL(DP),INTENT(INOUT) :: c_distr(pert%nglob,pert%nlocx)
       INTEGER,INTENT(IN) :: g_e
+      LOGICAL,INTENT(IN) :: sf
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,il3,ig1,lbnd,ibnd,iks,nbndval
+      INTEGER :: il1,il2,il3,ig1,lbnd,ibnd,iks,nbndval,iks_do
+      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
       INTEGER :: il1_end
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nglob
@@ -134,18 +136,24 @@ MODULE wbse_tools
                      !$acc loop seq
                      DO iks = 1,nks
                         !
-                        nbndval = nbnd_loc(iks)
+                        IF(sf) THEN
+                           iks_do = flks(iks)
+                        ELSE
+                           iks_do = iks
+                        ENDIF
+                        !
+                        nbndval = nbnd_loc(iks_do)
                         npw = ngk(iks)
                         !
                         !$acc loop collapse(2) reduction(+:reduce)
                         DO lbnd = 1,nbndval
                            DO il3 = 1,npw
-                              reduce = reduce+REAL(ag(il3,lbnd,iks,il1),KIND=DP)*REAL(bg(il3,lbnd,iks,il2),KIND=DP) &
-                              & +AIMAG(ag(il3,lbnd,iks,il1))*AIMAG(bg(il3,lbnd,iks,il2))
+                              reduce = reduce+2._DP*REAL(ag(il3,lbnd,iks,il1),KIND=DP)*REAL(bg(il3,lbnd,iks,il2),KIND=DP) &
+                              & +2._DP*AIMAG(ag(il3,lbnd,iks,il1))*AIMAG(bg(il3,lbnd,iks,il2))
                            ENDDO
                         ENDDO
                         !
-                        reduce = reduce*2._DP
+                        !reduce = reduce*2._DP
                         !
                         IF(gstart == 2) THEN
                            !$acc loop reduction(+:reduce)
@@ -200,7 +208,7 @@ MODULE wbse_tools
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE update_with_vr_distr_real(ag,bg,nselect,n,lda,vr_distr,ew)
+    SUBROUTINE update_with_vr_distr_real(ag,bg,nselect,n,lda,vr_distr,ew,sf)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_pool_id
@@ -218,10 +226,12 @@ MODULE wbse_tools
       INTEGER,INTENT(IN) :: nselect,n,lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
       REAL(DP),INTENT(IN) :: ew(lda)
+      LOGICAL,INTENT(IN) :: sf
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,nbndval
+      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,nbndval,iks_do
+      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
       INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
       REAL(DP) :: dconst
@@ -303,7 +313,13 @@ MODULE wbse_tools
                   !$acc loop seq
                   DO iks = 1,nks
                      !
-                     nbndval = nbnd_loc(iks)
+                     IF(sf) THEN
+                        iks_do = flks(iks)
+                     ELSE
+                        iks_do = iks
+                     ENDIF
+                     !
+                     nbndval = nbnd_loc(iks_do)
                      npw = ngk(iks)
                      !
                      !$acc loop collapse(2)
@@ -341,7 +357,13 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               nbndval = nbnd_loc(iks)
+               IF(sf) THEN
+                  iks_do = flks(iks)
+               ELSE
+                  iks_do = iks
+               ENDIF
+               !
+               nbndval = nbnd_loc(iks_do)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -387,7 +409,13 @@ MODULE wbse_tools
                   !$acc loop seq
                   DO iks = 1,nks
                      !
-                     nbndval = nbnd_loc(iks)
+                     IF(sf) THEN
+                        iks_do = flks(iks)
+                     ELSE
+                        iks_do = iks
+                     ENDIF
+                     !
+                     nbndval = nbnd_loc(iks_do)
                      npw = ngk(iks)
                      !
                      !$acc loop collapse(2)
@@ -417,7 +445,13 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               nbndval = nbnd_loc(iks)
+               IF(sf) THEN
+                  iks_do = flks(iks)
+               ELSE
+                  iks_do = iks
+               ENDIF
+               !
+               nbndval = nbnd_loc(iks_do)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -446,7 +480,7 @@ MODULE wbse_tools
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE refresh_with_vr_distr_real(ag,nselect,n,lda,vr_distr)
+    SUBROUTINE refresh_with_vr_distr_real(ag,nselect,n,lda,vr_distr,sf)
       !------------------------------------------------------------------------
       !
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,&
@@ -464,10 +498,12 @@ MODULE wbse_tools
       COMPLEX(DP),INTENT(INOUT) :: ag(npwx,aband%nlocx,nks,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect,n,lda
       REAL(DP),INTENT(IN) :: vr_distr(lda,pert%nlocx)
+      LOGICAL,INTENT(IN) :: sf
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,nbndval
+      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,nbndval,iks_do
+      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
       INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nloc
@@ -543,7 +579,13 @@ MODULE wbse_tools
                   !$acc loop seq
                   DO iks = 1,nks
                      !
-                     nbndval = nbnd_loc(iks)
+                     IF(sf) THEN
+                        iks_do = flks(iks)
+                     ELSE
+                        iks_do = iks
+                     ENDIF
+                     !
+                     nbndval = nbnd_loc(iks_do)
                      npw = ngk(iks)
                      !
                      !$acc loop collapse(2)
@@ -582,7 +624,13 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               nbndval = nbnd_loc(iks)
+               IF(sf) THEN
+                  iks_do = flks(iks)
+               ELSE
+                  iks_do = iks
+               ENDIF
+               !
+               nbndval = nbnd_loc(iks_do)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -611,7 +659,13 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               nbndval = nbnd_loc(iks)
+               IF(sf) THEN
+                  iks_do = flks(iks)
+               ELSE
+                  iks_do = iks
+               ENDIF
+               !
+               nbndval = nbnd_loc(iks_do)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -642,7 +696,7 @@ MODULE wbse_tools
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE precondition_dvg_complex(ag,nselect,n,turn_shift)
+    SUBROUTINE precondition_dvg_complex(ag,nselect,n,turn_shift,sf)
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
@@ -664,16 +718,19 @@ MODULE wbse_tools
       COMPLEX(DP),INTENT(INOUT) :: ag(npwx,aband%nlocx,nks,pert%nlocx)
       INTEGER,INTENT(IN) :: nselect,n
       LOGICAL,INTENT(IN) :: turn_shift
+      LOGICAL,INTENT(IN) :: sf
       !
       ! Workspace
       !
-      INTEGER :: il1,ig1,ig,lbnd,ibnd,nbndval
+      INTEGER :: il1,ig1,ig,lbnd,ibnd,nbndval,iks_do
+      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
       INTEGER :: iks
       INTEGER :: il1_start,il1_end
       REAL(DP):: tmp,tmp_abs,tmp_sgn
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       REAL(DP),ALLOCATABLE :: g2kin_save(:,:)
-      REAL(DP),PARAMETER :: minimum = 0.01_DP
+      !REAL(DP),PARAMETER :: minimum = 0.01_DP
+      REAL(DP),PARAMETER :: minimum = 1._DP
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('precd_ag')
@@ -732,7 +789,13 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               nbndval = nbnd_loc(iks)
+               IF(sf) THEN
+                  iks_do = flks(iks)
+               ELSE
+                  iks_do = iks
+               ENDIF
+               !
+               nbndval = nbnd_loc(iks_do)
                !
                !$acc loop collapse(2)
                DO lbnd = 1,nbndval
@@ -743,7 +806,7 @@ MODULE wbse_tools
                      ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
                      !
                      IF(turn_shift) THEN
-                        tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks)
+                        tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks_do)
                      ELSE
                         tmp = g2kin_save(ig,iks)
                      ENDIF

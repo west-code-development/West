@@ -21,10 +21,10 @@ SUBROUTINE wbse_setup()
                                  & trev_pdep_rel,trev_pdep,n_liouville_times,n_liouville_eigen,&
                                  & n_liouville_maxiter,n_liouville_read_from_file,&
                                  & trev_liouville_rel,trev_liouville,alphapv_dfpt,l_use_ecutrho,&
-                                 & wbse_save_dir,l_hybrid_tddft
+                                 & wbse_save_dir,l_hybrid_tddft,l_sf,l_sf_kernel
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
-  USE wbse_dv,              ONLY : wbse_dv_setup
+  USE wbse_dv,              ONLY : wbse_dv_setup,wbse_sf_kernel_setup
   USE xc_lib,               ONLY : xclib_dft_is
   USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
   !
@@ -132,6 +132,10 @@ SUBROUTINE wbse_setup()
   CALL set_nbndocc()
   !
   CALL wbse_dv_setup(l_bse)
+  !
+  IF (l_sf .AND. l_sf_kernel) THEN
+     CALL wbse_sf_kernel_setup()
+  ENDIF
   !
   CALL my_mkdir(wbse_save_dir)
   !

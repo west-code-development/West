@@ -115,6 +115,12 @@ default["wbse_control"]["wbse_epsinfty"] = 1.
 default["wbse_control"]["spin_excitation"] = "S"
 default["wbse_control"]["l_preconditioning"] = True
 default["wbse_control"]["l_pre_shift"] = False
+default["wbse_control"]["l_sf"] = False
+default["wbse_control"]["l_sf_kernel"] = False
+default["wbse_control"]["l_sf_alda0"] = False
+default["wbse_control"]["l_print_sf_kernel"] = False
+default["wbse_control"]["l_sf_cut1"] = 1e3
+default["wbse_control"]["l_sf_cut2"] = 1e-4
 default["wbse_control"]["l_reduce_io"] = True
 
 ############################

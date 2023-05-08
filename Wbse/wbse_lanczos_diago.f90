@@ -197,7 +197,7 @@ SUBROUTINE wbse_lanczos_diago()
         !
         ! Application of the Liouvillian superoperator
         !
-        CALL west_apply_liouvillian(evc1,evc1_new)
+        CALL west_apply_liouvillian(evc1,evc1_new,.FALSE.)
         !
         ! By construction <p|Lq>=0 should be 0, forcing this both conserves
         ! resources and increases stability.

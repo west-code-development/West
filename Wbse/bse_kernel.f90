@@ -11,7 +11,7 @@
 ! Ngoc Linh Nguyen, Victor Yu
 !
 !-----------------------------------------------------------------------
-SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
+SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
@@ -40,13 +40,15 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
   INTEGER, INTENT(IN) :: current_spin
   COMPLEX(DP), INTENT(IN) :: evc1(npwx,aband%nlocx,nks)
   COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,aband%nlocx)
+  LOGICAL, INTENT(IN) :: sf
   !
   ! Workspace
   !
   INTEGER :: ibnd,jbnd,my_ibnd,my_jbnd,lbnd,ipair
   INTEGER :: ig,ir
-  INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq
+  INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq,iks_do
   INTEGER :: dffts_nnr,aband_nloc
+  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
   COMPLEX(DP), ALLOCATABLE :: caux1(:,:),caux2(:,:),gaux(:)
@@ -80,11 +82,19 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
      !
      npw = ngk(ikq)
      !
+     IF (sf) THEN
+        iks_do = flks(ikq)
+     ELSE
+        iks_do = ikq
+     ENDIF
+     !
      IF(l_local_repr) THEN
         !
         !$acc host_data use_device(evc1,u_matrix,caux1)
+        !CALL ZGEMM('N','N',npw,nbnd_do,aband_nloc,one,evc1(:,:,ikq),npwx,&
+        !& u_matrix(:,:,current_spin),aband_nloc,zero,caux1,npwx)
         CALL ZGEMM('N','N',npw,nbnd_do,aband_nloc,one,evc1(:,:,ikq),npwx,&
-        & u_matrix(:,:,current_spin),aband_nloc,zero,caux1,npwx)
+        & u_matrix(:,:,iks_do),aband_nloc,zero,caux1,npwx)
         !$acc end host_data
         !
      ELSE
@@ -118,7 +128,8 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
      caux2(:,:) = zero
      !$acc end kernels
      !
-     do_idx = n_bse_idx(current_spin)
+     !do_idx = n_bse_idx(current_spin)
+     do_idx = n_bse_idx(iks_do)
      !
      DO lbnd = 1, aband%nloc, 2
         !
@@ -134,12 +145,15 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
         !
         DO ipair = 1, do_idx
            !
-           ibnd = idx_matrix(ipair,1,current_spin)-n_trunc_bands
-           jbnd = idx_matrix(ipair,2,current_spin)-n_trunc_bands
+           !ibnd = idx_matrix(ipair,1,current_spin)-n_trunc_bands
+           !jbnd = idx_matrix(ipair,2,current_spin)-n_trunc_bands
+           ibnd = idx_matrix(ipair,1,iks_do)-n_trunc_bands
+           jbnd = idx_matrix(ipair,2,iks_do)-n_trunc_bands
            !
            IF(ibnd == my_ibnd .OR. ibnd == my_jbnd) THEN
               !
-              CALL read_bse_pots_g(gaux,ibnd,jbnd,current_spin)
+              !CALL read_bse_pots_g(gaux,ibnd,jbnd,current_spin)
+              CALL read_bse_pots_g(gaux,ibnd,jbnd,iks_do)
               !
               !$acc update device(gaux)
               !
@@ -212,7 +226,9 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1)
      IF(l_local_repr) THEN
         !
         !$acc host_data use_device(caux2,u_matrix,bse_kd1)
-        CALL ZGEMM('N','C',npw,aband_nloc,nbnd_do,mone,caux2,npwx,u_matrix(:,:,current_spin),&
+        !CALL ZGEMM('N','C',npw,aband_nloc,nbnd_do,mone,caux2,npwx,u_matrix(:,:,current_spin),&
+        !& aband_nloc,one,bse_kd1,npwx)
+        CALL ZGEMM('N','C',npw,aband_nloc,nbnd_do,mone,caux2,npwx,u_matrix(:,:,iks_do),&
         & aband_nloc,one,bse_kd1,npwx)
         !$acc end host_data
         !

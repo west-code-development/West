@@ -10,7 +10,7 @@
 ! Contributors to this file:
 ! Ngoc Linh Nguyen, Victor Yu
 !
-SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
+SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !
   ! Applies the linear response operator to response wavefunctions
   !
@@ -30,7 +30,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
                                  & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
-                                 & l_hybrid_tddft
+                                 & l_hybrid_tddft,l_sf_kernel
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
   USE exx,                  ONLY : exxalfa
@@ -38,25 +38,28 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
-  USE wbse_dv,              ONLY : wbse_dv_of_drho_gpu
+  USE wbse_dv,              ONLY : wbse_dv_of_drho_gpu, wbse_dv_of_drho_sf_gpu
   USE west_gpu,             ONLY : dvrs,hevc1,reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
-  USE wbse_dv,              ONLY : wbse_dv_of_drho
+  USE wbse_dv,              ONLY : wbse_dv_of_drho, wbse_dv_of_drho_sf
 #endif
   !
   IMPLICIT NONE
   !
   COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,aband%nlocx,nks)
   COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,aband%nlocx,nks)
+  LOGICAL, INTENT(IN) :: sf
+  ! if sf = .True., then the code will operate in the spin-flip mode
   !
   ! Local variables
   !
-  LOGICAL :: lrpa
-  INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbnd_do,lbnd
+  LOGICAL :: lrpa, do_k1e
+  INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbnd_do,lbnd,iks_do,flnbndval
   INTEGER :: dffts_nnr
   COMPLEX(DP) :: factor
+  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
 #if !defined(__CUDA)
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
@@ -81,22 +84,39 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
   !
   ! Calculation of the charge density response
   !
-  CALL wbse_calc_dens(evc1,dvrs)
+  CALL wbse_calc_dens(evc1,dvrs,sf)
   !
   lrpa = l_bse
+  !
+  If(sf .AND. l_sf_kernel) THEN
 #if defined(__CUDA)
-  CALL wbse_dv_of_drho_gpu(dvrs,lrpa,.FALSE.)
+     CALL wbse_dv_of_drho_sf_gpu(dvrs)
 #else
-  CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
+     CALL wbse_dv_of_drho_sf(dvrs)
 #endif
+  ELSE
+#if defined(__CUDA)
+     CALL wbse_dv_of_drho_gpu(dvrs,lrpa,.FALSE.)
+#else
+     CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
+#endif
+  ENDIF
   !
   DO iks = 1,nks
      !
+     IF(sf) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
      nbndval = nbnd_occ(iks)
+     flnbndval = nbnd_occ(iks_do)
+     !
      nbnd_do = 0
      DO lbnd = 1,aband%nloc
         ibnd = aband%l2g(lbnd)+n_trunc_bands
-        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+        IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -126,13 +146,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !
      IF(nks > 1) THEN
 #if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
         CALL mp_bcast(evc_host,0,inter_image_comm)
         !
         CALL using_evc(2)
         CALL using_evc_d(0)
 #else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
@@ -145,7 +165,25 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      CALL using_becp_d_auto(0)
 #endif
      !
-     IF(.NOT. l_bse_triplet) THEN
+     IF(l_bse_triplet) THEN
+        !
+        do_k1e = .FALSE.
+        !
+     ELSEIF(sf .AND. (.NOT. l_sf_kernel)) THEN
+        !
+        do_k1e = .FALSE.
+        !
+     ELSEIF(sf .AND. l_sf_kernel) THEN
+        !
+        do_k1e = .TRUE.
+        !
+     ELSE
+        !
+        do_k1e = .TRUE.
+        !
+     ENDIF
+     !
+     IF(do_k1e) THEN
         !
         IF(gamma_only) THEN
            !
@@ -263,22 +301,22 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
         !
         IF(l_qp_correction) THEN
            IF(l_bse) THEN
-              factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
+              factor = CMPLX(-(et_qp(ibnd,iks_do)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
               IF(l_hybrid_tddft) THEN
-                 factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope+sigma_x_head*exxalfa),KIND=DP)
+                 factor = CMPLX(-(et_qp(ibnd,iks_do)-scissor_ope+sigma_x_head*exxalfa),KIND=DP)
               ELSE
-                 factor = CMPLX(-(et_qp(ibnd,iks)-scissor_ope),KIND=DP)
+                 factor = CMPLX(-(et_qp(ibnd,iks_do)-scissor_ope),KIND=DP)
               ENDIF
            ENDIF
         ELSE
            IF(l_bse) THEN
-              factor = CMPLX(-(et(ibnd,iks)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
+              factor = CMPLX(-(et(ibnd,iks_do)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
            ELSE
               IF(l_hybrid_tddft) THEN
-                 factor = CMPLX(-(et(ibnd,iks)-scissor_ope+sigma_x_head*exxalfa),KIND=DP)
+                 factor = CMPLX(-(et(ibnd,iks_do)-scissor_ope+sigma_x_head*exxalfa),KIND=DP)
               ELSE
-                 factor = CMPLX(-(et(ibnd,iks)-scissor_ope),KIND=DP)
+                 factor = CMPLX(-(et(ibnd,iks_do)-scissor_ope),KIND=DP)
               ENDIF
            ENDIF
         ENDIF
@@ -298,7 +336,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      !$acc end parallel
      !
      IF(l_bse .OR. l_hybrid_tddft) THEN
-        CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks))
+        CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
      ENDIF
      !
      IF(gamma_only) THEN
@@ -312,6 +350,21 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new)
      ENDIF
      !
      ! Pc[k]*evc1_new(k)
+     !
+     ! Note: we need to load evc from iks to ensure that Pc of the current spin
+     ! channel is applied
+     IF(nks > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+     ENDIF
      !
 #if defined(__CUDA)
      CALL reallocate_ps_gpu(nbndval,nbnd_do)

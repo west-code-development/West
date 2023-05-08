@@ -341,7 +341,7 @@ MODULE lanczos_restart
             CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.beta',&
             & beta_store(:,ipol_iter,is))
             CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.zeta',&
-            & RESHAPE(zeta_store(:,:,ipol_iter,is),(/n_lanczos*3/)))
+            & RESHAPE(zeta_store(:,:,ipol_iter,is),[n_lanczos*3]))
          ENDDO
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(logfile))

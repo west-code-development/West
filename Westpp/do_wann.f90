@@ -166,7 +166,7 @@ SUBROUTINE do_wann()
         !
         ! output transformation matrix
         !
-        CALL json%add('output.B.K'//label_k//'.trans_matrix',RESHAPE(umat,(/nstate*nstate/)))
+        CALL json%add('output.B.K'//label_k//'.trans_matrix',RESHAPE(umat,[nstate*nstate]))
         !
      ENDIF
      !

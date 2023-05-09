@@ -133,7 +133,7 @@ SUBROUTINE wbse_setup()
   !
   CALL wbse_dv_setup(l_bse)
   !
-  IF (l_sf .AND. l_sf_kernel) THEN
+  IF(l_sf .AND. l_sf_kernel) THEN
      CALL wbse_sf_kernel_setup()
   ENDIF
   !

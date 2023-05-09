@@ -34,16 +34,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
   USE exx,                  ONLY : exxalfa
+  USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
-  USE wbse_dv,              ONLY : wbse_dv_of_drho_gpu, wbse_dv_of_drho_sf_gpu
   USE west_gpu,             ONLY : dvrs,hevc1,reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
-  USE wbse_dv,              ONLY : wbse_dv_of_drho, wbse_dv_of_drho_sf
 #endif
   !
   IMPLICIT NONE
@@ -55,11 +54,11 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !
   ! Local variables
   !
-  LOGICAL :: lrpa, do_k1e
+  LOGICAL :: lrpa,do_k1e
   INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbnd_do,lbnd,iks_do,flnbndval
   INTEGER :: dffts_nnr
   COMPLEX(DP) :: factor
-  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
+  INTEGER, PARAMETER :: flks(2) = [2,1]
 #if !defined(__CUDA)
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
@@ -89,17 +88,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   lrpa = l_bse
   !
   If(sf .AND. l_sf_kernel) THEN
-#if defined(__CUDA)
-     CALL wbse_dv_of_drho_sf_gpu(dvrs)
-#else
      CALL wbse_dv_of_drho_sf(dvrs)
-#endif
   ELSE
-#if defined(__CUDA)
-     CALL wbse_dv_of_drho_gpu(dvrs,lrpa,.FALSE.)
-#else
      CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
-#endif
   ENDIF
   !
   DO iks = 1,nks
@@ -166,21 +157,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
 #endif
      !
      IF(l_bse_triplet) THEN
-        !
         do_k1e = .FALSE.
-        !
      ELSEIF(sf .AND. (.NOT. l_sf_kernel)) THEN
-        !
         do_k1e = .FALSE.
-        !
      ELSEIF(sf .AND. l_sf_kernel) THEN
-        !
         do_k1e = .TRUE.
-        !
      ELSE
-        !
         do_k1e = .TRUE.
-        !
      ENDIF
      !
      IF(do_k1e) THEN
@@ -351,8 +334,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      ! Pc[k]*evc1_new(k)
      !
-     ! Note: we need to load evc from iks to ensure that Pc of the current spin
-     ! channel is applied
+     ! load evc from iks to apply Pc of the current spin channel
+     !
      IF(nks > 1) THEN
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)

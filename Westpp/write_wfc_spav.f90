@@ -76,7 +76,7 @@ SUBROUTINE wfc_spav(wfc, r0, nr, rmax, spav)
 END SUBROUTINE
 !
 ! -------------------------------------------------------------------
-SUBROUTINE write_wfc_spav(iu, fname, wfc, r0, nr, rmax)
+SUBROUTINE write_wfc_spav(fname, wfc, r0, nr, rmax)
   ! -----------------------------------------------------------------
   !
   ! r0 and rmax are in a.u
@@ -90,7 +90,6 @@ SUBROUTINE write_wfc_spav(iu, fname, wfc, r0, nr, rmax)
   !
   ! I/O
   !
-  INTEGER,INTENT(IN) :: iu
   CHARACTER(LEN=*),INTENT(IN) :: fname
   COMPLEX(DP),INTENT(IN) :: wfc(ngm)
   REAL(DP),INTENT(IN) :: r0(3)
@@ -99,6 +98,7 @@ SUBROUTINE write_wfc_spav(iu, fname, wfc, r0, nr, rmax)
   !
   ! Workspace
   !
+  INTEGER :: iu
   INTEGER :: ir
   REAL(DP) :: dr
   REAL(DP) :: spav(nr+1)
@@ -108,7 +108,7 @@ SUBROUTINE write_wfc_spav(iu, fname, wfc, r0, nr, rmax)
   CALL mp_sum(spav, intra_bgrp_comm)
   !
   IF(me_bgrp == root_bgrp) THEN
-     OPEN(UNIT=iu, FILE=TRIM(ADJUSTL(fname)))
+     OPEN(NEWUNIT=iu, FILE=TRIM(ADJUSTL(fname)))
      WRITE(iu, '(a,3f16.6)') '# r        f(r) : R0 (a.u)', r0(:)
      dr = rmax/nr
      DO ir = 1, nr+1

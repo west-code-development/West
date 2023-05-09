@@ -50,13 +50,13 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   ! Workspace
   !
   INTEGER :: ir, ibnd, iks, nbndval, lbnd, dffts_nnr, iks_do
-  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
   REAL(DP) :: w1
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: tmp_r(:)
   COMPLEX(DP), ALLOCATABLE :: tmp_c(:)
   COMPLEX(DP), ALLOCATABLE :: psic2(:)
 #endif
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('calc_dens')
@@ -77,7 +77,7 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   !
   DO iks = 1, nks  ! KPOINT-SPIN LOOP
      !
-     IF (sf) THEN
+     IF(sf) THEN
         iks_do = flks(iks)
      ELSE
         iks_do = iks

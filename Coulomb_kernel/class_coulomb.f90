@@ -29,7 +29,7 @@ MODULE class_coulomb
       INTEGER :: iq                                ! q-point
       REAL(DP), ALLOCATABLE :: sqvc(:)             ! square root of Coulomb potential in PW
       REAL(DP) :: mya, myb, mymu                   ! mya and mya + myb denote the factor of the short-range and of the
-                                                   ! long-range parts of Fock exchange, respectively 
+                                                   ! long-range parts of Fock exchange, respectively
                                                    ! mymu is inverse screening length in bohr^{-1}
                                                    ! See Eq. (3) of Phys. Rev. Mater. 2, 073803 (2018) for details
                                                    ! For HSE functional, mya = 1, myb = -1, mymu = 0.106

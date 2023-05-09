@@ -73,14 +73,13 @@ SUBROUTINE wbse_davidson_diago ( )
 #endif
   !
   INTEGER :: iks,il1,ig1,lbnd,ibnd,iks_do
-  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
   INTEGER :: nbndval,nbnd_do,flnbndval
   REAL(DP) :: time_spent(2)
   CHARACTER(LEN=8) :: iter_label
   !
   REAL(DP), EXTERNAL :: GET_CLOCK
   !
-  LOGICAL, PARAMETER :: l_vc_init = .TRUE.
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
   ! ... INITIALIZATION
   !
@@ -191,11 +190,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ! ... Eventually initialize or randomize
      !
      IF(n_pdep_read_from_file<nvec) THEN
-        IF(l_vc_init) THEN
-           CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_sf )
-        ELSE
-           CALL wbse_do_randomize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_sf  )
-        ENDIF
+        CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_sf )
      ENDIF
      !
      dav_iter = -1
@@ -270,7 +265,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec, l_sf)
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec, l_sf )
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -331,7 +326,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... expand the basis set with new basis vectors ( H - e*S )|psi> ...
      !
-     CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift)
+     CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift )
      CALL mp_bcast(vr_distr,0,inter_bgrp_comm)
      DEALLOCATE(ishift)
      CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew, l_sf )
@@ -612,7 +607,6 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE pwcom,                ONLY : nks,npw,npwx,ngk
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands
-  USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : pert,aband
 #if defined(__CUDA)
   USE cublas
@@ -624,7 +618,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   !
   INTEGER,INTENT(IN) :: m_global_start,m_global_end
   COMPLEX(DP),INTENT(INOUT) :: amat(npwx,aband%nlocx,nks,pert%nlocx)
-  LOGICAL, INTENT(IN) :: sf
+  LOGICAL,INTENT(IN) :: sf
   !
   ! Workspace
   !
@@ -632,15 +626,15 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   INTEGER :: ig,ip,ncol,lbnd,ibnd,iks,nbndval,nbnd_do,iks_do
   INTEGER :: k_global,k_local,j_local,k_id
   INTEGER :: m_local_start,m_local_end
-  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
   REAL(DP) :: anorm
-  COMPLEX(DP) :: za,anormc
+  COMPLEX(DP) :: za
   COMPLEX(DP),ALLOCATABLE :: zbraket(:)
   COMPLEX(DP),ALLOCATABLE :: vec(:,:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: vec
 #endif
   COMPLEX(DP),PARAMETER :: mone = (-1._DP,0._DP)
+  INTEGER,PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('paramgs')
@@ -716,26 +710,18 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
                  !$acc parallel loop collapse(2) reduction(+:anorm) present(amat) copy(anorm)
                  DO lbnd = 1, nbnd_do
                     DO ig = 1, npw
-                       IF(gamma_only) THEN
-                           anorm = anorm+2._DP*REAL(amat(ig,lbnd,iks,k_local),KIND=DP)**2 &
-                           & +2._DP*AIMAG(amat(ig,lbnd,iks,k_local))**2
-                       ELSE
-                           anorm = anorm+REAL(amat(ig,lbnd,iks,k_local),KIND=DP)**2 &
-                           & +AIMAG(amat(ig,lbnd,iks,k_local))**2
-                       ENDIF
+                       anorm = anorm+2._DP*REAL(amat(ig,lbnd,iks,k_local),KIND=DP)**2 &
+                       & +2._DP*AIMAG(amat(ig,lbnd,iks,k_local))**2
                     ENDDO
                  ENDDO
                  !$acc end parallel
                  !
-                 IF(gamma_only) THEN
-                    !anorm = 2._DP*anorm
-                    IF(gstart == 2) THEN
-                       !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
-                       DO lbnd = 1, nbnd_do
-                          anorm = anorm-REAL(amat(1,lbnd,iks,k_local),KIND=DP)**2
-                       ENDDO
-                       !$acc end parallel
-                    ENDIF
+                 IF(gstart == 2) THEN
+                    !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
+                    DO lbnd = 1, nbnd_do
+                       anorm = anorm-REAL(amat(1,lbnd,iks,k_local),KIND=DP)**2
+                    ENDDO
+                    !$acc end parallel
                  ENDIF
                  !
               ENDDO
@@ -781,11 +767,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
            !
            DO ip = j_local,m_local_end
               !
-              IF(gamma_only) THEN
-                 anorm = 0._DP
-              ELSE
-                 anormc = (0._DP,0._DP)
-              ENDIF
+              anorm = 0._DP
               !
               DO iks = 1, nks
                  !
@@ -804,41 +786,26 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
                     IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
                  ENDDO
                  !
-                 IF(gamma_only) THEN
-                    !$acc parallel loop collapse(2) reduction(+:anorm) present(vec,amat) copy(anorm)
-                    DO lbnd = 1, nbnd_do
-                       DO ig = 1, npw
-                          anorm = anorm+2._DP*REAL(vec(ig,lbnd,iks),KIND=DP)*REAL(amat(ig,lbnd,iks,ip),KIND=DP) &
-                          & +2._DP*AIMAG(vec(ig,lbnd,iks))*AIMAG(amat(ig,lbnd,iks,ip))
-                       ENDDO
+                 !$acc parallel loop collapse(2) reduction(+:anorm) present(vec,amat) copy(anorm)
+                 DO lbnd = 1, nbnd_do
+                    DO ig = 1, npw
+                       anorm = anorm+2._DP*REAL(vec(ig,lbnd,iks),KIND=DP)*REAL(amat(ig,lbnd,iks,ip),KIND=DP) &
+                       & +2._DP*AIMAG(vec(ig,lbnd,iks))*AIMAG(amat(ig,lbnd,iks,ip))
                     ENDDO
-                    !$acc end parallel
-                    !
-                    !anorm = 2._DP*anorm
-                    IF(gstart == 2) THEN
-                       !$acc parallel loop reduction(+:anorm) present(vec,amat) copy(anorm)
-                       DO lbnd = 1, nbnd_do
-                          anorm = anorm-REAL(vec(1,lbnd,iks),KIND=DP)*REAL(amat(1,lbnd,iks,ip),KIND=DP)
-                       ENDDO
-                       !$acc end parallel
-                    ENDIF
-                 ELSE
-                    !$acc parallel loop collapse(2) reduction(+:anormc) present(vec,amat) copy(anormc)
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 IF(gstart == 2) THEN
+                    !$acc parallel loop reduction(+:anorm) present(vec,amat) copy(anorm)
                     DO lbnd = 1, nbnd_do
-                       DO ig = 1, npw
-                          anormc = anormc+CONJG(vec(ig,lbnd,iks))*amat(ig,lbnd,iks,ip)
-                       ENDDO
+                       anorm = anorm-REAL(vec(1,lbnd,iks),KIND=DP)*REAL(amat(1,lbnd,iks,ip),KIND=DP)
                     ENDDO
                     !$acc end parallel
                  ENDIF
                  !
               ENDDO
               !
-              IF(gamma_only) THEN
-                 zbraket(ip) = CMPLX(anorm,KIND=DP)
-              ELSE
-                 zbraket(ip) = anormc
-              ENDIF
+              zbraket(ip) = CMPLX(anorm,KIND=DP)
               !
            ENDDO
            !
@@ -872,169 +839,6 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
 #else
   CALL stop_clock('paramgs')
 #endif
-  !
-END SUBROUTINE
-!
-!
-!----------------------------------------------------------------------------
-SUBROUTINE wbse_do_randomize ( amat, mglobalstart, mglobalend, sf )
-  !----------------------------------------------------------------------------
-  !
-  ! Randomize in dvg the vectors belonging to [ mglobalstart, mglobalend ]
-  !
-  USE kinds,                ONLY : DP
-  USE random_numbers,       ONLY : randy
-  USE gvect,                ONLY : g,gstart,ngm_g,ig_l2g
-  USE pwcom,                ONLY : nks,npw,npwx,ngk
-  USE westcom,              ONLY : lrwfc,iuwfc,nbnd_occ,n_trunc_bands
-  USE constants,            ONLY : tpi
-  USE distribution_center,  ONLY : pert,aband
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,my_bgrp_id
-  USE mp,                   ONLY : mp_bcast,mp_max
-  USE wavefunctions,        ONLY : evc
-  USE buffers,              ONLY : get_buffer
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
-  USE west_gpu,             ONLY : reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
-#endif
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  INTEGER,INTENT(IN) :: mglobalstart, mglobalend
-  COMPLEX(DP),INTENT(INOUT) :: amat(npwx,aband%nlocx,nks,pert%nlocx)
-  LOGICAL, INTENT(IN) :: sf
-  !
-  ! Workspace
-  !
-  REAL(DP),ALLOCATABLE :: random_num_debug(:,:)
-  INTEGER :: il1,ig1,ig,lbnd,ibnd,iks,nbndval,nbnd_do,iks_do,flnbndval
-  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
-  INTEGER :: mloc,mstart,max_mloc
-  INTEGER :: owner
-  REAL(DP) :: aux_real
-  REAL(DP) :: rr, arg
-#if defined(__CUDA)
-  COMPLEX(DP), ALLOCATABLE :: caux1(:,:)
-  !$acc declare device_resident(caux1)
-#endif
-  !
-  CALL start_clock ('randomize')
-  !
-  ! Random numbers are generated according to G-global
-  !
-  ALLOCATE(random_num_debug(2,ngm_g))
-  !
-  mloc = 0
-  mstart = 1
-  DO il1 = 1, pert%nloc
-     ig1 = pert%l2g(il1)
-     IF( ig1 < mglobalstart .OR. ig1 > mglobalend ) CYCLE
-     IF( mloc==0 ) mstart = il1
-     mloc = mloc + 1
-  ENDDO
-  !
-  max_mloc = mloc
-  CALL mp_max (max_mloc, inter_image_comm)
-  !
-#if defined(__CUDA)
-  ALLOCATE(caux1(npwx,aband%nlocx))
-#endif
-  !
-  DO il1 = mstart, mstart+max_mloc-1
-     !
-     ig1=pert%l2g(il1)
-     !
-     ! Initialize the sequence
-     !
-     aux_real=randy(ig1)
-     !
-     DO iks = 1, nks
-        !
-        IF(sf) THEN
-           iks_do = flks(iks)
-        ELSE
-           iks_do = iks
-        ENDIF
-        !
-        nbndval = nbnd_occ(iks)
-        flnbndval = nbnd_occ(iks_do)
-        npw = ngk(iks)
-        !
-        nbnd_do = 0
-        DO lbnd = 1, aband%nloc
-           ibnd = aband%l2g(lbnd)+n_trunc_bands
-           IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
-        ENDDO
-        !
-        DO ibnd = 1, flnbndval-n_trunc_bands
-           !
-           CALL aband%g2l(ibnd,lbnd,owner)
-           !
-           DO ig=1,ngm_g
-              random_num_debug(1:2,ig) = (/ randy(), randy() /)
-           ENDDO
-           !
-           IF(my_bgrp_id == owner) THEN
-              !
-              amat(:,lbnd,iks,il1) = 0._DP
-              !
-!$OMP PARALLEL private(ig,rr,arg)
-!$OMP DO
-              DO ig=gstart,npw
-                 rr = random_num_debug(1,ig_l2g(ig))
-                 arg = tpi * random_num_debug(2,ig_l2g(ig))
-                 amat(ig,lbnd,iks,il1) = CMPLX( rr*COS(arg), rr*SIN(arg), KIND=DP) / &
-                                       ( g(1,ig)*g(1,ig) + &
-                                         g(2,ig)*g(2,ig) + &
-                                         g(3,ig)*g(3,ig) + 1._DP )
-              ENDDO
-!$OMP ENDDO
-!$OMP END PARALLEL
-              !
-           ENDIF
-           !
-        ENDDO
-        !
-        ! ... read in GS wavefunctions iks
-        !
-        IF(nks > 1) THEN
-           IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
-           CALL mp_bcast(evc,0,inter_image_comm)
-           !
-#if defined(__CUDA)
-           CALL using_evc(2)
-           CALL using_evc_d(0)
-#endif
-        ENDIF
-        !
-        ! Pc amat
-        !
-        IF (.NOT.( ig1 < mglobalstart .OR. ig1 > mglobalend )) THEN
-#if defined(__CUDA)
-           CALL memcpy_H2D(caux1,amat(:,:,iks,il1),npwx*aband%nlocx)
-           !
-           CALL reallocate_ps_gpu(nbndval,nbnd_do)
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,caux1,(1._DP,0._DP))
-           !
-           CALL memcpy_D2H(amat(:,:,iks,il1),caux1,npwx*aband%nlocx)
-#else
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,amat(:,:,iks,il1),(1._DP,0._DP))
-#endif
-        ENDIF
-        !
-     ENDDO
-     !
-  ENDDO
-  !
-  DEALLOCATE(random_num_debug)
-  !
-#if defined(__CUDA)
-  DEALLOCATE(caux1)
-#endif
-  !
-  CALL stop_clock ('randomize')
   !
 END SUBROUTINE
 !
@@ -1129,7 +933,7 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend,sf)
   USE io_global,            ONLY : stdout
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
-  USE pwcom,                ONLY : nks,npwx,nbnd,et
+  USE pwcom,                ONLY : nks,npwx,nbnd,et,nspin
   USE mp_global,            ONLY : inter_image_comm,my_image_id,my_bgrp_id
   USE mp,                   ONLY : mp_bcast,mp_max
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands
@@ -1146,8 +950,7 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend,sf)
   !
   ! Workspace
   !
-  INTEGER :: iks,iv,ic,ib,lv,nbndval,flnbndval,iks_do
-  INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
+  INTEGER :: iv,ic,ib,lv,nbndval,flnbndval,iks,iks_do,is
   INTEGER :: nbnd_v_window,nbnd_c_window,npair
   INTEGER :: il1,ig1,nvec
   INTEGER :: itmp1,itmp2
@@ -1155,6 +958,7 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend,sf)
   INTEGER :: owner
   INTEGER,ALLOCATABLE :: e_diff_order(:)
   REAL(DP),ALLOCATABLE :: e_diff(:)
+  INTEGER,PARAMETER :: flks(2) = [2,1]
   !
   CALL start_clock ('vc_init')
   !
@@ -1205,35 +1009,41 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend,sf)
   !
   amat(:,:,:,mstart:mstart+max_mloc-1) = (0._DP,0._DP)
   !
-  DO il1 = mstart,mstart+max_mloc-1
-     !
-     ig1 = pert%l2g(il1)
-     !
-     itmp1 = e_diff_order(ig1)
-     itmp2 = MOD(itmp1-1, npair) + 1
-     !
-     iks = (itmp1-1)/npair + 1
-     !
-     IF(sf) THEN
-        iks_do = flks(iks)
-     ELSE
-        iks_do = iks
-     ENDIF
-     !
-     nbndval = nbnd_occ(iks)
-     flnbndval = nbnd_occ(iks_do)
+  DO is = 1,nspin
      !
      IF(nks > 1) THEN
-        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,is)
         CALL mp_bcast(evc,0,inter_image_comm)
      ENDIF
      !
-     iv = (itmp2-1)/nbnd_c_window + 1 + flnbndval - nbnd_v_window - n_trunc_bands
-     ic = MOD(itmp2-1, nbnd_c_window) + 1 + nbndval
-     !
-     CALL aband%g2l(iv,lv,owner)
-     !
-     IF(owner == my_bgrp_id) amat(:,lv,iks,il1) = evc(:,ic)
+     DO il1 = mstart,mstart+max_mloc-1
+        !
+        ig1 = pert%l2g(il1)
+        IF(ig1 < mglobalstart .OR. ig1 > mglobalend) CYCLE
+        !
+        itmp1 = e_diff_order(ig1)
+        itmp2 = MOD(itmp1-1, npair) + 1
+        !
+        iks = (itmp1-1)/npair + 1
+        IF(iks /= is) CYCLE
+        !
+        IF(sf) THEN
+           iks_do = flks(iks)
+        ELSE
+           iks_do = iks
+        ENDIF
+        !
+        nbndval = nbnd_occ(iks)
+        flnbndval = nbnd_occ(iks_do)
+        !
+        iv = (itmp2-1)/nbnd_c_window + 1 + flnbndval - nbnd_v_window - n_trunc_bands
+        ic = MOD(itmp2-1, nbnd_c_window) + 1 + nbndval
+        !
+        CALL aband%g2l(iv,lv,owner)
+        !
+        IF(owner == my_bgrp_id) amat(:,lv,iks,il1) = evc(:,ic)
+        !
+     ENDDO
      !
   ENDDO
   !

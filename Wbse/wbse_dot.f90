@@ -61,8 +61,6 @@ SUBROUTINE wbse_dot(x,y,m,nks,dotp)
            ENDDO
            !$acc end parallel
            !
-           !tmp_r = tmp_r*2._DP
-           !
            IF(gstart == 2) THEN
               !$acc parallel loop reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
               DO lbnd = 1, m

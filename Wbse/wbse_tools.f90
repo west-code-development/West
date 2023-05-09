@@ -64,13 +64,13 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,il3,ig1,lbnd,ibnd,iks,nbndval,iks_do
-      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
+      INTEGER :: il1,il2,il3,ig1,lbnd,ibnd,iks,iks_do,nbndval
       INTEGER :: il1_end
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nglob
       REAL(DP):: reduce
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
+      INTEGER,PARAMETER :: flks(2) = [2,1]
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('build_hr')
@@ -86,7 +86,13 @@ MODULE wbse_tools
          !
          DO iks = 1,nks
             !
-            nbndval = nbnd_occ(iks)
+            IF(sf) THEN
+               iks_do = flks(iks)
+            ELSE
+               iks_do = iks
+            ENDIF
+            !
+            nbndval = nbnd_occ(iks_do)
             !
             nbnd_loc(iks) = 0
             DO lbnd = 1,aband%nloc
@@ -136,13 +142,7 @@ MODULE wbse_tools
                      !$acc loop seq
                      DO iks = 1,nks
                         !
-                        IF(sf) THEN
-                           iks_do = flks(iks)
-                        ELSE
-                           iks_do = iks
-                        ENDIF
-                        !
-                        nbndval = nbnd_loc(iks_do)
+                        nbndval = nbnd_loc(iks)
                         npw = ngk(iks)
                         !
                         !$acc loop collapse(2) reduction(+:reduce)
@@ -152,8 +152,6 @@ MODULE wbse_tools
                               & +2._DP*AIMAG(ag(il3,lbnd,iks,il1))*AIMAG(bg(il3,lbnd,iks,il2))
                            ENDDO
                         ENDDO
-                        !
-                        !reduce = reduce*2._DP
                         !
                         IF(gstart == 2) THEN
                            !$acc loop reduction(+:reduce)
@@ -230,13 +228,13 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,nbndval,iks_do
-      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
+      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,iks_do,nbndval
       INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
       REAL(DP) :: dconst
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
+      INTEGER,PARAMETER :: flks(2) = [2,1]
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('update_vr')
@@ -267,7 +265,13 @@ MODULE wbse_tools
          !
          DO iks = 1,nks
             !
-            nbndval = nbnd_occ(iks)
+            IF(sf) THEN
+               iks_do = flks(iks)
+            ELSE
+               iks_do = iks
+            ENDIF
+            !
+            nbndval = nbnd_occ(iks_do)
             !
             nbnd_loc(iks) = 0
             DO lbnd = 1,aband%nloc
@@ -313,13 +317,7 @@ MODULE wbse_tools
                   !$acc loop seq
                   DO iks = 1,nks
                      !
-                     IF(sf) THEN
-                        iks_do = flks(iks)
-                     ELSE
-                        iks_do = iks
-                     ENDIF
-                     !
-                     nbndval = nbnd_loc(iks_do)
+                     nbndval = nbnd_loc(iks)
                      npw = ngk(iks)
                      !
                      !$acc loop collapse(2)
@@ -357,13 +355,7 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               IF(sf) THEN
-                  iks_do = flks(iks)
-               ELSE
-                  iks_do = iks
-               ENDIF
-               !
-               nbndval = nbnd_loc(iks_do)
+               nbndval = nbnd_loc(iks)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -409,13 +401,7 @@ MODULE wbse_tools
                   !$acc loop seq
                   DO iks = 1,nks
                      !
-                     IF(sf) THEN
-                        iks_do = flks(iks)
-                     ELSE
-                        iks_do = iks
-                     ENDIF
-                     !
-                     nbndval = nbnd_loc(iks_do)
+                     nbndval = nbnd_loc(iks)
                      npw = ngk(iks)
                      !
                      !$acc loop collapse(2)
@@ -445,13 +431,7 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               IF(sf) THEN
-                  iks_do = flks(iks)
-               ELSE
-                  iks_do = iks
-               ENDIF
-               !
-               nbndval = nbnd_loc(iks_do)
+               nbndval = nbnd_loc(iks)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -502,14 +482,14 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,nbndval,iks_do
-      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
+      INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,iks_do,nbndval
       INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nloc
       REAL(DP) :: dconst
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       COMPLEX(DP),ALLOCATABLE :: hg(:,:,:,:)
+      INTEGER,PARAMETER :: flks(2) = [2,1]
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('refresh_vr')
@@ -533,7 +513,13 @@ MODULE wbse_tools
          !
          DO iks = 1,nks
             !
-            nbndval = nbnd_occ(iks)
+            IF(sf) THEN
+               iks_do = flks(iks)
+            ELSE
+               iks_do = iks
+            ENDIF
+            !
+            nbndval = nbnd_occ(iks_do)
             !
             nbnd_loc(iks) = 0
             DO lbnd = 1,aband%nloc
@@ -579,13 +565,7 @@ MODULE wbse_tools
                   !$acc loop seq
                   DO iks = 1,nks
                      !
-                     IF(sf) THEN
-                        iks_do = flks(iks)
-                     ELSE
-                        iks_do = iks
-                     ENDIF
-                     !
-                     nbndval = nbnd_loc(iks_do)
+                     nbndval = nbnd_loc(iks)
                      npw = ngk(iks)
                      !
                      !$acc loop collapse(2)
@@ -624,13 +604,7 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               IF(sf) THEN
-                  iks_do = flks(iks)
-               ELSE
-                  iks_do = iks
-               ENDIF
-               !
-               nbndval = nbnd_loc(iks_do)
+               nbndval = nbnd_loc(iks)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -659,13 +633,7 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               IF(sf) THEN
-                  iks_do = flks(iks)
-               ELSE
-                  iks_do = iks
-               ENDIF
-               !
-               nbndval = nbnd_loc(iks_do)
+               nbndval = nbnd_loc(iks)
                npw = ngk(iks)
                !
                !$acc loop collapse(2)
@@ -722,15 +690,14 @@ MODULE wbse_tools
       !
       ! Workspace
       !
-      INTEGER :: il1,ig1,ig,lbnd,ibnd,nbndval,iks_do
-      INTEGER, DIMENSION(2), PARAMETER :: flks = (/ 2, 1 /)
-      INTEGER :: iks
+      INTEGER :: il1,ig1,ig,lbnd,ibnd,iks,iks_do,nbndval
       INTEGER :: il1_start,il1_end
       REAL(DP):: tmp,tmp_abs,tmp_sgn
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       REAL(DP),ALLOCATABLE :: g2kin_save(:,:)
-      !REAL(DP),PARAMETER :: minimum = 0.01_DP
-      REAL(DP),PARAMETER :: minimum = 1._DP
+      INTEGER,PARAMETER :: flks(2) = [2,1]
+      REAL(DP),PARAMETER :: minimum = 0.01_DP
+      !REAL(DP),PARAMETER :: minimum = 1._DP
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('precd_ag')
@@ -756,7 +723,13 @@ MODULE wbse_tools
             g2kin_save(:,iks) = g2kin
             !$acc end kernels
             !
-            nbndval = nbnd_occ(iks)
+            IF(sf) THEN
+               iks_do = flks(iks)
+            ELSE
+               iks_do = iks
+            ENDIF
+            !
+            nbndval = nbnd_occ(iks_do)
             !
             nbnd_loc(iks) = 0
             DO lbnd = 1,aband%nloc
@@ -789,13 +762,7 @@ MODULE wbse_tools
             !$acc loop seq
             DO iks = 1,nks
                !
-               IF(sf) THEN
-                  iks_do = flks(iks)
-               ELSE
-                  iks_do = iks
-               ENDIF
-               !
-               nbndval = nbnd_loc(iks_do)
+               nbndval = nbnd_loc(iks)
                !
                !$acc loop collapse(2)
                DO lbnd = 1,nbndval

@@ -48,19 +48,19 @@ SUBROUTINE dump_r ( auxr, fname )
   !
   !
   IF( lgate(1) ) THEN
-     CALL write_wfc_cube_r ( dffts, 2001, TRIM(fname)//'.cube', auxr )
+     CALL write_wfc_cube_r ( dffts, TRIM(fname)//'.cube', auxr )
   ENDIF
   !
   IF( lgate(2) ) THEN
-     CALL write_wfc_1D_r ( dffts, 2002, TRIM(fname)//'.plavx', auxr, 1 )
+     CALL write_wfc_1D_r ( dffts, TRIM(fname)//'.plavx', auxr, 1 )
   ENDIF
   !
   IF( lgate(3) ) THEN
-     CALL write_wfc_1D_r ( dffts, 2003, TRIM(fname)//'.plavy', auxr, 2 )
+     CALL write_wfc_1D_r ( dffts, TRIM(fname)//'.plavy', auxr, 2 )
   ENDIF
   !
   IF( lgate(4) ) THEN
-     CALL write_wfc_1D_r ( dffts, 2004, TRIM(fname)//'.plavz', auxr, 3 )
+     CALL write_wfc_1D_r ( dffts, TRIM(fname)//'.plavz', auxr, 3 )
   ENDIF
   !
   IF( lgate(5) ) THEN
@@ -73,7 +73,7 @@ SUBROUTINE dump_r ( auxr, fname )
      ELSE
         CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Rho')
      ENDIF
-     CALL write_wfc_spav ( 2005, TRIM(fname)//'.spavr', auxg, westpp_r0, westpp_nr, westpp_rmax )
+     CALL write_wfc_spav ( TRIM(fname)//'.spavr', auxg, westpp_r0, westpp_nr, westpp_rmax )
      DEALLOCATE(auxg)
      DEALLOCATE(auxr_)
      !

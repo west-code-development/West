@@ -30,7 +30,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
                                  & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
-                                 & l_hybrid_tddft,l_sf_kernel
+                                 & l_hybrid_tddft,l_spin_flip_kernel
   USE distribution_center,  ONLY : aband
   USE uspp_init,            ONLY : init_us_2
   USE exx,                  ONLY : exxalfa
@@ -87,7 +87,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !
   lrpa = l_bse
   !
-  If(sf .AND. l_sf_kernel) THEN
+  If(sf .AND. l_spin_flip_kernel) THEN
      CALL wbse_dv_of_drho_sf(dvrs)
   ELSE
      CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
@@ -158,9 +158,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      IF(l_bse_triplet) THEN
         do_k1e = .FALSE.
-     ELSEIF(sf .AND. (.NOT. l_sf_kernel)) THEN
+     ELSEIF(sf .AND. (.NOT. l_spin_flip_kernel)) THEN
         do_k1e = .FALSE.
-     ELSEIF(sf .AND. l_sf_kernel) THEN
+     ELSEIF(sf .AND. l_spin_flip_kernel) THEN
         do_k1e = .TRUE.
      ELSE
         do_k1e = .TRUE.

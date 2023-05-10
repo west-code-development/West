@@ -325,7 +325,8 @@ MODULE wbse_dv
     USE uspp,                  ONLY : nlcc_any
     USE xc_lib,                ONLY : xclib_dft_is
     USE lsda_mod,              ONLY : nspin
-    USE westcom,               ONLY : wbse_save_dir,sf_kernel,l_sf_alda0,l_sf_cut1,l_print_sf_kernel
+    USE westcom,               ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut1,&
+                                    & l_print_spin_flip_kernel
     USE scf,                   ONLY : rho,rho_core,rhog_core
     USE xc_lib,                ONLY : xc
     USE martyna_tuckerman,     ONLY : do_comp_mt
@@ -390,7 +391,7 @@ MODULE wbse_dv
     !
     ! ... add gradient corrections (if any)
     !
-    IF(.NOT. l_sf_alda0 .AND. xclib_dft_is('gradient')) THEN
+    IF(.NOT. l_spin_flip_alda0 .AND. xclib_dft_is('gradient')) THEN
        etxc = 0._DP
        vtxc = 0._DP
        !
@@ -407,10 +408,10 @@ MODULE wbse_dv
     ENDDO
     !$acc end parallel
     !
-    IF(.NOT. l_sf_alda0 .AND. xclib_dft_is('gradient')) THEN
+    IF(.NOT. l_spin_flip_alda0 .AND. xclib_dft_is('gradient')) THEN
        !$acc parallel loop present(sf_kernel)
        DO ir = 1, dfftp_nnr
-          IF(ABS(sf_kernel(ir)) > l_sf_cut1) sf_kernel(ir) = 0._DP
+          IF(ABS(sf_kernel(ir)) > spin_flip_cut1) sf_kernel(ir) = 0._DP
        ENDDO
        !$acc end parallel
     ENDIF
@@ -422,7 +423,7 @@ MODULE wbse_dv
     !
     CALL mp_barrier( world_comm )
     !
-    IF(l_print_sf_kernel) THEN
+    IF(l_print_spin_flip_kernel) THEN
        !$acc update host(sf_kernel)
        fname = TRIM(wbse_save_dir)//'/sf_kernel.cube'
        CALL write_wfc_cube_r(dfftp, fname, sf_kernel)

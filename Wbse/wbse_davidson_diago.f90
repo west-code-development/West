@@ -29,7 +29,7 @@ SUBROUTINE wbse_davidson_diago ( )
                                  & wstat_calculation,n_pdep_read_from_file,n_steps_write_restart,&
                                  & trev_pdep_rel,l_is_wstat_converged,nbnd_occ,lrwfc,iuwfc,dvg_exc,&
                                  & dng_exc,nbndval0x,n_trunc_bands,l_preconditioning,l_pre_shift,&
-                                 & l_sf
+                                 & l_spin_flip
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
                                  & davidson_restart_read
@@ -190,7 +190,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ! ... Eventually initialize or randomize
      !
      IF(n_pdep_read_from_file<nvec) THEN
-        CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_sf )
+        CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_spin_flip )
      ENDIF
      !
      dav_iter = -1
@@ -203,7 +203,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! < EXTRA STEP >
      !
-     CALL wbse_do_mgs( dvg_exc, 1, nvec, l_sf )
+     CALL wbse_do_mgs( dvg_exc, 1, nvec, l_spin_flip )
      !
      WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
      WRITE(stdout, &
@@ -245,7 +245,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !$acc end kernels
         ENDIF
         !
-        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_sf)
+        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_spin_flip)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
 #if defined(__CUDA)
@@ -265,7 +265,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec, l_sf )
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec, l_spin_flip )
      !
      ! ... diagonalize the reduced hamiltonian
      !
@@ -329,14 +329,14 @@ SUBROUTINE wbse_davidson_diago ( )
      CALL redistribute_vr_distr( notcnv, nbase, nvecx, vr_distr, ishift )
      CALL mp_bcast(vr_distr,0,inter_bgrp_comm)
      DEALLOCATE(ishift)
-     CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew, l_sf )
+     CALL wbse_update_with_vr_distr(dvg_exc, dng_exc, notcnv, nbase, nvecx, vr_distr, ew, l_spin_flip )
      !
      IF (l_preconditioning) THEN
         !
         IF (dav_iter < 4) THEN
-           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .FALSE., l_sf )
+           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, .FALSE., l_spin_flip )
         ELSE
-           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, l_pre_shift, l_sf )
+           CALL wbse_precondition_dvg( dvg_exc, notcnv, nbase, l_pre_shift, l_spin_flip )
         ENDIF
         !
      ENDIF
@@ -365,7 +365,7 @@ SUBROUTINE wbse_davidson_diago ( )
         !
         DO iks  = 1, nks
            !
-           IF(l_sf) THEN
+           IF(l_spin_flip) THEN
               iks_do = flks(iks)
            ELSE
               iks_do = iks
@@ -418,7 +418,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... MGS
      !
-     CALL wbse_do_mgs(dvg_exc,nbase+1,nbase+notcnv,l_sf)
+     CALL wbse_do_mgs(dvg_exc,nbase+1,nbase+notcnv,l_spin_flip)
      !
      ! apply the response function to new vectors
      !
@@ -456,7 +456,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !$acc end kernels
         ENDIF
         !
-        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_sf)
+        CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_spin_flip)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
 #if defined(__CUDA)
@@ -476,7 +476,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
-     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+notcnv, l_sf )
+     CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+notcnv, l_spin_flip )
      !
      nbase = nbase + notcnv
      !
@@ -518,7 +518,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            CALL stop_clock( 'chidiago:last' )
            !
-           CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_sf )
+           CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_spin_flip )
            !
            CALL plep_db_write( )
            CALL davidson_restart_clear()
@@ -545,8 +545,8 @@ SUBROUTINE wbse_davidson_diago ( )
         !
         WRITE(stdout,'(/,7x,"Refresh the basis set")')
         !
-        CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_sf )
-        CALL wbse_refresh_with_vr_distr( dng_exc, nvec, nbase, nvecx, vr_distr, l_sf )
+        CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_spin_flip )
+        CALL wbse_refresh_with_vr_distr( dng_exc, nvec, nbase, nvecx, vr_distr, l_spin_flip )
         !
         ! ... refresh the reduced hamiltonian
         !

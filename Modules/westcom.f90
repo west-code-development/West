@@ -334,12 +334,11 @@ MODULE wbse_center
   LOGICAL :: l_preconditioning
   LOGICAL :: l_dipole_realspace
   LOGICAL :: l_pre_shift
-  LOGICAL :: l_sf
-  LOGICAL :: l_sf_kernel
-  LOGICAL :: l_sf_alda0
-  LOGICAL :: l_print_sf_kernel
-  REAL(DP) :: l_sf_cut1
-  REAL(DP) :: l_sf_cut2
+  LOGICAL :: l_spin_flip
+  LOGICAL :: l_spin_flip_kernel
+  LOGICAL :: l_spin_flip_alda0
+  LOGICAL :: l_print_spin_flip_kernel
+  REAL(DP) :: spin_flip_cut1
   REAL(DP) :: wbse_epsinfty
   CHARACTER(LEN=1) :: spin_excitation
   !

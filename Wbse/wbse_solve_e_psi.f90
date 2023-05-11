@@ -15,7 +15,7 @@ SUBROUTINE solve_e_psi()
   !-----------------------------------------------------------------------
   !
   USE uspp,                 ONLY : okvan
-  USE westcom,              ONLY : l_macropol
+  USE westcom,              ONLY : l_dipole_realspace
   !
   IMPLICIT NONE
   !
@@ -32,10 +32,10 @@ SUBROUTINE solve_e_psi()
   ! Compute dipole in the R space. This option can be used
   ! only for finite systems (e.g. molecules).
   !
-  IF(l_macropol) THEN
-     CALL compute_d0psi_dfpt()
-  ELSE
+  IF(l_dipole_realspace) THEN
      CALL compute_d0psi_rs()
+  ELSE
+     CALL compute_d0psi_dfpt()
   ENDIF
   !
 #if defined(__CUDA)

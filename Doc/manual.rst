@@ -1087,21 +1087,21 @@ wbse_control
        - "ZZ": alpha_zz.
        - "XYZ": three Lanczos chains are sequentially performed and the full polarizability tensor and the absorption coefficient are computed.
 
-.. data:: macropol_calculation
+.. data:: l_dipole_realspace
 
 .. list-table::
    :widths: 10 90
    :stub-columns: 0
 
    * - **Type**
-     - string
+     - bool
    * - **Default**
-     - "C"
+     - False
    * - **Description**
-     - Available options are:
+     - Controls how the dipole is computed. Used only when wbse_calculation is "L" or "l".
 
-       - "N" : None. Choice valid for isolated systems.
-       - "C" : Include long-wavelength limit. Choice valid for condensed systems.
+       - If (False), then the dipole is computed in the reciprocal space by computing [H,r]. Choice valid for isolated and condensed systems.
+       - If (True), then the dipole is computed in the real space. Choice valid for isolated systems only.
 
 .. data:: wbse_epsinfty
 

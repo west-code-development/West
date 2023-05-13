@@ -1132,6 +1132,97 @@ wbse_control
        - "S" : Singlet.
        - "T" : Triplet.
 
+.. data:: l_preconditioning
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then preconditioning is used. Valid for calculations with wbse_calculation = "D" or "d". Should be set to True in most cases.
+
+.. data:: l_pre_shift
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the preconditioner is shifted by the corresponding Kohn-Sham orbital energy. Valid for calculations with wbse_calculation = "D" or "d". Should be set to True for isolated systems and False for perodic systems.
+
+.. data:: l_spin_flip
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then a spin-flip calculation is performed. Valid for calculations with wbse_calculation = "D" or "d" and nspin = 2.
+
+.. data:: l_spin_flip_kernel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the spin-flip kernel is used in the spin-flip calculations. Valid for spin-flip TDDFT calculations. Should be set to False for spin-flip BSE calculations.
+
+.. data:: l_spin_flip_alda0
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the ALDA0 approximation is used in the spin-flip kernel, i.e. the gradient correction to the exchange-correlation potential is discarded in the spin-flip kernel. Valid for spin-flip TDDFT calculations using GGA type exchange-correlation functionals with l_spin_flip_kernel = True.
+
+.. data:: l_print_spin_flip_kernel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the spin-flip kernel is printed as a Cubefile. Valid for spin-flip TDDFT calculations with l_spin_flip_kernel = True.
+
+.. data:: spin_flip_cut1
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e3
+   * - **Description**
+     - spin_flip_cut1 is the spin-flip cutoff, which prevents divergence by setting values greater than spin_flip_cut1 to zero on a grid. This is applicable for spin-flip TDDFT calculations using GGA type exchange-correlation functionals with l_spin_flip_kernel = True and l_spin_flip_alda0 = False.
+
 .. data:: l_reduce_io
 
 .. list-table::
@@ -1144,3 +1235,30 @@ wbse_control
      - True
    * - **Description**
      - Speeds up the calculation by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.
+
+.. data:: l_minimize_exx_if_active
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
+
+.. data:: n_exx_lowrank
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - dynamically set to match the number of bands, read from the ground state
+   * - **Description**
+     - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
+

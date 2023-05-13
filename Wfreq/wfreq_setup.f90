@@ -27,7 +27,7 @@ SUBROUTINE wfreq_setup
                                    & n_pdep_eigen_off_diagonal
   USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
-  USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx,nspin
+  USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx,nspin,ngk
   USE noncollin_module,       ONLY : npol
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
@@ -192,6 +192,8 @@ SUBROUTINE wfreq_setup
      DO iks = 1, kpt_pool%nloc
         !
         iks_g = kpt_pool%l2g(iks)
+        !
+        npw = ngk(iks)
         !
         IF(kpt_pool%nloc > 1) THEN
            IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)

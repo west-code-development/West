@@ -84,7 +84,7 @@ wstat_control
      - Available options are:
 
        - "S" : Start from scratch.
-       - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
+       - "R" : Restart from an interrupted run. You should restart with the same number of MPI tasks and parallelization flags.
        - "E" : Calculation of the response is external, i.e. outsourced to a server.
 
 .. data:: n_pdep_eigen
@@ -231,7 +231,7 @@ wstat_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
 
 .. data:: n_exx_lowrank
 
@@ -503,7 +503,7 @@ wfreq_control
    * - **Description**
      -
        - If (False), then only the diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (i.e., same band).
-       - If (True), then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{  {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
+       - If (True), then both the diagonal and off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are evaluated (mixing different bands). In this case the upper triangular part of the self-energy matrix is calculated and written to file according to :math:`{ {\left[ \Sigma \right]}_{ij} = \frac{1}{2} \mathrm{Re} \; \left[ {\left[ \Sigma \right]}_{ij} (\epsilon^{\mathrm{QP}}_i) + {\left[ \Sigma \right]}_{ij}(\epsilon^{\mathrm{QP}}_j) \right] }`. l_enable_off_diagonal can be set to True only when the Brillouin Zone is sampled at the :math:`{\Gamma}`-point.
 
 .. data:: n_pdep_eigen_off_diagonal
 
@@ -768,7 +768,7 @@ wbse_init_control
      - Available options are:
 
        - "S" : Start from scratch.
-       - "R" : Restart from an interrupted run. You should restart with the same number of cores and images.
+       - "R" : Restart from an interrupted run. You should restart with the same number of MPI tasks and parallelization flags.
 
 .. data:: solver
 
@@ -929,9 +929,9 @@ wbse_control
      - Available options are:
 
        - "D" : Diagonalize the Liouville super-operator with the Davidson iterative solver.
-       - "d" : Restart the calculation for wbse_calculation = "D" from an interrupted run. You should restart with the same number of cores and images.
+       - "d" : Restart the calculation for wbse_calculation = "D" from an interrupted run. You should restart with the same number of MPI tasks and parallelization flags.
        - "L" : Compute the absorption spectrum with the Lanczos method.
-       - "l" : Restart the calculation for wbse_calculation = "L" from an interrupted run. You should restart with the same number of cores and images.
+       - "l" : Restart the calculation for wbse_calculation = "L" from an interrupted run. You should restart with the same number of MPI tasks and parallelization flags.
 
 .. data:: qp_correction
 
@@ -1143,7 +1143,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then preconditioning is used. Valid for calculations with wbse_calculation = "D" or "d". Should be set to True in most cases.
+     - If (True), then preconditioning is used. Used only when wbse_calculation is "D" or "d". Should be set to True in most cases.
 
 .. data:: l_pre_shift
 
@@ -1156,7 +1156,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the preconditioner is shifted by the corresponding Kohn-Sham orbital energy. Valid for calculations with wbse_calculation = "D" or "d". Should be set to True for isolated systems and False for perodic systems.
+     - If (True), then the preconditioner is shifted by the corresponding Kohn-Sham orbital energy. Used only when wbse_calculation is "D" or "d" and l_preconditioning is True. Should be set to True for isolated systems and False for perodic systems.
 
 .. data:: l_spin_flip
 
@@ -1169,7 +1169,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then a spin-flip calculation is performed. Valid for calculations with wbse_calculation = "D" or "d" and nspin = 2.
+     - If (True), then a spin-flip calculation is performed. Used only when wbse_calculation is "D" or "d" and nspin is 2.
 
 .. data:: l_spin_flip_kernel
 
@@ -1182,7 +1182,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the spin-flip kernel is used in the spin-flip calculations. Valid for spin-flip TDDFT calculations. Should be set to False for spin-flip BSE calculations.
+     - If (True), then the spin-flip kernel is used in the spin-flip calculations. Used only in spin-flip TDDFT calculations. Should be set to False for spin-flip BSE calculations.
 
 .. data:: l_spin_flip_alda0
 
@@ -1195,7 +1195,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the ALDA0 approximation is used in the spin-flip kernel, i.e. the gradient correction to the exchange-correlation potential is discarded in the spin-flip kernel. Valid for spin-flip TDDFT calculations using GGA type exchange-correlation functionals with l_spin_flip_kernel = True.
+     - If (True), then the ALDA0 approximation is used in the spin-flip kernel, i.e. the gradient correction to the exchange-correlation potential is discarded in the spin-flip kernel. Used only in spin-flip TDDFT calculations using GGA type exchange-correlation functionals and when l_spin_flip_kernel is True.
 
 .. data:: l_print_spin_flip_kernel
 
@@ -1208,7 +1208,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the spin-flip kernel is printed as a Cubefile. Valid for spin-flip TDDFT calculations with l_spin_flip_kernel = True.
+     - If (True), then the spin-flip kernel is written to a cube file. Used only in spin-flip TDDFT calculations and when l_spin_flip_kernel is True.
 
 .. data:: spin_flip_cut1
 
@@ -1221,7 +1221,7 @@ wbse_control
    * - **Default**
      - 1e3
    * - **Description**
-     - spin_flip_cut1 is the spin-flip cutoff, which prevents divergence by setting values greater than spin_flip_cut1 to zero on a grid. This is applicable for spin-flip TDDFT calculations using GGA type exchange-correlation functionals with l_spin_flip_kernel = True and l_spin_flip_alda0 = False.
+     - Spin-flip cutoff to prevent divergence by setting values greater than spin_flip_cut1 to zero on a grid. Used only in spin-flip TDDFT calculations using GGA type exchange-correlation functionals and when l_spin_flip_kernel is True and l_spin_flip_alda0 is False.
 
 .. data:: l_reduce_io
 
@@ -1247,7 +1247,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction.
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
 
 .. data:: n_exx_lowrank
 
@@ -1261,4 +1261,3 @@ wbse_control
      - dynamically set to match the number of bands, read from the ground state
    * - **Description**
      - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
-

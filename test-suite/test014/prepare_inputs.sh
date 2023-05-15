@@ -61,8 +61,7 @@ input_west:
 
 wstat_control:
   wstat_calculation: S
-  n_pdep_eigen: 62
-  trev_pdep: 0.001
+  n_pdep_eigen: 30
 EOF
 
 
@@ -74,14 +73,13 @@ input_west:
 
 wstat_control:
   wstat_calculation: S
-  n_pdep_eigen: 62
-  trev_pdep: 0.001
+  n_pdep_eigen: 30
 
 wfreq_control:
   wfreq_calculation: XWGQH
   l_enable_off_diagonal: True
   macropol_calculation: C
-  n_pdep_eigen_to_use: 62
+  n_pdep_eigen_to_use: 30
   qp_bands: [30,31,32]
   n_refreq: 300
   ecut_refreq: 2.0

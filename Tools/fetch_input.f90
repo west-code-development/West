@@ -167,8 +167,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.l_print_spin_flip_kernel',l_print_spin_flip_kernel)
         CALL json%add('input.wbse_control.spin_flip_cut1',spin_flip_cut1)
         CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
-        CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
-        CALL json%add('input.wstat_control.n_exx_lowrank',n_exx_lowrank)
+        CALL json%add('input.wbse_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
+        CALL json%add('input.wbse_control.n_exx_lowrank',n_exx_lowrank)
         !
      ENDIF
      !

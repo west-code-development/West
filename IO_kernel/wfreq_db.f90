@@ -71,7 +71,6 @@ MODULE wfreq_db
       IF(mpime == root) THEN
          !
          CALL json%initialize()
-         !
          CALL json%load(filename=TRIM(logfile))
          !
          l_generate_plot = .FALSE.
@@ -245,7 +244,6 @@ MODULE wfreq_db
       IF(mpime == root) THEN
          !
          CALL json%initialize()
-         !
          CALL json%load(filename=TRIM(logfile))
          !
          DO iks = 1,nspin
@@ -338,7 +336,6 @@ MODULE wfreq_db
       IF(mpime == root) THEN
          !
          CALL json%initialize()
-         !
          CALL json%load(filename=TRIM(logfile))
          !
          DO iks = 1,nspin
@@ -348,6 +345,68 @@ MODULE wfreq_db
             CALL json%add('qdet.h1e.K'//my_label_ik,h1e(1:n_pairs,iks)*rytoev)
             !
          ENDDO
+         !
+         OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
+         CALL json%print(iun)
+         CLOSE(iun)
+         CALL json%destroy()
+         !
+      ENDIF
+      !
+      ! MPI BARRIER
+      !
+      CALL mp_barrier( world_comm )
+      !
+      ! TIMING
+      !
+      time_spent(2) = get_clock('qdet_db')
+      CALL stop_clock('qdet_db')
+      !
+      WRITE(stdout,*)
+      CALL io_push_bar()
+      WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"In location : ",a)') TRIM(wfreq_save_dir)
+      CALL io_push_bar()
+      !
+    END SUBROUTINE
+    !
+    !------------------------------------------------------------------------
+    SUBROUTINE qdet_db_write_overlap(overlap)
+    !------------------------------------------------------------------------
+      !
+      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root,world_comm
+      USE io_global,            ONLY : stdout
+      USE westcom,              ONLY : wfreq_save_dir,logfile,n_bands
+      USE io_push,              ONLY : io_push_bar
+      USE json_module,          ONLY : json_file
+      !
+      IMPLICIT NONE
+      !
+      REAL(DP),INTENT(IN):: overlap(n_bands,n_bands)
+      !
+      REAL(DP),EXTERNAL :: GET_CLOCK
+      REAL(DP) :: time_spent(2)
+      CHARACTER(20),EXTERNAL :: human_readable_time
+      !
+      TYPE(json_file) :: json
+      INTEGER :: iun
+      !
+      ! MPI BARRIER
+      !
+      CALL mp_barrier(world_comm)
+      !
+      ! TIMING
+      !
+      CALL start_clock('qdet_db')
+      time_spent(1) = get_clock('qdet_db')
+      !
+      IF(mpime == root) THEN
+         !
+         CALL json%initialize()
+         CALL json%load(filename=TRIM(logfile))
+         !
+         CALL json%add('qdet.overlap_ab',RESHAPE(overlap,[n_bands*n_bands]))
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
          CALL json%print(iun)

@@ -18,6 +18,7 @@ SUBROUTINE wbse_readin()
   USE uspp,             ONLY : okvan
   USE noncollin_module, ONLY : domag
   USE mp_global,        ONLY : npool
+  USE westcom,          ONLY : l_spin_flip
   !
   IMPLICIT NONE
   !
@@ -46,7 +47,7 @@ SUBROUTINE wbse_readin()
   IF(domag) CALL errore('wbse_readin','domag not implemented',1)
   IF(okvan) CALL errore('wbse_readin','ultrasoft pseudopotential not implemented',1)
   IF(doublegrid) CALL errore('wbse_readin','double grid not implemented',1)
-  IF(npool > 1) CALL errore('wbse_readin','pools not implemented',1)
+  IF(npool > 1 .AND. l_spin_flip) CALL errore('wbse_readin','pools not implemented for spin flip',1)
   !
   CALL stop_clock('wbse_readin')
   !

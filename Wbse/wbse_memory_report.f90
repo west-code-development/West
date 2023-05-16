@@ -20,10 +20,9 @@ SUBROUTINE wbse_memory_report()
   USE control_flags,       ONLY : gamma_only
   USE mp_global,           ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
-  USE pwcom,               ONLY : nks
   USE westcom,             ONLY : l_bse,l_hybrid_tddft,l_lanczos,nbnd_occ,n_trunc_bands,&
                                 & n_pdep_basis,npwqx,logfile
-  USE distribution_center, ONLY : pert
+  USE distribution_center, ONLY : pert,kpt_pool
   USE noncollin_module,    ONLY : npol
   USE json_module,         ONLY : json_file
   !
@@ -101,33 +100,33 @@ SUBROUTINE wbse_memory_report()
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
   !
   IF( .NOT. l_lanczos ) THEN
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbndloc
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*kpt_pool%nloc*nbndloc
      WRITE(stdout,'(5x,"[MEM] dvpsi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx*npol, nbndloc
+        mem_partial, npwx*npol, kpt_pool%nloc*nbndloc
      IF( mpime == root ) CALL json%add( 'memory.dvpsi', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*nbndloc
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*npol*kpt_pool%nloc*nbndloc
      WRITE(stdout,'(5x,"[MEM] dpsi                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx*npol, nbndloc
+        mem_partial, npwx*npol, kpt_pool%nloc*nbndloc
      IF( mpime == root ) CALL json%add( 'memory.dpsi', mem_partial )
      mem_tot = mem_tot + mem_partial
   ELSE
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*nks*3
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*kpt_pool%nloc*3
      WRITE(stdout,'(5x,"[MEM] d0psi                   ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, nbndloc*nks*3
+        mem_partial, npwx, nbndloc*kpt_pool%nloc*3
      IF( mpime == root ) CALL json%add( 'memory.d0psi', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*kpt_pool%nloc*nbndloc
      WRITE(stdout,'(5x,"[MEM] evc1                    ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, nbndloc
+        mem_partial, npwx, kpt_pool%nloc*nbndloc
      IF( mpime == root ) CALL json%add( 'memory.evc1', mem_partial )
      mem_tot = mem_tot + mem_partial
      !
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*2
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*kpt_pool%nloc*nbndloc*2
      WRITE(stdout,'(5x,"[MEM] Lanczos workspace       ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, nbndloc*2
+        mem_partial, npwx, kpt_pool%nloc*nbndloc*2
      IF( mpime == root ) CALL json%add( 'memory.lanczos', mem_partial )
      mem_tot = mem_tot + mem_partial
   ENDIF

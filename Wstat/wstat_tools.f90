@@ -315,7 +315,7 @@ MODULE wstat_tools
       !
       ! Create zz from hr_distr
       !
-      zz = 0._DP
+      zz = (0._DP,0._DP)
       DO il2 = 1,pert%nloc
          ig2 = pert%l2g(il2)
          IF(ig2 > n) CYCLE
@@ -401,7 +401,7 @@ MODULE wstat_tools
             !$acc enter data create(ag,c_distr(1:pert_nglob,l2_s:l2_e)) copyin(bg)
             !
             !$acc kernels present(c_distr(1:pert_nglob,l2_s:l2_e))
-            c_distr(1:pert%nglob,l2_s:l2_e) = 0._DP
+            c_distr(1:pert_nglob,l2_s:l2_e) = 0._DP
             !$acc end kernels
             !
          ENDIF
@@ -528,7 +528,7 @@ MODULE wstat_tools
             !$acc enter data create(ag,c_distr(1:pert_nglob,l2_s:l2_e)) copyin(bg)
             !
             !$acc kernels present(c_distr(1:pert_nglob,l2_s:l2_e))
-            c_distr(1:pert%nglob,l2_s:l2_e) = 0._DP
+            c_distr(1:pert_nglob,l2_s:l2_e) = (0._DP,0._DP)
             !$acc end kernels
             !
          ENDIF
@@ -552,7 +552,7 @@ MODULE wstat_tools
                   !$acc parallel async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
                   !$acc loop
                   DO il2 = l2_s,l2_e
-                     reduce = 0._DP
+                     reduce = (0._DP,0._DP)
                      !$acc loop reduction(+:reduce)
                      DO il3 = 1,npwq
                         reduce = reduce+CONJG(ag(il3,il1))*bg(il3,il2)
@@ -974,14 +974,11 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
       REAL(DP) :: dconst
-      COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
       COMPLEX(DP),ALLOCATABLE :: hg2(:,:)
-#if defined(__CUDA)
-      ATTRIBUTES(PINNED) :: hg,hg2
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('update_vr')
@@ -993,14 +990,29 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
+         il2_start = 1
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= n) CYCLE
+            il2_start = il2
+            EXIT
+         ENDDO
+         !
+         il2_end = 1
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 > n+nselect) EXIT
+            il2_end = il2
+         ENDDO
+         !
          ALLOCATE(hg(npwqx,pert%nlocx))
          ALLOCATE(hg2(npwqx,pert%nlocx))
          !
-         !$acc enter data create(ag,bg,hg,hg2)
+         !$acc enter data create(hg,hg2) copyin(ag,bg,vr_distr,ew)
          !
          !$acc kernels present(hg,hg2)
-         hg(:,:) = 0._DP
-         hg2(:,:) = 0._DP
+         hg(:,:) = (0._DP,0._DP)
+         hg2(:,:) = (0._DP,0._DP)
          !$acc end kernels
          !
          DO icycl = 0,nimage-1
@@ -1009,52 +1021,63 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            !$acc update device(ag,bg) wait
-            !
             DO il1 = 1,nloc
-               !
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               IF(ig1 > n) EXIT
+               il1_end = il1
+            ENDDO
+            !
+            !$acc parallel vector_length(1024) present(vr_distr,hg,ag,hg2,bg)
+            !$acc loop seq
+            DO il1 = 1,il1_end
                !
-               DO il2 = 1,pert%nloc
+               ! ig1 = pert%l2g(il1,idx)
+               !
+               ig1 = nimage*(il1-1)+idx+1
+               !
+               !$acc loop
+               DO il2 = il2_start,il2_end
                   !
-                  ig2 = pert%l2g(il2)
-                  IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-                  !
-#if defined(__CUDA)
                   dconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async present(hg,hg2,ag,bg)
+                  !$acc loop
                   DO il3 = 1,npwq
                      hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
                      hg2(il3,il2) = dconst*bg(il3,il1)+hg2(il3,il2)
                   ENDDO
-                  !$acc end parallel
-#else
-                  zconst = vr_distr(ig1,il2)
-                  CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
-                  CALL ZAXPY(npwq,zconst,bg(1,il1),1,hg2(1,il2),1)
-#endif
                   !
                ENDDO
             ENDDO
+            !$acc end parallel
             !
             ! Cycle ag, bg
             !
             CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
             CALL mp_circular_shift_left(bg,icycl+nimage,inter_image_comm)
             !
+            !$acc update device(ag,bg)
+            !
          ENDDO
          !
-         !$acc update host(hg,hg2) wait
-         !$acc exit data delete(ag,bg,hg,hg2)
-         !
-         DO il2 = 1,pert%nloc
-            ig2 = pert%l2g(il2)
-            IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-            ag(:,il2) = -ew(ig2)*hg(:,il2)+hg2(:,il2)
+         !$acc parallel vector_length(1024) present(ag,ew,hg,hg2)
+         !$acc loop
+         DO il2 = il2_start,il2_end
+            !
+            ! ig2 = pert%l2g(il2)
+            !
+            ig2 = nimage*(il2-1)+my_image_id+1
+            !
+            dconst = -ew(ig2)
+            !
+            !$acc loop
+            DO il3 = 1,npwq
+               ag(il3,il2) = dconst*hg(il3,il2)+hg2(il3,il2)
+            ENDDO
+            !
          ENDDO
+         !$acc end parallel
          !
+         !$acc exit data delete(bg,hg,hg2,vr_distr) copyout(ag)
          DEALLOCATE(hg)
          DEALLOCATE(hg2)
          !
@@ -1090,13 +1113,11 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
       COMPLEX(DP),ALLOCATABLE :: hg2(:,:)
-#if defined(__CUDA)
-      ATTRIBUTES(PINNED) :: hg,hg2
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('update_vr')
@@ -1108,14 +1129,29 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
+         il2_start = 1
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= n) CYCLE
+            il2_start = il2
+            EXIT
+         ENDDO
+         !
+         il2_end = 1
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 > n+nselect) EXIT
+            il2_end = il2
+         ENDDO
+         !
          ALLOCATE(hg(npwqx,pert%nlocx))
          ALLOCATE(hg2(npwqx,pert%nlocx))
          !
-         !$acc enter data create(ag,bg,hg,hg2)
+         !$acc enter data create(hg,hg2) copyin(ag,bg,vr_distr,ew)
          !
          !$acc kernels present(hg,hg2)
-         hg(:,:) = 0._DP
-         hg2(:,:) = 0._DP
+         hg(:,:) = (0._DP,0._DP)
+         hg2(:,:) = (0._DP,0._DP)
          !$acc end kernels
          !
          DO icycl = 0,nimage-1
@@ -1124,51 +1160,63 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            !$acc update device(ag,bg) wait
-            !
             DO il1 = 1,nloc
-               !
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               IF(ig1 > n) EXIT
+               il1_end = il1
+            ENDDO
+            !
+            !$acc parallel vector_length(1024) present(vr_distr,hg,ag,hg2,bg)
+            !$acc loop seq
+            DO il1 = 1,il1_end
                !
-               DO il2 = 1,pert%nloc
+               ! ig1 = pert%l2g(il1,idx)
+               !
+               ig1 = nimage*(il1-1)+idx+1
+               !
+               !$acc loop
+               DO il2 = il2_start,il2_end
                   !
-                  ig2 = pert%l2g(il2)
-                  IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-                  !
-#if defined(__CUDA)
                   zconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async present(hg,hg2,ag,bg)
+                  !$acc loop
                   DO il3 = 1,npwq
                      hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
                      hg2(il3,il2) = zconst*bg(il3,il1)+hg2(il3,il2)
                   ENDDO
-                  !$acc end parallel
-#else
-                  CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
-                  CALL ZAXPY(npwq,vr_distr(ig1,il2),bg(1,il1),1,hg2(1,il2),1)
-#endif
                   !
                ENDDO
             ENDDO
+            !$acc end parallel
             !
             ! Cycle ag, bg
             !
             CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
             CALL mp_circular_shift_left(bg,icycl+nimage,inter_image_comm)
             !
+            !$acc update device(ag,bg)
+            !
          ENDDO
          !
-         !$acc update host(hg,hg2) wait
-         !$acc exit data delete(ag,bg,hg,hg2)
-         !
-         DO il2 = 1,pert%nloc
-            ig2 = pert%l2g(il2)
-            IF(ig2 <= n .OR. ig2 > n+nselect) CYCLE
-            ag(:,il2) = -ew(ig2)*hg(:,il2)+hg2(:,il2)
+         !$acc parallel vector_length(1024) present(ag,ew,hg,hg2)
+         !$acc loop
+         DO il2 = il2_start,il2_end
+            !
+            ! ig2 = pert%l2g(il2)
+            !
+            ig2 = nimage*(il2-1)+my_image_id+1
+            !
+            zconst = CMPLX(-ew(ig2),KIND=DP)
+            !
+            !$acc loop
+            DO il3 = 1,npwq
+               ag(il3,il2) = zconst*hg(il3,il2)+hg2(il3,il2)
+            ENDDO
+            !
          ENDDO
+         !$acc end parallel
          !
+         !$acc exit data delete(bg,hg,hg2,vr_distr) copyout(ag)
          DEALLOCATE(hg)
          DEALLOCATE(hg2)
          !
@@ -1203,13 +1251,11 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
+      INTEGER :: pert_nloc
       REAL(DP) :: dconst
-      COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
-#if defined(__CUDA)
-      ATTRIBUTES(PINNED) :: hg
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('refresh_vr')
@@ -1217,14 +1263,24 @@ MODULE wstat_tools
       CALL start_clock('refresh_vr')
 #endif
       !
+      pert_nloc = pert%nloc
+      !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         il2_start = 1
+         il2_end = 1
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 > nselect) EXIT
+            il2_end = il2
+         ENDDO
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
          !
-         !$acc enter data create(ag,hg)
+         !$acc enter data create(hg) copyin(ag,vr_distr)
          !
          !$acc kernels present(hg)
-         hg(:,:) = 0._DP
+         hg(:,:) = (0._DP,0._DP)
          !$acc end kernels
          !
          DO icycl = 0,nimage-1
@@ -1233,52 +1289,68 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            !$acc update device(ag) wait
-            !
             DO il1 = 1,nloc
-               !
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               IF(ig1 > n) EXIT
+               il1_end = il1
+            ENDDO
+            !
+            !$acc parallel vector_length(1024) present(vr_distr,hg,ag)
+            !$acc loop seq
+            DO il1 = 1,il1_end
                !
-               DO il2 = 1,pert%nloc
+               ! ig1 = pert%l2g(il1,idx)
+               !
+               ig1 = nimage*(il1-1)+idx+1
+               !
+               !$acc loop
+               DO il2 = il2_start,il2_end
                   !
-                  ig2 = pert%l2g(il2)
-                  IF(ig2 > nselect) CYCLE
-                  !
-#if defined(__CUDA)
                   dconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async present(hg,ag)
+                  !$acc loop
                   DO il3 = 1,npwq
                      hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
                   ENDDO
-                  !$acc end parallel
-#else
-                  zconst = vr_distr(ig1,il2)
-                  CALL ZAXPY(npwq,zconst,ag(1,il1),1,hg(1,il2),1)
-#endif
                   !
                ENDDO
             ENDDO
+            !$acc end parallel
             !
             ! Cycle ag
             !
             CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
             !
+            !$acc update device(ag)
+            !
          ENDDO
          !
-         !$acc update host(hg) wait
-         !$acc exit data delete(ag,hg)
-         !
+         il2_start = 1
+         il2_end = 1
          DO il2 = 1,pert%nloc
             ig2 = pert%l2g(il2)
-            IF(ig2 > nselect) THEN
-               ag(:,il2) = 0._DP
-            ELSE
-               ag(:,il2) = hg(:,il2)
-            ENDIF
+            IF(ig2 > nselect) EXIT
+            il2_end = il2
          ENDDO
          !
+         !$acc kernels present(ag,hg)
+         ag(:,il2_start:il2_end) = hg(:,il2_start:il2_end)
+         !$acc end kernels
+         !
+         il2_start = 1
+         il2_end = pert_nloc
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= nselect) CYCLE
+            il2_start = il2
+            EXIT
+         ENDDO
+         !
+         !$acc kernels present(ag)
+         ag(:,il2_start:il2_end) = (0._DP,0._DP)
+         !$acc end kernels
+         !
+         !$acc exit data delete(hg,vr_distr) copyout(ag)
          DEALLOCATE(hg)
          !
       ENDIF
@@ -1315,12 +1387,11 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
+      INTEGER :: il1_end,il2_start,il2_end
       INTEGER :: icycl,idx,nloc
+      INTEGER :: pert_nloc
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
-#if defined(__CUDA)
-      ATTRIBUTES(PINNED) :: hg
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('refresh_vr')
@@ -1328,14 +1399,24 @@ MODULE wstat_tools
       CALL start_clock('refresh_vr')
 #endif
       !
+      pert_nloc = pert%nloc
+      !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         il2_start = 1
+         il2_end = 1
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 > nselect) EXIT
+            il2_end = il2
+         ENDDO
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
          !
-         !$acc enter data create(ag,hg)
+         !$acc enter data create(hg) copyin(ag,vr_distr)
          !
          !$acc kernels present(hg)
-         hg(:,:) = 0._DP
+         hg(:,:) = (0._DP,0._DP)
          !$acc end kernels
          !
          DO icycl = 0,nimage-1
@@ -1344,51 +1425,68 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            !$acc update device(ag) wait
-            !
             DO il1 = 1,nloc
-               !
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 < 1 .OR. ig1 > n) CYCLE
+               IF(ig1 > n) EXIT
+               il1_end = il1
+            ENDDO
+            !
+            !$acc parallel vector_length(1024) present(vr_distr,hg,ag)
+            !$acc loop seq
+            DO il1 = 1,il1_end
                !
-               DO il2 = 1,pert%nloc
+               ! ig1 = pert%l2g(il1,idx)
+               !
+               ig1 = nimage*(il1-1)+idx+1
+               !
+               !$acc loop
+               DO il2 = il2_start,il2_end
                   !
-                  ig2 = pert%l2g(il2)
-                  IF(ig2 > nselect) CYCLE
-                  !
-#if defined(__CUDA)
                   zconst = vr_distr(ig1,il2)
                   !
-                  !$acc parallel loop async present(hg,ag)
+                  !$acc loop
                   DO il3 = 1,npwq
                      hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
                   ENDDO
-                  !$acc end parallel
-#else
-                  CALL ZAXPY(npwq,vr_distr(ig1,il2),ag(1,il1),1,hg(1,il2),1)
-#endif
                   !
                ENDDO
             ENDDO
+            !$acc end parallel
             !
             ! Cycle ag
             !
             CALL mp_circular_shift_left(ag,icycl,inter_image_comm)
             !
+            !$acc update device(ag)
+            !
          ENDDO
          !
-         !$acc update host(hg) wait
-         !$acc exit data delete(ag,hg)
-         !
+         il2_start = 1
+         il2_end = 1
          DO il2 = 1,pert%nloc
             ig2 = pert%l2g(il2)
-            IF(ig2 > nselect) THEN
-               ag(:,il2) = 0._DP
-            ELSE
-               ag(:,il2) = hg(:,il2)
-            ENDIF
+            IF(ig2 > nselect) EXIT
+            il2_end = il2
          ENDDO
          !
+         !$acc kernels present(ag,hg)
+         ag(:,il2_start:il2_end) = hg(:,il2_start:il2_end)
+         !$acc end kernels
+         !
+         il2_start = 1
+         il2_end = pert_nloc
+         DO il2 = 1,pert%nloc
+            ig2 = pert%l2g(il2)
+            IF(ig2 <= nselect) CYCLE
+            il2_start = il2
+            EXIT
+         ENDDO
+         !
+         !$acc kernels present(ag)
+         ag(:,il2_start:il2_end) = (0._DP,0._DP)
+         !$acc end kernels
+         !
+         !$acc exit data delete(hg,vr_distr) copyout(ag)
          DEALLOCATE(hg)
          !
       ENDIF

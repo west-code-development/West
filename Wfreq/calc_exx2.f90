@@ -36,7 +36,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar
-  USE distribution_center,  ONLY : band_group,kpt_pool
+  USE distribution_center,  ONLY : kpt_pool,band_group
   USE class_idistribute,    ONLY : idistribute
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D

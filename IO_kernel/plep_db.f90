@@ -30,13 +30,13 @@ MODULE plep_db
       !
       USE mp,                   ONLY : mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp_global,            ONLY : inter_bgrp_comm,my_bgrp_id
+      USE mp_global,            ONLY : inter_pool_comm,my_pool_id,inter_bgrp_comm,my_bgrp_id
       USE io_global,            ONLY : stdout
-      USE pwcom,                ONLY : npwx,nks
+      USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x,n_trunc_bands
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE io_push,              ONLY : io_push_bar
-      USE distribution_center,  ONLY : pert,aband
+      USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE json_module,          ONLY : json_file
       USE west_mp,              ONLY : mp_root_sum_c16_3d
       !
@@ -47,7 +47,7 @@ MODULE plep_db
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: lbnd,ibnd
+      INTEGER :: lbnd,ibnd,iks,iks_g
       INTEGER :: iun,global_j,local_j
       CHARACTER(LEN=6) :: label_j
       CHARACTER(LEN=256) :: fname
@@ -102,7 +102,7 @@ MODULE plep_db
       !
       ! Dump eigenvectors
       !
-      ALLOCATE(dvg_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+      ALLOCATE(dvg_tmp(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob))
       !
       DO local_j = 1,pert%nloc
          !
@@ -115,14 +115,18 @@ MODULE plep_db
          !
          dvg_tmp(:,:,:) = (0._DP,0._DP)
          !
-         DO lbnd = 1,aband%nloc
-            ibnd = aband%l2g(lbnd)
-            dvg_tmp(:,ibnd,:) = dvg_exc(:,lbnd,:,local_j)
+         DO iks = 1,kpt_pool%nloc
+            iks_g = kpt_pool%l2g(iks)
+            DO lbnd = 1,band_group%nloc
+               ibnd = band_group%l2g(lbnd)
+               dvg_tmp(:,ibnd,iks_g) = dvg_exc(:,lbnd,iks,local_j)
+            ENDDO
          ENDDO
          !
+         CALL mp_root_sum_c16_3d(dvg_tmp,0,inter_pool_comm)
          CALL mp_root_sum_c16_3d(dvg_tmp,0,inter_bgrp_comm)
          !
-         IF(my_bgrp_id == 0) THEN
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             fname = TRIM(wbse_save_dir)//'/E'//label_j//'.dat'
             CALL plep_merge_and_write_G(TRIM(fname),dvg_tmp)
          ENDIF
@@ -159,11 +163,11 @@ MODULE plep_db
       USE mp,                   ONLY : mp_bcast,mp_barrier
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE pwcom,                ONLY : nks,npwx
+      USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : n_pdep_eigen,ev,wbse_save_dir,dvg_exc,nbndval0x,n_trunc_bands
       USE plep_io,              ONLY : plep_read_G_and_distribute
       USE io_push,              ONLY : io_push_bar
-      USE distribution_center,  ONLY : pert,aband
+      USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE json_module,          ONLY : json_file
       !
       IMPLICIT NONE
@@ -177,7 +181,7 @@ MODULE plep_db
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: lbnd,ibnd
+      INTEGER :: lbnd,ibnd,iks,iks_g
       INTEGER :: n_eigen_to_get
       INTEGER :: tmp_n_pdep_eigen
       INTEGER :: global_j,local_j
@@ -234,10 +238,10 @@ MODULE plep_db
       ! 3) READ THE EIGENVECTOR FILES
       !
       IF(.NOT. ALLOCATED(dvg_exc)) THEN
-         ALLOCATE(dvg_exc(npwx,aband%nlocx,nks,pert%nlocx))
+         ALLOCATE(dvg_exc(npwx,band_group%nlocx,kpt_pool%nloc,pert%nlocx))
       ENDIF
       !
-      ALLOCATE(dvg_tmp(npwx,nbndval0x-n_trunc_bands,nks))
+      ALLOCATE(dvg_tmp(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob))
       !
       DO local_j = 1,pert%nloc
          !
@@ -251,9 +255,12 @@ MODULE plep_db
          !
          CALL plep_read_G_and_distribute(TRIM(fname),dvg_tmp)
          !
-         DO lbnd = 1,aband%nloc
-            ibnd = aband%l2g(lbnd)
-            dvg_exc(:,lbnd,:,local_j) = dvg_tmp(:,ibnd,:)
+         DO iks = 1,kpt_pool%nloc
+            iks_g = kpt_pool%l2g(iks)
+            DO lbnd = 1,band_group%nloc
+               ibnd = band_group%l2g(lbnd)
+               dvg_exc(:,lbnd,iks,local_j) = dvg_tmp(:,ibnd,iks_g)
+            ENDDO
          ENDDO
          !
       ENDDO

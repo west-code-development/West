@@ -35,15 +35,15 @@ MODULE davidson_restart
       !
       USE mp,                   ONLY : mp_barrier,mp_get
       USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_pool_id,&
-                                     & inter_bgrp_comm,my_bgrp_id,me_bgrp
+      USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,&
+                                     & my_pool_id,inter_bgrp_comm,my_bgrp_id,me_bgrp
       USE io_global,            ONLY : stdout
-      USE pwcom,                ONLY : npwx,nks
+      USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : n_pdep_basis,ev,conv,dvg,dng,dvg_exc,dng_exc,nbndval0x,&
                                      & n_trunc_bands,wstat_restart_dir,wbse_restart_dir
       USE pdep_io,              ONLY : pdep_merge_and_write_G
       USE plep_io,              ONLY : plep_merge_and_write_G
-      USE distribution_center,  ONLY : pert,aband
+      USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE west_mp,              ONLY : mp_root_sum_c16_3d
       !
       IMPLICIT NONE
@@ -64,7 +64,7 @@ MODULE davidson_restart
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       CHARACTER(6) :: my_label
-      INTEGER :: lbnd,ibnd
+      INTEGER :: lbnd,ibnd,iks,iks_g
       INTEGER :: local_j,global_j
       INTEGER :: im
       LOGICAL :: l_bse
@@ -84,7 +84,7 @@ MODULE davidson_restart
          which = 'wbse_restart'
          dirname = wbse_restart_dir
          !
-         ALLOCATE(tmp_exc(npwx,nbndval0x-n_trunc_bands,nks))
+         ALLOCATE(tmp_exc(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob))
          !
       ELSE
          !
@@ -161,28 +161,36 @@ MODULE davidson_restart
             !
             tmp_exc(:,:,:) = (0._DP,0._DP)
             !
-            DO lbnd = 1,aband%nloc
-               ibnd = aband%l2g(lbnd)
-               tmp_exc(:,ibnd,:) = dvg_exc(:,lbnd,:,local_j)
+            DO iks = 1,kpt_pool%nloc
+               iks_g = kpt_pool%l2g(iks)
+               DO lbnd = 1,band_group%nloc
+                  ibnd = band_group%l2g(lbnd)
+                  tmp_exc(:,ibnd,iks_g) = dvg_exc(:,lbnd,iks,local_j)
+               ENDDO
             ENDDO
             !
+            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_pool_comm)
             CALL mp_root_sum_c16_3d(tmp_exc,0,inter_bgrp_comm)
             !
-            IF(my_bgrp_id == 0) THEN
+            IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
                fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
                CALL plep_merge_and_write_G(fname,tmp_exc)
             ENDIF
             !
             tmp_exc(:,:,:) = (0._DP,0._DP)
             !
-            DO lbnd = 1,aband%nloc
-               ibnd = aband%l2g(lbnd)
-               tmp_exc(:,ibnd,:) = dng_exc(:,lbnd,:,local_j)
+            DO iks = 1,kpt_pool%nloc
+               iks_g = kpt_pool%l2g(iks)
+               DO lbnd = 1,band_group%nloc
+                  ibnd = band_group%l2g(lbnd)
+                  tmp_exc(:,ibnd,iks_g) = dng_exc(:,lbnd,iks,local_j)
+               ENDDO
             ENDDO
             !
+            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_pool_comm)
             CALL mp_root_sum_c16_3d(tmp_exc,0,inter_bgrp_comm)
             !
-            IF(my_bgrp_id == 0) THEN
+            IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
                fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
                CALL plep_merge_and_write_G(fname,tmp_exc)
             ENDIF
@@ -729,12 +737,12 @@ MODULE davidson_restart
     SUBROUTINE read_restart4_(nbase,iq)
       !------------------------------------------------------------------------
       !
-      USE pwcom,                ONLY : npwx,nks
+      USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : dvg,dng,dvg_exc,dng_exc,nbndval0x,n_trunc_bands,&
                                      & wstat_restart_dir,wbse_restart_dir
       USE pdep_io,              ONLY : pdep_read_G_and_distribute
       USE plep_io,              ONLY : plep_read_G_and_distribute
-      USE distribution_center,  ONLY : pert,aband
+      USE distribution_center,  ONLY : pert,kpt_pool,band_group
       !
       IMPLICIT NONE
       !
@@ -746,7 +754,7 @@ MODULE davidson_restart
       ! Workspace
       !
       LOGICAL :: l_bse
-      INTEGER :: lbnd,ibnd
+      INTEGER :: lbnd,ibnd,iks,iks_g
       INTEGER :: global_j,local_j
       CHARACTER(6) :: my_label
       CHARACTER(LEN=512) :: fname
@@ -758,7 +766,7 @@ MODULE davidson_restart
          dvg_exc(:,:,:,:) = (0._DP,0._DP)
          dng_exc(:,:,:,:) = (0._DP,0._DP)
          !
-         ALLOCATE(tmp_exc(npwx,nbndval0x-n_trunc_bands,nks))
+         ALLOCATE(tmp_exc(npwx,nbndval0x-n_trunc_bands,kpt_pool%nglob))
          !
       ELSE
          !
@@ -781,17 +789,23 @@ MODULE davidson_restart
             fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
             CALL plep_read_G_and_distribute(fname,tmp_exc)
             !
-            DO lbnd = 1,aband%nloc
-               ibnd = aband%l2g(lbnd)
-               dvg_exc(:,lbnd,:,local_j) = tmp_exc(:,ibnd,:)
+            DO iks = 1,kpt_pool%nloc
+               iks_g = kpt_pool%l2g(iks)
+               DO lbnd = 1,band_group%nloc
+                  ibnd = band_group%l2g(lbnd)
+                  dvg_exc(:,lbnd,iks,local_j) = tmp_exc(:,ibnd,iks_g)
+               ENDDO
             ENDDO
             !
             fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'
             CALL plep_read_G_and_distribute(fname,tmp_exc)
             !
-            DO lbnd = 1,aband%nloc
-               ibnd = aband%l2g(lbnd)
-               dng_exc(:,lbnd,:,local_j) = tmp_exc(:,ibnd,:)
+            DO iks = 1,kpt_pool%nloc
+               iks_g = kpt_pool%l2g(iks)
+               DO lbnd = 1,band_group%nloc
+                  ibnd = band_group%l2g(lbnd)
+                  dng_exc(:,lbnd,iks,local_j) = tmp_exc(:,ibnd,iks_g)
+               ENDDO
             ENDDO
             !
          ELSE

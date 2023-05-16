@@ -153,7 +153,7 @@ MODULE check_ovl_wfc
       summ_jb = 0._DP
       summ_ij = 0._DP
       !
-      !$acc parallel loop reduction(+:summ_ib,summ_jb,summ_ij) present(orb_i,orb_j)
+      !$acc parallel loop reduction(+:summ_ib,summ_jb,summ_ij) present(orb_i,orb_j) copy(summ_ib,summ_jb,summ_ij)
       DO ir = 1, dffts_nnr
          summ_ib = summ_ib + orb_i(ir)**4
          summ_jb = summ_jb + orb_j(ir)**4

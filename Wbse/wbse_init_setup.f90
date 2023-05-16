@@ -14,13 +14,16 @@
 SUBROUTINE wbse_init_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,          ONLY : solver,l_bse,bse_method,l_pdep,localization,l_local_repr,&
-                             & l_use_ecutrho,wbse_init_save_dir,l_hybrid_tddft
-  USE kinds,            ONLY : DP
-  USE types_coulomb,    ONLY : pot3D
-  USE mp_global,        ONLY : nbgrp
-  USE xc_lib,           ONLY : xclib_dft_is
-  USE exx_base,         ONLY : exxdiv_treatment,erfc_scrlen
+  USE westcom,              ONLY : solver,l_bse,bse_method,l_pdep,localization,l_local_repr,&
+                                 & l_use_ecutrho,wbse_init_save_dir,l_hybrid_tddft
+  USE kinds,                ONLY : DP
+  USE types_coulomb,        ONLY : pot3D
+  USE mp_global,            ONLY : npool,nbgrp
+  USE xc_lib,               ONLY : xclib_dft_is
+  USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
+  USE pwcom,                ONLY : nkstot,nks
+  USE distribution_center,  ONLY : kpt_pool
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   !
   IMPLICIT NONE
   !
@@ -52,11 +55,13 @@ SUBROUTINE wbse_init_setup()
      l_pdep = .FALSE.
   END SELECT
   !
-  IF((.NOT. l_pdep) .AND. nbgrp > 1) CALL errore('wbse_init_setup','band groups not implemented for FF_Qbox',1)
-  !
+  IF(.NOT. l_pdep) THEN
+     IF(npool > 1) CALL errore('wbse_init_setup','pools not implemented for FF_Qbox',1)
+     IF(nbgrp > 1) CALL errore('wbse_init_setup','band groups not implemented for FF_Qbox',1)
 #if defined(__CUDA)
-  IF(.NOT. l_pdep) CALL errore('wbse_init_setup','CUDA not implemented for FF_Qbox',1)
+     CALL errore('wbse_init_setup','CUDA not implemented for FF_Qbox',1)
 #endif
+  ENDIF
   !
   SELECT CASE(TRIM(localization))
   CASE('N','n')
@@ -96,5 +101,10 @@ SUBROUTINE wbse_init_setup()
   CALL set_nbndocc()
   !
   CALL my_mkdir(wbse_init_save_dir)
+  !
+  kpt_pool = idistribute()
+  CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
+  !
+  IF(kpt_pool%nloc /= nks) CALL errore('wbse_init_setup','unexpected kpt_pool init error',1)
   !
 END SUBROUTINE

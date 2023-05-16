@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 ! -------------------------------------------------------------------
-SUBROUTINE write_wfc_1D_r ( dfft, iu, fname, wfc_distr, ipol)
+SUBROUTINE write_wfc_1D_r ( dfft, fname, wfc_distr, ipol)
   ! -------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
@@ -24,7 +24,6 @@ SUBROUTINE write_wfc_1D_r ( dfft, iu, fname, wfc_distr, ipol)
   ! I/O
   !
   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-  INTEGER,INTENT(IN) :: iu
   CHARACTER(LEN=*),INTENT(IN) :: fname
   REAL(DP),INTENT(IN) :: wfc_distr(dfft%nnr)
   INTEGER,INTENT(IN) :: ipol
@@ -32,6 +31,7 @@ SUBROUTINE write_wfc_1D_r ( dfft, iu, fname, wfc_distr, ipol)
   ! Workspace
   !
   REAL(DP) :: alat
+  INTEGER :: iu
   INTEGER :: nr1, nr2, nr3, nr1x, nr2x, nr3x
   INTEGER :: ir,ntot
   REAL(DP) :: wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x)
@@ -60,7 +60,7 @@ SUBROUTINE write_wfc_1D_r ( dfft, iu, fname, wfc_distr, ipol)
      ALLOCATE(integral(ntot))
      CALL calc_int_x(wfc_gat,nr1,nr2,nr3,integral)
      IF( dfft%mype == dfft%root ) THEN
-        OPEN(UNIT=iu,FILE=TRIM(fname))
+        OPEN(NEWUNIT=iu,FILE=TRIM(fname))
      ENDIF
      !
   CASE(2)
@@ -71,7 +71,7 @@ SUBROUTINE write_wfc_1D_r ( dfft, iu, fname, wfc_distr, ipol)
      ALLOCATE(integral(ntot))
      CALL calc_int_y(wfc_gat,nr1,nr2,nr3,integral)
      IF( dfft%mype == dfft%root ) THEN
-        OPEN(UNIT=iu,FILE=TRIM(fname))
+        OPEN(NEWUNIT=iu,FILE=TRIM(fname))
      ENDIF
      !
   CASE(3)
@@ -82,7 +82,7 @@ SUBROUTINE write_wfc_1D_r ( dfft, iu, fname, wfc_distr, ipol)
      ALLOCATE(integral(ntot))
      CALL calc_int_z(wfc_gat,nr1,nr2,nr3,integral)
      IF( dfft%mype == dfft%root ) THEN
-        OPEN(UNIT=iu,FILE=TRIM(fname))
+        OPEN(NEWUNIT=iu,FILE=TRIM(fname))
      ENDIF
      !
   CASE DEFAULT

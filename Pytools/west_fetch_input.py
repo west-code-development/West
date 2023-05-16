@@ -114,7 +114,15 @@ default["wbse_control"]["l_dipole_realspace"] = False
 default["wbse_control"]["wbse_epsinfty"] = 1.
 default["wbse_control"]["spin_excitation"] = "S"
 default["wbse_control"]["l_preconditioning"] = True
+default["wbse_control"]["l_pre_shift"] = False
+default["wbse_control"]["l_spin_flip"] = False
+default["wbse_control"]["l_spin_flip_kernel"] = False
+default["wbse_control"]["l_spin_flip_alda0"] = False
+default["wbse_control"]["l_print_spin_flip_kernel"] = False
+default["wbse_control"]["spin_flip_cut1"] = 1e3
 default["wbse_control"]["l_reduce_io"] = True
+default["wbse_control"]["l_minimize_exx_if_active"] = False
+default["wbse_control"]["n_exx_lowrank"] = 0 # dynamically set to the number of bands
 
 ############################
 # DYNAMICAL DEFAULT VALUES #
@@ -152,6 +160,12 @@ def update_default_values(key,kwargs) :
        assert("nelec") in kwargs.keys()
        nelec = kwargs["nelec"]
        default[key]["n_pdep_eigen_to_use"] = int(nelec)
+    #
+    if key == "wbse_control" :
+       #
+       assert("nbnd") in kwargs.keys()
+       nbnd = kwargs["nbnd"]
+       default[key]["n_exx_lowrank"] = int(nbnd)
 
 ################
 # OPEN & PARSE #

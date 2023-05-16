@@ -61,9 +61,9 @@ SUBROUTINE compute_d0psi_rs()
   USE gvect,                ONLY : gstart
   USE noncollin_module,     ONLY : npol
   USE io_push,              ONLY : io_push_title
-  USE pwcom,                ONLY : isk,igk_k,ngk,lsda,npw,npwx,nks
+  USE pwcom,                ONLY : isk,igk_k,ngk,lsda,npw,npwx
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,d0psi
-  USE distribution_center,  ONLY : aband
+  USE distribution_center,  ONLY : kpt_pool,band_group
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -80,7 +80,7 @@ SUBROUTINE compute_d0psi_rs()
   REAL(DP) :: inv_nr1, inv_nr2, inv_nr3
   INTEGER :: ibnd, jbnd, lbnd, nbndval, nbnd_do
   INTEGER :: iks, current_k, current_spin
-  INTEGER :: dffts_nnr
+  INTEGER :: dffts_nnr, kpt_pool_nloc, band_group_nloc
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: r(:,:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:)
@@ -129,7 +129,7 @@ SUBROUTINE compute_d0psi_rs()
   !
   ! Calculate the product r * psi(r)
   !
-  DO iks = 1, nks  ! KPOINT-SPIN LOOP
+  DO iks = 1, kpt_pool%nloc  ! KPOINT-SPIN LOOP
      !
      ! ... Set k-point, spin, number pw
      !
@@ -140,14 +140,14 @@ SUBROUTINE compute_d0psi_rs()
      nbndval = nbnd_occ(iks)
      !
      nbnd_do = 0
-     DO lbnd = 1, aband%nloc
-        ibnd = aband%l2g(lbnd)+n_trunc_bands
+     DO lbnd = 1, band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
         IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
@@ -164,8 +164,8 @@ SUBROUTINE compute_d0psi_rs()
         !
         DO lbnd = 1, nbnd_do, 2
            !
-           ibnd = aband%l2g(lbnd)+n_trunc_bands
-           jbnd = aband%l2g(lbnd+1)+n_trunc_bands
+           ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
            !
            IF(lbnd < nbnd_do) THEN
               !
@@ -225,7 +225,7 @@ SUBROUTINE compute_d0psi_rs()
         !
         DO lbnd = 1, nbnd_do
            !
-           ibnd = aband%l2g(lbnd)+n_trunc_bands
+           ibnd = band_group%l2g(lbnd)+n_trunc_bands
            !
            CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
            !
@@ -253,7 +253,7 @@ SUBROUTINE compute_d0psi_rs()
            !
            DO lbnd = 1, nbnd_do
               !
-              ibnd = aband%l2g(lbnd)+n_trunc_bands
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
               !
               CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
               !
@@ -294,12 +294,13 @@ SUBROUTINE compute_d0psi_rs()
   ENDDO
   !
   IF(gstart == 2 .AND. gamma_only) THEN
-     nbnd_do = aband%nlocx
+     kpt_pool_nloc = kpt_pool%nloc
+     band_group_nloc = band_group%nloc
      !
      !$acc parallel loop collapse(3) present(d0psi)
      DO ip = 1, n_ipol
-        DO iks = 1, nks
-           DO lbnd = 1, nbnd_do
+        DO iks = 1, kpt_pool_nloc
+           DO lbnd = 1, band_group_nloc
               d0psi(1,lbnd,iks,ip) = CMPLX(REAL(d0psi(1,lbnd,iks,ip),KIND=DP),KIND=DP)
            ENDDO
         ENDDO
@@ -389,10 +390,10 @@ SUBROUTINE compute_d0psi_dfpt()
   USE gvect,                ONLY : gstart
   USE noncollin_module,     ONLY : npol
   USE io_push,              ONLY : io_push_title
-  USE pwcom,                ONLY : npw,npwx,nks,current_spin,isk,xk,lsda,igk_k,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,current_k,ngk
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,&
                                  & l_kinetic_only,d0psi,l_skip_nl_part_of_hcomr
-  USE distribution_center,  ONLY : aband
+  USE distribution_center,  ONLY : kpt_pool,band_group
 #if defined(__CUDA)
   USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
@@ -412,6 +413,7 @@ SUBROUTINE compute_d0psi_dfpt()
   !
   INTEGER :: iv, ip, ibnd, lbnd, iks, ie, ierr
   INTEGER :: nbndval, nbnd_do
+  INTEGER :: kpt_pool_nloc, band_group_nloc
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
@@ -419,7 +421,7 @@ SUBROUTINE compute_d0psi_dfpt()
   !
   CALL io_push_title('Calculation of the dipole using DFPT method')
   !
-  DO iks = 1, nks   ! KPOINT-SPIN
+  DO iks = 1, kpt_pool%nloc  ! KPOINT-SPIN
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -430,8 +432,8 @@ SUBROUTINE compute_d0psi_dfpt()
      nbndval = nbnd_occ(iks)
      !
      nbnd_do = 0
-     DO lbnd = 1, aband%nloc
-        ibnd = aband%l2g(lbnd)+n_trunc_bands
+     DO lbnd = 1, band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
         IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
@@ -451,7 +453,7 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(nks > 1) THEN
+     IF(kpt_pool%nloc > 1) THEN
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
@@ -490,9 +492,9 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      d0psi(:,:,iks,:) = (0._DP,0._DP)
      !
-     DO lbnd = 1, aband%nloc
+     DO lbnd = 1, band_group%nloc
         !
-        iv = aband%l2g(lbnd)+n_trunc_bands
+        iv = band_group%l2g(lbnd)+n_trunc_bands
         !
 #if defined(__CUDA)
         !$acc host_data use_device(phi_tmp)
@@ -564,12 +566,13 @@ SUBROUTINE compute_d0psi_dfpt()
   ENDDO
   !
   IF(gstart == 2 .AND. gamma_only) THEN
-     nbnd_do = aband%nlocx
+     kpt_pool_nloc = kpt_pool%nloc
+     band_group_nloc = band_group%nloc
      !
      !$acc parallel loop collapse(3) present(d0psi)
      DO ip = 1, n_ipol
-        DO iks = 1, nks
-           DO lbnd = 1, nbnd_do
+        DO iks = 1, kpt_pool_nloc
+           DO lbnd = 1, band_group_nloc
               d0psi(1,lbnd,iks,ip) = CMPLX(REAL(d0psi(1,lbnd,iks,ip),KIND=DP),KIND=DP)
            ENDDO
         ENDDO

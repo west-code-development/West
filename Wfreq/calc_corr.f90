@@ -36,7 +36,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                                  & l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
-  USE distribution_center,  ONLY : pert,ifr,rfr,aband,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
   !

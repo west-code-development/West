@@ -38,7 +38,7 @@ SUBROUTINE davidson_diago_gamma ( )
   USE mp_global,            ONLY : nbgrp
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : nkstot,nks
-  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
@@ -101,7 +101,7 @@ SUBROUTINE davidson_diago_gamma ( )
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('chidiago','nbgrp>nbnd_occ',1)
   kpt_pool = idistribute()
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
-  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool initialization error',1)
+  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool init error',1)
   !
   ! ... MEMORY ALLOCATION
   !
@@ -451,7 +451,7 @@ SUBROUTINE davidson_diago_k ( )
   USE mp_global,            ONLY : nbgrp
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : nkstot,nks
-  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE westcom,              ONLY : dvg,dng,n_pdep_eigen,trev_pdep,n_pdep_maxiter,n_pdep_basis,&
@@ -517,7 +517,7 @@ SUBROUTINE davidson_diago_k ( )
   IF(nbgrp > MINVAL(nbnd_occ)) CALL errore('chidiago','nbgrp>nbnd_occ',1)
   kpt_pool = idistribute()
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
-  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool initialization error',1)
+  IF(kpt_pool%nloc /= nks) CALL errore('wstat_setup','unexpected kpt_pool init error',1)
   !
   ! ... MEMORY ALLOCATION
   !

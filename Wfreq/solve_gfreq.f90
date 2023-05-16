@@ -53,7 +53,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,band_group,kpt_pool,pert_offd
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group,pert_offd
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_coulomb,        ONLY : pot3D
@@ -591,7 +591,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE noncollin_module,     ONLY : noncolin,npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,band_group,kpt_pool
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group
   USE wfreq_restart,        ONLY : solvegfreq_restart_write_q,solvegfreq_restart_read_q,bksks_type
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase

@@ -194,7 +194,7 @@ MODULE wann_loc_wfc
             rot(:,:) = 0._DP
             !$acc end kernels
             !
-            !$acc parallel loop present(rot,a)
+            !$acc parallel loop present(top,bot,rot,a)
             DO k = 1,mwork/2
                !
                p = MIN(top(k),bot(k))

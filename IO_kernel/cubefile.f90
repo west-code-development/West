@@ -19,7 +19,7 @@ MODULE cubefile
  CONTAINS
  !
  !-----------------------------------------------------------------
-   SUBROUTINE write_wfc_cube_r ( dfft, iu, fname, wfc_distr )
+   SUBROUTINE write_wfc_cube_r ( dfft, fname, wfc_distr )
    ! -----------------------------------------------------------------
    !
    USE kinds,                 ONLY : DP
@@ -32,17 +32,16 @@ MODULE cubefile
    !
    ! I/O
    !
-   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-   INTEGER,INTENT(IN) :: iu
+   TYPE(fft_type_descriptor),INTENT(IN) :: dfft
    CHARACTER(LEN=*),INTENT(IN) :: fname
    REAL(DP),INTENT(IN) :: wfc_distr(dfft%nnr)
    !
    ! Workspace
    !
-   REAL(DP)         :: alat
-   INTEGER          :: i, nt, at_num
-   INTEGER, EXTERNAL  :: atomic_number
-   REAL(DP)    :: at_chrg, tpos(3), inpos(3)
+   REAL(DP) :: alat
+   INTEGER :: iu,i,nt,at_num
+   INTEGER,EXTERNAL :: atomic_number
+   REAL(DP) :: at_chrg,tpos(3),inpos(3)
    REAL(DP) :: wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x)
    !
    wfc_gat=0.0_DP
@@ -68,7 +67,7 @@ MODULE cubefile
    !
    IF( dfft%mype == dfft%root ) THEN
       !
-      OPEN(UNIT=iu,FILE=TRIM(ADJUSTL(fname)))
+      OPEN(NEWUNIT=iu,FILE=TRIM(ADJUSTL(fname)))
       !
       WRITE(iu,*) 'Cubfile created from WEST calculation'
       WRITE(iu,*) 'Comment'
@@ -104,7 +103,7 @@ MODULE cubefile
  END SUBROUTINE
  !
  !-----------------------------------------------------------------
-   SUBROUTINE read_wfc_cube_r ( dfft, iu, fname, wfc_distr )
+   SUBROUTINE read_wfc_cube_r ( dfft, fname, wfc_distr )
    ! -----------------------------------------------------------------
    !
    USE kinds,                 ONLY : DP
@@ -117,16 +116,15 @@ MODULE cubefile
    !
    ! I/O
    !
-   TYPE(fft_type_descriptor), INTENT(IN) :: dfft
-   INTEGER,INTENT(IN) :: iu
+   TYPE(fft_type_descriptor),INTENT(IN) :: dfft
    CHARACTER(LEN=*),INTENT(IN) :: fname
    REAL(DP),INTENT(OUT) :: wfc_distr(dfft%nnr)
    !
    ! Workspace
    !
-   REAL(DP)         :: alat
-   INTEGER          :: i
-   INTEGER, EXTERNAL  :: atomic_number
+   REAL(DP) :: alat
+   INTEGER :: iu,i
+   INTEGER,EXTERNAL :: atomic_number
    REAL(DP) :: wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x)
    !
    !
@@ -153,7 +151,7 @@ MODULE cubefile
    !
    IF( dfft%mype == dfft%root ) THEN
       !
-      OPEN(UNIT=iu,FILE=TRIM(ADJUSTL(fname)))
+      OPEN(NEWUNIT=iu,FILE=TRIM(ADJUSTL(fname)))
       !
       READ(iu,*)
       READ(iu,*)
@@ -193,7 +191,6 @@ MODULE cubefile
    !
    DO i1=1,nr1
       DO i2=1,nr2
-         !WRITE(iu,'(6E13.5)') (func(i1,i2,i3),i3=1,nr3)
          DO i3=1,nr3
             WRITE(iu,'(1E13.5)') func(i1,i2,i3)
          ENDDO
@@ -220,7 +217,6 @@ MODULE cubefile
    !
    DO i1=1,nr1
       DO i2=1,nr2
-         !READ(iu,'(6E13.5)') (func(i1,i2,i3),i3=1,nr3)
          DO i3=1,nr3
             READ(iu,*) func(i1,i2,i3)
          ENDDO

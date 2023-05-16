@@ -703,8 +703,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   ENDDO
   !$acc end parallel
   !
-  !$acc update host(eri_wp)
-  !$acc exit data delete(eri_wp,pijmap,braket,chi_body)
+  !$acc exit data delete(pijmap,braket,chi_body) copyout(eri_wp)
   !
   CALL mp_sum(eri_wp, inter_bgrp_comm)
   CALL mp_sum(eri_wp, inter_image_comm)

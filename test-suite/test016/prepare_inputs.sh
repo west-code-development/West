@@ -75,6 +75,7 @@ wbse_init_control:
 
 wbse_control:
   wbse_calculation: L
+  l_dipole_realspace: True
   scissor_ope: 0.4476
   n_lanczos: 200
 EOF

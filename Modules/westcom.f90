@@ -332,6 +332,7 @@ MODULE wbse_center
   CHARACTER(LEN=3) :: wbse_ipol
   LOGICAL :: l_qp_correction
   LOGICAL :: l_preconditioning
+  LOGICAL :: l_dipole_realspace
   REAL(DP) :: wbse_epsinfty
   CHARACTER(LEN=1) :: spin_excitation
   !

@@ -14,14 +14,14 @@
 SUBROUTINE wbse_setup()
   !-----------------------------------------------------------------------
   !
-  USE westcom,              ONLY : localization,l_local_repr,macropol_calculation,l_macropol,&
-                                 & solver,l_bse,wbse_calculation,l_davidson,l_lanczos,&
-                                 & qp_correction,l_qp_correction,spin_excitation,l_bse_triplet,&
-                                 & wstat_calculation,n_pdep_times,n_pdep_eigen,n_pdep_basis,&
-                                 & n_pdep_maxiter,n_pdep_read_from_file,trev_pdep_rel,trev_pdep,&
-                                 & n_liouville_times,n_liouville_eigen,n_liouville_maxiter,&
-                                 & n_liouville_read_from_file,trev_liouville_rel,trev_liouville,&
-                                 & alphapv_dfpt,l_use_ecutrho,wbse_save_dir,l_hybrid_tddft
+  USE westcom,              ONLY : localization,l_local_repr,solver,l_bse,wbse_calculation,&
+                                 & l_davidson,l_lanczos,qp_correction,l_qp_correction,&
+                                 & spin_excitation,l_bse_triplet,wstat_calculation,n_pdep_times,&
+                                 & n_pdep_eigen,n_pdep_basis,n_pdep_maxiter,n_pdep_read_from_file,&
+                                 & trev_pdep_rel,trev_pdep,n_liouville_times,n_liouville_eigen,&
+                                 & n_liouville_maxiter,n_liouville_read_from_file,&
+                                 & trev_liouville_rel,trev_liouville,alphapv_dfpt,l_use_ecutrho,&
+                                 & wbse_save_dir,l_hybrid_tddft
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup
@@ -41,11 +41,6 @@ SUBROUTINE wbse_setup()
      l_local_repr = .FALSE.
   CASE('B','b','W','w')
      l_local_repr = .TRUE.
-  END SELECT
-  !
-  SELECT CASE(macropol_calculation)
-  CASE('c','C')
-     l_macropol = .TRUE.
   END SELECT
   !
   SELECT CASE(TRIM(solver))

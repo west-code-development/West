@@ -61,6 +61,7 @@ wstat_control:
 
 wfreq_control:
   wfreq_calculation: XWGQH
+  macropol_calculation: N
   l_qdet_verbose: True
   l_enable_off_diagonal: True
   n_pdep_eigen_to_use: 50

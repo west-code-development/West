@@ -374,7 +374,6 @@ MODULE wbse_center
   INTEGER,     ALLOCATABLE :: tau_is_read(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: tau_all(:,:)
   REAL(DP),    ALLOCATABLE :: sf_kernel(:)
-  REAL(DP),    ALLOCATABLE :: sf_kernel_2(:,:)
   !
   ! Common workspace
   !

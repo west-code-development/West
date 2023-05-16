@@ -45,7 +45,6 @@ SUBROUTINE wfreq_setup
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
   INTEGER :: i,ib,jb,ipair,iks,iks_g,ib_index
-  INTEGER :: iunit
   LOGICAL :: l_generate_plot
   LOGICAL :: l_QDET
   REAL(DP),ALLOCATABLE :: overlap_ab(:,:)

@@ -332,7 +332,7 @@ MODULE wbse_dv
     USE martyna_tuckerman,     ONLY : do_comp_mt
     USE funct,                 ONLY : nlc,dft_is_nonlocc
     USE mp_bands,              ONLY : intra_bgrp_comm
-    USE mp,                    ONLY : mp_sum,mp_barrier
+    USE mp,                    ONLY : mp_barrier
     USE mp_world,              ONLY : world_comm
     USE constants,             ONLY : e2
     USE cubefile,              ONLY : write_wfc_cube_r
@@ -345,7 +345,6 @@ MODULE wbse_dv
     INTEGER :: dfftp_nnr
     REAL(DP), ALLOCATABLE :: vxc(:,:), ex(:), ec(:), vx(:,:), vc(:,:)
     REAL(DP) :: etxc, vtxc
-    REAL(DP) :: rho_up, rho_down, rho_diff
     CHARACTER(LEN=:), ALLOCATABLE :: fname
     !
     CALL start_clock('sf_kernel')
@@ -421,15 +420,15 @@ MODULE wbse_dv
     !
     ! print spin flip kernel
     !
-    CALL mp_barrier( world_comm )
-    !
     IF(l_print_spin_flip_kernel) THEN
+       CALL mp_barrier( world_comm )
+       !
        !$acc update host(sf_kernel)
        fname = TRIM(wbse_save_dir)//'/sf_kernel.cube'
        CALL write_wfc_cube_r(dfftp, fname, sf_kernel)
+       !
+       CALL mp_barrier( world_comm )
     ENDIF
-    !
-    CALL mp_barrier( world_comm )
     !
     CALL stop_clock('sf_kernel')
     !

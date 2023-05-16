@@ -32,9 +32,6 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
                              & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
                              & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_sf,l_sf_kernel,&
-                             & l_sf_alda0,l_print_sf_kernel,l_sf_cut1,l_sf_cut2,l_reduce_io
-                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
                              & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
                              & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
                              & spin_flip_cut1,l_reduce_io

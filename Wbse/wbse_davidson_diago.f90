@@ -931,7 +931,7 @@ SUBROUTINE wbse_vc_initialize(amat,mglobalstart,mglobalend,sf)
   USE io_global,            ONLY : stdout
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
-  USE pwcom,                ONLY : nks,npwx,nbnd,et,nspin
+  USE pwcom,                ONLY : npwx,nbnd,et,nspin
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,my_pool_id,&
                                  & my_bgrp_id
   USE mp,                   ONLY : mp_sum,mp_bcast,mp_max

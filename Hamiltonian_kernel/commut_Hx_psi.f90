@@ -10,6 +10,7 @@
 ! Contributors to this file:
 ! Marco Govoni
 !
+#if !defined(__CUDA)
 !-----------------------------------------------------------------------
 SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !-----------------------------------------------------------------------
@@ -275,9 +276,9 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !
 END SUBROUTINE
 !
-#if defined(__CUDA)
+#else
 !-----------------------------------------------------------------------
-SUBROUTINE commut_Hx_psi_gpu(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
+SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   !-----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >

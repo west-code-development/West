@@ -396,7 +396,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      ! Parallel macropol
      IF(l_macropol) THEN
 #if defined(__CUDA)
-        CALL allocate_macropol_gpu()
+        CALL allocate_macropol_gpu(1)
         CALL reallocate_ps_gpu(nbndval,3)
 #endif
         !
@@ -418,17 +418,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
            iv = occband%l2g(ivloc)
            !
-#if defined(__CUDA)
            !$acc host_data use_device(phi_tmp)
-           CALL commut_Hx_psi_gpu(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-           CALL commut_Hx_psi_gpu(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-           !$acc end host_data
-#else
            CALL commut_Hx_psi(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
            CALL commut_Hx_psi(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
            CALL commut_Hx_psi(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-#endif
+           !$acc end host_data
            !
            !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
            DO i1 = 1,3
@@ -609,16 +603,16 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
 #if defined(__CUDA)
            CALL reallocate_ps_gpu(nbnd-nbndval_full,mypara%nloc)
-           !$acc host_data use_device(dvpsi,ps_r)
-           CALL glbrak_gamma_gpu(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
-           & mypara%nloc,nbnd-nbndval_full,npol)
-           !$acc end host_data
 #else
            IF(ALLOCATED(ps_r)) DEALLOCATE(ps_r)
            ALLOCATE(ps_r(nbnd-nbndval_full,mypara%nloc))
+#endif
+           !
+           !$acc host_data use_device(dvpsi,ps_r)
            CALL glbrak_gamma(evc_work(:,nbndval_full+1:nbnd),dvpsi,ps_r,npw,npwx,nbnd-nbndval_full,&
            & mypara%nloc,nbnd-nbndval_full,npol)
-#endif
+           !$acc end host_data
+           !
            IF(nproc_bgrp > 1) THEN
               !$acc host_data use_device(ps_r)
               CALL mp_sum(ps_r,intra_bgrp_comm)
@@ -1451,7 +1445,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         IF(l_macropol .AND. l_gammaq) THEN
 #if defined(__CUDA)
-           CALL allocate_macropol_gpu()
+           CALL allocate_macropol_gpu(1)
            CALL reallocate_ps_gpu(nbndval,3)
 #endif
            !
@@ -1473,17 +1467,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               iv = occband%l2g(ivloc)
               !
-#if defined(__CUDA)
               !$acc host_data use_device(phi_tmp)
-              CALL commut_Hx_psi_gpu(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi_gpu(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi_gpu(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-              !$acc end host_data
-#else
               CALL commut_Hx_psi(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
               CALL commut_Hx_psi(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
               CALL commut_Hx_psi(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-#endif
+              !$acc end host_data
               !
               !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
               DO i1 = 1,3
@@ -1686,16 +1674,16 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
 #if defined(__CUDA)
               CALL reallocate_ps_gpu(nbnd-nbndval,mypara%nloc)
-              !$acc host_data use_device(dvpsi,ps_c)
-              CALL glbrak_k_gpu(evc_work(:,nbndval+1:nbnd),dvpsi,ps_c,npw,npwx,nbnd-nbndval,&
-              & mypara%nloc,nbnd-nbndval,npol)
-              !$acc end host_data
 #else
               IF(ALLOCATED(ps_c)) DEALLOCATE(ps_c)
               ALLOCATE(ps_c(nbnd-nbndval,mypara%nloc))
+#endif
+              !
+              !$acc host_data use_device(dvpsi,ps_c)
               CALL glbrak_k(evc_work(:,nbndval+1:nbnd),dvpsi,ps_c,npw,npwx,nbnd-nbndval,&
               & mypara%nloc,nbnd-nbndval,npol)
-#endif
+              !$acc end host_data
+              !
               IF(nproc_bgrp > 1) THEN
                  !$acc host_data use_device(ps_c)
                  CALL mp_sum(ps_c,intra_bgrp_comm)

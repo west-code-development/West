@@ -31,6 +31,7 @@ SUBROUTINE dump_r ( auxr, fname )
   CHARACTER(LEN=*),INTENT(IN) :: fname
   COMPLEX(DP),ALLOCATABLE :: auxg(:)
   COMPLEX(DP),ALLOCATABLE :: auxr_(:)
+  !$acc declare device_resident(auxr_)
   !
   ! Workspace
   !
@@ -66,14 +67,27 @@ SUBROUTINE dump_r ( auxr, fname )
   IF( lgate(5) ) THEN
      !
      ALLOCATE(auxg(ngm))
+     !$acc enter data create(auxg)
      ALLOCATE(auxr_(dffts%nnr))
-     auxr_ = CMPLX( auxr, 0._DP, KIND = DP)
+     !
+     !$acc kernels present(auxr_,auxr)
+     auxr_(:) = CMPLX( auxr, 0._DP, KIND = DP)
+     !$acc end kernels
+     !
      IF( gamma_only ) THEN
+        !$acc host_data use_device(auxr_,auxg)
         CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Rho')
+        !$acc end host_data
      ELSE
+        !$acc host_data use_device(auxr_,auxg)
         CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Rho')
+        !$acc end host_data
      ENDIF
+     !
+     !$acc update host(auxg)
      CALL write_wfc_spav ( TRIM(fname)//'.spavr', auxg, westpp_r0, westpp_nr, westpp_rmax )
+     !
+     !$acc exit data delete(auxg)
      DEALLOCATE(auxg)
      DEALLOCATE(auxr_)
      !

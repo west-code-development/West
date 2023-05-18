@@ -19,7 +19,6 @@ SUBROUTINE do_eigenpot2 ( )
   USE westcom,               ONLY : westpp_sign,westpp_range,westpp_save_dir,fftdriver,&
                                   & npwq,npwqx,dvg,ngq,igq_q,westpp_n_pdep_eigen_to_use
   USE fft_base,              ONLY : dffts
-  USE wavefunctions,         ONLY : psic
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
@@ -28,12 +27,18 @@ SUBROUTINE do_eigenpot2 ( )
   USE control_flags,         ONLY : gamma_only
   USE pdep_db,               ONLY : pdep_db_read
   USE types_bz_grid,         ONLY : q_grid
+#if defined(__CUDA)
+  USE wavefunctions_gpum,    ONLY : psic=>psic_d
+  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
+#else
+  USE wavefunctions,         ONLY : psic
+#endif
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
-  INTEGER :: ir, local_j, global_j, iq
+  INTEGER :: ir, local_j, global_j, iq, dffts_nnr
   REAL(DP),ALLOCATABLE :: auxr(:)
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
@@ -44,7 +49,14 @@ SUBROUTINE do_eigenpot2 ( )
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+#endif
+  !
   ALLOCATE(auxr(dffts%nnr))
+  !$acc enter data create(auxr)
+  !
+  dffts_nnr = dffts%nnr
   !
   CALL io_push_title('(E)igenpotentials')
   !
@@ -64,8 +76,7 @@ SUBROUTINE do_eigenpot2 ( )
         npwq = ngq(iq)
      ENDIF
      !
-     auxr = 0._DP
-     psic = 0._DP
+     !$acc enter data copyin(dvg)
      !
      DO local_j=1,pert%nloc
         !
@@ -74,35 +85,50 @@ SUBROUTINE do_eigenpot2 ( )
         global_j = pert%l2g(local_j)
         IF( global_j < westpp_range(1) .OR. global_j > westpp_range(2) ) CYCLE
         !
-        auxr = 0._DP
         IF( gamma_only ) THEN
+           !$acc host_data use_device(dvg)
            CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,local_j),psic,TRIM(fftdriver))
+           !$acc end host_data
         ELSE
+           !$acc host_data use_device(dvg)
            CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,local_j),psic,'Wave',igq_q(:,iq))
+           !$acc end host_data
         ENDIF
         IF( westpp_sign ) THEN
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(auxr)
+           DO ir = 1, dffts_nnr
               auxr(ir) = REAL( psic(ir), KIND=DP) *  ABS( REAL( psic(ir), KIND=DP) )
            ENDDO
+           !$acc end parallel loop
         ELSE
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(auxr)
+           DO ir = 1, dffts_nnr
               auxr(ir) = REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP)
            ENDDO
+           !$acc end parallel loop
         ENDIF
         !
         WRITE(labeli,'(i6.6)') global_j
         WRITE(labelq,'(i5.5)') iq
         fname = TRIM( westpp_save_dir ) // '/eigQ'//labelq//'I'//labeli
+        !$acc update host(auxr)
         CALL dump_r( auxr, fname)
         !
         CALL update_bar_type( barra,'westpp', 1 )
         !
      ENDDO
      !
+     !$acc exit data delete(dvg)
+     !
   ENDDO
   !
   CALL stop_bar_type( barra, 'westpp' )
   !
+  !$acc exit data delete(auxr)
   DEALLOCATE( auxr )
+  !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+#endif
   !
 END SUBROUTINE

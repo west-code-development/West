@@ -408,7 +408,7 @@ MODULE west_gpu_data
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_macropol_gpu()
+   SUBROUTINE allocate_macropol_gpu(m)
    !-----------------------------------------------------------------------
    !
    USE control_flags,         ONLY : gamma_only
@@ -423,6 +423,10 @@ MODULE west_gpu_data
    !
    IMPLICIT NONE
    !
+   ! I/O
+   !
+   INTEGER, INTENT(IN) :: m
+   !
    CALL allocate_linsolve_gpu(3)
    !
    ALLOCATE(gk(3,npwx))
@@ -431,14 +435,14 @@ MODULE west_gpu_data
       ALLOCATE(work(npwx,nkb))
       IF(noncolin) THEN
          ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
-         ALLOCATE(psc(nkb,npol,1,2))
+         ALLOCATE(psc(nkb,npol,m,2))
       ELSE
          ALLOCATE(deff(nhm,nhm,nat))
-         ALLOCATE(ps2(nkb,1,2))
+         ALLOCATE(ps2(nkb,m,2))
       ENDIF
       !
-      CALL allocate_bec_type_gpu(nkb,1,becp1_d)
-      CALL allocate_bec_type_gpu(nkb,1,becp2_d)
+      CALL allocate_bec_type_gpu(nkb,m,becp1_d)
+      CALL allocate_bec_type_gpu(nkb,m,becp2_d)
       !
       IF(noncolin) THEN
          becp1_d_nc_d => becp1_d%nc_d

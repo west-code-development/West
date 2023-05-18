@@ -22,7 +22,6 @@ SUBROUTINE do_rho ( )
   USE mp,                    ONLY : mp_bcast,mp_sum
   USE fft_base,              ONLY : dffts
   USE buffers,               ONLY : get_buffer
-  USE wavefunctions,         ONLY : evc,psic
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE fft_at_gamma,          ONLY : single_invfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
@@ -30,12 +29,20 @@ SUBROUTINE do_rho ( )
   USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE types_bz_grid,         ONLY : k_grid
+#if defined(__CUDA)
+  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions,         ONLY : evc_host=>evc
+  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
+#else
+  USE wavefunctions,         ONLY : evc_work=>evc,psic
+#endif
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
-  INTEGER :: ir, iks, local_ib, global_ib
+  INTEGER :: ir, iks, local_ib, global_ib, dffts_nnr
+  REAL(DP) :: wt
   REAL(DP),ALLOCATABLE :: auxr(:)
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
@@ -43,10 +50,18 @@ SUBROUTINE do_rho ( )
   aband = idistribute()
   CALL aband%init(nbnd,'i','nbnd',.TRUE.)
   !
-  ALLOCATE(auxr(dffts%nnr))
+#if defined(__CUDA)
+  CALL allocate_gpu()
+#endif
   !
-  auxr = 0._DP
-  psic = 0._DP
+  dffts_nnr = dffts%nnr
+  !
+  ALLOCATE(auxr(dffts%nnr))
+  !$acc enter data create(auxr)
+  !
+  !$acc kernels present(auxr)
+  auxr(:) = 0._DP
+  !$acc end kernels
   !
   CALL io_push_title('(R)ho')
   !
@@ -58,13 +73,24 @@ SUBROUTINE do_rho ( )
      !
      current_k = iks
      npw = ngk(iks)
+     wt = k_grid%weight(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(k_grid%nps>1) THEN
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        CALL mp_bcast(evc,0,inter_image_comm)
+     IF(k_grid%nps > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
      ENDIF
+     !
+#if defined(__CUDA)
+     CALL using_evc(2)
+     CALL using_evc_d(0)
+#endif
      !
      DO local_ib=1,aband%nloc
         !
@@ -74,15 +100,19 @@ SUBROUTINE do_rho ( )
         IF( global_ib > nbnd_occ(iks) ) CYCLE
         !
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
-           DO ir = 1, dffts%nnr
-              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * k_grid%weight(iks)
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave')
+           !$acc parallel loop present(auxr)
+           DO ir = 1, dffts_nnr
+              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * wt
            ENDDO
+           !$acc end parallel
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
-           DO ir = 1, dffts%nnr
-              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * k_grid%weight(iks)
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave',igk_k(:,current_k))
+           !$acc parallel loop present(auxr)
+           DO ir = 1, dffts_nnr
+              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * wt
            ENDDO
+           !$acc end parallel
         ENDIF
         !
      ENDDO
@@ -91,13 +121,19 @@ SUBROUTINE do_rho ( )
      !
   ENDDO
   !
+  !$acc update host(auxr)
   CALL mp_sum( auxr, inter_image_comm )
+  !
+  CALL stop_bar_type( barra, 'westpp' )
   !
   fname = TRIM( westpp_save_dir ) // '/rho'
   IF(my_image_id==0) CALL dump_r( auxr, fname)
   !
+  !$acc exit data delete(auxr)
   DEALLOCATE( auxr )
   !
-  CALL stop_bar_type( barra, 'westpp' )
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+#endif
   !
 END SUBROUTINE

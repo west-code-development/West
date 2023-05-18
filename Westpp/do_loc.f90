@@ -27,7 +27,6 @@ SUBROUTINE do_loc ( )
   USE fft_base,              ONLY : dffts
   USE scatter_mod,           ONLY : scatter_grid
   USE buffers,               ONLY : get_buffer
-  USE wavefunctions,         ONLY : evc,psic
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k
@@ -37,6 +36,13 @@ SUBROUTINE do_loc ( )
   USE types_bz_grid,         ONLY : k_grid
   USE cell_base,             ONLY : alat,at,omega
   USE json_module,           ONLY : json_file
+#if defined(__CUDA)
+  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions,         ONLY : evc_host=>evc
+  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
+#else
+  USE wavefunctions,         ONLY : evc_work=>evc,psic
+#endif
   !
   IMPLICIT NONE
   !
@@ -44,12 +50,15 @@ SUBROUTINE do_loc ( )
   !
   LOGICAL :: l_box
   INTEGER :: ir, i, iks, local_ib, global_ib, global_ib2, ir1, ir2, ir3, n_points, nbnd_, iunit
+  INTEGER :: dffts_nnr
   REAL(DP), ALLOCATABLE :: local_fac(:,:), ipr(:,:)
   REAL(DP), ALLOCATABLE :: filter(:), filter_loc(:)
   REAL(DP), ALLOCATABLE :: spav(:)
   COMPLEX(DP), ALLOCATABLE :: auxc(:), auxg(:)
+  !$acc declare device_resident(auxc)
   REAL(DP) :: rho, r_vec(3)
   REAL(DP) :: r, dr
+  REAL(DP) :: reduce, reduce2
   CHARACTER(LEN=5) :: label_k
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
@@ -57,6 +66,12 @@ SUBROUTINE do_loc ( )
   nbnd_ = westpp_range(2) - westpp_range(1) + 1
   aband = idistribute()
   CALL aband%init(nbnd_,'i','westpp_range',.TRUE.)
+  !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+#endif
+  !
+  dffts_nnr = dffts%nnr
   !
   l_box = .TRUE.
   DO i = 1, 7
@@ -66,10 +81,12 @@ SUBROUTINE do_loc ( )
   IF(l_box) THEN
      ALLOCATE(filter(dffts%nr1x*dffts%nr2x*dffts%nr3x))
      ALLOCATE(filter_loc(dffts%nnr))
+     !$acc enter data create(filter_loc)
   ELSE
      ALLOCATE(auxc(dffts%nnr))
      ALLOCATE(auxg(ngm))
      ALLOCATE(spav(westpp_nr+1))
+     !$acc enter data create(auxg,spav)
   ENDIF
   ALLOCATE(local_fac(nbnd_,k_grid%nps))
   ALLOCATE(ipr(nbnd_,k_grid%nps))
@@ -118,6 +135,7 @@ SUBROUTINE do_loc ( )
      ! scatter filter to all FFT processes
      !
      CALL scatter_grid(dffts, filter, filter_loc)
+     !$acc update device(filter_loc)
      !
      ! broadcast the number of points in box to all FFT processes
      !
@@ -143,58 +161,95 @@ SUBROUTINE do_loc ( )
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(k_grid%nps>1) THEN
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        CALL mp_bcast(evc,0,inter_image_comm)
+     IF(k_grid%nps > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
      ENDIF
      !
-     DO local_ib=1,aband%nloc
+#if defined(__CUDA)
+     CALL using_evc(2)
+     CALL using_evc_d(0)
+#endif
+     !
+     DO local_ib = 1,aband%nloc
         !
         ! local -> global
         !
         global_ib = aband%l2g(local_ib)+westpp_range(1)-1
         global_ib2 = aband%l2g(local_ib)
         !
+        reduce = 0._DP
+        reduce2 = 0._DP
+        !
         IF( gamma_only ) THEN
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave')
            !
            IF(l_box) THEN
               !
-              DO ir = 1, dffts%nnr
+              !$acc parallel loop reduction(+:reduce,reduce2) present(filter_loc) copy(reduce,reduce2)
+              DO ir = 1, dffts_nnr
                  rho = REAL(psic(ir),KIND=DP)**2
-                 local_fac(global_ib2,iks) = local_fac(global_ib2,iks)+filter_loc(ir)*rho
-                 ipr(global_ib2,iks) = ipr(global_ib2,iks)+rho**2
+                 reduce = reduce+filter_loc(ir)*rho
+                 reduce2 = reduce2+rho**2
               ENDDO
+              !$acc end parallel
+              !
+              local_fac(global_ib2,iks) = reduce
+              ipr(global_ib2,iks) = reduce2
               !
            ELSE
               !
-              DO ir = 1, dffts%nnr
+              !$acc parallel loop reduction(+:reduce2) present(auxc) copy(reduce2)
+              DO ir = 1, dffts_nnr
                  rho = REAL(psic(ir),KIND=DP)**2
                  auxc(ir) = CMPLX(rho,KIND=DP)
-                 ipr(global_ib2,iks) = ipr(global_ib2,iks)+rho**2
+                 reduce2 = reduce2+rho**2
               ENDDO
+              !$acc end parallel
               !
+              ipr(global_ib2,iks) = reduce2
+              !
+              !$acc host_data use_device(auxc,auxg)
               CALL single_fwfft_gamma(dffts,ngm,ngm,auxc,auxg,'Rho')
+              !$acc end host_data
+              !
+              !$acc update host(auxg)
               !
               CALL wfc_spav(auxg,westpp_r0,westpp_nr,westpp_rmax,spav)
               !
+              !$acc update device(spav)
+              !
+              !$acc parallel loop reduction(+:reduce) present(spav) copy(reduce)
               DO ir = 1, westpp_nr+1
                  r = REAL(ir-1,KIND=DP) * dr
-                 local_fac(global_ib2,iks) = local_fac(global_ib2,iks)+(r**2)*spav(ir)
+                 reduce = reduce+(r**2)*spav(ir)
               ENDDO
+              !$acc end parallel
+              !
+              local_fac(global_ib2,iks) = reduce
               !
            ENDIF
            !
         ELSE
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave',igk_k(:,current_k))
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop reduction(+:reduce,reduce2) present(filter_loc) copy(reduce,reduce2)
+           DO ir = 1, dffts_nnr
               rho = REAL(CONJG(psic(ir))*psic(ir),KIND=DP)
-              local_fac(global_ib2,iks) = local_fac(global_ib2,iks)+filter_loc(ir)*rho
-              ipr(global_ib2,iks) = ipr(global_ib2,iks)+rho**2
+              reduce = reduce+filter_loc(ir)*rho
+              reduce2 = reduce2+rho**2
            ENDDO
+           !$acc end parallel
+           !
+           local_fac(global_ib2,iks) = reduce
+           ipr(global_ib2,iks) = reduce2
            !
         ENDIF
         !
@@ -247,12 +302,21 @@ SUBROUTINE do_loc ( )
   !
   CALL stop_bar_type( barra, 'westpp' )
   !
-  IF(ALLOCATED(filter)) DEALLOCATE(filter)
-  IF(ALLOCATED(filter_loc)) DEALLOCATE(filter_loc)
-  IF(ALLOCATED(local_fac)) DEALLOCATE(local_fac)
-  IF(ALLOCATED(ipr)) DEALLOCATE(ipr)
-  IF(ALLOCATED(auxc)) DEALLOCATE(auxc)
-  IF(ALLOCATED(auxg)) DEALLOCATE(auxg)
-  IF(ALLOCATED(spav)) DEALLOCATE(spav)
+  IF(l_box) THEN
+     DEALLOCATE(filter)
+     !$acc exit data delete(filter_loc)
+     DEALLOCATE(filter_loc)
+  ELSE
+     DEALLOCATE(auxc)
+     !$acc exit data delete(auxg,spav)
+     DEALLOCATE(auxg)
+     DEALLOCATE(spav)
+  ENDIF
+  DEALLOCATE(local_fac)
+  DEALLOCATE(ipr)
+  !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+#endif
   !
 END SUBROUTINE

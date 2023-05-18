@@ -25,7 +25,6 @@ SUBROUTINE do_sxx ( )
   USE fft_base,              ONLY : dffts
   USE wvfct,                 ONLY : nbnd
   USE buffers,               ONLY : get_buffer
-  USE wavefunctions,         ONLY : evc,psic,psic_nc
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE fft_at_gamma,          ONLY : single_invfft_gamma,single_fwfft_gamma
   USE fft_at_k,              ONLY : single_invfft_k,single_fwfft_k
@@ -41,21 +40,33 @@ SUBROUTINE do_sxx ( )
   USE pdep_db,               ONLY : pdep_db_read
   USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,         ONLY : pot3D
+#if defined(__CUDA)
+  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d,&
+                                  & psic_nc=>psic_nc_d
+  USE wavefunctions,         ONLY : evc_host=>evc
+  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,memcpy_H2D
+#else
+  USE wavefunctions,         ONLY : evc_work=>evc,psic,psic_nc
+#endif
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
   INTEGER :: ir, ip, ig, iks, ib, iv, ip_glob, ik, is, ikqs, ikq, iq, nbndval, npwkq
-  COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
-  COMPLEX(DP), ALLOCATABLE :: evckmq(:,:), phase(:)
+  INTEGER :: dffts_nnr
+  COMPLEX(DP),ALLOCATABLE :: pertg(:), pertr(:), pertr_nc(:,:)
+  !$acc declare device_resident(pertg,pertr,pertr_nc)
+  COMPLEX(DP),ALLOCATABLE :: evckmq(:,:), phase(:)
   LOGICAL :: l_gammaq
   REAL(DP) :: g0(3)
+  REAL(DP) :: dot_tmp
   TYPE(bar_type) :: barra
-  REAL(DP),ALLOCATABLE :: sigma_exx( :, : )
-  REAL(DP),ALLOCATABLE :: sigma_sxx( :, : )
+  REAL(DP),ALLOCATABLE :: sqvc(:)
+  !$acc declare device_resident(sqvc)
+  REAL(DP),ALLOCATABLE :: sigma_exx(:,:)
+  REAL(DP),ALLOCATABLE :: sigma_sxx(:,:)
   REAL(DP) :: peso
-  REAL(DP), EXTERNAL :: DDOT
   CHARACTER(LEN=5) :: label_k
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   COMPLEX(DP),ALLOCATABLE :: zproj(:,:)
@@ -66,6 +77,14 @@ SUBROUTINE do_sxx ( )
   !
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
+  !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+  !
+  ALLOCATE(sqvc(ngm))
+#endif
+  !
+  dffts_nnr = dffts%nnr
   !
   ALLOCATE( sigma_exx( westpp_range(1):westpp_range(2), k_grid%nps) )
   ALLOCATE( sigma_sxx( westpp_range(1):westpp_range(2), k_grid%nps) )
@@ -81,13 +100,17 @@ SUBROUTINE do_sxx ( )
   ENDIF
   !
   IF( gamma_only ) THEN
+     CALL pdep_db_read(westpp_n_pdep_eigen_to_use)
+     !
      peso = 2._DP
      ALLOCATE( dproj( 1, pert%nloc ) )
+     !$acc enter data create(dproj) copyin(dvg)
   ELSE
      peso = 1._DP
      ALLOCATE( zproj( 1, pert%nloc ) )
      ALLOCATE( phase(dffts%nnr) )
      ALLOCATE( evckmq(npwx*npol,nbnd) )
+     !$acc enter data create(zproj,phase,evckmq)
   ENDIF
   !
   CALL io_push_title('(S)creened eXact eXchange')
@@ -106,25 +129,40 @@ SUBROUTINE do_sxx ( )
      !
      ! ... read in wavefunctions from the previous iteration
      !
-     IF(k_grid%nps>1) THEN
-        IF(my_image_id==0) CALL get_buffer( evc, lrwfc, iuwfc, iks )
-        CALL mp_bcast(evc,0,inter_image_comm)
+     IF(k_grid%nps > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
      ENDIF
+     !
+#if defined(__CUDA)
+     CALL using_evc(2)
+     CALL using_evc_d(0)
+#endif
      !
      DO ib = 1, nbnd
         !
         IF( ib < westpp_range(1) .OR. ib > westpp_range(2) ) CYCLE
         !
         IF(gamma_only) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ib),psic,'Wave')
         ELSEIF(noncolin) THEN
-           CALL single_invfft_k(dffts,npw,npwx,evc(1:npwx,ib),psic_nc(:,1),'Wave',igk_k(:,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx:npwx*2,ib),psic_nc(:,2),'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(1:npwx,ib),psic_nc(:,1),'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(1+npwx:npwx*2,ib),psic_nc(:,2),'Wave',igk_k(:,current_k))
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc(:,ib),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ib),psic,'Wave',igk_k(:,current_k))
         ENDIF
         !
         DO iq = 1, q_grid%np
+           !
+           IF(.NOT. gamma_only) THEN
+              CALL pdep_db_read(westpp_n_pdep_eigen_to_use,iq,l_print_pdep_read)
+              !$acc enter data copyin(dvg)
+           ENDIF
            !
            IF ( gamma_only ) THEN
               !
@@ -149,6 +187,8 @@ SUBROUTINE do_sxx ( )
               IF ( my_image_id == 0 ) CALL get_buffer( evckmq, lrwfc, iuwfc, ikqs )
               CALL mp_bcast( evckmq, 0, inter_image_comm )
               !
+              !$acc update device(evckmq,phase)
+              !
               IF (iks==1 .AND. ib==1 .AND. iq==1) THEN
                  l_print_pdep_read = .TRUE.
               ELSE
@@ -157,46 +197,91 @@ SUBROUTINE do_sxx ( )
               !
            ENDIF
            !
+#if defined(__CUDA)
+           CALL memcpy_H2D(sqvc,pot3D%sqvc,ngm)
+#endif
+           !
            DO iv = 1, nbndval
               !
               ! Bring it to R-space
               IF(gamma_only) THEN
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc(:,iv),pertr,'Wave')
-                 DO ir=1,dffts%nnr
+                 !
+                 !$acc host_data use_device(pertr)
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,iv),pertr,'Wave')
+                 !$acc end host_data
+                 !
+                 !$acc parallel loop present(pertr)
+                 DO ir=1,dffts_nnr
                     pertr(ir)=psic(ir)*pertr(ir)
                  ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc host_data use_device(pertr,pertg)
                  CALL single_fwfft_gamma(dffts,npwq,npwqx,pertr,pertg,TRIM(fftdriver))
+                 !$acc end host_data
+                 !
               ELSEIF(noncolin) THEN
+                 !
+                 !$acc host_data use_device(evckmq,pertr_nc)
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,iv),pertr_nc(:,1),'Wave',igk_k(:,ikqs))
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx:npwx*2,iv),pertr_nc(:,2),'Wave',igk_k(:,ikqs))
-                 DO ir=1,dffts%nnr
+                 !$acc end host_data
+                 !
+                 !$acc parallel loop present(pertr_nc,phase)
+                 DO ir=1,dffts_nnr
                     pertr_nc(ir,1)=CONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+CONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc host_data use_device(pertr_nc,pertg)
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(:,1),pertg,'Rho') ! no igk
+                 !$acc end host_data
+                 !
               ELSE
+                 !
+                 !$acc host_data use_device(evckmq,pertr)
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(:,iv),pertr,'Wave',igk_k(:,ikqs))
-                 DO ir=1,dffts%nnr
+                 !$acc end host_data
+                 !
+                 !$acc parallel loop present(pertr,phase)
+                 DO ir=1,dffts_nnr
                     pertr(ir)=CONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc host_data use_device(pertr,pertg)
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
+                 !$acc end host_data
+                 !
               ENDIF
               !
+              !$acc parallel loop present(pertg,sqvc)
               DO ig = 1,ngm
+#if defined(__CUDA)
+                 pertg(ig) = pertg(ig) * sqvc(ig)
+#else
                  pertg(ig) = pertg(ig) * pot3D%sqvc(ig)
+#endif
               ENDDO
-              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso*DDOT(2*ngm, pertg(1), 1, pertg(1), 1)/omega * q_grid%weight(iq)
+              !$acc end parallel
+              !
+              dot_tmp = 0._DP
+              !$acc parallel loop reduction(+:dot_tmp) present(pertg) copy(dot_tmp)
+              DO ig = 1,ngm
+                 dot_tmp = dot_tmp+REAL(pertg(ig),KIND=DP)**2+AIMAG(pertg(ig))**2
+              ENDDO
+              !$acc end parallel
+              !
+              sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - peso*dot_tmp/omega * q_grid%weight(iq)
               IF( ib == iv .AND. gstart == 2 .AND. l_gammaq ) sigma_exx( ib, iks ) = sigma_exx( ib, iks ) - pot3D%div
               !
               ! -- < SXX >
               !
-              IF (gamma_only) THEN
-                 CALL pdep_db_read(westpp_n_pdep_eigen_to_use)
-              ELSE
-                 CALL pdep_db_read(westpp_n_pdep_eigen_to_use,iq,l_print_pdep_read)
-              ENDIF
-              !
               IF( gamma_only ) THEN
+                 !$acc host_data use_device(pertg,dvg,dproj)
                  CALL glbrak_gamma( pertg, dvg, dproj, npwq, npwqx, 1, pert%nloc, 1, npol)
+                 !$acc end host_data
+                 !$acc update host(dproj)
                  CALL mp_sum( dproj, intra_bgrp_comm )
                  DO ip = 1, pert%nloc
                     ip_glob = pert%l2g(ip)
@@ -204,7 +289,10 @@ SUBROUTINE do_sxx ( )
                  ENDDO
                  IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * pot3D%div
               ELSE
+                 !$acc host_data use_device(pertg,dvg,zproj)
                  CALL glbrak_k( pertg, dvg, zproj, npwq, npwqx, 1, pert%nloc, 1, npol)
+                 !$acc end host_data
+                 !$acc update host(zproj)
                  CALL mp_sum( zproj, intra_bgrp_comm )
                  DO ip = 1, pert%nloc
                     ip_glob = pert%l2g(ip)
@@ -217,6 +305,10 @@ SUBROUTINE do_sxx ( )
               ! -- </ SXX >
               !
            ENDDO ! iv
+           !
+           IF(.NOT. gamma_only) THEN
+              !$acc exit data delete(dvg)
+           ENDIF
            !
         ENDDO ! iq
         !
@@ -240,12 +332,20 @@ SUBROUTINE do_sxx ( )
     DEALLOCATE( pertr )
   ENDIF
   IF( gamma_only ) THEN
+     !$acc exit data delete(dproj,phase,evckmq,dvg)
      DEALLOCATE( dproj )
   ELSE
+     !$acc exit data delete(zproj,phase,evckmq)
      DEALLOCATE( zproj )
-     DEALLOCATE( evckmq )
      DEALLOCATE( phase )
+     DEALLOCATE( evckmq )
   ENDIF
+  !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+  !
+  DEALLOCATE(sqvc)
+#endif
   !
   ! Output it per k-point
   !

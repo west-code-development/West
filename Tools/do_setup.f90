@@ -15,7 +15,7 @@ SUBROUTINE do_setup
   !-----------------------------------------------------------------------
   !
   USE json_module,            ONLY : json_file
-  USE pwcom,                  ONLY : npw,nbnd,nkstot,nspin,nelec,nelup,neldw,isk
+  USE pwcom,                  ONLY : ngk,nbnd,nkstot,nspin,nelec,nelup,neldw,isk
   USE fixed_occ,              ONLY : f_inp
   USE kinds,                  ONLY : DP
   USE mp,                     ONLY : mp_sum
@@ -89,7 +89,7 @@ SUBROUTINE do_setup
   ALLOCATE( npw_i(0:nproc_bgrp-1), ngm_i(0:nproc_bgrp-1) )
   npw_i = 0
   ngm_i = 0
-  npw_i(me_bgrp) = npw
+  npw_i(me_bgrp) = ngk(1)
   ngm_i(me_bgrp) = ngm
   CALL mp_sum( npw_i, intra_bgrp_comm )
   CALL mp_sum( ngm_i, intra_bgrp_comm )

@@ -331,7 +331,6 @@ MODULE wbse_dv
     USE xc_lib,                ONLY : xc
     USE martyna_tuckerman,     ONLY : do_comp_mt
     USE funct,                 ONLY : nlc,dft_is_nonlocc
-    USE mp_bands,              ONLY : intra_bgrp_comm
     USE mp,                    ONLY : mp_barrier
     USE mp_world,              ONLY : world_comm
     USE constants,             ONLY : e2

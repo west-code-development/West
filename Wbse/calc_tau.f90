@@ -40,13 +40,17 @@ SUBROUTINE calc_tau()
   INTEGER :: nbndval
   LOGICAL :: l_restart_calc,spin_resolve
   !
+#if defined(__CUDA)
+  IF(.NOT. l_pdep) CALL errore('calc_tau','GPU not implemented for FF_Qbox',1)
+#endif
+  !
   SELECT CASE(wbse_init_calculation)
   CASE('r','R')
      l_restart_calc = .TRUE.
   CASE('s','S')
      l_restart_calc = .FALSE.
   CASE DEFAULT
-     CALL errore('wbse_init','invalid wbse_init_calculation',1)
+     CALL errore('calc_tau','invalid wbse_init_calculation',1)
   END SELECT
   !
   IF(l_bse) THEN
@@ -371,15 +375,11 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
                  ENDDO
                  !$acc end parallel
                  !
-#if defined(__CUDA)
                  !$acc host_data use_device(aux1_g,dvg,dotp)
-                 CALL glbrak_gamma_gpu(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
+                 CALL glbrak_gamma(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
                  !$acc end host_data
                  !
                  !$acc update host(dotp)
-#else
-                 CALL glbrak_gamma(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
-#endif
                  !
                  CALL mp_sum(dotp,intra_bgrp_comm)
                  !
@@ -423,7 +423,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
                  !
                  ! aux1_g -> aux_r
                  !
+#if !defined(__CUDA)
                  CALL single_invfft_gamma(dffts,npw,npwx,aux1_g,aux_r,'Wave')
+#endif
                  !
                  aux1_r(:,:) = (0._DP,0._DP)
                  aux1_r(:,current_spin) = aux_r
@@ -496,7 +498,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
                  !
                  ! aux_r -> aux_g
                  !
+#if !defined(__CUDA)
                  CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
+#endif
                  !
                  ! vc + vc/fxc X vc
                  !

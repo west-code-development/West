@@ -59,7 +59,7 @@ SUBROUTINE wbse_init_setup()
      IF(npool > 1) CALL errore('wbse_init_setup','pools not implemented for FF_Qbox',1)
      IF(nbgrp > 1) CALL errore('wbse_init_setup','band groups not implemented for FF_Qbox',1)
 #if defined(__CUDA)
-     CALL errore('wbse_init_setup','CUDA not implemented for FF_Qbox',1)
+     CALL errore('wbse_init_setup','GPU not implemented for FF_Qbox',1)
 #endif
   ENDIF
   !

@@ -344,13 +344,10 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
         !
-#if defined(__CUDA)
         !$acc host_data use_device(dvpsi,ps_r)
-        CALL glbrak_gamma_gpu(evc_work,dvpsi,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol)
-        !$acc end host_data
-#else
         CALL glbrak_gamma(evc_work,dvpsi,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol)
-#endif
+        !$acc end host_data
+        !
         IF(nproc_bgrp > 1) THEN
            !$acc host_data use_device(ps_r)
            CALL mp_sum(ps_r,intra_bgrp_comm)
@@ -962,13 +959,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
            !
-#if defined(__CUDA)
            !$acc host_data use_device(dvpsi,ps_c)
-           CALL glbrak_k_gpu(evc_work,dvpsi,ps_c,npw,npwx,nbnd,pert%nloc,nbnd,npol)
-           !$acc end host_data
-#else
            CALL glbrak_k(evc_work,dvpsi,ps_c,npw,npwx,nbnd,pert%nloc,nbnd,npol)
-#endif
+           !$acc end host_data
+           !
            IF(nproc_bgrp > 1) THEN
               !$acc host_data use_device(ps_c)
               CALL mp_sum(ps_c,intra_bgrp_comm)

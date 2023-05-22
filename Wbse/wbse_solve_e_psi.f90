@@ -478,7 +478,7 @@ SUBROUTINE compute_d0psi_dfpt()
      deeq_d(:,:,:,:) = deeq
      qq_at_d(:,:,:) = qq_at
      !
-     CALL allocate_macropol_gpu()
+     CALL allocate_macropol_gpu(1)
      CALL reallocate_ps_gpu(nbndval,3)
 #endif
      !
@@ -496,17 +496,11 @@ SUBROUTINE compute_d0psi_dfpt()
         !
         iv = band_group%l2g(lbnd)+n_trunc_bands
         !
-#if defined(__CUDA)
         !$acc host_data use_device(phi_tmp)
-        CALL commut_Hx_psi_gpu(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi_gpu(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi_gpu(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-        !$acc end host_data
-#else
         CALL commut_Hx_psi(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
         CALL commut_Hx_psi(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
         CALL commut_Hx_psi(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-#endif
+        !$acc end host_data
         !
         CALL apply_alpha_pc_to_m_wfcs(nbndval,3,phi_tmp,(1._DP,0._DP))
         !

@@ -375,16 +375,11 @@ MODULE dfpt_module
                !
                ! Compute <psi_j| dV |psi_i>
                !
-#if defined(__CUDA)
                !$acc host_data use_device(dvpsi,psi_dvpsi)
-               CALL glbrak_gamma_gpu(evc_work(1,nbndval_full+1),dvpsi,psi_dvpsi,npw,npwx,nbndval_frac,&
+               CALL glbrak_gamma(evc_work(1,nbndval_full+1),dvpsi,psi_dvpsi,npw,npwx,nbndval_frac,&
                & band_group%nloc,nbndval_frac,npol)
                !$acc end host_data
                !$acc update host(psi_dvpsi)
-#else
-               CALL glbrak_gamma(evc_work(1,nbndval_full+1),dvpsi,psi_dvpsi,npw,npwx,nbndval_frac,&
-               & band_group%nloc,nbndval_frac,npol)
-#endif
                !
                CALL mp_sum(psi_dvpsi,intra_bgrp_comm)
                !

@@ -60,15 +60,13 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(iks,m,f,alpha)
      !
      alpha_r = REAL(alpha,KIND=DP)
      !
-     !$acc host_data use_device(proj_c,ps_r)
-#if defined(__CUDA)
-     CALL glbrak_gamma_gpu( proj_c(:,:,iks), f, ps_r, npw, npwx, n_bands, m, n_bands, npol )
-#else
+#if !defined(__CUDA)
      ALLOCATE( ps_r(n_bands,m) )
      ps_r = 0.0_DP
-     !
-     CALL glbrak_gamma( proj_c(:,:,iks), f, ps_r, npw, npwx, n_bands, m, n_bands, npol)
 #endif
+     !
+     !$acc host_data use_device(proj_c,ps_r)
+     CALL glbrak_gamma( proj_c(:,:,iks), f, ps_r, npw, npwx, n_bands, m, n_bands, npol)
      !
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !
@@ -81,15 +79,13 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(iks,m,f,alpha)
      !
   ELSE
      !
-     !$acc host_data use_device(proj_c,ps_c)
-#if defined(__CUDA)
-     CALL glbrak_k_gpu( proj_c(:,:,iks), f, ps_c, npw, npwx, n_bands, m, n_bands, npol )
-#else
+#if !defined(__CUDA)
      ALLOCATE( ps_c(n_bands,m) )
      ps_c = (0.0_DP,0.0_DP)
-     !
-     CALL glbrak_k( proj_c(:,:,iks), f, ps_c, npw, npwx, n_bands, m, n_bands, npol)
 #endif
+     !
+     !$acc host_data use_device(proj_c,ps_c)
+     CALL glbrak_k( proj_c(:,:,iks), f, ps_c, npw, npwx, n_bands, m, n_bands, npol)
      !
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !

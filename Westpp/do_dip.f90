@@ -21,9 +21,7 @@ SUBROUTINE do_dip()
   USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,current_k,ngk,nspin,et
-  USE wavefunctions,        ONLY : evc
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE uspp,                 ONLY : vkb,nkb
   USE uspp_init,            ONLY : init_us_2
   USE io_push,              ONLY : io_push_title
   USE noncollin_module,     ONLY : npol
@@ -31,6 +29,18 @@ SUBROUTINE do_dip()
   USE buffers,              ONLY : get_buffer
   USE types_bz_grid,        ONLY : k_grid
   USE json_module,          ONLY : json_file,json_core,json_value
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
+  USE uspp,                 ONLY : vkb,nkb,deeq,deeq_d,qq_at,qq_at_d
+  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE wvfct_gpum,           ONLY : using_et,using_et_d
+  USE wavefunctions,        ONLY : evc_host=>evc
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_macropol_gpu,&
+                                 & deallocate_macropol_gpu
+#else
+  USE wavefunctions,        ONLY : evc_work=>evc
+  USE uspp,                 ONLY : vkb,nkb
+#endif
   !
   IMPLICIT NONE
   !
@@ -63,12 +73,20 @@ SUBROUTINE do_dip()
   nstate = westpp_range(2)-westpp_range(1)+1
   IF(gamma_only) THEN
      ALLOCATE(dip_cryst_r(nstate,nstate,3))
+     !$acc enter data create(dip_cryst_r)
      ALLOCATE(dip_cart_r(nstate,nstate,3))
   ELSE
      ALLOCATE(dip_cryst_c(nstate,nstate,3))
+     !$acc enter data create(dip_cryst_c)
      ALLOCATE(dip_cart_c(nstate,nstate,3))
   ENDIF
   ALLOCATE(Hx_psi(npwx*npol,nstate))
+  !$acc enter data create(Hx_psi)
+  !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+  CALL allocate_macropol_gpu(nstate)
+#endif
   !
   IF(mpime == root) THEN
      CALL json%initialize()
@@ -88,30 +106,61 @@ SUBROUTINE do_dip()
      current_k = iks
      npw = ngk(iks)
      IF(lsda) current_spin = isk(iks)
+#if defined(__CUDA)
+     CALL g2_kin_gpu(iks)
+     !
+     ! ... More stuff needed by the hamiltonian: nonlocal projectors
+     !
+     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
+#else
      CALL g2_kin(iks)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
-     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb)
+     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.FALSE.)
+#endif
      !
      ! ... read in wavefunctions
      !
      IF(k_grid%nps > 1) THEN
-        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc,0,inter_image_comm)
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
      ENDIF
+     !
+#if defined(__CUDA)
+     CALL using_becp_auto(2)
+     CALL using_becp_d_auto(0)
+     CALL using_evc(2)
+     CALL using_evc_d(0)
+     CALL using_et(2)
+     CALL using_et_d(0)
+     !
+     deeq_d(:,:,:,:) = deeq
+     qq_at_d(:,:,:) = qq_at
+#endif
      !
      DO ipol = 1,3
         !
-        CALL commut_Hx_psi(iks,nstate,ipol,evc(:,westpp_range(1):westpp_range(2)),Hx_psi,&
+        !$acc host_data use_device(Hx_psi)
+        CALL commut_Hx_psi(iks,nstate,ipol,evc_work(:,westpp_range(1):westpp_range(2)),Hx_psi,&
         & l_skip_nl_part_of_hcomr)
+        !$acc end host_data
         !
         IF(gamma_only) THEN
-           CALL glbrak_gamma(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_cryst_r(:,:,ipol),&
-           & npw,npwx,nstate,nstate,nstate,npol)
+           !$acc host_data use_device(Hx_psi,dip_cryst_r)
+           CALL glbrak_gamma(evc_work(:,westpp_range(1):westpp_range(2)),Hx_psi,&
+           & dip_cryst_r(:,:,ipol),npw,npwx,nstate,nstate,nstate,npol)
+           !$acc end host_data
         ELSE
-           CALL glbrak_k(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_cryst_c(:,:,ipol),npw,&
-           & npwx,nstate,nstate,nstate,npol)
+           !$acc host_data use_device(Hx_psi,dip_cryst_c)
+           CALL glbrak_k(evc_work(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_cryst_c(:,:,ipol),&
+           & npw,npwx,nstate,nstate,nstate,npol)
+           !$acc end host_data
         ENDIF
         !
         CALL update_bar_type(barra,'westpp',1)
@@ -119,6 +168,8 @@ SUBROUTINE do_dip()
      ENDDO
      !
      IF(gamma_only) THEN
+        !$acc update host(dip_cryst_r)
+        !
         CALL mp_sum(dip_cryst_r,intra_bgrp_comm)
         !
         dip_cart_r = 0._DP
@@ -128,6 +179,8 @@ SUBROUTINE do_dip()
            ENDDO
         ENDDO
      ELSE
+        !$acc update host(dip_cryst_c)
+        !
         CALL mp_sum(dip_cryst_c,intra_bgrp_comm)
         !
         dip_cart_c = (0._DP,0._DP)
@@ -179,13 +232,21 @@ SUBROUTINE do_dip()
   CALL stop_bar_type(barra,'westpp')
   !
   IF(gamma_only) THEN
+     !$acc exit data delete(dip_cryst_r)
      DEALLOCATE(dip_cryst_r)
      DEALLOCATE(dip_cart_r)
   ELSE
+     !$acc exit data delete(dip_cryst_c)
      DEALLOCATE(dip_cryst_c)
      DEALLOCATE(dip_cart_c)
   ENDIF
+  !$acc exit data delete(Hx_psi)
   DEALLOCATE(Hx_psi)
+  !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+  CALL deallocate_macropol_gpu()
+#endif
   !
   IF(mpime == root) THEN
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))

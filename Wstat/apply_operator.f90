@@ -103,6 +103,10 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
   INTEGER :: ipert, iu, stat
   TYPE(bar_type) :: barra
   !
+#if defined(__CUDA)
+  CALL errore("outsourced","GPU not implemented",1)
+#endif
+  !
   IF(iq/=1) CALL errore("outsourced","iq /= 1 not allowed",iq)
   !
   CALL io_push_title("Calculation outsourced")
@@ -118,11 +122,13 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
      !
      DO ipert = 1, m
         !
+#if !defined(__CUDA)
         IF (gamma_only) THEN
            CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,ipert),aux_r,TRIM(fftdriver))
         ELSE
            CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,ipert),aux_r,'Wave',igq_q(:,iq))
         ENDIF
+#endif
         !
         filename = "I."//itoa(my_image_id)//"_P."//itoa(ipert)//".xml"
         aux_r_double(:) = REAL(aux_r(:),KIND=DP) / 2._DP ! The output must be in Ha Atomic units
@@ -157,11 +163,13 @@ SUBROUTINE calc_outsourced (m,dvg,dng,iq)
         CALL read_function3d(filename,aux_r_double,dffts)
         aux_r(:) = CMPLX(aux_r_double(:),0._DP,KIND=DP)
         !
+#if !defined(__CUDA)
         IF(gamma_only) THEN
            CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,dng(:,ipert),TRIM(fftdriver))
         ELSE
            CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,dng(:,ipert),'Wave',igq_q(:,iq))
         ENDIF
+#endif
         !
      ENDDO
      !

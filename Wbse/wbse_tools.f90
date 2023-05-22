@@ -682,8 +682,7 @@ MODULE wbse_tools
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       REAL(DP),ALLOCATABLE :: g2kin_save(:,:)
       INTEGER,PARAMETER :: flks(2) = [2,1]
-      REAL(DP),PARAMETER :: minimum = 0.01_DP
-      !REAL(DP),PARAMETER :: minimum = 1._DP
+      REAL(DP),PARAMETER :: minimum = 1._DP
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('precd_ag')

@@ -13,7 +13,7 @@ Perlmutter is an HPE Cray EX supercomputer located at National Energy Research S
 Building WEST (GPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on January 13, 2023):
+WEST executables can be compiled using the following script (tested on May 20, 2023):
 
 .. code-block:: bash
 
@@ -21,7 +21,7 @@ WEST executables can be compiled using the following script (tested on January 1
    #!/bin/bash
 
    module load PrgEnv-nvidia
-   module load nvidia/22.9
+   module load nvidia/22.7
    module load cudatoolkit/11.7
    module load craype-accel-nvidia80
    module load cray-python/3.9.13.1
@@ -78,7 +78,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --cpus-per-task=32
 
    module load PrgEnv-nvidia
-   module load nvidia/22.9
+   module load nvidia/22.7
    module load cudatoolkit/11.7
    module load craype-accel-nvidia80
    module load cray-python/3.9.13.1
@@ -99,7 +99,7 @@ Job submission is done with the following:
 Building WEST (CPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on February 17, 2023):
+WEST executables can be compiled using the following script (tested on May 20, 2023):
 
 .. code-block:: bash
 
@@ -107,7 +107,7 @@ WEST executables can be compiled using the following script (tested on February 
    #!/bin/bash
 
    module load cpu
-   module load cray-fftw/3.3.10.2
+   module load cray-fftw/3.3.10.3
    module load cray-python/3.9.13.1
 
    export CRAYPE_LINK_TYPE=dynamic
@@ -120,7 +120,7 @@ WEST executables can be compiled using the following script (tested on February 
    # Manually edit make.inc:
 
    # DFLAGS = -D__FFTW3 -D__MPI -D__SCALAPACK
-   # IFLAGS = -I. -I$(TOPDIR)/include -I$(TOPDIR)/FoX/finclude -I/opt/cray/pe/fftw/3.3.10.2/x86_milan/include
+   # IFLAGS = -I. -I$(TOPDIR)/include -I$(TOPDIR)/FoX/finclude -I/opt/cray/pe/fftw/3.3.10.3/x86_milan/include
    # BLAS_LIBS = # leave blank
    # LAPACK_LIBS = # leave blank
 
@@ -163,7 +163,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --cpus-per-task=2
 
    module load cpu
-   module load cray-fftw/3.3.10.2
+   module load cray-fftw/3.3.10.3
    module load cray-python/3.9.13.1
 
    export OMP_NUM_THREADS=1

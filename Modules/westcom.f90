@@ -342,7 +342,7 @@ MODULE wbse_center
   REAL(DP) :: wbse_epsinfty
   CHARACTER(LEN=1) :: spin_excitation
   LOGICAL :: l_forces
-  INTEGER :: l_forces_state
+  INTEGER :: forces_state
   !
   ! FOR global variables
   !

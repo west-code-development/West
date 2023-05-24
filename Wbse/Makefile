@@ -26,6 +26,7 @@ check_ovl_wfc.o \
 lanczos_restart.o \
 td_liouville_oper.o \
 wbse_calc_dens.o \
+wbse_calc_forces.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
 wbse_dv.o \
@@ -38,8 +39,7 @@ wbse_memory_report.o \
 wbse_readin.o \
 wbse_setup.o \
 wbse_solve_e_psi.o \
-wbse_tools.o \
-wbse_calc_forces.o
+wbse_tools.o
 
 PWOBJS = ../../PW/src/libpw.a
 

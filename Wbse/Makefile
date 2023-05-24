@@ -38,7 +38,8 @@ wbse_memory_report.o \
 wbse_readin.o \
 wbse_setup.o \
 wbse_solve_e_psi.o \
-wbse_tools.o
+wbse_tools.o \
+wbse_calc_forces.o
 
 PWOBJS = ../../PW/src/libpw.a
 

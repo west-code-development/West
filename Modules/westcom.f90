@@ -341,6 +341,8 @@ MODULE wbse_center
   REAL(DP) :: spin_flip_cut1
   REAL(DP) :: wbse_epsinfty
   CHARACTER(LEN=1) :: spin_excitation
+  LOGICAL :: l_forces
+  INTEGER :: l_forces_state
   !
   ! FOR global variables
   !

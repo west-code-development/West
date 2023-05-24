@@ -30,7 +30,7 @@ SUBROUTINE wbse_davidson_diago ( )
                                  & wstat_calculation,n_pdep_read_from_file,n_steps_write_restart,&
                                  & trev_pdep_rel,l_is_wstat_converged,nbnd_occ,lrwfc,iuwfc,dvg_exc,&
                                  & dng_exc,nbndval0x,n_trunc_bands,l_preconditioning,l_pre_shift,&
-                                 & l_spin_flip
+                                 & l_spin_flip,l_forces,l_forces_state
   USE plep_db,              ONLY : plep_db_write,plep_db_read
   USE davidson_restart,     ONLY : davidson_restart_write,davidson_restart_clear,&
                                  & davidson_restart_read
@@ -573,10 +573,6 @@ SUBROUTINE wbse_davidson_diago ( )
      !
   ENDDO iterate
   !
-#if defined(__CUDA)
-  CALL deallocate_gpu()
-#endif
-  !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
   DEALLOCATE( ev )
@@ -584,11 +580,48 @@ SUBROUTINE wbse_davidson_diago ( )
   DEALLOCATE( vr_distr )
   !
   DEALLOCATE( dng_exc )
-  DEALLOCATE( dvg_exc )
   !
-  !$acc exit data delete(dng_exc_tmp,dvg_exc_tmp)
+  !$acc exit data delete(dng_exc_tmp)
   DEALLOCATE( dng_exc_tmp )
-  DEALLOCATE( dvg_exc_tmp )
+  !
+  IF(l_forces) THEN
+     !
+#if defined(__CUDA)
+     CALL allocate_bse_gpu(band_group%nloc)
+#endif
+     !
+     !$acc kernels present(dvg_exc_tmp)
+     dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
+     !$acc end kernels
+     !
+#if defined(__CUDA)
+     CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,l_forces_state),npwx*band_group%nlocx*kpt_pool%nloc)
+#else
+     dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,l_forces_state)
+#endif
+     !
+     DEALLOCATE( dvg_exc )
+     !
+     CALL wbse_calc_forces( dvg_exc_tmp )
+     !
+#if defined(__CUDA)
+     CALL deallocate_bse_gpu()
+#endif
+     !
+     !$acc exit data delete(dvg_exc_tmp)
+     DEALLOCATE( dvg_exc_tmp )
+     !
+  ELSE
+     !
+     DEALLOCATE( dvg_exc )
+     !$acc exit data delete(dvg_exc_tmp)
+     DEALLOCATE( dvg_exc_tmp )
+     !
+  ENDIF
+  !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+#endif
   !
   CALL stop_clock( 'chidiago' )
   !

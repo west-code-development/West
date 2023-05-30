@@ -14,16 +14,16 @@ prefix       = 'test'
 wf_collect   = .true.
 /
 &system
-ibrav             = 1
-celldm(1)         = 28
-nat               = 4
-ntyp              = 3
-ecutwfc           = 25
-nbnd              = 16
+ibrav           = 1
+celldm(1)       = 20
+nat             = 4
+ntyp            = 3
+ecutwfc         = 25
+nbnd            = 16
+assume_isolated = 'mp'
 /
 &electrons
 diago_full_acc = .true.
-conv_thr = 1.0D-8
 /
 ATOMIC_SPECIES
 C 12.0107  C_ONCV_PBE-1.0.upf
@@ -36,6 +36,7 @@ H        0.426529664   0.563136593   0.500000000
 O        0.546444410   0.500000000   0.500000000
 K_POINTS gamma
 EOF
+
 
 cat > wbse.in << EOF
 input_west:

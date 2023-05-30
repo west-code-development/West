@@ -15,7 +15,7 @@ pw:
 	${PARA_PREFIX_QE} ${BINDIR}/pw.x -i pw.in > pw.out 2> pw.err
 
 wbse: pw
-	${PARA_PREFIX} ${BINDIR}/wbse.x -nimage ${NIMAGE} -nband ${NBAND} -i wbse.in > wbse.out 2> wbse.err
+	${PARA_PREFIX} ${BINDIR}/wbse.x -nimage ${NIMAGE} -npool ${NPOOL} -nband ${NBAND} -i wbse.in > wbse.out 2> wbse.err
 
 clean:
 	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1

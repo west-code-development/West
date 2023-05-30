@@ -343,6 +343,8 @@ MODULE wbse_center
   CHARACTER(LEN=1) :: spin_excitation
   LOGICAL :: l_forces
   INTEGER :: forces_state
+  REAL(DP) :: forces_zeq_cg_tr
+  REAL(DP) :: ddvxc_fd_coeff
   !
   ! FOR global variables
   !

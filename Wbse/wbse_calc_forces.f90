@@ -8,7 +8,7 @@
 ! This file is part of WEST.
 !
 ! Contributors to this file:
-! Yu Jin
+! Yu Jin, Victor Yu
 !
 !-----------------------------------------------------------------------
 SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
@@ -22,8 +22,10 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   USE wvfct,                ONLY : npwx
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
-  USE westcom,              ONLY : nbndval0x,n_trunc_bands
+  USE westcom,              ONLY : logfile,nbndval0x,n_trunc_bands
   USE distribution_center,  ONLY : kpt_pool,band_group
+  USE json_module,          ONLY : json_file
+  USE mp_world,             ONLY : mpime,root
   !
   IMPLICIT NONE
   !
@@ -40,6 +42,8 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   REAL(DP), EXTERNAL :: get_clock
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec(:,:,:), zvector(:,:,:), drhox1(:,:), drhox2(:,:)
   LOGICAL :: do_zvector, poor_of_ram_drhox2
+  TYPE(json_file) :: json
+  INTEGER :: iunit
   !
   CALL start_clock( 'l_forces' )
   time_spent(1) = get_clock( 'l_forces' )
@@ -116,14 +120,17 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   CALL io_push_title('Build and solve the Z-vector equations')
   !
   ! Zvector part
-  do_zvector = .FALSE.
+  do_zvector = .TRUE.
   !
   IF( do_zvector ) THEN
      !
      ALLOCATE( z_rhs_vec( npwx, band_group%nlocx, kpt_pool%nloc ) )
+     !$acc enter data create(z_rhs_vec)
+     !$acc kernels present(z_rhs_vec)
      z_rhs_vec = ( 0._DP, 0._DP )
+     !$acc end kernels
      !
-!     CALL wbse_build_rhs_zvector_eq( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
+     CALL wbse_build_rhs_zvector_eq( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
      !
      time_spent(2) = get_clock( 'l_forces' )
      CALL wbse_forces_time(time_spent)
@@ -137,7 +144,7 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
      zvector = ( 0._DP, 0._DP )
      !$acc end kernels
      !
-!     CALL wbse_solve_zvector_eq_cg( z_rhs_vec, zvector )
+     CALL wbse_solve_zvector_eq_cg( z_rhs_vec, zvector )
      !
      time_spent(2) = get_clock( 'l_forces' )
      CALL wbse_forces_time(time_spent)
@@ -153,6 +160,7 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
      CALL wbse_forces_time(time_spent)
      time_spent(1) = get_clock( 'l_forces' )
      !
+     !$acc exit data delete(z_rhs_vec)
      DEALLOCATE( z_rhs_vec )
      !$acc exit data delete(zvector)
      DEALLOCATE( zvector )
@@ -167,6 +175,20 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
      WRITE(stdout, 9035) na, ityp(na), ( - forces( 3 * na - 3 + ipol ), ipol = 1, 3 )
      !
   ENDDO
+  !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     CALL json%load(filename=TRIM(logfile))
+     CALL json%add('exec.forces.forces_total', - forces(1:n))
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
   !
   ! enforce total forces to be 0 in each direction
   !
@@ -190,19 +212,33 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   !
   CALL io_push_title('Forces Corrected')
   !
-  DO na = 1, nat
+  DO na = 1,nat
      !
      ! Note: forces are the negative of the gradients
-     WRITE(stdout, 9035) na, ityp(na), ( - forces( 3 * na - 3 + ipol ), ipol = 1, 3 )
+     WRITE(stdout, 9035) na, ityp(na), (-forces(3*na-3+ipol), ipol=1,3)
      !
   ENDDO
   !
   WRITE(stdout,*)
   !
-  DEALLOCATE( forces )
-  DEALLOCATE( dvgdvg_mat )
-  DEALLOCATE( drhox1 )
-  DEALLOCATE( drhox2 )
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     CALL json%load(filename=TRIM(logfile))
+     CALL json%add('exec.forces.forces_corrected', -forces(1:n))
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
+  !
+  DEALLOCATE(forces)
+  DEALLOCATE(dvgdvg_mat)
+  DEALLOCATE(drhox1)
+  DEALLOCATE(drhox2)
   !
   CALL stop_clock( 'l_forces' )
   !
@@ -436,11 +472,13 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   USE mp,                   ONLY : mp_sum
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
-  USE westcom,              ONLY : nbnd_occ,n_trunc_bands,l_spin_flip
+  USE westcom,              ONLY : logfile,nbnd_occ,n_trunc_bands,l_spin_flip
   USE vlocal,               ONLY : vloc
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
+  USE json_module,          ONLY : json_file
+  USE mp_world,             ONLY : mpime,root
   !
   IMPLICIT NONE
   !
@@ -459,6 +497,8 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   REAL(DP), ALLOCATABLE :: forces_aux(:), forces_drhox1(:), forcelc(:,:), rdrhox1(:,:)
   !$acc declare device_resident(forces_aux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  TYPE(json_file) :: json
+  INTEGER :: iunit
   !
   CALL io_push_title('Forces : drhox1 part')
   !
@@ -604,6 +644,20 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   ENDDO
   !
   WRITE(stdout,*)
+  !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     CALL json%load(filename=TRIM(logfile))
+     CALL json%add('exec.forces.forces_drhox1', - forces_drhox1(1:n))
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
   !
   DEALLOCATE(forces_aux)
   !$acc exit data delete(forces_drhox1)
@@ -1017,12 +1071,14 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
+  USE westcom,              ONLY : iuwfc,lrwfc,logfile,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
   USE vlocal,               ONLY : vloc
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,&
                                  & intra_bgrp_comm
+  USE json_module,          ONLY : json_file
+  USE mp_world,             ONLY : mpime,root
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -1039,6 +1095,8 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   REAL(DP), INTENT(IN) :: dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(IN) :: drhox2(dffts%nnr, nspin)
   REAL(DP), INTENT(INOUT) :: forces(n)
+  TYPE(json_file) :: json
+  INTEGER :: iunit
   !
   ! WORKSPACE
   !
@@ -1225,6 +1283,20 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !
   WRITE(stdout,*)
   !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     CALL json%load(filename=TRIM(logfile))
+     CALL json%add('exec.forces.forces_drhox2', - forces_drhox2(1:n))
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
+  !
   DEALLOCATE( forces_aux )
   !$acc exit data delete(forces_drhox2)
   DEALLOCATE( forces_drhox2 )
@@ -1258,12 +1330,14 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands,l_spin_flip
+  USE westcom,              ONLY : iuwfc,lrwfc,logfile,nbnd_occ,n_trunc_bands,l_spin_flip
   USE vlocal,               ONLY : vloc
   USE control_flags,        ONLY : gamma_only
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm,&
                                  & intra_bgrp_comm
+  USE json_module,          ONLY : json_file
+  USE mp_world,             ONLY : mpime,root
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -1286,8 +1360,10 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, na, ipol, lbnd, ibnd, ig
   REAL(DP) :: reduce, factor, this_wk
   REAL(DP), ALLOCATABLE :: forces_aux(:), forces_drhoz(:), forcelc(:,:), rdrhoz(:,:)
+  TYPE(json_file) :: json
+  INTEGER :: iunit
   !
-  CALL io_push_title('Forces : Z-Vector Part')
+  CALL io_push_title('Forces : drhoz part')
   !
   IF(nspin == 2) THEN
      factor = 1._DP
@@ -1458,6 +1534,20 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   WRITE(stdout,*)
   !
+  IF( mpime == root ) THEN
+     !
+     CALL json%initialize()
+     CALL json%load(filename=TRIM(logfile))
+     CALL json%add('exec.forces.forces_drhoz', - forces_drhoz(1:n))
+     !
+     OPEN( NEWUNIT=iunit,FILE=TRIM(logfile) )
+     CALL json%print( iunit )
+     CLOSE( iunit )
+     !
+     CALL json%destroy()
+     !
+  ENDIF
+  !
   DEALLOCATE( forces_aux )
   !$acc exit data delete(forces_drhoz)
   DEALLOCATE( forces_drhoz )
@@ -1604,5 +1694,666 @@ SUBROUTINE wbse_get_dvpsi_per_state_gamma_nonlocal (n, dvg_tmp, dvpsi)
   DEALLOCATE(work)
   DEALLOCATE(bec1)
   DEALLOCATE(bec2)
+  !
+END SUBROUTINE
+
+
+!-------------------------------------------------------------------------------------------
+SUBROUTINE wbse_solve_zvector_eq_cg(z_rhs, z_out)
+  !-----------------------------------------------------------------------------------------
+  !
+  USE kinds,                ONLY : DP
+  USE fft_base,             ONLY : dffts
+  USE io_global,            ONLY : stdout
+  USE mp,                   ONLY : mp_sum,mp_barrier,mp_bcast,mp_max
+  USE control_flags,        ONLY : gamma_only
+  USE noncollin_module,     ONLY : npol
+  USE pwcom,                ONLY : npw,npwx,nks,current_spin,isk,xk,nbnd,lsda,wk,ngk 
+  USE westcom,              ONLY : forces_zeq_cg_tr,l_pre_shift
+  USE lsda_mod,             ONLY : nspin
+  USE gvect,                ONLY : gstart
+  USE io_push,              ONLY : io_push_title,io_push_bar
+  USE distribution_center,  ONLY : band_group,kpt_pool
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,nbgrp,my_bgrp_id,&
+                                 & inter_bgrp_comm,intra_bgrp_comm
+  USE mp_world,             ONLY : world_comm
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  COMPLEX(DP), INTENT(IN) :: z_rhs(npwx*npol, band_group%nlocx, kpt_pool%nloc)
+  COMPLEX(DP), INTENT(INOUT) :: z_out(npwx*npol, band_group%nlocx, kpt_pool%nloc)
+  !
+  ! ... Local variables
+  !
+  INTEGER  :: iter,iks,nbndval,nbnd_do
+  INTEGER, PARAMETER :: max_cg_iters=1000
+  REAL(DP) :: threshold,residual_sq
+  COMPLEX(DP) :: alpha,beta
+  COMPLEX(DP),ALLOCATABLE :: residual_old(:),residual_new(:),dot_out(:),&
+                             rz_new(:),rz_old(:)
+  COMPLEX(DP),ALLOCATABLE :: tmp_z(:,:),tmp_z_rhs(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: r_old(:,:,:),r_new(:,:,:) ! residual
+  COMPLEX(DP),ALLOCATABLE :: p(:,:,:),Ap(:,:,:)
+  COMPLEX(DP),ALLOCATABLE :: x(:,:,:) ! the result
+  COMPLEX(DP),ALLOCATABLE :: z(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: anorm(:)
+  LOGICAL :: cg_prec, turn_shift
+  !
+  REAL(DP) :: time_spent(2)
+  REAL(DP), EXTERNAL :: get_clock
+  !
+  CALL start_clock( 'zvector_cg' )
+  time_spent(1) = get_clock( 'zvector_cg' )
+  !
+  cg_prec = .TRUE.
+  turn_shift = l_pre_shift
+  !
+  ALLOCATE(r_new(npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  ALLOCATE(r_old(npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  ALLOCATE(p    (npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  ALLOCATE(Ap   (npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  ALLOCATE(x    (npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  ALLOCATE(z    (npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  !
+  ALLOCATE(residual_old(nks))
+  ALLOCATE(residual_new(nks))
+  ALLOCATE(dot_out(nks))
+  ALLOCATE(rz_new(nks))
+  ALLOCATE(rz_old(nks))
+  !
+  CALL io_push_title("Forces : Solve the Z vector Equation using the CG algorithm")
+  !
+  CALL wbse_dot(z_rhs,z_rhs,band_group%nlocx,dot_out)
+  !
+  WRITE(stdout, "( /,10x,'                       *-----------------*' ) "  )
+  WRITE(stdout, "(   10x,'# Norm of z_rhs_vec  = | ', ES15.8, ' |' ) " ) SUM(DBLE(dot_out))
+  WRITE(stdout, "(   10x,'                       *-----------------*' ) "  )
+  !
+  threshold = forces_zeq_cg_tr
+  !
+  ! Initial guess
+  x = z_rhs
+  !
+  ! z-vector equation won't have the spin flip case
+  CALL west_apply_liouvillian(x, r_new, .false.)
+  time_spent(2) = get_clock( 'zvector_cg' )
+  CALL wbse_forces_time(time_spent)
+  !
+  CALL west_apply_liouvillian_btda(x, r_new, .false.)
+  time_spent(2) = get_clock( 'zvector_cg' )
+  CALL wbse_forces_time(time_spent)
+  !
+  r_new = z_rhs - r_new
+  !
+  CALL wbse_dot(r_new,r_new,band_group%nlocx,residual_new)
+  !
+  WRITE(stdout,"(5x,'Initial residual = ',E15.8)") DBLE(SUM(residual_new))
+  WRITE(stdout,'(7X,a)') ' '
+  !
+  IF (cg_prec) THEN
+     !
+     CALL cg_precondition(r_new,z,turn_shift)
+     !
+     CALL wbse_dot(r_new,z,band_group%nlocx,rz_new)
+     !
+     p = z
+     !
+  ELSE
+     !
+     p = r_new
+     !
+  ENDIF
+  !
+  r_old = r_new
+  r_new = (0._DP, 0._DP)
+  residual_old = residual_new
+  residual_new = (0._DP, 0._DP)
+  !
+  IF (cg_prec) THEN
+     !
+     rz_old = rz_new
+     rz_new = (0._DP, 0._DP)
+     !
+  ENDIF
+  !
+  DO iter = 1, max_cg_iters
+     !
+     time_spent(1) = get_clock( 'zvector_cg' )
+     !
+     CALL west_apply_liouvillian(p, Ap, .false.)
+     time_spent(2) = get_clock( 'zvector_cg' )
+     CALL wbse_forces_time(time_spent)
+     !
+     CALL west_apply_liouvillian_btda(p, Ap, .false.)
+     time_spent(2) = get_clock( 'zvector_cg' )
+     CALL wbse_forces_time(time_spent)
+     !
+     CALL wbse_dot(p,Ap,band_group%nlocx,dot_out)
+     !
+     IF (cg_prec) THEN
+        !
+        alpha = SUM(rz_old) / SUM(dot_out)
+        !
+     ELSE
+        !
+        alpha = SUM(residual_old) / SUM(dot_out)
+        !
+     ENDIF
+     !
+     x = x + alpha * p
+     !
+     r_new = r_old - alpha * Ap
+     !
+     CALL wbse_dot(r_new,r_new,band_group%nlocx,residual_new)
+     !
+     IF ( MOD(iter,1) == 0 ) THEN
+        WRITE(stdout,"(5x,'Residual(',I5.5,') = ',E15.8)") iter, DBLE(SUM(residual_new))
+        WRITE(stdout,'(7X,a)') ' '
+     ENDIF
+     !
+     residual_sq = ABS(SUM(residual_new))
+     CALL mp_max(residual_sq,world_comm)
+     !
+     IF (residual_sq < threshold) EXIT
+     !
+     IF (cg_prec) THEN
+        !
+        CALL cg_precondition(r_new,z,turn_shift)
+        !
+        CALL wbse_dot(r_new,z,band_group%nlocx,rz_new)
+        !
+        beta = SUM(rz_new) / SUM(rz_old)
+        !
+        p = z + beta * p
+        !
+     ELSE
+        !
+        beta = SUM(residual_new) / SUM(residual_old)
+        !
+        p = r_new + beta * p
+        !
+     ENDIF
+     !
+     r_old = r_new
+     r_new = (0._DP, 0._DP)
+     !
+     residual_old = residual_new
+     residual_new = (0._DP, 0._DP)
+     !
+     IF (cg_prec) THEN
+        !
+        rz_old = rz_new
+        rz_new = (0._DP, 0._DP)
+        !
+     ENDIF
+     !
+  ENDDO ! iter
+  !
+  z_out = x
+  !
+  DEALLOCATE(r_new)
+  DEALLOCATE(r_old)
+  DEALLOCATE(p)
+  DEALLOCATE(Ap)
+  DEALLOCATE(x)
+  DEALLOCATE(z)
+  DEALLOCATE(residual_old)
+  DEALLOCATE(residual_new)
+  DEALLOCATE(dot_out)
+  DEALLOCATE(rz_old)
+  DEALLOCATE(rz_new)
+  !
+  CALL stop_clock( 'zvector_cg' )
+  !
+  RETURN
+  !
+END SUBROUTINE
+
+!-------------------------------------------------------------------------------------------
+SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
+  !-----------------------------------------------------------------------------------------
+  ! Applies the linear response operator to response wavefunctions, the part
+  ! beyond the Tamm-Dancoff approximation (btda)
+  !
+  USE kinds,                ONLY : DP
+  USE fft_base,             ONLY : dffts
+  USE io_global,            ONLY : stdout
+  USE mp,                   ONLY : mp_sum,mp_bcast
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,double_invfft_gamma
+  USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
+  USE buffers,              ONLY : get_buffer
+  USE wvfct,                ONLY : nbnd,npwx
+  USE klist,                ONLY : nks
+  USE control_flags,        ONLY : gamma_only
+  USE noncollin_module,     ONLY : noncolin,npol
+  USE uspp,                 ONLY : vkb,nkb
+  USE pwcom,                ONLY : npw,npwx,et,nks,current_spin,isk,xk,nbnd,lsda,igk_k,g2kin,current_k,wk,ngk 
+  USE lsda_mod,             ONLY : nspin
+  USE gvect,                ONLY : gstart
+  USE io_push,              ONLY : io_push_title,io_push_bar
+  USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
+                                 & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
+                                 & l_hybrid_tddft,l_spin_flip_kernel
+  USE distribution_center,  ONLY : band_group,kpt_pool
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,&
+                                 & inter_bgrp_comm,intra_bgrp_comm
+  USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf 
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions,        ONLY : evc_host=>evc
+  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE west_gpu,             ONLY : dvrs,hevc1,reallocate_ps_gpu
+  USE cublas
+#else
+  USE wavefunctions,        ONLY : evc_work=>evc,psic
+#endif
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,band_group%nlocx,kpt_pool%nloc)
+  COMPLEX(DP), INTENT(INOUT) :: evc1_new(npwx*npol,band_group%nlocx,kpt_pool%nloc)
+  LOGICAL, INTENT(IN) :: sf
+  ! if sf = .True., then the code will operate in the spin-flip mode
+  !
+  ! ... Local variables
+  !
+  LOGICAL :: lrpa,do_k2e
+  INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
+  INTEGER :: dffts_nnr
+  INTEGER, PARAMETER :: flks(2) = [2,1]
+#if !defined(__CUDA)
+  COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
+  COMPLEX(DP), ALLOCATABLE :: evc2_new(:,:)
+#endif
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('apply_lv_btda')
+#else
+  CALL start_clock('apply_lv_btda')
+#endif
+  !
+  dffts_nnr = dffts%nnr
+  !
+#if !defined(__CUDA)
+  ALLOCATE(dvrs(dffts%nnr,nspin))
+  ALLOCATE(evc2_new(npwx*npol,band_group%nlocx))
+#endif
+  !
+  ! Calculation of the charge density response
+  !
+  CALL wbse_calc_dens(evc1,dvrs,sf)
+  !
+  lrpa = l_bse
+  !
+  If(sf .AND. l_spin_flip_kernel) THEN
+     CALL wbse_dv_of_drho_sf(dvrs)
+  ELSE
+     CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
+  ENDIF
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     !$acc kernels present(evc2_new)
+     evc2_new(:,:) = (0._DP,0._DP)
+     !$acc end kernels
+     !
+     IF(sf) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
+     nbndval = nbnd_occ(iks)
+     flnbndval = nbnd_occ(iks_do)
+     !
+     nbnd_do = 0
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
+     ENDDO
+     !
+     ! ... Set k-point, spin, kinetic energy, needed by Hpsi
+     !
+     current_k = iks
+     IF(lsda) current_spin = isk(iks)
+     !
+     ! ... Number of G vectors for PW expansion of wfs at k
+     !
+     npw = ngk(iks)
+     !
+     ! ... read in GS wavefunctions iks
+     !
+     IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+     !
+#if defined(__CUDA)
+     !
+     ! ... Sync GPU
+     !
+     CALL using_becp_auto(2)
+     CALL using_becp_d_auto(0)
+#endif
+     !
+     ENDIF
+     !
+     IF(l_bse_triplet) THEN
+        do_k2e = .FALSE.
+     ELSEIF(sf .AND. (.NOT. l_spin_flip_kernel)) THEN
+        do_k2e = .FALSE.
+     ELSEIF(sf .AND. l_spin_flip_kernel) THEN
+        do_k2e = .TRUE.
+     ELSE
+        do_k2e = .TRUE.
+     ENDIF
+     !
+     IF(do_k2e) THEN
+        !
+        IF(gamma_only) THEN
+           !
+           ! double bands @ gamma
+           !
+           DO lbnd=1, nbnd_do-MOD(nbnd_do,2),2
+              !
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
+              jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
+              !
+              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+              !
+              !$acc parallel loop present(dvrs)
+              DO ir=1,dffts_nnr
+                 psic(ir) = psic(ir)*CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+              ENDDO
+              !$acc end parallel
+              !
+              !$acc host_data use_device(evc2_new)
+              CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc2_new(:,lbnd),evc2_new(:,lbnd+1),'Wave')
+              !$acc end host_data
+              !
+           ENDDO
+           ! 
+           ! single band @ gamma
+           ! 
+           IF(MOD(nbnd_do,2) == 1) THEN
+              !
+              lbnd = nbnd_do
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
+              !
+              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+              !
+              !$acc parallel loop present(dvrs)
+              DO ir = 1,dffts_nnr
+                 psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+              ENDDO
+              !$acc end parallel
+              !
+              !$acc host_data use_device(evc2_new)
+              CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc2_new(:,lbnd),'Wave')
+              !$acc end host_data
+              !
+           ENDIF
+           !
+        ELSE
+           !
+           ! only single bands
+           !
+           DO lbnd = 1,nbnd_do
+              !
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
+              !
+              CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
+              !
+              !$acc parallel loop present(dvrs)
+              DO ir = 1,dffts_nnr
+                 psic(ir) = psic(ir)*dvrs(ir,current_spin)
+              ENDDO
+              !$acc end parallel
+              !
+              !$acc host_data use_device(evc2_new)
+              CALL single_fwfft_k(dffts,npw,npwx,psic,evc2_new(:,lbnd),'Wave',igk_k(:,current_k))
+              !$acc end host_data
+              !
+           ENDDO
+           !
+           IF(npol == 2) THEN
+              DO lbnd = 1,nbnd_do
+                 !
+                 ibnd = band_group%l2g(lbnd)+n_trunc_bands
+                 !
+                 CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
+                 !
+                 !$acc parallel loop present(dvrs)
+                 DO ir = 1,dffts_nnr
+                    psic(ir) = psic(ir)*dvrs(ir,current_spin)
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc host_data use_device(evc2_new)
+                 CALL single_fwfft_k(dffts,npw,npwx,psic,evc2_new(npwx+1:npwx*2,lbnd),'Wave',igk_k(:,current_k))
+                 !$acc end host_data
+                 !
+              ENDDO
+           ENDIF
+           !
+        ENDIF
+        !
+     ENDIF
+     !
+     IF (l_bse) THEN
+        !
+        ! The other part beyond TDA. exx_div treatment is not needed for this part.
+        !
+        STOP
+        !
+     ENDIF
+     !
+     IF (l_hybrid_tddft) THEN
+        !
+        ! The other part beyond TDA. exx_div treatment is not needed for this part.
+        !
+        STOP
+        !
+     ENDIF
+     !
+     IF(gamma_only) THEN
+        IF(gstart == 2) THEN
+           !$acc parallel loop present(evc1_new)
+           DO lbnd = 1,nbnd_do
+              evc2_new(1,lbnd) = CMPLX(REAL(evc2_new(1,lbnd),KIND=DP),KIND=DP)
+           ENDDO
+           !$acc end parallel
+        ENDIF
+     ENDIF
+     !
+     ! Pc[k]*evc2_new(k)
+     !
+     ! load evc from iks to apply Pc of the current spin channel
+     !
+     IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+     ENDIF
+     !
+#if defined(__CUDA)
+     CALL reallocate_ps_gpu(nbndval,nbnd_do)
+#endif
+     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,evc2_new(:,:),(1._DP,0._DP))
+     !
+     !$acc parallel loop collapse(2) present(l_x,evc2_new)
+     DO lbnd = 1,nbnd_do
+        DO ig = 1,npw
+           evc1_new(ig,lbnd,iks) = evc1_new(ig,lbnd,iks)+evc2_new(ig,lbnd)
+        ENDDO
+     ENDDO
+     !$acc end parallel
+     !
+  ENDDO
+  !
+#if !defined(__CUDA)
+  DEALLOCATE(dvrs)
+  DEALLOCATE(evc2_new)
+#endif
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('apply_lv_btda')
+#else
+  CALL stop_clock('apply_lv_btda')
+#endif
+  !
+END SUBROUTINE
+
+
+SUBROUTINE cg_precondition(x, px, turn_shift)
+  !
+  USE kinds,                ONLY : DP
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,world_comm
+  USE mp,                   ONLY : mp_bcast,mp_barrier,mp_max
+  USE buffers,              ONLY : get_buffer
+  USE pwcom,                ONLY : nks,npwx
+  USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,n_trunc_bands
+  USE distribution_center,  ONLY : band_group,kpt_pool
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,nbgrp,my_bgrp_id,&
+                                 & inter_bgrp_comm,intra_bgrp_comm
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions,        ONLY : evc_host=>evc
+  USE wvfct_gpum,           ONLY : g2kin=>g2kin_d,et=>et_d
+#else
+  USE wavefunctions,        ONLY : evc_work=>evc,psic
+  USE wvfct,                ONLY : g2kin,et
+#endif
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  COMPLEX(DP), INTENT(IN) :: x(npwx,band_group%nlocx,kpt_pool%nloc)
+  LOGICAL, INTENT(IN) :: turn_shift
+  COMPLEX(DP), INTENT(OUT) :: px(npwx,band_group%nlocx,kpt_pool%nloc)
+  !
+  ! Workspace
+  !
+  INTEGER :: ig, ibnd, nbndval, nbnd_do, lbnd, ibndp
+  INTEGER :: iks, current_k, current_spin
+  INTEGER :: kpt_pool_nloc
+  REAL(DP):: tmp,tmp_abs,tmp_sgn
+  REAL(DP),ALLOCATABLE :: g2kin_save(:,:)
+  REAL(DP),PARAMETER :: minimum = 1._DP
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('precd_cg')
+#else
+  CALL start_clock('precd_cg')
+#endif
+  !
+  px(:,:,:) = (0._DP, 0._DP)
+  !
+  kpt_pool_nloc = kpt_pool%nloc
+  !
+  ALLOCATE(g2kin_save(npwx,kpt_pool%nloc))
+  !$acc enter data create(g2kin_save)
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+#if defined(__CUDA)
+     CALL g2_kin_gpu(iks)
+#else
+     CALL g2_kin(iks)
+#endif
+     !
+     !$acc kernels present(g2kin_save)
+     g2kin_save(:,iks) = g2kin
+     !$acc end kernels
+     !
+     nbndval = nbnd_occ(iks)
+     !
+     nbnd_do = 0
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+     ENDDO
+     !
+     !$acc parallel vector_length(1024) present(g2kin_save,x)
+     !$acc loop
+     DO lbnd = 1,nbnd_do
+        DO ig = 1,npwx
+           !
+           ! ibnd = band_group%l2g(lbnd)
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           !
+           IF (turn_shift) THEN
+              tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks)
+           ELSE
+              tmp = g2kin_save(ig,iks)
+           ENDIF
+           !
+           ! Same as the following line but without thread divergence
+           ! IF(ABS(tmp) < minimum) tmp = SIGN(minimum,tmp)
+           !
+           tmp_abs = MAX(ABS(tmp),minimum)
+           tmp_sgn = SIGN(1._DP,tmp)
+           tmp = tmp_sgn*tmp_abs
+           !
+           px(ig,lbnd,iks) = x(ig,lbnd,iks)/tmp
+           !
+        ENDDO
+        !
+     ENDDO
+     !$acc end parallel
+     !
+     ! Pc[k]*px(k)
+     !
+     ! load evc from iks to apply Pc of the current spin channel
+     !
+     IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+     ENDIF
+     !
+#if defined(__CUDA)
+     CALL reallocate_ps_gpu(nbndval,nbnd_do)
+#endif
+     !
+     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,px(:,:,iks),(1._DP,0._DP))
+     !
+  ENDDO
+  !
+  !$acc exit data delete(g2kin_save) copyout(px)
+  DEALLOCATE(g2kin_save)
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('precd_cg')
+#else
+  CALL stop_clock('precd_cg')
+#endif
   !
 END SUBROUTINE

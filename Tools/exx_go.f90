@@ -29,11 +29,12 @@ SUBROUTINE exx_go()
   USE buffers,                ONLY : open_buffer,close_buffer
   USE control_flags,          ONLY : io_level
   USE westcom,                ONLY : l_minimize_exx_if_active,n_exx_lowrank
-  USE mp_global,              ONLY : intra_bgrp_comm
+  USE mp_global,              ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE mp_exx,                 ONLY : mp_start_exx
+  USE mp,                     ONLY : mp_bcast
   USE command_line_options,   ONLY : ntg_,command_line
 #if defined(__CUDA)
-!  USE exx,                    ONLY : xi_d
+  USE exx,                    ONLY : xi_d
 #endif
   !
   IMPLICIT NONE
@@ -89,11 +90,14 @@ SUBROUTINE exx_go()
      IF(use_ace) THEN
         nbndproj = n_exx_lowrank
         ALLOCATE(xi(npwx*npol,nbndproj,nks))
-        CALL aceinit0()
-        nbndproj = n_exx_lowrank
 #if defined(__CUDA)
-!        ALLOCATE(xi_d(npwx*npol,nbndproj))
-!        IF(nks == 1) xi_d(:,:) = xi(:,:,1)
+        ALLOCATE(xi_d(npwx*npol,nbndproj))
+#endif
+        IF(my_image_id == 0) CALL aceinit0()
+        CALL mp_bcast(xi,0,inter_image_comm)
+        nbndproj = n_exx_lowrank
+#if defined (__CUDA)
+        IF(nks == 1) xi_d(:,:) = xi(:,:,1)
 #endif
      ELSE
         CALL exxinit(DoLoc=.FALSE.)

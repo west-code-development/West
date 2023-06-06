@@ -2155,15 +2155,15 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
         !
         ! The other part beyond TDA. exx_div treatment is not needed for this part.
         !
-        STOP
+        CALL errore('wbse_build_rhs_zvector_eq', 'BSE forces have not been implemented', 1) 
         !
      ENDIF
      !
      IF (l_hybrid_tddft) THEN
         !
-        ! The other part beyond TDA. exx_div treatment is not needed for this part.
+        ! K2d part. exx_div treatment is not needed for this part.
         !
-        STOP
+        CALL hybrid_kernel_term2(current_spin,evc1(:,:,:),evc2_new(:,:),sf)
         !
      ENDIF
      !

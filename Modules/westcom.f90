@@ -345,6 +345,7 @@ MODULE wbse_center
   INTEGER :: forces_state
   REAL(DP) :: forces_zeq_cg_tr
   REAL(DP) :: ddvxc_fd_coeff
+  LOGICAL :: l_slow_tddft_k1d
   !
   ! FOR global variables
   !

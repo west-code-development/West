@@ -23,6 +23,7 @@ WBSE_OBJS = \
 bse_kernel.o \
 calc_tau.o \
 check_ovl_wfc.o \
+hybrid_kernel.o \
 lanczos_restart.o \
 td_liouville_oper.o \
 wbse_build_rhs_zvector_eq.o \

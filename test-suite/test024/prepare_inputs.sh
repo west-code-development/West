@@ -20,6 +20,7 @@ nat             = 4
 ntyp            = 3
 ecutwfc         = 25
 nbnd            = 16
+input_dft       = 'pbe0'
 /
 &electrons
 diago_full_acc = .true.
@@ -36,6 +37,16 @@ O        0.565022174   0.500000000   0.500000000
 K_POINTS gamma
 EOF
 
+cat > wbse_init.in << EOF
+input_west:
+  qe_prefix: test
+  west_prefix: test
+  outdir: ./
+
+wbse_init_control:
+  wbse_init_calculation: S
+  solver: TDDFT
+EOF
 
 cat > wbse.in << EOF
 input_west:
@@ -56,4 +67,5 @@ wbse_control:
   l_pre_shift: True
   l_forces: True
   forces_state: 1
+  n_exx_lowrank: 0
 EOF

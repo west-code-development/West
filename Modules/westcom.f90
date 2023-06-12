@@ -275,6 +275,7 @@ MODULE westpp_center
   REAL(DP) :: westpp_rmax
   REAL(DP) :: westpp_epsinfty
   INTEGER :: westpp_n_liouville_to_use
+  LOGICAL :: westpp_l_spin_flip
   !
   ! Common workspace
   !

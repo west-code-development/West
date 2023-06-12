@@ -26,7 +26,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,document,wbse_init_calculation,solver,&
+                             & westpp_n_liouville_to_use,westpp_l_spin_flip,document,&
+                             & wbse_init_calculation,solver,&
                              & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
                              & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
                              & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
@@ -114,6 +115,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
         CALL json%add('input.westpp_control.westpp_box',westpp_box)
         CALL json%add('input.westpp_control.westpp_n_liouville_to_use',westpp_n_liouville_to_use)
+        CALL json%add('input.westpp_control.westpp_l_spin_flip',westpp_l_spin_flip)
         !
      ENDIF
      !
@@ -194,7 +196,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,document,wbse_init_calculation,solver,&
+                             & westpp_n_liouville_to_use,westpp_l_spin_flip,&
+                             & document,wbse_init_calculation,solver,&
                              & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
                              & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
                              & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
@@ -428,6 +431,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = tmp_list%getitem(westpp_box(5), 4)
         IERR = tmp_list%getitem(westpp_box(6), 5)
         IERR = return_dict%get(westpp_n_liouville_to_use, 'westpp_n_liouville_to_use', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(westpp_l_spin_flip, 'westpp_l_spin_flip')
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         !
@@ -698,6 +702,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(westpp_epsinfty,root,world_comm)
      CALL mp_bcast(westpp_box,root,world_comm)
      CALL mp_bcast(westpp_n_liouville_to_use,root,world_comm)
+     CALL mp_bcast(westpp_l_spin_flip,root,world_comm)
      !
      ! CHECKS
      !

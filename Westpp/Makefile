@@ -18,6 +18,8 @@ WESTPP_OBJS = \
 do_dip.o \
 do_eigenpot2.o \
 do_exc.o \
+do_exc_comp.o \
+do_exc_spin.o \
 do_rho.o \
 do_sxx.o \
 do_wann.o \

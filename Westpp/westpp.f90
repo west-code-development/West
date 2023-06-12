@@ -25,7 +25,7 @@ PROGRAM westpp
   !
   CHARACTER(LEN=9) :: code = 'WESTPP'
   INTEGER :: i
-  LOGICAL :: lgate(9)
+  LOGICAL :: lgate(11)
   !
   ! *** START ***
   !
@@ -44,7 +44,7 @@ PROGRAM westpp
   CALL westpp_setup( )
   !
   lgate = .FALSE.
-  DO i = 1, 9
+  DO i = 1, 11
      IF( westpp_calculation(i:i) == 'r' .OR. westpp_calculation(i:i) == 'R' ) lgate(1) = .TRUE. ! Rho --> density
      IF( westpp_calculation(i:i) == 'w' .OR. westpp_calculation(i:i) == 'W' ) lgate(2) = .TRUE. ! Wavefunction
      IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Eigenpotentials
@@ -54,6 +54,8 @@ PROGRAM westpp
      IF( westpp_calculation(i:i) == 'x' .OR. westpp_calculation(i:i) == 'X' ) lgate(7) = .TRUE. ! Exciton
      IF( westpp_calculation(i:i) == 'p' .OR. westpp_calculation(i:i) == 'P' ) lgate(8) = .TRUE. ! Density response to exciton
      IF( westpp_calculation(i:i) == 'b' .OR. westpp_calculation(i:i) == 'B' ) lgate(9) = .TRUE. ! Boys / Wannier localization
+     IF( westpp_calculation(i:i) == 'c' .OR. westpp_calculation(i:i) == 'C' ) lgate(10) = .TRUE. ! Composition of excited state
+     IF( westpp_calculation(i:i) == 'm' .OR. westpp_calculation(i:i) == 'M' ) lgate(11) = .TRUE. ! Spin multiplicity of excited state
   ENDDO
   !
   IF( lgate(1) ) CALL do_rho( )
@@ -65,6 +67,8 @@ PROGRAM westpp
   IF( lgate(7) ) CALL do_exc( )
   IF( lgate(8) ) CALL do_resp( )
   IF( lgate(9) ) CALL do_wann( )
+  IF( lgate(10) ) CALL do_exc_comp( )
+  IF( lgate(11) ) CALL do_exc_spin( )
   !
   CALL exx_ungo( )
   !

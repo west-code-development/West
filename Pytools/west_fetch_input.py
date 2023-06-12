@@ -79,6 +79,7 @@ default["westpp_control"]["westpp_rmax"] = 1.
 default["westpp_control"]["westpp_epsinfty"] = 1.
 default["westpp_control"]["westpp_box"] = [0., 0., 0., 0., 0., 0.]
 default["westpp_control"]["westpp_n_liouville_to_use"] = 1
+default["westpp_control"]["westpp_l_spin_flip"] = False
 # server_control
 default["server_control"] = {}
 default["server_control"]["document"] = "{}"

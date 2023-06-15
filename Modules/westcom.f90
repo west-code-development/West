@@ -340,6 +340,7 @@ MODULE wbse_center
   LOGICAL :: l_spin_flip_alda0
   LOGICAL :: l_print_spin_flip_kernel
   REAL(DP) :: spin_flip_cut1
+  REAL(DP) :: spin_flip_cut2
   REAL(DP) :: wbse_epsinfty
   CHARACTER(LEN=1) :: spin_excitation
   LOGICAL :: l_forces

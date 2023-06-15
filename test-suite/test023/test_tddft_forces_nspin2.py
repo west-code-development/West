@@ -29,11 +29,11 @@ def test_wbse_forces():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_forces = read_wbse_forces("./test022/ref/wbse.json")
-    test_forces = read_wbse_forces("./test022/test.wbse.save/wbse.json")
+    ref_forces = read_wbse_forces("./test023/ref/wbse.json")
+    test_forces = read_wbse_forces("./test023/test.wbse.save/wbse.json")
 
     np.testing.assert_almost_equal(
         ref_forces,
         test_forces,
-        decimal=-np.log10(float(parameters["tolerance"]["bse"])),
+        decimal=-np.log10(float(parameters["tolerance"]["forces"])),
     )

@@ -423,7 +423,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   USE kinds,                ONLY : DP
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_bse,&
-                                 & l_hybrid_tddft,l_spin_flip
+                                 & l_hybrid_tddft,l_spin_flip,l_spin_flip_kernel
   USE lsda_mod,             ONLY : current_spin,nspin
   USE wvfct,                ONLY : npwx,npw
   USE klist,                ONLY : nks,igk_k
@@ -438,7 +438,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   USE distribution_center,  ONLY : band_group,kpt_pool
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,nbgrp,my_bgrp_id,&
                                  & inter_bgrp_comm,intra_bgrp_comm,world_comm
-  USE wbse_dv,              ONLY : wbse_dv_of_drho
+  USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -456,9 +456,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   ! WORKSPACE
   !
   LOGICAL :: lrpa
-  INTEGER :: ibnd,ibndp,jbnd,jbndp,kbnd,kbndp,iks,iks_do,ir,ig,nbndval,nbnd_do,lbnd
+  INTEGER :: ibnd,ibndp,jbnd,jbndp,kbnd,kbndp,iks,iks_do,ir,ig,nbndval,nbnd_do,lbnd,flnbndval
   INTEGER :: dffts_nnr
-  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),drhox(:,:),aux_g(:,:),dot_out(:)
+  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),drhox(:,:),aux_g(:,:),dot_out(:),evc_copy(:,:)
   REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:,:)
   REAL(DP) :: reduce
   COMPLEX(DP) :: factor
@@ -734,7 +734,301 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
      !
   ELSE
      !
-     STOP
+     IF(l_spin_flip_kernel) THEN
+        !
+        ALLOCATE(evc_copy(npwx, nbndval0x))
+        !
+        ! Calculation of the charge density response
+        CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.TRUE.)
+        !
+        CALL wbse_dv_of_drho_sf(dvrs)
+        !
+        DO iks = 1,kpt_pool%nloc
+           !
+           iks_do = flks(iks)
+           !
+           nbndval = nbnd_occ(iks)
+           flnbndval = nbnd_occ(iks_do)
+           !
+           nbnd_do = 0
+           DO lbnd = 1,band_group%nloc
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
+              IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+           ENDDO
+           !
+           ! ... Set k-point, spin, kinetic energy, needed by Hpsi
+           !
+           current_k = iks
+           IF(lsda) current_spin = isk(iks)
+           !
+           ! ... Number of G vectors for PW expansion of wfs at k
+           !
+           npw = ngk(iks)
+           !
+           ! ... read in GS wavefunctions iks
+           !
+           IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+              IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+              CALL mp_bcast(evc_host,0,inter_image_comm)
+              !
+              CALL using_evc(2)
+              CALL using_evc_d(0)
+#else
+              IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+              CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+           ENDIF
+           !
+           ! ... Apply \Delta V_HXC on vector
+           !
+           IF(gamma_only) THEN
+              !
+              ! double bands @ gamma
+              !
+              DO lbnd = 1,nbnd_do-MOD(nbnd_do,2),2
+                 !
+                 CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks_do),dvg_exc_tmp(:,lbnd+1,iks_do),psic,'Wave')
+                 !
+                 !$acc parallel loop present(dvrs)
+                 DO ir=1,dffts_nnr
+                    psic(ir) = psic(ir)*CMPLX(REAL(dvrs(ir,iks_do),KIND=DP),KIND=DP)
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc host_data use_device(z_rhs_vec_part2)
+                 CALL double_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part2(:,lbnd,iks),z_rhs_vec_part2(:,lbnd+1,iks),'Wave')
+                 !$acc end host_data
+                 !
+              ENDDO
+              ! 
+              ! single band @ gamma
+              ! 
+              IF(MOD(nbnd_do,2) == 1) THEN
+                 !
+                 lbnd = nbnd_do
+                 !
+                 CALL single_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks_do),psic,'Wave')
+                 !
+                 !$acc parallel loop present(dvrs)
+                 DO ir=1,dffts_nnr
+                    psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,iks_do),KIND=DP),KIND=DP)
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc host_data use_device(z_rhs_vec_part2)
+                 CALL single_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part2(:,lbnd,iks),'Wave')
+                 !$acc end host_data
+                 !
+              ENDIF
+              !
+              evc_copy(:,:) = (0._DP, 0._DP)
+              !
+              DO ibnd = 1,nbndval
+                 DO ig = 1,npw
+                    evc_copy(ig,ibnd) = evc_work(ig,ibnd)
+                 ENDDO
+              ENDDO
+              !
+              IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+                 IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
+                 CALL mp_bcast(evc_host,0,inter_image_comm)
+                 !
+                 CALL using_evc(2)
+                 CALL using_evc_d(0)
+#else
+                 IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
+                 CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+              ENDIF
+              !
+              ! now evc_copy contains the evc of the current spin channel, and
+              ! evc_work contains the evc of the opposite spin channel
+              !
+              ! Compute the second part: dv_vv_mat
+              ! recompute nbnd_do for the opposite spin channel
+              !
+              nbnd_do = 0
+              DO lbnd = 1,band_group%nloc
+                 ibnd = band_group%l2g(lbnd)+n_trunc_bands
+                 IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
+              ENDDO
+              !
+              DO lbnd = 1,nbnd_do
+                 !
+                 ibnd = band_group%l2g(lbnd)
+                 ibndp = ibnd+n_trunc_bands
+                 !
+                 ! double band @ gamma
+                 !
+                 DO jbnd = 1,(nbndval-n_trunc_bands)-MOD((nbndval-n_trunc_bands),2),2
+                    !
+                    kbnd = jbnd+1
+                    jbndp = jbnd+n_trunc_bands
+                    kbndp = kbnd+n_trunc_bands
+                    !
+                    CALL double_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbndp),evc_copy(:,kbndp),psic,'Wave')
+                    !
+                    !$acc parallel loop present(dvrs)
+                    DO ir=1,dffts_nnr
+                       psic(ir) = psic(ir)*CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+                    ENDDO
+                    !$acc end parallel
+                    !
+                    !$acc host_data use_device(aux_g)
+                    CALL double_fwfft_gamma(dffts,npw,npwx,psic,aux_g(:,1),aux_g(:,2),'Wave')
+                    !$acc end host_data
+                    !
+                    reduce = 0._DP
+                    !$acc loop reduction(+:reduce)
+                    DO ig = 1, npw
+                       reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
+                                       + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                    ENDDO
+                    !
+                    dv_vv_mat(jbnd,lbnd,iks) = 2._DP * reduce
+                    !
+                    IF (gstart == 2) THEN 
+                       dv_vv_mat(jbnd,lbnd,iks) = dv_vv_mat(jbnd,lbnd,iks) &
+                       & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,1),KIND=DP)
+                    ENDIF
+                    !
+                    reduce = 0._DP
+                    !$acc loop reduction(+:reduce)
+                    DO ig = 1, npw
+                       reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
+                                       + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
+                    ENDDO
+                    !
+                    dv_vv_mat(kbnd,lbnd,iks) = 2._DP * reduce
+                    !
+                    IF (gstart == 2) THEN 
+                       dv_vv_mat(kbnd,lbnd,iks) = dv_vv_mat(kbnd,lbnd,iks) &
+                       & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,2),KIND=DP)
+                    ENDIF
+                    !
+                 ENDDO
+                 ! 
+                 ! single band @ gamma
+                 !
+                 IF(MOD((nbndval-n_trunc_bands),2) == 1) THEN
+                    !
+                    jbnd  = nbndval - n_trunc_bands
+                    jbndp   = jbnd + n_trunc_bands
+                    !
+                    CALL single_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbndp),psic,'Wave')
+                    !
+                    !$acc parallel loop present(dvrs)
+                    DO ir=1,dffts_nnr
+                       psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP) 
+                    ENDDO
+                    !$acc end parallel
+                    !
+                    !$acc host_data use_device(aux_g)
+                    CALL single_fwfft_gamma(dffts,npw,npwx,psic,aux_g(:,1),'Wave')
+                    !$acc end host_data
+                    !
+                    reduce = 0._DP
+                    !$acc loop reduction(+:reduce)
+                    DO ig = 1, npw
+                       reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
+                                       + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                    ENDDO
+                    !
+                    dv_vv_mat(jbnd,lbnd,iks) = 2._DP * reduce
+                    !
+                    IF (gstart == 2) THEN
+                       dv_vv_mat(jbnd,lbnd,iks) = dv_vv_mat(jbnd,lbnd,iks) &
+                       & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,1),KIND=DP)
+                    ENDIF
+                    !
+                 ENDIF
+                 !
+              ENDDO
+              !
+              CALL mp_sum(dv_vv_mat(:,:,iks),intra_bgrp_comm) 
+              !
+              dpcpart(:,:) = (0._DP, 0._DP)
+              !
+              DO lbnd = 1,nbnd_do
+                 !
+                 DO jbnd = 1,nbndval-n_trunc_bands
+                    !
+                    factor = CMPLX(-dv_vv_mat(jbnd,lbnd,iks),KIND=DP)
+                    !
+                    !$acc host_data use_device(dvg_exc_tmp,dpcpart)
+                    CALL ZAXPY(npw,factor,dvg_exc_tmp(:,lbnd,iks),1,dpcpart(:,jbnd),1)
+                    !$acc end host_data
+                    !
+                 ENDDO
+                 !
+              ENDDO
+              !
+              CALL mp_sum(dpcpart(:,:),inter_bgrp_comm)
+              !
+           ENDIF
+           !
+           ! recompute nbnd_do for the current spin channel
+           !
+           nbnd_do = 0
+           DO lbnd = 1,band_group%nloc
+              ibnd = band_group%l2g(lbnd)+n_trunc_bands
+              IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+           ENDDO
+           !
+           !$acc parallel loop collapse(2) present(z_rhs_vec_part2,dpcpart)
+           DO lbnd = 1,nbnd_do
+              ibnd = band_group%l2g(lbnd)
+              DO ig = 1,npw
+                 z_rhs_vec_part2(ig,lbnd,iks) = z_rhs_vec_part2(ig,lbnd,iks)+dpcpart(ig,ibnd)
+              ENDDO
+           ENDDO
+           !$acc end parallel
+           !
+           IF(gamma_only) THEN
+              IF(gstart == 2) THEN
+                 !$acc parallel loop present(z_rhs_vec_part2)
+                 DO lbnd = 1,nbnd_do
+                    z_rhs_vec_part2(1,lbnd,iks) = CMPLX(REAL(z_rhs_vec_part2(1,lbnd,iks),KIND=DP),KIND=DP)
+                 ENDDO
+                 !$acc end parallel
+              ENDIF
+           ENDIF
+           !
+           ! Pc[k]*z_rhs_vec_part2
+           !
+           IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+              IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+              CALL mp_bcast(evc_host,0,inter_image_comm)
+              !
+              CALL using_evc(2)
+              CALL using_evc_d(0)
+#else
+              IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+              CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+           ENDIF
+           !
+#if defined(__CUDA)
+           CALL reallocate_ps_gpu(nbndval,nbnd_do)
+#endif
+           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,z_rhs_vec_part2(:,:,iks),(1._DP,0._DP))
+           !
+           !$acc parallel loop collapse(2) present(z_rhs_vec,z_rhs_vec_part2)
+           DO lbnd = 1,nbnd_do
+              DO ig = 1,npw
+                 z_rhs_vec(ig,lbnd,iks) = z_rhs_vec(ig,lbnd,iks)-z_rhs_vec_part2(ig,lbnd,iks)
+              ENDDO
+           ENDDO
+           !$acc end parallel
+           !
+        ENDDO
+        !
+        DEALLOCATE(evc_copy)
+        !
+     ENDIF
      !
   ENDIF  
   !
@@ -821,11 +1115,11 @@ using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   !
   IF(.NOT. l_spin_flip) THEN
      !
-     CALL compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
+     CALL compute_ddvxc_5p(dvg_exc_tmp, ddvxc)
      !
   ELSE
      !
-     STOP
+     CALL compute_ddvxc_sf(dvg_exc_tmp, ddvxc)
      !
   ENDIF
   !
@@ -1140,6 +1434,163 @@ END SUBROUTINE
 
 
 !-----------------------------------------------------------------------
+SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
+  !-----------------------------------------------------------------------
+  !
+  USE io_global,            ONLY : stdout
+  USE kinds,                ONLY : DP
+  USE lsda_mod,             ONLY : current_spin,nspin,lsda
+  USE wvfct,                ONLY : npwx
+  USE klist,                ONLY : nks,wk,igk_k
+  USE pwcom,                ONLY : isk,lsda,current_k,ngk
+  USE mp,                   ONLY : mp_barrier
+  USE noncollin_module,     ONLY : noncolin,npol,nspin_gga
+  USE xc_lib,               ONLY : xclib_dft_is
+  USE fft_base,             ONLY : dffts
+  USE gvect,                ONLY : ngm,g
+  USE scf,                  ONLY : rho,rho_core,rhog_core
+  USE uspp,                 ONLY : nlcc_any
+  USE distribution_center,  ONLY : kpt_pool,band_group
+  USE mp_world,             ONLY : world_comm
+  USE westcom,              ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut2,&
+                                 & l_print_spin_flip_kernel
+  USE qpoint,               ONLY : xq
+  USE gc_lr,                ONLY : grho,dvxc_rr,dvxc_sr,dvxc_ss,dvxc_s
+  USE eqv,                  ONLY : dmuxc
+  USE cubefile,             ONLY : write_wfc_cube_r
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  COMPLEX(DP), INTENT(IN) :: dvg_exc_tmp(npwx*npol, band_group%nlocx, kpt_pool%nloc)
+  COMPLEX(DP), INTENT(INOUT) :: ddvxc(dffts%nnr, nspin)
+  !
+  ! WORKSPACE
+  !
+  INTEGER  :: ir,is,is1,dffts_nnr
+  REAL(DP) :: tmp1,tmp2
+  COMPLEX(DP), ALLOCATABLE :: drho_sf_copy(:,:),dvsf(:,:)
+  CHARACTER(LEN=:), ALLOCATABLE :: fname
+#if !defined(__CUDA)
+  COMPLEX(DP), ALLOCATABLE :: drho_sf(:,:)
+#endif
+  !
+  IF(nlcc_any) CALL errore('compute_ddvxc_sf', 'nlcc_any is not supported', 1)
+  !
+  CALL mp_barrier(world_comm)
+  !
+  ALLOCATE(drho_sf(dffts%nnr,2))
+  ALLOCATE(drho_sf_copy(dffts%nnr,2))
+  ALLOCATE(dvsf(dffts%nnr,2))
+  drho_sf(:,:) = (0._DP, 0._DP)
+  drho_sf_copy(:,:) = (0._DP, 0._DP)
+  dvsf(:,:) = (0._DP, 0._DP)
+  !
+  dffts_nnr = dffts%nnr
+  !
+  CALL wbse_calc_dens(dvg_exc_tmp,drho_sf,.TRUE.)
+  !
+  DO ir = 1,dffts_nnr
+     tmp1 = REAL(drho_sf(ir,1),KIND=DP)**2
+     tmp2 = REAL(drho_sf(ir,2),KIND=DP)**2
+     drho_sf_copy(ir,1) = CMPLX(tmp1 + tmp2,0._DP,KIND=DP)
+     drho_sf_copy(ir,2) = - CMPLX(tmp1 + tmp2,0._DP,KIND=DP)
+  ENDDO
+  !
+  ! divide rho_diff
+  !
+  DO ir = 1,dffts_nnr
+     !
+     drho_sf_copy(ir,1) = drho_sf_copy(ir,1) / rho%of_r(ir,2)
+     drho_sf_copy(ir,2) = drho_sf_copy(ir,2) / rho%of_r(ir,2)
+     !
+     IF(ABS(rho%of_r(ir,2)) < spin_flip_cut2) THEN
+        drho_sf_copy(ir,1) = (0._DP, 0._DP)
+        drho_sf_copy(ir,2) = (0._DP, 0._DP)
+     ENDIF
+     !
+  ENDDO
+  !
+  ! part 1
+  !
+  DO ir = 1,dffts_nnr
+     ddvxc(ir,1) = - sf_kernel(ir) * drho_sf_copy(ir,1)
+     ddvxc(ir,2) = - sf_kernel(ir) * drho_sf_copy(ir,2)
+  ENDDO
+  !
+  ! part 2
+  !
+  dvsf(:,:) = (0._DP, 0._DP)
+  DO is = 1,nspin
+     DO is1 = 1,nspin
+        dvsf(:,is) = dvsf(:,is) + dmuxc(:,is,is1) * drho_sf_copy(:,is1)
+     ENDDO
+  ENDDO
+  !
+  IF(.NOT. l_spin_flip_alda0) THEN
+     IF(xclib_dft_is('gradient')) THEN
+        CALL dgradcorr(dffts, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
+             & drho_sf_copy, nspin, nspin_gga, g, dvsf)
+     ENDIF
+  ENDIF
+  !
+  ! part 1 and part 2 together
+  !
+  DO ir = 1,dffts_nnr
+     !
+     ddvxc(ir,1) = ddvxc(ir,1) + dvsf(ir,1)
+     ddvxc(ir,2) = ddvxc(ir,2) + dvsf(ir,2)
+     !
+  ENDDO
+  !
+  ! print spin flip kernel (keep it for now)
+  !
+  IF(l_print_spin_flip_kernel) THEN
+     !
+     CALL mp_barrier(world_comm)
+     !
+     !$acc update host(rho%of_r)
+     fname=TRIM(wbse_save_dir)//'/rho_diff.cube'
+     CALL write_wfc_cube_r(dffts, fname, rho%of_r(ir,2))
+     !
+     !$acc update host(drho_sf)
+     fname=TRIM(wbse_save_dir)//'/drho_sf_up.cube'
+     CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf(:,1),KIND=DP))
+     !
+     !$acc update host(drho_sf)
+     fname=TRIM(wbse_save_dir)//'/drho_sf_down.cube'
+     CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf(:,2),KIND=DP))
+     !
+     !$acc update host(drho_sf_copy)
+     fname=TRIM(wbse_save_dir)//'/drho_sq_rho_diff_up.cube'
+     CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf_copy(:,1),KIND=DP))
+     !
+     !$acc update host(drho_sf_copy)
+     fname=TRIM(wbse_save_dir)//'/drho_sq_rho_diff_down.cube'
+     CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf_copy(:,2),KIND=DP))
+     !
+     !$acc update host(ddvxc)
+     fname=TRIM(wbse_save_dir)//'/ddvxc_up.cube'
+     CALL write_wfc_cube_r(dffts, fname, REAL(ddvxc(:,1),KIND=DP))
+     !
+     !$acc update host(ddvxc)
+     fname=TRIM(wbse_save_dir)//'/ddvxc_down.cube'
+     CALL write_wfc_cube_r(dffts, fname, REAL(ddvxc(:,2),KIND=DP))
+     !
+     CALL mp_barrier(world_comm)
+  ENDIF
+  !
+  DEALLOCATE(drho_sf)
+  DEALLOCATE(drho_sf_copy)
+  DEALLOCATE(dvsf)
+  !
+  CALL mp_barrier(world_comm)
+  !
+END SUBROUTINE
+
+
+!-----------------------------------------------------------------------
 SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   !-----------------------------------------------------------------------
   !
@@ -1249,7 +1700,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
 #endif
      ENDIF
      !
-     IF (gamma_only) THEN
+     IF(gamma_only) THEN
         !
         ! Compute the first part
         CALL hybrid_kernel_term4 (current_spin, dvg_exc_tmp(:,:,:), z_rhs_vec_part4(:,:,iks), l_spin_flip)
@@ -1325,6 +1776,14 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
         ENDDO
         !
         CALL mp_sum(dpcpart(:,:), inter_bgrp_comm)
+        !
+        ! compute the nbnd_do for the current spin channel
+        !
+        nbnd_do = 0
+        DO lbnd = 1,band_group%nloc
+           ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+        ENDDO
         !
         !$acc parallel loop collapse(2) present(z_rhs_vec_part4,dpcpart)
         DO lbnd = 1,nbnd_do

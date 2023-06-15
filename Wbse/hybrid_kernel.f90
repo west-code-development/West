@@ -128,7 +128,7 @@ SUBROUTINE hybrid_kernel_term1_slow (current_spin, evc1, hybrid_kd1, sf)
               !
               DO ir = 1, dffts%nnr
                  !
-                 caux(ir) = CMPLX( REAL( psic(ir), KIND=DP ) * DIMAG( psic(ir) ), 0._DP, KIND=DP )
+                 caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),0._DP,KIND=DP)
                  !
               ENDDO
               !
@@ -154,7 +154,7 @@ SUBROUTINE hybrid_kernel_term1_slow (current_spin, evc1, hybrid_kd1, sf)
            !
            DO ir = 1, dffts%nnr
               !
-              psic(ir) = CMPLX( REAL( caux(ir), KIND=DP ) * DIMAG( caux(ir) ), 0._DP, KIND=DP )
+              psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),0._DP,KIND=DP)
               !
            ENDDO
            !
@@ -298,7 +298,7 @@ SUBROUTINE hybrid_kernel_term2 (current_spin, evc1, hybrid_kd2, sf)
               !
               DO ir = 1, dffts%nnr
                  !
-                 caux(ir) = CMPLX( REAL( psic(ir), KIND=DP ) * DIMAG( psic(ir) ), 0._DP, KIND=DP )
+                 caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),0._DP,KIND=DP)
                  !
               ENDDO
               !
@@ -324,7 +324,7 @@ SUBROUTINE hybrid_kernel_term2 (current_spin, evc1, hybrid_kd2, sf)
            !
            DO ir = 1, dffts%nnr
               !
-              psic(ir) = CMPLX( REAL( caux(ir), KIND=DP ) * DIMAG( caux(ir) ), 0._DP, KIND=DP )
+              psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),0._DP,KIND=DP)
               !
            ENDDO
            !
@@ -475,7 +475,7 @@ SUBROUTINE hybrid_kernel_term3 (current_spin, evc1, hybrid_kd3, sf)
               !
               DO ir = 1, dffts%nnr
                  !
-                 caux(ir) = CMPLX( REAL( psic(ir), KIND=DP ) * DIMAG( psic(ir) ), 0._DP, KIND=DP )
+                 caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),0._DP,KIND=DP)
                  !
               ENDDO
               !
@@ -501,7 +501,7 @@ SUBROUTINE hybrid_kernel_term3 (current_spin, evc1, hybrid_kd3, sf)
            !
            DO ir = 1, dffts%nnr
               !
-              psic(ir) = CMPLX( REAL( caux(ir), KIND=DP ) * DIMAG( caux(ir) ), 0._DP, KIND=DP )
+              psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),0._DP,KIND=DP)
               !
            ENDDO
            !
@@ -514,6 +514,14 @@ SUBROUTINE hybrid_kernel_term3 (current_spin, evc1, hybrid_kd3, sf)
      ENDDO
      !
      CALL mp_sum (aux_hybrid3(:,:), inter_bgrp_comm)
+     !
+     ! Note: nbnd_do needs to be recomputed for the corrent spin channel
+     !
+     nbnd_do = 0
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+     ENDDO
      !
      DO lbnd = 1, nbnd_do
         !
@@ -668,7 +676,7 @@ SUBROUTINE hybrid_kernel_term4 (current_spin, evc1, hybrid_kd4, sf)
               !
               DO ir = 1, dffts%nnr
                  !
-                 caux(ir) = CMPLX( REAL( psic(ir), KIND=DP ) * DIMAG( psic(ir) ), 0._DP, KIND=DP )
+                 caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),0._DP,KIND=DP)
                  !
               ENDDO
               !
@@ -694,7 +702,7 @@ SUBROUTINE hybrid_kernel_term4 (current_spin, evc1, hybrid_kd4, sf)
            !
            DO ir = 1, dffts%nnr
               !
-              psic(ir) = CMPLX( REAL( caux(ir), KIND=DP ) * DIMAG( caux(ir) ), 0._DP, KIND=DP )
+              psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),0._DP,KIND=DP)
               !
            ENDDO
            !

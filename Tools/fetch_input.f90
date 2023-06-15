@@ -35,7 +35,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
                              & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
                              & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut1,l_forces,forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,&
+                             & spin_flip_cut1,spin_flip_cut2,l_forces,forces_state,&
+                             & forces_zeq_cg_tr,ddvxc_fd_coeff,&
                              & l_slow_tddft_k1d,l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
@@ -166,6 +167,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.l_spin_flip_alda0',l_spin_flip_alda0)
         CALL json%add('input.wbse_control.l_print_spin_flip_kernel',l_print_spin_flip_kernel)
         CALL json%add('input.wbse_control.spin_flip_cut1',spin_flip_cut1)
+        CALL json%add('input.wbse_control.spin_flip_cut2',spin_flip_cut2)
         CALL json%add('input.wbse_control.l_forces',l_forces)
         CALL json%add('input.wbse_control.forces_state',forces_state)
         CALL json%add('input.wbse_control.forces_zeq_cg_tr',forces_zeq_cg_tr)
@@ -205,7 +207,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
                              & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
                              & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut1,l_forces,forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,&
+                             & spin_flip_cut1,spin_flip_cut2,l_forces,forces_state,&
+                             & forces_zeq_cg_tr,ddvxc_fd_coeff,&
                              & l_slow_tddft_k1d,l_reduce_io,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
@@ -535,6 +538,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(l_spin_flip_alda0, 'l_spin_flip_alda0')
         IERR = return_dict%getitem(l_print_spin_flip_kernel, 'l_print_spin_flip_kernel')
         IERR = return_dict%getitem(spin_flip_cut1, 'spin_flip_cut1')
+        IERR = return_dict%getitem(spin_flip_cut2, 'spin_flip_cut2')
         IERR = return_dict%getitem(l_forces, 'l_forces')
         IERR = return_dict%get(forces_state, 'forces_state', DUMMY_DEFAULT)
         IERR = return_dict%getitem(forces_zeq_cg_tr, 'forces_zeq_cg_tr')
@@ -815,6 +819,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(l_spin_flip_alda0,root,world_comm)
      CALL mp_bcast(l_print_spin_flip_kernel,root,world_comm)
      CALL mp_bcast(spin_flip_cut1,root,world_comm)
+     CALL mp_bcast(spin_flip_cut2,root,world_comm)
      CALL mp_bcast(l_forces,root,world_comm)
      CALL mp_bcast(forces_state,root,world_comm)
      CALL mp_bcast(forces_zeq_cg_tr,root,world_comm)

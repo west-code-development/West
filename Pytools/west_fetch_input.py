@@ -121,6 +121,7 @@ default["wbse_control"]["l_spin_flip_kernel"] = False
 default["wbse_control"]["l_spin_flip_alda0"] = False
 default["wbse_control"]["l_print_spin_flip_kernel"] = False
 default["wbse_control"]["spin_flip_cut1"] = 1e3
+default["wbse_control"]["spin_flip_cut2"] = 1e-4
 default["wbse_control"]["l_forces"] = False
 default["wbse_control"]["forces_state"] = 1
 default["wbse_control"]["forces_zeq_cg_tr"] = 1e-10

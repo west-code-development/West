@@ -35,5 +35,5 @@ def test_wbse_forces():
     np.testing.assert_almost_equal(
         ref_forces,
         test_forces,
-        decimal=-np.log10(float(parameters["tolerance"]["bse"])),
+        decimal=-np.log10(float(parameters["tolerance"]["forces"])),
     )

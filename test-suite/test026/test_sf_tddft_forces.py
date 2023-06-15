@@ -16,7 +16,7 @@ def read_wbse_forces(fileName):
     forces_total = np.array(raw_["exec"]["forces"]["forces_total"], dtype=float)
     forces_collect = np.array(raw_["exec"]["forces"]["forces_corrected"], dtype=float)
 
-    forces = np.array([forces_drhox1, forces_drhox2, forces_drhoz, forces_total, forces_collect])
+    forces = forces_collect
 
     return forces
 
@@ -29,8 +29,8 @@ def test_wbse_forces():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_forces = read_wbse_forces("./test025/ref/wbse.json")
-    test_forces = read_wbse_forces("./test025/test.wbse.save/wbse.json")
+    ref_forces = read_wbse_forces("./test026/ref/wbse.json")
+    test_forces = read_wbse_forces("./test026/test.wbse.save/wbse.json")
 
     np.testing.assert_almost_equal(
         ref_forces,

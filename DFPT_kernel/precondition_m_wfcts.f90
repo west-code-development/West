@@ -15,11 +15,7 @@ SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-#if defined(__CUDA)
-  USE wvfct_gpum,            ONLY : g2kin=>g2kin_d
-#else
   USE wvfct,                 ONLY : g2kin
-#endif
   USE noncollin_module,      ONLY : noncolin,npol
   USE pwcom,                 ONLY : npw,npwx
   !
@@ -37,7 +33,7 @@ SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
   INTEGER :: ibnd, ig
   !
 #if defined(__CUDA)
-  !$acc parallel loop collapse(2) present(pf,f,eprec)
+  !$acc parallel loop collapse(2) present(pf,f,g2kin,eprec)
 #else
   !$OMP PARALLEL DO COLLAPSE(2)
 #endif

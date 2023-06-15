@@ -115,17 +115,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      current_k = iks
      IF(lsda) current_spin = isk(iks)
      !
-#if defined(__CUDA)
-     CALL g2_kin_gpu(iks)
-     !
-     ! ... More stuff needed by the hamiltonian: nonlocal projectors
-     !
-     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
-#else
      CALL g2_kin(iks)
      !
      ! ... More stuff needed by the hamiltonian: nonlocal projectors
      !
+#if defined(__CUDA)
+     IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.TRUE.)
+#else
      IF(nkb > 0) CALL init_us_2(ngk(iks),igk_k(1,iks),xk(1,iks),vkb,.FALSE.)
 #endif
      !

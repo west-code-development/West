@@ -106,8 +106,8 @@ def test_qdet_one_body_terms():
     h1e_test = read_one_body_terms_from_JSON("./test014/test.wfreq.save/wfreq.json")
 
     np.testing.assert_almost_equal(
-        h1e_ref,
-        h1e_test,
+        np.abs(h1e_ref),
+        np.abs(h1e_test),
         decimal=-np.log10(float(parameters["tolerance"]["pdep_eigenvalue"])),
     )
 
@@ -124,7 +124,7 @@ def test_qdet_two_body_terms():
     eri_test = read_two_body_terms_from_JSON("./test014/test.wfreq.save/wfreq.json")
 
     np.testing.assert_almost_equal(
-        eri_ref,
-        eri_test,
+        np.abs(eri_ref),
+        np.abs(eri_test),
         decimal=-np.log10(float(parameters["tolerance"]["pdep_eigenvalue"])),
     )

@@ -30,11 +30,7 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
   USE gvect,            ONLY : gstart
   USE control_flags,    ONLY : gamma_only
   USE noncollin_module, ONLY : npol,noncolin
-#if defined(__CUDA)
-  USE wvfct_gpum,       ONLY : g2kin=>g2kin_d
-#else
   USE wvfct,            ONLY : g2kin
-#endif
   !
   IMPLICIT NONE
   !
@@ -53,7 +49,7 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
   ! ... Here we apply the kinetic energy (k+G)^2 psi
   !
 #if defined(__CUDA)
-  !$acc parallel loop collapse(2) present(hpsi,psi)
+  !$acc parallel loop collapse(2) present(hpsi,g2kin,psi)
 #else
   !$OMP PARALLEL DEFAULT(NONE) SHARED(m,n,hpsi,g2kin,psi,lda,noncolin) PRIVATE(ibnd,ig)
   !$OMP DO COLLAPSE(2)

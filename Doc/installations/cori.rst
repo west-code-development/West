@@ -4,7 +4,7 @@
 NERSC-Cori
 ==========
 
-Cori is a Cray XC40 located at National Energy Research Scientific Computing Center (`NERSC <https://www.nersc.gov/>`_).
+Cori (**retired** on May 31, 2023) was a Cray XC40 located at National Energy Research Scientific Computing Center (`NERSC <https://www.nersc.gov/>`_).
 
 .. code-block:: bash
 
@@ -13,7 +13,7 @@ Cori is a Cray XC40 located at National Energy Research Scientific Computing Cen
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on October 4, 2022):
+WEST executables can be compiled using the following script:
 
 .. code-block:: bash
 

@@ -17,11 +17,7 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   ! Set eprec, for precondiconditioning
   !
   USE kinds,                 ONLY : DP
-#if defined(__CUDA)
-  USE wvfct_gpum,            ONLY : g2kin=>g2kin_d
-#else
   USE wvfct,                 ONLY : g2kin
-#endif
   USE noncollin_module,      ONLY : noncolin,npol
   USE pwcom,                 ONLY : npw,npwx
   USE mp,                    ONLY : mp_sum
@@ -44,7 +40,7 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   REAL(DP) :: reduce
   REAL(DP),PARAMETER :: factor = 1.35_DP
   !
-  !$acc parallel vector_length(1024)
+  !$acc parallel vector_length(1024) present(g2kin)
   !$acc loop
   DO ibnd = 1,m
      reduce = 0._DP

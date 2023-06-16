@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "Formaldehyde molecule test TDDFT (PBE0) analytical forces"
+	@echo "Formaldehyde molecule test hybrid TDDFT forces"
 	@echo

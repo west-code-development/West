@@ -29,5 +29,5 @@ title:
 
 description:
 	@echo
-	@echo "O2 molecule test spin-flip TDDFT (LDA) analytical forces"
+	@echo "O2 molecule test spin-flip TDDFT (LDA) forces"
 	@echo

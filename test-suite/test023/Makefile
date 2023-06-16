@@ -29,5 +29,5 @@ title:
 
 description:
 	@echo
-	@echo "NV(-) in diamond test TDDFT (PBE) analytical forces"
+	@echo "NV- diamond test TDDFT (PBE) forces"
 	@echo

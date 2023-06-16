@@ -29,5 +29,5 @@ title:
 
 description:
 	@echo
-	@echo "Formaldehyde molecule test TDDFT (PBE) analytical forces"
+	@echo "Formaldehyde molecule test TDDFT (PBE) forces"
 	@echo

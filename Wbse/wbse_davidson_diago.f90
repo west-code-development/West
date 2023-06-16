@@ -21,6 +21,7 @@ SUBROUTINE wbse_davidson_diago ( )
   USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,&
                                  & inter_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_max,mp_bcast
+  USE west_mp,              ONLY : mp_get_c16_3d
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : npw,npwx,ngk
   USE distribution_center,  ONLY : pert,kpt_pool,band_group
@@ -75,6 +76,7 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   INTEGER :: iks,il1,ig1,lbnd,ibnd,iks_do
   INTEGER :: nbndval,nbnd_do,flnbndval
+  INTEGER :: owner
   REAL(DP) :: time_spent(2)
   CHARACTER(LEN=8) :: iter_label
   !
@@ -583,13 +585,17 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   IF(l_forces) THEN
      !
-#if defined(__CUDA)
-     CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,forces_state),npwx*band_group%nlocx*kpt_pool%nloc)
-#else
-     dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,forces_state)
-#endif
+     ! send forces_state to root image
+     !
+     CALL pert%g2l(forces_state,il1,owner)
+     !
+     CALL mp_get_c16_3d(dvg_exc_tmp,dvg_exc(:,:,:,il1),my_image_id,0,owner,owner,inter_image_comm)
+     !
+     !$acc update device(dvg_exc_tmp)
      !
      DEALLOCATE( dvg_exc )
+     !
+     ! root image computes forces
      !
      CALL wbse_calc_forces( dvg_exc_tmp )
      !

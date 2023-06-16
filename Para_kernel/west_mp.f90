@@ -25,6 +25,7 @@ MODULE west_mp
   PUBLIC :: mp_circular_shift_left_begin
   PUBLIC :: mp_circular_shift_left_c16_4d
   PUBLIC :: mp_root_sum_c16_3d
+  PUBLIC :: mp_get_c16_3d
   !
   INTERFACE mp_alltoallv
     MODULE PROCEDURE mp_alltoallv_i4_1d, mp_alltoallv_i8_1d, mp_alltoallv_r8_1d, &
@@ -307,6 +308,39 @@ MODULE west_mp
          CALL MPI_REDUCE(MPI_IN_PLACE,buf,SIZE(buf),MPI_DOUBLE_COMPLEX,MPI_SUM,root,comm,ierr)
       ELSE
          CALL MPI_REDUCE(buf,MPI_IN_PLACE,SIZE(buf),MPI_DOUBLE_COMPLEX,MPI_SUM,root,comm,ierr)
+      ENDIF
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE mp_get_c16_3d(recv_buf,send_buf,mpime,dest,sour,itag,comm)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP), INTENT(OUT) :: recv_buf(:,:,:)
+      COMPLEX(DP), INTENT(IN) :: send_buf(:,:,:)
+      INTEGER, INTENT(IN) :: mpime
+      INTEGER, INTENT(IN) :: dest
+      INTEGER, INTENT(IN) :: sour
+      INTEGER, INTENT(IN) :: itag
+      INTEGER, INTENT(IN) :: comm
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      INTEGER :: istat(MPI_STATUS_SIZE)
+      !
+      IF(sour == dest) THEN
+         recv_buf(:,:,:) = send_buf
+      ELSE
+         IF(mpime == sour) THEN
+            CALL MPI_SEND(send_buf,SIZE(send_buf),MPI_DOUBLE_COMPLEX,dest,itag,comm,ierr)
+         ELSEIF(mpime == dest) THEN
+            CALL MPI_RECV(recv_buf,SIZE(recv_buf),MPI_DOUBLE_COMPLEX,sour,itag,comm,istat,ierr)
+         ENDIF
       ENDIF
       !
     END SUBROUTINE

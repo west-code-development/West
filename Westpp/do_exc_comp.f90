@@ -16,15 +16,14 @@ SUBROUTINE do_exc_comp()
   USE kinds,                 ONLY : DP
   USE io_push,               ONLY : io_push_title
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE pwcom,                 ONLY : npw,npwx,nks,igk_k,current_k,ngk,wg
+  USE pwcom,                 ONLY : npw,nks,current_k,ngk
   USE control_flags,         ONLY : gamma_only
   USE gvect,                 ONLY : gstart
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE mp_global,             ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
   USE buffers,               ONLY : get_buffer
   USE westcom,               ONLY : iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
-                                  & westpp_n_liouville_to_use,westpp_save_dir,westpp_l_spin_flip,&
-                                  & logfile
+                                  & westpp_n_liouville_to_use,westpp_l_spin_flip,logfile
   USE mp_world,              ONLY : mpime,root
   USE plep_db,               ONLY : plep_db_read
   USE distribution_center,   ONLY : pert,kpt_pool,band_group
@@ -33,11 +32,11 @@ SUBROUTINE do_exc_comp()
   USE json_module,           ONLY : json_file,json_core,json_value
   USE wvfct,                 ONLY : nbnd
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
 #else
-  USE wavefunctions,         ONLY : evc_work=>evc,psic
+  USE wavefunctions,         ONLY : evc_work=>evc
 #endif
   !
   IMPLICIT NONE
@@ -188,7 +187,7 @@ SUBROUTINE do_exc_comp()
   CALL mp_sum(projection_matrix(:,:,:,:),intra_bgrp_comm)
   CALL mp_sum(projection_matrix(:,:,:,:),inter_image_comm)
   !
-  ! ... Print out results  
+  ! ... Print out results
   !
   WRITE(stdout, "( /,5x,' *-------------* THE PRINCIPLE PROJECTED COMPONENTS *-------------*')")
   !
@@ -207,7 +206,7 @@ SUBROUTINE do_exc_comp()
         DO iocc = 1,nbnd_occ(iks_do)
            DO iemp = 1,(nbnd - nbnd_occ(iks))
               reduce = ABS(projection_matrix(iks,iocc,iemp,iexc))
-              IF (reduce >= 0.1) THEN
+              IF (reduce >= 0.1_DP) THEN
                  WRITE(stdout, "(6x, i8, 4x, i8, 16x, i8, 7x, f12.6, 2x)" ) iks,iocc,iemp,reduce
               ENDIF
            ENDDO

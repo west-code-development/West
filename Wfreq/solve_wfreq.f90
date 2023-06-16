@@ -811,7 +811,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         l_write_restart = .FALSE.
         !
         IF( o_restart_time >= 0._DP ) THEN
-           IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+           IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
            IF( iv == nbndval ) l_write_restart = .TRUE.
         ENDIF
         !
@@ -1825,7 +1825,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            l_write_restart = .FALSE.
            !
            IF( o_restart_time >= 0._DP ) THEN
-              IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+              IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
               IF( iv == nbndval ) l_write_restart = .TRUE.
            ENDIF
            !

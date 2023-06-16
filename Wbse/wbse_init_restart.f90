@@ -22,7 +22,7 @@ MODULE wbse_init_restart
       !
       USE kinds,               ONLY : i8b
       USE mp_world,            ONLY : world_comm
-      USE io_global,           ONLY : ionode
+      USE mp_global,           ONLY : my_image_id,my_bgrp_id,me_bgrp
       USE mp,                  ONLY : mp_barrier
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,&
                                     & HD_ID_DIMENSION
@@ -48,7 +48,7 @@ MODULE wbse_init_restart
       !
       ! CREATE THE STATUS FILE
       !
-      IF(ionode) THEN
+      IF(my_image_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
          !
          header = 0
          header(HD_ID_VERSION) = HD_VERSION
@@ -75,9 +75,8 @@ MODULE wbse_init_restart
     SUBROUTINE wbse_index_matrix_read(fname,size_list0,size_list1,size_column,idx_matrix)
       !
       USE kinds,               ONLY : i8b
-      USE io_global,           ONLY : ionode
+      USE mp_global,           ONLY : intra_image_comm,my_image_id,my_bgrp_id,me_bgrp
       USE mp,                  ONLY : mp_bcast
-      USE mp_global,           ONLY : intra_image_comm
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,&
                                     & HD_ID_DIMENSION
       USE base64_module,       ONLY : islittleendian
@@ -98,7 +97,7 @@ MODULE wbse_init_restart
       INTEGER :: header(HD_LENGTH)
       INTEGER(i8b) :: offset
       !
-      IF(ionode) THEN
+      IF(my_image_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
          IF(ierr /= 0) THEN
@@ -124,7 +123,7 @@ MODULE wbse_init_restart
       !
       ALLOCATE(idx_matrix_tmp(size_list1,size_column))
       !
-      IF(ionode) THEN
+      IF(my_image_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
          !
          READ(iun,POS=offset) idx_matrix_tmp(1:size_list1,1:size_column)
          CLOSE(iun)
@@ -144,8 +143,8 @@ MODULE wbse_init_restart
       !
       USE kinds,               ONLY : i8b
       USE mp_world,            ONLY : world_comm
-      USE io_global,           ONLY : ionode
       USE mp,                  ONLY : mp_barrier
+      USE io_global,           ONLY : ionode
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,&
                                     & HD_ID_DIMENSION
       USE base64_module,       ONLY : islittleendian
@@ -197,9 +196,9 @@ MODULE wbse_init_restart
     SUBROUTINE wbse_status_restart_read(fname,size_list,restart_matrix,done_calc)
       !
       USE kinds,               ONLY : i8b
-      USE io_global,           ONLY : ionode
-      USE mp,                  ONLY : mp_bcast
       USE mp_global,           ONLY : intra_image_comm
+      USE mp,                  ONLY : mp_bcast
+      USE io_global,           ONLY : ionode
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,&
                                     & HD_ID_DIMENSION
       USE base64_module,       ONLY : islittleendian

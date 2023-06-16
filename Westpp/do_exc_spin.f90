@@ -16,15 +16,14 @@ SUBROUTINE do_exc_spin()
   USE kinds,                 ONLY : DP
   USE io_push,               ONLY : io_push_title
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE pwcom,                 ONLY : npw,npwx,nks,igk_k,current_k,ngk,wg,nspin
+  USE pwcom,                 ONLY : npw,npwx,ngk,wg,nspin
   USE control_flags,         ONLY : gamma_only
   USE gvect,                 ONLY : gstart
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE mp_global,             ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
   USE buffers,               ONLY : get_buffer
-  USE westcom,               ONLY : iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
-                                  & westpp_n_liouville_to_use,westpp_save_dir,westpp_l_spin_flip,&
-                                  & logfile
+  USE westcom,               ONLY : iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,&
+                                  & westpp_n_liouville_to_use,westpp_l_spin_flip,logfile
   USE mp_world,              ONLY : mpime,root
   USE plep_db,               ONLY : plep_db_read
   USE distribution_center,   ONLY : pert,kpt_pool,band_group
@@ -33,18 +32,18 @@ SUBROUTINE do_exc_spin()
   USE json_module,           ONLY : json_file
   USE wvfct,                 ONLY : nbnd
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
 #else
-  USE wavefunctions,         ONLY : evc_work=>evc,psic
+  USE wavefunctions,         ONLY : evc_work=>evc
 #endif
   !
   IMPLICIT NONE
   !
   ! ... LOCAL variables
   !
-  INTEGER :: iks,iexc,lexc,ig,ibnd1,ibnd2,ibnd3,iunit
+  INTEGER :: iexc,lexc,ig,ibnd1,ibnd2,ibnd3,iunit
   INTEGER :: barra_load
   INTEGER :: nbndx_occ
   CHARACTER(5) :: label_exc
@@ -58,7 +57,7 @@ SUBROUTINE do_exc_spin()
   !
   ! CHECK IF nspin = 2
   !
-  IF(nspin .NE. 2) CALL errore('westpp', '<S^2> can only be computed for systems with nspin = 2', 1)
+  IF(nspin /= 2) CALL errore('westpp', '<S^2> can only be computed for systems with nspin = 2', 1)
   !
   IF(mpime == root) THEN
      CALL json%initialize()
@@ -470,8 +469,8 @@ SUBROUTINE do_exc_spin()
               norm_d = norm_d + dvgdvg_dd(ibnd1, ibnd1)
            ENDDO
            !
-           IF(ABS(norm_u - 1.0) .LT. 0.01) flip_up = .TRUE.
-           IF(ABS(norm_d - 1.0) .LT. 0.01) flip_up = .FALSE.
+           IF(ABS(norm_u - 1._DP) < 0.01_DP) flip_up = .TRUE.
+           IF(ABS(norm_d - 1._DP) < 0.01_DP) flip_up = .FALSE.
            !
            ds2 = 0._DP
            !
@@ -507,7 +506,7 @@ SUBROUTINE do_exc_spin()
            !
            ss = (-1._DP + SQRT(1._DP + 4._DP * s2)) / 2
            !
-           IF(nbnd_occ(1) .GE. nbnd_occ(2)) THEN
+           IF(nbnd_occ(1) >= nbnd_occ(2)) THEN
               !
               IF(flip_up) THEN
                  ds2 = ds2 + 2._DP * ss + 1._DP

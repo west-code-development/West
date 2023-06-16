@@ -133,8 +133,8 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE mp,                   ONLY : mp_barrier,mp_sum
   USE lsda_mod,             ONLY : nspin
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_invfft_gamma
-  USE mp_global,            ONLY : inter_image_comm,intra_image_comm,my_image_id,inter_bgrp_comm,&
-                                 & intra_bgrp_comm,me_bgrp
+  USE mp_global,            ONLY : inter_image_comm,intra_image_comm,my_image_id,npool,&
+                                 & inter_bgrp_comm,intra_bgrp_comm,me_bgrp
   USE conversions,          ONLY : itoa
   USE qbox_interface,       ONLY : sleep_and_wait_for_lock_to_be_removed
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -537,18 +537,24 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
         !
         time_spent(2) = get_clock('tau')
         !
-        IF(o_restart_time >= 0._DP .AND. time_spent(2)-time_spent(1) > o_restart_time*60._DP) THEN
+        IF(o_restart_time >= 0._DP .AND. time_spent(2)-time_spent(1) >= o_restart_time*60._DP) THEN
            !
-           CALL mp_sum(restart_matrix(1:do_idx),inter_image_comm)
+           ! cannot restart when using spin parallelization
            !
-           DO ir = 1,do_idx
-              IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
-           ENDDO
-           !
-           fname = TRIM(wbse_init_save_dir)//'/restart_matrix'//flabel
-           CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
-           !
-           time_spent(1) = get_clock('tau')
+           IF(npool == 1) THEN
+              !
+              CALL mp_sum(restart_matrix(1:do_idx),inter_image_comm)
+              !
+              DO ir = 1,do_idx
+                 IF(restart_matrix(ir) > 0) restart_matrix(ir) = 1
+              ENDDO
+              !
+              fname = TRIM(wbse_init_save_dir)//'/restart_matrix'//flabel
+              CALL wbse_status_restart_write(fname,do_idx,restart_matrix)
+              !
+              time_spent(1) = get_clock('tau')
+              !
+           ENDIF
            !
         ENDIF
         !

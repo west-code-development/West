@@ -86,7 +86,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
      IF(sf) THEN
         ikq_do = flks(ikq_g)
      ELSE
-        ikq_do = ikq_g
+        ikq_do = ikq
      ENDIF
      !
      IF(l_local_repr) THEN
@@ -148,7 +148,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
            !
            IF(ibnd == my_ibnd .OR. ibnd == my_jbnd) THEN
               !
-              CALL read_bse_pots_g(gaux,ibnd,jbnd,ikq_do)
+              CALL read_bse_pots_g(gaux,ibnd,jbnd,ikq_g)
               !
               !$acc update device(gaux)
               !

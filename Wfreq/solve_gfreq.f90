@@ -485,7 +485,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         l_write_restart = .FALSE.
         !
         IF( o_restart_time >= 0._DP ) THEN
-           IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+           IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
            IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
         ENDIF
         !
@@ -1008,7 +1008,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            l_write_restart = .FALSE.
            !
            IF( o_restart_time >= 0._DP ) THEN
-              IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+              IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
               IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
            ENDIF
            !

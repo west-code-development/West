@@ -21,10 +21,11 @@ MODULE wbse_io
   SUBROUTINE read_bse_pots_g(rhog,fixed_band_i,fixed_band_j,ispin)
     !
     USE kinds,          ONLY : DP
+    USE pwcom,          ONLY : npwx
+    USE mp_global,      ONLY : npool
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
     USE westcom,        ONLY : wbse_init_save_dir,l_bse,l_reduce_io,tau_is_read,tau_all,n_tau,&
                              & n_trunc_bands
-    USE pwcom,          ONLY : npwx
     !
     IMPLICIT NONE
     !
@@ -35,17 +36,22 @@ MODULE wbse_io
     !
     ! Workspace
     !
-    INTEGER :: band_i,band_j,iread
+    INTEGER :: lspin,band_i,band_j,iread
     CHARACTER :: my_spin
     CHARACTER(LEN=6) :: my_labeli,my_labelj
     CHARACTER(LEN=256) :: fname
+    !
+    ! Local spin index when using spin parallelization
+    !
+    lspin = ispin
+    IF(npool == 2) lspin = 1
     !
     band_i = MIN(fixed_band_i,fixed_band_j)
     band_j = MAX(fixed_band_i,fixed_band_j)
     !
     IF(l_reduce_io) THEN
        !
-       iread = tau_is_read(band_i,band_j,ispin)
+       iread = tau_is_read(band_i,band_j,lspin)
        IF(iread > 0) THEN
           rhog(:) = tau_all(:,iread)
           RETURN
@@ -67,7 +73,7 @@ MODULE wbse_io
     IF(l_reduce_io) THEN
        !
        n_tau = n_tau+1
-       tau_is_read(band_i,band_j,ispin) = n_tau
+       tau_is_read(band_i,band_j,lspin) = n_tau
        tau_all(:,n_tau) = rhog
        !
     ENDIF

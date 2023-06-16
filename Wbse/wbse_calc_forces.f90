@@ -459,7 +459,7 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   !
   USE io_global,            ONLY : stdout
   USE kinds,                ONLY : DP
-  USE ions_base,            ONLY : nat,ityp,tau
+  USE ions_base,            ONLY : nat,ntyp=>nsp,ityp,tau
   USE cell_base,            ONLY : alat,omega
   USE gvect,                ONLY : g,gstart,ngm,ngl,igtongl
   USE io_push,              ONLY : io_push_title
@@ -623,7 +623,7 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
      rdrhox1(:,1) = rdrhox1(:,1) + rdrhox1(:,2)
   ENDIF
   !
-  CALL force_lc(nat, tau, ityp, alat, omega, ngm, ngl, igtongl, g, rdrhox1(:,1), dffts%nl, gstart, &
+  CALL force_lc(nat, tau, ityp, ntyp, alat, omega, ngm, ngl, igtongl, g, rdrhox1(:,1), gstart, &
   & gamma_only, vloc, forcelc)
   !
   forcelc(:,:) = - factor * forcelc
@@ -1057,7 +1057,7 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !
   USE io_global,            ONLY : stdout
   USE kinds,                ONLY : DP
-  USE ions_base,            ONLY : nat,ityp,tau
+  USE ions_base,            ONLY : nat,ntyp=>nsp,ityp,tau
   USE cell_base,            ONLY : alat,omega
   USE gvect,                ONLY : g,gstart,ngm,ngl,igtongl
   USE io_push,              ONLY : io_push_title
@@ -1261,7 +1261,7 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
      rdrhox2(:,1) = rdrhox2(:,1) + rdrhox2(:,2)
   ENDIF
   !
-  CALL force_lc(nat, tau, ityp, alat, omega, ngm, ngl, igtongl, g, rdrhox2(:,1), dffts%nl, gstart, &
+  CALL force_lc(nat, tau, ityp, ntyp, alat, omega, ngm, ngl, igtongl, g, rdrhox2(:,1), gstart, &
   & gamma_only, vloc, forcelc)
   !
   forcelc(:,:) = - factor * forcelc
@@ -1316,7 +1316,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   USE io_global,            ONLY : stdout
   USE kinds,                ONLY : DP
-  USE ions_base,            ONLY : nat,ityp,tau
+  USE ions_base,            ONLY : nat,ntyp=>nsp,ityp,tau
   USE cell_base,            ONLY : alat,omega
   USE gvect,                ONLY : g,gstart,ngm,ngl,igtongl
   USE io_push,              ONLY : io_push_title
@@ -1508,7 +1508,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
      rdrhoz(:,1) = rdrhoz(:,1) + rdrhoz(:,2)
   ENDIF
   !
-  CALL force_lc(nat, tau, ityp, alat, omega, ngm, ngl, igtongl, g, rdrhoz(:,1), dffts%nl, gstart, &
+  CALL force_lc(nat, tau, ityp, ntyp, alat, omega, ngm, ngl, igtongl, g, rdrhoz(:,1), gstart, &
   & gamma_only, vloc, forcelc)
   !
   forcelc(:,:) = - factor * forcelc

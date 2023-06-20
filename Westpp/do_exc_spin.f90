@@ -16,11 +16,11 @@ SUBROUTINE do_exc_spin()
   USE kinds,                 ONLY : DP
   USE io_push,               ONLY : io_push_title
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE pwcom,                 ONLY : npw,npwx,ngk,wg,nspin
+  USE pwcom,                 ONLY : npwx,wg,nspin
   USE control_flags,         ONLY : gamma_only
   USE gvect,                 ONLY : gstart
   USE mp,                    ONLY : mp_sum,mp_bcast
-  USE mp_global,             ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
+  USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE buffers,               ONLY : get_buffer
   USE westcom,               ONLY : iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,&
                                   & westpp_n_liouville_to_use,westpp_l_spin_flip,logfile
@@ -44,20 +44,25 @@ SUBROUTINE do_exc_spin()
   ! ... LOCAL variables
   !
   INTEGER :: iexc,lexc,ig,ibnd1,ibnd2,ibnd3,iunit
-  INTEGER :: barra_load
-  INTEGER :: nbndx_occ
+  INTEGER :: nbndx_occ,nbnd_up,nbnd_dn
   CHARACTER(5) :: label_exc
   REAL(DP) :: reduce,s2,ds2,ss,norm_u,norm_d,n_alpha,n_beta
   LOGICAL :: flip_up
-  REAL(DP), ALLOCATABLE :: om(:,:),collect_ds2(:),dvgdvg_uu(:,:),dvgdvg_dd(:,:),&
-                         & dvgdvg_ud(:,:), dvgevc_ud(:,:), dvgevc_du(:,:)
+  REAL(DP), ALLOCATABLE :: om(:,:),collect_ds2(:)
+  REAL(DP), ALLOCATABLE :: dvgdvg_uu(:,:),dvgdvg_dd(:,:),dvgdvg_ud(:,:),dvgevc_ud(:,:),dvgevc_du(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc_copy(:,:)
+  !$acc declare device_resident(evc_copy)
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   !
   ! CHECK IF nspin = 2
   !
-  IF(nspin /= 2) CALL errore('westpp', '<S^2> can only be computed for systems with nspin = 2', 1)
+  IF(nspin /= 2) CALL errore('do_exc_spin', '<S^2> can only be computed for systems with nspin = 2', 1)
+  IF(.NOT. gamma_only) CALL errore('do_exc_spin', '<S^2> requires gamma_only', 1)
+  !
+#if defined(__CUDA)
+  CALL allocate_gpu()
+#endif
   !
   IF(mpime == root) THEN
      CALL json%initialize()
@@ -67,69 +72,67 @@ SUBROUTINE do_exc_spin()
   ! COMPUTE <S^2> FOR THE GROUND STATE
   !
   ALLOCATE(om(nbnd, nbnd))
-  om(:,:) = 0._DP
-  !
+  !$acc enter data create(om)
   ALLOCATE(evc_copy(npwx, nbnd))
-  evc_copy(:,:) = (0._DP, 0._DP)
   !
 #if defined(__CUDA)
   IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,1)
   CALL mp_bcast(evc_host,0,inter_image_comm)
+  !
+  CALL using_evc(2)
+  CALL using_evc_d(0)
 #else
   IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,1)
   CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
   !
-  npw = ngk(1)
-  !
-  DO ibnd1 = 1,nbnd
-     DO ig = 1, npw
-        evc_copy(ig,ibnd1) = evc_work(ig,ibnd1)
-     ENDDO
-  ENDDO
+  !$acc kernels present(evc_copy)
+  evc_copy(:,:) = evc_work
+  !$acc end kernels
   !
 #if defined(__CUDA)
   IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,2)
   CALL mp_bcast(evc_host,0,inter_image_comm)
+  !
+  CALL using_evc(2)
+  CALL using_evc_d(0)
 #else
   IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,2)
   CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
   !
+  !$acc parallel vector_length(1024) present(evc_copy,om)
+  !$acc loop collapse(2)
   DO ibnd1 = 1,nbnd
      DO ibnd2 = 1,nbnd
         !
-        IF (gamma_only) THEN
-           !
-           reduce = 0._DP
-           !$acc loop reduction(+:reduce)
-           DO ig = 1, npw
-              reduce = reduce + 2._DP * REAL(evc_copy(ig,ibnd1),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
-                     &        + 2._DP * AIMAG(evc_copy(ig,ibnd1)) * AIMAG(evc_work(ig,ibnd2))
-           ENDDO
-           !
-           IF (gstart==2) THEN
-              reduce = reduce - REAL(evc_copy(1,ibnd1),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
-           ENDIF
-           !
-           om(ibnd1, ibnd2) = reduce
-           !
-        ELSE
-           CALL errore('do_exc_spin', 'gamma_only is required', 1)
+        reduce = 0._DP
+        !$acc loop reduction(+:reduce)
+        DO ig = 1, npwx
+           reduce = reduce + 2._DP * REAL(evc_copy(ig,ibnd1),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
+                  &        + 2._DP * AIMAG(evc_copy(ig,ibnd1)) * AIMAG(evc_work(ig,ibnd2))
+        ENDDO
+        !
+        IF (gstart==2) THEN
+           reduce = reduce - REAL(evc_copy(1,ibnd1),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
         ENDIF
+        !
+        om(ibnd1, ibnd2) = reduce
         !
      ENDDO
   ENDDO
+  !$acc end parallel
+  !
+  !$acc update host(om)
   !
   CALL mp_sum(om, intra_bgrp_comm)
   !
   n_alpha = SUM(wg(:,1))
   n_beta = SUM(wg(:,2))
   !
-  WRITE(stdout, "(   /, 5x, ' Ground State n_alpha : ', f12.6, '     n_beta', f12.6)") n_alpha, n_beta
+  WRITE(stdout, "(/, 5x, ' Ground State n_alpha : ', f12.6, '     n_beta', f12.6)") n_alpha, n_beta
   !
   s2 = (n_alpha - n_beta) * (n_alpha - n_beta + 2._DP) / 4._DP + n_beta
-  !s2 = (nbnd_occ(1) - nbnd_occ(2)) * (nbnd_occ(1) - nbnd_occ(2) + 2._DP) / 4._DP + nbnd_occ(2)
   !
   DO ibnd1 = 1,nbnd
      DO ibnd2 = 1,nbnd
@@ -137,7 +140,7 @@ SUBROUTINE do_exc_spin()
      ENDDO
   ENDDO
   !
-  WRITE(stdout, "(   /, 5x, ' Ground State <S^2> : ', f12.6)") s2
+  WRITE(stdout, "(/, 5x, ' Ground State <S^2> : ', f12.6)") s2
   !
   IF(mpime == root) THEN
      CALL json%add('output.ground_state.spin_square',s2)
@@ -162,34 +165,40 @@ SUBROUTINE do_exc_spin()
      !
      CALL plep_db_read(westpp_n_liouville_to_use)
      !
-#if defined(__CUDA)
-     CALL allocate_gpu()
-#endif
-     !
      CALL io_push_title('BSE/TDDFT Excited State Spin (M)ultiplicity')
      !
      nbndx_occ = MAXVAL(nbnd_occ)
+     nbnd_up = nbnd_occ(1)
+     nbnd_dn = nbnd_occ(2)
      !
      ALLOCATE(dvgdvg_uu(nbndx_occ, nbndx_occ))
      ALLOCATE(dvgdvg_ud(nbndx_occ, nbndx_occ))
      ALLOCATE(dvgdvg_dd(nbndx_occ, nbndx_occ))
      ALLOCATE(dvgevc_ud(nbndx_occ, nbndx_occ))
      ALLOCATE(dvgevc_du(nbndx_occ, nbndx_occ))
+     !$acc enter data create(dvgdvg_uu,dvgdvg_ud,dvgdvg_dd,dvgevc_ud,dvgevc_du) copyin(dvg_exc)
      !
+     !$acc kernels present(dvgdvg_uu)
      dvgdvg_uu(:,:) = 0._DP
+     !$acc end kernels
+     !
+     !$acc kernels present(dvgdvg_ud)
      dvgdvg_ud(:,:) = 0._DP
+     !$acc end kernels
+     !
+     !$acc kernels present(dvgdvg_dd)
      dvgdvg_dd(:,:) = 0._DP
+     !$acc end kernels
+     !
+     !$acc kernels present(dvgevc_ud)
      dvgevc_ud(:,:) = 0._DP
+     !$acc end kernels
+     !
+     !$acc kernels present(dvgevc_du)
      dvgevc_du(:,:) = 0._DP
+     !$acc end kernels
      !
-     !barra_load = 0
-     !DO lexc = 1,pert%nloc
-     !   iexc = pert%l2g(lexc)
-     !   IF(iexc < westpp_range(1) .OR. iexc > westpp_range(2)) CYCLE
-     !   barra_load = barra_load+1
-     !ENDDO
-     !
-     !CALL start_bar_type(barra,'westpp',barra_load*k_grid%nps*SUM(nbnd_occ))
+     CALL start_bar_type(barra,'westpp',pert%nloc)
      !
      DO lexc = 1,pert%nloc
         !
@@ -197,121 +206,117 @@ SUBROUTINE do_exc_spin()
         !
         iexc = pert%l2g(lexc)
         !
-        npw = ngk(1)
-        !
         IF(.NOT. westpp_l_spin_flip) THEN
            !
            ! Spin-conserve case
            ! compute matrix elements
            ! Part 1: up-up
            !
-           DO ibnd1 = 1, nbnd_occ(1)
-              DO ibnd2 = 1, nbnd_occ(1)
-                 IF (gamma_only) THEN
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,1,lexc),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(dvg_exc(ig,ibnd2,1,lexc))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,1,lexc),KIND=DP)
-                    ENDIF
-                    !
-                    dvgdvg_uu(ibnd1,ibnd2) = reduce
-                    !
-                 ELSE
-                    CALL errore('do_exc_spin', 'gamma_only is required', 1)
+           !$acc parallel vector_length(1024) present(dvg_exc,dvgdvg_uu)
+           !$acc loop collapse(2)
+           DO ibnd1 = 1, nbnd_up
+              DO ibnd2 = 1, nbnd_up
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,1,lexc),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(dvg_exc(ig,ibnd2,1,lexc))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,1,lexc),KIND=DP)
                  ENDIF
+                 !
+                 dvgdvg_uu(ibnd1,ibnd2) = reduce
                  !
               ENDDO
            ENDDO
+           !$acc end parallel
+           !
+           !$acc update host(dvgdvg_uu)
            !
            CALL mp_sum(dvgdvg_uu, intra_bgrp_comm)
            !
            ! Part 2: down-down
            !
-           DO ibnd1 = 1, nbnd_occ(2)
-              DO ibnd2 = 1, nbnd_occ(2)
-                 IF (gamma_only) THEN
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,2,lexc)) * AIMAG(dvg_exc(ig,ibnd2,2,lexc))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP)
-                    ENDIF
-                    !
-                    dvgdvg_dd(ibnd1,ibnd2) = reduce
-                    !
-                 ELSE
-                    CALL errore('do_exc_spin', 'gamma_only is required', 1)
+           !$acc parallel vector_length(1024) present(dvg_exc,dvgdvg_dd)
+           !$acc loop collapse(2)
+           DO ibnd1 = 1, nbnd_dn
+              DO ibnd2 = 1, nbnd_dn
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,2,lexc)) * AIMAG(dvg_exc(ig,ibnd2,2,lexc))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP)
                  ENDIF
+                 !
+                 dvgdvg_dd(ibnd1,ibnd2) = reduce
                  !
               ENDDO
            ENDDO
+           !$acc end parallel
+           !
+           !$acc update host(dvgdvg_dd)
            !
            CALL mp_sum(dvgdvg_dd, intra_bgrp_comm)
            !
            ! Part 3: up-down
            !
-           DO ibnd1 = 1, nbnd_occ(1)
-              DO ibnd2 = 1, nbnd_occ(2)
-                 IF (gamma_only) THEN
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(dvg_exc(ig,ibnd2,2,lexc))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP)
-                    ENDIF
-                    !
-                    dvgdvg_ud(ibnd1,ibnd2) = reduce
-                    !
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc_work(ig,ibnd2))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
-                    ENDIF
-                    !
-                    dvgevc_ud(ibnd1,ibnd2) = reduce
-                    !
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) * REAL(evc_copy(ig,ibnd1),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd2,2,lexc)) * AIMAG(evc_copy(ig,ibnd1))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP) * REAL(evc_copy(1,ibnd1),KIND=DP)
-                    ENDIF
-                    !
-                    dvgevc_du(ibnd2,ibnd1) = reduce
-                    !
-                 ELSE
-                    CALL errore('do_exc_spin', 'gamma_only is required', 1)
+           !$acc parallel vector_length(1024) present(dvg_exc,dvgdvg_ud,dvgevc_ud,evc_copy,dvgevc_du)
+           !$acc loop collapse(2)
+           DO ibnd1 = 1, nbnd_up
+              DO ibnd2 = 1, nbnd_dn
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(dvg_exc(ig,ibnd2,2,lexc))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP)
                  ENDIF
+                 !
+                 dvgdvg_ud(ibnd1,ibnd2) = reduce
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc_work(ig,ibnd2))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
+                 ENDIF
+                 !
+                 dvgevc_ud(ibnd1,ibnd2) = reduce
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) * REAL(evc_copy(ig,ibnd1),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd2,2,lexc)) * AIMAG(evc_copy(ig,ibnd1))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP) * REAL(evc_copy(1,ibnd1),KIND=DP)
+                 ENDIF
+                 !
+                 dvgevc_du(ibnd2,ibnd1) = reduce
                  !
               ENDDO
            ENDDO
+           !$acc end parallel
+           !
+           !$acc update host(dvgdvg_ud,dvgevc_ud,dvgevc_du)
            !
            CALL mp_sum(dvgdvg_ud, intra_bgrp_comm)
            CALL mp_sum(dvgevc_ud, intra_bgrp_comm)
@@ -319,22 +324,18 @@ SUBROUTINE do_exc_spin()
            !
            ds2 = 0._DP
            !
-           DO ibnd1 = 1, nbnd_occ(1)
-              DO ibnd2 = 1, nbnd_occ(2)
+           DO ibnd1 = 1, nbnd_up
+              DO ibnd2 = 1, nbnd_dn
                  !
                  ds2 = ds2 - dvgevc_ud(ibnd1, ibnd2)**2 - dvgevc_du(ibnd2, ibnd1)**2 &
                      & - 2._DP * dvgdvg_ud(ibnd1, ibnd2) * om(ibnd1, ibnd2)
                  !
-                 DO ibnd3 = 1, nbnd_occ(1)
-                    !
+                 DO ibnd3 = 1, nbnd_up
                     ds2 = ds2 + dvgdvg_uu(ibnd1, ibnd3) * om(ibnd1, ibnd2) * om(ibnd3, ibnd2)
-                    !
                  ENDDO
                  !
-                 DO ibnd3 = 1, nbnd_occ(2)
-                    !
+                 DO ibnd3 = 1, nbnd_dn
                     ds2 = ds2 + dvgdvg_dd(ibnd2, ibnd3) * om(ibnd1, ibnd2) * om(ibnd1, ibnd3)
-                    !
                  ENDDO
                  !
               ENDDO
@@ -346,113 +347,113 @@ SUBROUTINE do_exc_spin()
            ! compute matrix elements
            ! Part 1: up-up
            !
-           DO ibnd1 = 1, nbnd_occ(2)
-              DO ibnd2 = 1, nbnd_occ(2)
-                 IF (gamma_only) THEN
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,1,lexc),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(dvg_exc(ig,ibnd2,1,lexc))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,1,lexc),KIND=DP)
-                    ENDIF
-                    !
-                    dvgdvg_uu(ibnd1,ibnd2) = reduce
-                    !
-                 ELSE
-                    CALL errore('do_exc_spin', 'gamma_only is required', 1)
+           !$acc parallel vector_length(1024) present(dvg_exc,dvgdvg_uu)
+           !$acc loop collapse(2)
+           DO ibnd1 = 1, nbnd_dn
+              DO ibnd2 = 1, nbnd_dn
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,1,lexc),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(dvg_exc(ig,ibnd2,1,lexc))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,1,lexc),KIND=DP)
                  ENDIF
+                 !
+                 dvgdvg_uu(ibnd1,ibnd2) = reduce
                  !
               ENDDO
            ENDDO
+           !$acc end parallel
+           !
+           !$acc update host(dvgdvg_uu)
            !
            CALL mp_sum(dvgdvg_uu, intra_bgrp_comm)
            !
            ! Part 2: down-down
            !
-           DO ibnd1 = 1, nbnd_occ(1)
-              DO ibnd2 = 1, nbnd_occ(1)
-                 IF (gamma_only) THEN
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,2,lexc)) * AIMAG(dvg_exc(ig,ibnd2,2,lexc))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP)
-                    ENDIF
-                    !
-                    dvgdvg_dd(ibnd1,ibnd2) = reduce
-                    !
-                 ELSE
-                    CALL errore('do_exc_spin', 'gamma_only is required', 1)
+           !$acc parallel vector_length(1024) present(dvg_exc,dvgdvg_dd)
+           !$acc loop collapse(2)
+           DO ibnd1 = 1, nbnd_up
+              DO ibnd2 = 1, nbnd_up
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(ig,ibnd2,2,lexc),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,2,lexc)) * AIMAG(dvg_exc(ig,ibnd2,2,lexc))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,2,lexc),KIND=DP) * REAL(dvg_exc(1,ibnd2,2,lexc),KIND=DP)
                  ENDIF
+                 !
+                 dvgdvg_dd(ibnd1,ibnd2) = reduce
                  !
               ENDDO
            ENDDO
+           !$acc end parallel
+           !
+           !$acc update host(dvgdvg_dd)
            !
            CALL mp_sum(dvgdvg_dd, intra_bgrp_comm)
            !
            ! Part 3: up-down
            !
-           DO ibnd1 = 1, nbnd_occ(2)
-              DO ibnd2 = 1, nbnd_occ(2)
-                 IF (gamma_only) THEN
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc_work(ig,ibnd2))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
-                    ENDIF
-                    !
-                    dvgevc_ud(ibnd1,ibnd2) = reduce
-                    !
-                 ELSE
-                    CALL errore('do_exc_spin', 'gamma_only is required', 1)
+           !$acc parallel vector_length(1024) present(dvg_exc,dvgevc_ud)
+           !$acc loop collapse(2)
+           DO ibnd1 = 1, nbnd_dn
+              DO ibnd2 = 1, nbnd_dn
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc_work(ig,ibnd2))
+                 ENDDO
+                 !
+                 IF(gstart == 2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
                  ENDIF
+                 !
+                 dvgevc_ud(ibnd1,ibnd2) = reduce
                  !
               ENDDO
            ENDDO
+           !$acc end parallel
+           !
+           !$acc update host(dvgevc_ud)
            !
            CALL mp_sum(dvgevc_ud, intra_bgrp_comm)
            !
            ! Part 4: down-up
            !
-           DO ibnd1 = 1, nbnd_occ(1)
-              DO ibnd2 = 1, nbnd_occ(1)
-                 IF (gamma_only) THEN
-                    !
-                    reduce = 0._DP
-                    !$acc loop reduction(+:reduce)
-                    DO ig = 1, npw
-                       reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,2,lexc),KIND=DP) * REAL(evc_copy(ig,ibnd2),KIND=DP) &
-                       &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,2,lexc)) * AIMAG(evc_copy(ig,ibnd2))
-                    ENDDO
-                    !
-                    IF (gstart==2) THEN
-                       reduce = reduce - REAL(dvg_exc(1,ibnd1,2,lexc),KIND=DP) * REAL(evc_copy(1,ibnd2),KIND=DP)
-                    ENDIF
-                    !
-                    dvgevc_du(ibnd1,ibnd2) = reduce
-                    !
-                 ELSE
-                    CALL errore('do_exc_spin', 'gamma_only is required', 1)
+           !$acc parallel vector_length(1024) present(dvg_exc,evc_copy,dvgevc_du)
+           !$acc loop collapse(2)
+           DO ibnd1 = 1, nbnd_up
+              DO ibnd2 = 1, nbnd_up
+                 !
+                 reduce = 0._DP
+                 !$acc loop reduction(+:reduce)
+                 DO ig = 1, npwx
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,2,lexc),KIND=DP) * REAL(evc_copy(ig,ibnd2),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,2,lexc)) * AIMAG(evc_copy(ig,ibnd2))
+                 ENDDO
+                 !
+                 IF (gstart==2) THEN
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,2,lexc),KIND=DP) * REAL(evc_copy(1,ibnd2),KIND=DP)
                  ENDIF
+                 !
+                 dvgevc_du(ibnd1,ibnd2) = reduce
                  !
               ENDDO
            ENDDO
+           !$acc end parallel
+           !
+           !$acc update host(dvgevc_du)
            !
            CALL mp_sum(dvgevc_du, intra_bgrp_comm)
            !
@@ -461,11 +462,11 @@ SUBROUTINE do_exc_spin()
            norm_u = 0._DP
            norm_d = 0._DP
            !
-           DO ibnd1 = 1, nbnd_occ(2)
+           DO ibnd1 = 1, nbnd_dn
               norm_u = norm_u + dvgdvg_uu(ibnd1, ibnd1)
            ENDDO
            !
-           DO ibnd1 = 1, nbnd_occ(1)
+           DO ibnd1 = 1, nbnd_up
               norm_d = norm_d + dvgdvg_dd(ibnd1, ibnd1)
            ENDDO
            !
@@ -476,12 +477,12 @@ SUBROUTINE do_exc_spin()
            !
            IF(flip_up) THEN
               !
-              DO ibnd1 = 1,nbnd_occ(2)
-                 DO ibnd2 = 1,nbnd_occ(2)
+              DO ibnd1 = 1,nbnd_dn
+                 DO ibnd2 = 1,nbnd_dn
                     !
                     ds2 = ds2 - dvgevc_ud(ibnd1, ibnd2)**2 + dvgevc_ud(ibnd1, ibnd1) * dvgevc_ud(ibnd2, ibnd2)
                     !
-                    DO ibnd3 = 1, nbnd_occ(1)
+                    DO ibnd3 = 1, nbnd_up
                        ds2 = ds2 + dvgdvg_uu(ibnd1, ibnd2) * om(ibnd3, ibnd1) * om(ibnd3, ibnd2)
                     ENDDO
                     !
@@ -490,12 +491,12 @@ SUBROUTINE do_exc_spin()
               !
            ELSE
               !
-              DO ibnd1 = 1, nbnd_occ(1)
-                 DO ibnd2 = 1, nbnd_occ(1)
+              DO ibnd1 = 1, nbnd_up
+                 DO ibnd2 = 1, nbnd_up
                     !
                     ds2 = ds2 - dvgevc_du(ibnd1, ibnd2)**2 + dvgevc_du(ibnd1, ibnd1) * dvgevc_du(ibnd2, ibnd2)
                     !
-                    DO ibnd3 = 1, nbnd_occ(2)
+                    DO ibnd3 = 1, nbnd_dn
                        ds2 = ds2 + dvgdvg_dd(ibnd1, ibnd2) * om(ibnd1, ibnd3) * om(ibnd2, ibnd3)
                     ENDDO
                     !
@@ -506,7 +507,7 @@ SUBROUTINE do_exc_spin()
            !
            ss = (-1._DP + SQRT(1._DP + 4._DP * s2)) / 2
            !
-           IF(nbnd_occ(1) >= nbnd_occ(2)) THEN
+           IF(nbnd_up >= nbnd_dn) THEN
               !
               IF(flip_up) THEN
                  ds2 = ds2 + 2._DP * ss + 1._DP
@@ -528,32 +529,32 @@ SUBROUTINE do_exc_spin()
         !
         collect_ds2(iexc) = ds2
         !
+        CALL update_bar_type(barra,'westpp',1)
+        !
      ENDDO
+     !
+     CALL stop_bar_type(barra,'westpp')
      !
      CALL mp_sum(collect_ds2,inter_image_comm)
      !
+     !$acc exit data delete(dvgdvg_uu,dvgdvg_ud,dvgdvg_dd,dvgevc_ud,dvgevc_du,dvg_exc)
      DEALLOCATE(dvgdvg_uu)
      DEALLOCATE(dvgdvg_ud)
      DEALLOCATE(dvgdvg_dd)
      DEALLOCATE(dvgevc_ud)
      DEALLOCATE(dvgevc_du)
      !
-     DO iexc=1,westpp_n_liouville_to_use
+     DO iexc = 1,westpp_n_liouville_to_use
         !
-        WRITE(stdout, &
-        & "(   /, 5x, ' # Exciton : | ', i12,' |','   ','spin flip : | ', L3)") iexc, westpp_l_spin_flip
+        WRITE(stdout, "(/, 5x, ' # Exciton : | ', i12,' |','   ','spin flip : | ', L3)") iexc, westpp_l_spin_flip
         !
         IF(westpp_l_spin_flip) THEN
-           !
            WRITE(stdout, &
-           & "(   /, 5x, '    nbnd_1 : | ', i12, ' |','      ', 'nbnd_2 : | ', i12, ' |','   ', 'flip up : | ', L3)") &
-           nbnd_occ(1), nbnd_occ(2), flip_up
-           !
+           & "(/, 5x, '    nbnd_1 : | ', i12, ' |','      ', 'nbnd_2 : | ', i12, ' |','   ', 'flip up : | ', L3)") &
+           & nbnd_up, nbnd_dn, flip_up
         ENDIF
         !
-        WRITE(stdout, &
-        & "(   /, 5x, ' Ex Energy : | ', f12.6,' |','      ','D<S^2> : | ', f12.6)") &
-        ev(iexc), collect_ds2(iexc)
+        WRITE(stdout, "(/, 5x, ' Ex Energy : | ', f12.6,' |','      ','D<S^2> : | ', f12.6)") ev(iexc), collect_ds2(iexc)
         !
      ENDDO
      !
@@ -562,21 +563,17 @@ SUBROUTINE do_exc_spin()
      ! ... Write the results in the json file
      !
      IF(mpime == root) THEN
-        !
         DO iexc = 1,westpp_n_liouville_to_use
-           !
            WRITE(label_exc,'(I5.5)') iexc
-           !
            CALL json%add('output.E'//label_exc//'.delta_spin_square',collect_ds2(iexc))
-           !
         ENDDO
-        !
      ENDIF
      !
      DEALLOCATE(collect_ds2)
      !
   ENDIF
   !
+  !$acc exit data delete(om)
   DEALLOCATE(om)
   DEALLOCATE(evc_copy)
   !

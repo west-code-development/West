@@ -20,7 +20,7 @@ SUBROUTINE do_exc_comp()
   USE control_flags,         ONLY : gamma_only
   USE gvect,                 ONLY : gstart
   USE mp,                    ONLY : mp_sum,mp_bcast
-  USE mp_global,             ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
+  USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE buffers,               ONLY : get_buffer
   USE westcom,               ONLY : iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
                                   & westpp_n_liouville_to_use,westpp_l_spin_flip,logfile
@@ -45,8 +45,8 @@ SUBROUTINE do_exc_comp()
   !
   INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iaux,iunit
   INTEGER :: trans(2)
-  INTEGER :: barra_load
   INTEGER :: nbndx_occ,nbndx_emp
+  INTEGER :: nbndval,flnbndval
   CHARACTER(5) :: label_exc
   CHARACTER(5) :: label_k
   CHARACTER(9) :: label_d
@@ -61,21 +61,20 @@ SUBROUTINE do_exc_comp()
   nbndx_occ = MAXVAL(nbnd_occ)
   nbndx_emp = nbnd - MINVAL(nbnd_occ)
   !
-  IF(nbndx_emp < 1) THEN
-     CALL errore('do_exc_comp', 'Eigenvectors decomposition need KS empty stats, rerun pwscf with nbnd > nbnd_occ', 1)
-  ENDIF
+  IF(nbndx_emp < 1) &
+     CALL errore('do_exc_comp', 'decomposition of eigenvectors needs empty states, rerun pwscf with nbnd > nbnd_occ', 1)
   !
-  IF(westpp_range(1) >= nbndx_occ) THEN
+  IF(westpp_range(1) >= nbndx_occ) &
      CALL errore('do_exc_comp', 'westpp_range(1) should be smaller than the number of occupied bands', 1)
-  ENDIF
   !
-  IF(westpp_range(2) <= nbndx_occ) THEN
+  IF(westpp_range(2) <= nbndx_occ) &
      CALL errore('do_exc_comp', 'westpp_range(2) should be greater than the number of occupied bands', 1)
-  ENDIF
   !
-  IF(westpp_range(2) > nbnd) THEN
+  IF(westpp_range(2) > nbnd) &
      CALL errore('do_exc_comp', 'westpp_range(2) should not exceed the number of bands', 1)
-  ENDIF
+  !
+  IF(.NOT. gamma_only) &
+     CALL errore('do_exc_comp', 'decomposition of eigenvectors requires gamma_only', 1)
   !
   ! ... DISTRIBUTE
   !
@@ -100,17 +99,11 @@ SUBROUTINE do_exc_comp()
   ENDIF
   !
   ALLOCATE(projection_matrix(nks,nbndx_occ,nbndx_emp,westpp_n_liouville_to_use))
+  !$acc enter data create(projection_matrix) copyin(dvg_exc)
   !
   CALL io_push_title('BSE/TDDFT Excited State De(C)omposition')
   !
-  !barra_load = 0
-  !DO lexc = 1,pert%nloc
-  !   iexc = pert%l2g(lexc)
-  !   IF(iexc < westpp_range(1) .OR. iexc > westpp_range(2)) CYCLE
-  !   barra_load = barra_load+1
-  !ENDDO
-  !
-  !CALL start_bar_type(barra,'westpp',barra_load*k_grid%nps*SUM(nbnd_occ))
+  CALL start_bar_type(barra,'westpp',pert%nloc*k_grid%nps)
   !
   DO lexc = 1,pert%nloc
      !
@@ -148,44 +141,41 @@ SUBROUTINE do_exc_comp()
            iks_do = iks
         ENDIF
         !
-        DO iocc = 1, nbnd_occ(iks_do)
-           !
-           DO iemp = 1, (nbnd - nbnd_occ(iks))
+        nbndval = nbnd_occ(iks)
+        flnbndval = nbnd_occ(iks_do)
+        !
+        !$acc parallel vector_length(1024) present(dvg_exc,projection_matrix)
+        !$acc loop collapse(2)
+        DO iocc = 1, flnbndval
+           DO iemp = 1, nbnd - nbndval
               !
-              IF(gamma_only) THEN
-                 !
-                 reduce = 0._DP
-                 !$acc loop reduction(+:reduce)
-                 DO ig = 1, npw
-                    reduce = reduce + 2._DP*REAL(dvg_exc(ig,iocc,iks,lexc),KIND=DP)*REAL(evc_work(ig,nbnd_occ(iks)+iemp),KIND=DP) &
-                    &               + 2._DP*AIMAG(dvg_exc(ig,iocc,iks,lexc))*AIMAG(evc_work(ig,nbnd_occ(iks)+iemp))
-                 ENDDO
-                 !
-                 IF (gstart==2) THEN
-                    reduce = reduce - REAL(dvg_exc(1,iocc,iks,lexc),KIND=DP)*REAL(evc_work(1,nbnd_occ(iks)+iemp),KIND=DP)
-                 ENDIF
-                 !
-              ELSE
-                 !
-                 CALL errore('do_exc_comp', 'gamma_only is required', 1)
-                 !
+              reduce = 0._DP
+              !$acc loop reduction(+:reduce)
+              DO ig = 1, npw
+                 reduce = reduce + 2._DP*REAL(dvg_exc(ig,iocc,iks,lexc),KIND=DP)*REAL(evc_work(ig,nbndval+iemp),KIND=DP) &
+                 &               + 2._DP*AIMAG(dvg_exc(ig,iocc,iks,lexc))*AIMAG(evc_work(ig,nbndval+iemp))
+              ENDDO
+              !
+              IF(gstart == 2) THEN
+                 reduce = reduce - REAL(dvg_exc(1,iocc,iks,lexc),KIND=DP)*REAL(evc_work(1,nbndval+iemp),KIND=DP)
               ENDIF
               !
               projection_matrix(iks,iocc,iemp,iexc) = reduce
               !
-              !CALL update_bar_type(barra,'westpp',1)
-              !
            ENDDO
-           !
-           !
         ENDDO
+        !$acc end parallel
+        !
+        CALL update_bar_type(barra,'westpp',1)
         !
      ENDDO
      !
   ENDDO
   !
-  CALL mp_sum(projection_matrix(:,:,:,:),intra_bgrp_comm)
-  CALL mp_sum(projection_matrix(:,:,:,:),inter_image_comm)
+  !$acc update host(projection_matrix)
+  !
+  CALL mp_sum(projection_matrix,intra_bgrp_comm)
+  CALL mp_sum(projection_matrix,inter_image_comm)
   !
   ! ... Print out results
   !
@@ -193,16 +183,16 @@ SUBROUTINE do_exc_comp()
   !
   DO iexc = 1,westpp_n_liouville_to_use
      !
-     WRITE(stdout, &
-         & "(   /, 5x, ' #     Exciton : | ', i8,' |','   ','Excitation energy : | ', f12.6)") &
-         iexc, ev(iexc)
+     WRITE(stdout, "(   /, 5x, ' #     Exciton : | ', i8,' |','   ','Excitation energy : | ', f12.6)") iexc, ev(iexc)
      !
      DO iks = 1,nks
+        !
         IF(westpp_l_spin_flip) THEN
            iks_do = flks(iks)
         ELSE
            iks_do = iks
         ENDIF
+        !
         DO iocc = 1,nbnd_occ(iks_do)
            DO iemp = 1,(nbnd - nbnd_occ(iks))
               reduce = ABS(projection_matrix(iks,iocc,iemp,iexc))
@@ -211,7 +201,9 @@ SUBROUTINE do_exc_comp()
               ENDIF
            ENDDO
         ENDDO
+        !
      ENDDO
+     !
   ENDDO
   !
   ! ... Write the results in the json file
@@ -241,29 +233,38 @@ SUBROUTINE do_exc_comp()
            trans = 0
            !
            DO iocc = westpp_range(1),nbnd_occ(iks_do)
+              !
               trans(1) = iocc
+              !
               DO iemp = 1,(westpp_range(2) - nbnd_occ(iks))
+                 !
                  trans(2) = iemp
                  iaux = iaux+1
                  WRITE(label_d,'(I9)') iaux
                  !
                  CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection('//label_d//').trans',trans)
-                 IF(gamma_only) THEN
-                    reduce = projection_matrix(iks,iocc,iemp,iexc)
-                    CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection('//label_d//').value',reduce)
-                 ENDIF
+                 !
+                 reduce = projection_matrix(iks,iocc,iemp,iexc)
+                 CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection('//label_d//').value',reduce)
                  !
               ENDDO
+              !
            ENDDO
+           !
         ENDDO
+        !
      ENDDO
+     !
   ENDIF
   !
-  !CALL stop_bar_type(barra,'westpp')
+  CALL stop_bar_type(barra,'westpp')
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()
 #endif
+  !
+  !$acc exit data delete(projection_matrix,dvg_exc)
+  DEALLOCATE(projection_matrix)
   !
   IF(mpime == root) THEN
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))

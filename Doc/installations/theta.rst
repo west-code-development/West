@@ -116,6 +116,8 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    export ROMIO_FSTYPE_FORCE="ufs:"
 
+**Important**: It is recommended to run the calculation from one of the Lustre file systems (`/grand` or `/eagle` instead of `/home`).
+
 .. code-block:: bash
 
    $ cat run_west.sh

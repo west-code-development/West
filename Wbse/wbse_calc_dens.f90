@@ -195,8 +195,6 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   CALL mp_sum(drho,inter_pool_comm)
   CALL mp_sum(drho,inter_bgrp_comm)
   !
-  !$acc update device(drho)
-  !
 #if !defined(__CUDA)
   IF(gamma_only) THEN
      DEALLOCATE(tmp_r)

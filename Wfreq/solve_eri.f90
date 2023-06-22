@@ -177,7 +177,6 @@ SUBROUTINE compute_braket(braket)
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : psic=>psic_d
-  USE west_gpu,             ONLY : memcpy_H2D
 #else
   USE wavefunctions,        ONLY : psic
 #endif
@@ -188,8 +187,7 @@ SUBROUTINE compute_braket(braket)
   !
   COMPLEX(DP),ALLOCATABLE :: phi(:)
   COMPLEX(DP),ALLOCATABLE :: rho_r(:), rho_g(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(rho_r,rho_g,sqvc)
+  !$acc declare device_resident(rho_r,rho_g)
   !
   INTEGER :: s, s_g, m, p1, p1loc, i, j, ig, ir, mloc
   INTEGER :: barra_load
@@ -207,14 +205,13 @@ SUBROUTINE compute_braket(braket)
   !
   CALL pot3D%init(fftdriver,.FALSE.,'default')
   !
+  !$acc enter data copyin(pot3D)
+  !$acc enter data copyin(pot3D%sqvc)
+  !
   ALLOCATE( phi(npwqx) )
   !$acc enter data create(phi)
   ALLOCATE( rho_g(npwqx) )
   ALLOCATE( rho_r(dffts%nnr) )
-#if defined(__CUDA)
-  ALLOCATE( sqvc(npwqx) )
-  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
-#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -248,13 +245,9 @@ SUBROUTINE compute_braket(braket)
         !
         ! Mulitply by V_c^0.5
         !
-        !$acc parallel loop present(phi,sqvc)
+        !$acc parallel loop present(phi,pot3D)
         DO ig = 1, npwq
-#if defined(__CUDA)
-           phi(ig) = sqvc(ig) * phi(ig)
-#else
            phi(ig) = pot3D%sqvc(ig) * phi(ig)
-#endif
         ENDDO
         !$acc end parallel
         !
@@ -317,9 +310,9 @@ SUBROUTINE compute_braket(braket)
   DEALLOCATE( phi )
   DEALLOCATE( rho_r )
   DEALLOCATE( rho_g )
-#if defined(__CUDA)
-  DEALLOCATE( sqvc )
-#endif
+  !
+  !$acc exit data delete(pot3D%sqvc)
+  !$acc exit data delete(pot3D)
   !
 END SUBROUTINE
 !
@@ -342,7 +335,6 @@ SUBROUTINE compute_eri_vc(eri_vc)
   USE cell_base,            ONLY : omega
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : psic=>psic_d
-  USE west_gpu,             ONLY : memcpy_H2D
 #else
   USE wavefunctions,        ONLY : psic
 #endif
@@ -352,8 +344,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   REAL(DP),INTENT(OUT) :: eri_vc(n_pairs,n_pairs,nspin,nspin)
   !
   COMPLEX(DP),ALLOCATABLE :: rho_g1(:), rho_g2(:), rho_r(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(rho_g1,rho_g2,rho_r,sqvc)
+  !$acc declare device_resident(rho_g1,rho_g2,rho_r)
   !
   INTEGER :: i, j, k, l, p1, p1loc, p2, s1, s1_g, s2
   INTEGER :: ir, ig
@@ -369,13 +360,12 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   CALL pot3D%init('Rho',.FALSE.,'gb')
   !
+  !$acc enter data copyin(pot3D)
+  !$acc enter data copyin(pot3D%sqvc)
+  !
   ALLOCATE( rho_r(dffts%nnr) )
   ALLOCATE( rho_g1(ngm) )
   ALLOCATE( rho_g2(ngm) )
-#if defined(__CUDA)
-  ALLOCATE( sqvc(ngm) )
-  CALL memcpy_H2D(sqvc,pot3D%sqvc,ngm)
-#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -409,13 +399,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !$acc end host_data
         !
-        !$acc parallel loop present(rho_g1,sqvc)
+        !$acc parallel loop present(rho_g1,pot3D)
         DO ig = 1, ngm
-#if defined(__CUDA)
-           rho_g1(ig) = sqvc(ig) * rho_g1(ig)
-#else
            rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
-#endif
         ENDDO
         !$acc end parallel
         !
@@ -454,13 +440,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
            !$acc end host_data
            !
-           !$acc parallel loop present(rho_g2,sqvc)
+           !$acc parallel loop present(rho_g2,pot3D)
            DO ig = 1, ngm
-#if defined(__CUDA)
-              rho_g2(ig) = sqvc(ig) * rho_g2(ig)
-#else
               rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
-#endif
            ENDDO
            !$acc end parallel
            !
@@ -524,13 +506,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
         !$acc end host_data
         !
-        !$acc parallel loop present(rho_g1,sqvc)
+        !$acc parallel loop present(rho_g1,pot3D)
         DO ig = 1, ngm
-#if defined(__CUDA)
-           rho_g1(ig) = sqvc(ig) * rho_g1(ig)
-#else
            rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
-#endif
         ENDDO
         !$acc end parallel
         !
@@ -555,13 +533,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
            !$acc end host_data
            !
-           !$acc parallel loop present(rho_g2,sqvc)
+           !$acc parallel loop present(rho_g2,pot3D)
            DO ig = 1, ngm
-#if defined(__CUDA)
-              rho_g2(ig) = sqvc(ig) * rho_g2(ig)
-#else
               rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
-#endif
            ENDDO
            !$acc end parallel
            !
@@ -598,9 +572,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
   DEALLOCATE( rho_r )
   DEALLOCATE( rho_g1 )
   DEALLOCATE( rho_g2 )
-#if defined(__CUDA)
-  DEALLOCATE( sqvc )
-#endif
+  !
+  !$acc exit data delete(pot3D%sqvc)
+  !$acc exit data delete(pot3D)
   !
 END SUBROUTINE
 !

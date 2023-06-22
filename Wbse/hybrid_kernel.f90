@@ -22,7 +22,7 @@ SUBROUTINE hybrid_kernel_term1_slow(current_spin, evc1, hybrid_kd1, sf)
   USE types_coulomb,         ONLY : pot3D
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma
-  USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_bgrp_comm
+  USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
   USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,nbndval0x,n_trunc_bands
   USE exx,                   ONLY : exxalfa
@@ -44,17 +44,23 @@ SUBROUTINE hybrid_kernel_term1_slow(current_spin, evc1, hybrid_kd1, sf)
   LOGICAL, INTENT(IN) :: sf
   COMPLEX(DP), INTENT(INOUT) :: hybrid_kd1(npwx,band_group%nlocx)
   !
-  ! local vars
+  ! Workspace
   !
   INTEGER :: lbnd, ibnd, ibndp, jbnd, jbndp, ir, ig, iks_do
-  INTEGER :: nbndval, current_spin_ikq, ikq
-  INTEGER :: nbnd_do
-  !
+  INTEGER :: nbndval, nbnd_do, current_spin_ikq, ikq
+  INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: aux_hybrid1(:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: aux_hybrid1
+#endif
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
+  !$acc declare device_resident(caux,gaux,raux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
-  ALLOCATE(aux_hybrid1(npwx, nbndval0x-n_trunc_bands))
+  dffts_nnr = dffts%nnr
+  !
+  ALLOCATE(aux_hybrid1(npwx,nbndval0x-n_trunc_bands))
+  !$acc enter data create(aux_hybrid1)
   ALLOCATE(caux(dffts%nnr))
   ALLOCATE(gaux(npwx))
   ALLOCATE(raux(dffts%nnr))
@@ -62,7 +68,6 @@ SUBROUTINE hybrid_kernel_term1_slow(current_spin, evc1, hybrid_kd1, sf)
   DO ikq = 1,kpt_pool%nloc
      !
      current_spin_ikq = isk(ikq)
-     !
      IF(current_spin_ikq /= current_spin) CYCLE
      !
      IF(sf) THEN
@@ -102,7 +107,9 @@ SUBROUTINE hybrid_kernel_term1_slow(current_spin, evc1, hybrid_kd1, sf)
         !
         jbndp = jbnd + n_trunc_bands
         !
-        raux(:) = (0._DP, 0._DP)
+        !$acc kernels present(raux)
+        raux(:) = (0._DP,0._DP)
+        !$acc end kernels
         !
         DO lbnd = 1, nbnd_do ! index to be summed
            !
@@ -113,11 +120,11 @@ SUBROUTINE hybrid_kernel_term1_slow(current_spin, evc1, hybrid_kd1, sf)
            !
            CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibndp),evc_work(:,jbndp),psic,'Wave')
            !
-           DO ir = 1, dffts%nnr
-              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),0._DP,KIND=DP)
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
+              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))/omega,KIND=DP)
            ENDDO
-           !
-           caux(:) = caux / omega
+           !$acc end parallel
            !
            ! Apply the bare Coulomb potential
            !
@@ -125,19 +132,27 @@ SUBROUTINE hybrid_kernel_term1_slow(current_spin, evc1, hybrid_kd1, sf)
            CALL single_fwfft_gamma(dffts,npw,npwx,caux,gaux,'Wave')
            !$acc end host_data
            !
+           !$acc parallel loop present(gaux,pot3D)
            DO ig = 1, npw
               gaux(ig) = gaux(ig) * (pot3D%sqvc(ig)**2)
            ENDDO
+           !$acc end parallel
            !
            !$acc host_data use_device(gaux,evc1,caux)
            CALL double_invfft_gamma(dffts,npw,npwx,gaux,evc1(:,lbnd,ikq),caux,'Wave')
            !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
               psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),KIND=DP)
            ENDDO
+           !$acc end parallel
            !
-           raux(:) = raux + psic
+           !$acc parallel loop present(raux)
+           DO ir = 1, dffts_nnr
+              raux(ir) = raux(ir)+psic(ir)
+           ENDDO
+           !$acc end parallel
            !
         ENDDO
         !
@@ -147,15 +162,27 @@ SUBROUTINE hybrid_kernel_term1_slow(current_spin, evc1, hybrid_kd1, sf)
         !
      ENDDO
      !
+     !$acc update host(aux_hybrid1)
      CALL mp_sum(aux_hybrid1, inter_bgrp_comm)
+     !$acc update device(aux_hybrid1)
      !
+     !$acc parallel loop collapse(2) present(hybrid_kd1,aux_hybrid1)
      DO lbnd = 1, nbnd_do
-        ibnd = band_group%l2g(lbnd)
-        hybrid_kd1(:,lbnd) = hybrid_kd1(:,lbnd) - aux_hybrid1(:,ibnd) * exxalfa
+        DO ig = 1, npw
+           !
+           ! ibnd = band_group%l2g(lbnd)
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           !
+           hybrid_kd1(ig,lbnd) = hybrid_kd1(ig,lbnd) - aux_hybrid1(ig,ibnd) * exxalfa
+           !
+        ENDDO
      ENDDO
+     !$acc end parallel
      !
   ENDDO
   !
+  !$acc exit data delete(aux_hybrid1)
   DEALLOCATE(aux_hybrid1)
   DEALLOCATE(caux)
   DEALLOCATE(gaux)
@@ -175,7 +202,7 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   USE types_coulomb,         ONLY : pot3D
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma
-  USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_bgrp_comm
+  USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
   USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,nbndval0x,n_trunc_bands
   USE exx,                   ONLY : exxalfa
@@ -197,17 +224,24 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   LOGICAL, INTENT(IN) :: sf
   COMPLEX(DP), INTENT(INOUT) :: hybrid_kd2(npwx,band_group%nlocx)
   !
-  ! local vars
+  ! Workspace
   !
   INTEGER :: lbnd, ibnd, ibndp, jbnd, jbndp, ir, ig
   INTEGER :: current_spin_ikq, ikq, nbndval, nbnd_do
-  !
+  INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: aux_hybrid2(:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: aux_hybrid2
+#endif
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
+  !$acc declare device_resident(caux,gaux,raux)
   !
   IF(sf) CALL errore('hybrid_kernel_gamma_term2', 'spin-flip is not supported', 1)
   !
-  ALLOCATE(aux_hybrid2(npwx, nbndval0x-n_trunc_bands))
+  dffts_nnr = dffts%nnr
+  !
+  ALLOCATE(aux_hybrid2(npwx,nbndval0x-n_trunc_bands))
+  !$acc enter data create(aux_hybrid2)
   ALLOCATE(caux(dffts%nnr))
   ALLOCATE(gaux(npwx))
   ALLOCATE(raux(dffts%nnr))
@@ -215,7 +249,6 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   DO ikq = 1,kpt_pool%nloc
      !
      current_spin_ikq = isk(ikq)
-     !
      IF(current_spin_ikq /= current_spin) CYCLE
      !
      nbndval = nbnd_occ(ikq)
@@ -247,7 +280,9 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
         !
         jbndp = jbnd + n_trunc_bands
         !
-        raux(:) = (0._DP, 0._DP)
+        !$acc kernels present(raux)
+        raux(:) = (0._DP,0._DP)
+        !$acc end kernels
         !
         DO lbnd = 1, nbnd_do ! index to be summed
            !
@@ -262,11 +297,11 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
            CALL double_invfft_gamma(dffts,npw,npwx,evc1(:,lbnd,ikq),evc_work(:,jbndp),psic,'Wave')
            !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
-              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),KIND=DP)
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
+              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))/omega,KIND=DP)
            ENDDO
-           !
-           caux(:) = caux/omega
+           !$acc end parallel
            !
            ! Apply the bare Coulomb potential
            !
@@ -274,19 +309,27 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
            CALL single_fwfft_gamma(dffts,npw,npwx,caux,gaux,'Wave')
            !$acc end host_data
            !
+           !$acc parallel loop present(gaux,pot3D)
            DO ig = 1, npw
               gaux(ig) = gaux(ig) * (pot3D%sqvc(ig)**2)
            ENDDO
+           !$acc end parallel
            !
            !$acc host_data use_device(gaux,caux)
            CALL double_invfft_gamma(dffts,npw,npwx,gaux,evc_work(:,ibndp),caux,'Wave')
            !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
               psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),KIND=DP)
            ENDDO
+           !$acc end parallel
            !
-           raux(:) = raux + psic
+           !$acc parallel loop present(raux)
+           DO ir = 1, dffts_nnr
+              raux(ir) = raux(ir)+psic(ir)
+           ENDDO
+           !$acc end parallel
            !
         ENDDO
         !
@@ -296,15 +339,27 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
         !
      ENDDO
      !
+     !$acc update host(aux_hybrid2)
      CALL mp_sum(aux_hybrid2, inter_bgrp_comm)
+     !$acc update device(aux_hybrid2)
      !
+     !$acc parallel loop collapse(2) present(hybrid_kd2,aux_hybrid2)
      DO lbnd = 1, nbnd_do
-        ibnd = band_group%l2g(lbnd)
-        hybrid_kd2(:,lbnd) = hybrid_kd2(:,lbnd) - aux_hybrid2(:,ibnd) * exxalfa
+        DO ig = 1, npw
+           !
+           ! ibnd = band_group%l2g(lbnd)
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           !
+           hybrid_kd2(ig,lbnd) = hybrid_kd2(ig,lbnd) - aux_hybrid2(ig,ibnd) * exxalfa
+           !
+        ENDDO
      ENDDO
+     !$acc end parallel
      !
   ENDDO
   !
+  !$acc exit data delete(aux_hybrid2)
   DEALLOCATE(aux_hybrid2)
   DEALLOCATE(caux)
   DEALLOCATE(gaux)
@@ -324,7 +379,7 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   USE types_coulomb,         ONLY : pot3D
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma
-  USE mp_global,             ONLY : my_image_id,inter_bgrp_comm,inter_image_comm
+  USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
   USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,nbndval0x,n_trunc_bands
   USE exx,                   ONLY : exxalfa
@@ -346,16 +401,23 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   LOGICAL, INTENT(IN) :: sf
   COMPLEX(DP), INTENT(INOUT) :: hybrid_kd3(npwx,band_group%nlocx)
   !
-  ! local vars
+  ! Workspace
   !
   INTEGER :: lbnd, ibnd, jbnd, jbndp, ir, ig, iks_do, nbnd_do
   INTEGER :: current_spin_ikq, ikq, nbndval, flnbndval
-  !
+  INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: aux_hybrid3(:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: aux_hybrid3
+#endif
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
+  !$acc declare device_resident(caux,gaux,raux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
-  ALLOCATE(aux_hybrid3(npwx, nbndval0x-n_trunc_bands))
+  dffts_nnr = dffts%nnr
+  !
+  ALLOCATE(aux_hybrid3(npwx,nbndval0x-n_trunc_bands))
+  !$acc enter data create(aux_hybrid3)
   ALLOCATE(caux(dffts%nnr))
   ALLOCATE(gaux(npwx))
   ALLOCATE(raux(dffts%nnr))
@@ -363,7 +425,6 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   DO ikq = 1,kpt_pool%nloc
      !
      current_spin_ikq = isk(ikq)
-     !
      IF(current_spin_ikq /= current_spin) CYCLE
      !
      IF(sf) THEN
@@ -404,7 +465,9 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
         !
         jbndp = jbnd + n_trunc_bands
         !
-        raux(:) = (0._DP, 0._DP)
+        !$acc kernels present(raux)
+        raux(:) = (0._DP,0._DP)
+        !$acc end kernels
         !
         DO lbnd = 1, nbnd_do
            !
@@ -414,11 +477,11 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
            CALL double_invfft_gamma(dffts,npw,npwx,evc1(:,lbnd,ikq),evc_work(:,jbndp),psic,'Wave')
            !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
-              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),KIND=DP)
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
+              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))/omega,KIND=DP)
            ENDDO
-           !
-           caux(:) = caux/omega
+           !$acc end parallel
            !
            ! Apply the bare Coulomb potential
            !
@@ -426,19 +489,27 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
            CALL single_fwfft_gamma(dffts,npw,npwx,caux,gaux,'Wave')
            !$acc end host_data
            !
+           !$acc parallel loop present(gaux,pot3D)
            DO ig = 1, npw
               gaux(ig) = gaux(ig) * (pot3D%sqvc(ig)**2)
            ENDDO
+           !$acc end parallel
            !
            !$acc host_data use_device(gaux,evc1,caux)
            CALL double_invfft_gamma(dffts,npw,npwx,gaux,evc1(:,lbnd,ikq),caux,'Wave')
            !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
               psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),KIND=DP)
            ENDDO
+           !$acc end parallel
            !
-           raux(:) = raux + psic
+           !$acc parallel loop present(raux)
+           DO ir = 1, dffts_nnr
+              raux(ir) = raux(ir)+psic(ir)
+           ENDDO
+           !$acc end parallel
            !
         ENDDO
         !
@@ -448,7 +519,9 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
         !
      ENDDO
      !
+     !$acc update host(aux_hybrid3)
      CALL mp_sum(aux_hybrid3, inter_bgrp_comm)
+     !$acc update device(aux_hybrid3)
      !
      ! Recompute nbnd_do for the current spin channel
      !
@@ -458,13 +531,23 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
         IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
+     !$acc parallel loop collapse(2) present(hybrid_kd3,aux_hybrid3)
      DO lbnd = 1, nbnd_do
-        ibnd = band_group%l2g(lbnd)
-        hybrid_kd3(:,lbnd) = hybrid_kd3(:,lbnd) - aux_hybrid3(:,ibnd) * exxalfa
+        DO ig = 1, npw
+           !
+           ! ibnd = band_group%l2g(lbnd)
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           !
+           hybrid_kd3(ig,lbnd) = hybrid_kd3(ig,lbnd) - aux_hybrid3(ig,ibnd) * exxalfa
+           !
+        ENDDO
      ENDDO
+     !$acc end parallel
      !
   ENDDO
   !
+  !$acc exit data delete(aux_hybrid3)
   DEALLOCATE(aux_hybrid3)
   DEALLOCATE(caux)
   DEALLOCATE(gaux)
@@ -484,7 +567,7 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   USE types_coulomb,         ONLY : pot3D
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma
-  USE mp_global,             ONLY : my_image_id,inter_bgrp_comm,inter_image_comm
+  USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
   USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,nbndval0x,n_trunc_bands
   USE exx,                   ONLY : exxalfa
@@ -506,17 +589,24 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   LOGICAL, INTENT(IN) :: sf
   COMPLEX(DP), INTENT(INOUT) :: hybrid_kd4(npwx,band_group%nlocx)
   !
-  ! local vars
+  ! Workspace
   !
   INTEGER :: lbnd, ibnd, ibndp, jbnd, ir, ig, iks_do
   INTEGER :: current_spin_ikq, ikq, nbndval, nbnd_do
-  !
+  INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: aux_hybrid4(:,:), aux_evc1(:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: aux_hybrid4, aux_evc1
+#endif
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
+  !$acc declare device_resident(caux,gaux,raux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
-  ALLOCATE(aux_evc1(npwx, nbndval0x-n_trunc_bands))
-  ALLOCATE(aux_hybrid4(npwx, nbndval0x-n_trunc_bands))
+  dffts_nnr = dffts%nnr
+  !
+  ALLOCATE(aux_evc1(npwx,nbndval0x-n_trunc_bands))
+  ALLOCATE(aux_hybrid4(npwx,nbndval0x-n_trunc_bands))
+  !$acc enter data create(aux_evc1,aux_hybrid4)
   ALLOCATE(caux(dffts%nnr))
   ALLOCATE(gaux(npwx))
   ALLOCATE(raux(dffts%nnr))
@@ -524,7 +614,6 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   DO ikq = 1,kpt_pool%nloc
      !
      current_spin_ikq = isk(ikq)
-     !
      IF(current_spin_ikq /= current_spin) CYCLE
      !
      IF(sf) THEN
@@ -562,18 +651,33 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
      !
      ! Collect evc1 from all bgrps
      !
-     aux_evc1(:,:) = (0._DP, 0._DP)
+     !$acc kernels present(aux_evc1)
+     aux_evc1(:,:) = (0._DP,0._DP)
+     !$acc end kernels
      !
+     !$acc parallel loop collapse(2) present(aux_evc1,evc1)
      DO lbnd = 1, nbnd_do
-        ibnd = band_group%l2g(lbnd)
-        aux_evc1(:,ibnd) = evc1(:,lbnd,iks_do)
+        DO ig = 1, npw
+           !
+           ! ibnd = band_group%l2g(lbnd)
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           !
+           aux_evc1(ig,ibnd) = evc1(ig,lbnd,iks_do)
+           !
+        ENDDO
      ENDDO
+     !$acc end parallel
      !
-     CALL mp_sum(aux_evc1, inter_bgrp_comm)
+     !$acc update host(aux_evc1)
+     CALL mp_sum(aux_evc1,inter_bgrp_comm)
+     !$acc update device(aux_evc1)
      !
      DO jbnd = 1, nbndval - n_trunc_bands ! index to be left
         !
-        raux(:) = (0._DP, 0._DP)
+        !$acc kernels present(raux)
+        raux(:) = (0._DP,0._DP)
+        !$acc end kernels
         !
         DO lbnd = 1, nbnd_do ! index to be summed
            !
@@ -586,11 +690,11 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
            CALL double_invfft_gamma(dffts,npw,npwx,aux_evc1(:,jbnd),evc1(:,lbnd,iks_do),psic,'Wave')
            !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
-              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir)),KIND=DP)
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
+              caux(ir) = CMPLX(REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))/omega,KIND=DP)
            ENDDO
-           !
-           caux(:) = caux/omega
+           !$acc end parallel
            !
            ! Apply the bare Coulomb potential
            !
@@ -598,19 +702,27 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
            CALL single_fwfft_gamma(dffts,npw,npwx,caux,gaux,'Wave')
            !$acc end host_data
            !
+           !$acc parallel loop present(gaux,pot3D)
            DO ig = 1, npw
               gaux(ig) = gaux(ig) * (pot3D%sqvc(ig)**2)
            ENDDO
+           !$acc end parallel
            !
            !$acc host_data use_device(gaux,caux)
            CALL double_invfft_gamma(dffts,npw,npwx,gaux,evc_work(:,ibndp),caux,'Wave')
            !$acc end host_data
            !
-           DO ir = 1, dffts%nnr
+           !$acc parallel loop present(caux)
+           DO ir = 1, dffts_nnr
               psic(ir) = CMPLX(REAL(caux(ir),KIND=DP)*AIMAG(caux(ir)),KIND=DP)
            ENDDO
+           !$acc end parallel
            !
-           raux(:) = raux + psic
+           !$acc parallel loop present(raux)
+           DO ir = 1, dffts_nnr
+              raux(ir) = raux(ir)+psic(ir)
+           ENDDO
+           !$acc end parallel
            !
         ENDDO
         !
@@ -620,15 +732,27 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
         !
      ENDDO
      !
+     !$acc update host(aux_hybrid4)
      CALL mp_sum(aux_hybrid4, inter_bgrp_comm)
+     !$acc update device(aux_hybrid4)
      !
+     !$acc parallel loop collapse(2) present(hybrid_kd4,aux_hybrid4)
      DO lbnd = 1, nbnd_do
-        ibnd = band_group%l2g(lbnd)
-        hybrid_kd4(:,lbnd) = hybrid_kd4(:,lbnd) - aux_hybrid4(:,ibnd) * exxalfa
+        DO ig = 1, npw
+           !
+           ! ibnd = band_group%l2g(lbnd)
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           !
+           hybrid_kd4(ig,lbnd) = hybrid_kd4(ig,lbnd) - aux_hybrid4(ig,ibnd) * exxalfa
+           !
+        ENDDO
      ENDDO
+     !$acc end parallel
      !
   ENDDO
   !
+  !$acc exit data delete(aux_evc1,aux_hybrid4)
   DEALLOCATE(aux_evc1)
   DEALLOCATE(aux_hybrid4)
   DEALLOCATE(caux)

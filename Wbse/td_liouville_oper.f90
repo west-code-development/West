@@ -10,7 +10,9 @@
 ! Contributors to this file:
 ! Ngoc Linh Nguyen, Victor Yu
 !
+!-----------------------------------------------------------------------
 SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
+  !-----------------------------------------------------------------------
   !
   ! Applies the linear response operator to response wavefunctions
   !
@@ -22,7 +24,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,xk,ngk,igk_k,nbnd
   USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_bcast
-  USE mp_global,            ONLY : my_image_id,inter_image_comm
+  USE mp_global,            ONLY : inter_image_comm,my_image_id
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
@@ -50,9 +52,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,band_group%nlocx,kpt_pool%nloc)
   COMPLEX(DP), INTENT(OUT) :: evc1_new(npwx*npol,band_group%nlocx,kpt_pool%nloc)
   LOGICAL, INTENT(IN) :: sf
-  ! if sf = .True., then the code will operate in the spin-flip mode
   !
-  ! Local variables
+  ! Workspace
   !
   LOGICAL :: lrpa,do_k1e
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
@@ -77,13 +78,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !$acc end kernels
   !
 #if !defined(__CUDA)
-  ALLOCATE(hevc1(npwx*npol,band_group%nloc))
+  ALLOCATE(hevc1(npwx*npol,band_group%nlocx))
   ALLOCATE(dvrs(dffts%nnr,nspin))
 #endif
   !
   ! Calculation of the charge density response
   !
   CALL wbse_calc_dens(evc1,dvrs,sf)
+  !
+  !$acc update device(dvrs)
   !
   lrpa = l_bse
   !
@@ -367,6 +370,248 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   CALL stop_clock_gpu('apply_lv')
 #else
   CALL stop_clock('apply_lv')
+#endif
+  !
+END SUBROUTINE
+!
+!-----------------------------------------------------------------------
+SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
+  !-----------------------------------------------------------------------
+  !
+  ! Applies the linear response operator to response wavefunctions
+  ! beyond the Tamm-Dancoff approximation (btda)
+  !
+  USE kinds,                ONLY : DP
+  USE fft_base,             ONLY : dffts
+  USE gvect,                ONLY : gstart
+  USE lsda_mod,             ONLY : nspin
+  USE pwcom,                ONLY : npw,npwx,current_k,current_spin,isk,lsda,ngk
+  USE mp,                   ONLY : mp_bcast
+  USE mp_global,            ONLY : inter_image_comm,my_image_id
+  USE noncollin_module,     ONLY : npol
+  USE buffers,              ONLY : get_buffer
+  USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
+                                 & double_invfft_gamma
+  USE westcom,              ONLY : l_bse,l_bse_triplet,nbnd_occ,n_trunc_bands,lrwfc,iuwfc,&
+                                 & l_hybrid_tddft,l_spin_flip_kernel
+  USE distribution_center,  ONLY : kpt_pool,band_group
+  USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
+  USE wavefunctions,        ONLY : evc_host=>evc
+  USE west_gpu,             ONLY : dvrs,evc2_new=>hevc1,reallocate_ps_gpu
+#else
+  USE wavefunctions,        ONLY : evc_work=>evc,psic
+#endif
+  !
+  IMPLICIT NONE
+  !
+  ! I/O
+  !
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx*npol,band_group%nlocx,kpt_pool%nloc)
+  COMPLEX(DP), INTENT(INOUT) :: evc1_new(npwx*npol,band_group%nlocx,kpt_pool%nloc)
+  LOGICAL, INTENT(IN) :: sf
+  !
+  ! Workspace
+  !
+  LOGICAL :: lrpa,do_k2e
+  INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
+  INTEGER :: dffts_nnr
+  INTEGER, PARAMETER :: flks(2) = [2,1]
+#if !defined(__CUDA)
+  COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
+  COMPLEX(DP), ALLOCATABLE :: evc2_new(:,:)
+#endif
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('apply_lv_btda')
+#else
+  CALL start_clock('apply_lv_btda')
+#endif
+  !
+  dffts_nnr = dffts%nnr
+  !
+#if !defined(__CUDA)
+  ALLOCATE(evc2_new(npwx*npol,band_group%nlocx))
+  ALLOCATE(dvrs(dffts%nnr,nspin))
+#endif
+  !
+  ! Calculation of the charge density response
+  !
+  CALL wbse_calc_dens(evc1,dvrs,sf)
+  !
+  !$acc update device(dvrs)
+  !
+  lrpa = l_bse
+  !
+  If(sf .AND. l_spin_flip_kernel) THEN
+     CALL wbse_dv_of_drho_sf(dvrs)
+  ELSE
+     CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
+  ENDIF
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     IF(sf) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
+     nbndval = nbnd_occ(iks)
+     flnbndval = nbnd_occ(iks_do)
+     !
+     nbnd_do = 0
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
+     ENDDO
+     !
+     ! ... Set k-point, spin, kinetic energy, needed by Hpsi
+     !
+     current_k = iks
+     IF(lsda) current_spin = isk(iks)
+     !
+     ! ... Number of G vectors for PW expansion of wfs at k
+     !
+     npw = ngk(iks)
+     !
+     ! ... read in GS wavefunctions iks
+     !
+     IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+     ENDIF
+     !
+     IF(l_bse_triplet) THEN
+        do_k2e = .FALSE.
+     ELSEIF(sf .AND. (.NOT. l_spin_flip_kernel)) THEN
+        do_k2e = .FALSE.
+     ELSEIF(sf .AND. l_spin_flip_kernel) THEN
+        do_k2e = .TRUE.
+     ELSE
+        do_k2e = .TRUE.
+     ENDIF
+     !
+     IF(do_k2e) THEN
+        !
+        ! double bands @ gamma
+        !
+        DO lbnd = 1, nbnd_do-MOD(nbnd_do,2),2
+           !
+           ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
+           !
+           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+           !
+           !$acc parallel loop present(dvrs)
+           DO ir = 1,dffts_nnr
+              psic(ir) = psic(ir)*CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+           ENDDO
+           !$acc end parallel
+           !
+           !$acc host_data use_device(evc2_new)
+           CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc2_new(:,lbnd),evc2_new(:,lbnd+1),'Wave')
+           !$acc end host_data
+           !
+        ENDDO
+        !
+        ! single band @ gamma
+        !
+        IF(MOD(nbnd_do,2) == 1) THEN
+           !
+           lbnd = nbnd_do
+           ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           !
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+           !
+           !$acc parallel loop present(dvrs)
+           DO ir = 1,dffts_nnr
+              psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
+           ENDDO
+           !$acc end parallel
+           !
+           !$acc host_data use_device(evc2_new)
+           CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc2_new(:,lbnd),'Wave')
+           !$acc end host_data
+           !
+        ENDIF
+        !
+     ENDIF
+     !
+     IF(l_bse) THEN
+        !
+        ! The other part beyond TDA. exx_div treatment is not needed for this part.
+        !
+        CALL errore('west_apply_liouvillian_btda', 'BSE forces have not been implemented', 1)
+        !
+     ENDIF
+     !
+     IF(l_hybrid_tddft) THEN
+        !
+        ! K2d part. exx_div treatment is not needed for this part.
+        !
+        CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
+        !
+     ENDIF
+     !
+     IF(gstart == 2) THEN
+        !$acc parallel loop present(evc2_new)
+        DO lbnd = 1,nbnd_do
+           evc2_new(1,lbnd) = CMPLX(REAL(evc2_new(1,lbnd),KIND=DP),KIND=DP)
+        ENDDO
+        !$acc end parallel
+     ENDIF
+     !
+     ! Pc[k]*evc2_new(k)
+     !
+     ! load evc from iks to apply Pc of the current spin channel
+     !
+     IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
+     ENDIF
+     !
+#if defined(__CUDA)
+     CALL reallocate_ps_gpu(nbndval,nbnd_do)
+#endif
+     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,evc2_new,(1._DP,0._DP))
+     !
+     !$acc parallel loop collapse(2) present(evc1_new,evc2_new)
+     DO lbnd = 1,nbnd_do
+        DO ig = 1,npw
+           evc1_new(ig,lbnd,iks) = evc1_new(ig,lbnd,iks)+evc2_new(ig,lbnd)
+        ENDDO
+     ENDDO
+     !$acc end parallel
+     !
+  ENDDO
+  !
+#if !defined(__CUDA)
+  DEALLOCATE(dvrs)
+  DEALLOCATE(evc2_new)
+#endif
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('apply_lv_btda')
+#else
+  CALL stop_clock('apply_lv_btda')
 #endif
   !
 END SUBROUTINE

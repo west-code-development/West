@@ -108,7 +108,7 @@ SUBROUTINE wbse_lanczos_diago()
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  CALL allocate_bse_gpu(band_group%nloc)
+  CALL allocate_bse_gpu(band_group%nlocx)
   !
   CALL using_et(2)
   CALL using_et_d(0)

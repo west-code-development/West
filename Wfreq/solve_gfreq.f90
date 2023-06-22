@@ -114,8 +114,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   INTEGER,ALLOCATABLE :: l2g(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(l2g,sqvc)
+  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -125,6 +124,10 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
+  !
+  !$acc enter data copyin(pot3D)
+  !$acc enter data copyin(pot3D%sqvc)
+  !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   IF(l_read_restart) THEN
@@ -180,10 +183,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
   !$acc enter data create(dvpsi)
-#if defined(__CUDA)
-  ALLOCATE(sqvc(npwqx))
-  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
-#endif
   ALLOCATE(overlap(pert%nglob,nbnd))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
@@ -310,13 +309,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            ! Multiply by sqvc
            !
-           !$acc parallel loop present(pertg,sqvc)
+           !$acc parallel loop present(pertg,pot3D)
            DO ig = 1,npwq
-#if defined(__CUDA)
-              pertg(ig) = sqvc(ig)*pertg(ig)
-#else
               pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
            ENDDO
            !$acc end parallel
            !
@@ -410,13 +405,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                     !
                     ! Multiply by sqvc
                     !
-                    !$acc parallel loop present(pertg,sqvc)
+                    !$acc parallel loop present(pertg,pot3D)
                     DO ig = 1,npwq
-#if defined(__CUDA)
-                       pertg(ig) = sqvc(ig)*pertg(ig)
-#else
                        pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
                     ENDDO
                     !
                     ! Bring it to R-space
@@ -523,9 +514,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
-#if defined(__CUDA)
-  DEALLOCATE(sqvc)
-#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
@@ -547,6 +535,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ENDIF
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
+  !
+  !$acc exit data delete(pot3D%sqvc)
+  !$acc exit data delete(pot3D)
   !
   ! Write final restart file when using pool or band group
   !
@@ -648,8 +639,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bksks_type) :: bksks
   INTEGER,ALLOCATABLE :: l2g(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(l2g,sqvc)
+  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -725,9 +715,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
   !$acc enter data create(dvpsi)
-#if defined(__CUDA)
-  ALLOCATE(sqvc(npwqx))
-#endif
   ALLOCATE(overlap(pert%nglob,nbnd))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
@@ -795,9 +782,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         !
         CALL pot3D%init('Wave',.TRUE.,'default',iq)
         !
-#if defined(__CUDA)
-        CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
-#endif
+        !$acc enter data copyin(pot3D)
+        !$acc enter data copyin(pot3D%sqvc)
         !
         ! The Hamiltonian is evaluated at k'
         !
@@ -900,13 +886,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               ! Multiply by sqvc
               !
-              !$acc parallel loop present(pertg,sqvc)
+              !$acc parallel loop present(pertg,pot3D)
               DO ig = 1,npwq
-#if defined(__CUDA)
-                 pertg(ig) = sqvc(ig)*pertg(ig)
-#else
                  pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
               ENDDO
               !$acc end parallel
               !
@@ -1035,6 +1017,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
         ENDDO ! BANDS
         !
+        !$acc exit data delete(pot3D%sqvc)
+        !$acc exit data delete(pot3D)
+        !
      ENDDO ! KPOINT-SPIN (INTEGRAL OVER K')
      !
   ENDDO ! KPOINT-SPIN (MATRIX ELEMENT)
@@ -1061,9 +1046,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
-#if defined(__CUDA)
-  DEALLOCATE(sqvc)
-#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)

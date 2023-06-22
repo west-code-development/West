@@ -217,8 +217,8 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !$acc enter data copyin(u_matrix)
         !
         !$acc host_data use_device(u_matrix,evc_loc)
-        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,u_matrix,&
-        & nbnd_do,(0._DP,0._DP),evc_loc,npwx)
+        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(1,nbnd_s),npwx,u_matrix,nbnd_do,&
+        & (0._DP,0._DP),evc_loc,npwx)
         !$acc end host_data
         !
         !$acc exit data delete(u_matrix)
@@ -379,8 +379,8 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
      !$acc enter data copyin(u_matrix)
      !
      !$acc host_data use_device(u_matrix,evc_loc)
-     CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,u_matrix,&
-     & nbnd_do,(0._DP,0._DP),evc_loc,npwx)
+     CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(1,nbnd_s),npwx,u_matrix,nbnd_do,&
+     & (0._DP,0._DP),evc_loc,npwx)
      !$acc end host_data
      !
      !$acc exit data delete(u_matrix)

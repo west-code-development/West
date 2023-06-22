@@ -168,8 +168,8 @@ MODULE wann_loc_wfc
       !
       !$acc host_data use_device(u,a,aux)
       DO ia = 1,na
-         CALL DGEMM('T','N',m,m,m,1._DP,u,m,a(:,:,ia),m,0._DP,aux,m)
-         CALL DGEMM('N','N',m,m,m,1._DP,aux,m,u,m,0._DP,a(:,:,ia),m)
+         CALL DGEMM('T','N',m,m,m,1._DP,u,m,a(1,1,ia),m,0._DP,aux,m)
+         CALL DGEMM('N','N',m,m,m,1._DP,aux,m,u,m,0._DP,a(1,1,ia),m)
       ENDDO
       !$acc end host_data
       !
@@ -275,8 +275,8 @@ MODULE wann_loc_wfc
             !
             !$acc host_data use_device(rot,a,aux)
             DO ia = 1,na
-               CALL DGEMM('T','N',m,m,m,1._DP,rot,m,a(:,:,ia),m,0._DP,aux,m)
-               CALL DGEMM('N','N',m,m,m,1._DP,aux,m,rot,m,0._DP,a(:,:,ia),m)
+               CALL DGEMM('T','N',m,m,m,1._DP,rot,m,a(1,1,ia),m,0._DP,aux,m)
+               CALL DGEMM('N','N',m,m,m,1._DP,aux,m,rot,m,0._DP,a(1,1,ia),m)
             ENDDO
             !$acc end host_data
             !

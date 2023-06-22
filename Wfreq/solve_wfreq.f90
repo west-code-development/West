@@ -147,8 +147,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   INTEGER,ALLOCATABLE :: l2g(:)
   REAL(DP),ALLOCATABLE :: eprec_loc(:)
   REAL(DP),ALLOCATABLE :: et_loc(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(l2g,eprec_loc,et_loc,sqvc)
+  !$acc declare device_resident(l2g,eprec_loc,et_loc)
   COMPLEX(DP),POINTER :: evc_work(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(DEVICE) :: evc_work
@@ -252,6 +251,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
   !
+  !$acc enter data copyin(pot3D)
+  !$acc enter data copyin(pot3D%sqvc)
+  !
 #if defined(__CUDA)
   CALL allocate_gpu()
   CALL allocate_gw_gpu(mypara%nlocx,mypara%nloc)
@@ -272,10 +274,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
   !$acc enter data create(dvpsi)
-#if defined(__CUDA)
-  ALLOCATE(sqvc(npwqx))
-  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
-#endif
   ALLOCATE(overlap(mypara%nglob,nbnd-nbndval_full))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
@@ -539,13 +537,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
               !
               ! Multiply by sqvc
               !
-              !$acc parallel loop present(pertg,sqvc)
+              !$acc parallel loop present(pertg,pot3D)
               DO ig = 1,npwq
-#if defined(__CUDA)
-                 pertg(ig) = sqvc(ig)*pertg(ig)
-#else
                  pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
               ENDDO
               !$acc end parallel
               !
@@ -867,15 +861,15 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !$acc exit data delete(bg,imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
-#if defined(__CUDA)
-  DEALLOCATE(sqvc)
-#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
+  !
+  !$acc exit data delete(pot3D%sqvc)
+  !$acc exit data delete(pot3D)
   !
   ! Synchronize and write final restart file when using pool or band group
   !
@@ -1202,8 +1196,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   INTEGER,ALLOCATABLE :: l2g(:)
   REAL(DP),ALLOCATABLE :: eprec_loc(:)
   REAL(DP),ALLOCATABLE :: et_loc(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(l2g,eprec_loc,et_loc,sqvc)
+  !$acc declare device_resident(l2g,eprec_loc,et_loc)
   !
   CALL io_push_title('(W)-Lanczos')
   !
@@ -1306,9 +1299,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
   !$acc enter data create(dvpsi)
-#if defined(__CUDA)
-  ALLOCATE(sqvc(npwqx))
-#endif
   ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
@@ -1341,9 +1331,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      !
      CALL pot3D%init('Wave',.TRUE.,'default',iq)
      !
-#if defined(__CUDA)
-     CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
-#endif
+     !$acc enter data copyin(pot3D)
+     !$acc enter data copyin(pot3D%sqvc)
      !
      ! Read PDEP
      !
@@ -1592,13 +1581,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
                  ! Multiply by sqvc
                  !
-                 !$acc parallel loop present(pertg,sqvc)
+                 !$acc parallel loop present(pertg,pot3D)
                  DO ig = 1,npwq
-#if defined(__CUDA)
-                    pertg(ig) = sqvc(ig)*pertg(ig)
-#else
                     pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
                  ENDDO
                  !$acc end parallel
                  !
@@ -1870,6 +1855,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
      ENDDO ! KPOINT-SPIN
      !
+     !$acc exit data delete(pot3D%sqvc)
+     !$acc exit data delete(pot3D)
+     !
   ENDDO ! QPOINT
   !
 #if defined(__CUDA)
@@ -1890,9 +1878,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !$acc exit data delete(bg,imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
-#if defined(__CUDA)
-  DEALLOCATE(sqvc)
-#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)

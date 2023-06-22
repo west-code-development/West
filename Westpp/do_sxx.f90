@@ -44,7 +44,7 @@ SUBROUTINE do_sxx ( )
   USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d,&
                                   & psic_nc=>psic_nc_d
   USE wavefunctions,         ONLY : evc_host=>evc
-  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,memcpy_H2D
+  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
 #else
   USE wavefunctions,         ONLY : evc_work=>evc,psic,psic_nc
 #endif
@@ -62,8 +62,6 @@ SUBROUTINE do_sxx ( )
   REAL(DP) :: g0(3)
   REAL(DP) :: dot_tmp
   TYPE(bar_type) :: barra
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(sqvc)
   REAL(DP),ALLOCATABLE :: sigma_exx(:,:)
   REAL(DP),ALLOCATABLE :: sigma_sxx(:,:)
   REAL(DP) :: peso
@@ -80,8 +78,6 @@ SUBROUTINE do_sxx ( )
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  !
-  ALLOCATE(sqvc(ngm))
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -197,9 +193,8 @@ SUBROUTINE do_sxx ( )
               !
            ENDIF
            !
-#if defined(__CUDA)
-           CALL memcpy_H2D(sqvc,pot3D%sqvc,ngm)
-#endif
+           !$acc enter data copyin(pot3D)
+           !$acc enter data copyin(pot3D%sqvc)
            !
            DO iv = 1, nbndval
               !
@@ -255,13 +250,9 @@ SUBROUTINE do_sxx ( )
                  !
               ENDIF
               !
-              !$acc parallel loop present(pertg,sqvc)
+              !$acc parallel loop present(pertg,pot3D)
               DO ig = 1,ngm
-#if defined(__CUDA)
-                 pertg(ig) = pertg(ig) * sqvc(ig)
-#else
                  pertg(ig) = pertg(ig) * pot3D%sqvc(ig)
-#endif
               ENDDO
               !$acc end parallel
               !
@@ -310,6 +301,9 @@ SUBROUTINE do_sxx ( )
               !$acc exit data delete(dvg)
            ENDIF
            !
+           !$acc exit data delete(pot3D%sqvc)
+           !$acc exit data delete(pot3D)
+           !
         ENDDO ! iq
         !
         CALL update_bar_type( barra,'westpp', 1 )
@@ -343,8 +337,6 @@ SUBROUTINE do_sxx ( )
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()
-  !
-  DEALLOCATE(sqvc)
 #endif
   !
   ! Output it per k-point

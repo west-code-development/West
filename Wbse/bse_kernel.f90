@@ -92,7 +92,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
      IF(l_local_repr) THEN
         !
         !$acc host_data use_device(evc1,u_matrix,caux1)
-        CALL ZGEMM('N','N',npw,nbnd_do,band_group_nloc,one,evc1(:,:,ikq),npwx,u_matrix(:,:,ikq_do),&
+        CALL ZGEMM('N','N',npw,nbnd_do,band_group_nloc,one,evc1(1,1,ikq),npwx,u_matrix(1,1,ikq_do),&
         & band_group_nloc,zero,caux1,npwx)
         !$acc end host_data
         !
@@ -221,7 +221,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
      IF(l_local_repr) THEN
         !
         !$acc host_data use_device(caux2,u_matrix,bse_kd1)
-        CALL ZGEMM('N','C',npw,band_group_nloc,nbnd_do,mone,caux2,npwx,u_matrix(:,:,ikq_do),&
+        CALL ZGEMM('N','C',npw,band_group_nloc,nbnd_do,mone,caux2,npwx,u_matrix(1,1,ikq_do),&
         & band_group_nloc,one,bse_kd1,npwx)
         !$acc end host_data
         !

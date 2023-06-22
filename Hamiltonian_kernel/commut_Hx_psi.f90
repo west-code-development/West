@@ -561,12 +561,12 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      IF(noncolin) THEN
         !$acc host_data use_device(vkb,psc,work)
         CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),vkb,npwx,psc,nkb,(1._DP,0._DP),dpsi_d,npwx)
-        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work,npwx,psc(:,:,:,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
+        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work,npwx,psc(1,1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
      ELSE
         !$acc host_data use_device(vkb,ps2,work)
         CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),vkb,npwx,ps2,nkb,(1._DP,0._DP),dpsi_d,npwx)
-        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work,npwx,ps2(:,:,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
+        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work,npwx,ps2(1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
      ENDIF
      !

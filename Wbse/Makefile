@@ -26,6 +26,7 @@ calc_tau.o \
 check_ovl_wfc.o \
 hybrid_kernel.o \
 lanczos_restart.o \
+solve_zvector_eq_cg.o \
 td_liouville_oper.o \
 wbse_calc_dens.o \
 wbse_calc_forces.o \

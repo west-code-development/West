@@ -142,7 +142,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE distribution_center,  ONLY : pert
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : evc_work=>evc_d,psic=>psic_d
-  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,memcpy_H2D
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
@@ -173,8 +173,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   REAL(DP), ALLOCATABLE :: aux_rr(:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux1_r(:,:),aux1_g(:)
   REAL(DP), ALLOCATABLE :: frspin(:,:)
-  REAL(DP), ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(aux_r,sqvc)
+  !$acc declare device_resident(aux_r)
   !
   CHARACTER(LEN=:), ALLOCATABLE :: lockfile
   CHARACTER(LEN=:), ALLOCATABLE :: fname
@@ -211,9 +210,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  !
-  ALLOCATE(sqvc(npwx))
-  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwx)
 #endif
   !
   WRITE(flabel,'(A,I6.6,A,I6.6,A,I1,A)') '_iq',ikq,'_ik',iks,'_spin',current_spin,'.dat'
@@ -351,13 +347,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
            tau(:) = (0._DP,0._DP)
            !$acc end kernels
            !
-           !$acc parallel loop present(tau,aux1_g,sqvc)
+           !$acc parallel loop present(tau,aux1_g,pot3D)
            DO ig = 1,npw
-#if defined(__CUDA)
-              tau(ig) = aux1_g(ig)*(sqvc(ig)**2)
-#else
               tau(ig) = aux1_g(ig)*(pot3D%sqvc(ig)**2)
-#endif
            ENDDO
            !$acc end parallel
            !
@@ -365,13 +357,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
               !
               IF(l_pdep) THEN
                  !
-                 !$acc parallel loop present(aux1_g,sqvc)
+                 !$acc parallel loop present(aux1_g,pot3D)
                  DO ig = 1,npw
-#if defined(__CUDA)
-                    aux1_g(ig) = aux1_g(ig)*sqvc(ig)
-#else
                     aux1_g(ig) = aux1_g(ig)*pot3D%sqvc(ig)
-#endif
                  ENDDO
                  !$acc end parallel
                  !
@@ -404,13 +392,9 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
                  CALL mp_sum(aux1_g,inter_bgrp_comm)
                  !$acc update device(aux1_g)
                  !
-                 !$acc parallel loop present(tau,aux1_g,sqvc)
+                 !$acc parallel loop present(tau,aux1_g,pot3D)
                  DO ig = 1,npw
-#if defined(__CUDA)
-                    tau(ig) = tau(ig)+aux1_g(ig)*sqvc(ig)
-#else
                     tau(ig) = tau(ig)+aux1_g(ig)*pot3D%sqvc(ig)
-#endif
                  ENDDO
                  !$acc end parallel
                  !
@@ -599,8 +583,6 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()
-  !
-  DEALLOCATE(sqvc)
 #endif
   !
   DEALLOCATE(idx_matrix)

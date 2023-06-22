@@ -41,7 +41,9 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   !
   CALL io_push_title('Forces : Build the RHS of the Z vector equation')
   !
-  z_rhs_vec = (0._DP, 0._DP)
+  !$acc kernels present(z_rhs_vec)
+  z_rhs_vec = (0._DP,0._DP)
+  !$acc end kernels
   !
   ! part1: d < a | D | a > / d | v >
   !
@@ -53,7 +55,7 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   !
   ! part2: d < a | K1e | a > / d | v >
   !
-  IF ( .NOT. l_bse_triplet ) THEN
+  IF(.NOT. l_bse_triplet) THEN
      !
      CALL rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
      !
@@ -81,7 +83,7 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   !
   ! part4: d < a | k1d | a > / d | v >
   !
-  IF( l_hybrid_tddft ) THEN
+  IF(l_hybrid_tddft) THEN
      !
      CALL rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      !
@@ -89,7 +91,7 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
      CALL wbse_forces_time(time_spent)
      time_spent(1) = get_clock( 'rhs_z' )
      !
-  ELSEIF( l_bse ) THEN
+  ELSEIF(l_bse) THEN
      !
      CALL errore('build_rhs_zvector_eq', 'BSE forces have not been implemented', 1)
      !
@@ -109,7 +111,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_bse,&
                                  & l_hybrid_tddft,l_spin_flip,l_slow_tddft_k1d
   USE pwcom,                ONLY : isk,lsda,nspin,current_spin,current_k,ngk,npwx,npw
-  USE mp,                   ONLY : mp_sum,mp_bcast
+  USE mp,                   ONLY : mp_bcast
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
@@ -122,6 +124,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : reallocate_ps_gpu
+  USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
@@ -135,12 +138,14 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   COMPLEX(DP), INTENT(IN) :: drhox1(dffts%nnr, nspin), drhox2(dffts%nnr, nspin)
   COMPLEX(DP), INTENT(INOUT) :: z_rhs_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   !
-  ! WORKSPACE
+  ! Workspace
   !
   LOGICAL :: lrpa
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
-  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part1(:,:,:),dotp(:),tmp_vec(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dotp(:)
+  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part1(:,:,:),tmp_vec(:,:,:)
+  !$acc declare device_resident(z_rhs_vec_part1,tmp_vec)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   COMPLEX(DP), ALLOCATABLE :: drhox(:,:)
   !
@@ -148,12 +153,14 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   !
   ALLOCATE(z_rhs_vec_part1(npwx*npol, band_group%nlocx, kpt_pool%nloc))
   !$acc kernels present(z_rhs_vec_part1)
-  z_rhs_vec_part1(:,:,:) = (0._DP, 0._DP)
+  z_rhs_vec_part1(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
   !
   IF(l_bse .OR. l_hybrid_tddft) THEN
      ALLOCATE(tmp_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc))
-     tmp_vec(:,:,:) = (0._DP, 0._DP)
+     !$acc kernels present(tmp_vec)
+     tmp_vec(:,:,:) = (0._DP,0._DP)
+     !$acc end kernels
   ENDIF
   !
   ! Compute drhox
@@ -171,6 +178,8 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
      drhox(:,iks) = drhox1(:,iks) + drhox2(:,iks_do)
      !
   ENDDO
+  !
+  !$acc enter data copyin(drhox)
   !
   lrpa = l_bse
   !
@@ -235,7 +244,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
      !
      ! single band @ gamma
      !
-     IF(MOD(nbnd_do,2) == 1 ) THEN
+     IF(MOD(nbnd_do,2) == 1) THEN
         !
         lbnd = nbnd_do
         ibnd = band_group%l2g(lbnd)+n_trunc_bands
@@ -254,34 +263,26 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         !
      ENDIF
      !
-     IF (l_bse) THEN
+     IF(l_bse) THEN
         !
         CALL errore('build_rhs_zvector_eq', 'BSE forces have not been implemented', 1)
         !
      ENDIF
      !
-     IF (l_hybrid_tddft) THEN
+     IF(l_hybrid_tddft) THEN
         !
         CALL hybrid_kernel_term3(current_spin,dvg_exc_tmp,z_rhs_vec_part1(:,:,iks),l_spin_flip)
         !
-        DO lbnd = 1, nbnd_do
-           !
-           DO jbnd = 1, nbndval - n_trunc_bands
-              !
-              IF(l_spin_flip) THEN
-                 iks_do = flks(iks)
-              ELSE
-                 iks_do = iks
-              ENDIF
-              !
-              DO ig = 1,npw
-                 tmp_vec(ig,lbnd,iks) = tmp_vec(ig,lbnd,iks) &
-                 & - dvgdvg_mat(jbnd,lbnd,iks_do) * evc_work(ig,jbnd+n_trunc_bands)
-              ENDDO
-              !
-           ENDDO
-           !
-        ENDDO
+        IF(l_spin_flip) THEN
+           iks_do = flks(iks)
+        ELSE
+           iks_do = iks
+        ENDIF
+        !
+        !$acc host_data use_device(dvgdvg_mat,tmp_vec)
+        CALL DGEMM('N','N',2*npwx*npol,nbnd_do,nbndval-n_trunc_bands,-1._DP,evc_work(1,1+n_trunc_bands),&
+        & 2*npwx*npol,dvgdvg_mat(1,1,iks_do),nbndval0x-n_trunc_bands,1._DP,tmp_vec(1,1,iks),2*npwx*npol)
+        !$acc end host_data
         !
         IF(l_slow_tddft_k1d) THEN
            CALL hybrid_kernel_term1_slow(current_spin,tmp_vec,z_rhs_vec_part1(:,:,iks),.FALSE.)
@@ -326,10 +327,10 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
   !
   DEALLOCATE(dotp)
-  DEALLOCATE(drhox)
   DEALLOCATE(z_rhs_vec_part1)
-  !
-  IF (l_bse .OR. l_hybrid_tddft) DEALLOCATE(tmp_vec)
+  IF(l_bse .OR. l_hybrid_tddft) DEALLOCATE(tmp_vec)
+  !$acc exit data delete(drhox)
+  DEALLOCATE(drhox)
   !
 END SUBROUTINE
 !
@@ -350,12 +351,14 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,intra_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id,&
+                                 & intra_bgrp_comm
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : reallocate_ps_gpu
+  USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
@@ -367,38 +370,49 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   COMPLEX(DP), INTENT(IN) :: dvg_exc_tmp(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(INOUT) :: z_rhs_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   !
-  ! WORKSPACE
+  ! Workspace
   !
   LOGICAL :: lrpa
   INTEGER :: ibnd,ibndp,jbnd,jbndp,kbnd,kbndp,iks,iks_do,ir,ig,nbndval,nbnd_do,lbnd,flnbndval
   INTEGER :: dffts_nnr
-  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),aux_g(:,:),dotp(:),evc_copy(:,:)
-  REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:,:)
-  REAL(DP) :: reduce
-  COMPLEX(DP) :: factor
+  COMPLEX(DP), ALLOCATABLE :: dotp(:)
+  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),aux_g(:,:),evc_copy(:,:)
+  !$acc declare device_resident(z_rhs_vec_part2,aux_g,evc_copy)
+  REAL(DP) :: reduce,reduce2
   INTEGER, PARAMETER :: flks(2) = [2,1]
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
+  REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: dpcpart,dv_vv_mat
+#endif
   !
   dffts_nnr = dffts%nnr
   !
   ALLOCATE(z_rhs_vec_part2(npwx*npol, band_group%nlocx, kpt_pool%nloc))
-  ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(aux_g(npwx*npol,2))
+  ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
   ALLOCATE(dpcpart(npwx*npol, nbndval0x-n_trunc_bands))
   ALLOCATE(dvrs(dffts%nnr,nspin))
+  !$acc enter data create(dv_vv_mat,dpcpart,dvrs)
   !
   !$acc kernels present(z_rhs_vec_part2)
   z_rhs_vec_part2(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
   !
-  dv_vv_mat(:,:,:) = (0._DP, 0._DP)
+  !$acc kernels present(dpcpart)
+  dpcpart(:,:) = (0._DP,0._DP)
+  !$acc end kernels
   !
-  IF( .NOT. l_spin_flip ) THEN
+  dv_vv_mat(:,:) = (0._DP,0._DP)
+  !
+  IF(.NOT. l_spin_flip) THEN
      !
      ! Calculation of the charge density response
      !
      CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.FALSE.)
+     !
+     !$acc update device(dvrs)
      !
      lrpa = l_bse
      !
@@ -483,6 +497,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
         ENDIF
         !
         ! Compute the second part: dv_vv_mat
+        !
         DO lbnd = 1,nbnd_do
            !
            ibnd = band_group%l2g(lbnd)
@@ -509,32 +524,25 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !$acc end host_data
               !
               reduce = 0._DP
-              !$acc loop reduction(+:reduce)
+              reduce2 = 0._DP
+              !$acc parallel loop reduction(+:reduce,reduce2) present(aux_g) copy(reduce,reduce2)
               DO ig = 1, npw
                  reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
                  &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                 reduce2 = reduce2 + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
+                 &                 + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
               ENDDO
+              !$acc end parallel
               !
-              dv_vv_mat(jbnd,lbnd,iks) = 2._DP * reduce
-              !
-              IF (gstart == 2) THEN
-                 dv_vv_mat(jbnd,lbnd,iks) = dv_vv_mat(jbnd,lbnd,iks) &
-                 & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,1),KIND=DP)
+              IF(gstart == 2) THEN
+                 !$acc serial present(aux_g) copy(reduce,reduce2)
+                 reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                 reduce2 = reduce2 - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
+                 !$acc end serial
               ENDIF
               !
-              reduce = 0._DP
-              !$acc loop reduction(+:reduce)
-              DO ig = 1, npw
-                 reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
-                 &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
-              ENDDO
-              !
-              dv_vv_mat(kbnd,lbnd,iks) = 2._DP * reduce
-              !
-              IF (gstart == 2) THEN
-                 dv_vv_mat(kbnd,lbnd,iks) = dv_vv_mat(kbnd,lbnd,iks) &
-                 & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,2),KIND=DP)
-              ENDIF
+              dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
+              dv_vv_mat(kbnd,lbnd) = 2._DP * reduce2
               !
            ENDDO
            !
@@ -558,48 +566,48 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !$acc end host_data
               !
               reduce = 0._DP
-              !$acc loop reduction(+:reduce)
+              !$acc parallel loop reduction(+:reduce) present(aux_g) copy(reduce)
               DO ig = 1, npw
                  reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
                  &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
               ENDDO
+              !$acc end parallel
               !
-              dv_vv_mat(jbnd,lbnd,iks) = 2._DP * reduce
-              !
-              IF (gstart == 2) THEN
-                 dv_vv_mat(jbnd,lbnd,iks) = dv_vv_mat(jbnd,lbnd,iks) &
-                 & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,1),KIND=DP)
+              IF(gstart == 2) THEN
+                 !$acc serial present(aux_g) copy(reduce)
+                 reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                 !$acc end serial
               ENDIF
+              !
+              dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
               !
            ENDIF
            !
         ENDDO
         !
-        CALL mp_sum(dv_vv_mat(:,:,iks),intra_bgrp_comm)
+        CALL mp_sum(dv_vv_mat,intra_bgrp_comm)
         !
-        dpcpart(:,:) = (0._DP, 0._DP)
+        !$acc update device(dv_vv_mat)
         !
-        DO lbnd = 1,nbnd_do
-           !
-           DO jbnd = 1,nbndval-n_trunc_bands
-              !
-              factor = CMPLX(-dv_vv_mat(jbnd,lbnd,iks),KIND=DP)
-              !
-              !$acc host_data use_device(dvg_exc_tmp,dpcpart)
-              CALL ZAXPY(npw,factor,dvg_exc_tmp(:,lbnd,iks),1,dpcpart(:,jbnd),1)
-              !$acc end host_data
-              !
-           ENDDO
-           !
-        ENDDO
+        !$acc host_data use_device(dvg_exc_tmp,dv_vv_mat,dpcpart)
+        CALL DGEMM('N','T',2*npwx*npol,nbndval-n_trunc_bands,nbnd_do,-1._DP,dvg_exc_tmp(1,1,iks),&
+        & 2*npwx*npol,dv_vv_mat,nbndval0x-n_trunc_bands,0._DP,dpcpart,2*npwx*npol)
+        !$acc end host_data
         !
+        !$acc update host(dpcpart)
         CALL mp_sum(dpcpart,inter_bgrp_comm)
+        !$acc update device(dpcpart)
         !
         !$acc parallel loop collapse(2) present(z_rhs_vec_part2,dpcpart)
         DO lbnd = 1,nbnd_do
            DO ig = 1,npw
-              ibnd = band_group%l2g(lbnd)
+              !
+              ! ibnd = band_group%l2g(lbnd)
+              !
+              ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+              !
               z_rhs_vec_part2(ig,lbnd,iks) = z_rhs_vec_part2(ig,lbnd,iks)+dpcpart(ig,ibnd)
+              !
            ENDDO
         ENDDO
         !$acc end parallel
@@ -633,10 +641,13 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
      !
      IF(l_spin_flip_kernel) THEN
         !
-        ALLOCATE(evc_copy(npwx, nbndval0x))
+        ALLOCATE(evc_copy(npwx, nbndval0x-n_trunc_bands))
         !
         ! Calculation of the charge density response
+        !
         CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.TRUE.)
+        !
+        !$acc update device(dvrs)
         !
         CALL wbse_dv_of_drho_sf(dvrs)
         !
@@ -721,7 +732,13 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !
            ENDIF
            !
-           evc_copy(:,:) = evc_work
+           !$acc parallel loop collapse(2) present(evc_copy)
+           DO ibnd = 1,nbndval-n_trunc_bands
+              DO ig = 1,npwx
+                 evc_copy(ig,ibnd) = evc_work(ig,ibnd+n_trunc_bands)
+              ENDDO
+           ENDDO
+           !$acc end parallel
            !
            IF(kpt_pool%nloc > 1) THEN
 #if defined(__CUDA)
@@ -736,10 +753,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
 #endif
            ENDIF
            !
-           ! now evc_copy contains the evc of the current spin channel, and
-           ! evc_work contains the evc of the opposite spin channel
+           ! evc_copy -> current spin channel
+           ! evc_work -> opposite spin channel
            !
-           ! Compute the second part: dv_vv_mat
            ! recompute nbnd_do for the opposite spin channel
            !
            nbnd_do = 0
@@ -747,6 +763,8 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               ibnd = band_group%l2g(lbnd)+n_trunc_bands
               IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
            ENDDO
+           !
+           ! Compute the second part: dv_vv_mat
            !
            DO lbnd = 1,nbnd_do
               !
@@ -762,7 +780,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  kbndp = kbnd+n_trunc_bands
                  !
                  !$acc host_data use_device(evc_copy)
-                 CALL double_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbndp),evc_copy(:,kbndp),psic,'Wave')
+                 CALL double_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbnd),evc_copy(:,kbnd),psic,'Wave')
                  !$acc end host_data
                  !
                  !$acc parallel loop present(dvrs)
@@ -776,32 +794,24 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  !$acc end host_data
                  !
                  reduce = 0._DP
-                 !$acc loop reduction(+:reduce)
+                 reduce2 = 0._DP
+                 !$acc parallel loop reduction(+:reduce,reduce2) present(aux_g) copy(reduce,reduce2)
                  DO ig = 1, npw
                     reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
                     &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                    reduce2 = reduce2 + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
+                    &                 + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
                  ENDDO
                  !
-                 dv_vv_mat(jbnd,lbnd,iks) = 2._DP * reduce
-                 !
-                 IF (gstart == 2) THEN
-                    dv_vv_mat(jbnd,lbnd,iks) = dv_vv_mat(jbnd,lbnd,iks) &
-                    & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,1),KIND=DP)
+                 IF(gstart == 2) THEN
+                    !$acc serial present(aux_g) copy(reduce,reduce2)
+                    reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                    reduce2 = reduce2 - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
+                    !$acc end serial
                  ENDIF
                  !
-                 reduce = 0._DP
-                 !$acc loop reduction(+:reduce)
-                 DO ig = 1, npw
-                    reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
-                    &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
-                 ENDDO
-                 !
-                 dv_vv_mat(kbnd,lbnd,iks) = 2._DP * reduce
-                 !
-                 IF (gstart == 2) THEN
-                    dv_vv_mat(kbnd,lbnd,iks) = dv_vv_mat(kbnd,lbnd,iks) &
-                    & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,2),KIND=DP)
-                 ENDIF
+                 dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
+                 dv_vv_mat(kbnd,lbnd) = 2._DP * reduce2
                  !
               ENDDO
               !
@@ -813,7 +823,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  jbndp = jbnd + n_trunc_bands
                  !
                  !$acc host_data use_device(evc_copy)
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbndp),psic,'Wave')
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbnd),psic,'Wave')
                  !$acc end host_data
                  !
                  !$acc parallel loop present(dvrs)
@@ -827,42 +837,36 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  !$acc end host_data
                  !
                  reduce = 0._DP
-                 !$acc loop reduction(+:reduce)
+                 !$acc parallel loop reduction(+:reduce) present(aux_g) copy(reduce)
                  DO ig = 1, npw
                     reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
                     &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
                  ENDDO
                  !
-                 dv_vv_mat(jbnd,lbnd,iks) = 2._DP * reduce
-                 !
-                 IF (gstart == 2) THEN
-                    dv_vv_mat(jbnd,lbnd,iks) = dv_vv_mat(jbnd,lbnd,iks) &
-                    & - REAL(evc_work(1,ibndp),KIND=DP)*REAL(aux_g(1,1),KIND=DP)
+                 IF(gstart == 2) THEN
+                    !$acc serial present(aux_g) copy(reduce)
+                    reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                    !$acc end serial
                  ENDIF
+                 !
+                 dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
                  !
               ENDIF
               !
            ENDDO
            !
-           CALL mp_sum(dv_vv_mat(:,:,iks),intra_bgrp_comm)
+           CALL mp_sum(dv_vv_mat,intra_bgrp_comm)
            !
-           dpcpart(:,:) = (0._DP, 0._DP)
+           !$acc update device(dv_vv_mat)
            !
-           DO lbnd = 1,nbnd_do
-              !
-              DO jbnd = 1,nbndval-n_trunc_bands
-                 !
-                 factor = CMPLX(-dv_vv_mat(jbnd,lbnd,iks),KIND=DP)
-                 !
-                 !$acc host_data use_device(dvg_exc_tmp,dpcpart)
-                 CALL ZAXPY(npw,factor,dvg_exc_tmp(:,lbnd,iks),1,dpcpart(:,jbnd),1)
-                 !$acc end host_data
-                 !
-              ENDDO
-              !
-           ENDDO
+           !$acc host_data use_device(dvg_exc_tmp,dv_vv_mat,dpcpart)
+           CALL DGEMM('N','T',2*npwx*npol,nbndval-n_trunc_bands,nbnd_do,-1._DP,dvg_exc_tmp(1,1,iks),&
+           & 2*npwx*npol,dv_vv_mat,nbndval0x-n_trunc_bands,0._DP,dpcpart,2*npwx*npol)
+           !$acc end host_data
            !
+           !$acc update host(dpcpart)
            CALL mp_sum(dpcpart,inter_bgrp_comm)
+           !$acc update device(dpcpart)
            !
            ! recompute nbnd_do for the current spin channel
            !
@@ -875,8 +879,13 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            !$acc parallel loop collapse(2) present(z_rhs_vec_part2,dpcpart)
            DO lbnd = 1,nbnd_do
               DO ig = 1,npw
-                 ibnd = band_group%l2g(lbnd)
+                 !
+                 ! ibnd = band_group%l2g(lbnd)
+                 !
+                 ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+                 !
                  z_rhs_vec_part2(ig,lbnd,iks) = z_rhs_vec_part2(ig,lbnd,iks)+dpcpart(ig,ibnd)
+                 !
               ENDDO
            ENDDO
            !$acc end parallel
@@ -934,11 +943,12 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
   !
   DEALLOCATE(dotp)
-  DEALLOCATE(aux_g)
-  DEALLOCATE(dv_vv_mat)
   DEALLOCATE(z_rhs_vec_part2)
-  DEALLOCATE(dvrs)
+  DEALLOCATE(aux_g)
+  !$acc exit data delete(dv_vv_mat,dpcpart,dvrs)
+  DEALLOCATE(dv_vv_mat)
   DEALLOCATE(dpcpart)
+  DEALLOCATE(dvrs)
   !
 END SUBROUTINE
 !
@@ -951,7 +961,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands,l_spin_flip
   USE pwcom,                ONLY : isk,lsda,nspin,current_spin,current_k,ngk,npwx,npw
-  USE mp,                   ONLY : mp_sum,mp_bcast
+  USE mp,                   ONLY : mp_bcast
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
@@ -963,6 +973,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : reallocate_ps_gpu
+  USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
@@ -974,11 +985,13 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   COMPLEX(DP), INTENT(IN) :: dvg_exc_tmp(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(INOUT) :: z_rhs_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   !
-  ! WORKSPACE
+  ! Workspace
   !
   INTEGER :: ibnd,jbnd,iks,ir,ig,nbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
-  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part3(:,:,:),dotp(:)
+  COMPLEX(DP), ALLOCATABLE :: dotp(:)
+  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part3(:,:,:)
+  !$acc declare device_resident(z_rhs_vec_part3)
   COMPLEX(DP), ALLOCATABLE :: ddvxc(:,:)
   !
   dffts_nnr = dffts%nnr
@@ -995,6 +1008,8 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   ELSE
      CALL compute_ddvxc_sf(dvg_exc_tmp, ddvxc)
   ENDIF
+  !
+  !$acc enter data copyin(ddvxc)
   !
   DO iks = 1,kpt_pool%nloc
      !
@@ -1055,7 +1070,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
      !
      ! single band @ gamma
      !
-     IF(MOD(nbnd_do,2) == 1 ) THEN
+     IF(MOD(nbnd_do,2) == 1) THEN
         !
         lbnd = nbnd_do
         ibnd = band_group%l2g(lbnd)+n_trunc_bands
@@ -1108,6 +1123,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   !
   DEALLOCATE(dotp)
   DEALLOCATE(z_rhs_vec_part3)
+  !$acc exit data delete(ddvxc)
   DEALLOCATE(ddvxc)
   !
 END SUBROUTINE
@@ -1138,7 +1154,7 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   COMPLEX(DP), INTENT(IN) :: dvg_exc_tmp(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(OUT) :: ddvxc(dffts%nnr, nspin)
   !
-  ! WORKSPACE
+  ! Workspace
   !
   INTEGER :: iks,ir,indk
   REAL(DP), ALLOCATABLE :: aux_vxc(:,:,:), vxc(:,:), rdvrs(:,:)
@@ -1152,7 +1168,6 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   ALLOCATE(vxc(dffts%nnr, nspin))
   ALLOCATE(dvrs(dffts%nnr,nspin))
   ALLOCATE(rdvrs(dffts%nnr, nspin))
-  rdvrs(:,:) = 0._DP
   !
   ! Calculation of the charge density response
   !
@@ -1189,7 +1204,7 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
         !
      ENDDO
      !
-     CALL v_xc( a_rho, rho_core, rhog_core, etxc, vtxc, vxc)
+     CALL v_xc(a_rho, rho_core, rhog_core, etxc, vtxc, vxc)
      !
      aux_vxc(:,:,indk) = vxc
      !
@@ -1198,15 +1213,11 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   ! compute ddvxc
   !
   DO iks = 1,nspin
-     !
      DO ir = 1,dffts%nnr
-        !
         ddvxc(ir,iks) = CMPLX( (-1._DP*aux_vxc(ir,iks,1)+16._DP*aux_vxc(ir,iks,2) &
         &                       -30._DP*aux_vxc(ir,iks,3)+16._DP*aux_vxc(ir,iks,4) &
-        &                       -1._DP*aux_vxc(ir,iks,5)), 0._DP, KIND=DP ) / (12._DP*coeff*coeff)
-        !
+        &                       -1._DP*aux_vxc(ir,iks,5)), KIND=DP ) / (12._DP*coeff*coeff)
      ENDDO
-     !
   ENDDO
   !
   DEALLOCATE(aux_vxc)
@@ -1248,13 +1259,13 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   COMPLEX(DP), INTENT(IN) :: dvg_exc_tmp(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(OUT) :: ddvxc(dffts%nnr, nspin)
   !
-  ! WORKSPACE
+  ! Workspace
   !
-  INTEGER :: ir,is,is1,dffts_nnr
+  INTEGER :: ir,is,is1
   REAL(DP) :: tmp1,tmp2
   COMPLEX(DP), ALLOCATABLE :: drho_sf_copy(:,:),dvsf(:,:)
-  CHARACTER(LEN=:), ALLOCATABLE :: fname
   COMPLEX(DP), ALLOCATABLE :: drho_sf(:,:)
+  CHARACTER(LEN=:), ALLOCATABLE :: fname
   !
   IF(nlcc_any) CALL errore('compute_ddvxc_sf', 'nlcc_any is not supported', 1)
   !
@@ -1262,41 +1273,39 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   ALLOCATE(drho_sf_copy(dffts%nnr,2))
   ALLOCATE(dvsf(dffts%nnr,2))
   !
-  dffts_nnr = dffts%nnr
-  !
   CALL wbse_calc_dens(dvg_exc_tmp,drho_sf,.TRUE.)
   !
-  DO ir = 1,dffts_nnr
+  DO ir = 1,dffts%nnr
      tmp1 = REAL(drho_sf(ir,1),KIND=DP)**2
      tmp2 = REAL(drho_sf(ir,2),KIND=DP)**2
-     drho_sf_copy(ir,1) = CMPLX(tmp1 + tmp2,0._DP,KIND=DP)
-     drho_sf_copy(ir,2) = - CMPLX(tmp1 + tmp2,0._DP,KIND=DP)
+     drho_sf_copy(ir,1) = CMPLX(tmp1+tmp2,KIND=DP)
+     drho_sf_copy(ir,2) = -CMPLX(tmp1+tmp2,KIND=DP)
   ENDDO
   !
   ! divide rho_diff
   !
-  DO ir = 1,dffts_nnr
-     !
-     drho_sf_copy(ir,1) = drho_sf_copy(ir,1) / rho%of_r(ir,2)
-     drho_sf_copy(ir,2) = drho_sf_copy(ir,2) / rho%of_r(ir,2)
-     !
+  DO ir = 1,dffts%nnr
      IF(ABS(rho%of_r(ir,2)) < spin_flip_cut2) THEN
-        drho_sf_copy(ir,1) = (0._DP, 0._DP)
-        drho_sf_copy(ir,2) = (0._DP, 0._DP)
+        drho_sf_copy(ir,1) = (0._DP,0._DP)
+        drho_sf_copy(ir,2) = (0._DP,0._DP)
+     ELSE
+        drho_sf_copy(ir,1) = drho_sf_copy(ir,1) / rho%of_r(ir,2)
+        drho_sf_copy(ir,2) = drho_sf_copy(ir,2) / rho%of_r(ir,2)
      ENDIF
-     !
   ENDDO
   !
   ! part 1
   !
-  DO ir = 1,dffts_nnr
+  !$acc update host(sf_kernel)
+  !
+  DO ir = 1,dffts%nnr
      ddvxc(ir,1) = - sf_kernel(ir) * drho_sf_copy(ir,1)
      ddvxc(ir,2) = - sf_kernel(ir) * drho_sf_copy(ir,2)
   ENDDO
   !
   ! part 2
   !
-  dvsf(:,:) = (0._DP, 0._DP)
+  dvsf(:,:) = (0._DP,0._DP)
   DO is = 1,nspin
      DO is1 = 1,nspin
         dvsf(:,is) = dvsf(:,is) + dmuxc(:,is,is1) * drho_sf_copy(:,is1)
@@ -1312,11 +1321,9 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   !
   ! part 1 and part 2 together
   !
-  DO ir = 1,dffts_nnr
-     !
+  DO ir = 1,dffts%nnr
      ddvxc(ir,1) = ddvxc(ir,1) + dvsf(ir,1)
      ddvxc(ir,2) = ddvxc(ir,2) + dvsf(ir,2)
-     !
   ENDDO
   !
   ! print spin flip kernel (keep it for now)
@@ -1325,31 +1332,24 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
      !
      CALL mp_barrier(world_comm)
      !
-     !$acc update host(rho%of_r)
      fname=TRIM(wbse_save_dir)//'/rho_diff.cube'
      CALL write_wfc_cube_r(dffts, fname, rho%of_r(ir,2))
      !
-     !$acc update host(drho_sf)
      fname=TRIM(wbse_save_dir)//'/drho_sf_up.cube'
      CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf(:,1),KIND=DP))
      !
-     !$acc update host(drho_sf)
      fname=TRIM(wbse_save_dir)//'/drho_sf_down.cube'
      CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf(:,2),KIND=DP))
      !
-     !$acc update host(drho_sf_copy)
      fname=TRIM(wbse_save_dir)//'/drho_sq_rho_diff_up.cube'
      CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf_copy(:,1),KIND=DP))
      !
-     !$acc update host(drho_sf_copy)
      fname=TRIM(wbse_save_dir)//'/drho_sq_rho_diff_down.cube'
      CALL write_wfc_cube_r(dffts, fname, REAL(drho_sf_copy(:,2),KIND=DP))
      !
-     !$acc update host(ddvxc)
      fname=TRIM(wbse_save_dir)//'/ddvxc_up.cube'
      CALL write_wfc_cube_r(dffts, fname, REAL(ddvxc(:,1),KIND=DP))
      !
-     !$acc update host(ddvxc)
      fname=TRIM(wbse_save_dir)//'/ddvxc_down.cube'
      CALL write_wfc_cube_r(dffts, fname, REAL(ddvxc(:,2),KIND=DP))
      !
@@ -1377,11 +1377,13 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,intra_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id,&
+                                 & intra_bgrp_comm
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : reallocate_ps_gpu
+  USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc
 #endif
@@ -1393,28 +1395,40 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   COMPLEX(DP), INTENT(IN) :: dvg_exc_tmp(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(INOUT) :: z_rhs_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   !
-  ! WORKSPACE
+  ! Workspace
   !
   INTEGER :: ig,lbnd,jbnd,jbndp,iks_do,nbnd_do
   INTEGER :: ibnd,nbndval,flnbndval
   INTEGER :: iks
   REAL(DP) :: reduce
-  COMPLEX(DP) :: factor
-  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part4(:,:,:),tmp_vec(:,:),dotp(:)
+  COMPLEX(DP), ALLOCATABLE :: dotp(:)
+  COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part4(:,:,:),tmp_vec(:,:)
+  !$acc declare device_resident(z_rhs_vec_part4,tmp_vec)
   REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:)
+  !$acc declare device_resident(dv_vv_mat)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
+#if defined(__CUDA)
+  ATTRIBUTES(PINNED) :: dpcpart
+#endif
   !
   ALLOCATE(z_rhs_vec_part4(npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
   ALLOCATE(tmp_vec(npwx*npol, band_group%nlocx))
   ALLOCATE(dpcpart(npwx*npol, nbndval0x-n_trunc_bands))
+  !$acc enter data create(dpcpart)
   !
   !$acc kernels present(z_rhs_vec_part4)
-  z_rhs_vec_part4(:,:,:) = (0._DP, 0._DP)
+  z_rhs_vec_part4(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
   !
-  dv_vv_mat(:,:) = (0._DP, 0._DP)
+  !$acc kernels present(dpcpart)
+  dpcpart(:,:) = (0._DP,0._DP)
+  !$acc end kernels
+  !
+  !$acc kernels present(dv_vv_mat)
+  dv_vv_mat(:,:) = (0._DP,0._DP)
+  !$acc end kernels
   !
   DO iks = 1,kpt_pool%nloc
      !
@@ -1463,7 +1477,9 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      !
      ! Compute the second part: dv_vv_mat
      !
-     tmp_vec(:,:) = (0._DP, 0._DP)
+     !$acc kernels present(tmp_vec)
+     tmp_vec(:,:) = (0._DP,0._DP)
+     !$acc end kernels
      !
      IF(l_slow_tddft_k1d) THEN
         CALL hybrid_kernel_term1_slow(current_spin, dvg_exc_tmp, tmp_vec, l_spin_flip)
@@ -1471,11 +1487,12 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
         CALL bse_kernel_gamma(current_spin, dvg_exc_tmp, tmp_vec, l_spin_flip)
      ENDIF
      !
+     !$acc parallel vector_length(1024) present(tmp_vec,dv_vv_mat)
+     !$acc loop collapse(2)
      DO jbnd = 1, nbndval - n_trunc_bands
-        !
-        jbndp = jbnd + n_trunc_bands
-        !
         DO lbnd = 1, nbnd_do
+           !
+           jbndp = jbnd + n_trunc_bands
            !
            reduce = 0._DP
            !$acc loop reduction(+:reduce)
@@ -1484,34 +1501,28 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
               &               + AIMAG(evc_work(ig,jbndp)) * AIMAG(tmp_vec(ig,lbnd))
            ENDDO
            !
-           dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
-           !
-           IF( gstart == 2 ) THEN
-              dv_vv_mat(jbnd,lbnd) = dv_vv_mat(jbnd,lbnd) &
-              & - REAL(evc_work(1,jbndp),KIND=DP)*REAL(tmp_vec(1,lbnd),KIND=DP)
+           IF(gstart == 2) THEN
+              reduce = reduce - 0.5_DP * REAL(evc_work(1,jbndp),KIND=DP) * REAL(tmp_vec(1,lbnd),KIND=DP)
            ENDIF
            !
+           dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
+           !
         ENDDO
-        !
      ENDDO
+     !$acc end parallel
      !
+     !$acc host_data use_device(dv_vv_mat)
      CALL mp_sum(dv_vv_mat,intra_bgrp_comm)
+     !$acc end host_data
      !
-     dpcpart(:,:) = (0._DP, 0._DP)
+     !$acc host_data use_device(dvg_exc_tmp,dv_vv_mat,dpcpart)
+     CALL DGEMM('N','T',2*npwx*npol,nbndval-n_trunc_bands,nbnd_do,-1._DP,dvg_exc_tmp(1,1,iks),&
+     & 2*npwx*npol,dv_vv_mat,nbndval0x-n_trunc_bands,0._DP,dpcpart,2*npwx*npol)
+     !$acc end host_data
      !
-     DO jbnd = 1, nbndval - n_trunc_bands
-        DO lbnd = 1, nbnd_do
-           !
-           factor = CMPLX(-dv_vv_mat(jbnd,lbnd),KIND=DP)
-           !
-           !$acc host_data use_device(dvg_exc_tmp,dpcpart)
-           CALL ZAXPY(npw,factor,dvg_exc_tmp(:,lbnd,iks),1,dpcpart(:,jbnd),1)
-           !$acc end host_data
-           !
-        ENDDO
-     ENDDO
-     !
-     CALL mp_sum(dpcpart, inter_bgrp_comm)
+     !$acc update host(dpcpart)
+     CALL mp_sum(dpcpart,inter_bgrp_comm)
+     !$acc update device(dpcpart)
      !
      ! compute nbnd_do for the current spin channel
      !
@@ -1524,8 +1535,13 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      !$acc parallel loop collapse(2) present(z_rhs_vec_part4,dpcpart)
      DO lbnd = 1,nbnd_do
         DO ig = 1,npw
-           ibnd = band_group%l2g(lbnd)
+           !
+           ! ibnd = band_group%l2g(lbnd)
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           !
            z_rhs_vec_part4(ig,lbnd,iks) = z_rhs_vec_part4(ig,lbnd,iks)+dpcpart(ig,ibnd)
+           !
         ENDDO
      ENDDO
      !$acc end parallel
@@ -1567,6 +1583,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   DEALLOCATE(z_rhs_vec_part4)
   DEALLOCATE(dv_vv_mat)
   DEALLOCATE(tmp_vec)
+  !$acc exit data delete(dpcpart)
   DEALLOCATE(dpcpart)
   !
 END SUBROUTINE

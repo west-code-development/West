@@ -130,6 +130,9 @@ SUBROUTINE wbse_setup()
      !
   ENDIF
   !
+  !$acc enter data copyin(pot3D)
+  !$acc enter data copyin(pot3D%sqvc)
+  !
   CALL pot3D%print_divergence()
   !
   CALL set_nbndocc()

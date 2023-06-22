@@ -665,7 +665,7 @@ MODULE west_gpu_data
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_bse_gpu(nbndloc)
+   SUBROUTINE allocate_bse_gpu(nbndlocx)
    !-----------------------------------------------------------------------
    !
    USE control_flags,         ONLY : gamma_only
@@ -679,7 +679,7 @@ MODULE west_gpu_data
    !
    ! I/O
    !
-   INTEGER, INTENT(IN) :: nbndloc
+   INTEGER, INTENT(IN) :: nbndlocx
    !
    IF(l_bse .OR. l_hybrid_tddft) THEN
       ALLOCATE(raux1(dffts%nnr))
@@ -689,7 +689,7 @@ MODULE west_gpu_data
       ALLOCATE(gaux(npwx))
       !$acc enter data create(caux1,caux2,gaux)
    ENDIF
-   ALLOCATE(hevc1(npwx*npol,nbndloc))
+   ALLOCATE(hevc1(npwx*npol,nbndlocx))
    ALLOCATE(dvrs(dffts%nnr,nspin))
    !$acc enter data create(dvrs)
    IF(gamma_only) THEN
@@ -701,10 +701,8 @@ MODULE west_gpu_data
    IF(.NOT. gamma_only) THEN
       ALLOCATE(psic2(dffts%nnr))
    ENDIF
-   IF(.NOT. l_bse) THEN
-      ALLOCATE(dvaux(dffts%nnr,nspin))
-      !$acc enter data create(dvaux)
-   ENDIF
+   ALLOCATE(dvaux(dffts%nnr,nspin))
+   !$acc enter data create(dvaux)
    ALLOCATE(dvhart(dffts%nnr))
    !
    !$acc enter data copyin(et_qp,u_matrix)

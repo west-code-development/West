@@ -55,6 +55,8 @@ Running WEST Jobs
 
 Summit uses the `jsrun <https://docs.olcf.ornl.gov/systems/summit_user_guide.html#job-launcher-jsrun>`_ job manager. The following is an example executable script `run_west.sh` to run the `wstat.x` WEST executable on two nodes of Summit with 6 MPI ranks and 6 GPUs per node. The <project_name> must be replaced with an active project allocation.
 
+**Important**: It is recommended to run the calculation from the IBM Spectrum Scale file system (`$MEMBERWORK` instead of `/home`).
+
 .. code-block:: bash
 
    $ cat run_west.sh

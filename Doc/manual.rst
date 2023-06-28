@@ -603,6 +603,8 @@ westpp_control
        - "X" : Output the exciton state.
        - "P" : Output the density response to exciton state.
        - "B" : Output the unitary transformation matrix of Boys/Wannier localization.
+       - "C" : Output the decomposition of excited state.
+       - "M" : Output the spin multiplicity of excited state.
 
 .. data:: westpp_range
 
@@ -726,6 +728,19 @@ westpp_control
      - [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
    * - **Description**
      - Box [x_0, x_1, y_0, y_1, z_0, z_1] (in a.u.) within which the localization factor is computed (the "L" runlevel).
+
+.. data:: westpp_l_spin_flip
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then a spin-flip calculation is performed. Used only when westpp_calculation is "C" or "M" and nspin is 2.
 
 |
 
@@ -1223,6 +1238,19 @@ wbse_control
    * - **Description**
      - Spin-flip cutoff to prevent divergence by setting values greater than spin_flip_cut1 to zero on a grid. Used only in spin-flip TDDFT calculations using GGA type exchange-correlation functionals and when l_spin_flip_kernel is True and l_spin_flip_alda0 is False.
 
+.. data:: spin_flip_cut2
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-4
+   * - **Description**
+     - Spin-flip cutoff to prevent divergence. Used only in spin-flip TDDFT calculations.
+
 .. data:: l_reduce_io
 
 .. list-table::
@@ -1261,3 +1289,55 @@ wbse_control
      - dynamically set to match the number of bands, read from the ground state
    * - **Description**
      - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
+
+.. data:: l_forces
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then analytical forces are computed for the forces_state excited state. Used only when wbse_calculation is “D” or “d”.
+
+.. data:: forces_state
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1
+   * - **Description**
+     - Excited state for which analytical forces are computed. Used only when l_forces is True.
+
+.. data:: forces_zeq_cg_tr
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-10
+   * - **Description**
+     - Convergence threshold in the CG method that solves the Z vector equation. Used only when l_forces is True.
+
+.. data:: ddvxc_fd_coeff
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-2
+   * - **Description**
+     - Finite difference step size to compute the second derivative of the local part of the exchange-correlation kernel. Used only when l_forces is True.

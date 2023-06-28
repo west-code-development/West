@@ -109,7 +109,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   USE kinds,                ONLY : DP
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_bse,&
-                                 & l_hybrid_tddft,l_spin_flip,l_slow_tddft_k1d
+                                 & l_hybrid_tddft,l_spin_flip
   USE pwcom,                ONLY : isk,lsda,nspin,current_spin,current_k,ngk,npwx,npw
   USE mp,                   ONLY : mp_bcast
   USE buffers,              ONLY : get_buffer
@@ -284,11 +284,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         & 2*npwx*npol,dvgdvg_mat(1,1,iks_do),nbndval0x-n_trunc_bands,1._DP,tmp_vec(1,1,iks),2*npwx*npol)
         !$acc end host_data
         !
-        IF(l_slow_tddft_k1d) THEN
-           CALL hybrid_kernel_term1_slow(current_spin,tmp_vec,z_rhs_vec_part1(:,:,iks),.FALSE.)
-        ELSE
-           CALL bse_kernel_gamma(current_spin,tmp_vec,z_rhs_vec_part1(:,:,iks),.FALSE.)
-        ENDIF
+        CALL bse_kernel_gamma(current_spin,tmp_vec,z_rhs_vec_part1(:,:,iks),.FALSE.)
         !
      ENDIF
      !
@@ -1158,7 +1154,7 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   !
   INTEGER :: iks,ir,indk
   REAL(DP), ALLOCATABLE :: aux_vxc(:,:,:), vxc(:,:), rdvrs(:,:)
-  REAL(DP) :: etxc,vtxc,coeff
+  REAL(DP) :: etxc,vtxc
   TYPE (scf_type) :: a_rho
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   !
@@ -1172,8 +1168,6 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   ! Calculation of the charge density response
   !
   CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.FALSE.)
-  !
-  coeff = ddvxc_fd_coeff
   !
   IF(nspin == 1) THEN
      !
@@ -1194,7 +1188,7 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
      !
      vxc(:,:) = 0._DP
      !
-     a_rho%of_r(:,:) = rho%of_r + REAL((indk-3),KIND=DP) * coeff * rdvrs
+     a_rho%of_r(:,:) = rho%of_r + REAL((indk-3),KIND=DP) * ddvxc_fd_coeff * rdvrs
      !
      DO iks = 1, nspin
         !
@@ -1216,7 +1210,7 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
      DO ir = 1,dffts%nnr
         ddvxc(ir,iks) = CMPLX( (-1._DP*aux_vxc(ir,iks,1)+16._DP*aux_vxc(ir,iks,2) &
         &                       -30._DP*aux_vxc(ir,iks,3)+16._DP*aux_vxc(ir,iks,4) &
-        &                       -1._DP*aux_vxc(ir,iks,5)), KIND=DP ) / (12._DP*coeff*coeff)
+        &                       -1._DP*aux_vxc(ir,iks,5)), KIND=DP ) / (12._DP*ddvxc_fd_coeff**2)
      ENDDO
   ENDDO
   !
@@ -1370,8 +1364,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   USE io_global,            ONLY : stdout
   USE kinds,                ONLY : DP
   USE gvect,                ONLY : gstart
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip,&
-                                 & l_slow_tddft_k1d
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
   USE pwcom,                ONLY : isk,lsda,nspin,current_spin,current_k,ngk,npwx,npw
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE buffers,              ONLY : get_buffer
@@ -1481,11 +1474,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      tmp_vec(:,:) = (0._DP,0._DP)
      !$acc end kernels
      !
-     IF(l_slow_tddft_k1d) THEN
-        CALL hybrid_kernel_term1_slow(current_spin, dvg_exc_tmp, tmp_vec, l_spin_flip)
-     ELSE
-        CALL bse_kernel_gamma(current_spin, dvg_exc_tmp, tmp_vec, l_spin_flip)
-     ENDIF
+     CALL bse_kernel_gamma(current_spin, dvg_exc_tmp, tmp_vec, l_spin_flip)
      !
      !$acc parallel vector_length(1024) present(tmp_vec,dv_vv_mat)
      !$acc loop collapse(2)

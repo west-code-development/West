@@ -41,7 +41,6 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   REAL(DP), EXTERNAL :: get_clock
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec(:,:,:), zvector(:,:,:), drhox1(:,:), drhox2(:,:)
   !$acc declare device_resident(z_rhs_vec,zvector)
-  LOGICAL :: poor_of_ram_drhox2
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
@@ -93,13 +92,7 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   !
   ALLOCATE( drhox2(dffts%nnr, nspin) )
   !
-  poor_of_ram_drhox2 = .TRUE.
-  !
-  IF(poor_of_ram_drhox2) THEN
-     CALL wbse_calc_drhox2_slow( dvgdvg_mat, drhox2 )
-  ELSE
-     CALL wbse_calc_drhox2( dvgdvg_mat, drhox2 )
-  ENDIF
+  CALL wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   !
   time_spent(2) = get_clock( 'l_forces' )
   CALL wbse_forces_time(time_spent)
@@ -703,119 +696,6 @@ END SUBROUTINE
 !
 !-----------------------------------------------------------------------
 SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
-  !-----------------------------------------------------------------------
-  !
-  USE kinds,                ONLY : DP
-  USE cell_base,            ONLY : omega
-  USE pwcom,                ONLY : wg,ngk,nspin,npwx,npw
-  USE mp,                   ONLY : mp_sum,mp_bcast
-  USE buffers,              ONLY : get_buffer
-  USE fft_base,             ONLY : dffts
-  USE fft_at_gamma,         ONLY : single_invfft_gamma
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
-  USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
-#endif
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  REAL(DP), INTENT(IN) :: dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc)
-  COMPLEX(DP), INTENT(OUT) :: drhox2(dffts%nnr, nspin)
-  !
-  ! Workspace
-  !
-  INTEGER :: iks, iks_do, nbndval, nbnd_do, ir, lbnd, ibnd, jbnd
-  REAL(DP) :: prod, w1
-  COMPLEX(DP), ALLOCATABLE :: aux_all_r(:,:)
-  INTEGER, PARAMETER :: flks(2) = [2,1]
-  !
-  ALLOCATE( aux_all_r(dffts%nnr, nbndval0x-n_trunc_bands) )
-  !
-  aux_all_r(:,:) = (0._DP,0._DP)
-  !
-  drhox2(:,:) = (0._DP,0._DP)
-  !
-  DO iks = 1,kpt_pool%nloc
-     !
-     IF(l_spin_flip) THEN
-        iks_do = flks(iks)
-     ELSE
-        iks_do = iks
-     ENDIF
-     !
-     nbndval = nbnd_occ(iks_do)
-     !
-     nbnd_do = 0
-     DO lbnd = 1,band_group%nloc
-        ibnd = band_group%l2g(lbnd)+n_trunc_bands
-        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
-     ENDDO
-     !
-     npw = ngk(iks)
-     !
-     ! ... read GS wavefunctions
-     !
-     IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
-     ENDIF
-     !
-     ! INVFFT all evc into aux_all_r
-     !
-     DO ibnd = n_trunc_bands+1, nbndval
-        !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
-        !
-        aux_all_r(:,ibnd) = psic(:)
-        !
-     ENDDO
-     !
-     DO lbnd = 1, nbnd_do
-        !
-        ibnd = band_group%l2g(lbnd)
-        !
-        w1 = wg(ibnd + n_trunc_bands, iks_do)/omega
-        !
-        DO jbnd = 1, nbndval - n_trunc_bands
-           !
-           DO ir=1, dffts%nnr
-              !
-              prod = REAL(aux_all_r(ir,ibnd),KIND=DP) * REAL(aux_all_r(ir,jbnd),KIND=DP) * dvgdvg_mat(jbnd, lbnd, iks)
-              !
-              drhox2(ir,iks) = drhox2(ir,iks) - w1 * CMPLX(prod, 0._DP, KIND=DP)
-              !
-           ENDDO
-           !
-        ENDDO
-        !
-     ENDDO
-     !
-  ENDDO
-  !
-  CALL mp_sum(drhox2,inter_bgrp_comm)
-  CALL mp_sum(drhox2,inter_pool_comm)
-  !
-  DEALLOCATE( aux_all_r )
-  !
-END SUBROUTINE
-!
-!-----------------------------------------------------------------------
-SUBROUTINE wbse_calc_drhox2_slow( dvgdvg_mat, drhox2 )
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP

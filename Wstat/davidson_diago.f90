@@ -946,14 +946,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   REAL(DP) :: tmp_r
   COMPLEX(DP) :: tmp_c
   COMPLEX(DP) :: za
-  REAL(DP),ALLOCATABLE :: braket(:)
   COMPLEX(DP),ALLOCATABLE :: zbraket(:)
   !$acc declare device_resident(zbraket)
   COMPLEX(DP),ALLOCATABLE :: vec(:)
-#if !defined(__CUDA)
-  REAL(DP),EXTERNAL :: DDOT
-  COMPLEX(DP),EXTERNAL :: ZDOTC
-#endif
   COMPLEX(DP),PARAMETER :: mone = (-1._DP,0._DP)
   !
 #if defined(__CUDA)
@@ -971,9 +966,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
      !
      ALLOCATE(vec(npwqx))
      ALLOCATE(zbraket(pert%nloc))
-#if !defined(__CUDA)
-     ALLOCATE(braket(pert%nloc))
-#endif
      !
      !$acc enter data create(vec) copyin(amat)
      !
@@ -1012,7 +1004,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               !
               ! anorm = < k_l | k_l >
               !
-#if defined(__CUDA)
               anorm = 0._DP
               !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
               DO ig = 1,npwq
@@ -1027,14 +1018,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
                     anorm = anorm-REAL(amat(1,k_local),KIND=DP)**2
                  ENDIF
               ENDIF
-#else
-              IF(gamma_only) THEN
-                 anorm = 2._DP * DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
-                 IF(gstart==2) anorm = anorm - REAL(amat(1,k_local),KIND=DP) * REAL(amat(1,k_local),KIND=DP)
-              ELSE
-                 anorm = DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
-              ENDIF
-#endif
               !
               CALL mp_sum(anorm,intra_bgrp_comm)
               !
@@ -1074,7 +1057,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !
            ! In the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
            !
-#if defined(__CUDA)
            IF(gamma_only) THEN
               !$acc parallel vector_length(1024) present(vec,amat,zbraket)
               !$acc loop
@@ -1109,21 +1091,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !$acc host_data use_device(zbraket)
            CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
            !$acc end host_data
-#else
-           IF(gamma_only) THEN
-              DO ip = j_local,m_local_end !pert%nloc
-                 braket(ip) = 2._DP * DDOT(2*npwq,vec,1,amat(1,ip),1)
-              ENDDO
-              IF(gstart==2) FORALL(ip=j_local:m_local_end) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
-              CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
-              FORALL(ip=j_local:m_local_end) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
-           ELSE
-              DO ip = j_local,m_local_end !pert%nloc
-                 zbraket(ip) = ZDOTC(npwq,vec,1,amat(1,ip),1)
-              ENDDO
-              CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
-           ENDIF
-#endif
            !
            ncol=m_local_end-j_local+1
            !
@@ -1139,9 +1106,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
      !
      DEALLOCATE(vec)
      DEALLOCATE(zbraket)
-#if !defined(__CUDA)
-     DEALLOCATE(braket)
-#endif
      !
   ENDIF
   !

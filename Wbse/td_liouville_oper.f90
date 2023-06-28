@@ -32,7 +32,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
                                  & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
-                                 & l_hybrid_tddft,l_spin_flip_kernel,l_slow_tddft_k1d
+                                 & l_hybrid_tddft,l_spin_flip_kernel
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE uspp_init,            ONLY : init_us_2
   USE exx,                  ONLY : exxalfa
@@ -317,14 +317,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ENDDO
      !$acc end parallel
      !
-     IF(l_bse) THEN
+     IF(l_bse .OR. l_hybrid_tddft) THEN
         CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
-     ELSEIF(l_hybrid_tddft) THEN
-        IF(l_slow_tddft_k1d) THEN
-           CALL hybrid_kernel_term1_slow(current_spin,evc1,evc1_new(:,:,iks),sf)
-        ELSE
-           CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
-        ENDIF
      ENDIF
      !
      IF(gamma_only) THEN

@@ -382,9 +382,6 @@ MODULE wstat_tools
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nglob
       REAL(DP) :: reduce
-#if !defined(__CUDA)
-      REAL(DP),EXTERNAL :: DDOT
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('build_hr')
@@ -421,7 +418,6 @@ MODULE wstat_tools
                   ig1 = pert%l2g(il1,idx)
                   IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
                   !
-#if defined(__CUDA)
                   !$acc parallel async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
                   !$acc loop
                   DO il2 = l2_s,l2_e
@@ -439,15 +435,6 @@ MODULE wstat_tools
                      ENDIF
                   ENDDO
                   !$acc end parallel
-#else
-                  DO il2 = l2_s,l2_e
-                     c_distr(ig1,il2) = 2._DP*DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
-                     !
-                     IF(gstart == 2) THEN
-                        c_distr(ig1,il2) = c_distr(ig1,il2)-REAL(ag(1,il1),KIND=DP)*REAL(bg(1,il2),KIND=DP)
-                     ENDIF
-                  ENDDO
-#endif
                   !
                ENDDO
                !
@@ -509,9 +496,6 @@ MODULE wstat_tools
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nglob
       COMPLEX(DP) :: reduce
-#if !defined(__CUDA)
-      COMPLEX(DP),EXTERNAL :: ZDOTC
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('build_hr')
@@ -548,7 +532,6 @@ MODULE wstat_tools
                   ig1 = pert%l2g(il1,idx)
                   IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
                   !
-#if defined(__CUDA)
                   !$acc parallel async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
                   !$acc loop
                   DO il2 = l2_s,l2_e
@@ -560,11 +543,6 @@ MODULE wstat_tools
                      c_distr(ig1,il2) = reduce
                   ENDDO
                   !$acc end parallel
-#else
-                  DO il2 = l2_s,l2_e
-                     c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
-                  ENDDO
-#endif
                   !
                ENDDO
                !

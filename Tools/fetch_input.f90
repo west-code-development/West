@@ -27,17 +27,15 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
                              & westpp_n_liouville_to_use,westpp_l_spin_flip,document,&
-                             & wbse_init_calculation,solver,&
-                             & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
-                             & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut1,spin_flip_cut2,l_forces,forces_state,&
-                             & forces_zeq_cg_tr,ddvxc_fd_coeff,&
-                             & l_slow_tddft_k1d,l_reduce_io
+                             & wbse_init_calculation,solver,bse_method,localization,wfc_from_qbox,&
+                             & bisection_info,chi_kernel,overlap_thr,spin_channel,n_trunc_bands,&
+                             & wbse_calculation,qp_correction,scissor_ope,n_liouville_eigen,&
+                             & n_liouville_times,n_liouville_maxiter,n_liouville_read_from_file,&
+                             & trev_liouville,trev_liouville_rel,wbse_ipol,l_dipole_realspace,&
+                             & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
+                             & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
+                             & l_print_spin_flip_kernel,spin_flip_cut1,spin_flip_cut2,l_forces,&
+                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -172,7 +170,6 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.forces_state',forces_state)
         CALL json%add('input.wbse_control.forces_zeq_cg_tr',forces_zeq_cg_tr)
         CALL json%add('input.wbse_control.ddvxc_fd_coeff',ddvxc_fd_coeff)
-        CALL json%add('input.wbse_control.l_slow_tddft_k1d',l_slow_tddft_k1d)
         CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
         CALL json%add('input.wbse_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wbse_control.n_exx_lowrank',n_exx_lowrank)
@@ -198,18 +195,17 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,westpp_l_spin_flip,&
-                             & document,wbse_init_calculation,solver,&
-                             & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
-                             & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut1,spin_flip_cut2,l_forces,forces_state,&
-                             & forces_zeq_cg_tr,ddvxc_fd_coeff,&
-                             & l_slow_tddft_k1d,l_reduce_io,main_input_file,logfile
+                             & westpp_n_liouville_to_use,westpp_l_spin_flip,document,&
+                             & wbse_init_calculation,solver,bse_method,localization,wfc_from_qbox,&
+                             & bisection_info,chi_kernel,overlap_thr,spin_channel,n_trunc_bands,&
+                             & wbse_calculation,qp_correction,scissor_ope,n_liouville_eigen,&
+                             & n_liouville_times,n_liouville_maxiter,n_liouville_read_from_file,&
+                             & trev_liouville,trev_liouville_rel,wbse_ipol,l_dipole_realspace,&
+                             & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
+                             & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
+                             & l_print_spin_flip_kernel,spin_flip_cut1,spin_flip_cut2,l_forces,&
+                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,l_reduce_io,&
+                             & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -543,7 +539,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%get(forces_state, 'forces_state', DUMMY_DEFAULT)
         IERR = return_dict%getitem(forces_zeq_cg_tr, 'forces_zeq_cg_tr')
         IERR = return_dict%getitem(ddvxc_fd_coeff, 'ddvxc_fd_coeff')
-        IERR = return_dict%getitem(l_slow_tddft_k1d, 'l_slow_tddft_k1d')
         IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
         IERR = return_dict%getitem(l_minimize_exx_if_active, 'l_minimize_exx_if_active')
         IERR = return_dict%get(n_exx_lowrank, 'n_exx_lowrank', DUMMY_DEFAULT)
@@ -824,7 +819,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(forces_state,root,world_comm)
      CALL mp_bcast(forces_zeq_cg_tr,root,world_comm)
      CALL mp_bcast(ddvxc_fd_coeff,root,world_comm)
-     CALL mp_bcast(l_slow_tddft_k1d,root,world_comm)
      CALL mp_bcast(l_reduce_io,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
      CALL mp_bcast(n_exx_lowrank,root,world_comm)

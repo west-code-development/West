@@ -126,10 +126,6 @@ MODULE west_gpu_data
    !
    USE control_flags,         ONLY : use_gpu
    USE io_global,             ONLY : stdout
-#if defined(__SP_FFT)
-   USE control_flags,         ONLY : use_sp_fft
-   USE command_line_options,  ONLY : single_precision_fft_
-#endif
    !
    IMPLICIT NONE
    !
@@ -141,10 +137,6 @@ MODULE west_gpu_data
    !
    use_gpu = check_gpu_support
    IF(.NOT. use_gpu) CALL errore('gpu_start','use_gpu .FALSE.',1)
-   !
-#if defined(__SP_FFT)
-   use_sp_fft = (use_gpu .AND. single_precision_fft_)
-#endif
    !
    istat = cusolverDnCreate(cusolv_h)
    IF(istat /= 0) CALL errore('gpu_start','coSOLVER init failed',istat)

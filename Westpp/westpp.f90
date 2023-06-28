@@ -54,7 +54,7 @@ PROGRAM westpp
      IF( westpp_calculation(i:i) == 'x' .OR. westpp_calculation(i:i) == 'X' ) lgate(7) = .TRUE. ! Exciton
      IF( westpp_calculation(i:i) == 'p' .OR. westpp_calculation(i:i) == 'P' ) lgate(8) = .TRUE. ! Density response to exciton
      IF( westpp_calculation(i:i) == 'b' .OR. westpp_calculation(i:i) == 'B' ) lgate(9) = .TRUE. ! Boys / Wannier localization
-     IF( westpp_calculation(i:i) == 'c' .OR. westpp_calculation(i:i) == 'C' ) lgate(10) = .TRUE. ! Composition of excited state
+     IF( westpp_calculation(i:i) == 'c' .OR. westpp_calculation(i:i) == 'C' ) lgate(10) = .TRUE. ! Decomposition of excited state
      IF( westpp_calculation(i:i) == 'm' .OR. westpp_calculation(i:i) == 'M' ) lgate(11) = .TRUE. ! Spin multiplicity of excited state
   ENDDO
   !

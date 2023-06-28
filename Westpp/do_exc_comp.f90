@@ -8,7 +8,7 @@
 ! This file is part of WEST.
 !
 ! Contributors to this file:
-! Marco Govoni
+! Yu Jin
 !
 SUBROUTINE do_exc_comp()
   !

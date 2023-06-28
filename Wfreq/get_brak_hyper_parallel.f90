@@ -117,7 +117,7 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      !
   ENDDO
   !
-  !$acc update self(brak)
+  !$acc update host(brak)
   !
   CALL mp_sum(brak,intra_bgrp_comm)
   !
@@ -238,7 +238,7 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      !
   ENDDO
   !
-  !$acc update self(brak)
+  !$acc update host(brak)
   !
   CALL mp_sum(brak,intra_bgrp_comm)
   !

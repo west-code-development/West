@@ -44,7 +44,6 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   COMPLEX(DP), ALLOCATABLE :: p(:,:,:),Ap(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z(:,:,:)
   !$acc declare device_resident(r_old,r_new,p,Ap,z)
-  LOGICAL :: cg_prec,turn_shift
   !
   REAL(DP) :: time_spent(2)
   REAL(DP), EXTERNAL :: get_clock
@@ -52,8 +51,6 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   CALL start_clock( 'zvector_cg' )
   time_spent(1) = get_clock( 'zvector_cg' )
   !
-  cg_prec = .TRUE.
-  turn_shift = l_pre_shift
   kpt_pool_nloc = kpt_pool%nloc
   band_group_nlocx = band_group%nlocx
   !
@@ -109,33 +106,20 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   WRITE(stdout,"(5x,'Initial residual = ',E15.8)") REAL(SUM(residual_new),KIND=DP)
   WRITE(stdout,*)
   !
-  IF (cg_prec) THEN
-     !
-     CALL cg_precondition(r_new,z,turn_shift)
-     !
-     CALL wbse_dot(r_new,z,band_group%nlocx,rz_new)
-     !
-     !$acc kernels present(p,z)
-     p(:,:,:) = z
-     !$acc end kernels
-     !
-  ELSE
-     !
-     !$acc kernels present(p,r_new)
-     p(:,:,:) = r_new
-     !$acc end kernels
-     !
-  ENDIF
+  CALL cg_precondition(r_new,z,l_pre_shift)
+  !
+  CALL wbse_dot(r_new,z,band_group%nlocx,rz_new)
+  !
+  !$acc kernels present(p,z)
+  p(:,:,:) = z
+  !$acc end kernels
   !
   !$acc kernels present(r_old,r_new)
   r_old(:,:,:) = r_new
   !$acc end kernels
   !
   residual_old(:) = residual_new
-  !
-  IF (cg_prec) THEN
-     rz_old(:) = rz_new
-  ENDIF
+  rz_old(:) = rz_new
   !
   DO iter = 1, max_cg_iters
      !
@@ -152,11 +136,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
      !
      CALL wbse_dot(p,Ap,band_group%nlocx,dotp)
      !
-     IF (cg_prec) THEN
-        alpha = SUM(rz_old) / SUM(dotp)
-     ELSE
-        alpha = SUM(residual_old) / SUM(dotp)
-     ENDIF
+     alpha = SUM(rz_old) / SUM(dotp)
      !
      !$acc parallel loop collapse(3) present(z_out,p)
      DO iks = 1,kpt_pool_nloc
@@ -191,49 +171,28 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
      !
      IF (residual_sq < forces_zeq_cg_tr) EXIT
      !
-     IF (cg_prec) THEN
-        !
-        CALL cg_precondition(r_new,z,turn_shift)
-        !
-        CALL wbse_dot(r_new,z,band_group%nlocx,rz_new)
-        !
-        beta = SUM(rz_new) / SUM(rz_old)
-        !
-        !$acc parallel loop collapse(3) present(p,z)
-        DO iks = 1,kpt_pool_nloc
-           DO ib = 1,band_group_nlocx
-              DO ig = 1,npwx*npol
-                 p(ig,ib,iks) = z(ig,ib,iks) + beta * p(ig,ib,iks)
-              ENDDO
+     CALL cg_precondition(r_new,z,l_pre_shift)
+     !
+     CALL wbse_dot(r_new,z,band_group%nlocx,rz_new)
+     !
+     beta = SUM(rz_new) / SUM(rz_old)
+     !
+     !$acc parallel loop collapse(3) present(p,z)
+     DO iks = 1,kpt_pool_nloc
+        DO ib = 1,band_group_nlocx
+           DO ig = 1,npwx*npol
+              p(ig,ib,iks) = z(ig,ib,iks) + beta * p(ig,ib,iks)
            ENDDO
         ENDDO
-        !$acc end parallel
-        !
-     ELSE
-        !
-        beta = SUM(residual_new) / SUM(residual_old)
-        !
-        !$acc parallel loop collapse(3) present(p,r_new)
-        DO iks = 1,kpt_pool_nloc
-           DO ib = 1,band_group_nlocx
-              DO ig = 1,npwx*npol
-                 p(ig,ib,iks) = r_new(ig,ib,iks) + beta * p(ig,ib,iks)
-              ENDDO
-           ENDDO
-        ENDDO
-        !$acc end parallel
-        !
-     ENDIF
+     ENDDO
+     !$acc end parallel
      !
      !$acc kernels present(r_old,r_new)
      r_old(:,:,:) = r_new
      !$acc end kernels
      !
      residual_old(:) = residual_new
-     !
-     IF (cg_prec) THEN
-        rz_old(:) = rz_new
-     ENDIF
+     rz_old(:) = rz_new
      !
   ENDDO ! iter
   !

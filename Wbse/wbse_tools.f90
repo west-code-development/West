@@ -49,7 +49,7 @@ MODULE wbse_tools
       USE pwcom,                ONLY : npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
       USE gvect,                ONLY : gstart
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
+      USE west_mp,              ONLY : west_mp_circ_shift
       !
       IMPLICIT NONE
       !
@@ -171,7 +171,7 @@ MODULE wbse_tools
          !
          ! Cycle ag
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
+         CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
          !
          IF(l2_e >= l2_s) THEN
             !$acc update device(ag)
@@ -209,7 +209,7 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE pwcom,                ONLY : npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
+      USE west_mp,              ONLY : west_mp_circ_shift
       !
       IMPLICIT NONE
       !
@@ -331,7 +331,7 @@ MODULE wbse_tools
          !
          ! Cycle ag
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
+         CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
          !
          !$acc update device(ag)
          !
@@ -414,7 +414,7 @@ MODULE wbse_tools
          !
          ! Cycle bg
          !
-         CALL mp_circular_shift_left_c16_4d(bg,icycl,inter_image_comm)
+         CALL west_mp_circ_shift(bg,icycl,inter_image_comm)
          !
          !$acc update device(bg)
          !
@@ -460,7 +460,7 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE pwcom,                ONLY : npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
+      USE west_mp,              ONLY : west_mp_circ_shift
       !
       IMPLICIT NONE
       !
@@ -574,7 +574,7 @@ MODULE wbse_tools
          !
          ! Cycle ag
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
+         CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
          !
          !$acc update device(ag)
          !

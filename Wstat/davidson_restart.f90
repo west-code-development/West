@@ -44,7 +44,7 @@ MODULE davidson_restart
       USE pdep_io,              ONLY : pdep_merge_and_write_G
       USE plep_io,              ONLY : plep_merge_and_write_G
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
-      USE west_mp,              ONLY : mp_root_sum_c16_3d
+      USE west_mp,              ONLY : west_mp_root_sum
       !
       IMPLICIT NONE
       !
@@ -169,8 +169,8 @@ MODULE davidson_restart
                ENDDO
             ENDDO
             !
-            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_pool_comm)
-            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_bgrp_comm)
+            CALL west_mp_root_sum(tmp_exc,0,inter_pool_comm)
+            CALL west_mp_root_sum(tmp_exc,0,inter_bgrp_comm)
             !
             IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
                fname = TRIM(wbse_restart_dir)//'/V'//my_label//'.dat'
@@ -187,8 +187,8 @@ MODULE davidson_restart
                ENDDO
             ENDDO
             !
-            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_pool_comm)
-            CALL mp_root_sum_c16_3d(tmp_exc,0,inter_bgrp_comm)
+            CALL west_mp_root_sum(tmp_exc,0,inter_pool_comm)
+            CALL west_mp_root_sum(tmp_exc,0,inter_bgrp_comm)
             !
             IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
                fname = TRIM(wbse_restart_dir)//'/N'//my_label//'.dat'

@@ -33,7 +33,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   USE mp_world,              ONLY : world_comm,mpime,nproc
   USE class_idistribute,     ONLY : idistribute
   USE sort_tools,            ONLY : heapsort
-  USE west_mp,               ONLY : mp_alltoallv
+  USE west_mp,               ONLY : west_mp_alltoallv
 #if defined(__ELPA)
   USE elpa
 #endif
@@ -218,8 +218,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
      recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
   ENDDO
   !
-  CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
-  CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
+  CALL west_mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+  CALL west_mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
   !
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
      ALLOCATE(swap(LDROW*LDCOL))
@@ -403,8 +403,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   ! Compared to the forward redistribution, receive and send buffers are simply
   ! swapped, so no need to recalculate any of them
   !
-  CALL mp_alltoallv(idx_recv,recv_count,recv_displ,idx_send,send_count,send_displ,world_comm)
-  CALL mp_alltoallv(val_recv,recv_count,recv_displ,val_send,send_count,send_displ,world_comm)
+  CALL west_mp_alltoallv(idx_recv,recv_count,recv_displ,idx_send,send_count,send_displ,world_comm)
+  CALL west_mp_alltoallv(val_recv,recv_count,recv_displ,val_send,send_count,send_displ,world_comm)
   !
   DEALLOCATE(send_count)
   DEALLOCATE(recv_count)
@@ -466,7 +466,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   USE mp_world,              ONLY : world_comm,mpime,nproc
   USE class_idistribute,     ONLY : idistribute
   USE sort_tools,            ONLY : heapsort
-  USE west_mp,               ONLY : mp_alltoallv
+  USE west_mp,               ONLY : west_mp_alltoallv
 #if defined(__ELPA)
   USE elpa
 #endif
@@ -652,8 +652,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
      recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
   ENDDO
   !
-  CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
-  CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
+  CALL west_mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+  CALL west_mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
   !
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
      ALLOCATE(swap(LDROW*LDCOL))
@@ -853,8 +853,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   ! Compared to the forward redistribution, receive and send buffers are simply
   ! swapped, so no need to recalculate any of them
   !
-  CALL mp_alltoallv(idx_recv,recv_count,recv_displ,idx_send,send_count,send_displ,world_comm)
-  CALL mp_alltoallv(val_recv,recv_count,recv_displ,val_send,send_count,send_displ,world_comm)
+  CALL west_mp_alltoallv(idx_recv,recv_count,recv_displ,idx_send,send_count,send_displ,world_comm)
+  CALL west_mp_alltoallv(val_recv,recv_count,recv_displ,val_send,send_count,send_displ,world_comm)
   !
   DEALLOCATE(send_count)
   DEALLOCATE(recv_count)

@@ -23,7 +23,7 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE class_idistribute,    ONLY : idistribute
 #if defined(__CUDA)
   USE mp,                   ONLY : mp_sum,mp_waitall
-  USE west_mp,              ONLY : mp_circular_shift_left_begin
+  USE west_mp,              ONLY : west_mp_circ_shift_start
   USE west_gpu,             ONLY : tmp=>tmp_r3,dvpsi_h,memcpy_H2D
 #else
   USE mp,                   ONLY : mp_sum,mp_circular_shift_left
@@ -74,11 +74,11 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      ! Cycle dvpsi (start)
      !
      IF(MOD(icycl,2) == 0) THEN
-        CALL mp_circular_shift_left_begin(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
+        CALL west_mp_circ_shift_start(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
         !
         !$acc update device(dvpsi)
      ELSE
-        CALL mp_circular_shift_left_begin(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
+        CALL west_mp_circ_shift_start(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
         !
         CALL memcpy_H2D(dvpsi,dvpsi_h,npwx*npol*idistr%nlocx)
      ENDIF
@@ -144,7 +144,7 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE class_idistribute,    ONLY : idistribute
 #if defined(__CUDA)
   USE mp,                   ONLY : mp_sum,mp_waitall
-  USE west_mp,              ONLY : mp_circular_shift_left_begin
+  USE west_mp,              ONLY : west_mp_circ_shift_start
   USE west_gpu,             ONLY : tmp=>tmp_c3,dvpsi_h,memcpy_H2D
 #else
   USE mp,                   ONLY : mp_sum,mp_circular_shift_left
@@ -195,11 +195,11 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      ! Cycle dvpsi (start)
      !
      IF(MOD(icycl,2) == 0) THEN
-        CALL mp_circular_shift_left_begin(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
+        CALL west_mp_circ_shift_start(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
         !
         !$acc update device(dvpsi)
      ELSE
-        CALL mp_circular_shift_left_begin(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
+        CALL west_mp_circ_shift_start(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
         !
         CALL memcpy_H2D(dvpsi,dvpsi_h,npwx*npol*idistr%nlocx)
      ENDIF

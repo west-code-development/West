@@ -21,7 +21,7 @@ SUBROUTINE wbse_davidson_diago ( )
   USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,&
                                  & inter_bgrp_comm,nbgrp
   USE mp,                   ONLY : mp_max,mp_bcast
-  USE west_mp,              ONLY : mp_get_c16_3d
+  USE west_mp,              ONLY : west_mp_get
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : npw,npwx,ngk
   USE distribution_center,  ONLY : pert,kpt_pool,band_group
@@ -585,7 +585,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      CALL pert%g2l(forces_state,il1,owner)
      !
-     CALL mp_get_c16_3d(dvg_exc_tmp,dvg_exc(:,:,:,il1),my_image_id,0,owner,owner,inter_image_comm)
+     CALL west_mp_get(dvg_exc_tmp,dvg_exc(:,:,:,il1),my_image_id,0,owner,owner,inter_image_comm)
      !
      !$acc update device(dvg_exc_tmp)
      !

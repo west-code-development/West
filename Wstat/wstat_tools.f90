@@ -586,7 +586,7 @@ MODULE wstat_tools
       USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
       USE sort_tools,           ONLY : heapsort
-      USE west_mp,              ONLY : mp_alltoallv
+      USE west_mp,              ONLY : west_mp_alltoallv
       !
       IMPLICIT NONE
       !
@@ -720,14 +720,14 @@ MODULE wstat_tools
          recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
       ENDDO
       !
-      CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
       !
       send_count = send_count*lda
       recv_count = recv_count*lda
       send_displ = send_displ*lda
       recv_displ = recv_displ*lda
       !
-      CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
       !
       DEALLOCATE(val_send)
       DEALLOCATE(idx_send)
@@ -763,7 +763,7 @@ MODULE wstat_tools
       USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
       USE sort_tools,           ONLY : heapsort
-      USE west_mp,              ONLY : mp_alltoallv
+      USE west_mp,              ONLY : west_mp_alltoallv
       !
       IMPLICIT NONE
       !
@@ -897,14 +897,14 @@ MODULE wstat_tools
          recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
       ENDDO
       !
-      CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
       !
       send_count = send_count*lda
       recv_count = recv_count*lda
       send_displ = send_displ*lda
       recv_displ = recv_displ*lda
       !
-      CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
       !
       DEALLOCATE(val_send)
       DEALLOCATE(idx_send)

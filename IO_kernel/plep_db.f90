@@ -38,7 +38,7 @@ MODULE plep_db
       USE io_push,              ONLY : io_push_bar
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE json_module,          ONLY : json_file
-      USE west_mp,              ONLY : mp_root_sum_c16_3d
+      USE west_mp,              ONLY : west_mp_root_sum
       !
       IMPLICIT NONE
       !
@@ -123,8 +123,8 @@ MODULE plep_db
             ENDDO
          ENDDO
          !
-         CALL mp_root_sum_c16_3d(dvg_tmp,0,inter_pool_comm)
-         CALL mp_root_sum_c16_3d(dvg_tmp,0,inter_bgrp_comm)
+         CALL west_mp_root_sum(dvg_tmp,0,inter_pool_comm)
+         CALL west_mp_root_sum(dvg_tmp,0,inter_bgrp_comm)
          !
          IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             fname = TRIM(wbse_save_dir)//'/E'//label_j//'.dat'

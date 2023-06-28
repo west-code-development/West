@@ -155,18 +155,18 @@ CONTAINS
   !
   SUBROUTINE west_environment_end( code )
     !
-    USE io_global,        ONLY : stdout, meta_ionode
-    USE json_module,      ONLY : json_file
-    USE mp_world,         ONLY : mpime,root,world_comm
-    USE mp,               ONLY : mp_barrier
-    USE westcom,          ONLY : logfile
-    USE west_version,     ONLY : end_forpy
+    USE io_global,             ONLY : stdout, meta_ionode
+    USE json_module,           ONLY : json_file
+    USE mp_world,              ONLY : mpime,root,world_comm
+    USE mp,                    ONLY : mp_barrier
+    USE westcom,               ONLY : logfile
+    USE west_version,          ONLY : end_forpy
 #if defined(__HDF5)
-    USE hdf5_qe,          ONLY : phdf5_end => finalize_hdf5
-    USE qeh5_base_module, ONLY : hdf5_end => finalize_hdf5
+    USE hdf5_qe,               ONLY : phdf5_end => finalize_hdf5
+    USE qeh5_base_module,      ONLY : hdf5_end => finalize_hdf5
 #endif
 #if defined(__CUDA)
-    USE west_gpu,         ONLY : west_gpu_end
+    USE west_gpu,              ONLY : west_gpu_end
 #endif
     !
     IMPLICIT NONE
@@ -235,13 +235,13 @@ CONTAINS
   !
   SUBROUTINE west_opening_message( code )
     !
-    USE json_module,     ONLY : json_file
-    USE io_global,       ONLY : stdout
-    USE global_version,  ONLY : version_number
-    USE west_version,    ONLY : west_version_number, west_git_revision
-    USE mp_world,        ONLY : mpime,root
-    USE westcom,         ONLY : logfile
-    USE base64_module,   ONLY : islittleendian
+    USE json_module,           ONLY : json_file
+    USE io_global,             ONLY : stdout
+    USE global_version,        ONLY : version_number
+    USE west_version,          ONLY : west_version_number, west_git_revision
+    USE mp_world,              ONLY : mpime,root
+    USE westcom,               ONLY : logfile
+    USE base64_module,         ONLY : islittleendian
     !
     IMPLICIT NONE
     !
@@ -310,12 +310,12 @@ CONTAINS
      !
      ! ... Report the mpi/openmp status
      !
-     USE json_module,      ONLY : json_file
-     USE io_global,        ONLY : stdout
-     USE mp_global,        ONLY : nimage,npool,nbgrp,nproc_bgrp
-     USE mp_world,         ONLY : nproc,mpime,root
-     USE io_push,          ONLY : io_push_title,io_push_bar
-     USE westcom,          ONLY : logfile
+     USE json_module,          ONLY : json_file
+     USE io_global,            ONLY : stdout
+     USE mp_global,            ONLY : nimage,npool,nbgrp,nproc_bgrp
+     USE mp_world,             ONLY : nproc,mpime,root
+     USE io_push,              ONLY : io_push_title,io_push_bar
+     USE westcom,              ONLY : logfile
      !
      IMPLICIT NONE
      !

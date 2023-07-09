@@ -35,6 +35,9 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   USE wavefunctions_gpum,     ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,          ONLY : evc_host=>evc
   USE west_gpu,               ONLY : tmp_r,tmp_c,psic2
+#if defined(__NCCL)
+  USE west_gpu,               ONLY : gpu_sum,gpu_inter_pool_comm,gpu_inter_bgrp_comm
+#endif
 #else
   USE wavefunctions,          ONLY : evc_work=>evc,psic
 #endif
@@ -65,7 +68,10 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
 #endif
   !
   dffts_nnr = dffts%nnr
+  !
+  !$acc kernels present(drho)
   drho(:,:) = (0._DP,0._DP)
+  !$acc end kernels
   !
 #if !defined(__CUDA)
   IF(gamma_only) THEN
@@ -137,9 +143,11 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
            !
         ENDDO
         !
-        !$acc update host(tmp_r)
-        !
-        drho(:,current_spin) = CMPLX(tmp_r,KIND=DP)
+        !$acc parallel loop present(drho,tmp_r)
+        DO ir = 1, dffts_nnr
+           drho(ir,current_spin) = CMPLX(tmp_r(ir),KIND=DP)
+        ENDDO
+        !$acc end parallel
         !
      ELSE
         !
@@ -184,16 +192,24 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
            !
         ENDDO
         !
-        !$acc update host(tmp_c)
-        !
-        drho(:,current_spin) = tmp_c
+        !$acc parallel loop present(drho,tmp_c)
+        DO ir = 1, dffts_nnr
+           drho(ir,current_spin) = tmp_c(ir)
+        ENDDO
+        !$acc end parallel
         !
      ENDIF
      !
   ENDDO
   !
+#if defined(__NCCL)
+  CALL gpu_sum(drho,dffts_nnr*nspin,gpu_inter_pool_comm)
+  CALL gpu_sum(drho,dffts_nnr*nspin,gpu_inter_bgrp_comm)
+#else
+  !$acc update host(drho)
   CALL mp_sum(drho,inter_pool_comm)
   CALL mp_sum(drho,inter_bgrp_comm)
+#endif
   !
 #if !defined(__CUDA)
   IF(gamma_only) THEN

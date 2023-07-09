@@ -28,6 +28,9 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
 #if defined(__CUDA)
   USE wavefunctions_gpum,    ONLY : psic=>psic_d
   USE west_gpu,              ONLY : raux1,raux2,caux1,caux2,gaux
+#if defined(__NCCL)
+  USE west_gpu,              ONLY : gpu_sum,gpu_inter_bgrp_comm
+#endif
   USE cublas
 #else
   USE wavefunctions,         ONLY : psic
@@ -117,9 +120,13 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
      ENDIF
      !
+#if defined(__NCCL)
+     CALL gpu_sum(caux1,npwx*nbnd_do,gpu_inter_bgrp_comm)
+#else
      !$acc update host(caux1)
      CALL mp_sum(caux1,inter_bgrp_comm)
      !$acc update device(caux1)
+#endif
      !
      ! LOOP OVER BANDS AT KPOINT
      !
@@ -204,9 +211,13 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
      ENDDO
      !
+#if defined(__NCCL)
+     CALL gpu_sum(caux2,npwx*nbnd_do,gpu_inter_bgrp_comm)
+#else
      !$acc update host(caux2)
      CALL mp_sum(caux2,inter_bgrp_comm)
      !$acc update device(caux2)
+#endif
      !
      IF(l_hybrid_tddft) THEN
         !

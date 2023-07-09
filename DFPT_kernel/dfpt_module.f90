@@ -53,6 +53,9 @@ MODULE dfpt_module
       USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,allocate_linsolve_gpu,&
                                       & deallocate_linsolve_gpu,reallocate_ps_gpu
       USE cublas
+#if defined(__NCCL)
+      USE west_gpu,              ONLY : gpu_sum,gpu_inter_bgrp_comm
+#endif
 #else
       USE wavefunctions,         ONLY : evc_work=>evc,psic
       USE wvfct,                 ONLY : et
@@ -515,9 +518,13 @@ MODULE dfpt_module
             ! Sum up aux_r from band groups
             !
             IF (nbgrp > 1) THEN
+#if defined(__NCCL)
+               CALL gpu_sum(aux_r,dffts_nnr,gpu_inter_bgrp_comm)
+#else
                !$acc host_data use_device(aux_r)
                CALL mp_sum(aux_r,inter_bgrp_comm)
                !$acc end host_data
+#endif
             ENDIF
             !
             ! The perturbation is in aux_r

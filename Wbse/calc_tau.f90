@@ -134,7 +134,7 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
   USE lsda_mod,             ONLY : nspin
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_invfft_gamma
   USE mp_global,            ONLY : inter_image_comm,intra_image_comm,my_image_id,npool,&
-                                 & inter_bgrp_comm,intra_bgrp_comm,me_bgrp
+                                 & inter_bgrp_comm,nbgrp,intra_bgrp_comm,me_bgrp
   USE conversions,          ONLY : itoa
   USE qbox_interface,       ONLY : sleep_and_wait_for_lock_to_be_removed
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -388,9 +388,11 @@ SUBROUTINE calc_tau_single_q(iks,ikq,current_spin,nbndval,l_restart_calc)
                     !
                  ENDDO
                  !
-                 !$acc update host(aux1_g)
-                 CALL mp_sum(aux1_g,inter_bgrp_comm)
-                 !$acc update device(aux1_g)
+                 IF(nbgrp > 1) THEN
+                    !$acc update host(aux1_g)
+                    CALL mp_sum(aux1_g,inter_bgrp_comm)
+                    !$acc update device(aux1_g)
+                 ENDIF
                  !
                  !$acc parallel loop present(tau,aux1_g,pot3D)
                  DO ig = 1,npw

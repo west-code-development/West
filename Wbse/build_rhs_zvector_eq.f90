@@ -146,8 +146,8 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part1(:,:,:),tmp_vec(:,:,:)
   !$acc declare device_resident(z_rhs_vec_part1,tmp_vec)
-  INTEGER, PARAMETER :: flks(2) = [2,1]
   COMPLEX(DP), ALLOCATABLE :: drhox(:,:)
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
   dffts_nnr = dffts%nnr
   !
@@ -354,6 +354,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : reallocate_ps_gpu
+#if defined(__NCCL)
+  USE west_gpu,             ONLY : gpu_sum,gpu_inter_bgrp_comm
+#endif
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -375,13 +378,13 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),aux_g(:,:),evc_copy(:,:)
   !$acc declare device_resident(z_rhs_vec_part2,aux_g,evc_copy)
   REAL(DP) :: reduce,reduce2
-  INTEGER, PARAMETER :: flks(2) = [2,1]
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
   REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dpcpart,dv_vv_mat
 #endif
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
   dffts_nnr = dffts%nnr
   !
@@ -408,7 +411,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
      !
      CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.FALSE.)
      !
+#if !defined(__NCCL)
      !$acc update device(dvrs)
+#endif
      !
      lrpa = l_bse
      !
@@ -590,9 +595,13 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
         & 2*npwx*npol,dv_vv_mat,nbndval0x-n_trunc_bands,0._DP,dpcpart,2*npwx*npol)
         !$acc end host_data
         !
+#if defined(__NCCL)
+        CALL gpu_sum(dpcpart,npwx*npol*(nbndval-n_trunc_bands),gpu_inter_bgrp_comm)
+#else
         !$acc update host(dpcpart)
         CALL mp_sum(dpcpart,inter_bgrp_comm)
         !$acc update device(dpcpart)
+#endif
         !
         !$acc parallel loop collapse(2) present(z_rhs_vec_part2,dpcpart)
         DO lbnd = 1,nbnd_do
@@ -643,7 +652,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
         !
         CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.TRUE.)
         !
+#if !defined(__NCCL)
         !$acc update device(dvrs)
+#endif
         !
         CALL wbse_dv_of_drho_sf(dvrs)
         !
@@ -1163,11 +1174,16 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   ALLOCATE(aux_vxc(dffts%nnr, nspin, 5))
   ALLOCATE(vxc(dffts%nnr, nspin))
   ALLOCATE(dvrs(dffts%nnr,nspin))
+  !$acc enter data create(dvrs)
   ALLOCATE(rdvrs(dffts%nnr, nspin))
   !
   ! Calculation of the charge density response
   !
   CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.FALSE.)
+  !
+#if defined(__NCCL)
+  !$acc update host(dvrs)
+#endif
   !
   IF(nspin == 1) THEN
      !
@@ -1216,6 +1232,7 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   !
   DEALLOCATE(aux_vxc)
   DEALLOCATE(vxc)
+  !$acc exit data delete(dvrs)
   DEALLOCATE(dvrs)
   DEALLOCATE(rdvrs)
   !
@@ -1264,10 +1281,15 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   IF(nlcc_any) CALL errore('compute_ddvxc_sf', 'nlcc_any is not supported', 1)
   !
   ALLOCATE(drho_sf(dffts%nnr,2))
+  !$acc enter data create(drho_sf)
   ALLOCATE(drho_sf_copy(dffts%nnr,2))
   ALLOCATE(dvsf(dffts%nnr,2))
   !
   CALL wbse_calc_dens(dvg_exc_tmp,drho_sf,.TRUE.)
+  !
+#if defined(__NCCL)
+  !$acc update host(drho_sf)
+#endif
   !
   DO ir = 1,dffts%nnr
      tmp1 = REAL(drho_sf(ir,1),KIND=DP)**2
@@ -1351,6 +1373,7 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
      !
   ENDIF
   !
+  !$acc exit data delete(drho_sf)
   DEALLOCATE(drho_sf)
   DEALLOCATE(drho_sf_copy)
   DEALLOCATE(dvsf)
@@ -1376,6 +1399,9 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : reallocate_ps_gpu
+#if defined(__NCCL)
+  USE west_gpu,             ONLY : gpu_sum,gpu_inter_bgrp_comm
+#endif
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc
@@ -1399,11 +1425,11 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   !$acc declare device_resident(z_rhs_vec_part4,tmp_vec)
   REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:)
   !$acc declare device_resident(dv_vv_mat)
-  INTEGER, PARAMETER :: flks(2) = [2,1]
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dpcpart
 #endif
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
   ALLOCATE(z_rhs_vec_part4(npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
@@ -1509,9 +1535,13 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      & 2*npwx*npol,dv_vv_mat,nbndval0x-n_trunc_bands,0._DP,dpcpart,2*npwx*npol)
      !$acc end host_data
      !
+#if defined(__NCCL)
+     CALL gpu_sum(dpcpart,npwx*npol*(nbndval-n_trunc_bands),gpu_inter_bgrp_comm)
+#else
      !$acc update host(dpcpart)
      CALL mp_sum(dpcpart,inter_bgrp_comm)
      !$acc update device(dpcpart)
+#endif
      !
      ! compute nbnd_do for the current spin channel
      !

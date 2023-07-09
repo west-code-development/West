@@ -127,6 +127,9 @@ MODULE west_gpu_data
    !
    USE control_flags,         ONLY : use_gpu
    USE io_global,             ONLY : stdout
+#if defined(__NCCL)
+   USE west_gpu_comm,         ONLY : gpu_comm_start
+#endif
    !
    IMPLICIT NONE
    !
@@ -147,11 +150,19 @@ MODULE west_gpu_data
    !
    WRITE(stdout,'(/,5X,A)') 'GPU acceleration enabled'
    !
+#if defined(__NCCL)
+   CALL gpu_comm_start()
+#endif
+   !
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
    SUBROUTINE west_gpu_end()
    !-----------------------------------------------------------------------
+   !
+#if defined(__NCCL)
+   USE west_gpu_comm,         ONLY : gpu_comm_end
+#endif
    !
    IMPLICIT NONE
    !
@@ -161,6 +172,10 @@ MODULE west_gpu_data
    !
    istat = cusolverDnDestroyParams(cusolv_p)
    istat = cusolverDnDestroy(cusolv_h)
+   !
+#if defined(__NCCL)
+   CALL gpu_comm_end()
+#endif
    !
    END SUBROUTINE
    !

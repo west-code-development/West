@@ -63,6 +63,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
+#if defined(__NCCL)
+  USE west_gpu,             ONLY : gpu_sum,gpu_intra_bgrp_comm
+#endif
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
@@ -332,9 +335,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !$acc end host_data
         !
         IF(nproc_bgrp > 1) THEN
+#if defined(__NCCL)
+           CALL gpu_sum(ps_r,nbnd*pert_nloc,gpu_intra_bgrp_comm)
+#else
            !$acc host_data use_device(ps_r)
            CALL mp_sum(ps_r,intra_bgrp_comm)
            !$acc end host_data
+#endif
         ENDIF
         !
         !$acc kernels present(overlap)
@@ -577,6 +584,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
+#if defined(__NCCL)
+  USE west_gpu,             ONLY : gpu_sum,gpu_intra_bgrp_comm
+#endif
 #else
   USE wavefunctions,        ONLY : evc_work=>evc
 #endif
@@ -922,9 +932,13 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !$acc end host_data
            !
            IF(nproc_bgrp > 1) THEN
+#if defined(__NCCL)
+              CALL gpu_sum(ps_c,nbnd*pert_nloc,gpu_intra_bgrp_comm)
+#else
               !$acc host_data use_device(ps_c)
               CALL mp_sum(ps_c,intra_bgrp_comm)
               !$acc end host_data
+#endif
            ENDIF
            !
            !$acc kernels present(overlap)

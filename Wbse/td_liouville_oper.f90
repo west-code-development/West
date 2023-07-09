@@ -89,7 +89,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !
   CALL wbse_calc_dens(evc1,dvrs,sf)
   !
+#if !defined(__NCCL)
   !$acc update device(dvrs)
+#endif
   !
   lrpa = l_bse
   !
@@ -434,7 +436,9 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
   !
   CALL wbse_calc_dens(evc1,dvrs,sf)
   !
+#if !defined(__NCCL)
   !$acc update device(dvrs)
+#endif
   !
   lrpa = l_bse
   !

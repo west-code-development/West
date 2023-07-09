@@ -1156,6 +1156,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   ALLOCATE( dvpsi(npwx, n) )
   ALLOCATE( rdrhoz(dffts%nnr, nspin) )
   ALLOCATE( drhoz(dffts%nnr, nspin) )
+  !$acc enter data create(drhoz)
   !
   !$acc kernels present(forces_drhoz)
   forces_drhoz(:) = 0._DP
@@ -1276,6 +1277,10 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   CALL wbse_calc_dens( zvector, drhoz, .FALSE. )
   !
+#if defined(__NCCL)
+  !$acc update host(drhoz)
+#endif
+  !
   drhoz(:,:) = 2._DP * drhoz
   rdrhoz(:,:) = REAL(drhoz,KIND=DP)
   !
@@ -1326,6 +1331,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   DEALLOCATE( forcelc )
   DEALLOCATE( dvpsi )
   DEALLOCATE( rdrhoz )
+  !$acc exit data delete(drhoz)
   DEALLOCATE( drhoz )
   !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)

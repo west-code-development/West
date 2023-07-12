@@ -463,8 +463,8 @@ MODULE wbse_dv
     CALL start_clock('dv_drho_sf')
 #endif
     !
-    IF(nlcc_any) CALL errore('wbse_dv_of_drho_sf', 'nlcc_any is not supported', 1)
-    IF(do_comp_mt) CALL errore('wbse_dv_of_drho_sf', 'do_comp_mt is not supported', 1)
+    IF(nlcc_any) CALL errore('wbse_dv_of_drho_sf', 'nlcc_any not supported', 1)
+    IF(do_comp_mt) CALL errore('wbse_dv_of_drho_sf', 'do_comp_mt not supported', 1)
     !
     dfftp_nnr = dfftp%nnr
     !

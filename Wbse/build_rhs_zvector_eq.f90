@@ -16,11 +16,20 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   !
   USE kinds,                ONLY : DP
   USE io_push,              ONLY : io_push_title
-  USE pwcom,                ONLY : npwx,nspin
+  USE pwcom,                ONLY : ngk,npw,npwx,nspin
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
-  USE westcom,              ONLY : l_bse,l_hybrid_tddft,l_bse_triplet,nbndval0x,n_trunc_bands
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_bse,&
+                                 & l_hybrid_tddft,l_bse_triplet
+  USE mp,                   ONLY : mp_bcast
+  USE buffers,              ONLY : get_buffer
+  USE mp_global,            ONLY : inter_image_comm,my_image_id
+  USE wavefunctions,        ONLY : evc
   USE distribution_center,  ONLY : kpt_pool,band_group
+#if defined(__CUDA)
+  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
+  USE west_gpu,             ONLY : reallocate_ps_gpu
+#endif
   !
   IMPLICIT NONE
   !
@@ -30,6 +39,10 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   REAL(DP), INTENT(IN) :: dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(IN) :: drhox1(dffts%nnr, nspin), drhox2(dffts%nnr, nspin)
   COMPLEX(DP), INTENT(OUT) :: z_rhs_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc)
+  !
+  ! Workspace
+  !
+  INTEGER :: iks,lbnd,ibnd,nbndval,nbnd_do
   !
   CALL start_clock('build_zvec')
   !
@@ -54,12 +67,46 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   IF(l_hybrid_tddft) THEN
      CALL rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   ELSEIF(l_bse) THEN
-     CALL errore('build_rhs_zvector_eq', 'BSE forces have not been implemented', 1)
+     CALL errore('build_rhs_zvector_eq', 'BSE forces not implemented', 1)
   ENDIF
   !
   ! part1: d < a | D | a > / d | v >
   !
   CALL rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     nbndval = nbnd_occ(iks)
+     !
+     nbnd_do = 0
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+     ENDDO
+     !
+     npw = ngk(iks)
+     !
+     ! ... read in GS wavefunctions iks
+     !
+     IF(kpt_pool%nloc > 1) THEN
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !
+#if defined(__CUDA)
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#endif
+     ENDIF
+     !
+     ! Pc[k]*z_rhs_vec
+     !
+#if defined(__CUDA)
+     CALL reallocate_ps_gpu(nbndval,nbnd_do)
+#endif
+     !
+     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,z_rhs_vec(:,:,iks),(1._DP,0._DP))
+     !
+  ENDDO
   !
   CALL stop_clock('build_zvec')
   !
@@ -87,7 +134,6 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE west_gpu,             ONLY : reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -236,11 +282,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         !
      ENDIF
      !
-     IF(l_bse) THEN
-        !
-        CALL errore('build_rhs_zvector_eq', 'BSE forces have not been implemented', 1)
-        !
-     ENDIF
+     IF(l_bse) CALL errore('build_rhs_zvector_eq', 'BSE forces not implemented', 1)
      !
      IF(l_hybrid_tddft) THEN
         !
@@ -285,21 +327,6 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
      !
      npw = ngk(iks)
      !
-     ! ... read in GS wavefunctions iks
-     !
-     IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
-     ENDIF
-     !
      IF(gstart == 2) THEN
         !$acc parallel loop present(z_rhs_vec_part1)
         DO lbnd = 1,nbnd_do
@@ -307,14 +334,6 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         ENDDO
         !$acc end parallel
      ENDIF
-     !
-     ! Pc[k]*z_rhs_vec_part1
-     !
-#if defined(__CUDA)
-     CALL reallocate_ps_gpu(nbndval,nbnd_do)
-#endif
-     !
-     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,z_rhs_vec_part1(:,:,iks),(1._DP,0._DP))
      !
      !$acc parallel loop collapse(2) present(z_rhs_vec,z_rhs_vec_part1)
      DO lbnd = 1,nbnd_do
@@ -369,7 +388,6 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE west_gpu,             ONLY : reallocate_ps_gpu
 #if defined(__NCCL)
   USE west_gpu,             ONLY : gpu_sum,gpu_inter_bgrp_comm
 #endif
@@ -647,13 +665,6 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            !$acc end parallel
         ENDIF
         !
-        ! Pc[k]*z_rhs_vec_part2
-        !
-#if defined(__CUDA)
-        CALL reallocate_ps_gpu(nbndval,nbnd_do)
-#endif
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,z_rhs_vec_part2(:,:,iks),(1._DP,0._DP))
-        !
         !$acc parallel loop collapse(2) present(z_rhs_vec,z_rhs_vec_part2)
         DO lbnd = 1,nbnd_do
            DO ig = 1,npw
@@ -927,26 +938,6 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !$acc end parallel
            ENDIF
            !
-           ! Pc[k]*z_rhs_vec_part2
-           !
-           IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-              IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-              CALL mp_bcast(evc_host,0,inter_image_comm)
-              !
-              CALL using_evc(2)
-              CALL using_evc_d(0)
-#else
-              IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-              CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
-           ENDIF
-           !
-#if defined(__CUDA)
-           CALL reallocate_ps_gpu(nbndval,nbnd_do)
-#endif
-           CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,z_rhs_vec_part2(:,:,iks),(1._DP,0._DP))
-           !
            !$acc parallel loop collapse(2) present(z_rhs_vec,z_rhs_vec_part2)
            DO lbnd = 1,nbnd_do
               DO ig = 1,npw
@@ -1005,7 +996,6 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE west_gpu,             ONLY : reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -1136,13 +1126,6 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
         !$acc end parallel
      ENDIF
      !
-     ! Pc[k]*z_rhs_vec_part3
-     !
-#if defined(__CUDA)
-     CALL reallocate_ps_gpu(nbndval,nbnd_do)
-#endif
-     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,z_rhs_vec_part3(:,:,iks),(1._DP,0._DP))
-     !
      !$acc parallel loop collapse(2) present(z_rhs_vec,z_rhs_vec_part3)
      DO lbnd = 1,nbnd_do
         DO ig = 1,npw
@@ -1150,6 +1133,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
         ENDDO
      ENDDO
      !$acc end parallel
+     !
   ENDDO
   !
   ALLOCATE(dotp(nspin))
@@ -1332,7 +1316,7 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   CALL start_clock('ddvxc_sf')
 #endif
   !
-  IF(nlcc_any) CALL errore('compute_ddvxc_sf', 'nlcc_any is not supported', 1)
+  IF(nlcc_any) CALL errore('compute_ddvxc_sf', 'nlcc_any not supported', 1)
   !
   ALLOCATE(drho_sf(dffts%nnr,2))
   !$acc enter data create(drho_sf)
@@ -1458,7 +1442,6 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE west_gpu,             ONLY : reallocate_ps_gpu
 #if defined(__NCCL)
   USE west_gpu,             ONLY : gpu_sum,gpu_inter_bgrp_comm
 #endif
@@ -1638,13 +1621,6 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
         ENDDO
         !$acc end parallel
      ENDIF
-     !
-     ! Pc[k]*z_rhs_vec_part4
-     !
-#if defined(__CUDA)
-     CALL reallocate_ps_gpu(nbndval,nbnd_do)
-#endif
-     CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,z_rhs_vec_part4(:,:,iks),(1._DP,0._DP))
      !
      !$acc parallel loop collapse(2) present(z_rhs_vec,z_rhs_vec_part4)
      DO lbnd = 1,nbnd_do

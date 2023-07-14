@@ -66,10 +66,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc
-  USE uspp,                 ONLY : vkb,nkb,deeq,qq_at
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic=>psic_d
-  USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
+  USE wvfct_gpum,           ONLY : et_d
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
                                  & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
@@ -334,23 +333,12 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-     ENDIF
-     !
+        !
 #if defined(__CUDA)
-     !
-     ! ... Sync GPU
-     !
-     CALL using_becp_auto(2)
-     CALL using_becp_d_auto(0)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-     CALL using_et(2)
-     CALL using_et_d(0)
-     !
-     IF(l_macropol) THEN
-        !$acc update device(deeq,qq_at)
-     ENDIF
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #endif
+     ENDIF
      !
      IF(l_QDET) THEN
         !
@@ -1110,10 +1098,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE uspp,                 ONLY : vkb,nkb,deeq,qq_at
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wvfct_gpum,           ONLY : using_et,using_et_d,et_d
+  USE wvfct_gpum,           ONLY : et_d
   USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
                                  & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
@@ -1375,27 +1362,14 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 #if defined(__CUDA)
            IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc_host,0,inter_image_comm)
+           !
+           CALL using_evc(2)
+           CALL using_evc_d(0)
 #else
            IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
         ENDIF
-        !
-#if defined(__CUDA)
-        !
-        ! ... Sync GPU
-        !
-        CALL using_becp_auto(2)
-        CALL using_becp_d_auto(0)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-        CALL using_et(2)
-        CALL using_et_d(0)
-        !
-        IF(l_macropol .AND. l_gammaq) THEN
-           !$acc update device(deeq,qq_at)
-        ENDIF
-#endif
         !
         CALL k_grid%find( k_grid%p_cart(:,ik) + q_grid%p_cart(:,iq), 'cart', ikq, g0 )
         ikqs = k_grid%ipis2ips(ikq,is)

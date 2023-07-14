@@ -33,7 +33,6 @@ SUBROUTINE wbse_lanczos_diago()
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
-  USE wvfct_gpum,           ONLY : using_et,using_et_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,&
                                  & deallocate_bse_gpu,reallocate_ps_gpu
 #endif
@@ -109,13 +108,6 @@ SUBROUTINE wbse_lanczos_diago()
 #if defined(__CUDA)
   CALL allocate_gpu()
   CALL allocate_bse_gpu(band_group%nlocx)
-  !
-  CALL using_et(2)
-  CALL using_et_d(0)
-  IF(kpt_pool%nloc == 1) THEN
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-  ENDIF
 #endif
   !
   ! Main Lanczos code

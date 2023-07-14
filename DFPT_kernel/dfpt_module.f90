@@ -49,8 +49,7 @@ MODULE dfpt_module
 #if defined(__CUDA)
       USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
       USE wavefunctions,         ONLY : evc_host=>evc
-      USE wvfct_gpum,            ONLY : using_et,using_et_d,et=>et_d
-      USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
+      USE wvfct_gpum,            ONLY : et=>et_d
       USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,allocate_linsolve_gpu,&
                                       & deallocate_linsolve_gpu,reallocate_ps_gpu
       USE cublas
@@ -190,23 +189,14 @@ MODULE dfpt_module
 #if defined(__CUDA)
             IF ( my_image_id == 0 ) CALL get_buffer( evc_host, lrwfc, iuwfc, iks )
             CALL mp_bcast( evc_host, 0, inter_image_comm )
+            !
+            CALL using_evc(2)
+            CALL using_evc_d(0)
 #else
             IF ( my_image_id == 0 ) CALL get_buffer( evc_work, lrwfc, iuwfc, iks )
             CALL mp_bcast( evc_work, 0, inter_image_comm )
 #endif
          ENDIF
-         !
-#if defined(__CUDA)
-         !
-         ! ... Sync GPU
-         !
-         CALL using_becp_auto(2)
-         CALL using_becp_d_auto(0)
-         CALL using_evc(2)
-         CALL using_evc_d(0)
-         CALL using_et(2)
-         CALL using_et_d(0)
-#endif
          !
          IF (gamma_only) THEN
             !

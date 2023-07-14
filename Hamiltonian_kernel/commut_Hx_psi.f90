@@ -586,7 +586,7 @@ SUBROUTINE compute_deff_real(deff, et)
   !
   USE kinds,       ONLY : DP
   USE ions_base,   ONLY : nat
-  USE uspp,        ONLY : okvan, deeq, qq_at
+  USE uspp,        ONLY : deeq
   USE uspp_param,  ONLY : nhm
   USE lsda_mod,    ONLY : current_spin
   !
@@ -601,27 +601,15 @@ SUBROUTINE compute_deff_real(deff, et)
   !
   INTEGER :: na, i, j
   !
-  IF(.NOT. okvan) THEN
-     !$acc parallel loop collapse(3) present(deff,deeq)
-     DO na = 1,nat
-        DO i = 1,nhm
-           DO j = 1,nhm
-              deff(i,j,na) = deeq(i,j,na,current_spin)
-           ENDDO
+  !$acc parallel loop collapse(3) present(deff,deeq)
+  DO na = 1,nat
+     DO i = 1,nhm
+        DO j = 1,nhm
+           deff(i,j,na) = deeq(i,j,na,current_spin)
         ENDDO
      ENDDO
-     !$acc end parallel
-  ELSE
-     !$acc parallel loop collapse(3) present(deff,deeq,qq_at)
-     DO na = 1,nat
-        DO i = 1,nhm
-           DO j = 1,nhm
-              deff(i,j,na) = deeq(i,j,na,current_spin)-et*qq_at(i,j,na)
-           ENDDO
-        ENDDO
-     ENDDO
-     !$acc end parallel
-  ENDIF
+  ENDDO
+  !$acc end parallel
   !
 END SUBROUTINE
 #endif

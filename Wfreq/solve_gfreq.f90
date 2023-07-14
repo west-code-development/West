@@ -60,7 +60,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE types_bz_grid,        ONLY : k_grid
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
@@ -257,21 +256,14 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
-     !
-#if defined(__CUDA)
-     !
-     ! ... Sync GPU
-     !
-     CALL using_becp_auto(2)
-     CALL using_becp_d_auto(0)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-#endif
      !
      nbndval = nbnd_occ(iks)
      !
@@ -582,7 +574,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
@@ -825,19 +816,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
-        !
-#if defined(__CUDA)
-        !
-        ! ... Sync GPU
-        !
-        CALL using_becp_auto(2)
-        CALL using_becp_d_auto(0)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
 #endif
         !
         ! Read PDEP

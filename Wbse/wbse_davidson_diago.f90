@@ -42,7 +42,6 @@ SUBROUTINE wbse_davidson_diago ( )
   USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
-  USE wvfct_gpum,           ONLY : using_et,using_et_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,deallocate_bse_gpu,&
                                  & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
 #endif
@@ -111,13 +110,6 @@ SUBROUTINE wbse_davidson_diago ( )
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  !
-  CALL using_et(2)
-  CALL using_et_d(0)
-  IF(kpt_pool%nloc == 1) THEN
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-  ENDIF
 #endif
   !
   ! ... MEMORY ALLOCATION

@@ -395,11 +395,10 @@ SUBROUTINE compute_d0psi_dfpt()
                                  & l_kinetic_only,d0psi,l_skip_nl_part_of_hcomr
   USE distribution_center,  ONLY : kpt_pool,band_group
 #if defined(__CUDA)
-  USE uspp,                 ONLY : vkb,nkb,deeq,qq_at
+  USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE wvfct_gpum,           ONLY : using_et,using_et_d,et=>et_d
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE wvfct_gpum,           ONLY : et=>et_d
   USE west_gpu,             ONLY : allocate_macropol_gpu,deallocate_macropol_gpu,reallocate_ps_gpu
 #else
   USE uspp,                 ONLY : vkb,nkb
@@ -463,16 +462,6 @@ SUBROUTINE compute_d0psi_dfpt()
      ENDIF
      !
 #if defined(__CUDA)
-     !
-     ! ... Sync GPU
-     !
-     CALL using_becp_auto(2)
-     CALL using_becp_d_auto(0)
-     CALL using_et(2)
-     CALL using_et_d(0)
-     !
-     !$acc update device(deeq,qq_at)
-     !
      CALL allocate_macropol_gpu(1)
      CALL reallocate_ps_gpu(nbndval,3)
 #endif

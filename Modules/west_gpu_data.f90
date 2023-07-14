@@ -92,6 +92,7 @@ MODULE west_gpu_data
    !
    ! BSE
    !
+   REAL(DP), ALLOCATABLE :: factors(:)
    REAL(DP), ALLOCATABLE :: raux1(:)
    REAL(DP), ALLOCATABLE :: raux2(:)
    COMPLEX(DP), PINNED, ALLOCATABLE :: caux1(:,:)
@@ -101,7 +102,7 @@ MODULE west_gpu_data
    COMPLEX(DP), ALLOCATABLE :: psic2(:)
    COMPLEX(DP), PINNED, ALLOCATABLE :: dvaux(:,:)
    COMPLEX(DP), ALLOCATABLE :: dvhart(:)
-   !$acc declare device_resident(raux1,raux2,hevc1,psic2,dvhart)
+   !$acc declare device_resident(factors,raux1,raux2,hevc1,psic2,dvhart)
    COMPLEX(DP), PINNED, ALLOCATABLE :: gaux(:)
    !
    ! Workspace
@@ -168,13 +169,26 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE fft_base,              ONLY : dffts
-   USE pwcom,                 ONLY : wg,ngk
+   USE pwcom,                 ONLY : wg,ngk,nks
    USE westcom,               ONLY : igq_q
+   USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d
+   USE wvfct_gpum,            ONLY : using_et,using_et_d
+   USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
    !
    IMPLICIT NONE
    !
    dfft_nl_d => dffts%nl_d
    dfft_nlm_d => dffts%nlm_d
+   !
+   CALL using_et(2)
+   CALL using_et_d(0)
+   CALL using_becp_auto(2)
+   CALL using_becp_d_auto(0)
+   !
+   IF(nks == 1) THEN
+      CALL using_evc(2)
+      CALL using_evc_d(0)
+   ENDIF
    !
    !$acc enter data copyin(wg,ngk,igq_q)
    !
@@ -673,6 +687,7 @@ MODULE west_gpu_data
    !
    INTEGER, INTENT(IN) :: nbndlocx
    !
+   ALLOCATE(factors(nbndlocx))
    IF(l_bse .OR. l_hybrid_tddft) THEN
       ALLOCATE(raux1(dffts%nnr))
       ALLOCATE(raux2(dffts%nnr))
@@ -709,6 +724,9 @@ MODULE west_gpu_data
    !
    IMPLICIT NONE
    !
+   IF(ALLOCATED(factors)) THEN
+      DEALLOCATE(factors)
+   ENDIF
    IF(ALLOCATED(raux1)) THEN
       DEALLOCATE(raux1)
    ENDIF

@@ -174,16 +174,14 @@ SUBROUTINE do_exc()
 #if defined(__CUDA)
            IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc_host,0,inter_image_comm)
+           !
+           CALL using_evc(2)
+           CALL using_evc_d(0)
 #else
            IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
         ENDIF
-        !
-#if defined(__CUDA)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#endif
         !
         !$acc kernels present(rho_aux)
         rho_aux(:) = 0._DP

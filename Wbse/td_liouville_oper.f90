@@ -21,10 +21,10 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE gvect,                ONLY : gstart
   USE uspp,                 ONLY : vkb,nkb
   USE lsda_mod,             ONLY : nspin
-  USE pwcom,                ONLY : npw,npwx,et,current_k,current_spin,isk,lsda,xk,ngk,igk_k,nbnd
+  USE pwcom,                ONLY : npw,npwx,current_k,current_spin,isk,lsda,xk,ngk,igk_k,nbnd
   USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_bcast
-  USE mp_global,            ONLY : inter_image_comm,my_image_id
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,nbgrp,my_bgrp_id
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
@@ -40,11 +40,12 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
-  USE west_gpu,             ONLY : dvrs,hevc1,reallocate_ps_gpu
+  USE wvfct_gpum,           ONLY : et=>et_d
+  USE west_gpu,             ONLY : factors,dvrs,hevc1,reallocate_ps_gpu
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
+  USE wvfct,                ONLY : et
 #endif
   !
   IMPLICIT NONE
@@ -58,12 +59,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   LOGICAL :: lrpa,do_k1e
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
-  COMPLEX(DP) :: factor
-  INTEGER, PARAMETER :: flks(2) = [2,1]
+  REAL(DP) :: factor
 #if !defined(__CUDA)
+  REAL(DP), ALLOCATABLE :: factors(:)
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
 #endif
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('apply_lv')
@@ -78,6 +80,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !$acc end kernels
   !
 #if !defined(__CUDA)
+  ALLOCATE(factors(band_group%nlocx))
   ALLOCATE(hevc1(npwx*npol,band_group%nlocx))
   ALLOCATE(dvrs(dffts%nnr,nspin))
 #endif
@@ -146,14 +149,6 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
-     !
-#if defined(__CUDA)
-     !
-     ! ... Sync GPU
-     !
-     CALL using_becp_auto(2)
-     CALL using_becp_d_auto(0)
-#endif
      !
      IF(l_bse_triplet) THEN
         do_k1e = .FALSE.
@@ -277,49 +272,53 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      ! Subtract the eigenvalues
      !
-     DO lbnd = 1,nbnd_do
-        !
-        ibnd = band_group%l2g(lbnd)+n_trunc_bands
-        !
-        IF(l_qp_correction) THEN
-           IF(l_bse) THEN
-              factor = CMPLX(-(et_qp(ibnd,iks_do)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
-           ELSE
-              IF(l_hybrid_tddft) THEN
-                 factor = CMPLX(-(et_qp(ibnd,iks_do)-scissor_ope+sigma_x_head*exxalfa),KIND=DP)
-              ELSE
-                 factor = CMPLX(-(et_qp(ibnd,iks_do)-scissor_ope),KIND=DP)
-              ENDIF
-           ENDIF
-        ELSE
-           IF(l_bse) THEN
-              factor = CMPLX(-(et(ibnd,iks_do)-scissor_ope+sigma_x_head+sigma_c_head),KIND=DP)
-           ELSE
-              IF(l_hybrid_tddft) THEN
-                 factor = CMPLX(-(et(ibnd,iks_do)-scissor_ope+sigma_x_head*exxalfa),KIND=DP)
-              ELSE
-                 factor = CMPLX(-(et(ibnd,iks_do)-scissor_ope),KIND=DP)
-              ENDIF
-           ENDIF
-        ENDIF
-        !
-        !$acc host_data use_device(evc1,hevc1)
-        CALL ZAXPY(npw,factor,evc1(:,lbnd,iks),1,hevc1(:,lbnd),1)
-        !$acc end host_data
-        !
-     ENDDO
+     IF(l_bse) THEN
+        factor = -scissor_ope+sigma_x_head+sigma_c_head
+     ELSEIF(l_hybrid_tddft) THEN
+        factor = -scissor_ope+sigma_x_head*exxalfa
+     ELSE
+        factor = -scissor_ope
+     ENDIF
      !
-     !$acc parallel loop collapse(2) present(evc1_new,hevc1)
+     IF(l_qp_correction) THEN
+        !
+        !$acc parallel loop present(factors,et_qp)
+        DO lbnd = 1,nbnd_do
+           !
+           ! ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1+n_trunc_bands
+           !
+           factors(lbnd) = et_qp(ibnd,iks_do)+factor
+           !
+        ENDDO
+        !$acc end parallel
+        !
+     ELSE
+        !
+        !$acc parallel loop present(factors)
+        DO lbnd = 1,nbnd_do
+           !
+           ! ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           !
+           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1+n_trunc_bands
+           !
+           factors(lbnd) = et(ibnd,iks_do)+factor
+           !
+        ENDDO
+        !$acc end parallel
+        !
+     ENDIF
+     !
+     !$acc parallel loop collapse(2) present(evc1_new,hevc1,factors,evc1)
      DO lbnd = 1,nbnd_do
         DO ig = 1,npw
-           evc1_new(ig,lbnd,iks) = evc1_new(ig,lbnd,iks)+hevc1(ig,lbnd)
+           evc1_new(ig,lbnd,iks) = evc1_new(ig,lbnd,iks)+hevc1(ig,lbnd)-factors(lbnd)*evc1(ig,lbnd,iks)
         ENDDO
      ENDDO
      !$acc end parallel
      !
-     IF(l_bse .OR. l_hybrid_tddft) THEN
-        CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
-     ENDIF
+     IF(l_bse .OR. l_hybrid_tddft) CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
      !
      IF(gamma_only) THEN
         IF(gstart == 2) THEN
@@ -356,6 +355,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   ENDDO
   !
 #if !defined(__CUDA)
+  DEALLOCATE(factors)
   DEALLOCATE(dvrs)
   DEALLOCATE(hevc1)
 #endif
@@ -541,21 +541,13 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
         !
      ENDIF
      !
-     IF(l_bse) THEN
-        !
-        ! The other part beyond TDA. exx_div treatment is not needed for this part.
-        !
-        CALL errore('west_apply_liouvillian_btda', 'BSE forces have not been implemented', 1)
-        !
-     ENDIF
+     ! The other part beyond TDA. exx_div treatment is not needed for this part.
      !
-     IF(l_hybrid_tddft) THEN
-        !
-        ! K2d part. exx_div treatment is not needed for this part.
-        !
-        CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
-        !
-     ENDIF
+     IF(l_bse) CALL errore('west_apply_liouvillian_btda', 'BSE forces not implemented', 1)
+     !
+     ! K2d part. exx_div treatment is not needed for this part.
+     !
+     IF(l_hybrid_tddft) CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
      !
      IF(gstart == 2) THEN
         !$acc parallel loop present(evc2_new)

@@ -83,12 +83,12 @@ SUBROUTINE calc_tau()
         IF(kpt_pool%nloc > 1) THEN
            IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc,0,inter_image_comm)
-        ENDIF
-        !
+           !
 #if defined(__CUDA)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
+           CALL using_evc(2)
+           CALL using_evc_d(0)
 #endif
+        ENDIF
         !
         IF((.NOT. spin_resolve) .OR. (spin_resolve .AND. current_spin == spin_channel)) THEN
            CALL calc_tau_single_q(iks_g,iq,current_spin,nbndval,l_restart_calc)

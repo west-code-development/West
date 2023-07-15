@@ -17,7 +17,6 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   USE io_global,            ONLY : stdout
   USE kinds,                ONLY : DP
   USE ions_base,            ONLY : nat,ityp
-  USE io_push,              ONLY : io_push_title
   USE pwcom,                ONLY : nspin,npwx
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
@@ -25,6 +24,7 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE json_module,          ONLY : json_file
   USE mp_world,             ONLY : mpime,root
+  USE io_push,              ONLY : io_push_title
   !
   IMPLICIT NONE
   !
@@ -37,17 +37,15 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   INTEGER :: n, na, ipol
   REAL(DP), ALLOCATABLE :: forces(:), dvgdvg_mat(:,:,:)
   !$acc declare device_resident(dvgdvg_mat)
-  REAL(DP) :: sumforces, time_spent(2)
-  REAL(DP), EXTERNAL :: get_clock
+  REAL(DP) :: sumforces
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec(:,:,:), zvector(:,:,:), drhox1(:,:), drhox2(:,:)
   !$acc declare device_resident(z_rhs_vec,zvector)
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
-  CALL start_clock( 'l_forces' )
-  time_spent(1) = get_clock( 'l_forces' )
+  CALL start_clock('calc_force')
   !
-  CALL io_push_title('Calculating forces')
+  CALL io_push_title('Compute forces')
   !
   n = 3 * nat
   !
@@ -56,95 +54,39 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   ALLOCATE( dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc) )
   ALLOCATE( drhox1(dffts%nnr, nspin) )
   !
-  !
-  !
-  CALL io_push_title('Compute drhox1')
+  ! drhox1
   !
   CALL wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
-  !
-  !
-  !
-  CALL io_push_title('Compute forces of drhox1')
-  !
   CALL wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
-  !
-  !
-  !
-  CALL io_push_title('Compute < dvg | dvg >')
+  ! < dvg | dvg >
   !
   CALL wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
-  !
-  !
-  !
-  CALL io_push_title('Compute drhox2')
+  ! drhox2
   !
   ALLOCATE( drhox2(dffts%nnr, nspin) )
   !
   CALL wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
-  !
-  !
-  !
-  CALL io_push_title('Compute forces of drhox2')
-  !
   CALL wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
-  !
-  !
-  !
-  CALL io_push_title('Build and solve the Z-vector equations')
-  !
-  ! Zvector part
+  ! Z vector
   !
   ALLOCATE( z_rhs_vec( npwx, band_group%nlocx, kpt_pool%nloc ) )
   ALLOCATE( zvector( npwx, band_group%nlocx, kpt_pool%nloc ) )
   !
   CALL build_rhs_zvector_eq( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
   !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
-  !
-  !
-  !
   CALL solve_zvector_eq_cg( z_rhs_vec, zvector )
   !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
-  !
-  !
-  !
-  CALL io_push_title('Compute forces of Z vector')
-  !
   CALL wbse_forces_drhoz( n, zvector, forces )
-  !
-  time_spent(2) = get_clock( 'l_forces' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'l_forces' )
   !
   DEALLOCATE( z_rhs_vec )
   DEALLOCATE( zvector )
   !
-  CALL io_push_title('Forces Total')
+  CALL io_push_title('Forces total')
   !
   DO na = 1, nat
      !
@@ -188,7 +130,7 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
      !
   ENDDO
   !
-  CALL io_push_title('Forces Corrected')
+  CALL io_push_title('Forces corrected')
   !
   DO na = 1,nat
      !
@@ -219,27 +161,9 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   DEALLOCATE(drhox1)
   DEALLOCATE(drhox2)
   !
-  CALL stop_clock( 'l_forces' )
+  CALL stop_clock('calc_force')
   !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)
-  !
-END SUBROUTINE
-!
-!-----------------------------------------------------------------------
-SUBROUTINE wbse_forces_time(time)
-  !-----------------------------------------------------------------------
-  !
-  USE kinds,                ONLY : DP
-  USE io_global,            ONLY : stdout
-  !
-  IMPLICIT NONE
-  !
-  REAL(DP), INTENT(IN) :: time(2)
-  !
-  CHARACTER(20), EXTERNAL :: human_readable_time
-  !
-  WRITE(stdout, "(5x,'Tot. elapsed time ',a,',  time spent in last step ',a) ") &
-  TRIM(human_readable_time(time(2))), TRIM(human_readable_time(time(2)-time(1)))
   !
 END SUBROUTINE
 !
@@ -257,6 +181,7 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,l_spin_flip
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_pool_comm,inter_bgrp_comm
+  USE io_push,              ONLY : io_push_title
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : psic=>psic_d
 #else
@@ -276,6 +201,14 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   REAL(DP) :: w1, w2
   REAL(DP), ALLOCATABLE :: tmp_r(:)
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('drhox1')
+#else
+  CALL start_clock('drhox1')
+#endif
+  !
+  CALL io_push_title('Compute drhox1')
   !
   dffts_nnr = dffts%nnr
   drhox1(:,:) = (0._DP,0._DP)
@@ -367,6 +300,12 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   !$acc exit data delete(tmp_r)
   DEALLOCATE(tmp_r)
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('drhox1')
+#else
+  CALL stop_clock('drhox1')
+#endif
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -378,7 +317,6 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   USE ions_base,            ONLY : nat,ntyp=>nsp,ityp,tau
   USE cell_base,            ONLY : alat,omega
   USE gvect,                ONLY : g,gstart,ngm,ngl,igtongl
-  USE io_push,              ONLY : io_push_title
   USE uspp,                 ONLY : nkb,vkb
   USE uspp_init,            ONLY : init_us_2
   USE pwcom,                ONLY : isk,igk_k,lsda,nspin,current_spin,current_k,ngk,npwx,npw,xk,wk
@@ -392,6 +330,7 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   USE mp_global,            ONLY : inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
   USE json_module,          ONLY : json_file
   USE mp_world,             ONLY : mpime,root
+  USE io_push,              ONLY : io_push_title
   !
   IMPLICIT NONE
   !
@@ -413,7 +352,13 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
-  CALL io_push_title('Forces : drhox1 part')
+#if defined(__CUDA)
+  CALL start_clock_gpu('f_drhox1')
+#else
+  CALL start_clock('f_drhox1')
+#endif
+  !
+  CALL io_push_title('Compute forces of drhox1')
   !
   IF(nspin == 2) THEN
      factor = 1._DP
@@ -545,6 +490,8 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   !
   forces(:) = forces + forces_drhox1
   !
+  CALL io_push_title('Forces drhox1')
+  !
   DO na = 1, nat
      !
      ! forces = - gradients
@@ -576,6 +523,12 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   DEALLOCATE(dvpsi)
   DEALLOCATE(rdrhox1)
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('f_drhox1')
+#else
+  CALL stop_clock('f_drhox1')
+#endif
+  !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)
   !
 END SUBROUTINE
@@ -592,6 +545,7 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id,intra_bgrp_comm
+  USE io_push,              ONLY : io_push_title
   !
   IMPLICIT NONE
   !
@@ -606,6 +560,14 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   REAL(DP) :: reduce
   COMPLEX(DP), ALLOCATABLE :: dvg_exc_tmp_copy(:,:)
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('dvgdvg')
+#else
+  CALL start_clock('dvgdvg')
+#endif
+  !
+  CALL io_push_title('Compute < dvg | dvg >')
   !
   !$acc kernels present(dvgdvg_mat)
   dvgdvg_mat(:,:,:) = 0._DP
@@ -692,6 +654,12 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   !$acc exit data delete(dvg_exc_tmp_copy)
   DEALLOCATE( dvg_exc_tmp_copy )
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('dvgdvg')
+#else
+  CALL stop_clock('dvgdvg')
+#endif
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -708,6 +676,7 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm
+  USE io_push,              ONLY : io_push_title
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -729,6 +698,14 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   REAL(DP), ALLOCATABLE :: aux_r(:)
   !$acc declare device_resident(aux_r)
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('drhox2')
+#else
+  CALL start_clock('drhox2')
+#endif
+  !
+  CALL io_push_title('Compute drhox2')
   !
   dffts_nnr = dffts%nnr
   !
@@ -835,6 +812,12 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   !
   DEALLOCATE( aux_r )
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('drhox2')
+#else
+  CALL stop_clock('drhox2')
+#endif
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -846,7 +829,6 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   USE ions_base,            ONLY : nat,ntyp=>nsp,ityp,tau
   USE cell_base,            ONLY : alat,omega
   USE gvect,                ONLY : g,gstart,ngm,ngl,igtongl
-  USE io_push,              ONLY : io_push_title
   USE uspp,                 ONLY : nkb,vkb
   USE uspp_init,            ONLY : init_us_2
   USE pwcom,                ONLY : isk,igk_k,lsda,current_spin,nspin,current_k,ngk,npwx,npw,xk,wk
@@ -862,6 +844,7 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
                                  & intra_bgrp_comm
   USE json_module,          ONLY : json_file
   USE mp_world,             ONLY : mpime,root
+  USE io_push,              ONLY : io_push_title
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -891,7 +874,13 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !$acc declare device_resident(forces_aux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
-  CALL io_push_title('Forces : drhox2 part')
+#if defined(__CUDA)
+  CALL start_clock_gpu('f_drhox2')
+#else
+  CALL start_clock('f_drhox2')
+#endif
+  !
+  CALL io_push_title('Compute forces of drhox2')
   !
   IF(nspin == 2) THEN
      factor = 1._DP
@@ -1053,6 +1042,8 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !
   forces(:) = forces + forces_drhox2
   !
+  CALL io_push_title('Forces drhox2')
+  !
   DO na = 1, nat
      !
      ! forces = - gradients
@@ -1086,6 +1077,12 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   DEALLOCATE( aux_g )
   DEALLOCATE( aux_z )
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('f_drhox2')
+#else
+  CALL stop_clock('f_drhox2')
+#endif
+  !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)
   !
 END SUBROUTINE
@@ -1099,7 +1096,6 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   USE ions_base,            ONLY : nat,ntyp=>nsp,ityp,tau
   USE cell_base,            ONLY : alat,omega
   USE gvect,                ONLY : g,gstart,ngm,ngl,igtongl
-  USE io_push,              ONLY : io_push_title
   USE uspp,                 ONLY : nkb,vkb
   USE uspp_init,            ONLY : init_us_2
   USE pwcom,                ONLY : isk,igk_k,lsda,current_spin,nspin,current_k,ngk,npwx,npw,xk,wk
@@ -1115,6 +1111,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
                                  & intra_bgrp_comm
   USE json_module,          ONLY : json_file
   USE mp_world,             ONLY : mpime,root
+  USE io_push,              ONLY : io_push_title
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -1141,7 +1138,13 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
-  CALL io_push_title('Forces : drhoz part')
+#if defined(__CUDA)
+  CALL start_clock_gpu('f_drhoz')
+#else
+  CALL start_clock('f_drhoz')
+#endif
+  !
+  CALL io_push_title('Compute forces of Z vector')
   !
   IF(nspin == 2) THEN
      factor = 1._DP
@@ -1301,6 +1304,8 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   forces(:) = forces + forces_drhoz
   !
+  CALL io_push_title('Forces drhoz')
+  !
   DO na = 1, nat
      !
      ! forces = - gradients
@@ -1333,6 +1338,12 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   DEALLOCATE( rdrhoz )
   !$acc exit data delete(drhoz)
   DEALLOCATE( drhoz )
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('f_drhoz')
+#else
+  CALL stop_clock('f_drhoz')
+#endif
   !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)
   !

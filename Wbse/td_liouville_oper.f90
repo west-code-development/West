@@ -70,9 +70,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
-  CALL start_clock_gpu('apply_lv')
+  CALL start_clock_gpu('liouv')
 #else
-  CALL start_clock('apply_lv')
+  CALL start_clock('liouv')
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -387,9 +387,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
 #endif
   !
 #if defined(__CUDA)
-  CALL stop_clock_gpu('apply_lv')
+  CALL stop_clock_gpu('liouv')
 #else
-  CALL stop_clock('apply_lv')
+  CALL stop_clock('liouv')
 #endif
   !
 END SUBROUTINE
@@ -444,9 +444,9 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
 #endif
   !
 #if defined(__CUDA)
-  CALL start_clock_gpu('apply_lv_btda')
+  CALL start_clock_gpu('liouv_btda')
 #else
-  CALL start_clock('apply_lv_btda')
+  CALL start_clock('liouv_btda')
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -637,9 +637,9 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
 #endif
   !
 #if defined(__CUDA)
-  CALL stop_clock_gpu('apply_lv_btda')
+  CALL stop_clock_gpu('liouv_btda')
 #else
-  CALL stop_clock('apply_lv_btda')
+  CALL stop_clock('liouv_btda')
 #endif
   !
 END SUBROUTINE

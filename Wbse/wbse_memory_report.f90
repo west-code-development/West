@@ -89,7 +89,7 @@ SUBROUTINE wbse_memory_report()
      WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
      WRITE(stdout,'(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot
      WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-     WRITE(stdout,'(5x,"[MEM] ")')
+     WRITE(stdout,'(5x,"[MEM]")')
   ENDIF
   !
   mem_tot = 0._DP

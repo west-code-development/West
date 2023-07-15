@@ -213,7 +213,7 @@ MODULE pdep_db
       IF(lprintinfo_) THEN
          WRITE(stdout,*)
          CALL io_push_bar()
-         WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout,'(5x,"SAVE written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
          WRITE(stdout,'(5x,"In location : ",a)') TRIM(wstat_save_dir)
          CALL io_push_bar()
       ENDIF
@@ -374,7 +374,7 @@ MODULE pdep_db
       IF(lprintinfo_) THEN
          WRITE(stdout,*)
          CALL io_push_bar()
-         WRITE(stdout,'(5x,"SAVE read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout,'(5x,"SAVE read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
          WRITE(stdout,'(5x,"In location : ",a)') TRIM(wstat_save_dir)
          WRITE(stdout,'(5x,"Eigen. found : ",i12)') n_eigen_to_get
          CALL io_push_bar()

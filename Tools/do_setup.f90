@@ -155,7 +155,7 @@ SUBROUTINE do_setup
   WRITE( stdout, '( 8x,"b1 = (",3f14.7,")")') tpiba*bg(1:3,1)
   WRITE( stdout, '( 8x,"b2 = (",3f14.7,")")') tpiba*bg(1:3,2)
   WRITE( stdout, '( 8x,"b3 = (",3f14.7,")")') tpiba*bg(1:3,3)
-  WRITE( stdout, '( 5x," ")')
+  WRITE( stdout, *)
   IF( mpime == root ) THEN
      CALL json%add('system.3dfft.s',(/ dffts%nr1, dffts%nr2, dffts%nr3 /) )
      CALL json%add('system.3dfft.p',(/ dfftp%nr1, dfftp%nr2, dfftp%nr3 /) )

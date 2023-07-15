@@ -31,15 +31,9 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   COMPLEX(DP), INTENT(IN) :: drhox1(dffts%nnr, nspin), drhox2(dffts%nnr, nspin)
   COMPLEX(DP), INTENT(OUT) :: z_rhs_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc)
   !
-  ! Workspace
+  CALL start_clock('build_zvec')
   !
-  REAL(DP), EXTERNAL :: get_clock
-  REAL(DP) :: time_spent(2)
-  !
-  CALL start_clock( 'rhs_z' )
-  time_spent(1) = get_clock( 'rhs_z' )
-  !
-  CALL io_push_title('Forces : Build the RHS of the Z vector equation')
+  CALL io_push_title('Build the RHS of the Z vector equation')
   !
   !$acc kernels present(z_rhs_vec)
   z_rhs_vec = (0._DP,0._DP)
@@ -49,55 +43,23 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   !
   CALL rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
   !
-  time_spent(2) = get_clock( 'rhs_z' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'rhs_z' )
-  !
   ! part2: d < a | K1e | a > / d | v >
   !
-  IF(.NOT. l_bse_triplet) THEN
-     !
-     CALL rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
-     !
-     time_spent(2) = get_clock( 'rhs_z' )
-     CALL wbse_forces_time(time_spent)
-     time_spent(1) = get_clock( 'rhs_z' )
-     !
-  ENDIF
+  IF(.NOT. l_bse_triplet) CALL rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   !
   ! part3: d^2 vxc / d rho^2 contribution to d < a | K1e | a > / d | v >
   !
-  IF(.NOT. l_bse) THEN
-     !
-     IF(.NOT. l_bse_triplet) THEN
-        !
-        CALL rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
-        !
-        time_spent(2) = get_clock( 'rhs_z' )
-        CALL wbse_forces_time(time_spent)
-        time_spent(1) = get_clock( 'rhs_z' )
-        !
-     ENDIF
-     !
-  ENDIF
+  IF((.NOT. l_bse) .AND. (.NOT. l_bse_triplet)) CALL rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   !
   ! part4: d < a | k1d | a > / d | v >
   !
   IF(l_hybrid_tddft) THEN
-     !
      CALL rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
-     !
-     time_spent(2) = get_clock( 'rhs_z' )
-     CALL wbse_forces_time(time_spent)
-     time_spent(1) = get_clock( 'rhs_z' )
-     !
   ELSEIF(l_bse) THEN
-     !
      CALL errore('build_rhs_zvector_eq', 'BSE forces have not been implemented', 1)
-     !
   ENDIF
   !
-  CALL stop_clock( 'rhs_z' )
+  CALL stop_clock('build_zvec')
   !
 END SUBROUTINE
 !
@@ -148,6 +110,12 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   !$acc declare device_resident(z_rhs_vec_part1,tmp_vec)
   COMPLEX(DP), ALLOCATABLE :: drhox(:,:)
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('zvec1')
+#else
+  CALL start_clock('zvec1')
+#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -318,15 +286,19 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   !
   CALL wbse_dot(z_rhs_vec_part1,z_rhs_vec_part1,band_group%nlocx,dotp)
   !
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
-  WRITE(stdout, "( 5x,'# Norm of z_rhs_vec p1  = | ', ES15.8, ' |' ) " ) SUM(REAL(dotp,KIND=DP))
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
+  WRITE(stdout,"(5x,'Norm of z_rhs_vec p1 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
   DEALLOCATE(z_rhs_vec_part1)
   IF(l_bse .OR. l_hybrid_tddft) DEALLOCATE(tmp_vec)
   !$acc exit data delete(drhox)
   DEALLOCATE(drhox)
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('zvec1')
+#else
+  CALL stop_clock('zvec1')
+#endif
   !
 END SUBROUTINE
 !
@@ -385,6 +357,12 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   ATTRIBUTES(PINNED) :: dpcpart,dv_vv_mat
 #endif
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('zvec2')
+#else
+  CALL start_clock('zvec2')
+#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -945,9 +923,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   !
   CALL wbse_dot(z_rhs_vec_part2,z_rhs_vec_part2,band_group%nlocx,dotp)
   !
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
-  WRITE(stdout, "( 5x,'# Norm of z_rhs_vec p2  = | ', ES15.8, ' |' ) " ) SUM(REAL(dotp,KIND=DP))
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
+  WRITE(stdout,"(5x,'Norm of z_rhs_vec p2 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
   DEALLOCATE(z_rhs_vec_part2)
@@ -956,6 +932,12 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   DEALLOCATE(dv_vv_mat)
   DEALLOCATE(dpcpart)
   DEALLOCATE(dvrs)
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('zvec2')
+#else
+  CALL stop_clock('zvec2')
+#endif
   !
 END SUBROUTINE
 !
@@ -1000,6 +982,12 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part3(:,:,:)
   !$acc declare device_resident(z_rhs_vec_part3)
   COMPLEX(DP), ALLOCATABLE :: ddvxc(:,:)
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('zvec3')
+#else
+  CALL start_clock('zvec3')
+#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -1124,14 +1112,18 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   !
   CALL wbse_dot(z_rhs_vec_part3,z_rhs_vec_part3,band_group%nlocx,dotp)
   !
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
-  WRITE(stdout, "( 5x,'# Norm of z_rhs_vec p3  = | ', ES15.8, ' |' ) " ) SUM(REAL(dotp,KIND=DP))
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
+  WRITE(stdout,"(5x,'Norm of z_rhs_vec p3 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
   DEALLOCATE(z_rhs_vec_part3)
   !$acc exit data delete(ddvxc)
   DEALLOCATE(ddvxc)
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('zvec3')
+#else
+  CALL stop_clock('zvec3')
+#endif
   !
 END SUBROUTINE
 !
@@ -1168,6 +1160,12 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   REAL(DP) :: etxc,vtxc
   TYPE (scf_type) :: a_rho
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('ddvxc_5p')
+#else
+  CALL start_clock('ddvxc_5p')
+#endif
   !
   CALL create_scf_type(a_rho)
   !
@@ -1238,6 +1236,12 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   !
   CALL destroy_scf_type(a_rho)
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('ddvxc_5p')
+#else
+  CALL stop_clock('ddvxc_5p')
+#endif
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -1277,6 +1281,12 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   COMPLEX(DP), ALLOCATABLE :: drho_sf_copy(:,:),dvsf(:,:)
   COMPLEX(DP), ALLOCATABLE :: drho_sf(:,:)
   CHARACTER(LEN=:), ALLOCATABLE :: fname
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('ddvxc_sf')
+#else
+  CALL start_clock('ddvxc_sf')
+#endif
   !
   IF(nlcc_any) CALL errore('compute_ddvxc_sf', 'nlcc_any is not supported', 1)
   !
@@ -1378,6 +1388,12 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   DEALLOCATE(drho_sf_copy)
   DEALLOCATE(dvsf)
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('ddvxc_sf')
+#else
+  CALL stop_clock('ddvxc_sf')
+#endif
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -1430,6 +1446,12 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   ATTRIBUTES(PINNED) :: dpcpart
 #endif
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('zvec4')
+#else
+  CALL start_clock('zvec4')
+#endif
   !
   ALLOCATE(z_rhs_vec_part4(npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
@@ -1594,9 +1616,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   !
   CALL wbse_dot(z_rhs_vec_part4,z_rhs_vec_part4,band_group%nlocx,dotp)
   !
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
-  WRITE(stdout, "( 5x,'# Norm of z_rhs_vec p4  = | ', ES15.8, ' |' ) " ) SUM(REAL(dotp,KIND=DP))
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
+  WRITE(stdout,"(5x,'Norm of z_rhs_vec p4 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
   DEALLOCATE(z_rhs_vec_part4)
@@ -1604,5 +1624,11 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   DEALLOCATE(tmp_vec)
   !$acc exit data delete(dpcpart)
   DEALLOCATE(dpcpart)
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('zvec4')
+#else
+  CALL stop_clock('zvec4')
+#endif
   !
 END SUBROUTINE

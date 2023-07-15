@@ -69,12 +69,12 @@ SUBROUTINE exx_go()
         ecutfock = ecutwfc*4
      ENDIF
      !
-     WRITE(stdout,'(7X,"** WARNING : EXX-use_ace          = ",L1)') use_ace
-     WRITE(stdout,'(7X,"** WARNING : EXX-alpha            = ",F14.6)') exxalfa
-     WRITE(stdout,'(7X,"** WARNING : EXX-erfc_scrlen      = ",F14.6)') erfc_scrlen
-     WRITE(stdout,'(7X,"** WARNING : EXX-gau_scrlen       = ",F14.6)') gau_scrlen
-     WRITE(stdout,'(7X,"** WARNING : EXX-ecutfock         = ",F14.6)') ecutfock
-     WRITE(stdout,'(7X,"** WARNING : EXX-exxdiv_treatment = ",A14)') exxdiv_treatment
+     WRITE(stdout,'(7X,"** WARNING : EXX use_ace          = ",L1)') use_ace
+     WRITE(stdout,'(7X,"** WARNING : EXX alpha            = ",F14.6)') exxalfa
+     WRITE(stdout,'(7X,"** WARNING : EXX erfc_scrlen      = ",F14.6)') erfc_scrlen
+     WRITE(stdout,'(7X,"** WARNING : EXX gau_scrlen       = ",F14.6)') gau_scrlen
+     WRITE(stdout,'(7X,"** WARNING : EXX ecutfock         = ",F14.6)') ecutfock
+     WRITE(stdout,'(7X,"** WARNING : EXX exxdiv_treatment = ",A)') TRIM(exxdiv_treatment)
      !
      wfc_dir = tmp_dir
      nwordwfc = nbnd*npwx*npol

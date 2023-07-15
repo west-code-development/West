@@ -161,7 +161,7 @@ MODULE lanczos_restart
       time_spent(2) = get_clock('lan_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -312,7 +312,7 @@ MODULE lanczos_restart
       time_spent(2) = get_clock('lan_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !

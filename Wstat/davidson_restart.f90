@@ -222,7 +222,7 @@ MODULE davidson_restart
       CALL stop_clock(TRIM(which))
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(dirname)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -364,7 +364,7 @@ MODULE davidson_restart
       CALL stop_clock('wstat_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wstat_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -487,7 +487,7 @@ MODULE davidson_restart
       CALL stop_clock(TRIM(which))
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(dirname)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -546,7 +546,7 @@ MODULE davidson_restart
          WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------------------")')
          WRITE(stdout,'(5x,"[I/O] Restarting from q(",i5,") = (",3f12.7,")")') &
               lastdone_iq,(q_grid%p_cryst(ipol,lastdone_iq),ipol=1,3)
-         WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+         WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
          WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wstat_restart_dir)
          WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------------------")')
       ENDIF

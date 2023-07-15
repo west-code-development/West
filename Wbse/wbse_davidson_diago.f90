@@ -575,6 +575,8 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   DEALLOCATE( dng_exc )
   !
+  CALL stop_clock( 'chidiago' )
+  !
   IF(l_forces) THEN
      !
 #if defined(__CUDA)
@@ -613,8 +615,6 @@ SUBROUTINE wbse_davidson_diago ( )
 #if defined(__CUDA)
   CALL deallocate_gpu()
 #endif
-  !
-  CALL stop_clock( 'chidiago' )
   !
 END SUBROUTINE
 !

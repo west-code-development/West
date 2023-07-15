@@ -56,6 +56,12 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
   !$acc declare device_resident(caux,gaux,raux)
   !
+#if defined(__CUDA)
+  CALL start_clock_gpu('hybrid_k2')
+#else
+  CALL start_clock('hybrid_k2')
+#endif
+  !
   IF(sf) CALL errore('hybrid_kernel_gamma_term2', 'spin-flip is not supported', 1)
   !
   dffts_nnr = dffts%nnr
@@ -185,6 +191,12 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   DEALLOCATE(gaux)
   DEALLOCATE(raux)
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('hybrid_k2')
+#else
+  CALL stop_clock('hybrid_k2')
+#endif
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -233,6 +245,12 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
   !$acc declare device_resident(caux,gaux,raux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('hybrid_k3')
+#else
+  CALL start_clock('hybrid_k3')
+#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -373,6 +391,12 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   DEALLOCATE(gaux)
   DEALLOCATE(raux)
   !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('hybrid_k3')
+#else
+  CALL stop_clock('hybrid_k3')
+#endif
+  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -421,6 +445,12 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
   !$acc declare device_resident(caux,gaux,raux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('hybrid_k4')
+#else
+  CALL start_clock('hybrid_k4')
+#endif
   !
   dffts_nnr = dffts%nnr
   !
@@ -578,5 +608,11 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   DEALLOCATE(caux)
   DEALLOCATE(gaux)
   DEALLOCATE(raux)
+  !
+#if defined(__CUDA)
+  CALL stop_clock_gpu('hybrid_k4')
+#else
+  CALL stop_clock('hybrid_k4')
+#endif
   !
 END SUBROUTINE

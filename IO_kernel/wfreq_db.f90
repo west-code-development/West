@@ -198,7 +198,7 @@ MODULE wfreq_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"SAVE written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"In location : ",a)') TRIM(wfreq_save_dir)
       CALL io_push_bar()
       !
@@ -292,7 +292,7 @@ MODULE wfreq_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x "SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"SAVE written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x "In location : ",a)') TRIM(wfreq_save_dir)
       CALL io_push_bar()
       !
@@ -364,7 +364,7 @@ MODULE wfreq_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"SAVE written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"In location : ",a)') TRIM(wfreq_save_dir)
       CALL io_push_bar()
       !
@@ -426,7 +426,7 @@ MODULE wfreq_db
       !
       WRITE(stdout,*)
       CALL io_push_bar()
-      WRITE(stdout,'(5x,"SAVE written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"SAVE written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"In location : ",a)') TRIM(wfreq_save_dir)
       CALL io_push_bar()
       !

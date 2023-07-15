@@ -48,9 +48,15 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   REAL(DP) :: time_spent(2)
   REAL(DP), EXTERNAL :: get_clock
+  CHARACTER(20), EXTERNAL :: human_readable_time
   !
-  CALL start_clock( 'zvector_cg' )
-  time_spent(1) = get_clock( 'zvector_cg' )
+#if defined(__CUDA)
+  CALL start_clock_gpu('zvec_cg')
+#else
+  CALL start_clock('zvec_cg')
+#endif
+  !
+  CALL io_push_title('Solve the Z vector equation using the CG algorithm')
   !
   kpt_pool_nloc = kpt_pool%nloc
   band_group_nlocx = band_group%nlocx
@@ -69,13 +75,9 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   ALLOCATE(rz_new(nspin))
   ALLOCATE(rz_old(nspin))
   !
-  CALL io_push_title('Forces : Solve the Z vector equation using the CG algorithm')
-  !
   CALL wbse_dot(z_rhs,z_rhs,band_group%nlocx,dotp)
   !
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
-  WRITE(stdout, "( 5x,'# Norm of z_rhs_vec     = | ', ES15.8, ' |' ) " ) SUM(REAL(dotp,KIND=DP))
-  WRITE(stdout, "( 5x,'                          *-----------------*' ) " )
+  WRITE(stdout,"(5X,'Norm of z_rhs_vec    = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   ! Initial guess
   !
@@ -86,13 +88,8 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   ! no spin flip case for z-vector equation
   !
   CALL west_apply_liouvillian(z_out, r_new, .FALSE.)
-  time_spent(2) = get_clock( 'zvector_cg' )
-  CALL wbse_forces_time(time_spent)
-  time_spent(1) = get_clock( 'zvector_cg' )
   !
   CALL west_apply_liouvillian_btda(z_out, r_new, .FALSE.)
-  time_spent(2) = get_clock( 'zvector_cg' )
-  CALL wbse_forces_time(time_spent)
   !
   !$acc parallel loop collapse(3) present(r_new,z_rhs)
   DO iks = 1,kpt_pool_nloc
@@ -106,8 +103,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   CALL wbse_dot(r_new,r_new,band_group%nlocx,residual_new)
   !
-  WRITE(stdout,"(5x,'Initial residual = ',E15.8)") REAL(SUM(residual_new),KIND=DP)
-  WRITE(stdout,*)
+  WRITE(stdout,"(5X,'Initial residual     = ',ES15.8)") REAL(SUM(residual_new),KIND=DP)
   !
   CALL cg_precondition(r_new,z,l_pre_shift)
   !
@@ -126,16 +122,11 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   DO iter = 1, max_cg_iters
      !
-     time_spent(1) = get_clock( 'zvector_cg' )
+     time_spent(1) = get_clock('zvec_cg')
      !
      CALL west_apply_liouvillian(p, Ap, .FALSE.)
-     time_spent(2) = get_clock( 'zvector_cg' )
-     CALL wbse_forces_time(time_spent)
-     time_spent(1) = get_clock( 'zvector_cg' )
      !
      CALL west_apply_liouvillian_btda(p, Ap, .FALSE.)
-     time_spent(2) = get_clock( 'zvector_cg' )
-     CALL wbse_forces_time(time_spent)
      !
      CALL wbse_dot(p,Ap,band_group%nlocx,dotp)
      !
@@ -163,10 +154,10 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
      !
      CALL wbse_dot(r_new,r_new,band_group%nlocx,residual_new)
      !
-     IF ( MOD(iter,1) == 0 ) THEN
-        WRITE(stdout,"(5x,'Residual(',I5.5,') = ',E15.8)") iter, REAL(SUM(residual_new),KIND=DP)
-        WRITE(stdout,*)
-     ENDIF
+     WRITE(stdout,"(/,5X,'                  *----------*              *-----------------*')")
+     WRITE(stdout,"(  5X,'#     Iteration = | ', I8,' |','   ','Residual = | ', ES15.8,' |')") &
+     & iter, REAL(SUM(residual_new),KIND=DP)
+     WRITE(stdout,"(  5X,'                  *----------*              *-----------------*')")
      !
      residual_sq = ABS(SUM(residual_new))
      !
@@ -178,7 +169,16 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
         IF(residual_sq < forces_inexact_krylov_tr) do_inexact_krylov = .TRUE.
      ENDIF
      !
-     IF (residual_sq < forces_zeq_cg_tr) EXIT
+     IF(residual_sq < forces_zeq_cg_tr) THEN
+        !
+        time_spent(2) = get_clock('zvec_cg')
+        !
+        WRITE(stdout,"(5X,'Time spent in last iteration ',a)") &
+        & TRIM(human_readable_time(time_spent(2)-time_spent(1)))
+        !
+        EXIT
+        !
+     ENDIF
      !
      CALL cg_precondition(r_new,z,l_pre_shift)
      !
@@ -203,6 +203,11 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
      residual_old(:) = residual_new
      rz_old(:) = rz_new
      !
+     time_spent(2) = get_clock('zvec_cg')
+     !
+     WRITE(stdout,"(5X,'Time spent in last iteration ',a)") &
+     & TRIM(human_readable_time(time_spent(2)-time_spent(1)))
+     !
   ENDDO ! iter
   !
   do_inexact_krylov = .FALSE.
@@ -218,7 +223,11 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   DEALLOCATE(rz_old)
   DEALLOCATE(rz_new)
   !
-  CALL stop_clock( 'zvector_cg' )
+#if defined(__CUDA)
+  CALL stop_clock_gpu('zvec_cg')
+#else
+  CALL stop_clock('zvec_cg')
+#endif
   !
 END SUBROUTINE
 !
@@ -298,7 +307,7 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
            !
            ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
            !
-           IF (turn_shift) THEN
+           IF(turn_shift) THEN
               tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks)
            ELSE
               tmp = g2kin_save(ig,iks)

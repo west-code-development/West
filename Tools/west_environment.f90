@@ -268,7 +268,7 @@ CONTAINS
     WRITE( stdout, '(/5X,"This program is part of the open-source West suite",&
     &/5X,"for massively parallel calculations of excited states in materials; please cite", &
     &/9X,"""M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015);",&
-    &/9X," URL https://west-code.org"", ", &
+    &/9X," URL https://west-code.org"",", &
     &/5X,"in publications or presentations arising from this work.")' )
     !
     WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM(version_number)

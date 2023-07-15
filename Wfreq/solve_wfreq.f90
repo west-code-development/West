@@ -2106,8 +2106,8 @@ SUBROUTINE output_eps_head( )
      !
      WRITE(stdout,'(5x," ")')
      CALL io_push_bar()
-     WRITE(stdout,'(5x, "File ",a," written in ",a20)') TRIM(wfreq_save_dir)//'/optics.json',&
-     & human_readable_time(time_spent(2)-time_spent(1))
+     WRITE(stdout,'(5x, "File ",a," written in ",a)') TRIM(wfreq_save_dir)//'/optics.json',&
+     & TRIM(human_readable_time(time_spent(2)-time_spent(1)))
      CALL io_push_bar()
      !
      DEALLOCATE( out_tabella )

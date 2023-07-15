@@ -86,7 +86,7 @@ MODULE wbse_io
     USE mp_world,       ONLY : world_comm
     USE io_global,      ONLY : stdout
     USE mp,             ONLY : mp_barrier
-    USE mp_world,       ONLY : mpime,root
+    USE mp_global,      ONLY : my_image_id,my_bgrp_id,me_bgrp
     USE westcom,        ONLY : wbse_init_save_dir
     USE west_io,        ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
     USE base64_module,  ONLY : islittleendian
@@ -112,9 +112,7 @@ MODULE wbse_io
     !
     WRITE(stdout,'(/,5X,"Writing overlap and rotation matrices to ",A)') TRIM(fname)
     !
-    ! Resume all components
-    !
-    IF(mpime == root) THEN
+    IF(my_image_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
        !
        header = 0
        header(HD_ID_VERSION) = HD_VERSION
@@ -143,10 +141,10 @@ MODULE wbse_io
   SUBROUTINE read_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
     !
     USE kinds,          ONLY : DP,i8b
-    USE io_global,      ONLY : stdout,ionode
+    USE io_global,      ONLY : stdout
     USE mp_world,       ONLY : world_comm
     USE mp,             ONLY : mp_bcast,mp_barrier
-    USE mp_global,      ONLY : intra_image_comm
+    USE mp_global,      ONLY : intra_pool_comm,my_bgrp_id,me_bgrp
     USE westcom,        ONLY : wbse_init_save_dir
     USE west_io,        ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
     USE base64_module,  ONLY : islittleendian
@@ -179,7 +177,7 @@ MODULE wbse_io
     !
     WRITE(stdout,'(/,5X,"Reading overlap and rotation matrices from ",A)') TRIM(fname)
     !
-    IF(ionode) THEN
+    IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
        !
        OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
        IF(ierr /= 0) THEN
@@ -199,12 +197,12 @@ MODULE wbse_io
        !
     ENDIF
     !
-    CALL mp_bcast(oumat_dim_tmp,0,intra_image_comm)
+    CALL mp_bcast(oumat_dim_tmp,0,intra_pool_comm)
     !
     ALLOCATE(umatrix_tmp(oumat_dim_tmp,oumat_dim_tmp))
     ALLOCATE(omatrix_tmp(oumat_dim_tmp,oumat_dim_tmp))
     !
-    IF(ionode) THEN
+    IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
        !
        offset = offset+SIZEOF(header)
        READ(iun,POS=offset) umatrix_tmp(1:oumat_dim_tmp,1:oumat_dim_tmp)
@@ -214,8 +212,8 @@ MODULE wbse_io
        !
     ENDIF
     !
-    CALL mp_bcast(umatrix_tmp,0,intra_image_comm)
-    CALL mp_bcast(omatrix_tmp,0,intra_image_comm)
+    CALL mp_bcast(umatrix_tmp,0,intra_pool_comm)
+    CALL mp_bcast(omatrix_tmp,0,intra_pool_comm)
     !
     umatrix(:,:) = 0._DP
     omatrix(:,:) = 0._DP

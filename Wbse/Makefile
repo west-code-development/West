@@ -34,7 +34,6 @@ wbse_davidson_diago.o \
 wbse_dot.o \
 wbse_dv.o \
 wbse_init_readin.o \
-wbse_init_restart.o \
 wbse_init_setup.o \
 wbse_lanczos_diago.o \
 wbse_localization.o\

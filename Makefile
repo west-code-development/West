@@ -14,7 +14,7 @@ default:
 	@echo "  wfreq        calculation of dynamical dielectric response and GW self-energy"
 	@echo "  westpp       postprocessing programs"
 	@echo "  wbse         calculation of BSE"
-	@echo '  all          same as "make wstat wfreq westpp"'
+	@echo '  all          same as "make wstat wfreq westpp wbse"'
 	@echo
 	@echo "where target is one of the following operations:"
 	@echo "  doc          build WEST documentation"

@@ -138,7 +138,6 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
         CALL json%add('input.wbse_init_control.spin_channel',spin_channel)
         CALL json%add('input.wbse_init_control.n_trunc_bands',n_trunc_bands)
-        CALL json%add('input.wbse_init_control.o_restart_time',o_restart_time)
         !
      ENDIF
      !
@@ -493,7 +492,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(overlap_thr, 'overlap_thr')
         IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
         IERR = return_dict%get(n_trunc_bands, 'n_trunc_bands', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(o_restart_time, 'o_restart_time')
         !
         CALL return_dict%destroy
         !
@@ -755,7 +753,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(overlap_thr,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
      CALL mp_bcast(n_trunc_bands,root,world_comm)
-     CALL mp_bcast(o_restart_time,root,world_comm)
      !
      ! CHECKS
      !

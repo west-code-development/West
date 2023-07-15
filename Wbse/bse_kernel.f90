@@ -80,16 +80,17 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   !
   DO ikq = 1, kpt_pool%nloc
      !
-     ikq_g = kpt_pool%l2g(ikq)
      current_spin_ikq = isk(ikq)
      IF(current_spin_ikq /= current_spin) CYCLE
      !
      npw = ngk(ikq)
      !
      IF(sf) THEN
-        ikq_do = flks(ikq_g)
+        ikq_do = flks(ikq)
+        ikq_g = ikq_do
      ELSE
         ikq_do = ikq
+        ikq_g = kpt_pool%l2g(ikq)
      ENDIF
      !
      IF(l_local_repr) THEN

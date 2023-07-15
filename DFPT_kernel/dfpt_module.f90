@@ -26,10 +26,9 @@ MODULE dfpt_module
       USE io_global,             ONLY : stdout
       USE fft_base,              ONLY : dffts
       USE gvect,                 ONLY : gstart
-      USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
+      USE mp,                    ONLY : mp_sum,mp_bcast
       USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_pool_comm,nbgrp,my_bgrp_id,&
                                       & inter_bgrp_comm,intra_bgrp_comm
-      USE mp_world,              ONLY : world_comm
       USE buffers,               ONLY : get_buffer
       USE noncollin_module,      ONLY : noncolin,npol
       USE pwcom,                 ONLY : current_spin,isk,npw,npwx,lsda,current_k,ngk,igk_k,nbnd
@@ -104,8 +103,6 @@ MODULE dfpt_module
       CHARACTER(LEN=512) :: title
       !
       COMPLEX(DP), PARAMETER :: zero = (0._DP,0._DP)
-      !
-      CALL mp_barrier( world_comm )
       !
       IF (l_frac_occ .AND. .NOT. gamma_only) THEN
          CALL errore('dfpt', 'fraction occupation only implemented for gamma-only case', 1)
@@ -584,8 +581,6 @@ MODULE dfpt_module
       CALL deallocate_gpu()
       CALL deallocate_linsolve_gpu()
 #endif
-      !
-      CALL mp_barrier( world_comm )
       !
       CALL stop_bar_type( barra, 'dfpt' )
       !

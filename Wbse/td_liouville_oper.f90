@@ -32,11 +32,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
                                  & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
-                                 & l_hybrid_tddft,l_spin_flip_kernel
+                                 & l_hybrid_tddft,l_spin_flip_kernel,l_forces_inexact_krylov,&
+                                 & do_inexact_krylov
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE uspp_init,            ONLY : init_us_2
   USE exx,                  ONLY : exxalfa
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
+  USE xc_lib,               ONLY : stop_exx,start_exx
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -254,6 +256,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
         !
      ENDIF
      !
+     IF(do_inexact_krylov &
+        &.AND. (l_forces_inexact_krylov == 1 .OR. l_forces_inexact_krylov == 5) .AND. l_hybrid_tddft) THEN
+        !
+        CALL stop_exx()
+        !
+     ENDIF
+     !
      ! use h_psi_, i.e. h_psi without band parallelization, as west
      ! handles band parallelization separately
      !
@@ -264,6 +273,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
 #else
      CALL h_psi_(npwx,npw,nbnd_do,evc1(:,:,iks),hevc1)
 #endif
+     !
+     IF(do_inexact_krylov &
+        &.AND. (l_forces_inexact_krylov == 1 .OR. l_forces_inexact_krylov == 5) .AND. l_hybrid_tddft) THEN
+        !
+        CALL start_exx()
+        !
+     ENDIF
      !
      IF(l_qp_correction) THEN
 #if defined(__CUDA)
@@ -320,7 +336,33 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ENDDO
      !$acc end parallel
      !
-     IF(l_bse .OR. l_hybrid_tddft) CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
+     IF(l_bse .OR. l_hybrid_tddft) THEN
+        !
+        IF(l_hybrid_tddft) THEN
+           !
+           IF(do_inexact_krylov) THEN
+              !
+              IF(l_forces_inexact_krylov == 0 &
+              &.OR. l_forces_inexact_krylov == 1 &
+              &.OR. l_forces_inexact_krylov == 3) THEN
+                 !
+                 CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
+                 !
+              ENDIF
+              !
+           ELSE
+              !
+              CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
+              !
+           ENDIF
+           !
+        ELSEIF(l_bse) THEN
+           !
+           CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
+           !
+        ENDIF
+        !
+     ENDIF
      !
      IF(gamma_only) THEN
         IF(gstart == 2) THEN
@@ -389,7 +431,8 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
   USE westcom,              ONLY : l_bse,l_bse_triplet,nbnd_occ,n_trunc_bands,lrwfc,iuwfc,&
-                                 & l_hybrid_tddft,l_spin_flip_kernel
+                                 & l_hybrid_tddft,l_spin_flip_kernel,l_forces_inexact_krylov,&
+                                 & do_inexact_krylov
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
 #if defined(__CUDA)
@@ -551,7 +594,25 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
      !
      ! K2d part. exx_div treatment is not needed for this part.
      !
-     IF(l_hybrid_tddft) CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
+     IF(l_hybrid_tddft) THEN
+        !
+        IF(do_inexact_krylov) THEN
+           !
+           IF(l_forces_inexact_krylov == 0 &
+           &.OR. l_forces_inexact_krylov == 1 &
+           &.OR. l_forces_inexact_krylov == 2) THEN
+              !
+              CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
+              !
+           ENDIF
+           !
+        ELSE
+           !
+           CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
+           !
+        ENDIF
+        !
+     ENDIF
      !
      IF(gstart == 2) THEN
         !$acc parallel loop present(evc2_new)

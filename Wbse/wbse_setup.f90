@@ -21,7 +21,8 @@ SUBROUTINE wbse_setup()
                                  & trev_pdep_rel,trev_pdep,n_liouville_times,n_liouville_eigen,&
                                  & n_liouville_maxiter,n_liouville_read_from_file,&
                                  & trev_liouville_rel,trev_liouville,alphapv_dfpt,l_use_ecutrho,&
-                                 & wbse_save_dir,l_hybrid_tddft,l_spin_flip,l_spin_flip_kernel
+                                 & wbse_save_dir,l_hybrid_tddft,l_spin_flip,l_spin_flip_kernel,&
+                                 & do_inexact_krylov
   USE kinds,                ONLY : DP
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_sf_kernel_setup
@@ -157,6 +158,8 @@ SUBROUTINE wbse_setup()
   ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
   !
   IF(l_bse .OR. l_hybrid_tddft) CALL bse_start()
+  !
+  do_inexact_krylov = .FALSE.
   !
 END SUBROUTINE
 !

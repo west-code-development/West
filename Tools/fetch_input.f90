@@ -35,7 +35,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
                              & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
                              & l_print_spin_flip_kernel,spin_flip_cut1,spin_flip_cut2,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,l_reduce_io
+                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,l_forces_inexact_krylov,&
+                             & forces_inexact_krylov_threshold,l_reduce_io,do_inexact_krylov
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -173,6 +174,8 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
         CALL json%add('input.wbse_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wbse_control.n_exx_lowrank',n_exx_lowrank)
+        CALL json%add('input.wbse_control.l_forces_inexact_krylov',l_forces_inexact_krylov)
+        CALL json%add('input.wbse_control.forces_inexact_krylov_threshold',forces_inexact_krylov_threshold)
         !
      ENDIF
      !
@@ -204,7 +207,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
                              & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
                              & l_print_spin_flip_kernel,spin_flip_cut1,spin_flip_cut2,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,l_reduce_io,&
+                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,l_forces_inexact_krylov,&
+                             & forces_inexact_krylov_threshold,do_inexact_krylov,l_reduce_io,&
                              & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
@@ -542,6 +546,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
         IERR = return_dict%getitem(l_minimize_exx_if_active, 'l_minimize_exx_if_active')
         IERR = return_dict%get(n_exx_lowrank, 'n_exx_lowrank', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(l_forces_inexact_krylov, 'l_forces_inexact_krylov')
+        IERR = return_dict%getitem(forces_inexact_krylov_threshold, 'forces_inexact_krylov_threshold')
         !
         CALL return_dict%destroy
         !
@@ -822,6 +828,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(l_reduce_io,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
      CALL mp_bcast(n_exx_lowrank,root,world_comm)
+     CALL mp_bcast(l_forces_inexact_krylov,root,world_comm)
+     CALL mp_bcast(forces_inexact_krylov_threshold,root,world_comm)
      !
      ! CHECKS
      !

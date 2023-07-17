@@ -1251,45 +1251,6 @@ wbse_control
    * - **Description**
      - Spin-flip cutoff to prevent divergence. Used only in spin-flip TDDFT calculations.
 
-.. data:: l_reduce_io
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - bool
-   * - **Default**
-     - True
-   * - **Description**
-     - Speeds up the calculation by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.
-
-.. data:: l_minimize_exx_if_active
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - bool
-   * - **Default**
-     - False
-   * - **Description**
-     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
-
-.. data:: n_exx_lowrank
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - int
-   * - **Default**
-     - dynamically set to match the number of bands, read from the ground state
-   * - **Description**
-     - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
-
 .. data:: l_forces
 
 .. list-table::
@@ -1341,3 +1302,75 @@ wbse_control
      - 1e-2
    * - **Description**
      - Finite difference step size to compute the second derivative of the local part of the exchange-correlation kernel. Used only when l_forces is True.
+
+.. data:: forces_inexact_krylov
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - Apply the inexact krylov subspace approximation in the CG solver of the Z vector equation. Used only when l_forces is True.
+
+       - 0 : Do not apply the approximation.
+       - 1 : Skip the exact-exchange term once the CG solver converges to forces_inexact_krylov_tr.
+       - 2 : Skip the K_1d term once the CG solver converges to forces_inexact_krylov_tr.
+       - 3 : Skip the K_2d term once the CG solver converges to forces_inexact_krylov_tr.
+       - 4 : Skip the K_1d and K_2d terms once the CG solver converges to forces_inexact_krylov_tr.
+       - 5 : Skip the exact-exchange, K_1d, and K_2d terms once the CG solver converges to forces_inexact_krylov_tr.
+
+.. data:: forces_inexact_krylov_tr
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-16
+   * - **Description**
+     - Apply the inexact krylov subspace approximation if the norm of the residual vector is smaller than this threshold. Used only when l_forces is True.
+
+.. data:: l_minimize_exx_if_active
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
+
+.. data:: n_exx_lowrank
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - dynamically set to match the number of bands, read from the ground state
+   * - **Description**
+     - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
+
+.. data:: l_reduce_io
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - True
+   * - **Description**
+     - Speeds up the calculation by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.

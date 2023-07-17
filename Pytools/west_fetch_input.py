@@ -126,11 +126,11 @@ default["wbse_control"]["l_forces"] = False
 default["wbse_control"]["forces_state"] = 1
 default["wbse_control"]["forces_zeq_cg_tr"] = 1e-10
 default["wbse_control"]["ddvxc_fd_coeff"] = 0.01
-default["wbse_control"]["l_reduce_io"] = True
+default["wbse_control"]["forces_inexact_krylov"] = 0
+default["wbse_control"]["forces_inexact_krylov_tr"] = 1e-16
 default["wbse_control"]["l_minimize_exx_if_active"] = False
 default["wbse_control"]["n_exx_lowrank"] = 0 # dynamically set to the number of bands
-default["wbse_control"]["l_forces_inexact_krylov"] = 0
-default["wbse_control"]["forces_inexact_krylov_threshold"] = 1e-16
+default["wbse_control"]["l_reduce_io"] = True
 
 ############################
 # DYNAMICAL DEFAULT VALUES #

@@ -30,9 +30,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
-  USE westcom,              ONLY : l_bse,l_qp_correction,l_bse_triplet,sigma_c_head,sigma_x_head,&
-                                 & nbnd_occ,scissor_ope,n_trunc_bands,et_qp,lrwfc,iuwfc,&
-                                 & l_hybrid_tddft,l_spin_flip_kernel,l_forces_inexact_krylov,&
+  USE westcom,              ONLY : l_bse,l_bse_triplet,l_hybrid_tddft,l_spin_flip_kernel,&
+                                 & l_qp_correction,sigma_c_head,sigma_x_head,nbnd_occ,scissor_ope,&
+                                 & n_trunc_bands,et_qp,lrwfc,iuwfc,forces_inexact_krylov,&
                                  & do_inexact_krylov
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE uspp_init,            ONLY : init_us_2
@@ -58,7 +58,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !
   ! Workspace
   !
-  LOGICAL :: lrpa,do_k1e
+  LOGICAL :: lrpa,do_k1e,do_k1d
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
   REAL(DP) :: factor
@@ -256,11 +256,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
         !
      ENDIF
      !
-     IF(do_inexact_krylov &
-        &.AND. (l_forces_inexact_krylov == 1 .OR. l_forces_inexact_krylov == 5) .AND. l_hybrid_tddft) THEN
-        !
-        CALL stop_exx()
-        !
+     IF(do_inexact_krylov .AND. l_hybrid_tddft) THEN
+        IF(forces_inexact_krylov == 1 .OR. forces_inexact_krylov == 5) CALL stop_exx()
      ENDIF
      !
      ! use h_psi_, i.e. h_psi without band parallelization, as west
@@ -274,11 +271,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      CALL h_psi_(npwx,npw,nbnd_do,evc1(:,:,iks),hevc1)
 #endif
      !
-     IF(do_inexact_krylov &
-        &.AND. (l_forces_inexact_krylov == 1 .OR. l_forces_inexact_krylov == 5) .AND. l_hybrid_tddft) THEN
-        !
-        CALL start_exx()
-        !
+     IF(do_inexact_krylov .AND. l_hybrid_tddft) THEN
+        IF(forces_inexact_krylov == 1 .OR. forces_inexact_krylov == 5) CALL start_exx()
      ENDIF
      !
      IF(l_qp_correction) THEN
@@ -338,29 +332,17 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      IF(l_bse .OR. l_hybrid_tddft) THEN
         !
-        IF(l_hybrid_tddft) THEN
-           !
-           IF(do_inexact_krylov) THEN
-              !
-              IF(l_forces_inexact_krylov == 0 &
-              &.OR. l_forces_inexact_krylov == 1 &
-              &.OR. l_forces_inexact_krylov == 3) THEN
-                 !
-                 CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
-                 !
-              ENDIF
-              !
-           ELSE
-              !
-              CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
-              !
+        do_k1d = .TRUE.
+        !
+        IF(l_hybrid_tddft .AND. do_inexact_krylov) THEN
+           IF(forces_inexact_krylov == 2 &
+           & .OR. forces_inexact_krylov == 4 &
+           & .OR. forces_inexact_krylov == 5) THEN
+              do_k1d = .FALSE.
            ENDIF
-           !
-        ELSEIF(l_bse) THEN
-           !
-           CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
-           !
         ENDIF
+        !
+        IF(do_k1d) CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
         !
      ENDIF
      !
@@ -430,9 +412,8 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
-  USE westcom,              ONLY : l_bse,l_bse_triplet,nbnd_occ,n_trunc_bands,lrwfc,iuwfc,&
-                                 & l_hybrid_tddft,l_spin_flip_kernel,l_forces_inexact_krylov,&
-                                 & do_inexact_krylov
+  USE westcom,              ONLY : l_bse,l_bse_triplet,l_hybrid_tddft,l_spin_flip_kernel,nbnd_occ,&
+                                 & n_trunc_bands,lrwfc,iuwfc,forces_inexact_krylov,do_inexact_krylov
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
 #if defined(__CUDA)
@@ -453,7 +434,7 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
   !
   ! Workspace
   !
-  LOGICAL :: lrpa,do_k2e
+  LOGICAL :: lrpa,do_k2e,do_k2d
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
   INTEGER, PARAMETER :: flks(2) = [2,1]
@@ -596,21 +577,17 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
      !
      IF(l_hybrid_tddft) THEN
         !
+        do_k2d = .TRUE.
+        !
         IF(do_inexact_krylov) THEN
-           !
-           IF(l_forces_inexact_krylov == 0 &
-           &.OR. l_forces_inexact_krylov == 1 &
-           &.OR. l_forces_inexact_krylov == 2) THEN
-              !
-              CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
-              !
+           IF(forces_inexact_krylov == 3 &
+           & .OR. forces_inexact_krylov == 4 &
+           & .OR. forces_inexact_krylov == 5) THEN
+              do_k2d = .FALSE.
            ENDIF
-           !
-        ELSE
-           !
-           CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
-           !
         ENDIF
+        !
+        IF(do_k2d) CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
         !
      ENDIF
      !

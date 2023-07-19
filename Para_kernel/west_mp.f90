@@ -26,6 +26,7 @@ MODULE west_mp
   PUBLIC :: west_mp_circ_shift
   PUBLIC :: west_mp_root_sum
   PUBLIC :: west_mp_get
+  PUBLIC :: west_mp_allgatherv
   !
   INTERFACE west_mp_alltoallv
     MODULE PROCEDURE alltoallv_i4_1d, alltoallv_i8_1d, alltoallv_r8_1d, &
@@ -46,6 +47,10 @@ MODULE west_mp
   !
   INTERFACE west_mp_get
     MODULE PROCEDURE get_c16_3d
+  END INTERFACE
+  !
+  INTERFACE west_mp_allgatherv
+    MODULE PROCEDURE allgatherv_gpu_c16_2d
   END INTERFACE
   !
   CONTAINS
@@ -321,6 +326,40 @@ MODULE west_mp
             CALL MPI_RECV(recv_buf,SIZE(recv_buf),MPI_DOUBLE_COMPLEX,sour,itag,comm,istat,ierr)
          ENDIF
       ENDIF
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE allgatherv_gpu_c16_2d(send_buf,send_count,recv_buf,recv_count,recv_displ,comm)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP), INTENT(IN) :: send_buf(:,:)
+      INTEGER, INTENT(IN) :: send_count
+      COMPLEX(DP), INTENT(OUT) :: recv_buf(:,:)
+      INTEGER, INTENT(IN) :: recv_count(:)
+      INTEGER, INTENT(IN) :: recv_displ(:)
+      INTEGER, INTENT(IN) :: comm
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      !
+#if defined(__GPU_MPI)
+      !$acc host_data use_device(send_buf,recv_buf)
+#else
+      !$acc update host(send_buf)
+#endif
+      CALL MPI_ALLGATHERV(send_buf,send_count,MPI_DOUBLE_COMPLEX,recv_buf,recv_count,recv_displ,&
+      & MPI_DOUBLE_COMPLEX,comm,ierr)
+#if defined(__GPU_MPI)
+      !$acc end host_data
+#else
+      !$acc update device(recv_buf)
+#endif
       !
     END SUBROUTINE
     !

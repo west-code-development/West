@@ -386,7 +386,7 @@ MODULE wbse_center
   REAL(DP),    ALLOCATABLE :: et_qp(:,:)
   COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
   REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: evc1_all(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvg_exc_forces(:,:,:)
   INTEGER,     ALLOCATABLE :: n_bse_idx(:)
   INTEGER,     ALLOCATABLE :: idx_matrix(:,:,:)
   INTEGER,     ALLOCATABLE :: tau_is_read(:,:,:)

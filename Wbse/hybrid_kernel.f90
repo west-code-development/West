@@ -24,7 +24,7 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
-  USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,n_trunc_bands,evc1_all
+  USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,n_trunc_bands,dvg_exc_forces
   USE exx,                   ONLY : exxalfa
   USE buffers,               ONLY : get_buffer
   USE distribution_center,   ONLY : kpt_pool,band_group
@@ -113,8 +113,9 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
            !
            ! product of evc1 and evc
            !
-           !$acc host_data use_device(evc1_all)
-           CALL double_invfft_gamma(dffts,npw,npwx,evc1_all(:,jbnd,ikq),evc_work(:,ibndp),psic,'Wave')
+           !$acc host_data use_device(dvg_exc_forces)
+           CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc_forces(:,jbnd,ikq),evc_work(:,ibndp),&
+           & psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(caux)
@@ -196,7 +197,7 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
-  USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,n_trunc_bands,evc1_all
+  USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,n_trunc_bands,dvg_exc_forces
   USE exx,                   ONLY : exxalfa
   USE buffers,               ONLY : get_buffer
   USE distribution_center,   ONLY : kpt_pool,band_group
@@ -291,8 +292,9 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
            !
            ! product of evc1 and evc
            !
-           !$acc host_data use_device(evc1_all)
-           CALL double_invfft_gamma(dffts,npw,npwx,evc1_all(:,jbnd,ikq),evc_work(:,ibndp),psic,'Wave')
+           !$acc host_data use_device(dvg_exc_forces)
+           CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc_forces(:,jbnd,ikq),evc_work(:,ibndp),&
+           & psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(caux)
@@ -313,8 +315,8 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(gaux,evc1_all,caux)
-           CALL double_invfft_gamma(dffts,npw,npwx,gaux,evc1_all(:,jbnd,ikq),caux,'Wave')
+           !$acc host_data use_device(gaux,dvg_exc_forces,caux)
+           CALL double_invfft_gamma(dffts,npw,npwx,gaux,dvg_exc_forces(:,jbnd,ikq),caux,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(caux)
@@ -382,7 +384,7 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
-  USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,n_trunc_bands,evc1_all
+  USE westcom,               ONLY : nbnd_occ,iuwfc,lrwfc,n_trunc_bands,dvg_exc_forces
   USE exx,                   ONLY : exxalfa
   USE buffers,               ONLY : get_buffer
   USE distribution_center,   ONLY : kpt_pool,band_group
@@ -477,8 +479,9 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
            !
            ! product of evc1 and evc1
            !
-           !$acc host_data use_device(evc1_all)
-           CALL double_invfft_gamma(dffts,npw,npwx,evc1_all(:,ibnd,iks_do),evc1_all(:,jbnd,iks_do),psic,'Wave')
+           !$acc host_data use_device(dvg_exc_forces)
+           CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc_forces(:,ibnd,iks_do),&
+           & dvg_exc_forces(:,jbnd,iks_do),psic,'Wave')
            !$acc end host_data
            !
            !$acc parallel loop present(caux)

@@ -40,6 +40,7 @@ SUBROUTINE wbse_davidson_diago ( )
                                  & wbse_refresh_with_vr_distr,wbse_precondition_dvg
   USE buffers,              ONLY : get_buffer
   USE wavefunctions,        ONLY : evc
+  USE wbse_bgrp,            ONLY : init_gather_bands
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,deallocate_bse_gpu,&
@@ -105,6 +106,8 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   band_group = idistribute()
   CALL band_group%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.,IDIST_BLK)
+  !
+  CALL init_gather_bands()
   !
   CALL wbse_memory_report() ! Before allocating I report the memory required.
   !

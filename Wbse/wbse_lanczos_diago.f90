@@ -31,6 +31,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
+  USE wbse_bgrp,            ONLY : init_gather_bands
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,&
@@ -102,6 +103,8 @@ SUBROUTINE wbse_lanczos_diago()
   !
   band_group = idistribute()
   CALL band_group%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.,IDIST_BLK)
+  !
+  CALL init_gather_bands()
   !
   CALL wbse_memory_report()
   !

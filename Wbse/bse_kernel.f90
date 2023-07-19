@@ -16,21 +16,17 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   !
   USE kinds,                 ONLY : DP
   USE fft_base,              ONLY : dffts
-  USE mp,                    ONLY : mp_sum
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma,double_fwfft_gamma
-  USE mp_global,             ONLY : inter_bgrp_comm
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
   USE exx,                   ONLY : exxalfa
   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_local_repr,u_matrix,idx_matrix,&
                                   & n_bse_idx,l_hybrid_tddft
   USE distribution_center,   ONLY : kpt_pool,band_group
   USE wbse_io,               ONLY : read_bse_pots_g
+  USE wbse_bgrp,             ONLY : gather_bands
 #if defined(__CUDA)
   USE wavefunctions_gpum,    ONLY : psic=>psic_d
-  USE west_gpu,              ONLY : raux1,raux2,caux1,caux2,gaux
-#if defined(__NCCL)
-  USE west_gpu,              ONLY : gpu_sum,gpu_inter_bgrp_comm
-#endif
+  USE west_gpu,              ONLY : raux1,raux2,caux1,caux2,caux3,gaux
   USE cublas
 #else
   USE wavefunctions,         ONLY : psic
@@ -51,14 +47,13 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   INTEGER :: ig,ir
   INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq,ikq_g,ikq_do
   INTEGER :: dffts_nnr,band_group_nloc,band_group_myoffset
-  INTEGER, PARAMETER :: flks(2) = [2,1]
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
-  COMPLEX(DP), ALLOCATABLE :: caux1(:,:),caux2(:,:),gaux(:)
+  COMPLEX(DP), ALLOCATABLE :: caux1(:,:),caux2(:,:),caux3(:,:),gaux(:)
 #endif
   COMPLEX(DP), PARAMETER :: zero = (0._DP,0._DP)
   COMPLEX(DP), PARAMETER :: one = (1._DP,0._DP)
-  COMPLEX(DP), PARAMETER :: mone = (-1._DP,0._DP)
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('bse_kernel')
@@ -75,7 +70,8 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   ALLOCATE(raux1(dffts%nnr))
   ALLOCATE(raux2(dffts%nnr))
   ALLOCATE(caux1(npwx,nbnd_do))
-  ALLOCATE(caux2(npwx,nbnd_do))
+  ALLOCATE(caux2(npwx,band_group%nlocx))
+  ALLOCATE(caux3(npwx,nbnd_do))
   ALLOCATE(gaux(npwx))
 #endif
   !
@@ -94,41 +90,20 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         ikq_g = kpt_pool%l2g(ikq)
      ENDIF
      !
+     CALL gather_bands(evc1(:,:,ikq),caux1)
+     !
      IF(l_local_repr) THEN
         !
-        !$acc host_data use_device(evc1,u_matrix,caux1)
-        CALL ZGEMM('N','N',npw,nbnd_do,band_group_nloc,one,evc1(1,1,ikq),npwx,u_matrix(1,1,ikq_do),&
-        & band_group_nloc,zero,caux1,npwx)
-        !$acc end host_data
-        !
-     ELSE
-        !
-        !$acc kernels present(caux1)
-        caux1(:,:) = zero
+        !$acc kernels present(caux3,caux1)
+        caux3(:,:) = caux1
         !$acc end kernels
         !
-        !$acc parallel loop collapse(2) present(caux1,evc1)
-        DO lbnd = 1, band_group_nloc
-           !
-           ! ibnd = band_group%l2g(lbnd)
-           !
-           DO ig = 1, npw
-              ibnd = band_group_myoffset+lbnd
-              caux1(ig,ibnd) = evc1(ig,lbnd,ikq)
-           ENDDO
-           !
-        ENDDO
-        !$acc end parallel
+        !$acc host_data use_device(caux3,u_matrix,caux1)
+        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,one,caux3,npwx,u_matrix(1,1,ikq_do),nbnd_do,zero,&
+        & caux1,npwx)
+        !$acc end host_data
         !
      ENDIF
-     !
-#if defined(__NCCL)
-     CALL gpu_sum(caux1,npwx*nbnd_do,gpu_inter_bgrp_comm)
-#else
-     !$acc update host(caux1)
-     CALL mp_sum(caux1,inter_bgrp_comm)
-     !$acc update device(caux1)
-#endif
      !
      ! LOOP OVER BANDS AT KPOINT
      !
@@ -197,7 +172,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
            !$acc end parallel
            !
            !$acc host_data use_device(caux2)
-           CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),caux2(:,my_jbnd),'Wave')
+           CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,lbnd),caux2(:,lbnd+1),'Wave')
            !$acc end host_data
            !
         ELSE
@@ -209,20 +184,12 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
            !$acc end parallel
            !
            !$acc host_data use_device(caux2)
-           CALL single_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),'Wave')
+           CALL single_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,lbnd),'Wave')
            !$acc end host_data
            !
         ENDIF
         !
      ENDDO
-     !
-#if defined(__NCCL)
-     CALL gpu_sum(caux2,npwx*nbnd_do,gpu_inter_bgrp_comm)
-#else
-     !$acc update host(caux2)
-     CALL mp_sum(caux2,inter_bgrp_comm)
-     !$acc update device(caux2)
-#endif
      !
      IF(l_hybrid_tddft) THEN
         !
@@ -234,28 +201,32 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
      ENDIF
      !
+     CALL gather_bands(caux2,caux1)
+     !
      IF(l_local_repr) THEN
         !
-        !$acc host_data use_device(caux2,u_matrix,bse_kd1)
-        CALL ZGEMM('N','C',npw,band_group_nloc,nbnd_do,mone,caux2,npwx,u_matrix(1,1,ikq_do),&
-        & band_group_nloc,one,bse_kd1,npwx)
+        !$acc kernels present(caux3,caux1)
+        caux3(:,:) = caux1
+        !$acc end kernels
+        !
+        !$acc host_data use_device(caux3,u_matrix,caux1)
+        CALL ZGEMM('N','C',npw,nbnd_do,nbnd_do,one,caux3,npwx,u_matrix(1,1,ikq_do),nbnd_do,zero,&
+        & caux1,npwx)
         !$acc end host_data
         !
-     ELSE
-        !
-        !$acc parallel loop collapse(2) present(bse_kd1,caux2)
-        DO lbnd = 1, band_group_nloc
-           !
-           ! ibnd = band_group%l2g(lbnd)
-           !
-           DO ig = 1, npw
-              ibnd = band_group_myoffset+lbnd
-              bse_kd1(ig,lbnd) = bse_kd1(ig,lbnd)-caux2(ig,ibnd)
-           ENDDO
-        ENDDO
-        !$acc end parallel
-        !
      ENDIF
+     !
+     !$acc parallel loop collapse(2) present(bse_kd1,caux1)
+     DO lbnd = 1, band_group_nloc
+        !
+        ! ibnd = band_group%l2g(lbnd)
+        !
+        DO ig = 1, npw
+           ibnd = band_group_myoffset+lbnd
+           bse_kd1(ig,lbnd) = bse_kd1(ig,lbnd)-caux1(ig,ibnd)
+        ENDDO
+     ENDDO
+     !$acc end parallel
      !
   ENDDO
   !
@@ -264,6 +235,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   DEALLOCATE(raux2)
   DEALLOCATE(caux1)
   DEALLOCATE(caux2)
+  DEALLOCATE(caux3)
   DEALLOCATE(gaux)
 #endif
   !

@@ -140,9 +140,7 @@ SUBROUTINE wbse_setup()
   !
   CALL wbse_dv_setup(l_bse)
   !
-  IF(l_spin_flip .AND. l_spin_flip_kernel) THEN
-     CALL wbse_sf_kernel_setup()
-  ENDIF
+  IF(l_spin_flip .AND. l_spin_flip_kernel) CALL wbse_sf_kernel_setup()
   !
   CALL my_mkdir(wbse_save_dir)
   !
@@ -151,9 +149,7 @@ SUBROUTINE wbse_setup()
   !
   IF(kpt_pool%nloc /= nks) CALL errore('wbse_init_setup','unexpected kpt_pool init error',1)
   !
-  IF(l_qp_correction) THEN
-     CALL read_qp_eigs()
-  ENDIF
+  IF(l_qp_correction) CALL read_qp_eigs()
   !
   ! read ovl_matrix and u_matrix, and compute macroscopic term, if any
   !
@@ -188,7 +184,6 @@ SUBROUTINE bse_start()
   INTEGER :: lbnd,ibnd,jbnd,my_ibnd,nbnd_do,nbndval
   INTEGER :: ipair,do_idx
   REAL(DP) :: ovl_value
-  COMPLEX(DP), ALLOCATABLE :: u_tmp(:,:)
   !
   ! the divergence term in Fock potential
   !
@@ -209,24 +204,16 @@ SUBROUTINE bse_start()
   !
   IF(l_local_repr) THEN
      !
-     ALLOCATE(u_tmp(nbnd_do,nbnd_do))
-     ALLOCATE(u_matrix(band_group%nloc,nbnd_do,kpt_pool%nloc))
+     ALLOCATE(u_matrix(nbnd_do,nbnd_do,kpt_pool%nloc))
      ALLOCATE(ovl_matrix(nbnd_do,nbnd_do,kpt_pool%nloc))
      !
      DO is = 1,kpt_pool%nloc
         !
         is_g = kpt_pool%l2g(is)
         !
-        CALL read_umatrix_and_omatrix(nbnd_do,is_g,u_tmp,ovl_matrix(:,:,is))
-        !
-        DO lbnd = 1,band_group%nloc
-           ibnd = band_group%l2g(lbnd)
-           u_matrix(lbnd,:,is) = u_tmp(ibnd,:)
-        ENDDO
+        CALL read_umatrix_and_omatrix(nbnd_do,is_g,u_matrix(:,:,is),ovl_matrix(:,:,is))
         !
      ENDDO
-     !
-     DEALLOCATE(u_tmp)
      !
   ENDIF
   !

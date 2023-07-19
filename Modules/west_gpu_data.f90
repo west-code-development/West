@@ -96,13 +96,14 @@ MODULE west_gpu_data
    REAL(DP), ALLOCATABLE :: raux1(:)
    REAL(DP), ALLOCATABLE :: raux2(:)
    COMPLEX(DP), PINNED, ALLOCATABLE :: caux1(:,:)
-   COMPLEX(DP), PINNED, ALLOCATABLE :: caux2(:,:)
+   COMPLEX(DP), ALLOCATABLE :: caux2(:,:)
+   COMPLEX(DP), PINNED, ALLOCATABLE :: caux3(:,:)
    COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
    COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
    COMPLEX(DP), ALLOCATABLE :: psic2(:)
    COMPLEX(DP), PINNED, ALLOCATABLE :: dvaux(:,:)
    COMPLEX(DP), ALLOCATABLE :: dvhart(:)
-   !$acc declare device_resident(factors,raux1,raux2,hevc1,psic2,dvhart)
+   !$acc declare device_resident(factors,raux1,raux2,caux2,hevc1,psic2,dvhart)
    COMPLEX(DP), PINNED, ALLOCATABLE :: gaux(:)
    !
    ! Workspace
@@ -707,9 +708,10 @@ MODULE west_gpu_data
       ALLOCATE(raux1(dffts%nnr))
       ALLOCATE(raux2(dffts%nnr))
       ALLOCATE(caux1(npwx,nbndval0x-n_trunc_bands))
-      ALLOCATE(caux2(npwx,nbndval0x-n_trunc_bands))
+      ALLOCATE(caux2(npwx,nbndlocx))
+      ALLOCATE(caux3(npwx,nbndval0x-n_trunc_bands))
       ALLOCATE(gaux(npwx))
-      !$acc enter data create(caux1,caux2,gaux)
+      !$acc enter data create(caux1,caux3,gaux)
    ENDIF
    ALLOCATE(hevc1(npwx*npol,nbndlocx))
    ALLOCATE(dvrs(dffts%nnr,nspin))
@@ -753,8 +755,11 @@ MODULE west_gpu_data
       DEALLOCATE(caux1)
    ENDIF
    IF(ALLOCATED(caux2)) THEN
-      !$acc exit data delete(caux2)
       DEALLOCATE(caux2)
+   ENDIF
+   IF(ALLOCATED(caux3)) THEN
+      !$acc exit data delete(caux3)
+      DEALLOCATE(caux3)
    ENDIF
    IF(ALLOCATED(gaux)) THEN
       !$acc exit data delete(gaux)

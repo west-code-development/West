@@ -246,7 +246,7 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
   USE pwcom,                ONLY : npwx
   USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,n_trunc_bands
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,nbgrp,my_bgrp_id
+  USE mp_global,            ONLY : inter_image_comm,my_image_id
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -268,7 +268,7 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
   !
   ! Workspace
   !
-  INTEGER :: ig, ibnd, nbndval, nbnd_do, lbnd, iks
+  INTEGER :: ig, ibnd, nbndval, nbnd_do, lbnd, iks, band_group_myoffset
   REAL(DP):: tmp,tmp_abs,tmp_sgn
   REAL(DP), ALLOCATABLE :: g2kin_save(:,:)
   REAL(DP), PARAMETER :: minimum = 1._DP
@@ -278,6 +278,8 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
 #else
   CALL start_clock('precd_cg')
 #endif
+  !
+  band_group_myoffset = band_group%myoffset
   !
   !$acc kernels present(px)
   px(:,:,:) = (0._DP, 0._DP)
@@ -309,7 +311,7 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
            !
            ! ibnd = band_group%l2g(lbnd)
            !
-           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           ibnd = band_group_myoffset+lbnd
            !
            IF(turn_shift) THEN
               tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks)

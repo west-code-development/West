@@ -15,12 +15,12 @@ SUBROUTINE wbse_dot(x,y,m,dotp)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm,nbgrp,my_bgrp_id
+  USE mp_global,            ONLY : inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE pwcom,                ONLY : wg,nspin,npw,npwx,ngk
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands
-  USE distribution_center,  ONLY : kpt_pool
+  USE distribution_center,  ONLY : kpt_pool,band_group
   !
   IMPLICIT NONE
   !
@@ -33,8 +33,10 @@ SUBROUTINE wbse_dot(x,y,m,dotp)
   !
   ! Workspace
   !
-  INTEGER :: ig, lbnd, ibnd, iks, iks_g, nbndval
+  INTEGER :: ig, lbnd, ibnd, iks, iks_g, nbndval, band_group_myoffset
   REAL(DP) :: tmp_r
+  !
+  band_group_myoffset = band_group%myoffset
   !
   dotp(:) = (0._DP,0._DP)
   !
@@ -48,9 +50,12 @@ SUBROUTINE wbse_dot(x,y,m,dotp)
      !$acc parallel loop collapse(2) reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
      DO lbnd = 1, m
         DO ig = 1, npw
-           ibnd = nbgrp*(lbnd-1) + my_bgrp_id + 1 + n_trunc_bands
+           !
+           ibnd = band_group_myoffset+lbnd+n_trunc_bands
+           !
            tmp_r = tmp_r + wg(ibnd,iks)*2._DP*(REAL(x(ig,lbnd,iks),KIND=DP)*REAL(y(ig,lbnd,iks),KIND=DP) &
            & + AIMAG(x(ig,lbnd,iks))*AIMAG(y(ig,lbnd,iks)))
+           !
         ENDDO
      ENDDO
      !$acc end parallel
@@ -58,8 +63,11 @@ SUBROUTINE wbse_dot(x,y,m,dotp)
      IF(gstart == 2) THEN
         !$acc parallel loop reduction(+:tmp_r) present(wg,x,y) copy(tmp_r)
         DO lbnd = 1, m
-           ibnd = nbgrp*(lbnd-1) + my_bgrp_id + 1 + n_trunc_bands
+           !
+           ibnd = band_group_myoffset+lbnd+n_trunc_bands
+           !
            tmp_r = tmp_r - wg(ibnd,iks)*REAL(x(1,lbnd,iks),KIND=DP)*REAL(y(1,lbnd,iks),KIND=DP)
+           !
         ENDDO
         !$acc end parallel
      ENDIF

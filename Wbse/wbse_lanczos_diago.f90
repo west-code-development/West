@@ -28,7 +28,7 @@ SUBROUTINE wbse_lanczos_diago()
   USE wavefunctions,        ONLY : evc
   USE buffers,              ONLY : get_buffer
   USE distribution_center,  ONLY : pert,kpt_pool,band_group
-  USE class_idistribute,    ONLY : idistribute
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
 #if defined(__CUDA)
@@ -101,7 +101,7 @@ SUBROUTINE wbse_lanczos_diago()
   IF(nbgrp > nbndval0x-n_trunc_bands) CALL errore('wbse_lanczos_diago','nbgrp>nbndval',1)
   !
   band_group = idistribute()
-  CALL band_group%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.)
+  CALL band_group%init(nbndval0x-n_trunc_bands,'b','nbndval',.TRUE.,IDIST_BLK)
   !
   CALL wbse_memory_report()
   !

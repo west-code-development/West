@@ -18,7 +18,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   USE fft_base,              ONLY : dffts
   USE mp,                    ONLY : mp_sum
   USE fft_at_gamma,          ONLY : single_fwfft_gamma,double_invfft_gamma,double_fwfft_gamma
-  USE mp_global,             ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id
+  USE mp_global,             ONLY : inter_bgrp_comm
   USE pwcom,                 ONLY : npw,npwx,isk,ngk
   USE exx,                   ONLY : exxalfa
   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_local_repr,u_matrix,idx_matrix,&
@@ -50,7 +50,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   INTEGER :: ibnd,jbnd,my_ibnd,my_jbnd,lbnd,ipair
   INTEGER :: ig,ir
   INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq,ikq_g,ikq_do
-  INTEGER :: dffts_nnr,band_group_nloc
+  INTEGER :: dffts_nnr,band_group_nloc,band_group_myoffset
   INTEGER, PARAMETER :: flks(2) = [2,1]
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
@@ -69,6 +69,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   nbnd_do = nbndval0x-n_trunc_bands
   dffts_nnr = dffts%nnr
   band_group_nloc = band_group%nloc
+  band_group_myoffset = band_group%myoffset
   !
 #if !defined(__CUDA)
   ALLOCATE(raux1(dffts%nnr))
@@ -112,7 +113,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
            ! ibnd = band_group%l2g(lbnd)
            !
            DO ig = 1, npw
-              ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+              ibnd = band_group_myoffset+lbnd
               caux1(ig,ibnd) = evc1(ig,lbnd,ikq)
            ENDDO
            !
@@ -141,6 +142,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
         my_ibnd = band_group%l2g(lbnd)
         my_jbnd = band_group%l2g(lbnd+1)
+        IF(lbnd == band_group%nloc) my_jbnd = -1
         !
         !$acc kernels present(raux1,raux2)
         raux1(:) = 0._DP
@@ -187,27 +189,29 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         ! Back to reciprocal space
         !
         IF(lbnd < band_group%nloc) THEN
+           !
            !$acc parallel loop present(raux1,raux2)
            DO ir = 1, dffts_nnr
               psic(ir) = CMPLX(raux1(ir),raux2(ir),KIND=DP)
            ENDDO
            !$acc end parallel
+           !
+           !$acc host_data use_device(caux2)
+           CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),caux2(:,my_jbnd),'Wave')
+           !$acc end host_data
+           !
         ELSE
+           !
            !$acc parallel loop present(raux1)
            DO ir = 1, dffts_nnr
               psic(ir) = CMPLX(raux1(ir),KIND=DP)
            ENDDO
            !$acc end parallel
-        ENDIF
-        !
-        IF(lbnd < band_group%nloc) THEN
-           !$acc host_data use_device(caux2)
-           CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),caux2(:,my_jbnd),'Wave')
-           !$acc end host_data
-        ELSE
+           !
            !$acc host_data use_device(caux2)
            CALL single_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,my_ibnd),'Wave')
            !$acc end host_data
+           !
         ENDIF
         !
      ENDDO
@@ -245,7 +249,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
            ! ibnd = band_group%l2g(lbnd)
            !
            DO ig = 1, npw
-              ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+              ibnd = band_group_myoffset+lbnd
               bse_kd1(ig,lbnd) = bse_kd1(ig,lbnd)-caux2(ig,ibnd)
            ENDDO
         ENDDO

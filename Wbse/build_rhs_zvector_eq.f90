@@ -382,8 +382,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id,&
-                                 & intra_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,intra_bgrp_comm
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
@@ -407,7 +406,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   !
   LOGICAL :: lrpa
   INTEGER :: ibnd,ibndp,jbnd,jbndp,kbnd,kbndp,iks,iks_do,ir,ig,nbndval,nbnd_do,lbnd,flnbndval
-  INTEGER :: dffts_nnr
+  INTEGER :: dffts_nnr,band_group_myoffset
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),aux_g(:,:),evc_copy(:,:)
   !$acc declare device_resident(z_rhs_vec_part2,aux_g,evc_copy)
@@ -427,6 +426,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
 #endif
   !
   dffts_nnr = dffts%nnr
+  band_group_myoffset = band_group%myoffset
   !
   ALLOCATE(z_rhs_vec_part2(npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(aux_g(npwx*npol,2))
@@ -649,7 +649,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !
               ! ibnd = band_group%l2g(lbnd)
               !
-              ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+              ibnd = band_group_myoffset+lbnd
               !
               z_rhs_vec_part2(ig,lbnd,iks) = z_rhs_vec_part2(ig,lbnd,iks)+dpcpart(ig,ibnd)
               !
@@ -922,7 +922,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  !
                  ! ibnd = band_group%l2g(lbnd)
                  !
-                 ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+                 ibnd = band_group_myoffset+lbnd
                  !
                  z_rhs_vec_part2(ig,lbnd,iks) = z_rhs_vec_part2(ig,lbnd,iks)+dpcpart(ig,ibnd)
                  !
@@ -1437,8 +1437,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,nbgrp,my_bgrp_id,&
-                                 & intra_bgrp_comm
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,intra_bgrp_comm
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -1459,9 +1458,8 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   !
   ! Workspace
   !
-  INTEGER :: ig,lbnd,jbnd,jbndp,iks_do,nbnd_do
-  INTEGER :: ibnd,nbndval,flnbndval
-  INTEGER :: iks
+  INTEGER :: ig,lbnd,ibnd,jbnd,jbndp,iks,iks_do,nbnd_do,nbndval,flnbndval
+  INTEGER :: band_group_myoffset
   REAL(DP) :: reduce
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part4(:,:,:),tmp_vec(:,:)
@@ -1479,6 +1477,8 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
 #else
   CALL start_clock('zvec4')
 #endif
+  !
+  band_group_myoffset = band_group%myoffset
   !
   ALLOCATE(z_rhs_vec_part4(npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
@@ -1606,7 +1606,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
            !
            ! ibnd = band_group%l2g(lbnd)
            !
-           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           ibnd = band_group_myoffset+lbnd
            !
            z_rhs_vec_part4(ig,lbnd,iks) = z_rhs_vec_part4(ig,lbnd,iks)+dpcpart(ig,ibnd)
            !

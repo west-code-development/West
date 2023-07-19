@@ -654,7 +654,6 @@ MODULE wbse_tools
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : nbgrp,my_bgrp_id
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
@@ -678,7 +677,7 @@ MODULE wbse_tools
       !
       INTEGER :: il1,ig1,ig,lbnd,ibnd,iks,iks_do,nbndval
       INTEGER :: il1_start,il1_end
-      INTEGER :: kpt_pool_nloc
+      INTEGER :: kpt_pool_nloc,band_group_myoffset
       REAL(DP):: tmp,tmp_abs,tmp_sgn
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       REAL(DP),ALLOCATABLE :: g2kin_save(:,:)
@@ -692,6 +691,7 @@ MODULE wbse_tools
 #endif
       !
       kpt_pool_nloc = kpt_pool%nloc
+      band_group_myoffset = band_group%myoffset
       !
       ALLOCATE(g2kin_save(npwx,kpt_pool%nloc))
       !$acc enter data create(g2kin_save)
@@ -752,7 +752,7 @@ MODULE wbse_tools
                   !
                   ! ibnd = band_group%l2g(lbnd)
                   !
-                  ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+                  ibnd = band_group_myoffset+lbnd
                   !
                   IF(turn_shift) THEN
                      tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks_do)

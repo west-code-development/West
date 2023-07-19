@@ -178,7 +178,7 @@ SUBROUTINE bse_start()
   USE types_coulomb,        ONLY : pot3D
   USE wbse_io,              ONLY : read_umatrix_and_omatrix
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE class_idistribute,    ONLY : idistribute
+  USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   !
   IMPLICIT NONE
   !
@@ -203,7 +203,7 @@ SUBROUTINE bse_start()
   nbnd_do = nbndval0x-n_trunc_bands
   !
   band_group = idistribute()
-  CALL band_group%init(nbnd_do,'b','nbndval',.FALSE.)
+  CALL band_group%init(nbnd_do,'b','nbndval',.FALSE.,IDIST_BLK)
   !
   ! allocate and read unitary matrix and overlap matrix, if any
   !

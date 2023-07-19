@@ -24,7 +24,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE pwcom,                ONLY : npw,npwx,current_k,current_spin,isk,lsda,xk,ngk,igk_k,nbnd
   USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_bcast
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,nbgrp,my_bgrp_id
+  USE mp_global,            ONLY : inter_image_comm,my_image_id
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
@@ -60,7 +60,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   !
   LOGICAL :: lrpa,do_k1e,do_k1d
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
-  INTEGER :: dffts_nnr
+  INTEGER :: dffts_nnr,band_group_myoffset
   REAL(DP) :: factor
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: factors(:)
@@ -76,6 +76,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
 #endif
   !
   dffts_nnr = dffts%nnr
+  band_group_myoffset = band_group%myoffset
   !
   !$acc kernels present(evc1_new)
   evc1_new(:,:,:) = (0._DP,0._DP)
@@ -299,7 +300,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            !
            ! ibnd = band_group%l2g(lbnd)+n_trunc_bands
            !
-           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1+n_trunc_bands
+           ibnd = band_group_myoffset+lbnd+n_trunc_bands
            !
            factors(lbnd) = et_qp(ibnd,iks_do)+factor
            !
@@ -313,7 +314,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            !
            ! ibnd = band_group%l2g(lbnd)+n_trunc_bands
            !
-           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1+n_trunc_bands
+           ibnd = band_group_myoffset+lbnd+n_trunc_bands
            !
            factors(lbnd) = et(ibnd,iks_do)+factor
            !

@@ -13,7 +13,7 @@
 SUBROUTINE collect_evc1(evc1)
   !
   USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : nbgrp,my_bgrp_id
+  USE mp_global,            ONLY : inter_bgrp_comm
   USE pwcom,                ONLY : npwx
   USE westcom,              ONLY : evc1_all,nbndval0x,n_trunc_bands
   USE distribution_center,  ONLY : kpt_pool,band_group
@@ -29,11 +29,12 @@ SUBROUTINE collect_evc1(evc1)
   COMPLEX(DP), INTENT(IN) :: evc1(npwx,band_group%nlocx,kpt_pool%nloc)
   !
   INTEGER :: iks,lbnd,ibnd,ig,nbnd_do
-  INTEGER :: kpt_pool_nloc,band_group_nloc
+  INTEGER :: kpt_pool_nloc,band_group_nloc,band_group_myoffset
   !
   nbnd_do = nbndval0x-n_trunc_bands
   kpt_pool_nloc = kpt_pool%nloc
   band_group_nloc = band_group%nloc
+  band_group_myoffset = band_group%myoffset
   !
   IF(.NOT. ALLOCATED(evc1_all)) THEN
      ALLOCATE(evc1_all(npwx,nbnd_do,kpt_pool_nloc))
@@ -48,7 +49,7 @@ SUBROUTINE collect_evc1(evc1)
   DO iks = 1,kpt_pool_nloc
      DO lbnd = 1,band_group_nloc
         DO ig = 1,npwx
-           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
+           ibnd = band_group_myoffset+lbnd
            evc1_all(ig,ibnd,iks) = evc1(ig,lbnd,iks)
         ENDDO
      ENDDO

@@ -24,6 +24,7 @@ bse_kernel.o \
 build_rhs_zvector_eq.o \
 calc_tau.o \
 check_ovl_wfc.o \
+collect_evc1.o \
 hybrid_kernel.o \
 lanczos_restart.o \
 solve_zvector_eq_cg.o \

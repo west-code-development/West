@@ -39,9 +39,7 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   z_rhs_vec = (0._DP,0._DP)
   !$acc end kernels
   !
-  ! part1: d < a | D | a > / d | v >
-  !
-  CALL rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
+  ! part1: moved to the end
   !
   ! part2: d < a | K1e | a > / d | v >
   !
@@ -58,6 +56,10 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   ELSEIF(l_bse) THEN
      CALL errore('build_rhs_zvector_eq', 'BSE forces have not been implemented', 1)
   ENDIF
+  !
+  ! part1: d < a | D | a > / d | v >
+  !
+  CALL rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
   !
   CALL stop_clock('build_zvec')
   !
@@ -125,10 +127,13 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   !$acc end kernels
   !
   IF(l_bse .OR. l_hybrid_tddft) THEN
+     !
      ALLOCATE(tmp_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc))
+     !
      !$acc kernels present(tmp_vec)
      tmp_vec(:,:,:) = (0._DP,0._DP)
      !$acc end kernels
+     !
   ENDIF
   !
   ! Compute drhox
@@ -249,11 +254,50 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         !
         !$acc host_data use_device(dvgdvg_mat,tmp_vec)
         CALL DGEMM('N','N',2*npwx*npol,nbnd_do,nbndval-n_trunc_bands,-1._DP,evc_work(1,1+n_trunc_bands),&
-        & 2*npwx*npol,dvgdvg_mat(1,1,iks_do),nbndval0x-n_trunc_bands,1._DP,tmp_vec(1,1,iks),2*npwx*npol)
+        & 2*npwx*npol,dvgdvg_mat(1,1,iks_do),nbndval0x-n_trunc_bands,0._DP,tmp_vec(1,1,iks),2*npwx*npol)
         !$acc end host_data
+        !
+     ENDIF
+     !
+  ENDDO
+  !
+  IF(l_hybrid_tddft) THEN
+     !
+     DO iks = 1,kpt_pool%nloc
+        !
+        IF(lsda) current_spin = isk(iks)
         !
         CALL bse_kernel_gamma(current_spin,tmp_vec,z_rhs_vec_part1(:,:,iks),.FALSE.)
         !
+     ENDDO
+     !
+  ENDIF
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     nbndval = nbnd_occ(iks)
+     !
+     nbnd_do = 0
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
+     ENDDO
+     !
+     npw = ngk(iks)
+     !
+     ! ... read in GS wavefunctions iks
+     !
+     IF(kpt_pool%nloc > 1) THEN
+#if defined(__CUDA)
+        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
+#else
+        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc_work,0,inter_image_comm)
+#endif
      ENDIF
      !
      IF(gstart == 2) THEN
@@ -275,7 +319,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
      !$acc parallel loop collapse(2) present(z_rhs_vec,z_rhs_vec_part1)
      DO lbnd = 1,nbnd_do
         DO ig = 1,npw
-           z_rhs_vec(ig,lbnd,iks) = -z_rhs_vec_part1(ig,lbnd,iks)
+           z_rhs_vec(ig,lbnd,iks) = z_rhs_vec(ig,lbnd,iks)-z_rhs_vec_part1(ig,lbnd,iks)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -1514,7 +1558,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      !
      ! Compute the first part
      !
-     CALL hybrid_kernel_term4(current_spin, dvg_exc_tmp, z_rhs_vec_part4(:,:,iks), l_spin_flip)
+     CALL hybrid_kernel_term4(current_spin,dvg_exc_tmp,z_rhs_vec_part4(:,:,iks),l_spin_flip)
      !
      ! Compute the second part: dv_vv_mat
      !
@@ -1522,7 +1566,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      tmp_vec(:,:) = (0._DP,0._DP)
      !$acc end kernels
      !
-     CALL bse_kernel_gamma(current_spin, dvg_exc_tmp, tmp_vec, l_spin_flip)
+     CALL bse_kernel_gamma(current_spin,dvg_exc_tmp,tmp_vec,l_spin_flip)
      !
      !$acc parallel vector_length(1024) present(tmp_vec,dv_vv_mat)
      !$acc loop collapse(2)

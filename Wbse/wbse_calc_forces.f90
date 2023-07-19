@@ -54,6 +54,8 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   ALLOCATE( dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc) )
   ALLOCATE( drhox1(dffts%nnr, nspin) )
   !
+  CALL collect_evc1( dvg_exc_tmp )
+  !
   ! drhox1
   !
   CALL wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
@@ -542,9 +544,9 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   USE pwcom,                ONLY : ngk,npwx,npw
   USE mp,                   ONLY : mp_sum
   USE noncollin_module,     ONLY : npol
-  USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
+  USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip,evc1_all
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_global,            ONLY : inter_bgrp_comm,nbgrp,my_bgrp_id,intra_bgrp_comm
+  USE mp_global,            ONLY : intra_bgrp_comm
   USE io_push,              ONLY : io_push_title
   !
   IMPLICIT NONE
@@ -558,7 +560,6 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   !
   INTEGER :: iks, iks_do, nbndval, nbnd_do, lbnd, ibnd, ig
   REAL(DP) :: reduce
-  COMPLEX(DP), ALLOCATABLE :: dvg_exc_tmp_copy(:,:)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
@@ -572,9 +573,6 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   !$acc kernels present(dvgdvg_mat)
   dvgdvg_mat(:,:,:) = 0._DP
   !$acc end kernels
-  !
-  ALLOCATE( dvg_exc_tmp_copy(npwx*npol, nbndval0x-n_trunc_bands) )
-  !$acc enter data create(dvg_exc_tmp_copy)
   !
   DO iks = 1, kpt_pool%nloc
      !
@@ -594,28 +592,7 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
         IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
-     !$acc kernels present(dvg_exc_tmp_copy)
-     dvg_exc_tmp_copy(:,:) = (0._DP,0._DP)
-     !$acc end kernels
-     !
-     !$acc parallel loop collapse(2) present(dvg_exc_tmp_copy,dvg_exc_tmp)
-     DO lbnd = 1, nbnd_do
-        DO ig = 1, npwx
-           !
-           ! ibnd = band_group%l2g(lbnd)
-           !
-           ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
-           !
-           dvg_exc_tmp_copy(ig,ibnd) = dvg_exc_tmp(ig,lbnd,iks)
-        ENDDO
-     ENDDO
-     !$acc end parallel
-     !
-     !$acc update host(dvg_exc_tmp_copy)
-     CALL mp_sum(dvg_exc_tmp_copy,inter_bgrp_comm)
-     !$acc update device(dvg_exc_tmp_copy)
-     !
-     !$acc parallel present(dvgdvg_mat,dvg_exc_tmp_copy,dvg_exc_tmp)
+     !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
      !$acc loop collapse(2)
      DO lbnd = 1, nbnd_do
         DO ibnd = 1, nbndval - n_trunc_bands
@@ -623,8 +600,8 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
            reduce = 0._DP
            !$acc loop reduction(+:reduce)
            DO ig = 1, npw
-              reduce = reduce + REAL(dvg_exc_tmp_copy(ig,ibnd),KIND=DP)*REAL(dvg_exc_tmp(ig,lbnd,iks),KIND=DP) &
-              &               + AIMAG(dvg_exc_tmp_copy(ig,ibnd))*AIMAG(dvg_exc_tmp(ig,lbnd,iks))
+              reduce = reduce + REAL(evc1_all(ig,ibnd,iks),KIND=DP)*REAL(dvg_exc_tmp(ig,lbnd,iks),KIND=DP) &
+              &               + AIMAG(evc1_all(ig,ibnd,iks))*AIMAG(dvg_exc_tmp(ig,lbnd,iks))
            ENDDO
            !
            dvgdvg_mat(ibnd,lbnd,iks) = 2._DP * reduce
@@ -634,12 +611,12 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
      !$acc end parallel
      !
      IF(gstart == 2) THEN
-        !$acc parallel present(dvgdvg_mat,dvg_exc_tmp_copy,dvg_exc_tmp)
+        !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
         !$acc loop collapse(2)
         DO lbnd = 1, nbnd_do
            DO ibnd = 1, nbndval - n_trunc_bands
               dvgdvg_mat(ibnd,lbnd,iks) = dvgdvg_mat(ibnd,lbnd,iks) &
-              & - REAL(dvg_exc_tmp_copy(1,ibnd),KIND=DP) * REAL(dvg_exc_tmp(1,lbnd,iks),KIND=DP)
+              & - REAL(evc1_all(1,ibnd,iks),KIND=DP) * REAL(dvg_exc_tmp(1,lbnd,iks),KIND=DP)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -650,9 +627,6 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   !$acc host_data use_device(dvgdvg_mat)
   CALL mp_sum(dvgdvg_mat,intra_bgrp_comm)
   !$acc end host_data
-  !
-  !$acc exit data delete(dvg_exc_tmp_copy)
-  DEALLOCATE( dvg_exc_tmp_copy )
   !
 #if defined(__CUDA)
   CALL stop_clock_gpu('dvgdvg')

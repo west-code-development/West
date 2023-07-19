@@ -89,6 +89,8 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   CALL west_apply_liouvillian(z_out, r_new, .FALSE.)
   !
+  CALL collect_evc1(z_out)
+  !
   CALL west_apply_liouvillian_btda(z_out, r_new, .FALSE.)
   !
   !$acc parallel loop collapse(3) present(r_new,z_rhs)
@@ -125,6 +127,8 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
      time_spent(1) = get_clock('zvec_cg')
      !
      CALL west_apply_liouvillian(p, Ap, .FALSE.)
+     !
+     CALL collect_evc1(p)
      !
      CALL west_apply_liouvillian_btda(p, Ap, .FALSE.)
      !

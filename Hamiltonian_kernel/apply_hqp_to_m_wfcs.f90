@@ -28,9 +28,6 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
   USE wvfct,                ONLY : et_host=>et
   USE wvfct_gpum,           ONLY : et_work=>et_d
   USE west_gpu,             ONLY : ps_r,ps_c
-#if defined(__NCCL)
-  USE west_gpu,             ONLY : gpu_sum,gpu_intra_bgrp_comm
-#endif
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc
@@ -79,13 +76,9 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      CALL glbrak_gamma(evc,f,ps_r,npw,npwx,nbnd,m,nbnd,npol)
      !$acc end host_data
      !
-#if defined(__NCCL)
-     CALL gpu_sum(ps_r,nbnd*m,gpu_intra_bgrp_comm)
-#else
      !$acc host_data use_device(ps_r)
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !$acc end host_data
-#endif
      !
      !$acc parallel loop collapse(2) present(ps_r,et_qp)
      DO ibnd = 1,m
@@ -110,13 +103,9 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      CALL glbrak_k(evc,f,ps_c,npw,npwx,nbnd,m,nbnd,npol)
      !$acc end host_data
      !
-#if defined(__NCCL)
-     CALL gpu_sum(ps_c,nbnd*m,gpu_intra_bgrp_comm)
-#else
      !$acc host_data use_device(ps_c)
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !$acc end host_data
-#endif
      !
      !$acc parallel loop collapse(2) present(ps_c,et_qp)
      DO ibnd = 1,m

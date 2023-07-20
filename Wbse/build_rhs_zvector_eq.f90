@@ -387,9 +387,6 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
-#if defined(__NCCL)
-  USE west_gpu,             ONLY : gpu_sum,gpu_inter_bgrp_comm
-#endif
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic
@@ -451,9 +448,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
      !
      CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.FALSE.)
      !
-#if !defined(__NCCL)
      !$acc update device(dvrs)
-#endif
      !
      lrpa = l_bse
      !
@@ -635,13 +630,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
         & 2*npwx*npol,dv_vv_mat,nbndval0x-n_trunc_bands,0._DP,dpcpart,2*npwx*npol)
         !$acc end host_data
         !
-#if defined(__NCCL)
-        CALL gpu_sum(dpcpart,npwx*npol*(nbndval-n_trunc_bands),gpu_inter_bgrp_comm)
-#else
         !$acc update host(dpcpart)
         CALL mp_sum(dpcpart,inter_bgrp_comm)
         !$acc update device(dpcpart)
-#endif
         !
         !$acc parallel loop collapse(2) present(z_rhs_vec_part2,dpcpart)
         DO lbnd = 1,nbnd_do
@@ -685,9 +676,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
         !
         CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.TRUE.)
         !
-#if !defined(__NCCL)
         !$acc update device(dvrs)
-#endif
         !
         CALL wbse_dv_of_drho_sf(dvrs)
         !
@@ -1207,10 +1196,6 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   !
   CALL wbse_calc_dens(dvg_exc_tmp,dvrs,.FALSE.)
   !
-#if defined(__NCCL)
-  !$acc update host(dvrs)
-#endif
-  !
   IF(nspin == 1) THEN
      !
      rdvrs(:,1) = REAL(dvrs(:,1),KIND=DP)
@@ -1325,10 +1310,6 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   !
   CALL wbse_calc_dens(dvg_exc_tmp,drho_sf,.TRUE.)
   !
-#if defined(__NCCL)
-  !$acc update host(drho_sf)
-#endif
-  !
   DO ir = 1,dffts%nnr
      tmp1 = REAL(drho_sf(ir,1),KIND=DP)**2
      tmp2 = REAL(drho_sf(ir,2),KIND=DP)**2
@@ -1441,9 +1422,6 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
-#if defined(__NCCL)
-  USE west_gpu,             ONLY : gpu_sum,gpu_inter_bgrp_comm
-#endif
   USE cublas
 #else
   USE wavefunctions,        ONLY : evc_work=>evc
@@ -1584,13 +1562,9 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      & 2*npwx*npol,dv_vv_mat,nbndval0x-n_trunc_bands,0._DP,dpcpart,2*npwx*npol)
      !$acc end host_data
      !
-#if defined(__NCCL)
-     CALL gpu_sum(dpcpart,npwx*npol*(nbndval-n_trunc_bands),gpu_inter_bgrp_comm)
-#else
      !$acc update host(dpcpart)
      CALL mp_sum(dpcpart,inter_bgrp_comm)
      !$acc update device(dpcpart)
-#endif
      !
      ! compute nbnd_do for the current spin channel
      !

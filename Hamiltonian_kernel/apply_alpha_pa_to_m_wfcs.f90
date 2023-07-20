@@ -26,9 +26,6 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(iks,m,f,alpha)
   USE westcom,              ONLY : n_bands,proj_c
 #if defined(__CUDA)
   USE west_gpu,             ONLY : ps_r,ps_c
-#if defined(__NCCL)
-  USE west_gpu,             ONLY : gpu_sum,gpu_intra_bgrp_comm
-#endif
   USE cublas
 #endif
   !
@@ -72,13 +69,9 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(iks,m,f,alpha)
      CALL glbrak_gamma( proj_c(:,:,iks), f, ps_r, npw, npwx, n_bands, m, n_bands, npol)
      !$acc end host_data
      !
-#if defined(__NCCL)
-     CALL gpu_sum(ps_r,n_bands*m,gpu_intra_bgrp_comm)
-#else
      !$acc host_data use_device(ps_r)
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !$acc end host_data
-#endif
      !
      !$acc host_data use_device(proj_c,ps_r)
      CALL DGEMM('N','N',2*npwx*npol,m,n_bands,alpha_r,proj_c(1,1,iks),2*npwx*npol,ps_r,n_bands,0.0_DP,f,2*npwx*npol)
@@ -99,13 +92,9 @@ SUBROUTINE apply_alpha_pa_to_m_wfcs(iks,m,f,alpha)
      CALL glbrak_k( proj_c(:,:,iks), f, ps_c, npw, npwx, n_bands, m, n_bands, npol)
      !$acc end host_data
      !
-#if defined(__NCCL)
-     CALL gpu_sum(ps_c,n_bands*m,gpu_intra_bgrp_comm)
-#else
      !$acc host_data use_device(ps_c)
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !$acc end host_data
-#endif
      !
      !$acc host_data use_device(proj_c,ps_c)
      CALL ZGEMM('N','N',npwx*npol,m,n_bands,alpha,proj_c(1,1,iks),npwx*npol,ps_c,n_bands,(0.0_DP,0.0_DP),f,npwx*npol)

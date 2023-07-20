@@ -35,9 +35,6 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   USE wavefunctions_gpum,     ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,          ONLY : evc_host=>evc
   USE west_gpu,               ONLY : tmp_r,tmp_c,psic2
-#if defined(__NCCL)
-  USE west_gpu,               ONLY : gpu_sum,gpu_inter_pool_comm,gpu_inter_bgrp_comm
-#endif
 #else
   USE wavefunctions,          ONLY : evc_work=>evc,psic
 #endif
@@ -202,14 +199,9 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
      !
   ENDDO
   !
-#if defined(__NCCL)
-  CALL gpu_sum(drho,dffts_nnr*nspin,gpu_inter_pool_comm)
-  CALL gpu_sum(drho,dffts_nnr*nspin,gpu_inter_bgrp_comm)
-#else
   !$acc update host(drho)
   CALL mp_sum(drho,inter_pool_comm)
   CALL mp_sum(drho,inter_bgrp_comm)
-#endif
   !
 #if !defined(__CUDA)
   IF(gamma_only) THEN

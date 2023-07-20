@@ -262,9 +262,6 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   USE noncollin_module,     ONLY : npol,noncolin
   USE wvfct,                ONLY : g2kin
   USE west_gpu,             ONLY : is_conv,ibnd_todo,eu,a,c,rho,rhoold,g,t,h
-#if defined(__NCCL)
-  USE west_gpu,             ONLY : gpu_sum,gpu_intra_bgrp_comm
-#endif
   !
   IMPLICIT NONE
   !
@@ -380,13 +377,9 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      ENDIF
      !
      IF(nproc_bgrp > 1) THEN
-#if defined(__NCCL)
-        CALL gpu_sum(rho,nbnd_todo,gpu_intra_bgrp_comm)
-#else
         !$acc host_data use_device(rho)
         CALL mp_sum(rho(1:nbnd_todo),intra_bgrp_comm)
         !$acc end host_data
-#endif
      ENDIF
      !
      lbnd = nbnd_todo
@@ -493,15 +486,10 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      ENDIF
      !
      IF(nproc_bgrp > 1) THEN
-#if defined(__NCCL)
-        CALL gpu_sum(a,nbnd_todo,gpu_intra_bgrp_comm)
-        CALL gpu_sum(c,nbnd_todo,gpu_intra_bgrp_comm)
-#else
         !$acc host_data use_device(a,c)
         CALL mp_sum(a(1:nbnd_todo),intra_bgrp_comm)
         CALL mp_sum(c(1:nbnd_todo),intra_bgrp_comm)
         !$acc end host_data
-#endif
      ENDIF
      !
      ! hold stored in b

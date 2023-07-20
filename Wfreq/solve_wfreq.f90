@@ -73,9 +73,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                                  & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
                                  & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
                                  & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
-#if defined(__NCCL)
-  USE west_gpu,             ONLY : gpu_sum,gpu_inter_image_comm,gpu_intra_bgrp_comm
-#endif
 #else
   USE wavefunctions,        ONLY : evc,psic
   USE uspp,                 ONLY : vkb,nkb
@@ -594,13 +591,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !$acc end host_data
            !
            IF(nproc_bgrp > 1) THEN
-#if defined(__NCCL)
-              CALL gpu_sum(ps_r,(nbnd-nbndval_full)*mypara_nloc,gpu_intra_bgrp_comm)
-#else
               !$acc host_data use_device(ps_r)
               CALL mp_sum(ps_r,intra_bgrp_comm)
               !$acc end host_data
-#endif
            ENDIF
            !
            !$acc kernels present(overlap)
@@ -620,13 +613,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #endif
            !
            IF(nimage > 1) THEN
-#if defined(__NCCL)
-              CALL gpu_sum(overlap,mypara_nglob*(nbnd-nbndval_full),gpu_inter_image_comm)
-#else
               !$acc update host(overlap)
               CALL mp_sum(overlap,inter_image_comm)
               !$acc update device(overlap)
-#endif
            ENDIF
            !
            ! Update dmati with cond
@@ -1116,9 +1105,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                                  & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
                                  & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
                                  & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
-#if defined(__NCCL)
-  USE west_gpu,             ONLY : gpu_sum,gpu_inter_image_comm,gpu_intra_bgrp_comm
-#endif
 #else
   USE wavefunctions,        ONLY : evc_work=>evc
   USE uspp,                 ONLY : vkb,nkb
@@ -1648,13 +1634,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !$acc end host_data
               !
               IF(nproc_bgrp > 1) THEN
-#if defined(__NCCL)
-                 CALL gpu_sum(ps_c,(nbnd-nbndval)*mypara_nloc,gpu_intra_bgrp_comm)
-#else
                  !$acc host_data use_device(ps_c)
                  CALL mp_sum(ps_c,intra_bgrp_comm)
                  !$acc end host_data
-#endif
               ENDIF
               !
               !$acc kernels present(overlap)
@@ -1674,13 +1656,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 #endif
               !
               IF(nimage > 1) THEN
-#if defined(__NCCL)
-                 CALL gpu_sum(overlap,mypara_nglob*(nbnd-nbndval),gpu_inter_image_comm)
-#else
                  !$acc update host(overlap)
                  CALL mp_sum(overlap,inter_image_comm)
                  !$acc update device(overlap)
-#endif
               ENDIF
               !
               ! Update zmati with cond

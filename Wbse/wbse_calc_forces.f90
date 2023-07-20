@@ -1262,10 +1262,6 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   CALL wbse_calc_dens( zvector, drhoz, .FALSE. )
   !
-#if defined(__NCCL)
-  !$acc update host(drhoz)
-#endif
-  !
   drhoz(:,:) = 2._DP * drhoz
   rdrhoz(:,:) = REAL(drhoz,KIND=DP)
   !

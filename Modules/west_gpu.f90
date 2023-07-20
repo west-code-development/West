@@ -13,7 +13,6 @@ MODULE west_gpu
   !
   USE west_gpu_data
   USE west_gpu_tools
-  USE west_gpu_comm
   !
   IMPLICIT NONE
   !

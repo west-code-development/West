@@ -19,8 +19,8 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   USE mp,                   ONLY : mp_bcast
   USE noncollin_module,     ONLY : npol
   USE pwcom,                ONLY : npwx,nspin
-  USE westcom,              ONLY : forces_zeq_cg_tr,l_pre_shift,forces_inexact_krylov,&
-                                 & forces_inexact_krylov_tr,do_inexact_krylov
+  USE westcom,              ONLY : forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,l_pre_shift,&
+                                 & forces_inexact_krylov,forces_inexact_krylov_tr,do_inexact_krylov
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm
@@ -36,7 +36,6 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   INTEGER :: iks,ib,ig,iter
   INTEGER :: kpt_pool_nloc,band_group_nlocx
-  INTEGER, PARAMETER :: max_cg_iters = 1000
   REAL(DP) :: residual_sq
   COMPLEX(DP) :: alpha,beta
   COMPLEX(DP), ALLOCATABLE :: residual_old(:),residual_new(:),dotp(:),rz_new(:),rz_old(:)
@@ -119,7 +118,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   residual_old(:) = residual_new
   rz_old(:) = rz_new
   !
-  DO iter = 1, max_cg_iters
+  DO iter = 1,forces_zeq_n_cg_maxiter
      !
      time_spent(1) = get_clock('zvec_cg')
      !

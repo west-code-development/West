@@ -124,6 +124,7 @@ default["wbse_control"]["spin_flip_cut2"] = 1e-4
 default["wbse_control"]["l_forces"] = False
 default["wbse_control"]["forces_state"] = 1
 default["wbse_control"]["forces_zeq_cg_tr"] = 1e-10
+default["wbse_control"]["forces_zeq_n_cg_maxiter"] = 500
 default["wbse_control"]["ddvxc_fd_coeff"] = 0.01
 default["wbse_control"]["forces_inexact_krylov"] = 0
 default["wbse_control"]["forces_inexact_krylov_tr"] = 1e-16

@@ -1273,6 +1273,19 @@ wbse_control
    * - **Description**
      - Convergence threshold in the CG method that solves the Z vector equation. Used only when l_forces is True.
 
+.. data:: forces_zeq_n_cg_maxiter
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 500
+   * - **Description**
+     - Maximum number of iterations in the CG solver of the Z vector equation. Used only when l_forces is True.
+
 .. data:: ddvxc_fd_coeff
 
 .. list-table::

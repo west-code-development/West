@@ -346,6 +346,7 @@ MODULE wbse_center
   LOGICAL :: l_forces
   INTEGER :: forces_state
   REAL(DP) :: forces_zeq_cg_tr
+  INTEGER :: forces_zeq_n_cg_maxiter
   REAL(DP) :: ddvxc_fd_coeff
   INTEGER :: forces_inexact_krylov     ! Apply the inexact krylov subspace approximation in the CG solver
                                        ! of the Z vector equation

@@ -35,8 +35,9 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
                              & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
                              & l_print_spin_flip_kernel,spin_flip_cut1,spin_flip_cut2,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,forces_inexact_krylov,&
-                             & forces_inexact_krylov_tr,l_reduce_io
+                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
+                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
+                             & l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -169,6 +170,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.l_forces',l_forces)
         CALL json%add('input.wbse_control.forces_state',forces_state)
         CALL json%add('input.wbse_control.forces_zeq_cg_tr',forces_zeq_cg_tr)
+        CALL json%add('input.wbse_control.forces_zeq_n_cg_maxiter',forces_zeq_n_cg_maxiter)
         CALL json%add('input.wbse_control.ddvxc_fd_coeff',ddvxc_fd_coeff)
         CALL json%add('input.wbse_control.forces_inexact_krylov',forces_inexact_krylov)
         CALL json%add('input.wbse_control.forces_inexact_krylov_tr',forces_inexact_krylov_tr)
@@ -206,8 +208,9 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
                              & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
                              & l_print_spin_flip_kernel,spin_flip_cut1,spin_flip_cut2,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,ddvxc_fd_coeff,forces_inexact_krylov,&
-                             & forces_inexact_krylov_tr,l_reduce_io,main_input_file,logfile
+                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
+                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
+                             & l_reduce_io,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -539,6 +542,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(l_forces, 'l_forces')
         IERR = return_dict%get(forces_state, 'forces_state', DUMMY_DEFAULT)
         IERR = return_dict%getitem(forces_zeq_cg_tr, 'forces_zeq_cg_tr')
+        IERR = return_dict%get(forces_zeq_n_cg_maxiter, 'forces_zeq_n_cg_maxiter', DUMMY_DEFAULT)
         IERR = return_dict%getitem(ddvxc_fd_coeff, 'ddvxc_fd_coeff')
         IERR = return_dict%get(forces_inexact_krylov, 'forces_inexact_krylov', DUMMY_DEFAULT)
         IERR = return_dict%getitem(forces_inexact_krylov_tr, 'forces_inexact_krylov_tr')
@@ -820,6 +824,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(l_forces,root,world_comm)
      CALL mp_bcast(forces_state,root,world_comm)
      CALL mp_bcast(forces_zeq_cg_tr,root,world_comm)
+     CALL mp_bcast(forces_zeq_n_cg_maxiter,root,world_comm)
      CALL mp_bcast(ddvxc_fd_coeff,root,world_comm)
      CALL mp_bcast(forces_inexact_krylov,root,world_comm)
      CALL mp_bcast(forces_inexact_krylov_tr,root,world_comm)
@@ -843,6 +848,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         & CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
         IF(trev_liouville <= 0._DP) CALL errore('fetch_input','Err: trev_liouville<0.',1)
         IF(trev_liouville_rel <= 0._DP) CALL errore('fetch_input','Err: trev_liouville_rel<0.',1)
+        IF(forces_zeq_n_cg_maxiter < 1) CALL errore('fetch_input','Err: forces_zeq_n_cg_maxiter<1',1)
         IF(forces_inexact_krylov < 0 .OR. forces_inexact_krylov > 5) &
         & CALL errore('fetch_input','Err: invalid forces_inexact_krylov',1)
         IF(n_liouville_eigen == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_eigen',1)
@@ -851,6 +857,8 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IF(n_liouville_read_from_file == DUMMY_DEFAULT) &
         & CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
         IF(forces_state == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch forces_state',1)
+        IF(forces_zeq_n_cg_maxiter == DUMMY_DEFAULT) &
+        & CALL errore('fetch_input','Err: cannot fetch forces_zeq_n_cg_maxiter',1)
         IF(forces_inexact_krylov == DUMMY_DEFAULT) &
         & CALL errore('fetch_input','Err: cannot fetch forces_inexact_krylov',1)
      CASE('L','l')

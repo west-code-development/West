@@ -20,11 +20,10 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   USE noncollin_module,     ONLY : npol
   USE pwcom,                ONLY : npwx,nspin
   USE westcom,              ONLY : forces_zeq_cg_tr,l_pre_shift,forces_inexact_krylov,&
-                                 & forces_inexact_krylov_tr,do_inexact_krylov,dvg_exc_forces
+                                 & forces_inexact_krylov_tr,do_inexact_krylov
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm
-  USE wbse_bgrp,            ONLY : gather_bands
   !
   IMPLICIT NONE
   !
@@ -35,9 +34,8 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   ! ... Local variables
   !
-  INTEGER :: iks,ib,ig
+  INTEGER :: iks,ib,ig,iter
   INTEGER :: kpt_pool_nloc,band_group_nlocx
-  INTEGER :: iter
   INTEGER, PARAMETER :: max_cg_iters = 1000
   REAL(DP) :: residual_sq
   COMPLEX(DP) :: alpha,beta
@@ -90,10 +88,6 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   CALL west_apply_liouvillian(z_out, r_new, .FALSE.)
   !
-  DO iks = 1,kpt_pool%nloc
-     CALL gather_bands( z_out(:,:,iks), dvg_exc_forces(:,:,iks) )
-  ENDDO
-  !
   CALL west_apply_liouvillian_btda(z_out, r_new, .FALSE.)
   !
   !$acc parallel loop collapse(3) present(r_new,z_rhs)
@@ -130,10 +124,6 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
      time_spent(1) = get_clock('zvec_cg')
      !
      CALL west_apply_liouvillian(p, Ap, .FALSE.)
-     !
-     DO iks = 1,kpt_pool%nloc
-        CALL gather_bands( p(:,:,iks), dvg_exc_forces(:,:,iks) )
-     ENDDO
      !
      CALL west_apply_liouvillian_btda(p, Ap, .FALSE.)
      !

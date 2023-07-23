@@ -26,7 +26,8 @@ MODULE west_mp
   PUBLIC :: west_mp_circ_shift
   PUBLIC :: west_mp_root_sum
   PUBLIC :: west_mp_get
-  PUBLIC :: west_mp_allgatherv
+  PUBLIC :: west_mp_iallgatherv_start
+  PUBLIC :: west_mp_wait
   !
   INTERFACE west_mp_alltoallv
     MODULE PROCEDURE alltoallv_i4_1d, alltoallv_i8_1d, alltoallv_r8_1d, &
@@ -49,8 +50,8 @@ MODULE west_mp
     MODULE PROCEDURE get_c16_3d
   END INTERFACE
   !
-  INTERFACE west_mp_allgatherv
-    MODULE PROCEDURE allgatherv_gpu_c16_2d
+  INTERFACE west_mp_iallgatherv_start
+    MODULE PROCEDURE iallgatherv_gpu_start_c16_2d
   END INTERFACE
   !
   CONTAINS
@@ -330,7 +331,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE allgatherv_gpu_c16_2d(send_buf,send_count,recv_buf,recv_count,recv_displ,comm)
+    SUBROUTINE iallgatherv_gpu_start_c16_2d(send_buf,send_count,recv_buf,recv_count,recv_displ,comm,req)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -343,6 +344,7 @@ MODULE west_mp
       INTEGER, INTENT(IN) :: recv_count(:)
       INTEGER, INTENT(IN) :: recv_displ(:)
       INTEGER, INTENT(IN) :: comm
+      INTEGER, INTENT(OUT) :: req
       !
       ! Workspace
       !
@@ -353,13 +355,30 @@ MODULE west_mp
 #else
       !$acc update host(send_buf)
 #endif
-      CALL MPI_ALLGATHERV(send_buf,send_count,MPI_DOUBLE_COMPLEX,recv_buf,recv_count,recv_displ,&
-      & MPI_DOUBLE_COMPLEX,comm,ierr)
+      CALL MPI_IALLGATHERV(send_buf,send_count,MPI_DOUBLE_COMPLEX,recv_buf,recv_count,recv_displ,&
+      & MPI_DOUBLE_COMPLEX,comm,req,ierr)
 #if defined(__GPU_MPI)
       !$acc end host_data
-#else
-      !$acc update device(recv_buf)
 #endif
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE west_mp_wait(req)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER, INTENT(IN) :: req
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      INTEGER :: istat(MPI_STATUS_SIZE)
+      !
+      CALL MPI_WAIT(req,istat,ierr)
       !
     END SUBROUTINE
     !

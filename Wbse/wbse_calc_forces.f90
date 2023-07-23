@@ -20,12 +20,13 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   USE pwcom,                ONLY : nspin,npwx
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
-  USE westcom,              ONLY : logfile,nbndval0x,n_trunc_bands,dvg_exc_forces
+  USE westcom,              ONLY : logfile,nbndval0x,n_trunc_bands,evc1_all
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE json_module,          ONLY : json_file
   USE mp_world,             ONLY : mpime,root
   USE io_push,              ONLY : io_push_title
   USE wbse_bgrp,            ONLY : gather_bands
+  USE mp,                   ONLY : mp_waitall
   !
   IMPLICIT NONE
   !
@@ -36,6 +37,7 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   ! Workspace
   !
   INTEGER :: iks, n, na, ipol
+  INTEGER, ALLOCATABLE :: reqs(:)
   REAL(DP), ALLOCATABLE :: forces(:), dvgdvg_mat(:,:,:)
   !$acc declare device_resident(dvgdvg_mat)
   REAL(DP) :: sumforces
@@ -50,15 +52,14 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   !
   n = 3 * nat
   !
+  ALLOCATE( reqs(kpt_pool%nloc) )
   ALLOCATE( forces(n) )
   forces(:) = 0._DP
   ALLOCATE( dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc) )
   ALLOCATE( drhox1(dffts%nnr, nspin) )
-  ALLOCATE( dvg_exc_forces(npwx, nbndval0x-n_trunc_bands, kpt_pool%nloc) )
-  !$acc enter data create(dvg_exc_forces)
   !
   DO iks = 1,kpt_pool%nloc
-     CALL gather_bands( dvg_exc_tmp(:,:,iks), dvg_exc_forces(:,:,iks) )
+     CALL gather_bands( dvg_exc_tmp(:,:,iks), evc1_all(:,:,iks), reqs(iks) )
   ENDDO
   !
   ! drhox1
@@ -68,6 +69,11 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   CALL wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   !
   ! < dvg | dvg >
+  !
+  CALL mp_waitall(reqs)
+#if !defined(__GPU_MPI)
+  !$acc update device(evc1_all)
+#endif
   !
   CALL wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   !
@@ -163,12 +169,11 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
      !
   ENDIF
   !
+  DEALLOCATE(reqs)
   DEALLOCATE(forces)
   DEALLOCATE(dvgdvg_mat)
   DEALLOCATE(drhox1)
   DEALLOCATE(drhox2)
-  !$acc exit data delete(dvg_exc_forces)
-  DEALLOCATE(dvg_exc_forces)
   !
   CALL stop_clock('calc_force')
   !
@@ -551,7 +556,7 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   USE pwcom,                ONLY : ngk,npwx,npw
   USE mp,                   ONLY : mp_sum
   USE noncollin_module,     ONLY : npol
-  USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip,dvg_exc_forces
+  USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip,evc1_all
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : intra_bgrp_comm
   USE io_push,              ONLY : io_push_title
@@ -599,7 +604,7 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
         IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
-     !$acc parallel present(dvgdvg_mat,dvg_exc_forces,dvg_exc_tmp)
+     !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
      !$acc loop collapse(2)
      DO lbnd = 1, nbnd_do
         DO ibnd = 1, nbndval - n_trunc_bands
@@ -608,8 +613,8 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
            !$acc loop reduction(+:reduce)
            DO ig = 1, npw
               reduce = reduce &
-              & + REAL(dvg_exc_forces(ig,ibnd,iks),KIND=DP)*REAL(dvg_exc_tmp(ig,lbnd,iks),KIND=DP) &
-              & + AIMAG(dvg_exc_forces(ig,ibnd,iks))*AIMAG(dvg_exc_tmp(ig,lbnd,iks))
+              & + REAL(evc1_all(ig,ibnd,iks),KIND=DP)*REAL(dvg_exc_tmp(ig,lbnd,iks),KIND=DP) &
+              & + AIMAG(evc1_all(ig,ibnd,iks))*AIMAG(dvg_exc_tmp(ig,lbnd,iks))
            ENDDO
            !
            dvgdvg_mat(ibnd,lbnd,iks) = 2._DP * reduce
@@ -619,12 +624,12 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
      !$acc end parallel
      !
      IF(gstart == 2) THEN
-        !$acc parallel present(dvgdvg_mat,dvg_exc_forces,dvg_exc_tmp)
+        !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
         !$acc loop collapse(2)
         DO lbnd = 1, nbnd_do
            DO ibnd = 1, nbndval - n_trunc_bands
               dvgdvg_mat(ibnd,lbnd,iks) = dvgdvg_mat(ibnd,lbnd,iks) &
-              & - REAL(dvg_exc_forces(1,ibnd,iks),KIND=DP) * REAL(dvg_exc_tmp(1,lbnd,iks),KIND=DP)
+              & - REAL(evc1_all(1,ibnd,iks),KIND=DP) * REAL(dvg_exc_tmp(1,lbnd,iks),KIND=DP)
            ENDDO
         ENDDO
         !$acc end parallel

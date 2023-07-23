@@ -33,8 +33,8 @@ MODULE wbse_bgrp
       !
       USE pwcom,                ONLY : npwx
       USE mp_global,            ONLY : nbgrp
-      USE westcom,              ONLY : nbndval0x,n_trunc_bands
-      USE distribution_center,  ONLY : band_group
+      USE westcom,              ONLY : nbndval0x,n_trunc_bands,evc1_all
+      USE distribution_center,  ONLY : kpt_pool,band_group
       !
       IMPLICIT NONE
       !
@@ -59,10 +59,13 @@ MODULE wbse_bgrp
          ENDIF
       ENDDO
       !
+      ALLOCATE(evc1_all(npwx,nbnd_do,kpt_pool%nloc))
+      !$acc enter data create(evc1_all)
+      !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE gather_bands(distributed,gathered)
+    SUBROUTINE gather_bands(distributed,gathered,req)
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
@@ -70,7 +73,7 @@ MODULE wbse_bgrp
       USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : nbndval0x,n_trunc_bands
       USE distribution_center,  ONLY : band_group
-      USE west_mp,              ONLY : west_mp_allgatherv
+      USE west_mp,              ONLY : west_mp_iallgatherv_start
       !
       IMPLICIT NONE
       !
@@ -78,8 +81,10 @@ MODULE wbse_bgrp
       !
       COMPLEX(DP), INTENT(IN) :: distributed(npwx,band_group%nlocx)
       COMPLEX(DP), INTENT(OUT) :: gathered(npwx,nbndval0x-n_trunc_bands)
+      INTEGER, INTENT(OUT) :: req
       !
-      CALL west_mp_allgatherv(distributed,send_count,gathered,recv_count,recv_displ,inter_bgrp_comm)
+      CALL west_mp_iallgatherv_start(distributed,send_count,gathered,recv_count,recv_displ,&
+      & inter_bgrp_comm,req)
       !
     END SUBROUTINE
     !

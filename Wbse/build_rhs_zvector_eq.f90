@@ -120,7 +120,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   USE kinds,                ONLY : DP
   USE gvect,                ONLY : gstart
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_bse,&
-                                 & l_hybrid_tddft,l_spin_flip
+                                 & l_hybrid_tddft,l_spin_flip,evc1_all
   USE pwcom,                ONLY : isk,lsda,nspin,current_spin,current_k,ngk,npwx,npw
   USE mp,                   ONLY : mp_bcast
   USE buffers,              ONLY : get_buffer
@@ -131,6 +131,8 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id
   USE wbse_dv,              ONLY : wbse_dv_of_drho
+  USE wbse_bgrp,            ONLY : gather_bands
+  USE west_mp,              ONLY : west_mp_wait
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -153,6 +155,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   LOGICAL :: lrpa
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr
+  INTEGER :: req
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part1(:,:,:),tmp_vec(:,:,:)
   !$acc declare device_resident(z_rhs_vec_part1,tmp_vec)
@@ -299,33 +302,14 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         & 2*npwx*npol,dvgdvg_mat(1,1,iks_do),nbndval0x-n_trunc_bands,0._DP,tmp_vec(1,1,iks),2*npwx*npol)
         !$acc end host_data
         !
+        CALL gather_bands(tmp_vec(:,:,iks),evc1_all(:,:,iks),req)
+        CALL west_mp_wait(req)
+#if !defined(__GPU_MPI)
+        !$acc update device(evc1_all(:,:,iks))
+#endif
+        CALL bse_kernel_gamma(current_spin,evc1_all(:,:,iks),z_rhs_vec_part1(:,:,iks),.FALSE.)
+        !
      ENDIF
-     !
-  ENDDO
-  !
-  IF(l_hybrid_tddft) THEN
-     !
-     DO iks = 1,kpt_pool%nloc
-        !
-        IF(lsda) current_spin = isk(iks)
-        !
-        CALL bse_kernel_gamma(current_spin,tmp_vec,z_rhs_vec_part1(:,:,iks),.FALSE.)
-        !
-     ENDDO
-     !
-  ENDIF
-  !
-  DO iks = 1,kpt_pool%nloc
-     !
-     nbndval = nbnd_occ(iks)
-     !
-     nbnd_do = 0
-     DO lbnd = 1,band_group%nloc
-        ibnd = band_group%l2g(lbnd)+n_trunc_bands
-        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
-     ENDDO
-     !
-     npw = ngk(iks)
      !
      IF(gstart == 2) THEN
         !$acc parallel loop present(z_rhs_vec_part1)
@@ -1412,7 +1396,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   USE io_global,            ONLY : stdout
   USE kinds,                ONLY : DP
   USE gvect,                ONLY : gstart
-  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
+  USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip,evc1_all
   USE pwcom,                ONLY : isk,lsda,nspin,current_spin,current_k,ngk,npwx,npw
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE buffers,              ONLY : get_buffer
@@ -1527,7 +1511,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      tmp_vec(:,:) = (0._DP,0._DP)
      !$acc end kernels
      !
-     CALL bse_kernel_gamma(current_spin,dvg_exc_tmp,tmp_vec,l_spin_flip)
+     CALL bse_kernel_gamma(current_spin,evc1_all(:,:,iks),tmp_vec,l_spin_flip)
      !
      !$acc parallel vector_length(1024) present(tmp_vec,dv_vv_mat)
      !$acc loop collapse(2)

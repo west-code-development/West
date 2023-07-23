@@ -102,6 +102,29 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
   ENDIF
   !
+  IF(l_bse .OR. l_hybrid_tddft) THEN
+     do_k1d = .TRUE.
+     IF(l_hybrid_tddft .AND. do_inexact_krylov) THEN
+        IF(forces_inexact_krylov == 2 &
+        & .OR. forces_inexact_krylov == 4 &
+        & .OR. forces_inexact_krylov == 5) THEN
+           do_k1d = .FALSE.
+        ENDIF
+     ENDIF
+  ELSE
+     do_k1d = .FALSE.
+  ENDIF
+  !
+  IF(l_bse_triplet) THEN
+     do_k1e = .FALSE.
+  ELSEIF(sf .AND. (.NOT. l_spin_flip_kernel)) THEN
+     do_k1e = .FALSE.
+  ELSEIF(sf .AND. l_spin_flip_kernel) THEN
+     do_k1e = .TRUE.
+  ELSE
+     do_k1e = .TRUE.
+  ENDIF
+  !
   DO iks = 1,kpt_pool%nloc
      !
      IF(sf) THEN
@@ -151,16 +174,6 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
-     ENDIF
-     !
-     IF(l_bse_triplet) THEN
-        do_k1e = .FALSE.
-     ELSEIF(sf .AND. (.NOT. l_spin_flip_kernel)) THEN
-        do_k1e = .FALSE.
-     ELSEIF(sf .AND. l_spin_flip_kernel) THEN
-        do_k1e = .TRUE.
-     ELSE
-        do_k1e = .TRUE.
      ENDIF
      !
      IF(do_k1e) THEN
@@ -329,21 +342,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ENDDO
      !$acc end parallel
      !
-     IF(l_bse .OR. l_hybrid_tddft) THEN
-        !
-        do_k1d = .TRUE.
-        !
-        IF(l_hybrid_tddft .AND. do_inexact_krylov) THEN
-           IF(forces_inexact_krylov == 2 &
-           & .OR. forces_inexact_krylov == 4 &
-           & .OR. forces_inexact_krylov == 5) THEN
-              do_k1d = .FALSE.
-           ENDIF
-        ENDIF
-        !
-        IF(do_k1d) CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
-        !
-     ENDIF
+     IF(do_k1d) CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
      !
      IF(gamma_only) THEN
         IF(gstart == 2) THEN
@@ -469,6 +468,29 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
      CALL wbse_dv_of_drho(dvrs,lrpa,.FALSE.)
   ENDIF
   !
+  IF(l_hybrid_tddft) THEN
+     do_k2d = .TRUE.
+     IF(do_inexact_krylov) THEN
+        IF(forces_inexact_krylov == 3 &
+        & .OR. forces_inexact_krylov == 4 &
+        & .OR. forces_inexact_krylov == 5) THEN
+           do_k2d = .FALSE.
+        ENDIF
+     ENDIF
+  ELSE
+     do_k2d = .FALSE.
+  ENDIF
+  !
+  IF(l_bse_triplet) THEN
+     do_k2e = .FALSE.
+  ELSEIF(sf .AND. (.NOT. l_spin_flip_kernel)) THEN
+     do_k2e = .FALSE.
+  ELSEIF(sf .AND. l_spin_flip_kernel) THEN
+     do_k2e = .TRUE.
+  ELSE
+     do_k2e = .TRUE.
+  ENDIF
+  !
   DO iks = 1,kpt_pool%nloc
      !
      IF(sf) THEN
@@ -508,16 +530,6 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
-     ENDIF
-     !
-     IF(l_bse_triplet) THEN
-        do_k2e = .FALSE.
-     ELSEIF(sf .AND. (.NOT. l_spin_flip_kernel)) THEN
-        do_k2e = .FALSE.
-     ELSEIF(sf .AND. l_spin_flip_kernel) THEN
-        do_k2e = .TRUE.
-     ELSE
-        do_k2e = .TRUE.
      ENDIF
      !
      IF(do_k2e) THEN
@@ -572,21 +584,7 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
      !
      ! K2d part. exx_div treatment is not needed for this part.
      !
-     IF(l_hybrid_tddft) THEN
-        !
-        do_k2d = .TRUE.
-        !
-        IF(do_inexact_krylov) THEN
-           IF(forces_inexact_krylov == 3 &
-           & .OR. forces_inexact_krylov == 4 &
-           & .OR. forces_inexact_krylov == 5) THEN
-              do_k2d = .FALSE.
-           ENDIF
-        ENDIF
-        !
-        IF(do_k2d) CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
-        !
-     ENDIF
+     IF(do_k2d) CALL hybrid_kernel_term2(current_spin,evc1,evc2_new,sf)
      !
      IF(gstart == 2) THEN
         !$acc parallel loop present(evc2_new)

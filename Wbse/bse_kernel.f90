@@ -11,7 +11,7 @@
 ! Ngoc Linh Nguyen, Victor Yu
 !
 !-----------------------------------------------------------------------
-SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
+SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
   !-----------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
@@ -24,6 +24,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   USE distribution_center,   ONLY : kpt_pool,band_group
   USE wbse_io,               ONLY : read_bse_pots_g
   USE wbse_bgrp,             ONLY : gather_bands
+  USE west_mp,               ONLY : west_mp_wait
 #if defined(__CUDA)
   USE wavefunctions_gpum,    ONLY : psic=>psic_d
   USE west_gpu,              ONLY : raux1,raux2,caux1,caux2,caux3,gaux
@@ -38,7 +39,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   !
   INTEGER, INTENT(IN) :: current_spin
   COMPLEX(DP), INTENT(IN) :: evc1(npwx,band_group%nlocx,kpt_pool%nloc)
-  COMPLEX(DP), INTENT(INOUT) :: bse_kd1(npwx,band_group%nlocx)
+  COMPLEX(DP), INTENT(INOUT) :: bse_k1d(npwx,band_group%nlocx)
   LOGICAL, INTENT(IN) :: sf
   !
   ! Workspace
@@ -47,6 +48,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   INTEGER :: ig,ir
   INTEGER :: nbnd_do,do_idx,current_spin_ikq,ikq,ikq_g,ikq_do
   INTEGER :: dffts_nnr,band_group_nloc,band_group_myoffset
+  INTEGER :: req
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: raux1(:),raux2(:)
   COMPLEX(DP), ALLOCATABLE :: caux1(:,:),caux2(:,:),caux3(:,:),gaux(:)
@@ -71,7 +73,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   ALLOCATE(raux2(dffts%nnr))
   ALLOCATE(caux1(npwx,nbnd_do))
   ALLOCATE(caux2(npwx,band_group%nlocx))
-  ALLOCATE(caux3(npwx,nbnd_do))
+  IF(l_local_repr) ALLOCATE(caux3(npwx,nbnd_do))
   ALLOCATE(gaux(npwx))
 #endif
   !
@@ -90,7 +92,11 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         ikq_g = kpt_pool%l2g(ikq)
      ENDIF
      !
-     CALL gather_bands(evc1(:,:,ikq),caux1)
+     CALL gather_bands(evc1(:,:,ikq),caux1,req)
+     CALL west_mp_wait(req)
+#if !defined(__GPU_MPI)
+     !$acc update device(caux1)
+#endif
      !
      IF(l_local_repr) THEN
         !
@@ -201,7 +207,11 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
      ENDIF
      !
-     CALL gather_bands(caux2,caux1)
+     CALL gather_bands(caux2,caux1,req)
+     CALL west_mp_wait(req)
+#if !defined(__GPU_MPI)
+     !$acc update device(caux1)
+#endif
      !
      IF(l_local_repr) THEN
         !
@@ -216,14 +226,14 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
         !
      ENDIF
      !
-     !$acc parallel loop collapse(2) present(bse_kd1,caux1)
+     !$acc parallel loop collapse(2) present(bse_k1d,caux1)
      DO lbnd = 1, band_group_nloc
         !
         ! ibnd = band_group%l2g(lbnd)
         !
         DO ig = 1, npw
            ibnd = band_group_myoffset+lbnd
-           bse_kd1(ig,lbnd) = bse_kd1(ig,lbnd)-caux1(ig,ibnd)
+           bse_k1d(ig,lbnd) = bse_k1d(ig,lbnd)-caux1(ig,ibnd)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -235,7 +245,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_kd1,sf)
   DEALLOCATE(raux2)
   DEALLOCATE(caux1)
   DEALLOCATE(caux2)
-  DEALLOCATE(caux3)
+  IF(l_local_repr) DEALLOCATE(caux3)
   DEALLOCATE(gaux)
 #endif
   !

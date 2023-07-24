@@ -32,13 +32,15 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : l_bse,l_bse_triplet,l_hybrid_tddft,l_spin_flip_kernel,&
                                  & l_qp_correction,sigma_c_head,sigma_x_head,nbnd_occ,scissor_ope,&
-                                 & n_trunc_bands,et_qp,lrwfc,iuwfc,forces_inexact_krylov,&
+                                 & n_trunc_bands,et_qp,lrwfc,iuwfc,evc1_all,forces_inexact_krylov,&
                                  & do_inexact_krylov
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE uspp_init,            ONLY : init_us_2
   USE exx,                  ONLY : exxalfa
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
   USE xc_lib,               ONLY : stop_exx,start_exx
+  USE wbse_bgrp,            ONLY : gather_bands
+  USE west_mp,              ONLY : west_mp_wait
 #if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,        ONLY : evc_host=>evc
@@ -61,6 +63,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   LOGICAL :: lrpa,do_k1e,do_k1d
   INTEGER :: ibnd,jbnd,iks,iks_do,ir,ig,nbndval,flnbndval,nbnd_do,lbnd
   INTEGER :: dffts_nnr,band_group_myoffset
+  INTEGER :: req
   REAL(DP) :: factor
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: factors(:)
@@ -126,6 +129,8 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   ENDIF
   !
   DO iks = 1,kpt_pool%nloc
+     !
+     IF(do_k1d) CALL gather_bands(evc1(:,:,iks),evc1_all(:,:,iks),req)
      !
      IF(sf) THEN
         iks_do = flks(iks)
@@ -342,7 +347,13 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ENDDO
      !$acc end parallel
      !
-     IF(do_k1d) CALL bse_kernel_gamma(current_spin,evc1,evc1_new(:,:,iks),sf)
+     IF(do_k1d) THEN
+        CALL west_mp_wait(req)
+#if !defined(__GPU_MPI)
+        !$acc update device(evc1_all(:,:,iks))
+#endif
+        CALL bse_kernel_gamma(current_spin,evc1_all(:,:,iks),evc1_new(:,:,iks),sf)
+     ENDIF
      !
      IF(gamma_only) THEN
         IF(gstart == 2) THEN

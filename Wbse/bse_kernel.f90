@@ -38,7 +38,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
   ! I/O
   !
   INTEGER, INTENT(IN) :: current_spin
-  COMPLEX(DP), INTENT(IN) :: evc1(npwx,band_group%nlocx,kpt_pool%nloc)
+  COMPLEX(DP), INTENT(IN) :: evc1(npwx,nbndval0x-n_trunc_bands)
   COMPLEX(DP), INTENT(INOUT) :: bse_k1d(npwx,band_group%nlocx)
   LOGICAL, INTENT(IN) :: sf
   !
@@ -92,23 +92,15 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
         ikq_g = kpt_pool%l2g(ikq)
      ENDIF
      !
-     CALL gather_bands(evc1(:,:,ikq),caux1,req)
-     CALL west_mp_wait(req)
-#if !defined(__GPU_MPI)
-     !$acc update device(caux1)
-#endif
-     !
      IF(l_local_repr) THEN
-        !
-        !$acc kernels present(caux3,caux1)
-        caux3(:,:) = caux1
-        !$acc end kernels
-        !
-        !$acc host_data use_device(caux3,u_matrix,caux1)
-        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,one,caux3,npwx,u_matrix(1,1,ikq_do),nbnd_do,zero,&
+        !$acc host_data use_device(evc1,u_matrix,caux1)
+        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,one,evc1,npwx,u_matrix(1,1,ikq_do),nbnd_do,zero,&
         & caux1,npwx)
         !$acc end host_data
-        !
+     ELSE
+        !$acc kernels present(caux1,evc1)
+        caux1(:,:) = evc1
+        !$acc end kernels
      ENDIF
      !
      ! LOOP OVER BANDS AT KPOINT

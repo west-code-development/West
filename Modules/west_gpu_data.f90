@@ -98,12 +98,14 @@ MODULE west_gpu_data
    COMPLEX(DP), ALLOCATABLE :: caux1(:,:)
    COMPLEX(DP), ALLOCATABLE :: caux2(:,:)
    COMPLEX(DP), ALLOCATABLE :: caux3(:,:)
+   COMPLEX(DP), ALLOCATABLE :: caux4(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
    COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
    COMPLEX(DP), ALLOCATABLE :: psic2(:)
-   COMPLEX(DP), PINNED, ALLOCATABLE :: dvaux(:,:)
+   COMPLEX(DP), ALLOCATABLE :: dvaux(:,:)
+   COMPLEX(DP), ALLOCATABLE :: gdrho(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: dvhart(:)
-   !$acc declare device_resident(factors,raux1,raux2,caux3,hevc1,psic2,dvhart)
+   !$acc declare device_resident(factors,raux1,raux2,caux3,caux4,hevc1,psic2,dvaux,gdrho,dvhart)
    COMPLEX(DP), PINNED, ALLOCATABLE :: gaux(:)
    !
    ! Workspace
@@ -678,7 +680,7 @@ MODULE west_gpu_data
    USE control_flags,         ONLY : gamma_only
    USE lsda_mod,              ONLY : nspin
    USE wvfct,                 ONLY : npwx
-   USE noncollin_module,      ONLY : npol
+   USE noncollin_module,      ONLY : npol,nspin_gga
    USE fft_base,              ONLY : dffts
    USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_bse,l_hybrid_tddft,l_local_repr,&
                                    & et_qp,u_matrix
@@ -701,6 +703,10 @@ MODULE west_gpu_data
       ALLOCATE(gaux(npwx))
       !$acc enter data create(caux1,caux2,gaux)
    ENDIF
+   IF(.NOT. l_bse) THEN
+      ALLOCATE(caux4(3,dffts%nnr,nspin_gga))
+      ALLOCATE(gdrho(3,dffts%nnr,nspin_gga))
+   ENDIF
    ALLOCATE(hevc1(npwx*npol,nbndlocx))
    ALLOCATE(dvrs(dffts%nnr,nspin))
    !$acc enter data create(dvrs)
@@ -714,7 +720,6 @@ MODULE west_gpu_data
       ALLOCATE(psic2(dffts%nnr))
    ENDIF
    ALLOCATE(dvaux(dffts%nnr,nspin))
-   !$acc enter data create(dvaux)
    ALLOCATE(dvhart(dffts%nnr))
    !
    !$acc enter data copyin(et_qp,u_matrix)
@@ -749,9 +754,15 @@ MODULE west_gpu_data
    IF(ALLOCATED(caux3)) THEN
       DEALLOCATE(caux3)
    ENDIF
+   IF(ALLOCATED(caux4)) THEN
+      DEALLOCATE(caux4)
+   ENDIF
    IF(ALLOCATED(gaux)) THEN
       !$acc exit data delete(gaux)
       DEALLOCATE(gaux)
+   ENDIF
+   IF(ALLOCATED(gdrho)) THEN
+      DEALLOCATE(gdrho)
    ENDIF
    IF(ALLOCATED(hevc1)) THEN
       DEALLOCATE(hevc1)
@@ -772,7 +783,6 @@ MODULE west_gpu_data
       DEALLOCATE(psic2)
    ENDIF
    IF(ALLOCATED(dvaux)) THEN
-      !$acc exit data delete(dvaux)
       DEALLOCATE(dvaux)
    ENDIF
    IF(ALLOCATED(dvhart)) THEN

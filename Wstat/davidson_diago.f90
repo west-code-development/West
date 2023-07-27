@@ -176,11 +176,10 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      dfpt_dim = nbase
      diago_dim = nbase
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, &
-         & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 1/2')")&
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 1/2')") &
          & 'starting', dfpt_dim, diago_dim
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ! Apply operator with DFPT
      !
@@ -211,11 +210,10 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      dfpt_dim = nbase
      diago_dim = nbase
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, &
-         & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 2/2')")&
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 2/2')") &
          & 'starting', dfpt_dim, diago_dim
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ! Apply operator with DFPT
      !
@@ -267,10 +265,10 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      dfpt_dim = notcnv
      diago_dim = nbase+notcnv
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, "(   5x,'#     Iteration = | ', i8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
-         &dav_iter, dfpt_dim, diago_dim
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',i8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |')") &
+         & dav_iter, dfpt_dim, diago_dim
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ALLOCATE( ishift( nvecx ), STAT=ierr )
      IF( ierr /= 0 ) CALL errore( 'chidiago',' cannot allocate ishift ', ABS(ierr) )
@@ -641,11 +639,10 @@ SUBROUTINE davidson_diago_k ( )
         !
         dfpt_dim = nbase
         diago_dim = nbase
-        WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-        WRITE(stdout, &
-            & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 1/2')")&
+        WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+        WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 1/2')") &
             & 'starting', dfpt_dim, diago_dim
-        WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+        WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
         !
         ! Apply operator with DFPT
         !
@@ -677,11 +674,10 @@ SUBROUTINE davidson_diago_k ( )
         !
         dfpt_dim = nbase
         diago_dim = nbase
-        WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-        WRITE(stdout, &
-            & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 2/2')")&
+        WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+        WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 2/2')") &
             & 'starting', dfpt_dim, diago_dim
-        WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+        WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
         !
         ! Apply operator with DFPT
         !
@@ -734,10 +730,10 @@ SUBROUTINE davidson_diago_k ( )
         !
         dfpt_dim = notcnv
         diago_dim = nbase+notcnv
-        WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-        WRITE(stdout, "(   5x,'#     Iteration = | ', i8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
-         &dav_iter, dfpt_dim, diago_dim
-        WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+        WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+        WRITE(stdout, "(  5x,'#     Iteration = | ',i8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |')") &
+            & dav_iter, dfpt_dim, diago_dim
+        WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
         !
         ALLOCATE( ishift( nvecx ), STAT=ierr )
         IF( ierr /= 0 ) CALL errore( 'chidiago',' cannot allocate ishift ', ABS(ierr) )

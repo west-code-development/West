@@ -70,8 +70,6 @@ SUBROUTINE wbse_davidson_diago ( )
   COMPLEX(DP), ALLOCATABLE :: dng_exc_tmp(:,:,:), dvg_exc_tmp(:,:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dng_exc_tmp, dvg_exc_tmp
-  COMPLEX(DP), ALLOCATABLE :: caux1(:,:)
-  !$acc declare device_resident(caux1)
 #endif
   !
   INTEGER :: iks,il1,ig1,lbnd,ibnd,iks_do
@@ -176,6 +174,7 @@ SUBROUTINE wbse_davidson_diago ( )
      ! RESTART
      !
      CALL davidson_restart_read( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
+     !$acc enter data copyin(dvg_exc,dng_exc)
      !
   CASE('s','S')
      !
@@ -201,13 +200,14 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! < EXTRA STEP >
      !
+     !$acc enter data copyin(dvg_exc)
      CALL wbse_do_mgs( dvg_exc, 1, nvec, l_spin_flip )
+     !$acc exit data copyout(dvg_exc)
      !
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, &
-         & "(   5x,'#     Iteration = | ', a8,' |','   ','WBSE_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
-         & 'starting', nbase, nbase
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','WBSE_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |')") &
+          & 'starting', nbase, nbase
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ! Apply Liouville operator
      !
@@ -263,6 +263,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
+     !$acc enter data copyin(dvg_exc,dng_exc)
      CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nvec, l_spin_flip )
      !
      ! ... diagonalize the reduced hamiltonian
@@ -292,10 +293,10 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      dav_iter = dav_iter + 1
      !
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, "(   5x,'#     Iteration = | ', i8,' |','   ','WBSE_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
-         &dav_iter, notcnv, nbase+notcnv
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',i8,' |   ','WBSE_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |')") &
+         & dav_iter, notcnv, nbase+notcnv
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ALLOCATE( ishift( nvecx ), STAT=ierr )
      IF( ierr /= 0 ) CALL errore( 'chidiago',' cannot allocate ishift ', ABS(ierr) )
@@ -354,10 +355,6 @@ SUBROUTINE wbse_davidson_diago ( )
      max_mloc = mloc
      CALL mp_max (max_mloc, inter_image_comm)
      !
-#if defined(__CUDA)
-     ALLOCATE(caux1(npwx,band_group%nlocx))
-#endif
-     !
      DO il1 = mstart, mstart+max_mloc-1
         !
         ig1 = pert%l2g(il1)
@@ -396,28 +393,19 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            IF (.NOT.( ig1 <= nbase .OR. ig1 > nbase+notcnv )) THEN
 #if defined(__CUDA)
-              CALL memcpy_H2D(caux1,dvg_exc(:,:,iks,il1),npwx*band_group%nlocx)
-              !
               CALL reallocate_ps_gpu(nbndval,nbnd_do)
-              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,caux1,(1._DP,0._DP))
-              !
-              CALL memcpy_D2H(dvg_exc(:,:,iks,il1),caux1,npwx*band_group%nlocx)
-#else
-              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,dvg_exc(:,:,iks,il1),(1._DP,0._DP))
 #endif
+              CALL apply_alpha_pc_to_m_wfcs(nbndval,nbnd_do,dvg_exc(:,:,iks,il1),(1._DP,0._DP))
            ENDIF
            !
         ENDDO
         !
      ENDDO
      !
-#if defined(__CUDA)
-     DEALLOCATE(caux1)
-#endif
-     !
      ! ... MGS
      !
      CALL wbse_do_mgs(dvg_exc,nbase+1,nbase+notcnv,l_spin_flip)
+     !$acc exit data delete(dng_exc) copyout(dvg_exc)
      !
      ! apply the response function to new vectors
      !
@@ -475,6 +463,7 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! hr = <dvg|dng>
      !
+     !$acc enter data copyin(dvg_exc,dng_exc)
      CALL wbse_build_hr( dvg_exc, dng_exc, mstart, mstart+mloc-1, hr_distr, nbase+notcnv, l_spin_flip )
      !
      nbase = nbase + notcnv
@@ -518,6 +507,7 @@ SUBROUTINE wbse_davidson_diago ( )
            CALL stop_clock( 'chidiago:last' )
            !
            CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_spin_flip )
+           !$acc update host(dvg_exc)
            !
            CALL plep_db_write( )
            CALL davidson_restart_clear()
@@ -545,7 +535,9 @@ SUBROUTINE wbse_davidson_diago ( )
         WRITE(stdout,'(/,7x,"Refresh the basis set")')
         !
         CALL wbse_refresh_with_vr_distr( dvg_exc, nvec, nbase, nvecx, vr_distr, l_spin_flip )
+        !$acc update host(dvg_exc)
         CALL wbse_refresh_with_vr_distr( dng_exc, nvec, nbase, nvecx, vr_distr, l_spin_flip )
+        !$acc update host(dng_exc)
         !
         ! ... refresh the reduced hamiltonian
         !
@@ -569,6 +561,8 @@ SUBROUTINE wbse_davidson_diago ( )
         CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
   ENDDO iterate
+  !
+  !$acc exit data delete(dvg_exc,dng_exc)
   !
   DEALLOCATE( conv )
   DEALLOCATE( ew )
@@ -679,7 +673,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   ALLOCATE(vec(npwx,band_group%nlocx,kpt_pool%nloc))
   ALLOCATE(zbraket(pert%nloc))
   !
-  !$acc enter data create(vec,zbraket) copyin(amat)
+  !$acc enter data create(vec,zbraket)
   !
   ! 2) Localize m_global_start
   !
@@ -854,7 +848,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
      !
   ENDDO
   !
-  !$acc exit data delete(vec,zbraket) copyout(amat)
+  !$acc exit data delete(vec,zbraket)
   !
   DEALLOCATE(vec)
   DEALLOCATE(zbraket)

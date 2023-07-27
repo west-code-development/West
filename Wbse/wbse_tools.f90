@@ -105,7 +105,7 @@ MODULE wbse_tools
       !
       IF(l2_e >= l2_s) THEN
          !
-         !$acc enter data create(c_distr(1:pert_nglob,l2_s:l2_e)) copyin(ag,bg)
+         !$acc enter data create(c_distr(1:pert_nglob,l2_s:l2_e))
          !
          !$acc kernels present(c_distr(1:pert_nglob,l2_s:l2_e))
          c_distr(1:pert_nglob,l2_s:l2_e) = 0._DP
@@ -171,10 +171,14 @@ MODULE wbse_tools
          !
          ! Cycle ag
          !
-         CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
-         !
-         IF(l2_e >= l2_s) THEN
-            !$acc update device(ag)
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
+            !
+            IF(l2_e >= l2_s) THEN
+               !$acc update device(ag)
+            ENDIF
+            !
          ENDIF
          !
       ENDDO
@@ -182,7 +186,7 @@ MODULE wbse_tools
       IF(l2_e >= l2_s) THEN
          !
          !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e))
-         !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+         !$acc exit data delete(c_distr(1:pert_nglob,l2_s:l2_e))
          !
          CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
          CALL mp_sum(c_distr(:,l2_s:l2_e),inter_bgrp_comm)
@@ -278,7 +282,7 @@ MODULE wbse_tools
       !
       ALLOCATE(hg(npwx,band_group%nlocx,kpt_pool%nloc,pert%nlocx))
       !
-      !$acc enter data create(hg) copyin(ag,bg,vr_distr,ew,nbnd_loc)
+      !$acc enter data create(hg) copyin(vr_distr,ew,nbnd_loc)
       !
       !$acc kernels present(hg)
       hg(:,:,:,:) = 0._DP
@@ -331,9 +335,13 @@ MODULE wbse_tools
          !
          ! Cycle ag
          !
-         CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
-         !
-         !$acc update device(ag)
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
+            !
+            !$acc update device(ag)
+            !
+         ENDIF
          !
       ENDDO
       !
@@ -414,9 +422,13 @@ MODULE wbse_tools
          !
          ! Cycle bg
          !
-         CALL west_mp_circ_shift(bg,icycl,inter_image_comm)
-         !
-         !$acc update device(bg)
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(bg,icycl,inter_image_comm)
+            !
+            !$acc update device(bg)
+            !
+         ENDIF
          !
       ENDDO
       !
@@ -440,7 +452,7 @@ MODULE wbse_tools
       ENDDO
       !$acc end parallel
       !
-      !$acc exit data delete(bg,hg,vr_distr,ew,nbnd_loc) copyout(ag)
+      !$acc exit data delete(hg,vr_distr,ew,nbnd_loc)
       DEALLOCATE(hg)
       DEALLOCATE(nbnd_loc)
       !
@@ -521,7 +533,7 @@ MODULE wbse_tools
       !
       ALLOCATE(hg(npwx,band_group%nlocx,kpt_pool%nloc,pert%nlocx))
       !
-      !$acc enter data create(hg) copyin(ag,vr_distr,nbnd_loc)
+      !$acc enter data create(hg) copyin(vr_distr,nbnd_loc)
       !
       !$acc kernels present(hg)
       hg(:,:,:,:) = 0._DP
@@ -574,9 +586,13 @@ MODULE wbse_tools
          !
          ! Cycle ag
          !
-         CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
-         !
-         !$acc update device(ag)
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
+            !
+            !$acc update device(ag)
+            !
+         ENDIF
          !
       ENDDO
       !
@@ -637,7 +653,7 @@ MODULE wbse_tools
       ENDDO
       !$acc end parallel
       !
-      !$acc exit data delete(hg,vr_distr,nbnd_loc) copyout(ag)
+      !$acc exit data delete(hg,vr_distr,nbnd_loc)
       DEALLOCATE(hg)
       DEALLOCATE(nbnd_loc)
       !
@@ -721,7 +737,7 @@ MODULE wbse_tools
          !
       ENDDO
       !
-      !$acc enter data copyin(ag,nbnd_loc)
+      !$acc enter data copyin(nbnd_loc)
       !
       il1_start = 1
       DO il1 = 1,pert%nloc
@@ -776,7 +792,7 @@ MODULE wbse_tools
       ENDDO
       !$acc end parallel
       !
-      !$acc exit data delete(g2kin_save,nbnd_loc) copyout(ag)
+      !$acc exit data delete(g2kin_save,nbnd_loc)
       DEALLOCATE(g2kin_save)
       DEALLOCATE(nbnd_loc)
       !

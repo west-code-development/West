@@ -75,6 +75,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   CALL wbse_dot(z_rhs,z_rhs,band_group%nlocx,dotp)
   !
+  WRITE(stdout,*)
   WRITE(stdout,"(5X,'Norm of z_rhs_vec    = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   ! Initial guess

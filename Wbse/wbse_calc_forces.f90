@@ -101,7 +101,7 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   !
   CALL io_push_title('Forces total')
   !
-  DO na = 1, nat
+  DO na = 1,nat
      !
      ! forces = - gradients
      !
@@ -125,20 +125,16 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   !
   ! enforce total forces to be 0 in each direction
   !
-  DO ipol = 1, 3
+  DO ipol = 1,3
      !
      sumforces = 0._DP
      !
-     DO na = 1, nat
-        !
+     DO na = 1,nat
         sumforces = sumforces + forces( 3 * na - 3 + ipol )
-        !
      ENDDO
      !
-     DO na = 1, nat
-        !
+     DO na = 1,nat
         forces( 3 * na - 3 + ipol ) = forces( 3 * na - 3 + ipol ) - sumforces / REAL(nat,KIND=DP)
-        !
      ENDDO
      !
   ENDDO
@@ -192,6 +188,7 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_invfft_gamma,double_invfft_gamma
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,l_spin_flip
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_pool_comm,inter_bgrp_comm
@@ -212,15 +209,11 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   ! Workspace
   !
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ir, lbnd, ibnd, jbnd, dffts_nnr
+  INTEGER :: barra_load
   REAL(DP) :: w1, w2
   REAL(DP), ALLOCATABLE :: tmp_r(:)
+  TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: flks(2) = [2,1]
-  !
-#if defined(__CUDA)
-  CALL start_clock_gpu('drhox1')
-#else
-  CALL start_clock('drhox1')
-#endif
   !
   CALL io_push_title('Compute drhox1')
   !
@@ -229,6 +222,27 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   !
   ALLOCATE(tmp_r(dffts%nnr))
   !$acc enter data create(tmp_r)
+  !
+  barra_load = 0
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     IF(l_spin_flip) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
+     nbndval = nbnd_occ(iks_do)
+     !
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) barra_load = barra_load+1
+     ENDDO
+     !
+  ENDDO
+  !
+  CALL start_bar_type(barra,'drhox1',barra_load)
   !
   DO iks = 1,kpt_pool%nloc
      !
@@ -274,10 +288,12 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
         !$acc end host_data
         !
         !$acc parallel loop present(tmp_r)
-        DO ir = 1, dffts_nnr
+        DO ir = 1,dffts_nnr
            tmp_r(ir) = tmp_r(ir) + w1*REAL(psic(ir),KIND=DP)**2 + w2*AIMAG(psic(ir))**2
         ENDDO
         !$acc end parallel
+        !
+        CALL update_bar_type(barra,'drhox1',2)
         !
      ENDDO
      !
@@ -295,10 +311,12 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
         !$acc end host_data
         !
         !$acc parallel loop present(tmp_r)
-        DO ir = 1, dffts_nnr
+        DO ir = 1,dffts_nnr
            tmp_r(ir) = tmp_r(ir) + w1*REAL(psic(ir),KIND=DP)**2
         ENDDO
         !$acc end parallel
+        !
+        CALL update_bar_type(barra,'drhox1',1)
         !
      ENDIF
      !
@@ -311,14 +329,10 @@ SUBROUTINE wbse_calc_drhox1( dvg_exc_tmp, drhox1 )
   CALL mp_sum(drhox1,inter_bgrp_comm)
   CALL mp_sum(drhox1,inter_pool_comm)
   !
+  CALL stop_bar_type(barra,'drhox1')
+  !
   !$acc exit data delete(tmp_r)
   DEALLOCATE(tmp_r)
-  !
-#if defined(__CUDA)
-  CALL stop_clock_gpu('drhox1')
-#else
-  CALL stop_clock('drhox1')
-#endif
   !
 END SUBROUTINE
 !
@@ -337,6 +351,7 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   USE mp,                   ONLY : mp_sum
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE westcom,              ONLY : logfile,nbnd_occ,n_trunc_bands,l_spin_flip
   USE vlocal,               ONLY : vloc
   USE control_flags,        ONLY : gamma_only
@@ -359,18 +374,14 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:)
   !$acc declare device_resident(dvpsi)
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, na, ipol, lbnd, ibnd, ig
+  INTEGER :: barra_load
   REAL(DP) :: reduce, factor, this_wk
   REAL(DP), ALLOCATABLE :: forces_aux(:), forces_drhox1(:), forcelc(:,:), rdrhox1(:,:)
   !$acc declare device_resident(forces_aux)
-  INTEGER, PARAMETER :: flks(2) = [2,1]
   TYPE(json_file) :: json
   INTEGER :: iunit
-  !
-#if defined(__CUDA)
-  CALL start_clock_gpu('f_drhox1')
-#else
-  CALL start_clock('f_drhox1')
-#endif
+  TYPE(bar_type) :: barra
+  INTEGER, PARAMETER :: flks(2) = [2,1]
   !
   CALL io_push_title('Compute forces of drhox1')
   !
@@ -391,9 +402,30 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   forces_drhox1(:) = 0._DP
   !$acc end kernels
   !
+  barra_load = 0
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     IF(l_spin_flip) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
+     nbndval = nbnd_occ(iks_do)
+     !
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) barra_load = barra_load+1
+     ENDDO
+     !
+  ENDDO
+  !
+  CALL start_bar_type(barra,'f_drhox1',barra_load)
+  !
   ! nonlocal part
   !
-  DO iks = 1, kpt_pool%nloc
+  DO iks = 1,kpt_pool%nloc
      !
      IF(l_spin_flip) THEN
         iks_do = flks(iks)
@@ -429,7 +461,7 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
      npw = ngk(iks)
      this_wk = wk(iks)
      !
-     DO lbnd = 1, nbnd_do
+     DO lbnd = 1,nbnd_do
         !
         ! 1) | dvpsi_i >
         !
@@ -445,11 +477,11 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
         !
         !$acc parallel vector_length(1024) present(dvg_exc_tmp,dvpsi,forces_aux)
         !$acc loop
-        DO ia = 1, n
+        DO ia = 1,n
            !
            reduce = 0._DP
            !$acc loop reduction(+:reduce)
-           DO ig = 1, npw
+           DO ig = 1,npw
               reduce = reduce + REAL(dvg_exc_tmp(ig,lbnd,iks),KIND=DP) * REAL(dvpsi(ig,ia),KIND=DP) &
               &               + AIMAG(dvg_exc_tmp(ig,lbnd,iks)) * AIMAG(dvpsi(ig,ia))
            ENDDO
@@ -461,17 +493,19 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
         !
         IF (gstart == 2) THEN
            !$acc parallel loop present(forces_aux,dvg_exc_tmp,dvpsi)
-           DO ia = 1, n
+           DO ia = 1,n
               forces_aux(ia) = forces_aux(ia) - REAL(dvg_exc_tmp(1,lbnd,iks),KIND=DP)*REAL(dvpsi(1,ia),KIND=DP)
            ENDDO
            !$acc end parallel
         ENDIF
         !
         !$acc parallel loop present(forces_drhox1,forces_aux)
-        DO ia = 1, n
+        DO ia = 1,n
            forces_drhox1(ia) = forces_drhox1(ia) + factor * this_wk * forces_aux(ia)
         ENDDO
         !$acc end parallel
+        !
+        CALL update_bar_type(barra,'f_drhox1',1)
         !
      ENDDO
      !
@@ -482,6 +516,8 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   CALL mp_sum(forces_drhox1,intra_bgrp_comm)
   CALL mp_sum(forces_drhox1,inter_bgrp_comm)
   CALL mp_sum(forces_drhox1,inter_pool_comm)
+  !
+  CALL stop_bar_type(barra,'f_drhox1')
   !
   ! local part
   !
@@ -496,8 +532,8 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   !
   forcelc(:,:) = - factor * forcelc
   !
-  DO na = 1, nat
-     DO ipol = 1, 3
+  DO na = 1,nat
+     DO ipol = 1,3
         forces_drhox1(3 * na - 3 + ipol) = forces_drhox1(3 * na - 3 + ipol) + forcelc(ipol,na)
      ENDDO
   ENDDO
@@ -506,7 +542,7 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   !
   CALL io_push_title('Forces drhox1')
   !
-  DO na = 1, nat
+  DO na = 1,nat
      !
      ! forces = - gradients
      !
@@ -537,12 +573,6 @@ SUBROUTINE wbse_forces_drhox1( n, dvg_exc_tmp, drhox1, forces )
   DEALLOCATE(dvpsi)
   DEALLOCATE(rdrhox1)
   !
-#if defined(__CUDA)
-  CALL stop_clock_gpu('f_drhox1')
-#else
-  CALL stop_clock('f_drhox1')
-#endif
-  !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)
   !
 END SUBROUTINE
@@ -556,6 +586,7 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   USE pwcom,                ONLY : ngk,npwx,npw
   USE mp,                   ONLY : mp_sum
   USE noncollin_module,     ONLY : npol
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE westcom,              ONLY : nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip,evc1_all
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : intra_bgrp_comm
@@ -572,21 +603,18 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
   !
   INTEGER :: iks, iks_do, nbndval, nbnd_do, lbnd, ibnd, ig
   REAL(DP) :: reduce
+  TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
-#if defined(__CUDA)
-  CALL start_clock_gpu('dvgdvg')
-#else
-  CALL start_clock('dvgdvg')
-#endif
-  !
-  CALL io_push_title('Compute < dvg | dvg >')
+  CALL io_push_title('Compute <dvg|dvg>')
   !
   !$acc kernels present(dvgdvg_mat)
   dvgdvg_mat(:,:,:) = 0._DP
   !$acc end kernels
   !
-  DO iks = 1, kpt_pool%nloc
+  CALL start_bar_type(barra,'dvgdvg',kpt_pool%nloc)
+  !
+  DO iks = 1,kpt_pool%nloc
      !
      npw = ngk(iks)
      !
@@ -606,12 +634,12 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
      !
      !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
      !$acc loop collapse(2)
-     DO lbnd = 1, nbnd_do
-        DO ibnd = 1, nbndval - n_trunc_bands
+     DO lbnd = 1,nbnd_do
+        DO ibnd = 1,nbndval - n_trunc_bands
            !
            reduce = 0._DP
            !$acc loop reduction(+:reduce)
-           DO ig = 1, npw
+           DO ig = 1,npw
               reduce = reduce &
               & + REAL(evc1_all(ig,ibnd,iks),KIND=DP)*REAL(dvg_exc_tmp(ig,lbnd,iks),KIND=DP) &
               & + AIMAG(evc1_all(ig,ibnd,iks))*AIMAG(dvg_exc_tmp(ig,lbnd,iks))
@@ -626,8 +654,8 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
      IF(gstart == 2) THEN
         !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
         !$acc loop collapse(2)
-        DO lbnd = 1, nbnd_do
-           DO ibnd = 1, nbndval - n_trunc_bands
+        DO lbnd = 1,nbnd_do
+           DO ibnd = 1,nbndval - n_trunc_bands
               dvgdvg_mat(ibnd,lbnd,iks) = dvgdvg_mat(ibnd,lbnd,iks) &
               & - REAL(evc1_all(1,ibnd,iks),KIND=DP) * REAL(dvg_exc_tmp(1,lbnd,iks),KIND=DP)
            ENDDO
@@ -635,17 +663,15 @@ SUBROUTINE wbse_calc_dvgdvg_mat( dvg_exc_tmp, dvgdvg_mat )
         !$acc end parallel
      ENDIF
      !
+     CALL update_bar_type(barra,'dvgdvg',1)
+     !
   ENDDO
   !
   !$acc host_data use_device(dvgdvg_mat)
   CALL mp_sum(dvgdvg_mat,intra_bgrp_comm)
   !$acc end host_data
   !
-#if defined(__CUDA)
-  CALL stop_clock_gpu('dvgdvg')
-#else
-  CALL stop_clock('dvgdvg')
-#endif
+  CALL stop_bar_type(barra,'dvgdvg')
   !
 END SUBROUTINE
 !
@@ -660,6 +686,7 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   USE buffers,              ONLY : get_buffer
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : double_invfft_gamma,single_invfft_gamma
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE westcom,              ONLY : iuwfc,lrwfc,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm
@@ -681,16 +708,12 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   ! Workspace
   !
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ir, lbnd, ibnd, jbnd, jbndp, dffts_nnr
+  INTEGER :: barra_load
   REAL(DP) :: prod, w1
   REAL(DP), ALLOCATABLE :: aux_r(:)
   !$acc declare device_resident(aux_r)
+  TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: flks(2) = [2,1]
-  !
-#if defined(__CUDA)
-  CALL start_clock_gpu('drhox2')
-#else
-  CALL start_clock('drhox2')
-#endif
   !
   CALL io_push_title('Compute drhox2')
   !
@@ -703,6 +726,27 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   !$acc kernels present(drhox2)
   drhox2(:,:) = (0._DP,0._DP)
   !$acc end kernels
+  !
+  barra_load = 0
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     IF(l_spin_flip) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
+     nbndval = nbnd_occ(iks_do)
+     !
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) barra_load = barra_load+1
+     ENDDO
+     !
+  ENDDO
+  !
+  CALL start_bar_type(barra,'drhox2',barra_load)
   !
   DO iks = 1,kpt_pool%nloc
      !
@@ -743,7 +787,7 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
 #endif
      ENDIF
      !
-     DO lbnd = 1, nbnd_do
+     DO lbnd = 1,nbnd_do
         !
         ibnd = band_group%l2g(lbnd) + n_trunc_bands
         !
@@ -752,12 +796,12 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
         CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
         !
         !$acc parallel loop present(aux_r)
-        DO ir = 1, dffts_nnr
+        DO ir = 1,dffts_nnr
            aux_r(ir) = REAL(psic(ir),KIND=DP)
         ENDDO
         !$acc end parallel
         !
-        DO jbnd = 1, nbndval - n_trunc_bands, 2
+        DO jbnd = 1,nbndval - n_trunc_bands, 2
            !
            jbndp = jbnd + n_trunc_bands ! index for evc
            !
@@ -766,7 +810,7 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
               CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,jbndp),evc_work(:,jbndp+1),psic,'Wave')
               !
               !$acc parallel loop present(aux_r,dvgdvg_mat,drhox2)
-              DO ir = 1, dffts_nnr
+              DO ir = 1,dffts_nnr
                  prod = aux_r(ir) * ( REAL(psic(ir),KIND=DP) * dvgdvg_mat(jbnd,lbnd,iks) &
                  &                  + AIMAG(psic(ir)) * dvgdvg_mat(jbnd+1,lbnd,iks) )
                  drhox2(ir,current_spin) = drhox2(ir,current_spin) - w1 * CMPLX(prod,KIND=DP)
@@ -778,7 +822,7 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
               CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,jbndp),psic,'Wave')
               !
               !$acc parallel loop present(aux_r,dvgdvg_mat,drhox2)
-              DO ir = 1, dffts_nnr
+              DO ir = 1,dffts_nnr
                  prod = aux_r(ir) * REAL(psic(ir),KIND=DP) * dvgdvg_mat(jbnd,lbnd,iks)
                  drhox2(ir,current_spin) = drhox2(ir,current_spin) - w1 * CMPLX(prod,KIND=DP)
               ENDDO
@@ -787,6 +831,8 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
            ENDIF
            !
         ENDDO
+        !
+        CALL update_bar_type(barra,'drhox2',1)
         !
      ENDDO
      !
@@ -797,13 +843,9 @@ SUBROUTINE wbse_calc_drhox2( dvgdvg_mat, drhox2 )
   CALL mp_sum(drhox2,inter_bgrp_comm)
   CALL mp_sum(drhox2,inter_pool_comm)
   !
-  DEALLOCATE( aux_r )
+  CALL stop_bar_type(barra,'drhox2')
   !
-#if defined(__CUDA)
-  CALL stop_clock_gpu('drhox2')
-#else
-  CALL stop_clock('drhox2')
-#endif
+  DEALLOCATE( aux_r )
   !
 END SUBROUTINE
 !
@@ -823,6 +865,7 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE westcom,              ONLY : iuwfc,lrwfc,logfile,nbnd_occ,nbndval0x,n_trunc_bands,l_spin_flip
   USE vlocal,               ONLY : vloc
   USE control_flags,        ONLY : gamma_only
@@ -848,24 +891,20 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   REAL(DP), INTENT(IN) :: dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc)
   COMPLEX(DP), INTENT(IN) :: drhox2(dffts%nnr, nspin)
   REAL(DP), INTENT(INOUT) :: forces(n)
-  TYPE(json_file) :: json
-  INTEGER :: iunit
   !
   ! Workspace
   !
   COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:), aux_g(:)
   !$acc declare device_resident(dvpsi,aux_g)
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, ipol, na, lbnd, ibnd, ig
+  INTEGER :: barra_load
   REAL(DP) :: reduce, factor, this_wk
   REAL(DP), ALLOCATABLE :: forces_aux(:), forces_drhox2(:), rdrhox2(:,:), forcelc(:,:)
   !$acc declare device_resident(forces_aux)
+  TYPE(json_file) :: json
+  INTEGER :: iunit
+  TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: flks(2) = [2,1]
-  !
-#if defined(__CUDA)
-  CALL start_clock_gpu('f_drhox2')
-#else
-  CALL start_clock('f_drhox2')
-#endif
   !
   CALL io_push_title('Compute forces of drhox2')
   !
@@ -886,6 +925,27 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !$acc kernels present(forces_drhox2)
   forces_drhox2(:) = 0._DP
   !$acc end kernels
+  !
+  barra_load = 0
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     IF(l_spin_flip) THEN
+        iks_do = flks(iks)
+     ELSE
+        iks_do = iks
+     ENDIF
+     !
+     nbndval = nbnd_occ(iks_do)
+     !
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) barra_load = barra_load+1
+     ENDDO
+     !
+  ENDDO
+  !
+  CALL start_bar_type(barra,'f_drhox2',barra_load)
   !
   ! nonlocal part
   !
@@ -940,7 +1000,7 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
 #endif
      ENDIF
      !
-     DO lbnd = 1, nbnd_do
+     DO lbnd = 1,nbnd_do
         !
         ibnd = band_group%l2g(lbnd) + n_trunc_bands
         !
@@ -963,11 +1023,11 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
         !
         !$acc parallel vector_length(1024) present(aux_g,dvpsi,forces_aux)
         !$acc loop
-        DO ia = 1, n
+        DO ia = 1,n
            !
            reduce = 0._DP
            !$acc loop reduction(+:reduce)
-           DO ig = 1, npw
+           DO ig = 1,npw
               reduce = reduce + REAL(aux_g(ig),KIND=DP) * REAL(dvpsi(ig,ia),KIND=DP) &
               &               + AIMAG(aux_g(ig)) * AIMAG(dvpsi(ig,ia))
            ENDDO
@@ -979,17 +1039,19 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
         !
         IF (gstart == 2) THEN
            !$acc parallel loop present(forces_aux,aux_g,dvpsi)
-           DO ia = 1, n
+           DO ia = 1,n
               forces_aux(ia) = forces_aux(ia) - REAL(aux_g(1),KIND=DP)*REAL(dvpsi(1,ia),KIND=DP)
            ENDDO
            !$acc end parallel
         ENDIF
         !
         !$acc parallel loop present(forces_drhox2,forces_aux)
-        DO ia = 1, n
+        DO ia = 1,n
            forces_drhox2(ia) = forces_drhox2(ia) - factor * this_wk * forces_aux(ia)
         ENDDO
         !$acc end parallel
+        !
+        CALL update_bar_type(barra,'f_drhox2',1)
         !
      ENDDO
      !
@@ -1000,6 +1062,8 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   CALL mp_sum(forces_drhox2,intra_bgrp_comm)
   CALL mp_sum(forces_drhox2,inter_bgrp_comm)
   CALL mp_sum(forces_drhox2,inter_pool_comm)
+  !
+  CALL stop_bar_type(barra,'f_drhox2')
   !
   ! local part
   !
@@ -1014,8 +1078,8 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !
   forcelc(:,:) = - factor * forcelc
   !
-  DO na = 1, nat
-     DO ipol = 1, 3
+  DO na = 1,nat
+     DO ipol = 1,3
         forces_drhox2(3 * na - 3 + ipol) = forces_drhox2(3 * na - 3 + ipol) + forcelc(ipol,na)
      ENDDO
   ENDDO
@@ -1024,7 +1088,7 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !
   CALL io_push_title('Forces drhox2')
   !
-  DO na = 1, nat
+  DO na = 1,nat
      !
      ! forces = - gradients
      !
@@ -1056,12 +1120,6 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   DEALLOCATE( rdrhox2 )
   DEALLOCATE( aux_g )
   !
-#if defined(__CUDA)
-  CALL stop_clock_gpu('f_drhox2')
-#else
-  CALL stop_clock('f_drhox2')
-#endif
-  !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)
   !
 END SUBROUTINE
@@ -1082,6 +1140,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   USE buffers,              ONLY : get_buffer
   USE noncollin_module,     ONLY : npol
   USE fft_base,             ONLY : dffts
+  USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE westcom,              ONLY : iuwfc,lrwfc,logfile,nbnd_occ,n_trunc_bands,l_spin_flip
   USE vlocal,               ONLY : vloc
   USE control_flags,        ONLY : gamma_only
@@ -1111,17 +1170,13 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:), drhoz(:,:)
   !$acc declare device_resident(dvpsi)
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, na, ipol, lbnd, ibnd, ig
+  INTEGER :: barra_load
   REAL(DP) :: reduce, factor, this_wk
   REAL(DP), ALLOCATABLE :: forces_aux(:), forces_drhoz(:), forcelc(:,:), rdrhoz(:,:)
   !$acc declare device_resident(forces_aux)
   TYPE(json_file) :: json
   INTEGER :: iunit
-  !
-#if defined(__CUDA)
-  CALL start_clock_gpu('f_drhoz')
-#else
-  CALL start_clock('f_drhoz')
-#endif
+  TYPE(bar_type) :: barra
   !
   CALL io_push_title('Compute forces of Z vector')
   !
@@ -1144,9 +1199,24 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   forces_drhoz(:) = 0._DP
   !$acc end kernels
   !
+  barra_load = 0
+  !
+  DO iks = 1,kpt_pool%nloc
+     !
+     nbndval = nbnd_occ(iks)
+     !
+     DO lbnd = 1,band_group%nloc
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) barra_load = barra_load+1
+     ENDDO
+     !
+  ENDDO
+  !
+  CALL start_bar_type(barra,'f_drhoxz',barra_load)
+  !
   ! nonlocal part
   !
-  DO iks = 1, kpt_pool%nloc
+  DO iks = 1,kpt_pool%nloc
      !
      ! Z vector always spin-conserving
      !
@@ -1199,7 +1269,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
 #endif
      ENDIF
      !
-     DO lbnd = 1, nbnd_do
+     DO lbnd = 1,nbnd_do
         !
         ibnd = band_group%l2g(lbnd) + n_trunc_bands
         !
@@ -1217,11 +1287,11 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
         !
         !$acc parallel vector_length(1024) present(zvector,dvpsi,forces_aux)
         !$acc loop
-        DO ia = 1, n
+        DO ia = 1,n
            !
            reduce = 0._DP
            !$acc loop reduction(+:reduce)
-           DO ig = 1, npw
+           DO ig = 1,npw
               reduce = reduce + REAL(zvector(ig,lbnd,iks),KIND=DP) * REAL(dvpsi(ig,ia),KIND=DP) &
               &               + AIMAG(zvector(ig,lbnd,iks)) * AIMAG(dvpsi(ig,ia))
            ENDDO
@@ -1233,17 +1303,19 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
         !
         IF (gstart == 2) THEN
            !$acc parallel loop present(forces_aux,zvector,dvpsi)
-           DO ia = 1, n
+           DO ia = 1,n
               forces_aux(ia) = forces_aux(ia) - REAL(zvector(1,lbnd,iks),KIND=DP)*REAL(dvpsi(1,ia),KIND=DP)
            ENDDO
            !$acc end parallel
         ENDIF
         !
         !$acc parallel loop present(forces_drhoz,forces_aux)
-        DO ia = 1, n
+        DO ia = 1,n
            forces_drhoz(ia) = forces_drhoz(ia) + 2._DP * factor * this_wk * forces_aux(ia)
         ENDDO
         !$acc end parallel
+        !
+        CALL update_bar_type(barra,'f_drhoxz',1)
         !
      ENDDO
      !
@@ -1254,6 +1326,8 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   CALL mp_sum(forces_drhoz,intra_bgrp_comm)
   CALL mp_sum(forces_drhoz,inter_bgrp_comm)
   CALL mp_sum(forces_drhoz,inter_pool_comm)
+  !
+  CALL stop_bar_type(barra,'f_drhoxz')
   !
   ! local part
   !
@@ -1271,8 +1345,8 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   forcelc(:,:) = - factor * forcelc
   !
-  DO na = 1, nat
-     DO ipol = 1, 3
+  DO na = 1,nat
+     DO ipol = 1,3
         forces_drhoz(3 * na - 3 + ipol) = forces_drhoz(3 * na - 3 + ipol) + forcelc(ipol,na)
      ENDDO
   ENDDO
@@ -1281,7 +1355,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   CALL io_push_title('Forces drhoz')
   !
-  DO na = 1, nat
+  DO na = 1,nat
      !
      ! forces = - gradients
      !
@@ -1313,12 +1387,6 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   DEALLOCATE( rdrhoz )
   !$acc exit data delete(drhoz)
   DEALLOCATE( drhoz )
-  !
-#if defined(__CUDA)
-  CALL stop_clock_gpu('f_drhoz')
-#else
-  CALL stop_clock('f_drhoz')
-#endif
   !
 9035 FORMAT(5X,'atom ',I4,' type ',I2,'   force = ',3F14.8)
   !

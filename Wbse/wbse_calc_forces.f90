@@ -853,9 +853,9 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   !
   ! Workspace
   !
-  COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:), aux_g(:), aux_z(:)
-  !$acc declare device_resident(dvpsi,aux_g,aux_z)
-  INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, ipol, na, lbnd, ibnd, jbnd, ig
+  COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:), aux_g(:)
+  !$acc declare device_resident(dvpsi,aux_g)
+  INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, ipol, na, lbnd, ibnd, ig
   REAL(DP) :: reduce, factor, this_wk
   REAL(DP), ALLOCATABLE :: forces_aux(:), forces_drhox2(:), rdrhox2(:,:), forcelc(:,:)
   !$acc declare device_resident(forces_aux)
@@ -882,7 +882,6 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   ALLOCATE( dvpsi(npwx, n) )
   ALLOCATE( rdrhox2(dffts%nnr, nspin) )
   ALLOCATE( aux_g(npwx*npol) )
-  ALLOCATE( aux_z(nbndval0x-n_trunc_bands) )
   !
   !$acc kernels present(forces_drhox2)
   forces_drhox2(:) = 0._DP
@@ -957,15 +956,9 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
         !
         ! 2) force_aux = < evc_iv2 | dvpsi_ia_iv >
         !
-        !$acc parallel loop present(aux_z,dvgdvg_mat)
-        DO jbnd = 1, nbndval - n_trunc_bands
-           aux_z(jbnd) = CMPLX(dvgdvg_mat(jbnd,lbnd,iks),KIND=DP)
-        ENDDO
-        !$acc end parallel
-        !
         !$acc host_data use_device(dvgdvg_mat,aux_g)
-        CALL ZGEMM('N', 'N', npw, 1, nbndval-n_trunc_bands, (1._DP,0._DP), evc_work(1,n_trunc_bands+1), &
-        & npwx, aux_z, nbndval-n_trunc_bands, (0._DP,0._DP), aux_g, npwx)
+        CALL DGEMM('N', 'N', 2*npw, 1, nbndval-n_trunc_bands, 1._DP, evc_work(1,n_trunc_bands+1), &
+        & 2*npwx, dvgdvg_mat(1,lbnd,iks), nbndval0x-n_trunc_bands, 0._DP, aux_g, 2*npwx)
         !$acc end host_data
         !
         !$acc parallel vector_length(1024) present(aux_g,dvpsi,forces_aux)
@@ -1062,7 +1055,6 @@ SUBROUTINE wbse_forces_drhox2( n, dvgdvg_mat, drhox2, forces )
   DEALLOCATE( dvpsi )
   DEALLOCATE( rdrhox2 )
   DEALLOCATE( aux_g )
-  DEALLOCATE( aux_z )
   !
 #if defined(__CUDA)
   CALL stop_clock_gpu('f_drhox2')

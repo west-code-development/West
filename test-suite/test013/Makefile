@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule test QDET verbosity"
+	@echo "SiH4 molecule gamma_only QDET verbosity"
 	@echo

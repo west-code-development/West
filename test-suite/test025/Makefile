@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "NV- in diamond test hybrid TDDFT forces"
+	@echo "NV- diamond gamma_only spin-polarized hybrid TDDFT forces"
 	@echo

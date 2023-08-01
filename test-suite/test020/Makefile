@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule gamma_only test hybrid no ACE"
+	@echo "SiH4 molecule gamma_only GW hybrid no ACE"
 	@echo

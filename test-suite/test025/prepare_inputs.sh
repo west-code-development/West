@@ -20,7 +20,7 @@ ecutwfc           = 25
 nosym             = .true.
 tot_charge        = -1
 nspin             = 2
-nbnd              = 40
+nbnd              = 60
 tot_magnetization = 2
 input_dft         = 'pbe0'
 exx_fraction      = 0.18
@@ -84,5 +84,4 @@ wbse_control:
   l_pre_shift: False 
   l_forces: True
   forces_state: 1
-  n_exx_lowrank: 0
 EOF

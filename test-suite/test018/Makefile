@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule test hybrid TDDFT Lanczos"
+	@echo "SiH4 molecule gamma_only hybrid TDDFT Lanczos"
 	@echo

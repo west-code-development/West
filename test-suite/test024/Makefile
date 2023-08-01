@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "Formaldehyde molecule test hybrid TDDFT forces"
+	@echo "Formaldehyde molecule gamma_only hybrid TDDFT forces"
 	@echo

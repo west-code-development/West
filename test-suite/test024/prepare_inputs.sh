@@ -19,7 +19,7 @@ celldm(1)       = 20
 nat             = 4
 ntyp            = 3
 ecutwfc         = 25
-nbnd            = 16
+nbnd            = 30
 input_dft       = 'pbe0'
 /
 &electrons
@@ -67,5 +67,4 @@ wbse_control:
   l_pre_shift: True
   l_forces: True
   forces_state: 1
-  n_exx_lowrank: 0
 EOF

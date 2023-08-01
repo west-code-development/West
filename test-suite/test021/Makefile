@@ -29,5 +29,5 @@ title:
 
 description:
 	@echo
-	@echo "O2 molecule test spin-flip TDDFT (LDA) Davidson"
+	@echo "O2 molecule gamma_only spin-flip TDDFT Davidson"
 	@echo

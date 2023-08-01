@@ -79,7 +79,7 @@ SUBROUTINE exx_go()
      wfc_dir = tmp_dir
      nwordwfc = nbnd*npwx*npol
      io_level = 1
-     CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
+     IF(n_exx_lowrank < 1) CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
      !
      CALL start_exx()
      CALL weights()
@@ -102,7 +102,7 @@ SUBROUTINE exx_go()
      exxdiv = exx_divergence()
      WRITE(stdout,'(7X,"** WARNING : EXX-exxdiv           = ",F14.6)') exxdiv
      !
-     CALL close_buffer(iunwfc,'KEEP')
+     IF(n_exx_lowrank < 1) CALL close_buffer(iunwfc,'KEEP')
      !
   ENDIF
   !

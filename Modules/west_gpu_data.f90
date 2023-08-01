@@ -798,5 +798,32 @@ MODULE west_gpu_data
    !$acc exit data delete(et_qp,u_matrix)
    !
    END SUBROUTINE
+   !
+   !-----------------------------------------------------------------------
+   SUBROUTINE allocate_drhoz_gpu()
+   !-----------------------------------------------------------------------
+   !
+   USE fft_base,              ONLY : dffts
+   !
+   IMPLICIT NONE
+   !
+   ALLOCATE(tmp_r(dffts%nnr))
+   !$acc enter data create(tmp_r)
+   !
+   END SUBROUTINE
+   !
+   !-----------------------------------------------------------------------
+   SUBROUTINE deallocate_drhoz_gpu()
+   !-----------------------------------------------------------------------
+   !
+   IMPLICIT NONE
+   !
+   IF(ALLOCATED(tmp_r)) THEN
+      !$acc exit data delete(tmp_r)
+      DEALLOCATE(tmp_r)
+   ENDIF
+   !
+   END SUBROUTINE
 #endif
+   !
 END MODULE

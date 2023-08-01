@@ -576,10 +576,6 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   IF(l_forces) THEN
      !
-#if defined(__CUDA)
-     CALL allocate_bse_gpu(band_group%nlocx)
-#endif
-     !
      ! send forces_state to root image
      !
      CALL pert%g2l(forces_state,il1,owner)
@@ -596,10 +592,6 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      !$acc exit data delete(dvg_exc_tmp)
      DEALLOCATE( dvg_exc_tmp )
-     !
-#if defined(__CUDA)
-     CALL deallocate_bse_gpu()
-#endif
      !
   ELSE
      !

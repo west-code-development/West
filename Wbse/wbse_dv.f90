@@ -82,8 +82,6 @@ MODULE wbse_dv
     !
     !  This routine computes the change of the self consistent potential
     !  (Hartree and XC) due to the perturbation.
-    !  Note: gamma_only is disregarded for PHonon calculations,
-    !  TDDFPT purposes only.
     !
     USE kinds,                 ONLY : DP
     USE constants,             ONLY : e2,fpi
@@ -96,7 +94,6 @@ MODULE wbse_dv
     USE funct,                 ONLY : dft_is_nonlocc
     USE scf,                   ONLY : rho,rho_core
     USE uspp,                  ONLY : nlcc_any
-    USE control_flags,         ONLY : gamma_only
     USE martyna_tuckerman,     ONLY : wg_corr_h,do_comp_mt
     USE qpoint,                ONLY : xq
     USE eqv,                   ONLY : dmuxc
@@ -274,19 +271,17 @@ MODULE wbse_dv
     ENDIF
 #endif
     !
-    IF(gamma_only) THEN
 #if defined(__CUDA)
-       !$acc parallel loop present(dvhart)
-       DO ig = 1, ngm
-          dvhart(dfft_nlm_d(ig)) = CONJG(dvhart(dfft_nl_d(ig)))
-       ENDDO
-       !$acc end parallel
+    !$acc parallel loop present(dvhart)
+    DO ig = 1, ngm
+       dvhart(dfft_nlm_d(ig)) = CONJG(dvhart(dfft_nl_d(ig)))
+    ENDDO
+    !$acc end parallel
 #else
-       DO ig = 1, ngm
-          dvhart(dfftp%nlm(ig)) = CONJG(dvhart(dfftp%nl(ig)))
-       ENDDO
+    DO ig = 1, ngm
+       dvhart(dfftp%nlm(ig)) = CONJG(dvhart(dfftp%nl(ig)))
+    ENDDO
 #endif
-    ENDIF
     !
     ! Transformed back to real space
     !
@@ -452,8 +447,6 @@ MODULE wbse_dv
     !
     !  This routine computes the change of the self consistent potential
     !  (XC) due to the perturbation in spin-flip calculations
-    !  Note: gamma_only is disregarded for PHonon calculations,
-    !  TDDFPT purposes only.
     !
     USE kinds,                 ONLY : DP
     USE fft_base,              ONLY : dfftp

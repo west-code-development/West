@@ -27,6 +27,9 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   USE io_push,              ONLY : io_push_title
   USE wbse_bgrp,            ONLY : gather_bands
   USE mp,                   ONLY : mp_waitall
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : allocate_bse_gpu,deallocate_bse_gpu
+#endif
   !
   IMPLICIT NONE
   !
@@ -90,9 +93,17 @@ SUBROUTINE wbse_calc_forces( dvg_exc_tmp )
   ALLOCATE( z_rhs_vec( npwx, band_group%nlocx, kpt_pool%nloc ) )
   ALLOCATE( zvector( npwx, band_group%nlocx, kpt_pool%nloc ) )
   !
+#if defined(__CUDA)
+  CALL allocate_bse_gpu( band_group%nlocx )
+#endif
+  !
   CALL build_rhs_zvector_eq( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec )
   !
   CALL solve_zvector_eq_cg( z_rhs_vec, zvector )
+  !
+#if defined(__CUDA)
+  CALL deallocate_bse_gpu()
+#endif
   !
   CALL wbse_forces_drhoz( n, zvector, forces )
   !
@@ -1151,6 +1162,7 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   USE mp_world,             ONLY : mpime,root
   USE io_push,              ONLY : io_push_title
 #if defined(__CUDA)
+  USE west_gpu,             ONLY : allocate_drhoz_gpu,deallocate_drhoz_gpu
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
 #else
@@ -1331,7 +1343,15 @@ SUBROUTINE wbse_forces_drhoz( n, zvector, forces )
   !
   ! local part
   !
+#if defined(__CUDA)
+  CALL allocate_drhoz_gpu()
+#endif
+  !
   CALL wbse_calc_dens( zvector, drhoz, .FALSE. )
+  !
+#if defined(__CUDA)
+  CALL deallocate_drhoz_gpu()
+#endif
   !
   drhoz(:,:) = 2._DP * drhoz
   rdrhoz(:,:) = REAL(drhoz,KIND=DP)

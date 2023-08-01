@@ -22,14 +22,12 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE uspp,                 ONLY : vkb,nkb
   USE lsda_mod,             ONLY : nspin
   USE pwcom,                ONLY : npw,npwx,current_k,current_spin,isk,lsda,xk,ngk,igk_k,nbnd
-  USE control_flags,        ONLY : gamma_only
   USE mp,                   ONLY : mp_bcast
   USE mp_global,            ONLY : inter_image_comm,my_image_id
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
-  USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE westcom,              ONLY : l_bse,l_bse_triplet,l_hybrid_tddft,l_spin_flip_kernel,&
                                  & l_qp_correction,sigma_c_head,sigma_x_head,nbnd_occ,scissor_ope,&
                                  & n_trunc_bands,et_qp,lrwfc,iuwfc,evc1_all,forces_inexact_krylov,&
@@ -183,91 +181,45 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      !
      IF(do_k1e) THEN
         !
-        IF(gamma_only) THEN
+        ! double bands @ gamma
+        !
+        DO lbnd = 1,nbnd_do-MOD(nbnd_do,2),2
            !
-           ! double bands @ gamma
+           ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
            !
-           DO lbnd = 1,nbnd_do-MOD(nbnd_do,2),2
-              !
-              ibnd = band_group%l2g(lbnd)+n_trunc_bands
-              jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
-              !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
-              !
-              !$acc parallel loop present(dvrs)
-              DO ir = 1,dffts_nnr
-                 psic(ir) = psic(ir)*CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
-              ENDDO
-              !$acc end parallel
-              !
-              !$acc host_data use_device(evc1_new)
-              CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),evc1_new(:,lbnd+1,iks),'Wave')
-              !$acc end host_data
-              !
+           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+           !
+           !$acc parallel loop present(dvrs)
+           DO ir = 1,dffts_nnr
+              psic(ir) = psic(ir)*CMPLX(REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
            ENDDO
+           !$acc end parallel
            !
-           ! single band @ gamma
+           !$acc host_data use_device(evc1_new)
+           CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),evc1_new(:,lbnd+1,iks),'Wave')
+           !$acc end host_data
            !
-           IF(MOD(nbnd_do,2) == 1) THEN
-              !
-              lbnd = nbnd_do
-              ibnd = band_group%l2g(lbnd)+n_trunc_bands
-              !
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
-              !
-              !$acc parallel loop present(dvrs)
-              DO ir = 1,dffts_nnr
-                 psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
-              ENDDO
-              !$acc end parallel
-              !
-              !$acc host_data use_device(evc1_new)
-              CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),'Wave')
-              !$acc end host_data
-              !
-           ENDIF
+        ENDDO
+        !
+        ! single band @ gamma
+        !
+        IF(MOD(nbnd_do,2) == 1) THEN
            !
-        ELSE
+           lbnd = nbnd_do
+           ibnd = band_group%l2g(lbnd)+n_trunc_bands
            !
-           ! only single bands
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
            !
-           DO lbnd = 1,nbnd_do
-              !
-              ibnd = band_group%l2g(lbnd)+n_trunc_bands
-              !
-              CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
-              !
-              !$acc parallel loop present(dvrs)
-              DO ir = 1,dffts_nnr
-                 psic(ir) = psic(ir)*dvrs(ir,current_spin)
-              ENDDO
-              !$acc end parallel
-              !
-              !$acc host_data use_device(evc1_new)
-              CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),'Wave',igk_k(:,current_k))
-              !$acc end host_data
-              !
+           !$acc parallel loop present(dvrs)
+           DO ir = 1,dffts_nnr
+              psic(ir) = CMPLX(REAL(psic(ir),KIND=DP)*REAL(dvrs(ir,current_spin),KIND=DP),KIND=DP)
            ENDDO
+           !$acc end parallel
            !
-           IF(npol == 2) THEN
-              DO lbnd = 1,nbnd_do
-                 !
-                 ibnd = band_group%l2g(lbnd)+n_trunc_bands
-                 !
-                 CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
-                 !
-                 !$acc parallel loop present(dvrs)
-                 DO ir = 1,dffts_nnr
-                    psic(ir) = psic(ir)*dvrs(ir,current_spin)
-                 ENDDO
-                 !$acc end parallel
-                 !
-                 !$acc host_data use_device(evc1_new)
-                 CALL single_fwfft_k(dffts,npw,npwx,psic,evc1_new(npwx+1:npwx*2,lbnd,iks),'Wave',igk_k(:,current_k))
-                 !$acc end host_data
-                 !
-              ENDDO
-           ENDIF
+           !$acc host_data use_device(evc1_new)
+           CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),'Wave')
+           !$acc end host_data
            !
         ENDIF
         !
@@ -355,14 +307,12 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
         CALL bse_kernel_gamma(current_spin,evc1_all(:,:,iks),evc1_new(:,:,iks),sf)
      ENDIF
      !
-     IF(gamma_only) THEN
-        IF(gstart == 2) THEN
-           !$acc parallel loop present(evc1_new)
-           DO lbnd = 1,nbnd_do
-              evc1_new(1,lbnd,iks) = CMPLX(REAL(evc1_new(1,lbnd,iks),KIND=DP),KIND=DP)
-           ENDDO
-           !$acc end parallel
-        ENDIF
+     IF(gstart == 2) THEN
+        !$acc parallel loop present(evc1_new)
+        DO lbnd = 1,nbnd_do
+           evc1_new(1,lbnd,iks) = CMPLX(REAL(evc1_new(1,lbnd,iks),KIND=DP),KIND=DP)
+        ENDDO
+        !$acc end parallel
      ENDIF
      !
      ! Pc[k]*evc1_new(k)

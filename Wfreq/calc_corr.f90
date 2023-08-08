@@ -24,7 +24,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,inter_pool_comm,inter_bgrp_comm,intra_bgrp_comm
-  USE mp,                   ONLY : mp_sum,mp_barrier
+  USE mp,                   ONLY : mp_sum
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
@@ -52,7 +52,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   !
   ! Workspace
   !
-  INTEGER :: iks,iks_g,ib,ibloc,ib_index,jb,jb_index,ipair
+  INTEGER :: iks,iks_g,ib,ibloc,ib_index,jb,jb_index,ipair,iloc_pair
   INTEGER :: ifreq,glob_ifreq,il,im,glob_im,ip
   INTEGER :: nbndval,nbndval_full
   REAL(DP) :: peso
@@ -108,8 +108,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
      !
      iks_g = kpt_pool%l2g(iks)
-     !
      nbndval = nbnd_occ(iks)
+     iloc_pair = 0
      !
      DO ibloc = 1,band_group%nloc
         !
@@ -123,6 +123,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
            IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
            & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
               ipair = ijpmap(jb_index,ib_index)
+              iloc_pair = iloc_pair+1
            ELSEIF(l_enable_off_diagonal .OR. jb /= ib) THEN
               CYCLE
            ENDIF
@@ -158,10 +159,10 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                  IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                  & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
                     enrg1 = et(glob_im,iks) - energy(jb_index,iks_g)
-                    partial_b = partial_b + d_body1_ifr_full(im,ifreq,ipair,iks_g)*0.5_DP &
+                    partial_b = partial_b + d_body1_ifr_full(im,ifreq,iloc_pair,iks_g)*0.5_DP &
                     & *(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
                  ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                    partial_b = partial_b + d_body1_ifr(im,ifreq,ib_index,iks_g) &
+                    partial_b = partial_b + d_body1_ifr(im,ifreq,ibloc,iks_g) &
                     & *integrate_imfreq(ifreq,enrg)
                  ENDIF
               ENDDO
@@ -179,13 +180,13 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                     DO il = 1, n_lanczos
                        IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                        & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
-                          enrg = d_diago_full(il,ip,ipair,iks_g) - energy(ib_index,iks_g)
-                          enrg1 = d_diago_full(il,ip,ipair,iks_g) - energy(jb_index,iks_g)
-                          partial_b = partial_b + d_body2_ifr_full(il,ip,ifreq,ipair,iks_g)*0.5_DP &
+                          enrg = d_diago_full(il,ip,iloc_pair,iks_g) - energy(ib_index,iks_g)
+                          enrg1 = d_diago_full(il,ip,iloc_pair,iks_g) - energy(jb_index,iks_g)
+                          partial_b = partial_b + d_body2_ifr_full(il,ip,ifreq,iloc_pair,iks_g)*0.5_DP &
                           & *(integrate_imfreq(ifreq,enrg) + integrate_imfreq(ifreq,enrg1))
                        ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                          enrg = d_diago(il,ip,ib_index,iks_g) - energy(ib_index,iks_g)
-                          partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ib_index,iks_g) &
+                          enrg = d_diago(il,ip,ibloc,iks_g) - energy(ib_index,iks_g)
+                          partial_b = partial_b + d_body2_ifr(il,ip,ifreq,ibloc,iks_g) &
                           & *integrate_imfreq(ifreq,enrg)
                        ENDIF
                     ENDDO
@@ -233,6 +234,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
      iks_g = kpt_pool%l2g(iks)
      nbndval = nbnd_occ(iks)
      IF (l_frac_occ) nbndval_full = nbnd_occ_full(iks)
+     iloc_pair = 0
      !
      DO ibloc = 1,band_group%nloc
         !
@@ -248,6 +250,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
            IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
            & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
               ipair = ijpmap(jb_index,ib_index)
+              iloc_pair = iloc_pair+1
            ELSEIF(l_enable_off_diagonal .OR. jb /= ib) THEN
               CYCLE
            ENDIF
@@ -301,9 +304,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                     IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                     & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
                        residues_b = residues_b + 0.5_DP * peso * segno &
-                       & * z_body_rfr_full( im, ifreq, ipair, iks_g )
+                       & * z_body_rfr_full( im, ifreq, iloc_pair, iks_g )
                     ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                       residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ib_index, iks_g )
+                       residues_b = residues_b + peso * segno * z_body_rfr( im, ifreq, ibloc, iks_g )
                     ENDIF
                     !
                  ENDDO
@@ -332,10 +335,10 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                        IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                        & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
                           residues_b = residues_b + 0.5_DP * (1._DP - peso) * segno &
-                          & * z_body_rfr_full( im, ifreq, ipair, iks_g )
+                          & * z_body_rfr_full( im, ifreq, iloc_pair, iks_g )
                        ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                           residues_b = residues_b + (1._DP - peso) * segno &
-                          & * z_body_rfr( im, ifreq, ib_index, iks_g )
+                          & * z_body_rfr( im, ifreq, ibloc, iks_g )
                        ENDIF
                        !
                     ENDDO
@@ -388,7 +391,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                        IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
                        !
                        residues_b = residues_b + 0.5_DP * peso * segno &
-                       & * z_body_rfr_full( im, ifreq, ipair, iks_g )
+                       & * z_body_rfr_full( im, ifreq, iloc_pair, iks_g )
                        !
                     ENDDO
                     !
@@ -411,7 +414,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                           IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
                           !
                           residues_b = residues_b + 0.5_DP * (1._DP - peso) * segno &
-                          & * z_body_rfr_full( im, ifreq, ipair, iks_g )
+                          & * z_body_rfr_full( im, ifreq, iloc_pair, iks_g )
                           !
                        ENDDO
                        !
@@ -460,7 +463,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   USE kinds,                ONLY : DP
   USE mp_global,            ONLY : inter_image_comm,inter_bgrp_comm,intra_bgrp_comm
-  USE mp,                   ONLY : mp_sum,mp_barrier
+  USE mp,                   ONLY : mp_sum
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : omega
   USE constants,            ONLY : pi
@@ -568,7 +571,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               DO im = 1, aband%nloc
                  glob_im = aband%l2g(im)
                  enrg = et(glob_im,ikks) - energy(ib_index,iks)
-                 partial_b = partial_b + z_body1_ifr_q(im,ifreq,ib_index,iks,iq) &
+                 partial_b = partial_b + z_body1_ifr_q(im,ifreq,ibloc,iks,iq) &
                  & *integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
               ENDDO
            ENDDO
@@ -581,8 +584,8 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
               DO ifreq = 1,ifr%nloc
                  DO ip = 1, pert%nloc
                     DO il = 1, n_lanczos
-                       enrg = d_diago_q(il,ip,ib_index,iks,iq) - energy(ib_index,iks)
-                       partial_b = partial_b + z_body2_ifr_q(il,ip,ifreq,ib_index,iks,iq) &
+                       enrg = d_diago_q(il,ip,ibloc,iks,iq) - energy(ib_index,iks)
+                       partial_b = partial_b + z_body2_ifr_q(il,ip,ifreq,ibloc,iks,iq) &
                        & *integrate_imfreq(ifreq,enrg)*q_grid%weight(iq)
                     ENDDO
                  ENDDO
@@ -671,7 +674,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
                     !
                     IF(glob_im==ib.AND.l_macropol.AND.l_gammaq) residues_h = residues_h + segno * z_head_rfr(ifreq)
                     !
-                    residues_b = residues_b + segno * z_body_rfr_q( im, ifreq, ib_index, iks, iq )*q_grid%weight(iq)
+                    residues_b = residues_b + segno * z_body_rfr_q( im, ifreq, ibloc, iks, iq )*q_grid%weight(iq)
                     !
                  ENDDO
                  !

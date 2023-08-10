@@ -10,7 +10,7 @@ Project Leads
 -------------
 
 - Marco Govoni (University of Modena and Reggio Emilia, Argonne National Lab, University of Chicago)
-- Giulia Galli (University of Chicago and Argonne National Laboratory)
+- Giulia Galli (University of Chicago and Argonne National Lab)
 
 Developers
 ----------

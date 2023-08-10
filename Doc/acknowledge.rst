@@ -9,29 +9,23 @@ The development of **WEST** is funded by `MICCoM <http://miccom-center.org/>`_, 
 Project Leads
 -------------
 
-- Marco Govoni (Argonne National Laboratory and University of Chicago)
-- Giulia Galli (University of Chicago and Argonne National Laboratory)
+- Marco Govoni (University of Modena and Reggio Emilia, Argonne National Lab, University of Chicago)
+- Giulia Galli (University of Chicago and Argonne National Lab)
 
 Developers
 ----------
 
-- Marco Govoni (Argonne National Laboratory and University of Chicago)
+- Marco Govoni (University of Modena and Reggio Emilia, Argonne National Lab, University of Chicago)
 - Yu Jin (University of Chicago)
-- Nan Sheng (University of Chicago)
-- Christian Vorwerk (University of Chicago)
-- Han Yang (University of Chicago)
-- Victor Yu (Argonne National Laboratory)
+- Victor Yu (Argonne National Lab)
 
 Contributors
 ------------
 
 - Francois Gygi (University of California, Davis)
 - Ikutaro Hamada (Osaka University)
-- Yuan Ping (University of California, Santa Cruz)
-- Jonathan Skone (University of Chicago)
-- Tyler Smart (University of California, Santa Cruz)
-- Aditya Tanikanti (University of Chicago)
-- Feng Wu (University of California, Santa Cruz)
+- Yuan Ping (University of Wisconsin, Madison)
+- Jonathan Skone (Lawrence Berkeley National Lab)
 
 Former Developers
 -----------------
@@ -44,4 +38,7 @@ Former Developers
 - Ryan McAvoy (2017-2018)
 - Ngoc Linh Nguyen (2017-2018)
 - Peter Scherpelz (2016-2018)
+- Nan Sheng (2020-2022)
+- Christian Vorwerk (2021-2022)
+- Han Yang (2017-2022)
 - Huihuo Zheng (2016-2018)

@@ -1,17 +1,17 @@
 Change Log
 ==========
 
-v5.5.0 (2023/08/xx)
+v5.5.0 (2023/08/10)
 -------------------
 
 - Code updated for compatibility with Quantum ESPRESSO 7.2. QE must be compiled without CMake.
-- Added support for hybrid functionals and spin flip to TDDFT.
-- Changed default `macropol_calculation` from N to C.
-- Enabled the adaptively compressed exchange (ACE) method when evaluating the exact exchange in GW, QDET, BSE, and TDDFT calculations on top of hybrid functionals.
+- Added support to TDDFT: hybrid functionals, and spin-flip.
+- Changed default `macropol_calculation` from N to C. If the system has vacuum, one should set `macropol_calculation` to N. 
+- Enabled the use of the adaptively compressed exchange (ACE) method when evaluating the exact exchange in GW, QDET, BSE, and TDDFT calculations on top of hybrid functionals.
 - Ported `westpp` to GPU.
 - Improved the performance of TDDFT and BSE on GPU.
 - Improved the performance of Wannier localization for large systems.
-- Reduced memory usage in large-scale QDET runs.
+- Reduced memory usage for large-scale QDET runs.
 - Bug fix. Fixed QDET for spin-polarized systems.
 - Updated CI/CD. Added tests to cover the new functionalities.
 - Updated documentation. Updated build instructions for ALCF/Polaris, ALCF/Theta and NERSC/Perlmutter. Added more tutorials.

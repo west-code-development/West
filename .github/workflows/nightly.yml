@@ -1,0 +1,69 @@
+name: Nightly CI
+
+on:
+  schedule:
+  - cron: "0 4 * * *"
+
+env:
+  QE_VERSION: qe-7.2
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux]
+    container: miccomcenter/bot:gcc1320_0002
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        path: West
+    - name: Build QE
+      run: |
+        rm -rf qe
+        git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git qe
+        cd qe
+        git describe --tags --always
+        ./configure
+        make -j8 pw
+        ls bin
+    - name: Build WEST
+      id: west
+      run: |
+        pip3 install -q -U pip
+        pip3 install -q -U numpy
+        mv West qe
+        cd qe/West
+        git describe --tags --always
+        make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
+        make -j8 all
+        ls ../bin
+    - name: Test images
+      if: steps.west.outcome == 'success'
+      run: |
+        cp -r qe/West/test-suite qe/West/test-ni
+        cd qe/West/test-ni
+        make clean
+        make NP=8 NI=2
+    - name: Test pools
+      if: steps.west.outcome == 'success'
+      run: |
+        cp -r qe/West/test-suite qe/West/test-nk
+        cd qe/West/test-nk
+        make clean
+        make NP=8 NK=2
+    - name: Test band groups
+      if: steps.west.outcome == 'success'
+      run: |
+        cp -r qe/West/test-suite qe/West/test-nb
+        cd qe/West/test-nb
+        make clean
+        make NP=8 NB=2
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      if: '!success()'
+      with:
+        name: artifacts
+        path: |
+          qe/West/test-*/test*/*.out
+          qe/West/test-*/test*/*.err
+          qe/West/test-*/test*/test*/w*.json
+        retention-days: 1

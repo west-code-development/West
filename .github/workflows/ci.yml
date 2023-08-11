@@ -1,0 +1,49 @@
+name: CI
+
+on: [push, pull_request]
+
+env:
+  QE_VERSION: qe-7.2
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux]
+    container: miccomcenter/bot:gcc1320_0001
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        path: West
+    - name: Build QE
+      run: |
+        rm -rf qe
+        git clone -b $QE_VERSION --single-branch --depth 1 https://gitlab.com/QEF/q-e.git qe
+        cd qe
+        git describe --tags --always
+        ./configure
+        make -j8 pw
+        ls bin
+    - name: Build WEST
+      run: |
+        pip3 install -q --upgrade pip
+        pip3 install -q numpy
+        mv West qe
+        cd qe/West
+        git describe --tags --always
+        make conf PYT=python3 PYT_LDFLAGS="`python3-config --ldflags --embed`"
+        make -j8 all
+        ls ../bin
+    - name: Test
+      run: |
+        cd qe/West/test-suite
+        make NP=8
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: artifacts
+        path: |
+          qe/West/test-suite/test*/*.out
+          qe/West/test-suite/test*/*.err
+          qe/West/test-suite/test*/test*/w*.json
+        retention-days: 1

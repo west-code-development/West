@@ -800,20 +800,23 @@ MODULE west_gpu_data
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_drhoz_gpu()
+   SUBROUTINE allocate_forces_gpu()
    !-----------------------------------------------------------------------
    !
    USE fft_base,              ONLY : dffts
+   USE uspp,                  ONLY : dvan_d,dvan
    !
    IMPLICIT NONE
    !
    ALLOCATE(tmp_r(dffts%nnr))
    !$acc enter data create(tmp_r)
    !
+   dvan_d(:,:,:) = dvan
+   !
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE deallocate_drhoz_gpu()
+   SUBROUTINE deallocate_forces_gpu()
    !-----------------------------------------------------------------------
    !
    IMPLICIT NONE

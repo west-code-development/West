@@ -348,16 +348,8 @@ MODULE wbse_center
   REAL(DP) :: forces_zeq_cg_tr
   INTEGER :: forces_zeq_n_cg_maxiter
   REAL(DP) :: ddvxc_fd_coeff
-  INTEGER :: forces_inexact_krylov     ! Apply the inexact krylov subspace approximation in the CG solver
-                                       ! of the Z vector equation
-                                       ! = 0: (default) not applying the approximation
-                                       ! = 1: skipping V_EXX after a few iterations
-                                       ! = 2: skipping K_1d after a few iterations
-                                       ! = 3: skipping K_2d after a few iterations
-                                       ! = 4: skipping both K_1d and K_2d after a few iterations
-                                       ! = 5: skipping VEE, K_1d, and K_2d after a few iterations
-  REAL(DP) :: forces_inexact_krylov_tr ! Apply the inexact krylov subspace approximation, if the norm of
-                                       ! the residual vector is smaller than this threshold
+  INTEGER :: forces_inexact_krylov
+  REAL(DP) :: forces_inexact_krylov_tr
   !
   ! FOR global variables
   !

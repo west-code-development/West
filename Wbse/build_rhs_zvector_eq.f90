@@ -1261,7 +1261,7 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   USE uspp,                 ONLY : nlcc_any
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_world,             ONLY : world_comm
-  USE westcom,              ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut2,&
+  USE westcom,              ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut,&
                                  & l_print_spin_flip_kernel
   USE qpoint,               ONLY : xq
   USE gc_lr,                ONLY : grho,dvxc_rr,dvxc_sr,dvxc_ss,dvxc_s
@@ -1308,7 +1308,7 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   ! divide rho_diff
   !
   DO ir = 1,dffts%nnr
-     IF(ABS(rho%of_r(ir,2)) < spin_flip_cut2) THEN
+     IF(ABS(rho%of_r(ir,2)) < spin_flip_cut) THEN
         drho_sf_copy(ir,1) = (0._DP,0._DP)
         drho_sf_copy(ir,2) = (0._DP,0._DP)
      ELSE

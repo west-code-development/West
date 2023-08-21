@@ -333,7 +333,7 @@ MODULE wbse_dv
     USE uspp,                  ONLY : nlcc_any
     USE xc_lib,                ONLY : xclib_dft_is
     USE lsda_mod,              ONLY : nspin
-    USE westcom,               ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut1,&
+    USE westcom,               ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut,&
                                     & l_print_spin_flip_kernel
     USE scf,                   ONLY : rho,rho_core,rhog_core
     USE xc_lib,                ONLY : xc
@@ -417,7 +417,7 @@ MODULE wbse_dv
     IF(.NOT. l_spin_flip_alda0 .AND. xclib_dft_is('gradient')) THEN
        !$acc parallel loop present(sf_kernel)
        DO ir = 1, dfftp_nnr
-          IF(ABS(sf_kernel(ir)) > spin_flip_cut1) sf_kernel(ir) = 0._DP
+          IF(ABS(rho%of_r(ir,2)) < spin_flip_cut) sf_kernel(ir) = 0._DP
        ENDDO
        !$acc end parallel
     ENDIF

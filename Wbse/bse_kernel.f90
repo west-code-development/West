@@ -131,7 +131,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
            !
            IF(ibnd == my_ibnd .OR. ibnd == my_jbnd) THEN
               !
-              CALL read_bse_pots_g(gaux,ibnd,jbnd,ikq_g)
+              CALL read_bse_pots_g(gaux,ibnd,jbnd,ikq_do)
               !
               !$acc update device(gaux)
               !

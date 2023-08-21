@@ -256,7 +256,7 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
      nbnd_do = 0
      DO lbnd = 1,band_group%nloc
         ibnd = band_group%l2g(lbnd)+n_trunc_bands
-        IF(ibnd > n_trunc_bands .AND. ibnd <= flnbndval) nbnd_do = nbnd_do+1
+        IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
      ! ... Number of G vectors for PW expansion of wfs at k
@@ -287,7 +287,7 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
         raux(:) = (0._DP,0._DP)
         !$acc end kernels
         !
-        DO jbnd = 1, nbndval - n_trunc_bands ! index to be summed
+        DO jbnd = 1, flnbndval - n_trunc_bands ! index to be summed
            !
            ! product of evc1 and evc
            !

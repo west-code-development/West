@@ -1,0 +1,2264 @@
+{
+  "runjob": {
+    "startdate": "21Aug2023",
+    "starttime": "16:41: 4",
+    "completed": true,
+    "endtime": "16:41:18",
+    "enddate": "21Aug2023"
+  },
+  "software": {
+    "package": "WEST",
+    "program": "WBSE",
+    "version": "5.5.0",
+    "website": "http://www.west-code.org",
+    "citation": "M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).",
+    "qeversion": "7.2"
+  },
+  "config": {
+    "io": {
+      "islittleendian": true
+    }
+  },
+  "parallel": {
+    "nranks": 8,
+    "nimage": 1,
+    "npool": 1,
+    "nbgrp": 1,
+    "nrg": 8,
+    "nproc": 8,
+    "nthreads": 1
+  },
+  "input": {
+    "input_west": {
+      "qe_prefix": "test",
+      "west_prefix": "test",
+      "outdir": "./"
+    },
+    "wbse_init_control": {
+      "wbse_init_calculation": "S",
+      "solver": "TDDFT",
+      "bse_method": "PDEP",
+      "n_pdep_eigen_to_use": 12,
+      "localization": "N",
+      "wfc_from_qbox": "qb_wfc",
+      "bisection_info": "bis_info",
+      "chi_kernel": "CHI",
+      "overlap_thr": 0.0E+0,
+      "spin_channel": 0,
+      "n_trunc_bands": 0
+    },
+    "wbse_control": {
+      "wbse_calculation": "D",
+      "qp_correction": "",
+      "scissor_ope": 0.0E+0,
+      "n_liouville_eigen": 4,
+      "n_liouville_times": 4,
+      "n_liouville_maxiter": 100,
+      "n_liouville_read_from_file": 0,
+      "trev_liouville": 0.1E-9,
+      "trev_liouville_rel": 0.1E-7,
+      "n_lanczos": 1000,
+      "n_steps_write_restart": 100,
+      "wbse_ipol": "XX",
+      "l_dipole_realspace": false,
+      "wbse_epsinfty": 0.1E+1,
+      "spin_excitation": "S",
+      "l_preconditioning": true,
+      "l_pre_shift": true,
+      "l_spin_flip": true,
+      "l_spin_flip_kernel": true,
+      "l_spin_flip_alda0": false,
+      "l_print_spin_flip_kernel": false,
+      "spin_flip_cut": 0.1E-2,
+      "l_forces": true,
+      "forces_state": 4,
+      "forces_zeq_cg_tr": 0.1E-9,
+      "forces_zeq_n_cg_maxiter": 500,
+      "ddvxc_fd_coeff": 0.1E-1,
+      "forces_inexact_krylov": 0,
+      "forces_inexact_krylov_tr": 0.99999999999999998E-16,
+      "l_minimize_exx_if_active": false,
+      "n_exx_lowrank": 64,
+      "l_reduce_io": true
+    }
+  },
+  "system": {
+    "basis": {
+      "npw": {
+        "proc": [
+          1056,
+          1056,
+          1055,
+          1055,
+          1056,
+          1056,
+          1053,
+          1053
+        ],
+        "min": 1053,
+        "max": 1056,
+        "sum": 8440
+      },
+      "ngm": {
+        "proc": [
+          8440,
+          8440,
+          8440,
+          8441,
+          8441,
+          8441,
+          8440,
+          8439
+        ],
+        "min": 8439,
+        "max": 8441,
+        "sum": 67522
+      },
+      "gamma_only": true,
+      "ecutwfc:ry": 0.25E+2,
+      "ecutrho:ry": 0.1E+3
+    },
+    "cell": {
+      "units": "a.u.",
+      "omega": 0.8E+4,
+      "a1": [
+        0.2E+2,
+        0.0E+0,
+        0.0E+0
+      ],
+      "a2": [
+        0.0E+0,
+        0.2E+2,
+        0.0E+0
+      ],
+      "a3": [
+        0.0E+0,
+        0.0E+0,
+        0.2E+2
+      ],
+      "b1": [
+        0.31415926535897931E+0,
+        0.0E+0,
+        0.0E+0
+      ],
+      "b2": [
+        0.0E+0,
+        0.31415926535897931E+0,
+        0.0E+0
+      ],
+      "b3": [
+        0.0E+0,
+        0.0E+0,
+        0.31415926535897931E+0
+      ],
+      "alat": 0.2E+2,
+      "tpiba": 0.31415926535897931E+0
+    },
+    "electron": {
+      "nbnd": 64,
+      "nkstot": 2,
+      "nspin": 2,
+      "nelec": 0.12E+2,
+      "nelup": 0.70000000000000009E+1,
+      "neldw": 0.49999999999999991E+1,
+      "npol": 1,
+      "lsda": true,
+      "noncolin": false,
+      "lspinorb": false
+    },
+    "3dfft": {
+      "s": [
+        64,
+        64,
+        64
+      ],
+      "p": [
+        64,
+        64,
+        64
+      ]
+    },
+    "bzsamp": {
+      "k": [
+        {
+          "id": 1,
+          "crystcoord": [
+            0.0E+0,
+            0.0E+0,
+            0.0E+0
+          ]
+        }
+      ]
+    }
+  },
+  "memory": {
+    "units": "Mb",
+    "evc": 0.103125E+1,
+    "nlpp": 0.2578125E+0,
+    "rhor": 0.5E+0,
+    "rhog": 0.6439208984375E-1,
+    "gshells": 0.61187744140625E-2,
+    "dvg_exc": 0.18046875E+1,
+    "dng_exc": 0.18046875E+1,
+    "hr_distr": 0.1953125E-2,
+    "vr_distr": 0.1953125E-2,
+    "dvpsi": 0.2255859375E+0,
+    "dpsi": 0.2255859375E+0,
+    "liouville": 0.11279296875E+0,
+    "kernel": 0.2255859375E+0,
+    "forces": 0.11279296875E+1
+  },
+  "exec": {
+    "ndav": 75,
+    "davitr": [
+      {
+        "dav_iter": -1,
+        "ev": [
+          0.15538731070846926E+0,
+          0.15538734700404053E+0,
+          0.24295560463749946E+0,
+          0.24479491075106394E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.25248098373413086E+0,
+        "time_elap:hum": "00.2s",
+        "time_iter:sec": 0.25248098373413086E+0,
+        "time_iter:hum": "00.2s"
+      },
+      {
+        "dav_iter": 1,
+        "ev": [
+          0.15256821612196286E+0,
+          0.15256825235036992E+0,
+          0.2400243249399977E+0,
+          0.242298497931659E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.4662480354309082E+0,
+        "time_elap:hum": "00.4s",
+        "time_iter:sec": 0.21105813980102539E+0,
+        "time_iter:hum": "00.2s"
+      },
+      {
+        "dav_iter": 2,
+        "ev": [
+          0.14963197476661139E+0,
+          0.14963201082688604E+0,
+          0.23778588747505619E+0,
+          0.24069262111678685E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.67500686645507812E+0,
+        "time_elap:hum": "00.6s",
+        "time_iter:sec": 0.20631694793701172E+0,
+        "time_iter:hum": "00.2s"
+      },
+      {
+        "dav_iter": 3,
+        "ev": [
+          0.14887330487598477E+0,
+          0.14887334083040613E+0,
+          0.23700949626180878E+0,
+          0.24030224916504428E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.86413693428039551E+0,
+        "time_elap:hum": "00.8s",
+        "time_iter:sec": 0.18656301498413086E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 4,
+        "ev": [
+          0.14831185698830918E+0,
+          0.14831189292959968E+0,
+          0.23620684004568512E+0,
+          0.23974484808774846E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.10532059669494629E+1,
+        "time_elap:hum": "01.0s",
+        "time_iter:sec": 0.18269705772399902E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 5,
+        "ev": [
+          0.14815045729327866E+0,
+          0.14815049322683266E+0,
+          0.23582832890793601E+0,
+          0.23948408903859067E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.12403488159179688E+1,
+        "time_elap:hum": "01.2s",
+        "time_iter:sec": 0.18431186676025391E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 6,
+        "ev": [
+          0.14807484823322145E+0,
+          0.14807488417791928E+0,
+          0.23565567913393301E+0,
+          0.23936786898362578E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.14318108558654785E+1,
+        "time_elap:hum": "01.4s",
+        "time_iter:sec": 0.18849492073059082E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 7,
+        "ev": [
+          0.14805539408427004E+0,
+          0.14805543002748517E+0,
+          0.23558958478330419E+0,
+          0.23932277729762064E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.16238579750061035E+1,
+        "time_elap:hum": "01.6s",
+        "time_iter:sec": 0.18527412414550781E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 8,
+        "ev": [
+          0.148042310426864E+0,
+          0.14804234636962096E+0,
+          0.23554433531604616E+0,
+          0.23929105442188056E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.18113439083099365E+1,
+        "time_elap:hum": "01.8s",
+        "time_iter:sec": 0.18421292304992676E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 9,
+        "ev": [
+          0.1480364143797831E+0,
+          0.14803645032123852E+0,
+          0.23550709241174375E+0,
+          0.23926348175948511E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.20032830238342285E+1,
+        "time_elap:hum": "02.0s",
+        "time_iter:sec": 0.18856501579284668E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 10,
+        "ev": [
+          0.14803457603104822E+0,
+          0.14803461197240053E+0,
+          0.23548163009799156E+0,
+          0.23924459773798648E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.2203887939453125E+1,
+        "time_elap:hum": "02.2s",
+        "time_iter:sec": 0.19348907470703125E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 11,
+        "ev": [
+          0.14803387572966545E+0,
+          0.14803391167109378E+0,
+          0.23545471212966171E+0,
+          0.2392250638131434E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.239615797996521E+1,
+        "time_elap:hum": "02.3s",
+        "time_iter:sec": 0.18853211402893066E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 12,
+        "ev": [
+          0.14803363539238801E+0,
+          0.14803367133384701E+0,
+          0.23540069202366029E+0,
+          0.23918517782826015E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.2586824893951416E+1,
+        "time_elap:hum": "02.5s",
+        "time_iter:sec": 0.18685007095336914E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 13,
+        "ev": [
+          0.14803352479370591E+0,
+          0.14803356073517915E+0,
+          0.23534906285532048E+0,
+          0.23914703761853071E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.27778079509735107E+1,
+        "time_elap:hum": "02.7s",
+        "time_iter:sec": 0.18336009979248047E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 14,
+        "ev": [
+          0.14803345308505356E+0,
+          0.14803348902653021E+0,
+          0.23532260376520683E+0,
+          0.23912792791774445E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.29680588245391846E+1,
+        "time_elap:hum": "02.9s",
+        "time_iter:sec": 0.18614792823791504E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 15,
+        "ev": [
+          0.14803341863882991E+0,
+          0.14803345458030612E+0,
+          0.23529826295570586E+0,
+          0.23910930473387068E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.31598048210144043E+1,
+        "time_elap:hum": "03.1s",
+        "time_iter:sec": 0.18748879432678223E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 16,
+        "ev": [
+          0.14803340590114492E+0,
+          0.14803344184262252E+0,
+          0.23527527034233767E+0,
+          0.23909170640496707E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.3352370023727417E+1,
+        "time_elap:hum": "03.3s",
+        "time_iter:sec": 0.18449902534484863E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 17,
+        "ev": [
+          0.14803340112605851E+0,
+          0.1480334370675368E+0,
+          0.23525037584282121E+0,
+          0.23907333635542041E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.35430428981781006E+1,
+        "time_elap:hum": "03.5s",
+        "time_iter:sec": 0.18610501289367676E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 18,
+        "ev": [
+          0.1480333993683306E+0,
+          0.14803343530980947E+0,
+          0.23520416124261012E+0,
+          0.23903830275912807E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.37346758842468262E+1,
+        "time_elap:hum": "03.7s",
+        "time_iter:sec": 0.18687605857849121E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 19,
+        "ev": [
+          0.14803339847537009E+0,
+          0.14803343441684924E+0,
+          0.23515996247810075E+0,
+          0.23900463249926499E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.39795429706573486E+1,
+        "time_elap:hum": "03.9s",
+        "time_iter:sec": 0.22893214225769043E+0,
+        "time_iter:hum": "00.2s"
+      },
+      {
+        "dav_iter": 20,
+        "ev": [
+          0.14803339789462755E+0,
+          0.14803343383610679E+0,
+          0.23513600052580758E+0,
+          0.23898689733507034E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.42116219997406006E+1,
+        "time_elap:hum": "04.2s",
+        "time_iter:sec": 0.22231101989746094E+0,
+        "time_iter:hum": "00.2s"
+      },
+      {
+        "dav_iter": 21,
+        "ev": [
+          0.14803339762007031E+0,
+          0.14803343356154919E+0,
+          0.23511405105193162E+0,
+          0.23896963448916703E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.44057559967041016E+1,
+        "time_elap:hum": "04.4s",
+        "time_iter:sec": 0.18909001350402832E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 22,
+        "ev": [
+          0.14803339751470099E+0,
+          0.14803343345617978E+0,
+          0.23509307690341538E+0,
+          0.23895312689100512E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.46019480228424072E+1,
+        "time_elap:hum": "04.6s",
+        "time_iter:sec": 0.1872861385345459E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 23,
+        "ev": [
+          0.14803339747455233E+0,
+          0.14803343341603156E+0,
+          0.23507009012884289E+0,
+          0.23893586230239508E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.47925820350646973E+1,
+        "time_elap:hum": "04.7s",
+        "time_iter:sec": 0.18525314331054688E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 24,
+        "ev": [
+          0.14803339747455227E+0,
+          0.14803343341603142E+0,
+          0.2350285376156655E+0,
+          0.23890338347518358E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.48925390243530273E+1,
+        "time_elap:hum": "04.8s",
+        "time_iter:sec": 0.94491004943847656E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 25,
+        "ev": [
+          0.14803339747455246E+0,
+          0.14803343341603159E+0,
+          0.23431686410432093E+0,
+          0.23792222214906819E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.4993567943572998E+1,
+        "time_elap:hum": "04.9s",
+        "time_iter:sec": 0.95369100570678711E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 26,
+        "ev": [
+          0.14803339747455246E+0,
+          0.14803343341603162E+0,
+          0.23412854631040483E+0,
+          0.23738609384655701E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.50955479145050049E+1,
+        "time_elap:hum": "05.0s",
+        "time_iter:sec": 0.9251093864440918E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 27,
+        "ev": [
+          0.14803339747455249E+0,
+          0.14803343341603162E+0,
+          0.23407331241361801E+0,
+          0.23725949230120974E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.51945550441741943E+1,
+        "time_elap:hum": "05.1s",
+        "time_iter:sec": 0.93032121658325195E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 28,
+        "ev": [
+          0.14803339747455249E+0,
+          0.14803343341603159E+0,
+          0.23405929130079178E+0,
+          0.23723017162256613E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.52939178943634033E+1,
+        "time_elap:hum": "05.2s",
+        "time_iter:sec": 0.93317985534667969E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 29,
+        "ev": [
+          0.14803339747455238E+0,
+          0.14803343341603156E+0,
+          0.23405865744589002E+0,
+          0.23722885462634594E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.53966879844665527E+1,
+        "time_elap:hum": "05.3s",
+        "time_iter:sec": 0.96477031707763672E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 30,
+        "ev": [
+          0.14803339747455244E+0,
+          0.14803343341603153E+0,
+          0.23405829753729823E+0,
+          0.23722818201354795E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.54999959468841553E+1,
+        "time_elap:hum": "05.4s",
+        "time_iter:sec": 0.96972942352294922E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 31,
+        "ev": [
+          0.14803339747455238E+0,
+          0.14803343341603153E+0,
+          0.23405726826376513E+0,
+          0.23722645851418078E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.56044328212738037E+1,
+        "time_elap:hum": "05.6s",
+        "time_iter:sec": 0.97887992858886719E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 32,
+        "ev": [
+          0.14803339747455235E+0,
+          0.14803343341603148E+0,
+          0.23405625698178281E+0,
+          0.23722477059650632E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.57068839073181152E+1,
+        "time_elap:hum": "05.7s",
+        "time_iter:sec": 0.92110872268676758E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 33,
+        "ev": [
+          0.14803339747455238E+0,
+          0.1480334334160317E+0,
+          0.23405549409660795E+0,
+          0.23722362053812032E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.5808434009552002E+1,
+        "time_elap:hum": "05.8s",
+        "time_iter:sec": 0.94837188720703125E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 34,
+        "ev": [
+          0.1480333974745521E+0,
+          0.14803343341603156E+0,
+          0.23404335666425388E+0,
+          0.23720170003177654E+0
+        ],
+        "conv": [
+          true,
+          true,
+          false,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.5908538818359375E+1,
+        "time_elap:hum": "05.9s",
+        "time_iter:sec": 0.93061923980712891E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 35,
+        "ev": [
+          0.14440285756061863E+0,
+          0.14803339747456709E+0,
+          0.14803343341603192E+0,
+          0.23405797551056326E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.60096809864044189E+1,
+        "time_elap:hum": "06.0s",
+        "time_iter:sec": 0.94128131866455078E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 36,
+        "ev": [
+          0.56708272620777773E-1,
+          0.14803339746393876E+0,
+          0.1480334334054165E+0,
+          0.23405716170975494E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.62036049365997314E+1,
+        "time_elap:hum": "06.2s",
+        "time_iter:sec": 0.18675398826599121E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 37,
+        "ev": [
+          0.25181965272571709E-1,
+          0.14803339746393862E+0,
+          0.14803343340541655E+0,
+          0.23405680361668921E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.63066778182983398E+1,
+        "time_elap:hum": "06.3s",
+        "time_iter:sec": 0.92054843902587891E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 38,
+        "ev": [
+          0.12572664569310414E-1,
+          0.14803339746393843E+0,
+          0.1480334334054165E+0,
+          0.23405657368009189E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.64066808223724365E+1,
+        "time_elap:hum": "06.4s",
+        "time_iter:sec": 0.92553853988647461E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 39,
+        "ev": [
+          0.97874769708182728E-2,
+          0.14803339746393823E+0,
+          0.14803343340541653E+0,
+          0.23405623914490625E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.65092220306396484E+1,
+        "time_elap:hum": "06.5s",
+        "time_iter:sec": 0.94987154006958008E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 40,
+        "ev": [
+          0.94633796445907185E-2,
+          0.14803339746393826E+0,
+          0.14803343340541647E+0,
+          0.234055470377344E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.66111018657684326E+1,
+        "time_elap:hum": "06.6s",
+        "time_iter:sec": 0.94188928604125977E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 41,
+        "ev": [
+          0.93905048474631145E-2,
+          0.14803339746393829E+0,
+          0.14803343340541633E+0,
+          0.23405479661450737E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.67132549285888672E+1,
+        "time_elap:hum": "06.7s",
+        "time_iter:sec": 0.94356060028076172E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 42,
+        "ev": [
+          0.93159489148248401E-2,
+          0.14803339746393809E+0,
+          0.14803343340541636E+0,
+          0.23405086055504412E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.68162698745727539E+1,
+        "time_elap:hum": "06.8s",
+        "time_iter:sec": 0.94964027404785156E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 43,
+        "ev": [
+          0.92671501910053505E-2,
+          0.1480333974639379E+0,
+          0.14803343340541633E+0,
+          0.23403656849482524E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.6922238826751709E+1,
+        "time_elap:hum": "06.9s",
+        "time_iter:sec": 0.94108819961547852E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 44,
+        "ev": [
+          0.92211090796042172E-2,
+          0.14803339746393732E+0,
+          0.14803343340541628E+0,
+          0.23401293689824876E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.70233969688415527E+1,
+        "time_elap:hum": "07.0s",
+        "time_iter:sec": 0.92862129211425781E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 45,
+        "ev": [
+          0.91518567658226205E-2,
+          0.14803339746393571E+0,
+          0.14803343340541564E+0,
+          0.20937363104340714E+0
+        ],
+        "conv": [
+          false,
+          true,
+          true,
+          false
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.71249380111694336E+1,
+        "time_elap:hum": "07.1s",
+        "time_iter:sec": 0.93147993087768555E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 46,
+        "ev": [
+          0.90657225333131853E-2,
+          0.11474185985235227E+0,
+          0.1480333974639412E+0,
+          0.14803343340541705E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.72274978160858154E+1,
+        "time_elap:hum": "07.2s",
+        "time_iter:sec": 0.94027996063232422E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 47,
+        "ev": [
+          0.89921486833173699E-2,
+          0.82419734158281216E-1,
+          0.14803339745788774E+0,
+          0.14803343339936462E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.74244718551635742E+1,
+        "time_elap:hum": "07.4s",
+        "time_iter:sec": 0.18839192390441895E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 48,
+        "ev": [
+          0.89819482903114416E-2,
+          0.79575547520546477E-1,
+          0.14803339745788771E+0,
+          0.1480334333993647E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.7529810905456543E+1,
+        "time_elap:hum": "07.5s",
+        "time_iter:sec": 0.92740058898925781E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 49,
+        "ev": [
+          0.89799055679215447E-2,
+          0.78852114861100178E-1,
+          0.14803339745788763E+0,
+          0.14803343339936456E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.76315548419952393E+1,
+        "time_elap:hum": "07.6s",
+        "time_iter:sec": 0.92717885971069336E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 50,
+        "ev": [
+          0.89794540569888472E-2,
+          0.78661905387072281E-1,
+          0.14803339745788766E+0,
+          0.14803343339936462E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.7733543872833252E+1,
+        "time_elap:hum": "07.7s",
+        "time_iter:sec": 0.92883825302124023E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 51,
+        "ev": [
+          0.89793670293054489E-2,
+          0.7862971128954574E-1,
+          0.14803339745788766E+0,
+          0.14803343339936453E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.78368399143218994E+1,
+        "time_elap:hum": "07.8s",
+        "time_iter:sec": 0.94054937362670898E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 52,
+        "ev": [
+          0.89793521838717246E-2,
+          0.78623402145042334E-1,
+          0.14803339745788754E+0,
+          0.14803343339936459E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.79409120082855225E+1,
+        "time_elap:hum": "07.9s",
+        "time_iter:sec": 0.94750165939331055E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 53,
+        "ev": [
+          0.89793482229633577E-2,
+          0.78620992927061956E-1,
+          0.14803339745788754E+0,
+          0.14803343339936442E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.80452208518981934E+1,
+        "time_elap:hum": "08.0s",
+        "time_iter:sec": 0.94831943511962891E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 54,
+        "ev": [
+          0.89793459763649018E-2,
+          0.7861990472446051E-1,
+          0.14803339745788743E+0,
+          0.14803343339936431E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.81502838134765625E+1,
+        "time_elap:hum": "08.1s",
+        "time_iter:sec": 0.91708898544311523E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 55,
+        "ev": [
+          0.89793410369873265E-2,
+          0.78617693505194444E-1,
+          0.14803339745788718E+0,
+          0.14803343339936406E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.82526199817657471E+1,
+        "time_elap:hum": "08.2s",
+        "time_iter:sec": 0.92561006546020508E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 56,
+        "ev": [
+          0.89793362111746221E-2,
+          0.78614297250835977E-1,
+          0.14803339745788599E+0,
+          0.14803343339936081E+0
+        ],
+        "conv": [
+          false,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.83572590351104736E+1,
+        "time_elap:hum": "08.3s",
+        "time_iter:sec": 0.9472203254699707E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 57,
+        "ev": [
+          0.89793340974422837E-2,
+          0.78611838316022142E-1,
+          0.11231888175063237E+0,
+          0.14803339745788854E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "notcnv": 4,
+        "time_elap:sec": 0.8462479829788208E+1,
+        "time_elap:hum": "08.4s",
+        "time_iter:sec": 0.95199823379516602E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 58,
+        "ev": [
+          0.89793335371543409E-2,
+          0.78610674729902838E-1,
+          0.83622276176921848E-1,
+          0.14803339745380173E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 3,
+        "time_elap:sec": 0.86597080230712891E+1,
+        "time_elap:hum": "08.6s",
+        "time_iter:sec": 0.18691205978393555E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 59,
+        "ev": [
+          0.89793334268351566E-2,
+          0.78609217893956529E-1,
+          0.80193348718886254E-1,
+          0.14803339745380167E+0
+        ],
+        "conv": [
+          false,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 3,
+        "time_elap:sec": 0.88146679401397705E+1,
+        "time_elap:hum": "08.8s",
+        "time_iter:sec": 0.13900995254516602E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 60,
+        "ev": [
+          0.89793333747195062E-2,
+          0.78579287407834375E-1,
+          0.78707425621349969E-1,
+          0.14803339745380159E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.89641878604888916E+1,
+        "time_elap:hum": "08.9s",
+        "time_iter:sec": 0.13847899436950684E+0,
+        "time_iter:hum": "00.1s"
+      },
+      {
+        "dav_iter": 61,
+        "ev": [
+          0.89793333690621497E-2,
+          0.78478134385949666E-1,
+          0.7863419355030643E-1,
+          0.14803339745380162E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.90693049430847168E+1,
+        "time_elap:hum": "09.0s",
+        "time_iter:sec": 0.93842029571533203E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 62,
+        "ev": [
+          0.89793333676403703E-2,
+          0.78453818482661974E-1,
+          0.78630652727553971E-1,
+          0.14803339745380137E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.91749088764190674E+1,
+        "time_elap:hum": "09.1s",
+        "time_iter:sec": 0.94173908233642578E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 63,
+        "ev": [
+          0.89793333670620864E-2,
+          0.78445363501712773E-1,
+          0.78629667263140038E-1,
+          0.14803339745380109E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.92811210155487061E+1,
+        "time_elap:hum": "09.2s",
+        "time_iter:sec": 0.94639062881469727E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 64,
+        "ev": [
+          0.89793333669618298E-2,
+          0.78443512273424984E-1,
+          0.78629475090681633E-1,
+          0.14803339745380095E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.93900558948516846E+1,
+        "time_elap:hum": "09.3s",
+        "time_iter:sec": 0.93427896499633789E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 65,
+        "ev": [
+          0.89793333668673914E-2,
+          0.7844131535066548E-1,
+          0.78629265417738972E-1,
+          0.14803339745380056E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.94949839115142822E+1,
+        "time_elap:hum": "09.4s",
+        "time_iter:sec": 0.92803001403808594E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 66,
+        "ev": [
+          0.89793333667044679E-2,
+          0.78438082839589085E-1,
+          0.78628971560747316E-1,
+          0.14803339745379956E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.96005170345306396E+1,
+        "time_elap:hum": "09.6s",
+        "time_iter:sec": 0.93465089797973633E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 67,
+        "ev": [
+          0.89793333665370255E-2,
+          0.78435911251505785E-1,
+          0.78628780271198462E-1,
+          0.1480333974537982E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.97063798904418945E+1,
+        "time_elap:hum": "09.7s",
+        "time_iter:sec": 0.93910932540893555E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 68,
+        "ev": [
+          0.8979333366499467E-2,
+          0.78435396445907232E-1,
+          0.78628735545942935E-1,
+          0.14803339745379512E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.9813230037689209E+1,
+        "time_elap:hum": "09.8s",
+        "time_iter:sec": 0.94696044921875E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 69,
+        "ev": [
+          0.89793333664663685E-2,
+          0.78435159665669968E-1,
+          0.78628715054374562E-1,
+          0.14803339745379204E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.99207630157470703E+1,
+        "time_elap:hum": "09.9s",
+        "time_iter:sec": 0.95261096954345703E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 70,
+        "ev": [
+          0.89793333664473993E-2,
+          0.78435137699170682E-1,
+          0.78628713157052305E-1,
+          0.1480333974537873E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.10029619932174683E+2,
+        "time_elap:hum": "10.0s",
+        "time_iter:sec": 0.92607021331787109E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 71,
+        "ev": [
+          0.89793333663851921E-2,
+          0.78435133963906389E-1,
+          0.78628712834101652E-1,
+          0.14803339745378008E+0
+        ],
+        "conv": [
+          true,
+          false,
+          false,
+          true
+        ],
+        "notcnv": 2,
+        "time_elap:sec": 0.10135044813156128E+2,
+        "time_elap:hum": "10.1s",
+        "time_iter:sec": 0.92758893966674805E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 72,
+        "ev": [
+          0.89793333663002427E-2,
+          0.78435133127370951E-1,
+          0.78628712761825426E-1,
+          0.1480333974537647E+0
+        ],
+        "conv": [
+          true,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 1,
+        "time_elap:sec": 0.10242856025695801E+2,
+        "time_elap:hum": "10.2s",
+        "time_iter:sec": 0.95015048980712891E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 73,
+        "ev": [
+          0.89793333662956509E-2,
+          0.78435132886879796E-1,
+          0.78628712741061021E-1,
+          0.14803339745376429E+0
+        ],
+        "conv": [
+          true,
+          false,
+          true,
+          true
+        ],
+        "notcnv": 1,
+        "time_elap:sec": 0.1030377984046936E+2,
+        "time_elap:hum": "10.3s",
+        "time_iter:sec": 0.47993898391723633E-1,
+        "time_iter:hum": "< 00.1s"
+      },
+      {
+        "dav_iter": 74,
+        "ev": [
+          0.89793333662940341E-2,
+          0.78435132845255495E-1,
+          0.78628712737450049E-1,
+          0.14803339745376445E+0
+        ],
+        "conv": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "notcnv": 0,
+        "time_elap:sec": 0.10366605997085571E+2,
+        "time_elap:hum": "10.3s",
+        "time_iter:sec": 0.49787044525146484E-1,
+        "time_iter:hum": "< 00.1s"
+      }
+    ],
+    "forces": {
+      "forces_drhox1": [
+        0.22688072503325926E-1,
+        0.25383799815701703E-6,
+        -0.21136782401545874E-6,
+        -0.22688154376135777E-1,
+        0.25187811898743089E-6,
+        -0.21356072109220217E-6
+      ],
+      "forces_drhox2": [
+        -0.93377636773722544E-1,
+        -0.10440439516049005E-6,
+        -0.73381171150806168E-7,
+        0.9337797748637186E-1,
+        0.92699766553877572E-7,
+        0.88429984528536065E-7
+      ],
+      "forces_drhoz": [
+        0.6499774446706944E+0,
+        -0.11043785403189177E-6,
+        -0.14601171444660055E-7,
+        -0.64997770833177093E+0,
+        -0.53161725601519327E-7,
+        0.25399445692519951E-7
+      ],
+      "forces_total": [
+        0.57928788040029777E+0,
+        0.38995748964635213E-7,
+        -0.29935016661092496E-6,
+        -0.57928788522153485E+0,
+        0.29141615993978913E-6,
+        -0.9973129087114615E-7
+      ],
+      "forces_corrected": [
+        0.57928788281091625E+0,
+        -0.12621020548757696E-6,
+        -0.99809437869889404E-7,
+        -0.57928788281091625E+0,
+        0.12621020548757696E-6,
+        0.99809437869889404E-7
+      ]
+    }
+  },
+  "timing": {
+    "WBSE": {
+      "cpu:sec": 0.12607410999999999E+2,
+      "cpu:hum": "12.6s",
+      "wall:sec": 0.13669351100921631E+2,
+      "wall:hum": "13.6s",
+      "nocalls": 2
+    },
+    "wbse_readin": {
+      "cpu:sec": 0.12889200000000001E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.14362883567810059E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "fetch_input": {
+      "cpu:sec": 0.17459000000000002E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.17744064331054688E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 2
+    },
+    "fft": {
+      "cpu:sec": 0.3006420000000336E+0,
+      "cpu:hum": "00.3s",
+      "wall:sec": 0.30719161033630371E+0,
+      "wall:hum": "00.3s",
+      "nocalls": 481
+    },
+    "fft_scatter": {
+      "cpu:sec": 0.27970720000000284E+1,
+      "cpu:hum": "02.7s",
+      "wall:sec": 0.28932828903198242E+1,
+      "wall:hum": "02.8s",
+      "nocalls": 30811
+    },
+    "init_vloc": {
+      "cpu:sec": 0.10946999999999985E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.11124134063720703E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 2
+    },
+    "init_us_1": {
+      "cpu:sec": 0.12270000000000336E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.24929046630859375E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 2
+    },
+    "v_of_rho": {
+      "cpu:sec": 0.47588999999999992E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.52725076675415039E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "v_xc": {
+      "cpu:sec": 0.46111000000000013E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.51228046417236328E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "v_h": {
+      "cpu:sec": 0.14370000000000216E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.14369487762451172E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "do_setup": {
+      "cpu:sec": 0.104406E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.12529706954956055E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "init_pw_ar": {
+      "cpu:sec": 0.10267900000000002E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.12259316444396973E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "hinit0": {
+      "cpu:sec": 0.65839999999999788E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.65848827362060547E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "davcio": {
+      "cpu:sec": 0.24306399999999861E+0,
+      "cpu:hum": "00.2s",
+      "wall:sec": 0.37471342086791992E+0,
+      "wall:hum": "00.3s",
+      "nocalls": 1846
+    },
+    "exx_grid": {
+      "cpu:sec": 0.26999999999999247E-4,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.38862228393554688E-4,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "aceinit0": {
+      "cpu:sec": 0.89359999999999995E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.17997026443481445E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "exx_div": {
+      "cpu:sec": 0.14089999999999936E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.15709400177001953E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "sqvc_init": {
+      "cpu:sec": 0.11169999999999791E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.11579990386962891E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "dv_setup": {
+      "cpu:sec": 0.16842500000000005E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.18798613548278809E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "setup_dmuxc": {
+      "cpu:sec": 0.30610000000000026E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.34299850463867188E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "setup_dgc": {
+      "cpu:sec": 0.13780700000000001E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.15365099906921387E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "sf_kernel": {
+      "cpu:sec": 0.34021999999999997E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.3493499755859375E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "chidiago": {
+      "cpu:sec": 0.96308089999999993E+1,
+      "cpu:hum": "09.6s",
+      "wall:sec": 0.10519378900527954E+2,
+      "wall:hum": "10.5s",
+      "nocalls": 1
+    },
+    "vc_init": {
+      "cpu:sec": 0.65999999999899472E-4,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.70285797119140625E-3,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "paramgs": {
+      "cpu:sec": 0.85467999999995214E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.10703301429748535E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 75
+    },
+    "liouv": {
+      "cpu:sec": 0.96853309999999997E+1,
+      "cpu:hum": "09.6s",
+      "wall:sec": 0.10073298931121826E+2,
+      "wall:hum": "10.0s",
+      "nocalls": 216
+    },
+    "calc_dens": {
+      "cpu:sec": 0.99254100000000101E+0,
+      "cpu:hum": "00.9s",
+      "wall:sec": 0.11139171123504639E+1,
+      "wall:hum": "01.1s",
+      "nocalls": 231
+    },
+    "fftw": {
+      "cpu:sec": 0.81643169999999117E+1,
+      "cpu:hum": "08.1s",
+      "wall:sec": 0.83970699310302734E+1,
+      "wall:hum": "08.3s",
+      "nocalls": 30314
+    },
+    "dv_drho_sf": {
+      "cpu:sec": 0.20274999999989163E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.209197998046875E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 205
+    },
+    "init_us_2": {
+      "cpu:sec": 0.60153000000008561E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.70303201675415039E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 438
+    },
+    "init_us_2:cp": {
+      "cpu:sec": 0.58942999999999302E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.69233417510986328E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 438
+    },
+    "h_psi": {
+      "cpu:sec": 0.12309769999999904E+1,
+      "cpu:hum": "01.2s",
+      "wall:sec": 0.12485918998718262E+1,
+      "wall:hum": "01.2s",
+      "nocalls": 432
+    },
+    "h_psi:pot": {
+      "cpu:sec": 0.10584179999999836E+1,
+      "cpu:hum": "01.0s",
+      "wall:sec": 0.10714375972747803E+1,
+      "wall:hum": "01.0s",
+      "nocalls": 432
+    },
+    "vloc_psi": {
+      "cpu:sec": 0.10202270000000002E+1,
+      "cpu:hum": "01.0s",
+      "wall:sec": 0.10317254066467285E+1,
+      "wall:hum": "01.0s",
+      "nocalls": 432
+    },
+    "h_psi:calbec": {
+      "cpu:sec": 0.19573999999984437E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.2019190788269043E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 432
+    },
+    "calbec": {
+      "cpu:sec": 0.99255000000010085E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.10296511650085449E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 864
+    },
+    "add_vuspsi": {
+      "cpu:sec": 0.16155999999993398E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.17419338226318359E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 432
+    },
+    "vexxace": {
+      "cpu:sec": 0.1634709999999977E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.16801190376281738E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 432
+    },
+    "matcalc": {
+      "cpu:sec": 0.82240999999996234E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.84856271743774414E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 432
+    },
+    "bse_kernel": {
+      "cpu:sec": 0.61159649999999965E+1,
+      "cpu:hum": "06.1s",
+      "wall:sec": 0.62060306072235107E+1,
+      "wall:hum": "06.2s",
+      "nocalls": 436
+    },
+    "pdep_read": {
+      "cpu:sec": 0.6745000000000001E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.83138942718505859E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 43
+    },
+    "alphapc": {
+      "cpu:sec": 0.35387999999992203E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.60215234756469727E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 880
+    },
+    "build_hr": {
+      "cpu:sec": 0.42093000000001268E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.51001787185668945E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 75
+    },
+    "diagox": {
+      "cpu:sec": 0.54140000000035826E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.64449310302734375E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 75
+    },
+    "redistr_vr": {
+      "cpu:sec": 0.18180000000018737E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.1979827880859375E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 74
+    },
+    "update_vr": {
+      "cpu:sec": 0.13444699999999266E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.14501786231994629E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 74
+    },
+    "precd_ag": {
+      "cpu:sec": 0.86119999999993979E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.90451240539550781E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 74
+    },
+    "chidiago:las": {
+      "cpu:sec": 0.5942300000000067E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.60094833374023438E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 17
+    },
+    "refresh_vr": {
+      "cpu:sec": 0.60783999999998173E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.61475753784179688E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 33
+    },
+    "plep_db": {
+      "cpu:sec": 0.62199999999990041E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.13704180717468262E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "plep_write": {
+      "cpu:sec": 0.61029999999995255E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.1359400749206543E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 4
+    },
+    "calc_force": {
+      "cpu:sec": 0.25338900000000013E+1,
+      "cpu:hum": "02.5s",
+      "wall:sec": 0.26496989727020264E+1,
+      "wall:hum": "02.6s",
+      "nocalls": 1
+    },
+    "drhox1": {
+      "cpu:sec": 0.5494000000000554E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.55389404296875E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "f_drhox1": {
+      "cpu:sec": 0.24969999999999715E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.34420490264892578E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "dvgdvg": {
+      "cpu:sec": 0.1660000000001105E-3,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.18095970153808594E-3,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "drhox2": {
+      "cpu:sec": 0.28375999999999735E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.30407905578613281E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "f_drhox2": {
+      "cpu:sec": 0.20310000000005601E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.29969215393066406E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "build_zvec": {
+      "cpu:sec": 0.3168299999999995E+0,
+      "cpu:hum": "00.3s",
+      "wall:sec": 0.32788181304931641E+0,
+      "wall:hum": "00.3s",
+      "nocalls": 1
+    },
+    "zvec2": {
+      "cpu:sec": 0.36804000000000059E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.36806106567382812E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "ddvxc_sf": {
+      "cpu:sec": 0.25789000000001394E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.31788825988769531E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "ffts": {
+      "cpu:sec": 0.87849999999978223E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.94268321990966797E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 16
+    },
+    "zvec3": {
+      "cpu:sec": 0.47560000000004266E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.57559013366699219E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    },
+    "zvec4": {
+      "cpu:sec": 0.10946299999999987E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.11246299743652344E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "hybrid_k4": {
+      "cpu:sec": 0.80650999999999584E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.83650827407836914E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 2
+    },
+    "dv_drho": {
+      "cpu:sec": 0.53837699999999167E+0,
+      "cpu:hum": "00.5s",
+      "wall:sec": 0.54342198371887207E+0,
+      "wall:hum": "00.5s",
+      "nocalls": 25
+    },
+    "zvec1": {
+      "cpu:sec": 0.11076499999999889E+0,
+      "cpu:hum": "00.1s",
+      "wall:sec": 0.11077594757080078E+0,
+      "wall:hum": "00.1s",
+      "nocalls": 1
+    },
+    "hybrid_k3": {
+      "cpu:sec": 0.77434000000000225E-1,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.77438116073608398E-1,
+      "wall:hum": "< 00.1s",
+      "nocalls": 2
+    },
+    "zvec_cg": {
+      "cpu:sec": 0.21259499999999996E+1,
+      "cpu:hum": "02.1s",
+      "wall:sec": 0.21819539070129395E+1,
+      "wall:hum": "02.1s",
+      "nocalls": 1
+    },
+    "liouv_btda": {
+      "cpu:sec": 0.13413049999999984E+1,
+      "cpu:hum": "01.3s",
+      "wall:sec": 0.13736424446105957E+1,
+      "wall:hum": "01.3s",
+      "nocalls": 12
+    },
+    "hybrid_k2": {
+      "cpu:sec": 0.96781300000000314E+0,
+      "cpu:hum": "00.9s",
+      "wall:sec": 0.9858705997467041E+0,
+      "wall:hum": "00.9s",
+      "nocalls": 24
+    },
+    "precd_cg": {
+      "cpu:sec": 0.50770000000017745E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.62086582183837891E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 11
+    },
+    "f_drhoxz": {
+      "cpu:sec": 0.13139999999989271E-2,
+      "cpu:hum": "< 00.1s",
+      "wall:sec": 0.23140907287597656E-2,
+      "wall:hum": "< 00.1s",
+      "nocalls": 1
+    }
+  }
+}

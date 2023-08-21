@@ -205,7 +205,7 @@ def read_and_test_wbse_forces(fileA,fileB,tol):
 #########
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009','test010','test011','test012','test013','test014','test015','test016','test017','test018','test019','test020','test021','test022','test023','test024','test025','test026'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test008','test009','test010','test011','test012','test013','test014','test015','test016','test017','test018','test019','test020','test021','test022','test023','test024','test025','test026','test027','test028'])
 def test_totalEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
@@ -233,14 +233,14 @@ def test_bseSpectrum(testdir):
     read_and_test_wbse_lanczos(testdir+'/test.wbse.save/wbse.json',testdir+'/ref/wbse.json',float(parameters['tolerance']['bse']))
 
 
-@pytest.mark.parametrize('testdir',['test017','test019','test021','test022','test023','test024','test025','test026'])
+@pytest.mark.parametrize('testdir',['test017','test019','test021','test022','test023','test024','test025','test026','test027','test028'])
 def test_bseEigen(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wbse_davidson(testdir+'/test.wbse.save/wbse.json',testdir+'/ref/wbse.json',float(parameters['tolerance']['bse']))
 
 
-@pytest.mark.parametrize('testdir',['test022','test023','test024','test025','test026'])
+@pytest.mark.parametrize('testdir',['test022','test023','test024','test025','test026','test027','test028'])
 def test_tddftForces(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)

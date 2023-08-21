@@ -23,11 +23,11 @@ clean:
 title:
 	@echo
 	@echo "###############"
-	@echo "### test026 ###"
+	@echo "### test027 ###"
 	@echo "###############"
 	@echo
 
 description:
 	@echo
-	@echo "O2 molecule gamma_only spin-flip TDDFT (LDA) forces"
+	@echo "O2 molecule gamma_only spin-flip TDDFT (PBE) forces"
 	@echo

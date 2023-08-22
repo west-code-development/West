@@ -1261,8 +1261,8 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   USE uspp,                 ONLY : nlcc_any
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_world,             ONLY : world_comm
-  USE westcom,              ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut,&
-                                 & l_print_spin_flip_kernel
+  USE westcom,              ONLY : wbse_save_dir,sf_kernel,l_spin_flip_kernel,l_spin_flip_alda0,&
+                                 & spin_flip_cut,l_print_spin_flip_kernel
   USE qpoint,               ONLY : xq
   USE gc_lr,                ONLY : grho,dvxc_rr,dvxc_sr,dvxc_ss,dvxc_s
   USE eqv,                  ONLY : dmuxc
@@ -1279,8 +1279,7 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   !
   INTEGER :: ir,is,is1
   REAL(DP) :: tmp1,tmp2
-  COMPLEX(DP), ALLOCATABLE :: drho_sf_copy(:,:),dvsf(:,:)
-  COMPLEX(DP), ALLOCATABLE :: drho_sf(:,:)
+  COMPLEX(DP), ALLOCATABLE :: drho_sf(:,:),drho_sf_copy(:,:)
   CHARACTER(LEN=:), ALLOCATABLE :: fname
   !
 #if defined(__CUDA)
@@ -1294,7 +1293,6 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   ALLOCATE(drho_sf(dffts%nnr,2))
   !$acc enter data create(drho_sf)
   ALLOCATE(drho_sf_copy(dffts%nnr,2))
-  ALLOCATE(dvsf(dffts%nnr,2))
   !
   CALL wbse_calc_dens(dvg_exc_tmp,drho_sf,.TRUE.)
   !
@@ -1317,37 +1315,34 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
      ENDIF
   ENDDO
   !
-  ! part 1
-  !
-  !$acc update host(sf_kernel)
-  !
-  DO ir = 1,dffts%nnr
-     ddvxc(ir,1) = - sf_kernel(ir) * drho_sf_copy(ir,1)
-     ddvxc(ir,2) = - sf_kernel(ir) * drho_sf_copy(ir,2)
-  ENDDO
-  !
   ! part 2
   !
-  dvsf(:,:) = (0._DP,0._DP)
+  ddvxc(:,:) = (0._DP,0._DP)
   DO is = 1,nspin
      DO is1 = 1,nspin
-        dvsf(:,is) = dvsf(:,is) + dmuxc(:,is,is1) * drho_sf_copy(:,is1)
+        ddvxc(:,is) = ddvxc(:,is) + dmuxc(:,is,is1) * drho_sf_copy(:,is1)
      ENDDO
   ENDDO
   !
   IF(.NOT. l_spin_flip_alda0) THEN
      IF(xclib_dft_is('gradient')) THEN
         CALL dgradcorr(dffts, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
-             & drho_sf_copy, nspin, nspin_gga, g, dvsf)
+             & drho_sf_copy, nspin, nspin_gga, g, ddvxc)
      ENDIF
   ENDIF
   !
-  ! part 1 and part 2 together
+  ! part 1
   !
-  DO ir = 1,dffts%nnr
-     ddvxc(ir,1) = ddvxc(ir,1) + dvsf(ir,1)
-     ddvxc(ir,2) = ddvxc(ir,2) + dvsf(ir,2)
-  ENDDO
+  IF(l_spin_flip_kernel) THEN
+     !
+     !$acc update host(sf_kernel)
+     !
+     DO ir = 1,dffts%nnr
+        ddvxc(ir,1) = ddvxc(ir,1) - sf_kernel(ir) * drho_sf_copy(ir,1)
+        ddvxc(ir,2) = ddvxc(ir,2) - sf_kernel(ir) * drho_sf_copy(ir,2)
+     ENDDO
+     !
+  ENDIF
   !
   ! print spin flip kernel (keep it for now)
   !
@@ -1383,7 +1378,6 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   !$acc exit data delete(drho_sf)
   DEALLOCATE(drho_sf)
   DEALLOCATE(drho_sf_copy)
-  DEALLOCATE(dvsf)
   !
 #if defined(__CUDA)
   CALL stop_clock_gpu('ddvxc_sf')

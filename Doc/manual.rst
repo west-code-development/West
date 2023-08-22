@@ -1208,7 +1208,7 @@ wbse_control
    * - **Description**
      - If (True), then the spin-flip kernel is written to a cube file. Used only in spin-flip TDDFT calculations and when l_spin_flip_kernel is True.
 
-.. data:: spin_flip_cut1
+.. data:: spin_flip_cut
 
 .. list-table::
    :widths: 10 90
@@ -1217,22 +1217,9 @@ wbse_control
    * - **Type**
      - float
    * - **Default**
-     - 1e3
+     - 1e-3
    * - **Description**
-     - Spin-flip cutoff to prevent divergence by setting values greater than spin_flip_cut1 to zero on a grid. Used only in spin-flip TDDFT calculations using GGA type exchange-correlation functionals and when l_spin_flip_kernel is True and l_spin_flip_alda0 is False.
-
-.. data:: spin_flip_cut2
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - float
-   * - **Default**
-     - 1e-4
-   * - **Description**
-     - Spin-flip cutoff to prevent divergence. Used only in spin-flip TDDFT calculations.
+     - Spin-flip cutoff to prevent divergence by setting values to zero on a grid point if the density on this point is smaller than spin_flip_cut. Used only in spin-flip TDDFT calculations.
 
 .. data:: l_forces
 

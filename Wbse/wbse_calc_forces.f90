@@ -124,7 +124,7 @@ SUBROUTINE wbse_calc_forces(dvg_exc_tmp)
      !
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
-     CALL json%add('exec.forces.forces_total', -forces(1:n))
+     CALL json%add('output.forces.forces_total', -forces(1:n))
      !
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))
      CALL json%print(iunit)
@@ -166,7 +166,7 @@ SUBROUTINE wbse_calc_forces(dvg_exc_tmp)
      !
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
-     CALL json%add('exec.forces.forces_corrected', -forces(1:n))
+     CALL json%add('output.forces.forces_corrected', -forces(1:n))
      !
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))
      CALL json%print(iunit)
@@ -538,7 +538,7 @@ SUBROUTINE wbse_forces_drhox1(n, dvg_exc_tmp, drhox1, forces)
      !
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
-     CALL json%add('exec.forces.forces_drhox1', -forces_drhox1(1:n))
+     CALL json%add('output.forces.forces_drhox1', -forces_drhox1(1:n))
      !
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))
      CALL json%print(iunit)
@@ -1069,7 +1069,7 @@ SUBROUTINE wbse_forces_drhox2(n, dvgdvg_mat, drhox2, forces)
      !
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
-     CALL json%add('exec.forces.forces_drhox2', -forces_drhox2(1:n))
+     CALL json%add('output.forces.forces_drhox2', -forces_drhox2(1:n))
      !
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))
      CALL json%print(iunit)
@@ -1329,7 +1329,7 @@ SUBROUTINE wbse_forces_drhoz(n, zvector, forces)
      !
      CALL json%initialize()
      CALL json%load(filename=TRIM(logfile))
-     CALL json%add('exec.forces.forces_drhoz', -forces_drhoz(1:n))
+     CALL json%add('output.forces.forces_drhoz', -forces_drhoz(1:n))
      !
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))
      CALL json%print(iunit)

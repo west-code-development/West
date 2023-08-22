@@ -331,12 +331,11 @@ MODULE wbse_dv
     USE fft_base,              ONLY : dfftp
     USE uspp_param,            ONLY : upf
     USE uspp,                  ONLY : nlcc_any
-    USE xc_lib,                ONLY : xclib_dft_is
+    USE xc_lib,                ONLY : xclib_dft_is,xc
     USE lsda_mod,              ONLY : nspin
     USE westcom,               ONLY : wbse_save_dir,sf_kernel,l_spin_flip_alda0,spin_flip_cut,&
                                     & l_print_spin_flip_kernel
     USE scf,                   ONLY : rho,rho_core,rhog_core
-    USE xc_lib,                ONLY : xc
     USE martyna_tuckerman,     ONLY : do_comp_mt
     USE funct,                 ONLY : nlc,dft_is_nonlocc
     USE mp,                    ONLY : mp_barrier

@@ -85,11 +85,22 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
      npw = ngk(ikq)
      !
      IF(sf) THEN
+        !
+        ! spin-flip cannot be parallelized over spin
+        ! ikq_do == ikq_g == local (flipped) spin index == global (flipped) spin index
+        !
         ikq_do = flks(ikq)
         ikq_g = ikq_do
+        !
      ELSE
+        !
+        ! spin-conserving can be parallelized over spin
+        ! ikq_do == local spin index
+        ! ikq_g == global spin index
+        !
         ikq_do = ikq
         ikq_g = kpt_pool%l2g(ikq)
+        !
      ENDIF
      !
      IF(l_local_repr) THEN
@@ -131,7 +142,9 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
            !
            IF(ibnd == my_ibnd .OR. ibnd == my_jbnd) THEN
               !
-              CALL read_bse_pots_g(gaux,ibnd,jbnd,ikq_do)
+              ! read_bse_pots_g uses global spin index
+              !
+              CALL read_bse_pots_g(gaux,ibnd,jbnd,ikq_g)
               !
               !$acc update device(gaux)
               !

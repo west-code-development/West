@@ -34,10 +34,9 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & trev_liouville,trev_liouville_rel,wbse_ipol,l_dipole_realspace,&
                              & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
                              & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
-                             & l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
-                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
-                             & l_reduce_io
+                             & l_print_spin_flip_kernel,spin_flip_cut,l_forces,forces_state,&
+                             & forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,ddvxc_fd_coeff,&
+                             & forces_inexact_krylov,forces_inexact_krylov_tr,l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -206,10 +205,10 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & trev_liouville,trev_liouville_rel,wbse_ipol,l_dipole_realspace,&
                              & wbse_epsinfty,spin_excitation,l_preconditioning,l_pre_shift,&
                              & l_spin_flip,l_spin_flip_kernel,l_spin_flip_alda0,&
-                             & l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
-                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
-                             & l_reduce_io,main_input_file,logfile
+                             & l_print_spin_flip_kernel,spin_flip_cut,l_forces,forces_state,&
+                             & forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,ddvxc_fd_coeff,&
+                             & forces_inexact_krylov,forces_inexact_krylov_tr,l_reduce_io,&
+                             & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier

@@ -186,9 +186,8 @@ SUBROUTINE wbse_davidson_diago ( )
      !
      ! ... Eventually initialize or randomize
      !
-     IF(n_pdep_read_from_file<nvec) THEN
-        CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_spin_flip )
-     ENDIF
+     IF(n_pdep_read_from_file<nvec) &
+     & CALL wbse_vc_initialize ( dvg_exc, n_pdep_read_from_file+1, nvec, l_spin_flip )
      !
      dav_iter = -1
      !
@@ -275,7 +274,6 @@ SUBROUTINE wbse_davidson_diago ( )
      ! Write the eigenvalues & time spent
      !
      CALL wbse_output_ev_and_time(nvec,ev,conv,time_spent,dav_iter,notcnv)
-     !
      dav_iter = 0
      IF(n_steps_write_restart == 1) CALL davidson_restart_write( dav_iter, notcnv, nbase, ew, hr_distr, vr_distr )
      !
@@ -576,6 +574,9 @@ SUBROUTINE wbse_davidson_diago ( )
   !
   IF(l_forces) THEN
      !
+     IF(.NOT. l_is_wstat_converged) &
+     & CALL errore('chidiago','davidson not converged, cannot compute forces',1)
+     !
      ! send forces_state to root image
      !
      CALL pert%g2l(forces_state,il1,owner)
@@ -637,7 +638,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   !
   ! Workspace
   !
-  LOGICAL :: unfinished
+  LOGICAL :: done
   INTEGER :: ig,ip,ncol,lbnd,ibnd,iks,nbndval,nbnd_do,iks_do
   INTEGER :: k_global,k_local,j_local,k_id
   INTEGER :: m_local_start,m_local_end
@@ -659,8 +660,8 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   !
   ! 1) Run some checks
   !
-  IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
-  & CALL errore( 'mgs', 'wbse_do_mgs problem', 1 )
+  IF(m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob) &
+  & CALL errore('mgs','wbse_do_mgs problem',1)
   !
   ALLOCATE(vec(npwx,band_group%nlocx,kpt_pool%nloc))
   ALLOCATE(zbraket(pert%nloc))
@@ -670,40 +671,42 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
   ! 2) Localize m_global_start
   !
   m_local_start = 1
-  DO ip = 1, pert%nloc
+  DO ip = 1,pert%nloc
      ig = pert%l2g(ip)
-     IF( ig < m_global_start ) CYCLE
-     m_local_start = ip
-     EXIT
+     IF(ig >= m_global_start) THEN
+        m_local_start = ip
+        EXIT
+     ENDIF
   ENDDO
   !
   ! 3) Localize m_global_end
   !
   m_local_end = pert%nloc
-  DO ip = pert%nloc, 1, -1
+  DO ip = pert%nloc,1,-1
      ig = pert%l2g(ip)
-     IF( ig > m_global_end ) CYCLE
-     m_local_end = ip
-     EXIT
+     IF(ig <= m_global_end) THEN
+        m_local_end = ip
+        EXIT
+     ENDIF
   ENDDO
   !
-  j_local=1
-  unfinished=.TRUE.
+  j_local = 1
+  done = .FALSE.
   !
-  DO k_global=1,m_global_end
+  DO k_global = 1,m_global_end
      !
      CALL pert%g2l(k_global,k_local,k_id)
      !
-     IF(my_image_id==k_id) THEN
+     IF(my_image_id == k_id) THEN
         !
         ! 4) Eventually, normalize the current vector
         !
-        IF( k_global >= m_global_start ) THEN
+        IF(k_global >= m_global_start) THEN
            !
            ! anorm = < k_l | k_l >
            !
            anorm = 0._DP
-           DO iks = 1, kpt_pool%nloc
+           DO iks = 1,kpt_pool%nloc
               !
               IF(sf) THEN
                  iks_do = flks(iks)
@@ -715,14 +718,14 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
               npw = ngk(iks)
               !
               nbnd_do = 0
-              DO lbnd = 1, band_group%nloc
+              DO lbnd = 1,band_group%nloc
                  ibnd = band_group%l2g(lbnd)+n_trunc_bands
                  IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
               ENDDO
               !
               !$acc parallel loop collapse(2) reduction(+:anorm) present(amat) copy(anorm)
-              DO lbnd = 1, nbnd_do
-                 DO ig = 1, npw
+              DO lbnd = 1,nbnd_do
+                 DO ig = 1,npw
                     anorm = anorm+2._DP*REAL(amat(ig,lbnd,iks,k_local),KIND=DP)**2 &
                     & +2._DP*AIMAG(amat(ig,lbnd,iks,k_local))**2
                  ENDDO
@@ -731,7 +734,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
               !
               IF(gstart == 2) THEN
                  !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
-                 DO lbnd = 1, nbnd_do
+                 DO lbnd = 1,nbnd_do
                     anorm = anorm-REAL(amat(1,lbnd,iks,k_local),KIND=DP)**2
                  ENDDO
                  !$acc end parallel
@@ -761,9 +764,9 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
         !
         !$acc update host(vec)
         !
-        j_local=MAX(k_local+1,m_local_start)
+        j_local = MAX(k_local+1,m_local_start)
         !
-        IF(j_local>m_local_end) unfinished=.FALSE.
+        IF(j_local > m_local_end) done = .TRUE.
         !
      ENDIF
      !
@@ -773,7 +776,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
      !
      ! Update when needed
      !
-     IF(unfinished) THEN
+     IF(.NOT. done) THEN
         !
         !$acc update device(vec)
         !
@@ -783,7 +786,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
            !
            anorm = 0._DP
            !
-           DO iks = 1, kpt_pool%nloc
+           DO iks = 1,kpt_pool%nloc
               !
               IF(sf) THEN
                  iks_do = flks(iks)
@@ -795,14 +798,14 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
               npw = ngk(iks)
               !
               nbnd_do = 0
-              DO lbnd = 1, band_group%nloc
+              DO lbnd = 1,band_group%nloc
                  ibnd = band_group%l2g(lbnd)+n_trunc_bands
                  IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
               ENDDO
               !
               !$acc parallel loop collapse(2) reduction(+:anorm) present(vec,amat) copy(anorm)
-              DO lbnd = 1, nbnd_do
-                 DO ig = 1, npw
+              DO lbnd = 1,nbnd_do
+                 DO ig = 1,npw
                     anorm = anorm+2._DP*REAL(vec(ig,lbnd,iks),KIND=DP)*REAL(amat(ig,lbnd,iks,ip),KIND=DP) &
                     & +2._DP*AIMAG(vec(ig,lbnd,iks))*AIMAG(amat(ig,lbnd,iks,ip))
                  ENDDO
@@ -811,7 +814,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
               !
               IF(gstart == 2) THEN
                  !$acc parallel loop reduction(+:anorm) present(vec,amat) copy(anorm)
-                 DO lbnd = 1, nbnd_do
+                 DO lbnd = 1,nbnd_do
                     anorm = anorm-REAL(vec(1,lbnd,iks),KIND=DP)*REAL(amat(1,lbnd,iks,ip),KIND=DP)
                  ENDDO
                  !$acc end parallel
@@ -829,7 +832,7 @@ SUBROUTINE wbse_do_mgs (amat,m_global_start,m_global_end,sf)
         !
         !$acc update device(zbraket)
         !
-        ncol=m_local_end-j_local+1
+        ncol = m_local_end-j_local+1
         !
         !$acc host_data use_device(vec,zbraket,amat)
         CALL ZGERU(npwx*band_group%nlocx*kpt_pool%nloc,ncol,mone,vec,1,zbraket(j_local),1,&

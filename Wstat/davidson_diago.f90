@@ -287,7 +287,6 @@ SUBROUTINE davidson_diago_gamma ( )
            ! ... roots come first. This allows to use quick matrix-matrix
            ! ... multiplications to set a new basis vector (see below)
            !
-           !IF ( np /= n ) vr(:,np) = vr(:,n)
            ishift(nbase+np) = n
            !
            ew(nbase+np) = ev(n)
@@ -934,7 +933,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! Workspace
   !
-  LOGICAL :: unfinished
+  LOGICAL :: done
   INTEGER :: ig,ip,ncol
   INTEGER :: k_global,k_local,j_local,k_id
   INTEGER :: m_local_start,m_local_end
@@ -955,8 +954,8 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! 1) Run some checks
   !
-  IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
-  & CALL errore( 'mgs', 'do_mgs problem', 1 )
+  IF(m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob) &
+  & CALL errore('mgs','do_mgs problem',1)
   !
   IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
      !
@@ -968,35 +967,37 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
      ! 2) Localize m_global_start
      !
      m_local_start = 1
-     DO ip = 1, pert%nloc
+     DO ip = 1,pert%nloc
         ig = pert%l2g(ip)
-        IF( ig < m_global_start ) CYCLE
-        m_local_start = ip
-        EXIT
+        IF(ig >= m_global_start) THEN
+           m_local_start = ip
+           EXIT
+        ENDIF
      ENDDO
      !
      ! 3) Localize m_global_end
      !
      m_local_end = pert%nloc
-     DO ip = pert%nloc, 1, -1
+     DO ip = pert%nloc,1,-1
         ig = pert%l2g(ip)
-        IF( ig > m_global_end ) CYCLE
-        m_local_end = ip
-        EXIT
+        IF(ig <= m_global_end) THEN
+           m_local_end = ip
+           EXIT
+        ENDIF
      ENDDO
      !
-     j_local=1
-     unfinished=.TRUE.
+     j_local = 1
+     done = .FALSE.
      !
-     DO k_global=1,m_global_end
+     DO k_global = 1,m_global_end
         !
         CALL pert%g2l(k_global,k_local,k_id)
         !
-        IF(my_image_id==k_id) THEN
+        IF(my_image_id == k_id) THEN
            !
            ! 4) Eventually, normalize the current vector
            !
-           IF( k_global >= m_global_start ) THEN
+           IF(k_global >= m_global_start) THEN
               !
               ! anorm = < k_l | k_l >
               !
@@ -1035,9 +1036,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !
            !$acc update host(vec)
            !
-           j_local=MAX(k_local+1,m_local_start)
+           j_local = MAX(k_local+1,m_local_start)
            !
-           IF(j_local>m_local_end) unfinished=.FALSE.
+           IF(j_local > m_local_end) done = .TRUE.
            !
         ENDIF
         !
@@ -1047,7 +1048,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
         !
         ! Update when needed
         !
-        IF(unfinished) THEN
+        IF(.NOT. done) THEN
            !
            !$acc update device(vec)
            !
@@ -1088,7 +1089,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
            !$acc end host_data
            !
-           ncol=m_local_end-j_local+1
+           ncol = m_local_end-j_local+1
            !
            !$acc host_data use_device(vec,zbraket,amat)
            CALL ZGERU(npwqx,ncol,mone,vec,1,zbraket(j_local),1,amat(1,j_local),npwqx)

@@ -1315,25 +1315,26 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
      ENDIF
   ENDDO
   !
-  ! part 2
-  !
   ddvxc(:,:) = (0._DP,0._DP)
-  DO is = 1,nspin
-     DO is1 = 1,nspin
-        ddvxc(:,is) = ddvxc(:,is) + dmuxc(:,is,is1) * drho_sf_copy(:,is1)
-     ENDDO
-  ENDDO
-  !
-  IF(.NOT. l_spin_flip_alda0) THEN
-     IF(xclib_dft_is('gradient')) THEN
-        CALL dgradcorr(dffts, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
-             & drho_sf_copy, nspin, nspin_gga, g, ddvxc)
-     ENDIF
-  ENDIF
-  !
-  ! part 1
   !
   IF(l_spin_flip_kernel) THEN
+     !
+     ! part 2
+     !
+     DO is = 1,nspin
+        DO is1 = 1,nspin
+           ddvxc(:,is) = ddvxc(:,is) + dmuxc(:,is,is1) * drho_sf_copy(:,is1)
+        ENDDO
+     ENDDO
+     !
+     IF(.NOT. l_spin_flip_alda0) THEN
+        IF(xclib_dft_is('gradient')) THEN
+           CALL dgradcorr(dffts, rho%of_r, grho, dvxc_rr, dvxc_sr, dvxc_ss, dvxc_s, xq, &
+                & drho_sf_copy, nspin, nspin_gga, g, ddvxc)
+        ENDIF
+     ENDIF
+     !
+     ! part 1
      !
      !$acc update host(sf_kernel)
      !

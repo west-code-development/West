@@ -197,7 +197,7 @@ SUBROUTINE compute_braket(braket)
   TYPE(bar_type) :: barra
   REAL(DP) :: reduce
   !
-  CALL io_push_title('braket')
+  CALL io_push_title('Braket')
   !
   ! Distribute pairs over band groups
   !
@@ -352,7 +352,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   TYPE(bar_type) :: barra
   REAL(DP) :: reduce
   !
-  CALL io_push_title('pair density')
+  CALL io_push_title('Pair density')
   !
   ! Distribute pairs over images
   !
@@ -479,7 +479,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   IF (nspin==2) THEN
      !
-     CALL io_push_title('pair density')
+     CALL io_push_title('Pair density')
      !
      CALL start_bar_type ( barra, 'eri_vc_s1s2', bandpair%nloc )
      !
@@ -605,7 +605,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   COMPLEX(DP) :: reduce
   TYPE(bar_type) :: barra
   !
-  CALL io_push_title('Wp Integrals (PDEP)')
+  CALL io_push_title('Wp integrals (PDEP)')
   !
   DO nloc = 1, macropert%nloc
      n = macropert%l2g(nloc)

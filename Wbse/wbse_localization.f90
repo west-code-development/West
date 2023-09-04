@@ -112,7 +112,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
            ENDDO
         ENDDO
         !
-        CALL io_push_title('Wannier localization')
+        CALL io_push_title('Wannier (A matrices)')
         !
         CALL start_bar_type(barra,'wann',barra_load)
         !
@@ -225,7 +225,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         ! compute overlap
         !
-        CALL io_push_title('Wannier overlap')
+        CALL io_push_title('Wannier (overlap)')
         !
         CALL start_bar_type(barra,'wann',barra_load)
         !

@@ -106,7 +106,9 @@ MODULE wann_loc_wfc
       ! Gygi et al., Computer Physics Communications 155, 1-6 (2003)
       !
       USE kinds,                 ONLY : DP
+      USE io_global,             ONLY : stdout
       USE linear_algebra_kernel, ONLY : matdiago_dsy
+      USE io_push,               ONLY : io_push_title
 #if defined(__CUDA)
       USE cublas
 #endif
@@ -135,7 +137,17 @@ MODULE wann_loc_wfc
       INTEGER,PARAMETER :: itermax = 5000
       REAL(DP),PARAMETER :: avg_spread_thr = 1.E-9_DP
       !
+      REAL(DP) :: time_spent(2)
+      REAL(DP), EXTERNAL :: get_clock
+      CHARACTER(20), EXTERNAL :: human_readable_time
+      !
+#if defined(__CUDA)
+      CALL start_clock_gpu('jade')
+#else
       CALL start_clock('jade')
+#endif
+      !
+      CALL io_push_title('Wannier (JADE)')
       !
       ALLOCATE(rot(m,m))
       ALLOCATE(aux(m,m))
@@ -187,6 +199,8 @@ MODULE wann_loc_wfc
       conv = .FALSE.
       !
       DO iter = 1,itermax
+         !
+         time_spent(1) = get_clock('jade')
          !
          DO sweep = 1,m-1
             !
@@ -309,6 +323,16 @@ MODULE wann_loc_wfc
          ENDDO
          !$acc end parallel
          !
+         WRITE(stdout,"(/,5X,'                  *----------*            *-----------------*')")
+         WRITE(stdout,"(  5X,'#     Iteration = | ', I8,' |','   ','Spread = | ', ES15.8,' |')") &
+         & iter, sigma
+         WRITE(stdout,"(  5X,'                  *----------*            *-----------------*')")
+         !
+         time_spent(2) = get_clock('jade')
+         !
+         WRITE(stdout,"(5X,'Time spent in last iteration ',a)") &
+         & TRIM(human_readable_time(time_spent(2)-time_spent(1)))
+         !
          ! Check convergence
          !
          IF(ABS(sigma-sigma_old) < m*avg_spread_thr) THEN
@@ -328,7 +352,11 @@ MODULE wann_loc_wfc
       !
       IF(.NOT. conv) CALL errore('wann','convergence not achieved',itermax)
       !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('jade')
+#else
       CALL stop_clock('jade')
+#endif
       !
     END SUBROUTINE
     !

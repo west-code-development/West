@@ -21,7 +21,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   USE pwcom,                ONLY : npwx,nspin
   USE westcom,              ONLY : forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,l_pre_shift,&
                                  & forces_inexact_krylov,forces_inexact_krylov_tr,do_inexact_krylov
-  USE io_push,              ONLY : io_push_title,io_push_bar
+  USE io_push,              ONLY : io_push_title
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm
   !

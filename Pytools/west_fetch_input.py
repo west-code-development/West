@@ -90,6 +90,7 @@ default["wbse_init_control"]["solver"] = "BSE"
 default["wbse_init_control"]["bse_method"] = "PDEP"
 default["wbse_init_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wbse_init_control"]["localization"] = "N"
+default["wbse_init_control"]["wannier_tr_rel"] = 1e-6
 default["wbse_init_control"]["wfc_from_qbox"] = "qb_wfc"
 default["wbse_init_control"]["bisection_info"] = "bis_info"
 default["wbse_init_control"]["chi_kernel"] = "CHI"

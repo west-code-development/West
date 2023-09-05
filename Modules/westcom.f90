@@ -298,7 +298,8 @@ MODULE wbse_init_center
   CHARACTER(LEN=20) :: chi_kernel
   CHARACTER(LEN=512) :: wfc_from_qbox  ! wavefunction file name, extension is spin channel, e.g. 'qb_wfc.1'
   CHARACTER(LEN=512) :: bisection_info ! bisection file name, extension is spin channel, e.g. 'bis_info.1'
-  REAL(DP) :: overlap_thr              ! overlap threshold for idx_matrix in wbse_init_qboxcoupling
+  REAL(DP) :: wannier_tr_rel
+  REAL(DP) :: overlap_thr
   INTEGER :: spin_channel
   INTEGER :: n_trunc_bands
   LOGICAL :: l_local_repr

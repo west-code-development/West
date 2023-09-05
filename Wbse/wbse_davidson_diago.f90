@@ -520,7 +520,7 @@ SUBROUTINE wbse_davidson_diago ( )
            !
            ! ... last iteration, some roots not converged: return
            !
-           WRITE( stdout, '(5X,"WARNING: ",I5," eigenvalues not converged in chidiago")' ) notcnv
+           WRITE( stdout, '(5X,"WARNING : ",I5," eigenvalues not converged in chidiago")' ) notcnv
            !
            CALL stop_clock( 'chidiago:last' )
            !

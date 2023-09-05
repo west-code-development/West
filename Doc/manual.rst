@@ -834,6 +834,19 @@ wbse_init_control
        - "B" : Bisected orbitals are used. Valid only when bse_method is "FF_QBOX".
        - "W" : Wannier orbitals are used.
 
+.. data:: wannier_tr_rel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-6
+   * - **Description**
+     - Relative convergence threshold for Wannier localization. Used only when localization is "W".
+
 .. data:: wfc_from_qbox
 
 .. list-table::

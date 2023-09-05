@@ -109,6 +109,7 @@ MODULE wann_loc_wfc
       USE io_global,             ONLY : stdout
       USE linear_algebra_kernel, ONLY : matdiago_dsy
       USE io_push,               ONLY : io_push_title
+      USE westcom,               ONLY : wannier_tr_rel
 #if defined(__CUDA)
       USE cublas
 #endif
@@ -134,8 +135,7 @@ MODULE wann_loc_wfc
       REAL(DP),ALLOCATABLE :: rot(:,:),aux(:,:)
       !$acc declare device_resident(rot,aux)
       !
-      INTEGER,PARAMETER :: itermax = 5000
-      REAL(DP),PARAMETER :: avg_spread_thr = 1.E-9_DP
+      INTEGER,PARAMETER :: itermax = 100
       !
       REAL(DP) :: time_spent(2)
       REAL(DP), EXTERNAL :: get_clock
@@ -330,12 +330,12 @@ MODULE wann_loc_wfc
          !
          time_spent(2) = get_clock('jade')
          !
-         WRITE(stdout,"(5X,'Time spent in last iteration ',a)") &
+         WRITE(stdout,"(5X,'Time spent in last iteration ',A)") &
          & TRIM(human_readable_time(time_spent(2)-time_spent(1)))
          !
          ! Check convergence
          !
-         IF(ABS(sigma-sigma_old) < m*avg_spread_thr) THEN
+         IF(ABS((sigma-sigma_old)/sigma_old) < wannier_tr_rel) THEN
             conv = .TRUE.
             EXIT
          ELSE
@@ -350,7 +350,7 @@ MODULE wann_loc_wfc
       DEALLOCATE(top)
       DEALLOCATE(bot)
       !
-      IF(.NOT. conv) CALL errore('wann','convergence not achieved',itermax)
+      IF(.NOT. conv) WRITE(stdout,'(7X,"** WARNING : JADE not converged in ",I5," steps")') itermax
       !
 #if defined(__CUDA)
       CALL stop_clock_gpu('jade')

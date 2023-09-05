@@ -13,7 +13,7 @@ Polaris is a GPU-accelerated supercomputer located at Argonne National Laborator
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on June 14, 2023):
+WEST executables can be compiled using the following script (tested on September 17, 2023):
 
 .. code-block:: bash
 
@@ -27,11 +27,10 @@ WEST executables can be compiled using the following script (tested on June 14, 
    export MPICH_GPU_SUPPORT_ENABLED=1
    export CUDA_HOME=/opt/nvidia/hpc_sdk/Linux_x86_64/23.3/cuda/11.8
 
-   ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.8 --with-cuda-cc=80
+   ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.8 --with-cuda-cc=80 --with-cuda-mpi=yes
 
    # Manually edit make.inc:
 
-   # DFLAGS = -D__PGI -D__CUDA -D__FFTW -D__MPI -D__GPU_MPI
    # MPIF90 = ftn
    # F90 = ftn
    # CC = cc

@@ -64,7 +64,7 @@ WESTLIBS = \
 
 TLDEPS = bindir mods pwlibs pw
 
-all : title tldeps wbse.x wbse_init.x
+all : title tldeps wbse.x wbse_init.x libwbse.a
 
 wbse.x : wbse.o $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
 	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
@@ -76,6 +76,10 @@ wbse_init.x : wbse_init.o $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
 
 tldeps :
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
+
+libwbse.a : $(WBSE_OBJS)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L

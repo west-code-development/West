@@ -742,6 +742,22 @@ westpp_control
    * - **Description**
      - If (True), then a spin-flip calculation is performed. Used only when westpp_calculation is "C" or "M" and nspin is 2.
 
+.. data:: westpp_l_dipole_realspace
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - Controls how the dipole is computed. Used only when westpp_calculation is "C".
+
+       - If (False), then the dipole is computed in the reciprocal space by computing [H,r]. Choice valid for isolated and condensed systems.
+       - If (True), then the dipole is computed in the real space. Choice valid for isolated systems only.
+
 |
 
 

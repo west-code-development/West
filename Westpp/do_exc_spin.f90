@@ -149,6 +149,7 @@ SUBROUTINE do_exc_spin()
   IF(westpp_n_liouville_to_use > 0) THEN
      !
      ALLOCATE(collect_ds2(westpp_n_liouville_to_use))
+     collect_ds2(:) = 0._DP
      !
      ! COMPUTE \Delta <S^2> FOR THE EXCITED STATES
      !
@@ -549,12 +550,14 @@ SUBROUTINE do_exc_spin()
         WRITE(stdout, "(/, 5x, ' # Exciton : | ', i12,' |','   ','spin flip : | ', L3)") iexc, westpp_l_spin_flip
         !
         IF(westpp_l_spin_flip) THEN
-           WRITE(stdout, &
-           & "(/, 5x, '    nbnd_1 : | ', i12, ' |','      ', 'nbnd_2 : | ', i12, ' |','   ', 'flip up : | ', L3)") &
-           & nbnd_up, nbnd_dn, flip_up
+           IF(flip_up) THEN
+              WRITE(stdout, "(5x, ' Transition from spin-down to spin-up')")
+           ELSE
+              WRITE(stdout, "(5x, ' Transition from spin-up to spin-down')")
+           ENDIF
         ENDIF
         !
-        WRITE(stdout, "(/, 5x, ' Ex Energy : | ', f12.6,' |','      ','D<S^2> : | ', f12.6)") ev(iexc), collect_ds2(iexc)
+        WRITE(stdout, "(5x, ' Ex Energy : | ', f12.6,' |',' ','Delta <S^2> : | ', f12.6)") ev(iexc), collect_ds2(iexc)
         !
      ENDDO
      !

@@ -158,8 +158,6 @@ SUBROUTINE wbse_lanczos_diago()
   !
   CALL solve_e_psi()
   !
-  !$acc update host(d0psi)
-  !
   CALL io_push_title('Lanczos linear-response absorption spectrum calculation')
   WRITE(stdout,'(5x,"Using Tamm-Dancoff Liouvillian operator")')
   !

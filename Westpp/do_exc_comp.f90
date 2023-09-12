@@ -16,14 +16,15 @@ SUBROUTINE do_exc_comp()
   USE kinds,                 ONLY : DP
   USE io_push,               ONLY : io_push_title
   USE bar,                   ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE pwcom,                 ONLY : npw,nks,current_k,ngk
+  USE pwcom,                 ONLY : npw,npwx,nks,current_k,ngk
   USE control_flags,         ONLY : gamma_only
   USE gvect,                 ONLY : gstart
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE buffers,               ONLY : get_buffer
-  USE westcom,               ONLY : iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
-                                  & westpp_n_liouville_to_use,westpp_l_spin_flip,logfile
+  USE westcom,               ONLY : logfile,iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
+                                  & westpp_n_liouville_to_use,westpp_l_spin_flip,&
+                                  & westpp_l_dipole_realspace,l_dipole_realspace,d0psi,alphapv_dfpt
   USE mp_world,              ONLY : mpime,root
   USE plep_db,               ONLY : plep_db_read
   USE distribution_center,   ONLY : pert,kpt_pool,band_group
@@ -43,20 +44,22 @@ SUBROUTINE do_exc_comp()
   !
   ! ... LOCAL variables
   !
-  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iaux,iunit
-  INTEGER :: trans(2)
+  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iaux,iunit,ipol
+  INTEGER :: trans(4)
   INTEGER :: nbndx_occ,nbndx_emp
   INTEGER :: nbndval,flnbndval
   CHARACTER(5) :: label_exc
   CHARACTER(5) :: label_k
   CHARACTER(9) :: label_d
   REAL(DP) :: reduce
-  REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:)
+  REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:),transition_dipole(:,:)
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   TYPE(json_core) :: jcor
   TYPE(json_value), POINTER :: jval
   INTEGER, PARAMETER :: flks(2) = [2,1]
+  !
+  COMPLEX(DP), EXTERNAL :: get_alpha_pv
   !
   nbndx_occ = MAXVAL(nbnd_occ)
   nbndx_emp = nbnd - MINVAL(nbnd_occ)
@@ -64,8 +67,8 @@ SUBROUTINE do_exc_comp()
   IF(nbndx_emp < 1) &
      CALL errore('do_exc_comp', 'decomposition of eigenvectors needs empty states, rerun pwscf with nbnd > nbnd_occ', 1)
   !
-  IF(westpp_range(1) >= nbndx_occ) &
-     CALL errore('do_exc_comp', 'westpp_range(1) should be smaller than the number of occupied bands', 1)
+  IF(westpp_range(1) > nbndx_occ) &
+     CALL errore('do_exc_comp', 'westpp_range(1) should not exceed the number of occupied bands', 1)
   !
   IF(westpp_range(2) <= nbndx_occ) &
      CALL errore('do_exc_comp', 'westpp_range(2) should be greater than the number of occupied bands', 1)
@@ -98,8 +101,30 @@ SUBROUTINE do_exc_comp()
      CALL json%load(filename=TRIM(logfile))
   ENDIF
   !
+  IF(.NOT. westpp_l_spin_flip) THEN
+     !
+     ALLOCATE(d0psi(npwx,nbndx_occ,nks,3))
+     !$acc enter data create(d0psi)
+     !
+     l_dipole_realspace = westpp_l_dipole_realspace
+     !
+     ! Calculate ALPHA_PV
+     !
+     alphapv_dfpt = get_alpha_pv()
+     !
+     CALL solve_e_psi()
+     !
+     ALLOCATE(transition_dipole(3,westpp_n_liouville_to_use))
+     transition_dipole(:,:) = 0._DP
+     !
+  ENDIF
+  !
   ALLOCATE(projection_matrix(nks,nbndx_occ,nbndx_emp,westpp_n_liouville_to_use))
   !$acc enter data create(projection_matrix) copyin(dvg_exc)
+  !
+  !$acc kernels present(projection_matrix)
+  projection_matrix(:,:,:,:) = 0._DP
+  !$acc end kernels
   !
   CALL io_push_title('BSE/TDDFT Excited State De(C)omposition')
   !
@@ -168,6 +193,55 @@ SUBROUTINE do_exc_comp()
         !
      ENDDO
      !
+     ! Compute the transition dipole moment
+     !
+     IF(.NOT. westpp_l_spin_flip) THEN
+        !
+        DO ipol = 1, 3
+           !
+           reduce = 0._DP
+           !
+           DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
+              !
+              ! ... Set k-point, spin, kinetic energy, needed by Hpsi
+              !
+              current_k = iks
+              npw = ngk(iks)
+              !
+              IF(westpp_l_spin_flip) THEN
+                 iks_do = flks(iks)
+              ELSE
+                 iks_do = iks
+              ENDIF
+              !
+              nbndval = nbnd_occ(iks)
+              flnbndval = nbnd_occ(iks_do)
+              !
+              !$acc parallel loop collapse(2) reduction(+:reduce) present(dvg_exc,d0psi) copy(reduce)
+              DO iocc = 1, flnbndval
+                 DO ig = 1, npw
+                    reduce = reduce + 2._DP*REAL(dvg_exc(ig,iocc,iks,lexc),KIND=DP)*REAL(d0psi(ig,iocc,iks_do,ipol),KIND=DP) &
+                    &               + 2._DP*AIMAG(dvg_exc(ig,iocc,iks,lexc))*AIMAG(d0psi(ig,iocc,iks_do,ipol))
+                 ENDDO
+              ENDDO
+              !$acc end parallel
+              !
+              IF(gstart == 2) THEN
+                 !$acc parallel loop reduction(+:reduce) present(dvg_exc,d0psi) copy(reduce)
+                 DO iocc = 1, flnbndval
+                    reduce = reduce - REAL(dvg_exc(1,iocc,iks,lexc),KIND=DP)*REAL(d0psi(1,iocc,iks_do,ipol),KIND=DP)
+                 ENDDO
+                 !$acc end parallel
+              ENDIF
+              !
+           ENDDO
+           !
+           transition_dipole(ipol,iexc) = reduce
+           !
+        ENDDO
+        !
+     ENDIF
+     !
   ENDDO
   !
   !$acc update host(projection_matrix)
@@ -175,13 +249,25 @@ SUBROUTINE do_exc_comp()
   CALL mp_sum(projection_matrix,intra_bgrp_comm)
   CALL mp_sum(projection_matrix,inter_image_comm)
   !
+  IF(.NOT. westpp_l_spin_flip) THEN
+     !
+     CALL mp_sum(transition_dipole,intra_bgrp_comm)
+     CALL mp_sum(transition_dipole,inter_image_comm)
+     !
+     IF(nks == 1) transition_dipole(:,:) = SQRT(2._DP) * transition_dipole
+     !
+  ENDIF
+  !
+  CALL stop_bar_type(barra,'westpp')
+  !
   ! ... Print out results
   !
-  WRITE(stdout, "( /,5x,' *-------------* THE PRINCIPLE PROJECTED COMPONENTS *-------------*')")
+  WRITE(stdout, "(/,5x,'*-------------* THE PRINCIPLE PROJECTED COMPONENTS *-------------*')")
   !
   DO iexc = 1,westpp_n_liouville_to_use
      !
-     WRITE(stdout, "(   /, 5x, ' #     Exciton : | ', i8,' |','   ','Excitation energy : | ', f12.6)") iexc, ev(iexc)
+     WRITE(stdout, "(/, 5x, '#     Exciton :   ', i8,' |','   ','Excitation energy :   ', f12.6)") iexc, ev(iexc)
+     WRITE(stdout, "(   5x, '#     Transition_from      |   Transition_to       |    Coeffcient')")
      !
      DO iks = 1,nks
         !
@@ -193,14 +279,20 @@ SUBROUTINE do_exc_comp()
         !
         DO iocc = 1,nbnd_occ(iks_do)
            DO iemp = 1,(nbnd - nbnd_occ(iks))
-              reduce = ABS(projection_matrix(iks,iocc,iemp,iexc))
-              IF (reduce >= 0.1_DP) THEN
-                 WRITE(stdout, "(6x, i8, 4x, i8, 16x, i8, 7x, f12.6, 2x)" ) iks,iocc,iemp,reduce
+              IF(ABS(projection_matrix(iks,iocc,iemp,iexc)) >= 0.1_DP) THEN
+                 WRITE(stdout, "(4x, i8, 4x, i8, 8x, '|', i4, 4x, i8, 7x, '|', f13.6)") &
+                 & iks_do,iocc,iks,iemp+nbnd_occ(iks),projection_matrix(iks,iocc,iemp,iexc)
               ENDIF
            ENDDO
         ENDDO
         !
      ENDDO
+     !
+     IF(.NOT. westpp_l_spin_flip) THEN
+        WRITE(stdout, "(5x, '#     TDM_x                |   TDM_y               |    TDM_z             ')")
+        WRITE(stdout, "(9x, f18.9, 5x, '|', f17.9, 6x, '|', f16.9, 2x)") &
+        & transition_dipole(1,iexc),transition_dipole(2,iexc),transition_dipole(3,iexc)
+     ENDIF
      !
   ENDDO
   !
@@ -213,6 +305,9 @@ SUBROUTINE do_exc_comp()
         WRITE(label_exc,'(I5.5)') iexc
         !
         CALL json%add('output.E'//label_exc//'.excitation_energy',ev(iexc))
+        !
+        IF(.NOT. westpp_l_spin_flip) &
+        & CALL json%add('output.E'//label_exc//'.transition_dipole_moment',transition_dipole(:,iexc))
         !
         DO iks = 1,nks
            !
@@ -232,11 +327,13 @@ SUBROUTINE do_exc_comp()
            !
            DO iocc = westpp_range(1),nbnd_occ(iks_do)
               !
-              trans(1) = iocc
+              trans(1) = iks_do
+              trans(2) = iocc
               !
               DO iemp = 1,(westpp_range(2) - nbnd_occ(iks))
                  !
-                 trans(2) = iemp
+                 trans(3) = iks
+                 trans(4) = iemp + nbnd_occ(iks)
                  iaux = iaux+1
                  WRITE(label_d,'(I9)') iaux
                  !
@@ -255,14 +352,17 @@ SUBROUTINE do_exc_comp()
      !
   ENDIF
   !
-  CALL stop_bar_type(barra,'westpp')
-  !
 #if defined(__CUDA)
   CALL deallocate_gpu()
 #endif
   !
   !$acc exit data delete(projection_matrix,dvg_exc)
   DEALLOCATE(projection_matrix)
+  IF(.NOT. westpp_l_spin_flip) THEN
+     !$acc exit data delete(d0psi)
+     DEALLOCATE(d0psi)
+     DEALLOCATE(transition_dipole)
+  ENDIF
   !
   IF(mpime == root) THEN
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))

@@ -38,7 +38,9 @@ PWOBJS = ../../PW/src/libpw.a
 QEMODS = ../../KS_Solvers/libks_solvers.a ../../dft-d3/libdftd3qe.a $(BASEMODS)
 
 WESTLIBS = \
+../Wbse/libwbse.a \
 ../IO_kernel/lib_io_kernel.a \
+../DFPT_kernel/lib_dfpt_kernel.a \
 ../Hamiltonian_kernel/lib_hamiltonian_kernel.a \
 ../Para_kernel/lib_para_kernel.a \
 ../Coulomb_kernel/lib_coulomb_kernel.a \

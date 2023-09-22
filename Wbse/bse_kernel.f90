@@ -237,8 +237,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
         ! ibnd = band_group%l2g(lbnd)
         !
         DO ig = 1, npw
-           ibnd = band_group_myoffset+lbnd
-           bse_k1d(ig,lbnd) = bse_k1d(ig,lbnd)-caux1(ig,ibnd)
+           bse_k1d(ig,lbnd) = bse_k1d(ig,lbnd)-caux1(ig,band_group_myoffset+lbnd)
         ENDDO
      ENDDO
      !$acc end parallel

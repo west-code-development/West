@@ -237,12 +237,12 @@ SUBROUTINE bse_start()
            !
            IF(l_local_repr) THEN
               IF(ovl_value >= overlap_thr) THEN
-                 do_idx = do_idx + 1
+                 do_idx = do_idx+1
                  idx_matrix(do_idx,1,iks) = ibnd+n_trunc_bands
                  idx_matrix(do_idx,2,iks) = jbnd+n_trunc_bands
               ENDIF
            ELSE
-              do_idx = do_idx + 1
+              do_idx = do_idx+1
               idx_matrix(do_idx,1,iks) = ibnd+n_trunc_bands
               idx_matrix(do_idx,2,iks) = jbnd+n_trunc_bands
            ENDIF
@@ -310,9 +310,9 @@ SUBROUTINE read_qp_eigs()
   !
   USE kinds,                ONLY : DP
   USE constants,            ONLY : RYTOEV
-  USE io_global,            ONLY : ionode
   USE mp,                   ONLY : mp_bcast
-  USE mp_global,            ONLY : intra_image_comm
+  USE mp_global,            ONLY : intra_pool_comm,my_bgrp_id,me_bgrp
+  USE wvfct,                ONLY : et
   USE westcom,              ONLY : et_qp,qp_correction
   USE pwcom,                ONLY : nspin,nbnd
   USE json_module,          ONLY : json_file
@@ -323,14 +323,16 @@ SUBROUTINE read_qp_eigs()
   ! Workspace
   !
   LOGICAL :: found
-  INTEGER :: is,is_g,nspin_tmp
+  INTEGER :: is,is_g,ib,nspin_tmp,qp_s,qp_e
+  REAL(DP) :: delta
   CHARACTER(LEN=6) :: labels
+  INTEGER,ALLOCATABLE :: ivals(:)
   REAL(DP),ALLOCATABLE :: rvals(:)
   TYPE(json_file) :: json
   !
   ALLOCATE(et_qp(nbnd,kpt_pool%nloc))
   !
-  IF(ionode) THEN
+  IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      !
      CALL json%initialize()
      CALL json%load(filename=TRIM(qp_correction))
@@ -338,6 +340,11 @@ SUBROUTINE read_qp_eigs()
      CALL json%get('system.electron.nspin',nspin_tmp,found)
      IF(.NOT. found) CALL errore('read_qp_eigs','nspin not found',1)
      IF(nspin_tmp /= nspin) CALL errore('read_qp_eigs','nspin mismatch',1)
+     !
+     CALL json%get('input.wfreq_control.qp_bandrange',ivals,found)
+     IF(.NOT. found) CALL errore('read_qp_eigs','qp_bandrange not found',1)
+     qp_s = ivals(1)
+     qp_e = ivals(2)
      !
      DO is = 1,kpt_pool%nloc
         !
@@ -347,8 +354,17 @@ SUBROUTINE read_qp_eigs()
         !
         CALL json%get('output.Q.K'//labels//'.eqpSec',rvals,found)
         IF(.NOT. found) CALL errore('read_qp_eigs','eqpSec not found',1)
-        IF(SIZE(rvals) /= nbnd) CALL errore('read_qp_eigs','nbnd mismatch',1)
-        et_qp(:,is) = rvals/RYTOEV
+        et_qp(qp_s:qp_e,is) = rvals/RYTOEV
+        !
+        delta = et_qp(qp_s,is)-et(qp_s,is)
+        DO ib = 1,qp_s-1
+           et_qp(ib,is) = et(ib,is)+delta
+        ENDDO
+        !
+        delta = et_qp(qp_e,is)-et(qp_e,is)
+        DO ib = qp_e+1,nbnd
+           et_qp(ib,is) = et(ib,is)+delta
+        ENDDO
         !
      ENDDO
      !
@@ -356,6 +372,6 @@ SUBROUTINE read_qp_eigs()
      !
   ENDIF
   !
-  CALL mp_bcast(et_qp,0,intra_image_comm)
+  CALL mp_bcast(et_qp,0,intra_pool_comm)
   !
 END SUBROUTINE

@@ -32,9 +32,7 @@ WEST executables can be compiled using the following script (tested on August 9,
    export BLAS_LIBS="$OLCF_ESSL_ROOT/lib64/libessl.so"
    export LAPACK_LIBS="$OLCF_ESSL_ROOT/lib64/libessl.so $OLCF_NETLIB_LAPACK_ROOT/lib64/liblapack.a"
 
-   ./configure --with-cuda=$OLCF_CUDA_ROOT --with-cuda-runtime=11.0 --with-cuda-cc=70
-
-   # Manually edit make.inc: add -D__GPU_MPI to DFLAGS
+   ./configure --with-cuda=$OLCF_CUDA_ROOT --with-cuda-runtime=11.0 --with-cuda-cc=70 --with-cuda-mpi=yes
 
    make -j 8 pw
 

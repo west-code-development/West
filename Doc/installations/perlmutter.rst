@@ -13,7 +13,7 @@ Perlmutter is an HPE Cray EX supercomputer located at National Energy Research S
 Building WEST (GPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on May 20, 2023):
+WEST executables can be compiled using the following script (tested on September 17, 2023):
 
 .. code-block:: bash
 
@@ -26,11 +26,10 @@ WEST executables can be compiled using the following script (tested on May 20, 2
    module load craype-accel-nvidia80
    module load cray-python/3.9.13.1
 
-   ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.7 --with-cuda-cc=80
+   ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.7 --with-cuda-cc=80 --with-cuda-mpi=yes
 
    # Manually edit make.inc:
 
-   # DFLAGS = -D__PGI -D__CUDA -D__FFTW -D__MPI
    # MPIF90 = ftn
    # F90 = ftn
    # CC = cc
@@ -87,6 +86,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
+   export MPICH_GPU_SUPPORT_ENABLED=1
    export MPICH_MPIIO_HINTS="*:romio_cb_write=enable:romio_ds_write=disable"
    export ROMIO_FSTYPE_FORCE="ufs:"
 
@@ -101,7 +101,7 @@ Job submission is done with the following:
 Building WEST (CPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on May 20, 2023):
+WEST executables can be compiled using the following script (tested on September 17, 2023):
 
 .. code-block:: bash
 

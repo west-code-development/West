@@ -742,6 +742,19 @@ westpp_control
    * - **Description**
      - If (True), then a spin-flip calculation is performed. Used only when westpp_calculation is "C" or "M" and nspin is 2.
 
+.. data:: westpp_wannier_tr_rel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-6
+   * - **Description**
+     - Relative convergence threshold for Wannier localization. Used only when westpp_calculation is "B".
+
 .. data:: westpp_l_dipole_realspace
 
 .. list-table::

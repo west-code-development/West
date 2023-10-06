@@ -1167,10 +1167,10 @@ wbse_control
    * - **Default**
      - "S"
    * - **Description**
-     - Available options are:
+     - Used only when nspin is 1. When nspin is 2, use l_spin_flip to choose spin-conserving or spin-flip excitations. Available options are:
 
        - "S" : Singlet.
-       - "T" : Triplet.
+       - "T" : Triplet. Valid only when solver is "BSE".
 
 .. data:: l_preconditioning
 

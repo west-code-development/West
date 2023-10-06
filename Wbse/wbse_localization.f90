@@ -69,7 +69,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   !
   CALL start_clock('local')
   !
-  SELECT CASE(TRIM(localization))
+  SELECT CASE(localization)
   CASE('W','w')
      l_wann = .TRUE.
   CASE('B','b')

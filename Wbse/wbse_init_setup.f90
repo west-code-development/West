@@ -63,7 +63,7 @@ SUBROUTINE wbse_init_setup()
 #endif
   ENDIF
   !
-  SELECT CASE(TRIM(localization))
+  SELECT CASE(localization)
   CASE('N','n')
      l_local_repr = .FALSE.
   CASE('B','b','W','w')

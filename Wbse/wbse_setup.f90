@@ -28,7 +28,7 @@ SUBROUTINE wbse_setup()
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_sf_kernel_setup
   USE xc_lib,               ONLY : xclib_dft_is
   USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
-  USE pwcom,                ONLY : nkstot,nks
+  USE pwcom,                ONLY : nkstot,nks,nspin
   USE distribution_center,  ONLY : kpt_pool
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
   !
@@ -40,7 +40,7 @@ SUBROUTINE wbse_setup()
   !
   CALL do_setup()
   !
-  SELECT CASE(TRIM(localization))
+  SELECT CASE(localization)
   CASE('N','n')
      l_local_repr = .FALSE.
   CASE('B','b','W','w')
@@ -77,12 +77,9 @@ SUBROUTINE wbse_setup()
      l_qp_correction = .TRUE.
   ENDIF
   !
-  SELECT CASE(spin_excitation)
-  CASE('S','s','singlet')
-     l_bse_triplet = .FALSE.
-  CASE('T','t','triplet')
-     l_bse_triplet = .TRUE.
-  END SELECT
+  l_bse_triplet = .FALSE.
+  IF(nspin == 1 .AND. l_bse .AND. (spin_excitation == 'T' .OR. spin_excitation == 't')) &
+  & l_bse_triplet = .TRUE.
   !
   SELECT CASE(wbse_calculation)
   CASE('l','d','r','R')

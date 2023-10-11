@@ -110,10 +110,14 @@ SUBROUTINE wbse_lanczos_diago()
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  CALL allocate_bse_gpu(band_group%nlocx)
 #endif
   !
   ! Main Lanczos code
+  !
+  ALLOCATE(d0psi(npwx,band_group%nlocx,kpt_pool%nloc,n_ipol))
+  !$acc enter data create(d0psi)
+  !
+  CALL solve_e_psi()
   !
   ALLOCATE(beta_store(n_lanczos,nipol_input,nspin))
   ALLOCATE(zeta_store(n_lanczos,n_ipol,nipol_input,nspin))
@@ -121,11 +125,14 @@ SUBROUTINE wbse_lanczos_diago()
   beta_store(:,:,:) = 0._DP
   zeta_store(:,:,:,:) = 0._DP
   !
-  ALLOCATE(d0psi(npwx,band_group%nlocx,kpt_pool%nloc,n_ipol))
   ALLOCATE(evc1(npwx,band_group%nlocx,kpt_pool%nloc))
   ALLOCATE(evc1_old(npwx,band_group%nlocx,kpt_pool%nloc))
   ALLOCATE(evc1_new(npwx,band_group%nlocx,kpt_pool%nloc))
-  !$acc enter data create(d0psi,evc1,evc1_old,evc1_new)
+  !$acc enter data create(evc1,evc1_old,evc1_new)
+  !
+#if defined(__CUDA)
+  CALL allocate_bse_gpu(band_group%nlocx)
+#endif
   !
   SELECT CASE(wbse_calculation)
   CASE('l')
@@ -155,8 +162,6 @@ SUBROUTINE wbse_lanczos_diago()
   CASE DEFAULT
      CALL errore('wbse_lanczos_diago','wrong wlzcos_calculation',1)
   END SELECT
-  !
-  CALL solve_e_psi()
   !
   CALL io_push_title('Lanczos linear-response absorption spectrum calculation')
   WRITE(stdout,'(5x,"Using Tamm-Dancoff Liouvillian operator")')

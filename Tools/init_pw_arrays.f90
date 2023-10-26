@@ -25,7 +25,7 @@ SUBROUTINE init_pw_arrays(ncalbec)
   USE mp_world,               ONLY : world_comm
   USE wavefunctions,          ONLY : evc
   USE klist,                  ONLY : nks
-  USE becmod,                 ONLY : becp,allocate_bec_type
+  USE becmod,                 ONLY : becp,allocate_bec_type_acc
   USE uspp,                   ONLY : nkb
   USE noncollin_module,       ONLY : npol
   USE buffers,                ONLY : open_buffer,close_buffer,save_buffer
@@ -56,7 +56,7 @@ SUBROUTINE init_pw_arrays(ncalbec)
   !
   CALL set_vrs(vrs,vltot,v%of_r,kedtau,v%kin_r,dfftp%nnr,nspin,doublegrid)
   !
-  CALL allocate_bec_type(nkb,ncalbec,becp)
+  CALL allocate_bec_type_acc(nkb,ncalbec,becp)
   !
   CALL newd
   !

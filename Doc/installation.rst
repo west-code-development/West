@@ -4,7 +4,7 @@
 Installation
 ============
 
-In order to install WEST you need to download `Quantum ESPRESSO 7.2 <https://gitlab.com/QEF/q-e/-/archive/qe-7.2/q-e-qe-7.2.tar>`_.
+In order to install WEST you need to download `Quantum ESPRESSO 7.3 <https://gitlab.com/QEF/q-e/-/archive/qe-7.3/q-e-qe-7.3.tar>`_.
 
 To compute absorption spectra (BSE), you also need to download and install `Qbox <http://qboxcode.org>`_.
 
@@ -14,7 +14,7 @@ QE can be installed with HDF5 support. Currently the installation of QE with CMa
 
 .. code-block:: bash
 
-   $ git clone -b 'qe-7.2' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
+   $ git clone -b 'qe-7.3' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
    $ cd QEdir
    $ git clone -b 'v5.5.0' --single-branch --depth 1 https://github.com/west-code-development/West.git West
    $ ./configure

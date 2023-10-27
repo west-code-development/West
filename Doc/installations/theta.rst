@@ -4,7 +4,7 @@
 ALCF-Theta
 ==========
 
-Theta is a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF <https://www.alcf.anl.gov/>`_.
+Theta (**retired** on December 31, 2023) was a Cray XC40 located at Argonne National Laboratory, maintained by `ALCF <https://www.alcf.anl.gov/>`_.
 
 .. code-block:: bash
 

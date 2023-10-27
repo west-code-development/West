@@ -3,7 +3,7 @@ name: CI
 on: [push, pull_request]
 
 env:
-  QE_VERSION: qe-7.2
+  QE_VERSION: qe-7.3
 
 jobs:
   test:

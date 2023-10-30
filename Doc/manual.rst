@@ -755,6 +755,19 @@ westpp_control
    * - **Description**
      - Relative convergence threshold for Wannier localization. Used only when westpp_calculation is "B".
 
+.. data:: westpp_l_compute_tdm
+
+.. list-table::
+      :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the transition dipole moment is computed. Used only when westpp_calculation is "C".
+
 .. data:: westpp_l_dipole_realspace
 
 .. list-table::

@@ -276,6 +276,7 @@ MODULE westpp_center
   REAL(DP) :: westpp_epsinfty
   INTEGER :: westpp_n_liouville_to_use
   LOGICAL :: westpp_l_spin_flip
+  LOGICAL :: westpp_l_compute_tdm
   REAL(DP) :: westpp_wannier_tr_rel
   LOGICAL :: westpp_l_dipole_realspace
   !

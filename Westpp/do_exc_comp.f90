@@ -21,9 +21,10 @@ SUBROUTINE do_exc_comp()
   USE gvect,                 ONLY : gstart
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
+  USE cell_base,             ONLY : bg
   USE buffers,               ONLY : get_buffer
   USE westcom,               ONLY : logfile,iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
-                                  & westpp_n_liouville_to_use,westpp_l_spin_flip,&
+                                  & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
                                   & westpp_l_dipole_realspace,l_dipole_realspace,d0psi,alphapv_dfpt
   USE mp_world,              ONLY : mpime,root
   USE plep_db,               ONLY : plep_db_read
@@ -44,7 +45,7 @@ SUBROUTINE do_exc_comp()
   !
   ! ... LOCAL variables
   !
-  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iaux,iunit,ipol
+  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iaux,iunit,ipol,icart
   INTEGER :: trans(4)
   INTEGER :: nbndx_occ,nbndx_emp
   INTEGER :: nbndval,flnbndval
@@ -52,7 +53,8 @@ SUBROUTINE do_exc_comp()
   CHARACTER(5) :: label_k
   CHARACTER(9) :: label_d
   REAL(DP) :: reduce
-  REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:),transition_dipole(:,:)
+  REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:)
+  REAL(DP), ALLOCATABLE :: transition_dipole_cry(:,:), transition_dipole_cart(:,:)
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   TYPE(json_core) :: jcor
@@ -101,7 +103,7 @@ SUBROUTINE do_exc_comp()
      CALL json%load(filename=TRIM(logfile))
   ENDIF
   !
-  IF(.NOT. westpp_l_spin_flip) THEN
+  IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
      !
      ALLOCATE(d0psi(npwx,nbndx_occ,nks,3))
      !$acc enter data create(d0psi)
@@ -114,8 +116,10 @@ SUBROUTINE do_exc_comp()
      !
      CALL solve_e_psi()
      !
-     ALLOCATE(transition_dipole(3,westpp_n_liouville_to_use))
-     transition_dipole(:,:) = 0._DP
+     ALLOCATE(transition_dipole_cry(3,westpp_n_liouville_to_use))
+     ALLOCATE(transition_dipole_cart(3,westpp_n_liouville_to_use))
+     transition_dipole_cry(:,:) = 0._DP
+     transition_dipole_cart(:,:) = 0._DP
      !
   ENDIF
   !
@@ -195,7 +199,7 @@ SUBROUTINE do_exc_comp()
      !
      ! Compute the transition dipole moment
      !
-     IF(.NOT. westpp_l_spin_flip) THEN
+     IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
         !
         DO ipol = 1, 3
            !
@@ -236,7 +240,7 @@ SUBROUTINE do_exc_comp()
               !
            ENDDO
            !
-           transition_dipole(ipol,iexc) = reduce
+           transition_dipole_cry(ipol,iexc) = reduce
            !
         ENDDO
         !
@@ -249,12 +253,28 @@ SUBROUTINE do_exc_comp()
   CALL mp_sum(projection_matrix,intra_bgrp_comm)
   CALL mp_sum(projection_matrix,inter_image_comm)
   !
-  IF(.NOT. westpp_l_spin_flip) THEN
+  IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
      !
-     CALL mp_sum(transition_dipole,intra_bgrp_comm)
-     CALL mp_sum(transition_dipole,inter_image_comm)
+     CALL mp_sum(transition_dipole_cry,intra_bgrp_comm)
+     CALL mp_sum(transition_dipole_cry,inter_image_comm)
      !
-     IF(nks == 1) transition_dipole(:,:) = SQRT(2._DP) * transition_dipole
+     IF(nks == 1) transition_dipole_cry(:,:) = SQRT(2._DP) * transition_dipole_cry
+     !
+     IF(westpp_l_dipole_realspace) THEN
+        !
+        transition_dipole_cart(:,:) = transition_dipole_cry(:,:)
+        !
+     ELSE
+        !
+        transition_dipole_cart(:,:) = 0._DP
+        DO icart = 1,3
+           DO ipol = 1,3
+              transition_dipole_cart(icart,:) = transition_dipole_cart(icart,:) &
+                      & +bg(icart,ipol)*transition_dipole_cry(ipol,:)
+           ENDDO
+        ENDDO
+        !
+     ENDIF
      !
   ENDIF
   !
@@ -288,10 +308,10 @@ SUBROUTINE do_exc_comp()
         !
      ENDDO
      !
-     IF(.NOT. westpp_l_spin_flip) THEN
+     IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
         WRITE(stdout, "(5x, '#     TDM_x                |   TDM_y               |    TDM_z             ')")
         WRITE(stdout, "(9x, f18.9, 5x, '|', f17.9, 6x, '|', f16.9, 2x)") &
-        & transition_dipole(1,iexc),transition_dipole(2,iexc),transition_dipole(3,iexc)
+        & transition_dipole_cart(1,iexc),transition_dipole_cart(2,iexc),transition_dipole_cart(3,iexc)
      ENDIF
      !
   ENDDO
@@ -306,8 +326,8 @@ SUBROUTINE do_exc_comp()
         !
         CALL json%add('output.E'//label_exc//'.excitation_energy',ev(iexc))
         !
-        IF(.NOT. westpp_l_spin_flip) &
-        & CALL json%add('output.E'//label_exc//'.transition_dipole_moment',transition_dipole(:,iexc))
+        IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) &
+        & CALL json%add('output.E'//label_exc//'.transition_dipole_moment',transition_dipole_cart(:,iexc))
         !
         DO iks = 1,nks
            !
@@ -358,10 +378,11 @@ SUBROUTINE do_exc_comp()
   !
   !$acc exit data delete(projection_matrix,dvg_exc)
   DEALLOCATE(projection_matrix)
-  IF(.NOT. westpp_l_spin_flip) THEN
+  IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
      !$acc exit data delete(d0psi)
      DEALLOCATE(d0psi)
-     DEALLOCATE(transition_dipole)
+     DEALLOCATE(transition_dipole_cry)
+     DEALLOCATE(transition_dipole_cart)
   ENDIF
   !
   IF(mpime == root) THEN

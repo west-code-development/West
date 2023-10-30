@@ -80,6 +80,7 @@ default["westpp_control"]["westpp_epsinfty"] = 1.
 default["westpp_control"]["westpp_box"] = [0., 0., 0., 0., 0., 0.]
 default["westpp_control"]["westpp_n_liouville_to_use"] = 1
 default["westpp_control"]["westpp_l_spin_flip"] = False
+default["westpp_control"]["westpp_l_compute_tdm"] = False
 default["westpp_control"]["westpp_wannier_tr_rel"] = 1e-6
 default["westpp_control"]["westpp_l_dipole_realspace"] = False
 # server_control

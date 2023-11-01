@@ -9,7 +9,7 @@ Welcome to West's documentation!
 
     This is documentation for the **WEST** *code*, which is part of the WEST_ framework.
 
-.. _WEST: http://www.west-code.org
+.. _WEST: https://west-code.org
 
 Contents
 --------
@@ -49,5 +49,5 @@ Contents
 
    To get help using the **WEST** package, send an email to `mgovoni@anl.gov <mailto:mgovoni@anl.gov>`_.
 
-The **WEST** package is hosted on `GitLab <http://greatfire.uchicago.edu/west-public/West>`_, mirrored to `GitHub <https://github.com/west-code-development/West>`_, and licensed under the open-source GPLv3 license.
+The **WEST** package is hosted on `GitHub <https://github.com/west-code-development/West>`_ and licensed under the open-source GPLv3 license.
 

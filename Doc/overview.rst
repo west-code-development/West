@@ -14,4 +14,4 @@ Features:
    - Electron-phonon *under development*
 
 .. seealso::
-   **WESTpy** is a Python package, designed to assist users of the WEST code in pre- and post-process massively parallel calculations. Click `here <http://www.west-code.org/doc/westpy/latest/>`_ to know more.
+   **WESTpy** is a Python package, designed to assist users of the WEST code in pre- and post-process massively parallel calculations. Click `here <https://west-code.org/doc/westpy/latest/>`_ to know more.

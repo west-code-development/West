@@ -268,7 +268,7 @@ CONTAINS
     WRITE( stdout, '(/5X,"This program is part of the open-source West suite",&
     &/5X,"for massively parallel calculations of excited states in materials; please cite", &
     &/9X,"""M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015);",&
-    &/9X," URL http://www.west-code.org"", ", &
+    &/9X," URL https://west-code.org"", ", &
     &/5X,"in publications or presentations arising from this work.")' )
     !
     WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM(version_number)
@@ -290,7 +290,7 @@ CONTAINS
       CALL json%add('software.program', TRIM(code) )
       CALL json%add('software.version', TRIM(west_version_number) )
       IF( TRIM(west_git_revision) /= 'unknown' ) CALL json%add('software.westgit', TRIM(west_git_revision) )
-      CALL json%add('software.website','http://www.west-code.org')
+      CALL json%add('software.website','https://west-code.org')
       CALL json%add('software.citation','M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015).')
       CALL json%add('software.qeversion', TRIM(version_number) )
       CALL json%add('config.io.islittleendian', islittleendian() )

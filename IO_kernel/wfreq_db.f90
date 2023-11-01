@@ -28,7 +28,8 @@ MODULE wfreq_db
     SUBROUTINE wfreq_db_write( )
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
+      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp_global,            ONLY : inter_pool_comm
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,n_spectralf,logfile,&
@@ -42,21 +43,20 @@ MODULE wfreq_db
       USE json_module,          ONLY : json_file
       USE constants,            ONLY : rytoev
       USE types_bz_grid,        ONLY : k_grid
+      USE distribution_center,  ONLY : kpt_pool
       !
       IMPLICIT NONE
       !
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks,ib,ipair
+      INTEGER :: iks,iks_g,ib,ipair
       CHARACTER(LEN=6) :: my_label_k,my_label_b
       CHARACTER(LEN=10) :: label
       !
       TYPE(json_file) :: json
       INTEGER :: iun,i
-      INTEGER,ALLOCATABLE :: ilist(:)
-      REAL(DP),ALLOCATABLE :: eks(:)
-      REAL(DP),ALLOCATABLE :: occ(:)
+      REAL(DP),ALLOCATABLE :: eks(:),occ(:,:)
       LOGICAL :: l_generate_plot,l_optics
       !
       ! MPI BARRIER
@@ -67,6 +67,22 @@ MODULE wfreq_db
       !
       CALL start_clock('wfreq_db')
       time_spent(1) = get_clock('wfreq_db')
+      !
+      ! get global copy of occupation
+      !
+      ALLOCATE(occ(n_bands,k_grid%nps))
+      !
+      occ(:,:) = 0._DP
+      DO iks = 1,kpt_pool%nloc
+         iks_g = kpt_pool%l2g(iks)
+         DO ib = 1,n_bands
+            occ(ib,iks_g) = occupation(qp_bands(ib),iks)
+         ENDDO
+      ENDDO
+      !
+      CALL mp_sum(occ,inter_pool_comm)
+      !
+      IF(nspin == 1) occ(:,:) = 2._DP*occ
       !
       IF(mpime == root) THEN
          !
@@ -80,12 +96,7 @@ MODULE wfreq_db
             IF(wfreq_calculation(i:i) == 'O') l_optics = .TRUE.
          ENDDO
          !
-         ALLOCATE(ilist(n_bands))
-         DO ib = 1,n_bands
-            ilist(ib) = qp_bands(ib)
-         ENDDO
-         CALL json%add('output.Q.bandmap',ilist)
-         DEALLOCATE(ilist)
+         CALL json%add('output.Q.bandmap',qp_bands)
          !
          IF(ALLOCATED(pijmap)) THEN
             DO ipair = 1,n_pairs
@@ -99,75 +110,67 @@ MODULE wfreq_db
             ENDDO
          ENDIF
          !
-         IF(l_generate_plot) CALL json%add('output.P.freqlist',sigma_freq(1:n_spectralf)*rytoev)
+         IF(l_generate_plot) CALL json%add('output.P.freqlist',sigma_freq*rytoev)
          !
          ALLOCATE(eks(n_bands))
-         ALLOCATE(occ(n_bands))
          !
          DO iks = 1,k_grid%nps
             !
             DO ib = 1,n_bands
                eks(ib) = et(qp_bands(ib),iks)
-               occ(ib) = occupation(qp_bands(ib),iks)
             ENDDO
-            !
-            IF(nspin == 1) occ(:) = 2._DP*occ
             !
             WRITE(my_label_k,'(i6.6)') iks
             !
             CALL json%add('output.Q.K'//my_label_k//'.eks',eks*rytoev)
-            CALL json%add('output.Q.K'//my_label_k//'.z',sigma_z(1:n_bands,iks))
-            CALL json%add('output.Q.K'//my_label_k//'.eqpLin',sigma_eqplin(1:n_bands,iks)*rytoev)
-            CALL json%add('output.Q.K'//my_label_k//'.eqpSec',sigma_eqpsec(1:n_bands,iks)*rytoev)
-            CALL json%add('output.Q.K'//my_label_k//'.sigma_diff',sigma_diff(1:n_bands,iks)*rytoev)
-            CALL json%add('output.Q.K'//my_label_k//'.occupation',occ)
+            CALL json%add('output.Q.K'//my_label_k//'.z',sigma_z(:,iks))
+            CALL json%add('output.Q.K'//my_label_k//'.eqpLin',sigma_eqplin(:,iks)*rytoev)
+            CALL json%add('output.Q.K'//my_label_k//'.eqpSec',sigma_eqpsec(:,iks)*rytoev)
+            CALL json%add('output.Q.K'//my_label_k//'.sigma_diff',sigma_diff(:,iks)*rytoev)
+            CALL json%add('output.Q.K'//my_label_k//'.occupation',occ(:,iks))
             IF(.NOT. l_enable_off_diagonal) THEN
-               CALL json%add('output.Q.K'//my_label_k//'.sigmax',sigma_exx(1:n_bands,iks)*rytoev)
-               CALL json%add('output.Q.K'//my_label_k//'.vxcl',sigma_vxcl(1:n_bands,iks)*rytoev)
-               CALL json%add('output.Q.K'//my_label_k//'.vxcnl',sigma_vxcnl(1:n_bands,iks)*rytoev)
-               CALL json%add('output.Q.K'//my_label_k//'.hf',sigma_hf(1:n_bands,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.sigmax',sigma_exx(:,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.vxcl',sigma_vxcl(:,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.vxcnl',sigma_vxcnl(:,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.hf',sigma_hf(:,iks)*rytoev)
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.re',&
-               & REAL(sigma_sc_eks(1:n_bands,iks)*rytoev,KIND=DP))
+               & REAL(sigma_sc_eks(:,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.im',&
-               & AIMAG(sigma_sc_eks(1:n_bands,iks)*rytoev))
+               & AIMAG(sigma_sc_eks(:,iks)*rytoev))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.re',&
-               & REAL(sigma_sc_eqplin(1:n_bands,iks)*rytoev,KIND=DP))
+               & REAL(sigma_sc_eqplin(:,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.im',&
-               & AIMAG(sigma_sc_eqplin(1:n_bands,iks)*rytoev))
+               & AIMAG(sigma_sc_eqplin(:,iks)*rytoev))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.re',&
-               & REAL(sigma_sc_eqpsec(1:n_bands,iks)*rytoev,KIND=DP))
+               & REAL(sigma_sc_eqpsec(:,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.im',&
-               & AIMAG(sigma_sc_eqpsec(1:n_bands,iks)*rytoev))
+               & AIMAG(sigma_sc_eqpsec(:,iks)*rytoev))
             ELSE
-               CALL json%add('output.Q.K'//my_label_k//'.sigmax',&
-               & sigma_exx_full(1:n_pairs,iks)*rytoev)
-               CALL json%add('output.Q.K'//my_label_k//'.vxcl',&
-               & sigma_vxcl_full(1:n_pairs,iks)*rytoev)
-               CALL json%add('output.Q.K'//my_label_k//'.vxcnl',&
-               & sigma_vxcnl_full(1:n_pairs,iks)*rytoev)
-               CALL json%add('output.Q.K'//my_label_k//'.hf',&
-               & sigma_hf_full(1:n_pairs,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.sigmax',sigma_exx_full(:,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.vxcl',sigma_vxcl_full(:,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.vxcnl',sigma_vxcnl_full(:,iks)*rytoev)
+               CALL json%add('output.Q.K'//my_label_k//'.hf',sigma_hf_full(:,iks)*rytoev)
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.re',&
-               & REAL(sigma_sc_eks_full(1:n_pairs,iks)*rytoev,KIND=DP))
+               & REAL(sigma_sc_eks_full(:,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eks.im',&
-               & AIMAG(sigma_sc_eks_full(1:n_pairs,iks)*rytoev))
+               & AIMAG(sigma_sc_eks_full(:,iks)*rytoev))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.re',&
-               & REAL(sigma_sc_eqplin_full(1:n_pairs,iks)*rytoev,KIND=DP))
+               & REAL(sigma_sc_eqplin_full(:,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpLin.im',&
-               & AIMAG(sigma_sc_eqplin_full(1:n_pairs,iks)*rytoev))
+               & AIMAG(sigma_sc_eqplin_full(:,iks)*rytoev))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.re',&
-               & REAL(sigma_corr_full(1:n_pairs,iks)*rytoev,KIND=DP))
+               & REAL(sigma_corr_full(:,iks)*rytoev,KIND=DP))
                CALL json%add('output.Q.K'//my_label_k//'.sigmac_eqpSec.im',&
-               & AIMAG(sigma_corr_full(1:n_pairs,iks)*rytoev))
+               & AIMAG(sigma_corr_full(:,iks)*rytoev))
             ENDIF
             !
             IF(l_generate_plot) THEN
                DO ib = 1,n_bands
                   WRITE(my_label_b,'(i6.6)') qp_bands(ib)
                   CALL json%add('output.P.K'//my_label_k//'.B'//my_label_b//'.sigmac.re',&
-                  & REAL(sigma_spectralf(1:n_spectralf,ib,iks),KIND=DP)*rytoev)
+                  & REAL(sigma_spectralf(:,ib,iks),KIND=DP)*rytoev)
                   CALL json%add('output.P.K'//my_label_k//'.B'//my_label_b//'.sigmac.im',&
-                  & AIMAG(sigma_spectralf(1:n_spectralf,ib,iks))*rytoev)
+                  & AIMAG(sigma_spectralf(:,ib,iks))*rytoev)
                ENDDO
             ENDIF
             !
@@ -178,7 +181,6 @@ MODULE wfreq_db
          ENDDO
          !
          DEALLOCATE(eks)
-         DEALLOCATE(occ)
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
          CALL json%print(iun)
@@ -186,6 +188,8 @@ MODULE wfreq_db
          CALL json%destroy()
          !
       ENDIF
+      !
+      DEALLOCATE(occ)
       !
       ! MPI BARRIER
       !
@@ -258,16 +262,16 @@ MODULE wfreq_db
                   !
                   IF(PRESENT(eri_vc)) THEN
                      CALL json%add('qdet.eri_vc.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
-                     & my_label_ipair,eri_vc(1:n_pairs,ipair,jks,iks)*rytoev)
+                     & my_label_ipair,eri_vc(:,ipair,jks,iks)*rytoev)
                   ENDIF
                   !
                   IF(PRESENT(eri_w_full)) THEN
                      CALL json%add('qdet.eri_w_full.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
-                     & my_label_ipair,REAL(eri_w_full(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
+                     & my_label_ipair,REAL(eri_w_full(:,ipair,jks,iks),KIND=DP)*rytoev)
                   ENDIF
                   !
                   CALL json%add('qdet.eri_w.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&
-                  & my_label_ipair,REAL(eri_w(1:n_pairs,ipair,jks,iks),KIND=DP)*rytoev)
+                  & my_label_ipair,REAL(eri_w(:,ipair,jks,iks),KIND=DP)*rytoev)
                   !
                ENDDO
                !
@@ -339,11 +343,8 @@ MODULE wfreq_db
          CALL json%load(filename=TRIM(logfile))
          !
          DO iks = 1,nspin
-            !
             WRITE(my_label_ik,'(i6.6)') iks
-            !
-            CALL json%add('qdet.h1e.K'//my_label_ik,h1e(1:n_pairs,iks)*rytoev)
-            !
+            CALL json%add('qdet.h1e.K'//my_label_ik,h1e(:,iks)*rytoev)
          ENDDO
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(logfile))

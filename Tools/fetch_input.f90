@@ -27,18 +27,18 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
                              & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
-                             & westpp_wannier_tr_rel,&
-                             & westpp_l_dipole_realspace,document,wbse_init_calculation,solver,&
-                             & bse_method,localization,wannier_tr_rel,wfc_from_qbox,bisection_info,&
-                             & chi_kernel,overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
-                             & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut,l_forces,forces_state,forces_zeq_cg_tr,&
-                             & forces_zeq_n_cg_maxiter,ddvxc_fd_coeff,forces_inexact_krylov,&
-                             & forces_inexact_krylov_tr,l_reduce_io
+                             & westpp_wannier_tr_rel,westpp_l_dipole_realspace,document,&
+                             & wbse_init_calculation,solver,bse_method,localization,wannier_tr_rel,&
+                             & wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,spin_channel,&
+                             & n_trunc_bands,wbse_calculation,qp_correction,scissor_ope,&
+                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
+                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
+                             & wbse_ipol,l_dipole_realspace,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_pre_shift,l_spin_flip,l_spin_flip_kernel,&
+                             & l_spin_flip_alda0,l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
+                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
+                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
+                             & l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -204,18 +204,18 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
                              & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
-                             & westpp_wannier_tr_rel,&
-                             & westpp_l_dipole_realspace,document,wbse_init_calculation,solver,&
-                             & bse_method,localization,wannier_tr_rel,wfc_from_qbox,bisection_info,&
-                             & chi_kernel,overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
-                             & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut,l_forces,forces_state,forces_zeq_cg_tr,&
-                             & forces_zeq_n_cg_maxiter,ddvxc_fd_coeff,forces_inexact_krylov,&
-                             & forces_inexact_krylov_tr,l_reduce_io,main_input_file,logfile
+                             & westpp_wannier_tr_rel,westpp_l_dipole_realspace,document,&
+                             & wbse_init_calculation,solver,bse_method,localization,wannier_tr_rel,&
+                             & wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,spin_channel,&
+                             & n_trunc_bands,wbse_calculation,qp_correction,scissor_ope,&
+                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
+                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
+                             & wbse_ipol,l_dipole_realspace,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_pre_shift,l_spin_flip,l_spin_flip_kernel,&
+                             & l_spin_flip_alda0,l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
+                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
+                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
+                             & l_reduce_io,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier

@@ -44,7 +44,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                                  & d_epsm1_ifr,z_epsm1_rfr,n_spectralf,ecut_spectralf,d_body1_ifr,&
                                  & d_body2_ifr,d_diago,z_body_rfr,sigma_z,sigma_eqplin,sigma_eqpsec,&
                                  & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
-                                 & sigma_spectralf,sigma_freq,l_enable_off_diagonal,ijpmap,n_pairs,&
+                                 & sigma_spectralf,sigma_freq,l_enable_off_diagonal,ijpmap,&
                                  & d_body1_ifr_full,d_body2_ifr_full,d_diago_full,z_body_rfr_full,&
                                  & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,my_pool_id,&

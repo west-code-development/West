@@ -12,7 +12,7 @@ The complete **WEST** reference for input parameters.
    Not all input parameters listed below are mandatory. Check :ref:`quickreference` or :ref:`tutorial` pages to see examples of input files.
 
 .. seealso::
-   **WESTpy** is a Python package, designed to assist users of the WEST code in pre- and post-process massively parallel calculations. Click `here <http://www.west-code.org/doc/westpy/latest/>`_ to know more.
+   **WESTpy** is a Python package, designed to assist users of the WEST code in pre- and post-process massively parallel calculations. Click `here <https://west-code.org/doc/westpy/latest/>`_ to know more.
 
 .. seealso::
    The input file is given according to the YAML Notation (`https://yaml.org/ <https://yaml.org//>`_).

@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "O2 molecule gamma_only fractional occupation"
+	@echo "O2 molecule gamma_only GW fractional occupation"
 	@echo

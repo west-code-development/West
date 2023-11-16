@@ -49,7 +49,7 @@ MODULE wbse_tools
       USE pwcom,                ONLY : npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
       USE gvect,                ONLY : gstart
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
+      USE west_mp,              ONLY : west_mp_circ_shift
       !
       IMPLICIT NONE
       !
@@ -65,7 +65,7 @@ MODULE wbse_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,lbnd,ibnd,iks,iks_do,nbndval
-      INTEGER :: il1_end
+      INTEGER :: l1_e
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nglob,kpt_pool_nloc
       REAL(DP):: reduce
@@ -105,7 +105,7 @@ MODULE wbse_tools
       !
       IF(l2_e >= l2_s) THEN
          !
-         !$acc enter data create(c_distr(1:pert_nglob,l2_s:l2_e)) copyin(ag,bg)
+         !$acc enter data create(c_distr(1:pert_nglob,l2_s:l2_e))
          !
          !$acc kernels present(c_distr(1:pert_nglob,l2_s:l2_e))
          c_distr(1:pert_nglob,l2_s:l2_e) = 0._DP
@@ -115,21 +115,24 @@ MODULE wbse_tools
       !
       DO icycl = 0,nimage-1
          !
-         IF(l2_e >= l2_s) THEN
-            !
-            idx = MOD(my_image_id+icycl,nimage)
-            nloc = pert%nglob/nimage
-            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-            !
-            DO il1 = 1,nloc
-               ig1 = pert%l2g(il1,idx)
-               IF(ig1 > g_e) EXIT
-               il1_end = il1
-            ENDDO
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         l1_e = 0
+         DO il1 = nloc,1,-1
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 <= g_e) THEN
+               l1_e = il1
+               EXIT
+            ENDIF
+         ENDDO
+         !
+         IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
             !
             !$acc parallel vector_length(1024) present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e),nbnd_loc,ngk)
             !$acc loop collapse(2)
-            DO il1 = 1,il1_end
+            DO il1 = 1,l1_e
                DO il2 = l2_s,l2_e
                   !
                   ! ig1 = pert%l2g(il1,idx)
@@ -171,10 +174,14 @@ MODULE wbse_tools
          !
          ! Cycle ag
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-         IF(l2_e >= l2_s) THEN
-            !$acc update device(ag)
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
+            !
+            IF(l2_e >= l2_s) THEN
+               !$acc update device(ag)
+            ENDIF
+            !
          ENDIF
          !
       ENDDO
@@ -182,7 +189,7 @@ MODULE wbse_tools
       IF(l2_e >= l2_s) THEN
          !
          !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e))
-         !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+         !$acc exit data delete(c_distr(1:pert_nglob,l2_s:l2_e))
          !
          CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
          CALL mp_sum(c_distr(:,l2_s:l2_e),inter_bgrp_comm)
@@ -209,7 +216,7 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE pwcom,                ONLY : npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
+      USE west_mp,              ONLY : west_mp_circ_shift
       !
       IMPLICIT NONE
       !
@@ -225,7 +232,7 @@ MODULE wbse_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,iks_do,nbndval
-      INTEGER :: il1_end,il2_start,il2_end
+      INTEGER :: l1_e,l2_s,l2_e
       INTEGER :: icycl,idx,nloc
       INTEGER :: kpt_pool_nloc
       REAL(DP) :: dconst
@@ -241,19 +248,22 @@ MODULE wbse_tools
       !
       kpt_pool_nloc = kpt_pool%nloc
       !
-      il2_start = 1
+      l2_s = 0
       DO il2 = 1,pert%nloc
          ig2 = pert%l2g(il2)
-         IF(ig2 <= n) CYCLE
-         il2_start = il2
-         EXIT
+         IF(ig2 > n) THEN
+            l2_s = il2
+            EXIT
+         ENDIF
       ENDDO
       !
-      il2_end = 1
-      DO il2 = 1,pert%nloc
+      l2_e = 0
+      DO il2 = pert%nloc,1,-1
          ig2 = pert%l2g(il2)
-         IF(ig2 > n+nselect) EXIT
-         il2_end = il2
+         IF(ig2 <= n+nselect) THEN
+            l2_e = il2
+            EXIT
+         ENDIF
       ENDDO
       !
       ALLOCATE(nbnd_loc(kpt_pool%nloc))
@@ -278,7 +288,7 @@ MODULE wbse_tools
       !
       ALLOCATE(hg(npwx,band_group%nlocx,kpt_pool%nloc,pert%nlocx))
       !
-      !$acc enter data create(hg) copyin(ag,bg,vr_distr,ew,nbnd_loc)
+      !$acc enter data create(hg) copyin(vr_distr,ew,nbnd_loc)
       !
       !$acc kernels present(hg)
       hg(:,:,:,:) = 0._DP
@@ -290,157 +300,189 @@ MODULE wbse_tools
          nloc = pert%nglob/nimage
          IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
          !
-         DO il1 = 1,nloc
+         l1_e = 0
+         DO il1 = nloc,1,-1
             ig1 = pert%l2g(il1,idx)
-            IF(ig1 > n) EXIT
-            il1_end = il1
+            IF(ig1 <= n) THEN
+               l1_e = il1
+               EXIT
+            ENDIF
          ENDDO
          !
-         !$acc parallel vector_length(1024) present(vr_distr,nbnd_loc,ngk,hg,ag)
-         !$acc loop seq
-         DO il1 = 1,il1_end
+         IF(l1_e > 0 .AND. l2_s > 0 .AND. l2_e >= l2_s) THEN
             !
-            ! ig1 = pert%l2g(il1,idx)
-            !
-            ig1 = nimage*(il1-1)+idx+1
-            !
-            !$acc loop
-            DO il2 = il2_start,il2_end
-               !
-               dconst = vr_distr(ig1,il2)
-               !
-               !$acc loop seq
-               DO iks = 1,kpt_pool_nloc
-                  !
-                  nbndval = nbnd_loc(iks)
-                  npw = ngk(iks)
-                  !
-                  !$acc loop collapse(2)
-                  DO lbnd = 1,nbndval
-                     DO il3 = 1,npw
-                        hg(il3,lbnd,iks,il2) = dconst*ag(il3,lbnd,iks,il1)+hg(il3,lbnd,iks,il2)
-                     ENDDO
-                  ENDDO
-                  !
-               ENDDO
-               !
-            ENDDO
-            !
-         ENDDO
-         !$acc end parallel
-         !
-         ! Cycle ag
-         !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-         !$acc update device(ag)
-         !
-      ENDDO
-      !
-      !$acc parallel vector_length(1024) present(ew,nbnd_loc,ngk,ag,hg)
-      !$acc loop
-      DO il2 = il2_start,il2_end
-         !
-         ! ig2 = pert%l2g(il2)
-         !
-         ig2 = nimage*(il2-1)+my_image_id+1
-         !
-         dconst = -ew(ig2)
-         !
-         !$acc loop seq
-         DO iks = 1,kpt_pool_nloc
-            !
-            nbndval = nbnd_loc(iks)
-            npw = ngk(iks)
-            !
-            !$acc loop collapse(2)
-            DO lbnd = 1,nbndval
-               DO il3 = 1,npw
-                  ag(il3,lbnd,iks,il2) = dconst*hg(il3,lbnd,iks,il2)
-               ENDDO
-            ENDDO
-            !
-         ENDDO
-         !
-      ENDDO
-      !$acc end parallel
-      !
-      !$acc kernels present(hg)
-      hg(:,:,:,:) = 0._DP
-      !$acc end kernels
-      !
-      DO icycl = 0,nimage-1
-         !
-         idx = MOD(my_image_id+icycl,nimage)
-         nloc = pert%nglob/nimage
-         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
-         !
-         DO il1 = 1,nloc
-            ig1 = pert%l2g(il1,idx)
-            IF(ig1 > n) EXIT
-            il1_end = il1
-         ENDDO
-         !
-         !$acc parallel vector_length(1024) present(vr_distr,nbnd_loc,ngk,hg,bg)
-         !$acc loop seq
-         DO il1 = 1,il1_end
-            !$acc loop
-            DO il2 = il2_start,il2_end
+            !$acc parallel vector_length(1024) present(vr_distr,nbnd_loc,ngk,hg,ag)
+            !$acc loop seq
+            DO il1 = 1,l1_e
                !
                ! ig1 = pert%l2g(il1,idx)
                !
                ig1 = nimage*(il1-1)+idx+1
                !
-               dconst = vr_distr(ig1,il2)
-               !
-               !$acc loop seq
-               DO iks = 1,kpt_pool_nloc
+               !$acc loop
+               DO il2 = l2_s,l2_e
                   !
-                  nbndval = nbnd_loc(iks)
-                  npw = ngk(iks)
+                  dconst = vr_distr(ig1,il2)
                   !
-                  !$acc loop collapse(2)
-                  DO lbnd = 1,nbndval
-                     DO il3 = 1,npw
-                        hg(il3,lbnd,iks,il2) = dconst*bg(il3,lbnd,iks,il1)+hg(il3,lbnd,iks,il2)
+                  !$acc loop seq
+                  DO iks = 1,kpt_pool_nloc
+                     !
+                     nbndval = nbnd_loc(iks)
+                     npw = ngk(iks)
+                     !
+                     !$acc loop collapse(2)
+                     DO lbnd = 1,nbndval
+                        DO il3 = 1,npw
+                           hg(il3,lbnd,iks,il2) = dconst*ag(il3,lbnd,iks,il1)+hg(il3,lbnd,iks,il2)
+                        ENDDO
                      ENDDO
+                     !
                   ENDDO
                   !
+               ENDDO
+               !
+            ENDDO
+            !$acc end parallel
+            !
+         ENDIF
+         !
+         ! Cycle ag
+         !
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
+            !
+            !$acc update device(ag)
+            !
+         ENDIF
+         !
+      ENDDO
+      !
+      IF(l2_s > 0 .AND. l2_e >= l2_s) THEN
+         !
+         !$acc parallel vector_length(1024) present(ew,nbnd_loc,ngk,ag,hg)
+         !$acc loop
+         DO il2 = l2_s,l2_e
+            !
+            ! ig2 = pert%l2g(il2)
+            !
+            ig2 = nimage*(il2-1)+my_image_id+1
+            !
+            dconst = -ew(ig2)
+            !
+            !$acc loop seq
+            DO iks = 1,kpt_pool_nloc
+               !
+               nbndval = nbnd_loc(iks)
+               npw = ngk(iks)
+               !
+               !$acc loop collapse(2)
+               DO lbnd = 1,nbndval
+                  DO il3 = 1,npw
+                     ag(il3,lbnd,iks,il2) = dconst*hg(il3,lbnd,iks,il2)
+                  ENDDO
+               ENDDO
+               !
+            ENDDO
+            !
+         ENDDO
+         !$acc end parallel
+         !
+      ENDIF
+      !
+      !$acc kernels present(hg)
+      hg(:,:,:,:) = 0._DP
+      !$acc end kernels
+      !
+      DO icycl = 0,nimage-1
+         !
+         idx = MOD(my_image_id+icycl,nimage)
+         nloc = pert%nglob/nimage
+         IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+         !
+         l1_e = 0
+         DO il1 = nloc,1,-1
+            ig1 = pert%l2g(il1,idx)
+            IF(ig1 <= n) THEN
+               l1_e = il1
+               EXIT
+            ENDIF
+         ENDDO
+         !
+         IF(l1_e > 0 .AND. l2_s > 0 .AND. l2_e >= l2_s) THEN
+            !
+            !$acc parallel vector_length(1024) present(vr_distr,nbnd_loc,ngk,hg,bg)
+            !$acc loop seq
+            DO il1 = 1,l1_e
+               !
+               ! ig1 = pert%l2g(il1,idx)
+               !
+               ig1 = nimage*(il1-1)+idx+1
+               !
+               !$acc loop
+               DO il2 = l2_s,l2_e
+                  !
+                  dconst = vr_distr(ig1,il2)
+                  !
+                  !$acc loop seq
+                  DO iks = 1,kpt_pool_nloc
+                     !
+                     nbndval = nbnd_loc(iks)
+                     npw = ngk(iks)
+                     !
+                     !$acc loop collapse(2)
+                     DO lbnd = 1,nbndval
+                        DO il3 = 1,npw
+                           hg(il3,lbnd,iks,il2) = dconst*bg(il3,lbnd,iks,il1)+hg(il3,lbnd,iks,il2)
+                        ENDDO
+                     ENDDO
+                     !
+                  ENDDO
+                  !
+               ENDDO
+               !
+            ENDDO
+            !$acc end parallel
+            !
+         ENDIF
+         !
+         ! Cycle bg
+         !
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(bg,icycl,inter_image_comm)
+            !
+            !$acc update device(bg)
+            !
+         ENDIF
+         !
+      ENDDO
+      !
+      IF(l2_s > 0 .AND. l2_e >= l2_s) THEN
+         !
+         !$acc parallel vector_length(1024) present(nbnd_loc,ngk,ag,hg)
+         !$acc loop
+         DO il2 = l2_s,l2_e
+            !$acc loop seq
+            DO iks = 1,kpt_pool_nloc
+               !
+               nbndval = nbnd_loc(iks)
+               npw = ngk(iks)
+               !
+               !$acc loop collapse(2)
+               DO lbnd = 1,nbndval
+                  DO il3 = 1,npw
+                     ag(il3,lbnd,iks,il2) = ag(il3,lbnd,iks,il2)+hg(il3,lbnd,iks,il2)
+                  ENDDO
                ENDDO
                !
             ENDDO
          ENDDO
          !$acc end parallel
          !
-         ! Cycle bg
-         !
-         CALL mp_circular_shift_left_c16_4d(bg,icycl,inter_image_comm)
-         !
-         !$acc update device(bg)
-         !
-      ENDDO
+      ENDIF
       !
-      !$acc parallel vector_length(1024) present(nbnd_loc,ngk,ag,hg)
-      !$acc loop
-      DO il2 = il2_start,il2_end
-         !$acc loop seq
-         DO iks = 1,kpt_pool_nloc
-            !
-            nbndval = nbnd_loc(iks)
-            npw = ngk(iks)
-            !
-            !$acc loop collapse(2)
-            DO lbnd = 1,nbndval
-               DO il3 = 1,npw
-                  ag(il3,lbnd,iks,il2) = ag(il3,lbnd,iks,il2)+hg(il3,lbnd,iks,il2)
-               ENDDO
-            ENDDO
-            !
-         ENDDO
-      ENDDO
-      !$acc end parallel
-      !
-      !$acc exit data delete(bg,hg,vr_distr,ew,nbnd_loc) copyout(ag)
+      !$acc exit data delete(hg,vr_distr,ew,nbnd_loc)
       DEALLOCATE(hg)
       DEALLOCATE(nbnd_loc)
       !
@@ -460,7 +502,7 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE pwcom,                ONLY : npwx,npw,ngk
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
-      USE west_mp,              ONLY : mp_circular_shift_left_c16_4d
+      USE west_mp,              ONLY : west_mp_circ_shift
       !
       IMPLICIT NONE
       !
@@ -474,7 +516,7 @@ MODULE wbse_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2,lbnd,ibnd,iks,iks_do,nbndval
-      INTEGER :: il1_end,il2_start,il2_end
+      INTEGER :: l1_e,l2_s,l2_e
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nloc,kpt_pool_nloc
       REAL(DP) :: dconst
@@ -491,12 +533,14 @@ MODULE wbse_tools
       pert_nloc = pert%nloc
       kpt_pool_nloc = kpt_pool%nloc
       !
-      il2_start = 1
-      il2_end = 1
-      DO il2 = 1,pert%nloc
+      l2_s = 1
+      l2_e = 0
+      DO il2 = pert%nloc,1,-1
          ig2 = pert%l2g(il2)
-         IF(ig2 > nselect) EXIT
-         il2_end = il2
+         IF(ig2 <= nselect) THEN
+            l2_e = il2
+            EXIT
+         ENDIF
       ENDDO
       !
       ALLOCATE(nbnd_loc(kpt_pool%nloc))
@@ -521,7 +565,7 @@ MODULE wbse_tools
       !
       ALLOCATE(hg(npwx,band_group%nlocx,kpt_pool%nloc,pert%nlocx))
       !
-      !$acc enter data create(hg) copyin(ag,vr_distr,nbnd_loc)
+      !$acc enter data create(hg) copyin(vr_distr,nbnd_loc)
       !
       !$acc kernels present(hg)
       hg(:,:,:,:) = 0._DP
@@ -533,111 +577,133 @@ MODULE wbse_tools
          nloc = pert%nglob/nimage
          IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
          !
-         DO il1 = 1,nloc
+         l1_e = 0
+         DO il1 = nloc,1,-1
             ig1 = pert%l2g(il1,idx)
-            IF(ig1 > n) EXIT
-            il1_end = il1
+            IF(ig1 <= n) THEN
+               l1_e = il1
+               EXIT
+            ENDIF
          ENDDO
          !
-         !$acc parallel vector_length(1024) present(vr_distr,nbnd_loc,ngk,hg,ag)
-         !$acc loop seq
-         DO il1 = 1,il1_end
+         IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
             !
-            ! ig1 = pert%l2g(il1,idx)
-            !
-            ig1 = nimage*(il1-1)+idx+1
-            !
-            !$acc loop
-            DO il2 = il2_start,il2_end
+            !$acc parallel vector_length(1024) present(vr_distr,nbnd_loc,ngk,hg,ag)
+            !$acc loop seq
+            DO il1 = 1,l1_e
                !
-               dconst = vr_distr(ig1,il2)
+               ! ig1 = pert%l2g(il1,idx)
                !
-               !$acc loop seq
-               DO iks = 1,kpt_pool_nloc
+               ig1 = nimage*(il1-1)+idx+1
+               !
+               !$acc loop
+               DO il2 = l2_s,l2_e
                   !
-                  nbndval = nbnd_loc(iks)
-                  npw = ngk(iks)
+                  dconst = vr_distr(ig1,il2)
                   !
-                  !$acc loop collapse(2)
-                  DO lbnd = 1,nbndval
-                     DO il3 = 1,npw
-                        hg(il3,lbnd,iks,il2) = dconst*ag(il3,lbnd,iks,il1)+hg(il3,lbnd,iks,il2)
+                  !$acc loop seq
+                  DO iks = 1,kpt_pool_nloc
+                     !
+                     nbndval = nbnd_loc(iks)
+                     npw = ngk(iks)
+                     !
+                     !$acc loop collapse(2)
+                     DO lbnd = 1,nbndval
+                        DO il3 = 1,npw
+                           hg(il3,lbnd,iks,il2) = dconst*ag(il3,lbnd,iks,il1)+hg(il3,lbnd,iks,il2)
+                        ENDDO
                      ENDDO
+                     !
                   ENDDO
                   !
                ENDDO
                !
             ENDDO
+            !$acc end parallel
             !
-         ENDDO
-         !$acc end parallel
+         ENDIF
          !
          ! Cycle ag
          !
-         CALL mp_circular_shift_left_c16_4d(ag,icycl,inter_image_comm)
-         !
-         !$acc update device(ag)
+         IF(nimage > 1) THEN
+            !
+            CALL west_mp_circ_shift(ag,icycl,inter_image_comm)
+            !
+            !$acc update device(ag)
+            !
+         ENDIF
          !
       ENDDO
       !
-      il2_start = 1
-      il2_end = 1
+      l2_s = 1
+      l2_e = 0
+      DO il2 = pert%nloc,1,-1
+         ig2 = pert%l2g(il2)
+         IF(ig2 <= nselect) THEN
+            l2_e = il2
+            EXIT
+         ENDIF
+      ENDDO
+      !
+      IF(l2_e > 0) THEN
+         !
+         !$acc parallel vector_length(1024) present(nbnd_loc,ngk,ag,hg)
+         !$acc loop
+         DO il2 = l2_s,l2_e
+            !$acc loop seq
+            DO iks = 1,kpt_pool_nloc
+               !
+               nbndval = nbnd_loc(iks)
+               npw = ngk(iks)
+               !
+               !$acc loop collapse(2)
+               DO lbnd = 1,nbndval
+                  DO il3 = 1,npw
+                     ag(il3,lbnd,iks,il2) = hg(il3,lbnd,iks,il2)
+                  ENDDO
+               ENDDO
+               !
+            ENDDO
+         ENDDO
+         !$acc end parallel
+         !
+      ENDIF
+      !
+      l2_s = 0
+      l2_e = pert_nloc
       DO il2 = 1,pert%nloc
          ig2 = pert%l2g(il2)
-         IF(ig2 > nselect) EXIT
-         il2_end = il2
+         IF(ig2 > nselect) THEN
+            l2_s = il2
+            EXIT
+         ENDIF
       ENDDO
       !
-      !$acc parallel vector_length(1024) present(nbnd_loc,ngk,ag,hg)
-      !$acc loop
-      DO il2 = il2_start,il2_end
-         !$acc loop seq
-         DO iks = 1,kpt_pool_nloc
-            !
-            nbndval = nbnd_loc(iks)
-            npw = ngk(iks)
-            !
-            !$acc loop collapse(2)
-            DO lbnd = 1,nbndval
-               DO il3 = 1,npw
-                  ag(il3,lbnd,iks,il2) = hg(il3,lbnd,iks,il2)
+      IF(l2_s > 0) THEN
+         !
+         !$acc parallel vector_length(1024) present(nbnd_loc,ngk,ag,hg)
+         !$acc loop
+         DO il2 = l2_s,l2_e
+            !$acc loop seq
+            DO iks = 1,kpt_pool_nloc
+               !
+               nbndval = nbnd_loc(iks)
+               npw = ngk(iks)
+               !
+               !$acc loop collapse(2)
+               DO lbnd = 1,nbndval
+                  DO il3 = 1,npw
+                     ag(il3,lbnd,iks,il2) = 0._DP
+                  ENDDO
                ENDDO
+               !
             ENDDO
-            !
          ENDDO
-      ENDDO
-      !$acc end parallel
+         !$acc end parallel
+         !
+      ENDIF
       !
-      il2_start = 1
-      il2_end = pert_nloc
-      DO il2 = 1,pert%nloc
-         ig2 = pert%l2g(il2)
-         IF(ig2 <= nselect) CYCLE
-         il2_start = il2
-         EXIT
-      ENDDO
-      !
-      !$acc parallel vector_length(1024) present(nbnd_loc,ngk,ag,hg)
-      !$acc loop
-      DO il2 = il2_start,il2_end
-         !$acc loop seq
-         DO iks = 1,kpt_pool_nloc
-            !
-            nbndval = nbnd_loc(iks)
-            npw = ngk(iks)
-            !
-            !$acc loop collapse(2)
-            DO lbnd = 1,nbndval
-               DO il3 = 1,npw
-                  ag(il3,lbnd,iks,il2) = 0._DP
-               ENDDO
-            ENDDO
-            !
-         ENDDO
-      ENDDO
-      !$acc end parallel
-      !
-      !$acc exit data delete(hg,vr_distr,nbnd_loc) copyout(ag)
+      !$acc exit data delete(hg,vr_distr,nbnd_loc)
       DEALLOCATE(hg)
       DEALLOCATE(nbnd_loc)
       !
@@ -654,7 +720,6 @@ MODULE wbse_tools
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : nbgrp,my_bgrp_id
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
@@ -677,8 +742,8 @@ MODULE wbse_tools
       ! Workspace
       !
       INTEGER :: il1,ig1,ig,lbnd,ibnd,iks,iks_do,nbndval
-      INTEGER :: il1_start,il1_end
-      INTEGER :: kpt_pool_nloc
+      INTEGER :: l1_s,l1_e
+      INTEGER :: kpt_pool_nloc,band_group_myoffset
       REAL(DP):: tmp,tmp_abs,tmp_sgn
       INTEGER,ALLOCATABLE :: nbnd_loc(:)
       REAL(DP),ALLOCATABLE :: g2kin_save(:,:)
@@ -692,93 +757,101 @@ MODULE wbse_tools
 #endif
       !
       kpt_pool_nloc = kpt_pool%nloc
+      band_group_myoffset = band_group%myoffset
       !
-      ALLOCATE(g2kin_save(npwx,kpt_pool%nloc))
-      !$acc enter data create(g2kin_save)
-      ALLOCATE(nbnd_loc(kpt_pool%nloc))
-      !
-      DO iks = 1,kpt_pool%nloc
-         !
-         CALL g2_kin(iks)
-         !
-         !$acc kernels present(g2kin_save,g2kin)
-         g2kin_save(:,iks) = g2kin
-         !$acc end kernels
-         !
-         IF(sf) THEN
-            iks_do = flks(iks)
-         ELSE
-            iks_do = iks
+      l1_s = 0
+      DO il1 = 1,pert%nloc
+         ig1 = pert%l2g(il1)
+         IF(ig1 > n) THEN
+            l1_s = il1
+            EXIT
          ENDIF
-         !
-         nbndval = nbnd_occ(iks_do)
-         !
-         nbnd_loc(iks) = 0
-         DO lbnd = 1,band_group%nloc
-            ibnd = band_group%l2g(lbnd)+n_trunc_bands
-            IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_loc(iks) = nbnd_loc(iks)+1
-         ENDDO
-         !
       ENDDO
       !
-      !$acc enter data copyin(ag,nbnd_loc)
-      !
-      il1_start = 1
-      DO il1 = 1,pert%nloc
+      l1_e = 0
+      DO il1 = pert%nloc,1,-1
          ig1 = pert%l2g(il1)
-         IF(ig1 <= n) CYCLE
-         il1_start = il1
-         EXIT
+         IF(ig1 <= n+nselect) THEN
+            l1_e = il1
+            EXIT
+         ENDIF
       ENDDO
       !
-      il1_end = 1
-      DO il1 = 1,pert%nloc
-         ig1 = pert%l2g(il1)
-         IF(ig1 > n+nselect) EXIT
-         il1_end = il1
-      ENDDO
-      !
-      !$acc parallel vector_length(1024) present(nbnd_loc,g2kin_save,ag)
-      !$acc loop
-      DO il1 = il1_start,il1_end
-         !$acc loop seq
-         DO iks = 1,kpt_pool_nloc
+      IF(l1_s > 0 .AND. l1_e >= l1_s) THEN
+         !
+         ALLOCATE(g2kin_save(npwx,kpt_pool%nloc))
+         !$acc enter data create(g2kin_save)
+         ALLOCATE(nbnd_loc(kpt_pool%nloc))
+         !
+         DO iks = 1,kpt_pool%nloc
             !
-            nbndval = nbnd_loc(iks)
+            CALL g2_kin(iks)
             !
-            !$acc loop collapse(2)
-            DO lbnd = 1,nbndval
-               DO ig = 1,npwx
-                  !
-                  ! ibnd = band_group%l2g(lbnd)
-                  !
-                  ibnd = nbgrp*(lbnd-1)+my_bgrp_id+1
-                  !
-                  IF(turn_shift) THEN
-                     tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks_do)
-                  ELSE
-                     tmp = g2kin_save(ig,iks)
-                  ENDIF
-                  !
-                  ! Same as the following line but without thread divergence
-                  ! IF(ABS(tmp) < minimum) tmp = SIGN(minimum,tmp)
-                  !
-                  tmp_abs = MAX(ABS(tmp),minimum)
-                  tmp_sgn = SIGN(1._DP,tmp)
-                  tmp = tmp_sgn*tmp_abs
-                  !
-                  ag(ig,lbnd,iks,il1) = ag(ig,lbnd,iks,il1)/tmp
-                  !
-               ENDDO
+            !$acc kernels present(g2kin_save,g2kin)
+            g2kin_save(:,iks) = g2kin
+            !$acc end kernels
+            !
+            IF(sf) THEN
+               iks_do = flks(iks)
+            ELSE
+               iks_do = iks
+            ENDIF
+            !
+            nbndval = nbnd_occ(iks_do)
+            !
+            nbnd_loc(iks) = 0
+            DO lbnd = 1,band_group%nloc
+               ibnd = band_group%l2g(lbnd)+n_trunc_bands
+               IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_loc(iks) = nbnd_loc(iks)+1
             ENDDO
             !
          ENDDO
-      ENDDO
-      !$acc end parallel
-      !
-      !$acc exit data delete(g2kin_save,nbnd_loc) copyout(ag)
-      DEALLOCATE(g2kin_save)
-      DEALLOCATE(nbnd_loc)
+         !
+         !$acc enter data copyin(nbnd_loc)
+         !
+         !$acc parallel vector_length(1024) present(nbnd_loc,g2kin_save,ag)
+         !$acc loop
+         DO il1 = l1_s,l1_e
+            !$acc loop seq
+            DO iks = 1,kpt_pool_nloc
+               !
+               nbndval = nbnd_loc(iks)
+               !
+               !$acc loop collapse(2)
+               DO lbnd = 1,nbndval
+                  DO ig = 1,npwx
+                     !
+                     ! ibnd = band_group%l2g(lbnd)
+                     !
+                     ibnd = band_group_myoffset+lbnd
+                     !
+                     IF(turn_shift) THEN
+                        tmp = g2kin_save(ig,iks)-et(ibnd+n_trunc_bands,iks_do)
+                     ELSE
+                        tmp = g2kin_save(ig,iks)
+                     ENDIF
+                     !
+                     ! Same as the following line but without thread divergence
+                     ! IF(ABS(tmp) < minimum) tmp = SIGN(minimum,tmp)
+                     !
+                     tmp_abs = MAX(ABS(tmp),minimum)
+                     tmp_sgn = SIGN(1._DP,tmp)
+                     tmp = tmp_sgn*tmp_abs
+                     !
+                     ag(ig,lbnd,iks,il1) = ag(ig,lbnd,iks,il1)/tmp
+                     !
+                  ENDDO
+               ENDDO
+               !
+            ENDDO
+         ENDDO
+         !$acc end parallel
+         !
+         !$acc exit data delete(g2kin_save,nbnd_loc)
+         DEALLOCATE(g2kin_save)
+         DEALLOCATE(nbnd_loc)
+         !
+      ENDIF
       !
 #if defined(__CUDA)
       CALL stop_clock_gpu('precd_ag')

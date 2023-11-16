@@ -561,12 +561,12 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      IF(noncolin) THEN
         !$acc host_data use_device(vkb,psc,work)
         CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),vkb,npwx,psc,nkb,(1._DP,0._DP),dpsi_d,npwx)
-        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work,npwx,psc(:,:,:,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
+        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work,npwx,psc(1,1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
      ELSE
         !$acc host_data use_device(vkb,ps2,work)
         CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),vkb,npwx,ps2,nkb,(1._DP,0._DP),dpsi_d,npwx)
-        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work,npwx,ps2(:,:,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
+        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work,npwx,ps2(1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
         !$acc end host_data
      ENDIF
      !
@@ -586,7 +586,7 @@ SUBROUTINE compute_deff_real(deff, et)
   !
   USE kinds,       ONLY : DP
   USE ions_base,   ONLY : nat
-  USE uspp,        ONLY : okvan, deeq, qq_at
+  USE uspp,        ONLY : deeq
   USE uspp_param,  ONLY : nhm
   USE lsda_mod,    ONLY : current_spin
   !
@@ -601,27 +601,15 @@ SUBROUTINE compute_deff_real(deff, et)
   !
   INTEGER :: na, i, j
   !
-  IF(.NOT. okvan) THEN
-     !$acc parallel loop collapse(3) present(deff,deeq)
-     DO na = 1,nat
-        DO i = 1,nhm
-           DO j = 1,nhm
-              deff(i,j,na) = deeq(i,j,na,current_spin)
-           ENDDO
+  !$acc parallel loop collapse(3) present(deff,deeq)
+  DO na = 1,nat
+     DO i = 1,nhm
+        DO j = 1,nhm
+           deff(i,j,na) = deeq(i,j,na,current_spin)
         ENDDO
      ENDDO
-     !$acc end parallel
-  ELSE
-     !$acc parallel loop collapse(3) present(deff,deeq,qq_at)
-     DO na = 1,nat
-        DO i = 1,nhm
-           DO j = 1,nhm
-              deff(i,j,na) = deeq(i,j,na,current_spin)-et*qq_at(i,j,na)
-           ENDDO
-        ENDDO
-     ENDDO
-     !$acc end parallel
-  ENDIF
+  ENDDO
+  !$acc end parallel
   !
 END SUBROUTINE
 #endif

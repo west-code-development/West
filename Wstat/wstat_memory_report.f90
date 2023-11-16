@@ -20,7 +20,7 @@ SUBROUTINE wstat_memory_report()
   USE control_flags,       ONLY : gamma_only
   USE mp_global,           ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
-  USE westcom,             ONLY : nbnd_occ,n_pdep_basis,npwqx,logfile
+  USE westcom,             ONLY : nbndval0x,n_pdep_basis,npwqx,logfile
   USE distribution_center, ONLY : pert
   USE noncollin_module,    ONLY : npol
   USE json_module,         ONLY : json_file
@@ -43,7 +43,7 @@ SUBROUTINE wstat_memory_report()
      !
   ENDIF
   !
-  nbndloc = (nbnd_occ(1)-1)/nbgrp+1
+  nbndloc = nbndval0x/nbgrp
   !
   mem_tot = 0.0_DP
   WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')

@@ -26,15 +26,19 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,document,wbse_init_calculation,solver,&
-                             & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
-                             & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut1,l_reduce_io
+                             & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
+                             & westpp_wannier_tr_rel,westpp_l_dipole_realspace,document,&
+                             & wbse_init_calculation,solver,bse_method,localization,wannier_tr_rel,&
+                             & wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,spin_channel,&
+                             & n_trunc_bands,wbse_calculation,qp_correction,scissor_ope,&
+                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
+                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
+                             & wbse_ipol,l_dipole_realspace,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_pre_shift,l_spin_flip,l_spin_flip_kernel,&
+                             & l_spin_flip_alda0,l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
+                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
+                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
+                             & l_reduce_io
   USE mp_world,         ONLY : mpime,root
   !
   IMPLICIT NONE
@@ -113,6 +117,10 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
         CALL json%add('input.westpp_control.westpp_box',westpp_box)
         CALL json%add('input.westpp_control.westpp_n_liouville_to_use',westpp_n_liouville_to_use)
+        CALL json%add('input.westpp_control.westpp_l_spin_flip',westpp_l_spin_flip)
+        CALL json%add('input.westpp_control.westpp_l_compute_tdm',westpp_l_compute_tdm)
+        CALL json%add('input.westpp_control.westpp_wannier_tr_rel',westpp_wannier_tr_rel)
+        CALL json%add('input.westpp_control.westpp_l_dipole_realspace',westpp_l_dipole_realspace)
         !
      ENDIF
      !
@@ -128,14 +136,14 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_init_control.solver',TRIM(solver))
         CALL json%add('input.wbse_init_control.bse_method',TRIM(bse_method))
         CALL json%add('input.wbse_init_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
-        CALL json%add('input.wbse_init_control.localization',TRIM(localization))
+        CALL json%add('input.wbse_init_control.localization',localization)
+        CALL json%add('input.wbse_init_control.wannier_tr_rel',wannier_tr_rel)
         CALL json%add('input.wbse_init_control.wfc_from_qbox',TRIM(wfc_from_qbox))
         CALL json%add('input.wbse_init_control.bisection_info',TRIM(bisection_info))
         CALL json%add('input.wbse_init_control.chi_kernel',TRIM(chi_kernel))
         CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
         CALL json%add('input.wbse_init_control.spin_channel',spin_channel)
         CALL json%add('input.wbse_init_control.n_trunc_bands',n_trunc_bands)
-        CALL json%add('input.wbse_init_control.o_restart_time',o_restart_time)
         !
      ENDIF
      !
@@ -155,17 +163,24 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wbse_control.wbse_ipol',TRIM(wbse_ipol))
         CALL json%add('input.wbse_control.l_dipole_realspace',l_dipole_realspace)
         CALL json%add('input.wbse_control.wbse_epsinfty',wbse_epsinfty)
-        CALL json%add('input.wbse_control.spin_excitation',TRIM(spin_excitation))
+        CALL json%add('input.wbse_control.spin_excitation',spin_excitation)
         CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
         CALL json%add('input.wbse_control.l_pre_shift',l_pre_shift)
         CALL json%add('input.wbse_control.l_spin_flip',l_spin_flip)
         CALL json%add('input.wbse_control.l_spin_flip_kernel',l_spin_flip_kernel)
         CALL json%add('input.wbse_control.l_spin_flip_alda0',l_spin_flip_alda0)
         CALL json%add('input.wbse_control.l_print_spin_flip_kernel',l_print_spin_flip_kernel)
-        CALL json%add('input.wbse_control.spin_flip_cut1',spin_flip_cut1)
-        CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
+        CALL json%add('input.wbse_control.spin_flip_cut',spin_flip_cut)
+        CALL json%add('input.wbse_control.l_forces',l_forces)
+        CALL json%add('input.wbse_control.forces_state',forces_state)
+        CALL json%add('input.wbse_control.forces_zeq_cg_tr',forces_zeq_cg_tr)
+        CALL json%add('input.wbse_control.forces_zeq_n_cg_maxiter',forces_zeq_n_cg_maxiter)
+        CALL json%add('input.wbse_control.ddvxc_fd_coeff',ddvxc_fd_coeff)
+        CALL json%add('input.wbse_control.forces_inexact_krylov',forces_inexact_krylov)
+        CALL json%add('input.wbse_control.forces_inexact_krylov_tr',forces_inexact_krylov_tr)
         CALL json%add('input.wbse_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
         CALL json%add('input.wbse_control.n_exx_lowrank',n_exx_lowrank)
+        CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
         !
      ENDIF
      !
@@ -188,15 +203,19 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
                              & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
                              & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,document,wbse_init_calculation,solver,&
-                             & bse_method,localization,wfc_from_qbox,bisection_info,chi_kernel,&
-                             & overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
-                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
-                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
-                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
-                             & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
-                             & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
-                             & spin_flip_cut1,l_reduce_io,main_input_file,logfile
+                             & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
+                             & westpp_wannier_tr_rel,westpp_l_dipole_realspace,document,&
+                             & wbse_init_calculation,solver,bse_method,localization,wannier_tr_rel,&
+                             & wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,spin_channel,&
+                             & n_trunc_bands,wbse_calculation,qp_correction,scissor_ope,&
+                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
+                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
+                             & wbse_ipol,l_dipole_realspace,wbse_epsinfty,spin_excitation,&
+                             & l_preconditioning,l_pre_shift,l_spin_flip,l_spin_flip_kernel,&
+                             & l_spin_flip_alda0,l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
+                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
+                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
+                             & l_reduce_io,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -421,6 +440,10 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = tmp_list%getitem(westpp_box(5), 4)
         IERR = tmp_list%getitem(westpp_box(6), 5)
         IERR = return_dict%get(westpp_n_liouville_to_use, 'westpp_n_liouville_to_use', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(westpp_l_spin_flip, 'westpp_l_spin_flip')
+        IERR = return_dict%getitem(westpp_l_compute_tdm, 'westpp_l_compute_tdm')
+        IERR = return_dict%getitem(westpp_wannier_tr_rel, 'westpp_wannier_tr_rel')
+        IERR = return_dict%getitem(westpp_l_dipole_realspace, 'westpp_l_dipole_realspace')
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         !
@@ -474,13 +497,13 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(cvalue, 'bse_method'); bse_method = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(n_pdep_eigen_to_use, 'n_pdep_eigen_to_use', DUMMY_DEFAULT)
         IERR = return_dict%getitem(cvalue, 'localization'); localization = TRIM(ADJUSTL(cvalue))
+        IERR = return_dict%getitem(wannier_tr_rel, 'wannier_tr_rel')
         IERR = return_dict%getitem(cvalue, 'wfc_from_qbox'); wfc_from_qbox = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'bisection_info'); bisection_info = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(cvalue, 'chi_kernel'); chi_kernel = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%getitem(overlap_thr, 'overlap_thr')
         IERR = return_dict%get(spin_channel, 'spin_channel', DUMMY_DEFAULT)
         IERR = return_dict%get(n_trunc_bands, 'n_trunc_bands', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(o_restart_time, 'o_restart_time')
         !
         CALL return_dict%destroy
         !
@@ -523,10 +546,17 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(l_spin_flip_kernel, 'l_spin_flip_kernel')
         IERR = return_dict%getitem(l_spin_flip_alda0, 'l_spin_flip_alda0')
         IERR = return_dict%getitem(l_print_spin_flip_kernel, 'l_print_spin_flip_kernel')
-        IERR = return_dict%getitem(spin_flip_cut1, 'spin_flip_cut1')
-        IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
+        IERR = return_dict%getitem(spin_flip_cut, 'spin_flip_cut')
+        IERR = return_dict%getitem(l_forces, 'l_forces')
+        IERR = return_dict%get(forces_state, 'forces_state', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(forces_zeq_cg_tr, 'forces_zeq_cg_tr')
+        IERR = return_dict%get(forces_zeq_n_cg_maxiter, 'forces_zeq_n_cg_maxiter', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(ddvxc_fd_coeff, 'ddvxc_fd_coeff')
+        IERR = return_dict%get(forces_inexact_krylov, 'forces_inexact_krylov', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(forces_inexact_krylov_tr, 'forces_inexact_krylov_tr')
         IERR = return_dict%getitem(l_minimize_exx_if_active, 'l_minimize_exx_if_active')
         IERR = return_dict%get(n_exx_lowrank, 'n_exx_lowrank', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
         !
         CALL return_dict%destroy
         !
@@ -686,6 +716,10 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(westpp_epsinfty,root,world_comm)
      CALL mp_bcast(westpp_box,root,world_comm)
      CALL mp_bcast(westpp_n_liouville_to_use,root,world_comm)
+     CALL mp_bcast(westpp_l_spin_flip,root,world_comm)
+     CALL mp_bcast(westpp_l_compute_tdm,root,world_comm)
+     CALL mp_bcast(westpp_wannier_tr_rel,root,world_comm)
+     CALL mp_bcast(westpp_l_dipole_realspace,root,world_comm)
      !
      ! CHECKS
      !
@@ -728,13 +762,13 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(bse_method,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(localization,root,world_comm)
+     CALL mp_bcast(wannier_tr_rel,root,world_comm)
      CALL mp_bcast(wfc_from_qbox,root,world_comm)
      CALL mp_bcast(bisection_info,root,world_comm)
      CALL mp_bcast(chi_kernel,root,world_comm)
      CALL mp_bcast(overlap_thr,root,world_comm)
      CALL mp_bcast(spin_channel,root,world_comm)
      CALL mp_bcast(n_trunc_bands,root,world_comm)
-     CALL mp_bcast(o_restart_time,root,world_comm)
      !
      ! CHECKS
      !
@@ -757,7 +791,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         CALL errore('fetch_input','Err: bse_method/=(PDEP,FF_QBOX)',1)
      END SELECT
      !
-     SELECT CASE(TRIM(localization))
+     SELECT CASE(localization)
      CASE('N','n','W','w')
      CASE('B','b')
         SELECT CASE(TRIM(bse_method))
@@ -797,10 +831,17 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(l_spin_flip_kernel,root,world_comm)
      CALL mp_bcast(l_spin_flip_alda0,root,world_comm)
      CALL mp_bcast(l_print_spin_flip_kernel,root,world_comm)
-     CALL mp_bcast(spin_flip_cut1,root,world_comm)
-     CALL mp_bcast(l_reduce_io,root,world_comm)
+     CALL mp_bcast(spin_flip_cut,root,world_comm)
+     CALL mp_bcast(l_forces,root,world_comm)
+     CALL mp_bcast(forces_state,root,world_comm)
+     CALL mp_bcast(forces_zeq_cg_tr,root,world_comm)
+     CALL mp_bcast(forces_zeq_n_cg_maxiter,root,world_comm)
+     CALL mp_bcast(ddvxc_fd_coeff,root,world_comm)
+     CALL mp_bcast(forces_inexact_krylov,root,world_comm)
+     CALL mp_bcast(forces_inexact_krylov_tr,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
      CALL mp_bcast(n_exx_lowrank,root,world_comm)
+     CALL mp_bcast(l_reduce_io,root,world_comm)
      !
      ! CHECKS
      !
@@ -818,15 +859,24 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         & CALL errore('fetch_input','Err: n_liouville_read_from_file>n_liouville_eigen',1)
         IF(trev_liouville <= 0._DP) CALL errore('fetch_input','Err: trev_liouville<0.',1)
         IF(trev_liouville_rel <= 0._DP) CALL errore('fetch_input','Err: trev_liouville_rel<0.',1)
+        IF(forces_zeq_n_cg_maxiter < 1) CALL errore('fetch_input','Err: forces_zeq_n_cg_maxiter<1',1)
+        IF(forces_inexact_krylov < 0 .OR. forces_inexact_krylov > 5) &
+        & CALL errore('fetch_input','Err: invalid forces_inexact_krylov',1)
         IF(n_liouville_eigen == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_eigen',1)
         IF(n_liouville_times == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_times',1)
         IF(n_liouville_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_liouville_maxiter',1)
         IF(n_liouville_read_from_file == DUMMY_DEFAULT) &
         & CALL errore('fetch_input','Err: cannot fetch n_liouville_read_from_file',1)
+        IF(forces_state == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch forces_state',1)
+        IF(forces_zeq_n_cg_maxiter == DUMMY_DEFAULT) &
+        & CALL errore('fetch_input','Err: cannot fetch forces_zeq_n_cg_maxiter',1)
+        IF(forces_inexact_krylov == DUMMY_DEFAULT) &
+        & CALL errore('fetch_input','Err: cannot fetch forces_inexact_krylov',1)
      CASE('L','l')
         IF(l_spin_flip) CALL errore('fetch_input','Err: spin flip must use Davidson',1)
         IF(n_lanczos < 1) CALL errore('fetch_input','Err: n_lanczos<1',1)
         IF(n_lanczos == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_lanczos',1)
+        IF(l_forces) CALL errore('fetch_input', 'Err: forces calculation must use Davidson', 1)
      CASE DEFAULT
         CALL errore('fetch_input','Err: wbse_calculation/=(D,L)',1)
      END SELECT

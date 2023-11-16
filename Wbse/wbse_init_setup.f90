@@ -63,7 +63,7 @@ SUBROUTINE wbse_init_setup()
 #endif
   ENDIF
   !
-  SELECT CASE(TRIM(localization))
+  SELECT CASE(localization)
   CASE('N','n')
      l_local_repr = .FALSE.
   CASE('B','b','W','w')
@@ -95,6 +95,9 @@ SUBROUTINE wbse_init_setup()
      CALL pot3D%init('Wave',.FALSE.,'default')
      !
   ENDIF
+  !
+  !$acc enter data copyin(pot3D)
+  !$acc enter data copyin(pot3D%sqvc)
   !
   CALL pot3D%print_divergence()
   !

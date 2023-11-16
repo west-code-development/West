@@ -43,7 +43,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d,psic_nc=>psic_nc_d
-  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,memcpy_H2D
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
 #else
   USE wavefunctions,        ONLY : evc_work=>evc,psic,psic_nc
 #endif
@@ -66,8 +66,6 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   REAL(DP) :: g0(3),peso
   REAL(DP) :: dot_tmp
   COMPLEX(DP) :: braket
-  REAL(DP), ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(sqvc)
   COMPLEX(DP), ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
   !$acc declare device_resident(pertg,pertr,pertr_nc)
   COMPLEX(DP), ALLOCATABLE :: psic1(:),pertg1(:),pertr1(:)
@@ -127,8 +125,6 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
-  !
-  ALLOCATE(sqvc(ngm))
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -149,16 +145,14 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
-     !
-#if defined(__CUDA)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-#endif
      !
      DO ibloc = 1,band_group%nloc
         !
@@ -215,9 +209,8 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
                  !$acc update device(evckmq,phase)
               ENDIF
               !
-#if defined(__CUDA)
-              CALL memcpy_H2D(sqvc,pot3D%sqvc,ngm)
-#endif
+              !$acc enter data copyin(pot3D)
+              !$acc enter data copyin(pot3D%sqvc)
               !
               vband = idistribute()
               CALL vband%init(nbndval,'i','nbndval',.FALSE.)
@@ -280,19 +273,12 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
                     !$acc end host_data
                  ENDIF
                  !
-                 !$acc parallel loop present(pertg1,pertg,sqvc)
+                 !$acc parallel loop present(pertg1,pertg,pot3D)
                  DO ig = 1,ngm
-#if defined(__CUDA)
-                    IF(l_enable_off_diagonal .AND. jb < ib) THEN
-                       pertg1(ig) = pertg1(ig)*sqvc(ig)
-                    ENDIF
-                    pertg(ig) = pertg(ig)*sqvc(ig)
-#else
                     IF(l_enable_off_diagonal .AND. jb < ib) THEN
                        pertg1(ig) = pertg1(ig)*pot3D%sqvc(ig)
                     ENDIF
                     pertg(ig) = pertg(ig)*pot3D%sqvc(ig)
-#endif
                  ENDDO
                  !$acc end parallel
                  !
@@ -329,6 +315,9 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
                  !
               ENDDO ! ivloc
               !
+              !$acc exit data delete(pot3D%sqvc)
+              !$acc exit data delete(pot3D)
+              !
            ENDDO ! iq
            !
            CALL update_bar_type(barra,'sigmax',1)
@@ -341,8 +330,6 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()
-  !
-  DEALLOCATE(sqvc)
 #endif
   !
   CALL stop_bar_type(barra,'sigmax')

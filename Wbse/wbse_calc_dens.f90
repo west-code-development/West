@@ -22,19 +22,17 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   USE fft_base,               ONLY : dffts
   USE lsda_mod,               ONLY : nspin,lsda
   USE noncollin_module,       ONLY : npol
-  USE pwcom,                  ONLY : npw,npwx,igk_k,current_k,current_spin,isk,wg,ngk
-  USE control_flags,          ONLY : gamma_only
+  USE pwcom,                  ONLY : npw,npwx,current_k,current_spin,isk,wg,ngk
   USE mp,                     ONLY : mp_sum,mp_bcast
   USE mp_global,              ONLY : my_image_id,inter_image_comm,inter_pool_comm,inter_bgrp_comm
   USE buffers,                ONLY : get_buffer
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands
   USE fft_at_gamma,           ONLY : double_invfft_gamma
-  USE fft_at_k,               ONLY : single_invfft_k
   USE distribution_center,    ONLY : kpt_pool,band_group
 #if defined(__CUDA)
   USE wavefunctions_gpum,     ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,          ONLY : evc_host=>evc
-  USE west_gpu,               ONLY : tmp_r,tmp_c,psic2
+  USE west_gpu,               ONLY : tmp_r
 #else
   USE wavefunctions,          ONLY : evc_work=>evc,psic
 #endif
@@ -53,8 +51,6 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   REAL(DP) :: w1
 #if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: tmp_r(:)
-  COMPLEX(DP), ALLOCATABLE :: tmp_c(:)
-  COMPLEX(DP), ALLOCATABLE :: psic2(:)
 #endif
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
@@ -65,15 +61,13 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
 #endif
   !
   dffts_nnr = dffts%nnr
+  !
+  !$acc kernels present(drho)
   drho(:,:) = (0._DP,0._DP)
+  !$acc end kernels
   !
 #if !defined(__CUDA)
-  IF(gamma_only) THEN
-     ALLOCATE(tmp_r(dffts%nnr))
-  ELSE
-     ALLOCATE(tmp_c(dffts%nnr))
-     ALLOCATE(psic2(dffts%nnr))
-  ENDIF
+  ALLOCATE(tmp_r(dffts%nnr))
 #endif
   !
   DO iks = 1, kpt_pool%nloc  ! KPOINT-SPIN LOOP
@@ -110,100 +104,45 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
 #endif
      ENDIF
      !
-     IF(gamma_only) THEN
+     !$acc kernels present(tmp_r)
+     tmp_r(:) = 0._DP
+     !$acc end kernels
+     !
+     ! double bands @ gamma
+     !
+     DO lbnd = 1, band_group%nloc
         !
-        !$acc kernels present(tmp_r)
-        tmp_r(:) = 0._DP
-        !$acc end kernels
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
         !
-        ! double bands @ gamma
+        w1 = wg(ibnd,iks_do)/omega
         !
-        DO lbnd = 1, band_group%nloc
-           !
-           ibnd = band_group%l2g(lbnd)+n_trunc_bands
-           IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
-           !
-           w1 = wg(ibnd,iks_do)/omega
-           !
-           !$acc host_data use_device(devc)
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),devc(:,lbnd,iks),psic,'Wave')
-           !$acc end host_data
-           !
-           !$acc parallel loop present(tmp_r)
-           DO ir = 1, dffts_nnr
-              tmp_r(ir) = tmp_r(ir) + w1*REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
-           ENDDO
-           !$acc end parallel
-           !
+        !$acc host_data use_device(devc)
+        CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),devc(:,lbnd,iks),psic,'Wave')
+        !$acc end host_data
+        !
+        !$acc parallel loop present(tmp_r)
+        DO ir = 1, dffts_nnr
+           tmp_r(ir) = tmp_r(ir) + w1*REAL(psic(ir),KIND=DP)*AIMAG(psic(ir))
         ENDDO
+        !$acc end parallel
         !
-        !$acc update host(tmp_r)
-        !
-        drho(:,current_spin) = CMPLX(tmp_r,KIND=DP)
-        !
-     ELSE
-        !
-        !$acc kernels present(tmp_c)
-        tmp_c(:) = (0._DP,0._DP)
-        !$acc end kernels
-        !
-        ! only single bands
-        !
-        DO lbnd = 1, band_group%nloc
-           !
-           ibnd = band_group%l2g(lbnd)+n_trunc_bands
-           IF(ibnd < 1 .OR. ibnd > nbndval) CYCLE
-           !
-           w1 = wg(ibnd,iks_do)/omega
-           !
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
-           !$acc host_data use_device(devc,psic2)
-           CALL single_invfft_k(dffts,npw,npwx,devc(:,lbnd,iks),psic2,'Wave',igk_k(:,current_k))
-           !$acc end host_data
-           !
-           !$acc parallel loop present(tmp_c,psic2)
-           DO ir = 1, dffts_nnr
-              tmp_c(ir) = tmp_c(ir) + w1*CONJG(psic(ir))*psic2(ir)
-           ENDDO
-           !$acc end parallel
-           !
-           IF(npol == 2) THEN
-              !
-              CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
-              !$acc host_data use_device(devc,psic2)
-              CALL single_invfft_k(dffts,npw,npwx,devc(npwx+1:npwx*2,lbnd,iks),psic2,'Wave',igk_k(:,current_k))
-              !$acc end host_data
-              !
-              !$acc parallel loop present(tmp_c,psic2)
-              DO ir = 1, dffts_nnr
-                 tmp_c(ir) = tmp_c(ir) + w1*CONJG(psic(ir))*psic2(ir)
-              ENDDO
-              !$acc end parallel
-              !
-           ENDIF
-           !
-        ENDDO
-        !
-        !$acc update host(tmp_c)
-        !
-        drho(:,current_spin) = tmp_c
-        !
-     ENDIF
+     ENDDO
+     !
+     !$acc parallel loop present(drho,tmp_r)
+     DO ir = 1, dffts_nnr
+        drho(ir,current_spin) = CMPLX(tmp_r(ir),KIND=DP)
+     ENDDO
+     !$acc end parallel
      !
   ENDDO
   !
+  !$acc update host(drho)
   CALL mp_sum(drho,inter_pool_comm)
   CALL mp_sum(drho,inter_bgrp_comm)
   !
-  !$acc update device(drho)
-  !
 #if !defined(__CUDA)
-  IF(gamma_only) THEN
-     DEALLOCATE(tmp_r)
-  ELSE
-     DEALLOCATE(tmp_c)
-     DEALLOCATE(psic2)
-  ENDIF
+  DEALLOCATE(tmp_r)
 #endif
   !
 #if defined(__CUDA)

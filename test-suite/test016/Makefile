@@ -35,5 +35,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule test BSE Lanczos"
+	@echo "SiH4 molecule gamma_only BSE Lanczos"
 	@echo

@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "Si bulk kmesh 1x1x2"
+	@echo "Si bulk kmesh 1x1x2 GW"
 	@echo

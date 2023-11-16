@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule gamma_only test l_enable_off_diagonal"
+	@echo "SiH4 molecule gamma_only GW l_enable_off_diagonal"
 	@echo

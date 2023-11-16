@@ -122,12 +122,12 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-     ENDIF
-     !
+        !
 #if defined(__CUDA)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #endif
+     ENDIF
      !
      ! NON-HYBRID CONTRIBUTION TO VXC
      !

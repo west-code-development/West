@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "Si bulk kmesh 1x1x2 test hybrid ACE"
+	@echo "Si bulk kmesh 1x1x2 GW hybrid ACE"
 	@echo

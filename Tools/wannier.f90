@@ -106,7 +106,10 @@ MODULE wann_loc_wfc
       ! Gygi et al., Computer Physics Communications 155, 1-6 (2003)
       !
       USE kinds,                 ONLY : DP
+      USE io_global,             ONLY : stdout
       USE linear_algebra_kernel, ONLY : matdiago_dsy
+      USE io_push,               ONLY : io_push_title
+      USE westcom,               ONLY : wannier_tr_rel
 #if defined(__CUDA)
       USE cublas
 #endif
@@ -132,10 +135,19 @@ MODULE wann_loc_wfc
       REAL(DP),ALLOCATABLE :: rot(:,:),aux(:,:)
       !$acc declare device_resident(rot,aux)
       !
-      INTEGER,PARAMETER :: itermax = 5000
-      REAL(DP),PARAMETER :: avg_spread_thr = 1.E-9_DP
+      INTEGER,PARAMETER :: itermax = 100
       !
+      REAL(DP) :: time_spent(2)
+      REAL(DP), EXTERNAL :: get_clock
+      CHARACTER(20), EXTERNAL :: human_readable_time
+      !
+#if defined(__CUDA)
+      CALL start_clock_gpu('jade')
+#else
       CALL start_clock('jade')
+#endif
+      !
+      CALL io_push_title('Wannier (JADE)')
       !
       ALLOCATE(rot(m,m))
       ALLOCATE(aux(m,m))
@@ -168,8 +180,8 @@ MODULE wann_loc_wfc
       !
       !$acc host_data use_device(u,a,aux)
       DO ia = 1,na
-         CALL DGEMM('T','N',m,m,m,1._DP,u,m,a(:,:,ia),m,0._DP,aux,m)
-         CALL DGEMM('N','N',m,m,m,1._DP,aux,m,u,m,0._DP,a(:,:,ia),m)
+         CALL DGEMM('T','N',m,m,m,1._DP,u,m,a(1,1,ia),m,0._DP,aux,m)
+         CALL DGEMM('N','N',m,m,m,1._DP,aux,m,u,m,0._DP,a(1,1,ia),m)
       ENDDO
       !$acc end host_data
       !
@@ -187,6 +199,8 @@ MODULE wann_loc_wfc
       conv = .FALSE.
       !
       DO iter = 1,itermax
+         !
+         time_spent(1) = get_clock('jade')
          !
          DO sweep = 1,m-1
             !
@@ -275,8 +289,8 @@ MODULE wann_loc_wfc
             !
             !$acc host_data use_device(rot,a,aux)
             DO ia = 1,na
-               CALL DGEMM('T','N',m,m,m,1._DP,rot,m,a(:,:,ia),m,0._DP,aux,m)
-               CALL DGEMM('N','N',m,m,m,1._DP,aux,m,rot,m,0._DP,a(:,:,ia),m)
+               CALL DGEMM('T','N',m,m,m,1._DP,rot,m,a(1,1,ia),m,0._DP,aux,m)
+               CALL DGEMM('N','N',m,m,m,1._DP,aux,m,rot,m,0._DP,a(1,1,ia),m)
             ENDDO
             !$acc end host_data
             !
@@ -309,9 +323,19 @@ MODULE wann_loc_wfc
          ENDDO
          !$acc end parallel
          !
+         WRITE(stdout,"(/,5X,'                  *----------*            *-----------------*')")
+         WRITE(stdout,"(  5X,'#     Iteration = | ', I8,' |','   ','Spread = | ', ES15.8,' |')") &
+         & iter, sigma
+         WRITE(stdout,"(  5X,'                  *----------*            *-----------------*')")
+         !
+         time_spent(2) = get_clock('jade')
+         !
+         WRITE(stdout,"(5X,'Time spent in last iteration ',A)") &
+         & TRIM(human_readable_time(time_spent(2)-time_spent(1)))
+         !
          ! Check convergence
          !
-         IF(ABS(sigma-sigma_old) < m*avg_spread_thr) THEN
+         IF(ABS((sigma-sigma_old)/sigma_old) < wannier_tr_rel) THEN
             conv = .TRUE.
             EXIT
          ELSE
@@ -326,9 +350,13 @@ MODULE wann_loc_wfc
       DEALLOCATE(top)
       DEALLOCATE(bot)
       !
-      IF(.NOT. conv) CALL errore('wann','convergence not achieved',itermax)
+      IF(.NOT. conv) WRITE(stdout,'(7X,"** WARNING : JADE not converged in ",I5," steps")') itermax
       !
+#if defined(__CUDA)
+      CALL stop_clock_gpu('jade')
+#else
       CALL stop_clock('jade')
+#endif
       !
     END SUBROUTINE
     !

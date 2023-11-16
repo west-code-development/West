@@ -252,11 +252,7 @@ MODULE wstat_tools
       CALL mp_sum(zz,inter_image_comm)
       ee = 0._DP
       !
-      IF(me_bgrp == root_bgrp) THEN
-         !
-         CALL matdiago_dsy(n,zz,ee,.FALSE.)
-         !
-      ENDIF
+      IF(me_bgrp == root_bgrp) CALL matdiago_dsy(n,zz,ee,.FALSE.)
       !
       CALL mp_bcast(ee,root_bgrp,intra_bgrp_comm)
       CALL mp_bcast(zz,root_bgrp,intra_bgrp_comm)
@@ -327,11 +323,7 @@ MODULE wstat_tools
       CALL mp_sum(zz,inter_image_comm)
       ee = 0._DP
       !
-      IF(me_bgrp == root_bgrp) THEN
-         !
-         CALL matdiago_zhe(n,zz,ee,.FALSE.)
-         !
-      ENDIF
+      IF(me_bgrp == root_bgrp) CALL matdiago_zhe(n,zz,ee,.FALSE.)
       !
       CALL mp_bcast(ee,root_bgrp,intra_bgrp_comm)
       CALL mp_bcast(zz,root_bgrp,intra_bgrp_comm)
@@ -379,12 +371,10 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1
+      INTEGER :: l1_e
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nglob
       REAL(DP) :: reduce
-#if !defined(__CUDA)
-      REAL(DP),EXTERNAL :: DDOT
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('build_hr')
@@ -408,23 +398,32 @@ MODULE wstat_tools
          !
          DO icycl = 0,nimage-1
             !
-            IF(l2_e >= l2_s) THEN
-               !
-               idx = MOD(my_image_id+icycl,nimage)
-               nloc = pert%nglob/nimage
-               IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            l1_e = 0
+            DO il1 = nloc,1,-1
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 <= g_e) THEN
+                  l1_e = il1
+                  EXIT
+               ENDIF
+            ENDDO
+            !
+            IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
                !
                !$acc update device(ag) wait
                !
-               DO il1 = 1,nloc
-                  !
-                  ig1 = pert%l2g(il1,idx)
-                  IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
-                  !
-#if defined(__CUDA)
-                  !$acc parallel async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
-                  !$acc loop
+               !$acc parallel vector_length(1024) async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+               !$acc loop collapse(2)
+               DO il1 = 1,l1_e
                   DO il2 = l2_s,l2_e
+                     !
+                     ! ig1 = pert%l2g(il1,idx)
+                     !
+                     ig1 = nimage*(il1-1)+idx+1
+                     !
                      reduce = 0._DP
                      !$acc loop reduction(+:reduce)
                      DO il3 = 1,npwq
@@ -437,19 +436,10 @@ MODULE wstat_tools
                      ELSE
                         c_distr(ig1,il2) = 2._DP*reduce
                      ENDIF
-                  ENDDO
-                  !$acc end parallel
-#else
-                  DO il2 = l2_s,l2_e
-                     c_distr(ig1,il2) = 2._DP*DDOT(2*npwq,ag(1,il1),1,bg(1,il2),1)
                      !
-                     IF(gstart == 2) THEN
-                        c_distr(ig1,il2) = c_distr(ig1,il2)-REAL(ag(1,il1),KIND=DP)*REAL(bg(1,il2),KIND=DP)
-                     ENDIF
                   ENDDO
-#endif
-                  !
                ENDDO
+               !$acc end parallel
                !
             ENDIF
             !
@@ -506,12 +496,10 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1
+      INTEGER :: l1_e
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nglob
       COMPLEX(DP) :: reduce
-#if !defined(__CUDA)
-      COMPLEX(DP),EXTERNAL :: ZDOTC
-#endif
       !
 #if defined(__CUDA)
       CALL start_clock_gpu('build_hr')
@@ -535,38 +523,43 @@ MODULE wstat_tools
          !
          DO icycl = 0,nimage-1
             !
-            IF(l2_e >= l2_s) THEN
-               !
-               idx = MOD(my_image_id+icycl,nimage)
-               nloc = pert%nglob/nimage
-               IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            idx = MOD(my_image_id+icycl,nimage)
+            nloc = pert%nglob/nimage
+            IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
+            !
+            l1_e = 0
+            DO il1 = nloc,1,-1
+               ig1 = pert%l2g(il1,idx)
+               IF(ig1 <= g_e) THEN
+                  l1_e = il1
+                  EXIT
+               ENDIF
+            ENDDO
+            !
+            IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
                !
                !$acc update device(ag) wait
                !
-               DO il1 = 1,nloc
-                  !
-                  ig1 = pert%l2g(il1,idx)
-                  IF(ig1 < 1 .OR. ig1 > g_e) CYCLE
-                  !
-#if defined(__CUDA)
-                  !$acc parallel async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
-                  !$acc loop
+               !$acc parallel vector_length(1024) async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+               !$acc loop collapse(2)
+               DO il1 = 1,l1_e
                   DO il2 = l2_s,l2_e
+                     !
+                     ! ig1 = pert%l2g(il1,idx)
+                     !
+                     ig1 = nimage*(il1-1)+idx+1
+                     !
                      reduce = (0._DP,0._DP)
                      !$acc loop reduction(+:reduce)
                      DO il3 = 1,npwq
                         reduce = reduce+CONJG(ag(il3,il1))*bg(il3,il2)
                      ENDDO
+                     !
                      c_distr(ig1,il2) = reduce
+                     !
                   ENDDO
-                  !$acc end parallel
-#else
-                  DO il2 = l2_s,l2_e
-                     c_distr(ig1,il2) = ZDOTC(npwq,ag(1,il1),1,bg(1,il2),1)
-                  ENDDO
-#endif
-                  !
                ENDDO
+               !$acc end parallel
                !
             ENDIF
             !
@@ -608,7 +601,7 @@ MODULE wstat_tools
       USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
       USE sort_tools,           ONLY : heapsort
-      USE west_mp,              ONLY : mp_alltoallv
+      USE west_mp,              ONLY : west_mp_alltoallv
       !
       IMPLICIT NONE
       !
@@ -742,14 +735,14 @@ MODULE wstat_tools
          recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
       ENDDO
       !
-      CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
       !
       send_count = send_count*lda
       recv_count = recv_count*lda
       send_displ = send_displ*lda
       recv_displ = recv_displ*lda
       !
-      CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
       !
       DEALLOCATE(val_send)
       DEALLOCATE(idx_send)
@@ -785,7 +778,7 @@ MODULE wstat_tools
       USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : pert
       USE sort_tools,           ONLY : heapsort
-      USE west_mp,              ONLY : mp_alltoallv
+      USE west_mp,              ONLY : west_mp_alltoallv
       !
       IMPLICIT NONE
       !
@@ -919,14 +912,14 @@ MODULE wstat_tools
          recv_displ(i_proc) = SUM(recv_count(1:i_proc-1))
       ENDDO
       !
-      CALL mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(idx_send,send_count,send_displ,idx_recv,recv_count,recv_displ,world_comm)
       !
       send_count = send_count*lda
       recv_count = recv_count*lda
       send_displ = send_displ*lda
       recv_displ = recv_displ*lda
       !
-      CALL mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
+      CALL west_mp_alltoallv(val_send,send_count,send_displ,val_recv,recv_count,recv_displ,world_comm)
       !
       DEALLOCATE(val_send)
       DEALLOCATE(idx_send)
@@ -974,7 +967,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: il1_end,il2_start,il2_end
+      INTEGER :: l1_e,l2_s,l2_e
       INTEGER :: icycl,idx,nloc
       REAL(DP) :: dconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
@@ -990,19 +983,22 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         il2_start = 1
+         l2_s = 0
          DO il2 = 1,pert%nloc
             ig2 = pert%l2g(il2)
-            IF(ig2 <= n) CYCLE
-            il2_start = il2
-            EXIT
+            IF(ig2 > n) THEN
+               l2_s = il2
+               EXIT
+            ENDIF
          ENDDO
          !
-         il2_end = 1
-         DO il2 = 1,pert%nloc
+         l2_e = 0
+         DO il2 = pert%nloc,1,-1
             ig2 = pert%l2g(il2)
-            IF(ig2 > n+nselect) EXIT
-            il2_end = il2
+            IF(ig2 <= n+nselect) THEN
+               l2_e = il2
+               EXIT
+            ENDIF
          ENDDO
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
@@ -1021,34 +1017,41 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            DO il1 = 1,nloc
+            l1_e = 0
+            DO il1 = nloc,1,-1
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 > n) EXIT
-               il1_end = il1
+               IF(ig1 <= n) THEN
+                  l1_e = il1
+                  EXIT
+               ENDIF
             ENDDO
             !
-            !$acc parallel vector_length(1024) present(vr_distr,hg,ag,hg2,bg)
-            !$acc loop seq
-            DO il1 = 1,il1_end
+            IF(l1_e > 0 .AND. l2_s > 0 .AND. l2_e >= l2_s) THEN
                !
-               ! ig1 = pert%l2g(il1,idx)
-               !
-               ig1 = nimage*(il1-1)+idx+1
-               !
-               !$acc loop
-               DO il2 = il2_start,il2_end
+               !$acc parallel vector_length(1024) present(vr_distr,hg,ag,hg2,bg)
+               !$acc loop seq
+               DO il1 = 1,l1_e
                   !
-                  dconst = vr_distr(ig1,il2)
+                  ! ig1 = pert%l2g(il1,idx)
+                  !
+                  ig1 = nimage*(il1-1)+idx+1
                   !
                   !$acc loop
-                  DO il3 = 1,npwq
-                     hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
-                     hg2(il3,il2) = dconst*bg(il3,il1)+hg2(il3,il2)
+                  DO il2 = l2_s,l2_e
+                     !
+                     dconst = vr_distr(ig1,il2)
+                     !
+                     !$acc loop
+                     DO il3 = 1,npwq
+                        hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
+                        hg2(il3,il2) = dconst*bg(il3,il1)+hg2(il3,il2)
+                     ENDDO
+                     !
                   ENDDO
-                  !
                ENDDO
-            ENDDO
-            !$acc end parallel
+               !$acc end parallel
+               !
+            ENDIF
             !
             ! Cycle ag, bg
             !
@@ -1059,23 +1062,27 @@ MODULE wstat_tools
             !
          ENDDO
          !
-         !$acc parallel vector_length(1024) present(ag,ew,hg,hg2)
-         !$acc loop
-         DO il2 = il2_start,il2_end
+         IF(l2_s > 0 .AND. l2_e >= l2_s) THEN
             !
-            ! ig2 = pert%l2g(il2)
-            !
-            ig2 = nimage*(il2-1)+my_image_id+1
-            !
-            dconst = -ew(ig2)
-            !
+            !$acc parallel vector_length(1024) present(ag,ew,hg,hg2)
             !$acc loop
-            DO il3 = 1,npwq
-               ag(il3,il2) = dconst*hg(il3,il2)+hg2(il3,il2)
+            DO il2 = l2_s,l2_e
+               !
+               ! ig2 = pert%l2g(il2)
+               !
+               ig2 = nimage*(il2-1)+my_image_id+1
+               !
+               dconst = -ew(ig2)
+               !
+               !$acc loop
+               DO il3 = 1,npwq
+                  ag(il3,il2) = dconst*hg(il3,il2)+hg2(il3,il2)
+               ENDDO
+               !
             ENDDO
+            !$acc end parallel
             !
-         ENDDO
-         !$acc end parallel
+         ENDIF
          !
          !$acc exit data delete(bg,hg,hg2,vr_distr) copyout(ag)
          DEALLOCATE(hg)
@@ -1113,7 +1120,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: il1_end,il2_start,il2_end
+      INTEGER :: l1_e,l2_s,l2_e
       INTEGER :: icycl,idx,nloc
       COMPLEX(DP) :: zconst
       COMPLEX(DP),ALLOCATABLE :: hg(:,:)
@@ -1129,19 +1136,22 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         il2_start = 1
+         l2_s = 0
          DO il2 = 1,pert%nloc
             ig2 = pert%l2g(il2)
-            IF(ig2 <= n) CYCLE
-            il2_start = il2
-            EXIT
+            IF(ig2 > n) THEN
+               l2_s = il2
+               EXIT
+            ENDIF
          ENDDO
          !
-         il2_end = 1
-         DO il2 = 1,pert%nloc
+         l2_e = 0
+         DO il2 = pert%nloc,1,-1
             ig2 = pert%l2g(il2)
-            IF(ig2 > n+nselect) EXIT
-            il2_end = il2
+            IF(ig2 <= n+nselect) THEN
+               l2_e = il2
+               EXIT
+            ENDIF
          ENDDO
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
@@ -1160,34 +1170,41 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            DO il1 = 1,nloc
+            l1_e = 0
+            DO il1 = nloc,1,-1
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 > n) EXIT
-               il1_end = il1
+               IF(ig1 <= n) THEN
+                  l1_e = il1
+                  EXIT
+               ENDIF
             ENDDO
             !
-            !$acc parallel vector_length(1024) present(vr_distr,hg,ag,hg2,bg)
-            !$acc loop seq
-            DO il1 = 1,il1_end
+            IF(l1_e > 0 .AND. l2_s > 0 .AND. l2_e >= l2_s) THEN
                !
-               ! ig1 = pert%l2g(il1,idx)
-               !
-               ig1 = nimage*(il1-1)+idx+1
-               !
-               !$acc loop
-               DO il2 = il2_start,il2_end
+               !$acc parallel vector_length(1024) present(vr_distr,hg,ag,hg2,bg)
+               !$acc loop seq
+               DO il1 = 1,l1_e
                   !
-                  zconst = vr_distr(ig1,il2)
+                  ! ig1 = pert%l2g(il1,idx)
+                  !
+                  ig1 = nimage*(il1-1)+idx+1
                   !
                   !$acc loop
-                  DO il3 = 1,npwq
-                     hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
-                     hg2(il3,il2) = zconst*bg(il3,il1)+hg2(il3,il2)
+                  DO il2 = l2_s,l2_e
+                     !
+                     zconst = vr_distr(ig1,il2)
+                     !
+                     !$acc loop
+                     DO il3 = 1,npwq
+                        hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
+                        hg2(il3,il2) = zconst*bg(il3,il1)+hg2(il3,il2)
+                     ENDDO
+                     !
                   ENDDO
-                  !
                ENDDO
-            ENDDO
-            !$acc end parallel
+               !$acc end parallel
+               !
+            ENDIF
             !
             ! Cycle ag, bg
             !
@@ -1198,23 +1215,27 @@ MODULE wstat_tools
             !
          ENDDO
          !
-         !$acc parallel vector_length(1024) present(ag,ew,hg,hg2)
-         !$acc loop
-         DO il2 = il2_start,il2_end
+         IF(l2_s > 0 .AND. l2_e >= l2_s) THEN
             !
-            ! ig2 = pert%l2g(il2)
-            !
-            ig2 = nimage*(il2-1)+my_image_id+1
-            !
-            zconst = CMPLX(-ew(ig2),KIND=DP)
-            !
+            !$acc parallel vector_length(1024) present(ag,ew,hg,hg2)
             !$acc loop
-            DO il3 = 1,npwq
-               ag(il3,il2) = zconst*hg(il3,il2)+hg2(il3,il2)
+            DO il2 = l2_s,l2_e
+               !
+               ! ig2 = pert%l2g(il2)
+               !
+               ig2 = nimage*(il2-1)+my_image_id+1
+               !
+               zconst = CMPLX(-ew(ig2),KIND=DP)
+               !
+               !$acc loop
+               DO il3 = 1,npwq
+                  ag(il3,il2) = zconst*hg(il3,il2)+hg2(il3,il2)
+               ENDDO
+               !
             ENDDO
+            !$acc end parallel
             !
-         ENDDO
-         !$acc end parallel
+         ENDIF
          !
          !$acc exit data delete(bg,hg,hg2,vr_distr) copyout(ag)
          DEALLOCATE(hg)
@@ -1251,7 +1272,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: il1_end,il2_start,il2_end
+      INTEGER :: l1_e,l2_s,l2_e
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nloc
       REAL(DP) :: dconst
@@ -1267,12 +1288,14 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         il2_start = 1
-         il2_end = 1
-         DO il2 = 1,pert%nloc
+         l2_s = 1
+         l2_e = 0
+         DO il2 = pert%nloc,1,-1
             ig2 = pert%l2g(il2)
-            IF(ig2 > nselect) EXIT
-            il2_end = il2
+            IF(ig2 <= nselect) THEN
+               l2_e = il2
+               EXIT
+            ENDIF
          ENDDO
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
@@ -1289,33 +1312,40 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            DO il1 = 1,nloc
+            l1_e = 0
+            DO il1 = nloc,1,-1
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 > n) EXIT
-               il1_end = il1
+               IF(ig1 <= n) THEN
+                  l1_e = il1
+                  EXIT
+               ENDIF
             ENDDO
             !
-            !$acc parallel vector_length(1024) present(vr_distr,hg,ag)
-            !$acc loop seq
-            DO il1 = 1,il1_end
+            IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
                !
-               ! ig1 = pert%l2g(il1,idx)
-               !
-               ig1 = nimage*(il1-1)+idx+1
-               !
-               !$acc loop
-               DO il2 = il2_start,il2_end
+               !$acc parallel vector_length(1024) present(vr_distr,hg,ag)
+               !$acc loop seq
+               DO il1 = 1,l1_e
                   !
-                  dconst = vr_distr(ig1,il2)
+                  ! ig1 = pert%l2g(il1,idx)
+                  !
+                  ig1 = nimage*(il1-1)+idx+1
                   !
                   !$acc loop
-                  DO il3 = 1,npwq
-                     hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
+                  DO il2 = l2_s,l2_e
+                     !
+                     dconst = vr_distr(ig1,il2)
+                     !
+                     !$acc loop
+                     DO il3 = 1,npwq
+                        hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
+                     ENDDO
+                     !
                   ENDDO
-                  !
                ENDDO
-            ENDDO
-            !$acc end parallel
+               !$acc end parallel
+               !
+            ENDIF
             !
             ! Cycle ag
             !
@@ -1325,30 +1355,41 @@ MODULE wstat_tools
             !
          ENDDO
          !
-         il2_start = 1
-         il2_end = 1
-         DO il2 = 1,pert%nloc
+         l2_s = 1
+         l2_e = 0
+         DO il2 = pert%nloc,1,-1
             ig2 = pert%l2g(il2)
-            IF(ig2 > nselect) EXIT
-            il2_end = il2
+            IF(ig2 <= nselect) THEN
+               l2_e = il2
+               EXIT
+            ENDIF
          ENDDO
          !
-         !$acc kernels present(ag,hg)
-         ag(:,il2_start:il2_end) = hg(:,il2_start:il2_end)
-         !$acc end kernels
+         IF(l2_e > 0) THEN
+            !
+            !$acc kernels present(ag,hg)
+            ag(:,l2_s:l2_e) = hg(:,l2_s:l2_e)
+            !$acc end kernels
+            !
+         ENDIF
          !
-         il2_start = 1
-         il2_end = pert_nloc
+         l2_s = 0
+         l2_e = pert_nloc
          DO il2 = 1,pert%nloc
             ig2 = pert%l2g(il2)
-            IF(ig2 <= nselect) CYCLE
-            il2_start = il2
-            EXIT
+            IF(ig2 > nselect) THEN
+               l2_s = il2
+               EXIT
+            ENDIF
          ENDDO
          !
-         !$acc kernels present(ag)
-         ag(:,il2_start:il2_end) = (0._DP,0._DP)
-         !$acc end kernels
+         IF(l2_s > 0) THEN
+            !
+            !$acc kernels present(ag)
+            ag(:,l2_s:l2_e) = (0._DP,0._DP)
+            !$acc end kernels
+            !
+         ENDIF
          !
          !$acc exit data delete(hg,vr_distr) copyout(ag)
          DEALLOCATE(hg)
@@ -1387,7 +1428,7 @@ MODULE wstat_tools
       ! Workspace
       !
       INTEGER :: il1,il2,il3,ig1,ig2
-      INTEGER :: il1_end,il2_start,il2_end
+      INTEGER :: l1_e,l2_s,l2_e
       INTEGER :: icycl,idx,nloc
       INTEGER :: pert_nloc
       COMPLEX(DP) :: zconst
@@ -1403,12 +1444,14 @@ MODULE wstat_tools
       !
       IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
          !
-         il2_start = 1
-         il2_end = 1
-         DO il2 = 1,pert%nloc
+         l2_s = 1
+         l2_e = 0
+         DO il2 = pert%nloc,1,-1
             ig2 = pert%l2g(il2)
-            IF(ig2 > nselect) EXIT
-            il2_end = il2
+            IF(ig2 <= nselect) THEN
+               l2_e = il2
+               EXIT
+            ENDIF
          ENDDO
          !
          ALLOCATE(hg(npwqx,pert%nlocx))
@@ -1425,33 +1468,40 @@ MODULE wstat_tools
             nloc = pert%nglob/nimage
             IF(idx < MOD(pert%nglob,nimage)) nloc = nloc+1
             !
-            DO il1 = 1,nloc
+            l1_e = 0
+            DO il1 = nloc,1,-1
                ig1 = pert%l2g(il1,idx)
-               IF(ig1 > n) EXIT
-               il1_end = il1
+               IF(ig1 <= n) THEN
+                  l1_e = il1
+                  EXIT
+               ENDIF
             ENDDO
             !
-            !$acc parallel vector_length(1024) present(vr_distr,hg,ag)
-            !$acc loop seq
-            DO il1 = 1,il1_end
+            IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
                !
-               ! ig1 = pert%l2g(il1,idx)
-               !
-               ig1 = nimage*(il1-1)+idx+1
-               !
-               !$acc loop
-               DO il2 = il2_start,il2_end
+               !$acc parallel vector_length(1024) present(vr_distr,hg,ag)
+               !$acc loop seq
+               DO il1 = 1,l1_e
                   !
-                  zconst = vr_distr(ig1,il2)
+                  ! ig1 = pert%l2g(il1,idx)
+                  !
+                  ig1 = nimage*(il1-1)+idx+1
                   !
                   !$acc loop
-                  DO il3 = 1,npwq
-                     hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
+                  DO il2 = l2_s,l2_e
+                     !
+                     zconst = vr_distr(ig1,il2)
+                     !
+                     !$acc loop
+                     DO il3 = 1,npwq
+                        hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
+                     ENDDO
+                     !
                   ENDDO
-                  !
                ENDDO
-            ENDDO
-            !$acc end parallel
+               !$acc end parallel
+               !
+            ENDIF
             !
             ! Cycle ag
             !
@@ -1461,30 +1511,41 @@ MODULE wstat_tools
             !
          ENDDO
          !
-         il2_start = 1
-         il2_end = 1
-         DO il2 = 1,pert%nloc
+         l2_s = 1
+         l2_e = 0
+         DO il2 = pert%nloc,1,-1
             ig2 = pert%l2g(il2)
-            IF(ig2 > nselect) EXIT
-            il2_end = il2
+            IF(ig2 <= nselect) THEN
+               l2_e = il2
+               EXIT
+            ENDIF
          ENDDO
          !
-         !$acc kernels present(ag,hg)
-         ag(:,il2_start:il2_end) = hg(:,il2_start:il2_end)
-         !$acc end kernels
+         IF(l2_e > 0) THEN
+            !
+            !$acc kernels present(ag,hg)
+            ag(:,l2_s:l2_e) = hg(:,l2_s:l2_e)
+            !$acc end kernels
+            !
+         ENDIF
          !
-         il2_start = 1
-         il2_end = pert_nloc
+         l2_s = 0
+         l2_e = pert_nloc
          DO il2 = 1,pert%nloc
             ig2 = pert%l2g(il2)
-            IF(ig2 <= nselect) CYCLE
-            il2_start = il2
-            EXIT
+            IF(ig2 > nselect) THEN
+               l2_s = il2
+               EXIT
+            ENDIF
          ENDDO
          !
-         !$acc kernels present(ag)
-         ag(:,il2_start:il2_end) = (0._DP,0._DP)
-         !$acc end kernels
+         IF(l2_s > 0) THEN
+            !
+            !$acc kernels present(ag)
+            ag(:,l2_s:l2_e) = (0._DP,0._DP)
+            !$acc end kernels
+            !
+         ENDIF
          !
          !$acc exit data delete(hg,vr_distr) copyout(ag)
          DEALLOCATE(hg)

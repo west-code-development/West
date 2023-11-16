@@ -60,7 +60,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE types_bz_grid,        ONLY : k_grid
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
@@ -114,8 +113,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   INTEGER,ALLOCATABLE :: l2g(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(l2g,sqvc)
+  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -125,6 +123,10 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
+  !
+  !$acc enter data copyin(pot3D)
+  !$acc enter data copyin(pot3D%sqvc)
+  !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
   IF(l_read_restart) THEN
@@ -180,10 +182,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
   !$acc enter data create(dvpsi)
-#if defined(__CUDA)
-  ALLOCATE(sqvc(npwqx))
-  CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
-#endif
   ALLOCATE(overlap(pert%nglob,nbnd))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
@@ -258,21 +256,14 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
-     !
-#if defined(__CUDA)
-     !
-     ! ... Sync GPU
-     !
-     CALL using_becp_auto(2)
-     CALL using_becp_d_auto(0)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-#endif
      !
      nbndval = nbnd_occ(iks)
      !
@@ -310,13 +301,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            ! Multiply by sqvc
            !
-           !$acc parallel loop present(pertg,sqvc)
+           !$acc parallel loop present(pertg,pot3D)
            DO ig = 1,npwq
-#if defined(__CUDA)
-              pertg(ig) = sqvc(ig)*pertg(ig)
-#else
               pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
            ENDDO
            !$acc end parallel
            !
@@ -410,13 +397,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                     !
                     ! Multiply by sqvc
                     !
-                    !$acc parallel loop present(pertg,sqvc)
+                    !$acc parallel loop present(pertg,pot3D)
                     DO ig = 1,npwq
-#if defined(__CUDA)
-                       pertg(ig) = sqvc(ig)*pertg(ig)
-#else
                        pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
                     ENDDO
                     !
                     ! Bring it to R-space
@@ -485,7 +468,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         l_write_restart = .FALSE.
         !
         IF( o_restart_time >= 0._DP ) THEN
-           IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+           IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
            IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
         ENDIF
         !
@@ -523,9 +506,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
-#if defined(__CUDA)
-  DEALLOCATE(sqvc)
-#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
@@ -547,6 +527,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ENDIF
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
+  !
+  !$acc exit data delete(pot3D%sqvc)
+  !$acc exit data delete(pot3D)
   !
   ! Write final restart file when using pool or band group
   !
@@ -591,7 +574,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE types_coulomb,        ONLY : pot3D
 #if defined(__CUDA)
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
@@ -648,8 +630,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bksks_type) :: bksks
   INTEGER,ALLOCATABLE :: l2g(:)
-  REAL(DP),ALLOCATABLE :: sqvc(:)
-  !$acc declare device_resident(l2g,sqvc)
+  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -725,9 +706,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
   !$acc enter data create(dvpsi)
-#if defined(__CUDA)
-  ALLOCATE(sqvc(npwqx))
-#endif
   ALLOCATE(overlap(pert%nglob,nbnd))
   !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
@@ -795,9 +773,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         !
         CALL pot3D%init('Wave',.TRUE.,'default',iq)
         !
-#if defined(__CUDA)
-        CALL memcpy_H2D(sqvc,pot3D%sqvc,npwqx)
-#endif
+        !$acc enter data copyin(pot3D)
+        !$acc enter data copyin(pot3D%sqvc)
         !
         ! The Hamiltonian is evaluated at k'
         !
@@ -839,19 +816,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
-        !
-#if defined(__CUDA)
-        !
-        ! ... Sync GPU
-        !
-        CALL using_becp_auto(2)
-        CALL using_becp_d_auto(0)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
 #endif
         !
         ! Read PDEP
@@ -900,13 +870,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               ! Multiply by sqvc
               !
-              !$acc parallel loop present(pertg,sqvc)
+              !$acc parallel loop present(pertg,pot3D)
               DO ig = 1,npwq
-#if defined(__CUDA)
-                 pertg(ig) = sqvc(ig)*pertg(ig)
-#else
                  pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
-#endif
               ENDDO
               !$acc end parallel
               !
@@ -1008,7 +974,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            l_write_restart = .FALSE.
            !
            IF( o_restart_time >= 0._DP ) THEN
-              IF( time_spent(2)-time_spent(1) > o_restart_time*60._DP ) l_write_restart = .TRUE.
+              IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
               IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
            ENDIF
            !
@@ -1034,6 +1000,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            CALL update_bar_type( barra, 'glanczos', 1 )
            !
         ENDDO ! BANDS
+        !
+        !$acc exit data delete(pot3D%sqvc)
+        !$acc exit data delete(pot3D)
         !
      ENDDO ! KPOINT-SPIN (INTEGRAL OVER K')
      !
@@ -1061,9 +1030,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
-#if defined(__CUDA)
-  DEALLOCATE(sqvc)
-#endif
   !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)

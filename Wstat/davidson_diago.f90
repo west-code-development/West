@@ -176,11 +176,10 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      dfpt_dim = nbase
      diago_dim = nbase
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, &
-         & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 1/2')")&
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 1/2')") &
          & 'starting', dfpt_dim, diago_dim
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ! Apply operator with DFPT
      !
@@ -211,11 +210,10 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      dfpt_dim = nbase
      diago_dim = nbase
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, &
-         & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 2/2')")&
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 2/2')") &
          & 'starting', dfpt_dim, diago_dim
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ! Apply operator with DFPT
      !
@@ -267,10 +265,10 @@ SUBROUTINE davidson_diago_gamma ( )
      !
      dfpt_dim = notcnv
      diago_dim = nbase+notcnv
-     WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-     WRITE(stdout, "(   5x,'#     Iteration = | ', i8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
-         &dav_iter, dfpt_dim, diago_dim
-     WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+     WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+     WRITE(stdout, "(  5x,'#     Iteration = | ',i8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |')") &
+         & dav_iter, dfpt_dim, diago_dim
+     WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
      !
      ALLOCATE( ishift( nvecx ), STAT=ierr )
      IF( ierr /= 0 ) CALL errore( 'chidiago',' cannot allocate ishift ', ABS(ierr) )
@@ -289,7 +287,6 @@ SUBROUTINE davidson_diago_gamma ( )
            ! ... roots come first. This allows to use quick matrix-matrix
            ! ... multiplications to set a new basis vector (see below)
            !
-           !IF ( np /= n ) vr(:,np) = vr(:,n)
            ishift(nbase+np) = n
            !
            ew(nbase+np) = ev(n)
@@ -388,7 +385,7 @@ SUBROUTINE davidson_diago_gamma ( )
            !
            ! ... last iteration, some roots not converged: return
            !
-           WRITE( stdout, '(5X,"WARNING: ",I5," eigenvalues not converged in chidiago")' ) notcnv
+           WRITE( stdout, '(5X,"WARNING : ",I5," eigenvalues not converged in chidiago")' ) notcnv
            !
            CALL stop_clock( 'chidiago:last' )
            !
@@ -641,11 +638,10 @@ SUBROUTINE davidson_diago_k ( )
         !
         dfpt_dim = nbase
         diago_dim = nbase
-        WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-        WRITE(stdout, &
-            & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 1/2')")&
+        WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+        WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 1/2')") &
             & 'starting', dfpt_dim, diago_dim
-        WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+        WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
         !
         ! Apply operator with DFPT
         !
@@ -677,11 +673,10 @@ SUBROUTINE davidson_diago_k ( )
         !
         dfpt_dim = nbase
         diago_dim = nbase
-        WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-        WRITE(stdout, &
-            & "(   5x,'#     Iteration = | ', a8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |  x 2/2')")&
+        WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+        WRITE(stdout, "(  5x,'#     Iteration = | ',a8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |  x 2/2')") &
             & 'starting', dfpt_dim, diago_dim
-        WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+        WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
         !
         ! Apply operator with DFPT
         !
@@ -734,10 +729,10 @@ SUBROUTINE davidson_diago_k ( )
         !
         dfpt_dim = notcnv
         diago_dim = nbase+notcnv
-        WRITE(stdout, "( /,5x,'                  *----------*              *----------*               *----------*') ")
-        WRITE(stdout, "(   5x,'#     Iteration = | ', i8,' |','   ','DFPT_dim = | ', i8,' |', '   ','Diago_dim = | ', i8,' |')") &
-         &dav_iter, dfpt_dim, diago_dim
-        WRITE(stdout, "(   5x,'                  *----------*              *----------*               *----------*') ")
+        WRITE(stdout, "(/,5x,'                  *----------*              *----------*               *----------*')")
+        WRITE(stdout, "(  5x,'#     Iteration = | ',i8,' |   ','DFPT_dim = | ',i8,' |   ','Diago_dim = | ',i8,' |')") &
+            & dav_iter, dfpt_dim, diago_dim
+        WRITE(stdout, "(  5x,'                  *----------*              *----------*               *----------*')")
         !
         ALLOCATE( ishift( nvecx ), STAT=ierr )
         IF( ierr /= 0 ) CALL errore( 'chidiago',' cannot allocate ishift ', ABS(ierr) )
@@ -856,7 +851,7 @@ SUBROUTINE davidson_diago_k ( )
               !
               ! ... last iteration, some roots not converged: return
               !
-              WRITE( stdout, '(5X,"WARNING: ",I5," eigenvalues not converged in chidiago")' ) notcnv
+              WRITE( stdout, '(5X,"WARNING : ",I5," eigenvalues not converged in chidiago")' ) notcnv
               !
               CALL stop_clock( 'chidiago:last' )
               !
@@ -938,7 +933,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! Workspace
   !
-  LOGICAL :: unfinished
+  LOGICAL :: done
   INTEGER :: ig,ip,ncol
   INTEGER :: k_global,k_local,j_local,k_id
   INTEGER :: m_local_start,m_local_end
@@ -946,14 +941,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   REAL(DP) :: tmp_r
   COMPLEX(DP) :: tmp_c
   COMPLEX(DP) :: za
-  REAL(DP),ALLOCATABLE :: braket(:)
   COMPLEX(DP),ALLOCATABLE :: zbraket(:)
   !$acc declare device_resident(zbraket)
   COMPLEX(DP),ALLOCATABLE :: vec(:)
-#if !defined(__CUDA)
-  REAL(DP),EXTERNAL :: DDOT
-  COMPLEX(DP),EXTERNAL :: ZDOTC
-#endif
   COMPLEX(DP),PARAMETER :: mone = (-1._DP,0._DP)
   !
 #if defined(__CUDA)
@@ -964,55 +954,53 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   !
   ! 1) Run some checks
   !
-  IF( m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob ) &
-  & CALL errore( 'mgs', 'do_mgs problem', 1 )
+  IF(m_global_start < 1 .OR. m_global_start > m_global_end .OR. m_global_end > pert%nglob) &
+  & CALL errore('mgs','do_mgs problem',1)
   !
   IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
      !
      ALLOCATE(vec(npwqx))
      ALLOCATE(zbraket(pert%nloc))
-#if !defined(__CUDA)
-     ALLOCATE(braket(pert%nloc))
-#endif
      !
      !$acc enter data create(vec) copyin(amat)
      !
      ! 2) Localize m_global_start
      !
      m_local_start = 1
-     DO ip = 1, pert%nloc
+     DO ip = 1,pert%nloc
         ig = pert%l2g(ip)
-        IF( ig < m_global_start ) CYCLE
-        m_local_start = ip
-        EXIT
+        IF(ig >= m_global_start) THEN
+           m_local_start = ip
+           EXIT
+        ENDIF
      ENDDO
      !
      ! 3) Localize m_global_end
      !
      m_local_end = pert%nloc
-     DO ip = pert%nloc, 1, -1
+     DO ip = pert%nloc,1,-1
         ig = pert%l2g(ip)
-        IF( ig > m_global_end ) CYCLE
-        m_local_end = ip
-        EXIT
+        IF(ig <= m_global_end) THEN
+           m_local_end = ip
+           EXIT
+        ENDIF
      ENDDO
      !
-     j_local=1
-     unfinished=.TRUE.
+     j_local = 1
+     done = .FALSE.
      !
-     DO k_global=1,m_global_end
+     DO k_global = 1,m_global_end
         !
         CALL pert%g2l(k_global,k_local,k_id)
         !
-        IF(my_image_id==k_id) THEN
+        IF(my_image_id == k_id) THEN
            !
            ! 4) Eventually, normalize the current vector
            !
-           IF( k_global >= m_global_start ) THEN
+           IF(k_global >= m_global_start) THEN
               !
               ! anorm = < k_l | k_l >
               !
-#if defined(__CUDA)
               anorm = 0._DP
               !$acc parallel loop reduction(+:anorm) present(amat) copy(anorm)
               DO ig = 1,npwq
@@ -1027,14 +1015,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
                     anorm = anorm-REAL(amat(1,k_local),KIND=DP)**2
                  ENDIF
               ENDIF
-#else
-              IF(gamma_only) THEN
-                 anorm = 2._DP * DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
-                 IF(gstart==2) anorm = anorm - REAL(amat(1,k_local),KIND=DP) * REAL(amat(1,k_local),KIND=DP)
-              ELSE
-                 anorm = DDOT(2*npwq,amat(1,k_local),1,amat(1,k_local),1)
-              ENDIF
-#endif
               !
               CALL mp_sum(anorm,intra_bgrp_comm)
               !
@@ -1056,9 +1036,9 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !
            !$acc update host(vec)
            !
-           j_local=MAX(k_local+1,m_local_start)
+           j_local = MAX(k_local+1,m_local_start)
            !
-           IF(j_local>m_local_end) unfinished=.FALSE.
+           IF(j_local > m_local_end) done = .TRUE.
            !
         ENDIF
         !
@@ -1068,13 +1048,12 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
         !
         ! Update when needed
         !
-        IF(unfinished) THEN
+        IF(.NOT. done) THEN
            !
            !$acc update device(vec)
            !
            ! In the range ip=j_local:pert%nloc    = >    | ip > = | ip > - | vec > * < vec | ip >
            !
-#if defined(__CUDA)
            IF(gamma_only) THEN
               !$acc parallel vector_length(1024) present(vec,amat,zbraket)
               !$acc loop
@@ -1109,23 +1088,8 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
            !$acc host_data use_device(zbraket)
            CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
            !$acc end host_data
-#else
-           IF(gamma_only) THEN
-              DO ip = j_local,m_local_end !pert%nloc
-                 braket(ip) = 2._DP * DDOT(2*npwq,vec,1,amat(1,ip),1)
-              ENDDO
-              IF(gstart==2) FORALL(ip=j_local:m_local_end) braket(ip) = braket(ip) - REAL(vec(1),KIND=DP)*REAL(amat(1,ip),KIND=DP)
-              CALL mp_sum(braket(j_local:m_local_end),intra_bgrp_comm)
-              FORALL(ip=j_local:m_local_end) zbraket(ip) = CMPLX( braket(ip), 0._DP, KIND=DP)
-           ELSE
-              DO ip = j_local,m_local_end !pert%nloc
-                 zbraket(ip) = ZDOTC(npwq,vec,1,amat(1,ip),1)
-              ENDDO
-              CALL mp_sum(zbraket(j_local:m_local_end),intra_bgrp_comm)
-           ENDIF
-#endif
            !
-           ncol=m_local_end-j_local+1
+           ncol = m_local_end-j_local+1
            !
            !$acc host_data use_device(vec,zbraket,amat)
            CALL ZGERU(npwqx,ncol,mone,vec,1,zbraket(j_local),1,amat(1,j_local),npwqx)
@@ -1139,9 +1103,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
      !
      DEALLOCATE(vec)
      DEALLOCATE(zbraket)
-#if !defined(__CUDA)
-     DEALLOCATE(braket)
-#endif
      !
   ENDIF
   !

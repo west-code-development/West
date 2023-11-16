@@ -28,9 +28,9 @@ CONTAINS
   SUBROUTINE west_environment_start( code )
     !
     USE io_global,             ONLY : stdout, meta_ionode
-    USE io_files,              ONLY : crash_file, nd_nmbr
+    USE io_files,              ONLY : tmp_dir, crash_file, nd_nmbr
     USE mp_images,             ONLY : me_image, my_image_id
-    USE westcom,               ONLY : savedir, logfile, outdir, west_prefix
+    USE westcom,               ONLY : savedir, logfile, west_prefix
     USE base64_module,         ONLY : base64_init
     USE json_string_utilities, ONLY : lowercase_string
     USE west_version,          ONLY : start_forpy
@@ -65,7 +65,7 @@ CONTAINS
     CALL parse_command_arguments()
     CALL fetch_input_yml(1,(/1/),.FALSE.)
     !
-    savedir = TRIM(outdir) // TRIM(west_prefix) // '.' // TRIM(lowercase_string(code)) // '.save/'
+    savedir = TRIM(tmp_dir) // TRIM(west_prefix) // '.' // TRIM(lowercase_string(code)) // '.save/'
     logfile = TRIM(savedir) // TRIM(lowercase_string(code)) // '.json'
     !
     ! Do not overwrite existing JSON file
@@ -75,7 +75,7 @@ CONTAINS
     INQUIRE(FILE=TRIM(logfile),EXIST=exst)
     !
     DO WHILE(exst)
-       logfile = TRIM(savedir)//TRIM(lowercase_string(code))//'_'//TRIM(int_to_char(n_json))//'.json'
+       logfile = TRIM(savedir) // TRIM(lowercase_string(code)) // '_' // TRIM(int_to_char(n_json)) // '.json'
        INQUIRE(FILE=TRIM(logfile),EXIST=exst)
        n_json = n_json+1
        IF(n_json > n_json_max) CALL errore(TRIM(code),'Too many JSON files',1)
@@ -119,8 +119,7 @@ CONTAINS
        debug = .TRUE.
 #endif
        IF (debug ) THEN
-          uname = 'out.' // trim(int_to_char( my_image_id )) // '_' // &
-               trim(int_to_char( me_image))
+          uname = 'out.' // TRIM(int_to_char( my_image_id )) // '_' // TRIM(int_to_char( me_image))
           OPEN( UNIT = stdout, FILE = TRIM(uname),STATUS='UNKNOWN')
        ELSE
 #if defined(_WIN32)
@@ -155,18 +154,18 @@ CONTAINS
   !
   SUBROUTINE west_environment_end( code )
     !
-    USE io_global,        ONLY : stdout, meta_ionode
-    USE json_module,      ONLY : json_file
-    USE mp_world,         ONLY : mpime,root,world_comm
-    USE mp,               ONLY : mp_barrier
-    USE westcom,          ONLY : logfile
-    USE west_version,     ONLY : end_forpy
+    USE io_global,             ONLY : stdout, meta_ionode
+    USE json_module,           ONLY : json_file
+    USE mp_world,              ONLY : mpime,root,world_comm
+    USE mp,                    ONLY : mp_barrier
+    USE westcom,               ONLY : logfile
+    USE west_version,          ONLY : end_forpy
 #if defined(__HDF5)
-    USE hdf5_qe,          ONLY : phdf5_end => finalize_hdf5
-    USE qeh5_base_module, ONLY : hdf5_end => finalize_hdf5
+    USE hdf5_qe,               ONLY : phdf5_end => finalize_hdf5
+    USE qeh5_base_module,      ONLY : hdf5_end => finalize_hdf5
 #endif
 #if defined(__CUDA)
-    USE west_gpu,         ONLY : west_gpu_end
+    USE west_gpu,              ONLY : west_gpu_end
 #endif
     !
     IMPLICIT NONE
@@ -235,13 +234,13 @@ CONTAINS
   !
   SUBROUTINE west_opening_message( code )
     !
-    USE json_module,     ONLY : json_file
-    USE io_global,       ONLY : stdout
-    USE global_version,  ONLY : version_number
-    USE west_version,    ONLY : west_version_number, west_git_revision
-    USE mp_world,        ONLY : mpime,root
-    USE westcom,         ONLY : logfile
-    USE base64_module,   ONLY : islittleendian
+    USE json_module,           ONLY : json_file
+    USE io_global,             ONLY : stdout
+    USE global_version,        ONLY : version_number
+    USE west_version,          ONLY : west_version_number, west_git_revision
+    USE mp_world,              ONLY : mpime,root
+    USE westcom,               ONLY : logfile
+    USE base64_module,         ONLY : islittleendian
     !
     IMPLICIT NONE
     !
@@ -268,7 +267,7 @@ CONTAINS
     WRITE( stdout, '(/5X,"This program is part of the open-source West suite",&
     &/5X,"for massively parallel calculations of excited states in materials; please cite", &
     &/9X,"""M. Govoni et al., J. Chem. Theory Comput. 11, 2680 (2015);",&
-    &/9X," URL https://west-code.org"", ", &
+    &/9X," URL https://west-code.org"",", &
     &/5X,"in publications or presentations arising from this work.")' )
     !
     WRITE( stdout, '(/5X,"Based on the Quantum ESPRESSO v. ",A)') TRIM(version_number)
@@ -310,12 +309,12 @@ CONTAINS
      !
      ! ... Report the mpi/openmp status
      !
-     USE json_module,      ONLY : json_file
-     USE io_global,        ONLY : stdout
-     USE mp_global,        ONLY : nimage,npool,nbgrp,nproc_bgrp
-     USE mp_world,         ONLY : nproc,mpime,root
-     USE io_push,          ONLY : io_push_title,io_push_bar
-     USE westcom,          ONLY : logfile
+     USE json_module,          ONLY : json_file
+     USE io_global,            ONLY : stdout
+     USE mp_global,            ONLY : nimage,npool,nbgrp,nproc_bgrp
+     USE mp_world,             ONLY : nproc,mpime,root
+     USE io_push,              ONLY : io_push_title,io_push_bar
+     USE westcom,              ONLY : logfile
      !
      IMPLICIT NONE
      !

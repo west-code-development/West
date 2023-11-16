@@ -79,6 +79,10 @@ default["westpp_control"]["westpp_rmax"] = 1.
 default["westpp_control"]["westpp_epsinfty"] = 1.
 default["westpp_control"]["westpp_box"] = [0., 0., 0., 0., 0., 0.]
 default["westpp_control"]["westpp_n_liouville_to_use"] = 1
+default["westpp_control"]["westpp_l_spin_flip"] = False
+default["westpp_control"]["westpp_l_compute_tdm"] = False
+default["westpp_control"]["westpp_wannier_tr_rel"] = 1e-6
+default["westpp_control"]["westpp_l_dipole_realspace"] = False
 # server_control
 default["server_control"] = {}
 default["server_control"]["document"] = "{}"
@@ -89,13 +93,13 @@ default["wbse_init_control"]["solver"] = "BSE"
 default["wbse_init_control"]["bse_method"] = "PDEP"
 default["wbse_init_control"]["n_pdep_eigen_to_use"] = 1 # dynamically set to the number of electrons
 default["wbse_init_control"]["localization"] = "N"
+default["wbse_init_control"]["wannier_tr_rel"] = 1e-6
 default["wbse_init_control"]["wfc_from_qbox"] = "qb_wfc"
 default["wbse_init_control"]["bisection_info"] = "bis_info"
 default["wbse_init_control"]["chi_kernel"] = "CHI"
 default["wbse_init_control"]["overlap_thr"] = 0.
 default["wbse_init_control"]["spin_channel"] = 0
 default["wbse_init_control"]["n_trunc_bands"] = 0
-default["wbse_init_control"]["o_restart_time"] = 0.
 # wbse_control
 default["wbse_control"] = {}
 default["wbse_control"]["wbse_calculation"] = "D"
@@ -119,10 +123,17 @@ default["wbse_control"]["l_spin_flip"] = False
 default["wbse_control"]["l_spin_flip_kernel"] = False
 default["wbse_control"]["l_spin_flip_alda0"] = False
 default["wbse_control"]["l_print_spin_flip_kernel"] = False
-default["wbse_control"]["spin_flip_cut1"] = 1e3
-default["wbse_control"]["l_reduce_io"] = True
+default["wbse_control"]["spin_flip_cut"] = 1e-3
+default["wbse_control"]["l_forces"] = False
+default["wbse_control"]["forces_state"] = 1
+default["wbse_control"]["forces_zeq_cg_tr"] = 1e-10
+default["wbse_control"]["forces_zeq_n_cg_maxiter"] = 500
+default["wbse_control"]["ddvxc_fd_coeff"] = 0.01
+default["wbse_control"]["forces_inexact_krylov"] = 0
+default["wbse_control"]["forces_inexact_krylov_tr"] = 1e-16
 default["wbse_control"]["l_minimize_exx_if_active"] = False
 default["wbse_control"]["n_exx_lowrank"] = 0 # dynamically set to the number of bands
+default["wbse_control"]["l_reduce_io"] = True
 
 ############################
 # DYNAMICAL DEFAULT VALUES #

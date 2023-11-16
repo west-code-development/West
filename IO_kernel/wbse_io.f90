@@ -21,10 +21,11 @@ MODULE wbse_io
   SUBROUTINE read_bse_pots_g(rhog,fixed_band_i,fixed_band_j,ispin)
     !
     USE kinds,          ONLY : DP
+    USE pwcom,          ONLY : npwx
+    USE mp_global,      ONLY : npool
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
     USE westcom,        ONLY : wbse_init_save_dir,l_bse,l_reduce_io,tau_is_read,tau_all,n_tau,&
                              & n_trunc_bands
-    USE pwcom,          ONLY : npwx
     !
     IMPLICIT NONE
     !
@@ -35,17 +36,22 @@ MODULE wbse_io
     !
     ! Workspace
     !
-    INTEGER :: band_i,band_j,iread
+    INTEGER :: lspin,band_i,band_j,iread
     CHARACTER :: my_spin
     CHARACTER(LEN=6) :: my_labeli,my_labelj
     CHARACTER(LEN=256) :: fname
+    !
+    ! Local spin index when using spin parallelization
+    !
+    lspin = ispin
+    IF(npool == 2) lspin = 1
     !
     band_i = MIN(fixed_band_i,fixed_band_j)
     band_j = MAX(fixed_band_i,fixed_band_j)
     !
     IF(l_reduce_io) THEN
        !
-       iread = tau_is_read(band_i,band_j,ispin)
+       iread = tau_is_read(band_i,band_j,lspin)
        IF(iread > 0) THEN
           rhog(:) = tau_all(:,iread)
           RETURN
@@ -67,7 +73,7 @@ MODULE wbse_io
     IF(l_reduce_io) THEN
        !
        n_tau = n_tau+1
-       tau_is_read(band_i,band_j,ispin) = n_tau
+       tau_is_read(band_i,band_j,lspin) = n_tau
        tau_all(:,n_tau) = rhog
        !
     ENDIF
@@ -80,7 +86,7 @@ MODULE wbse_io
     USE mp_world,       ONLY : world_comm
     USE io_global,      ONLY : stdout
     USE mp,             ONLY : mp_barrier
-    USE mp_world,       ONLY : mpime,root
+    USE mp_global,      ONLY : my_image_id,my_bgrp_id,me_bgrp
     USE westcom,        ONLY : wbse_init_save_dir
     USE west_io,        ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
     USE base64_module,  ONLY : islittleendian
@@ -106,9 +112,7 @@ MODULE wbse_io
     !
     WRITE(stdout,'(/,5X,"Writing overlap and rotation matrices to ",A)') TRIM(fname)
     !
-    ! Resume all components
-    !
-    IF(mpime == root) THEN
+    IF(my_image_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
        !
        header = 0
        header(HD_ID_VERSION) = HD_VERSION
@@ -137,10 +141,10 @@ MODULE wbse_io
   SUBROUTINE read_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
     !
     USE kinds,          ONLY : DP,i8b
-    USE io_global,      ONLY : stdout,ionode
+    USE io_global,      ONLY : stdout
     USE mp_world,       ONLY : world_comm
     USE mp,             ONLY : mp_bcast,mp_barrier
-    USE mp_global,      ONLY : intra_image_comm
+    USE mp_global,      ONLY : intra_pool_comm,my_bgrp_id,me_bgrp
     USE westcom,        ONLY : wbse_init_save_dir
     USE west_io,        ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
     USE base64_module,  ONLY : islittleendian
@@ -173,7 +177,7 @@ MODULE wbse_io
     !
     WRITE(stdout,'(/,5X,"Reading overlap and rotation matrices from ",A)') TRIM(fname)
     !
-    IF(ionode) THEN
+    IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
        !
        OPEN(NEWUNIT=iun,FILE=TRIM(fname),ACCESS='STREAM',FORM='UNFORMATTED',STATUS='OLD',IOSTAT=ierr)
        IF(ierr /= 0) THEN
@@ -193,12 +197,12 @@ MODULE wbse_io
        !
     ENDIF
     !
-    CALL mp_bcast(oumat_dim_tmp,0,intra_image_comm)
+    CALL mp_bcast(oumat_dim_tmp,0,intra_pool_comm)
     !
     ALLOCATE(umatrix_tmp(oumat_dim_tmp,oumat_dim_tmp))
     ALLOCATE(omatrix_tmp(oumat_dim_tmp,oumat_dim_tmp))
     !
-    IF(ionode) THEN
+    IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
        !
        offset = offset+SIZEOF(header)
        READ(iun,POS=offset) umatrix_tmp(1:oumat_dim_tmp,1:oumat_dim_tmp)
@@ -208,8 +212,8 @@ MODULE wbse_io
        !
     ENDIF
     !
-    CALL mp_bcast(umatrix_tmp,0,intra_image_comm)
-    CALL mp_bcast(omatrix_tmp,0,intra_image_comm)
+    CALL mp_bcast(umatrix_tmp,0,intra_pool_comm)
+    CALL mp_bcast(omatrix_tmp,0,intra_pool_comm)
     !
     umatrix(:,:) = 0._DP
     omatrix(:,:) = 0._DP

@@ -848,7 +848,7 @@ MODULE wfreq_restart
       CALL stop_clock('sw_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -941,7 +941,7 @@ MODULE wfreq_restart
       CALL stop_clock('sw_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -1041,7 +1041,7 @@ MODULE wfreq_restart
       CALL stop_clock('sw_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -1160,7 +1160,7 @@ MODULE wfreq_restart
       CALL stop_clock('sg_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -1209,7 +1209,7 @@ MODULE wfreq_restart
       CALL stop_clock('sg_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !

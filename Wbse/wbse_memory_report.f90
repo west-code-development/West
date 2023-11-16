@@ -20,8 +20,8 @@ SUBROUTINE wbse_memory_report()
   USE control_flags,       ONLY : gamma_only
   USE mp_global,           ONLY : nbgrp
   USE mp_world,            ONLY : mpime,root
-  USE westcom,             ONLY : l_bse,l_hybrid_tddft,l_lanczos,nbnd_occ,n_trunc_bands,&
-                                & n_pdep_basis,npwqx,logfile
+  USE westcom,             ONLY : l_bse,l_hybrid_tddft,l_forces,l_local_repr,l_lanczos,nbndval0x,&
+                                & n_trunc_bands,n_pdep_basis,npwqx,logfile
   USE distribution_center, ONLY : pert,kpt_pool
   USE noncollin_module,    ONLY : npol
   USE json_module,         ONLY : json_file
@@ -31,7 +31,7 @@ SUBROUTINE wbse_memory_report()
   TYPE(json_file) :: json
   INTEGER :: iunit
   INTEGER, PARAMETER :: Mb=1024*1024, complex_size=16, real_size=8
-  INTEGER :: nbndloc
+  INTEGER :: nbndloc, nbndall
   REAL(DP) :: mem_tot, mem_partial
   !
   CALL pw_memory_report()
@@ -44,7 +44,7 @@ SUBROUTINE wbse_memory_report()
      !
   ENDIF
   !
-  nbndloc = (nbnd_occ(1)-n_trunc_bands-1)/nbgrp+1
+  nbndloc = nbndval0x/nbgrp
   !
   IF( .NOT. l_lanczos ) THEN
      mem_tot = 0._DP
@@ -89,7 +89,7 @@ SUBROUTINE wbse_memory_report()
      WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
      WRITE(stdout,'(5x,"[MEM] Total estimate          ",f10.2," Mb", 5x)') mem_tot
      WRITE(stdout,'(5x,"[MEM] ----------------------------------------------------------")')
-     WRITE(stdout,'(5x,"[MEM] ")')
+     WRITE(stdout,'(5x,"[MEM]")')
   ENDIF
   !
   mem_tot = 0._DP
@@ -131,17 +131,34 @@ SUBROUTINE wbse_memory_report()
      mem_tot = mem_tot + mem_partial
   ENDIF
   !
-  mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc*2
+  mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndloc
   WRITE(stdout,'(5x,"[MEM] Liouville workspace     ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-     mem_partial, npwx, nbndloc*2
+     mem_partial, npwx, nbndloc
   IF( mpime == root ) CALL json%add( 'memory.liouville', mem_partial )
   mem_tot = mem_tot + mem_partial
   !
   IF( l_bse .OR. l_hybrid_tddft ) THEN
-     mem_partial = (1.0_DP/Mb)*complex_size*npwx*(nbnd_occ(1)-n_trunc_bands)*2
+     nbndall = nbndval0x-n_trunc_bands
+     IF( l_local_repr ) THEN
+        nbndall = nbndall*2
+     ENDIF
+     nbndall = nbndall+nbndloc
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*nbndall
      WRITE(stdout,'(5x,"[MEM] kernel                  ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
-        mem_partial, npwx, (nbnd_occ(1)-n_trunc_bands)*2
+        mem_partial, npwx, nbndall
      IF( mpime == root ) CALL json%add( 'memory.kernel', mem_partial )
+     mem_tot = mem_tot + mem_partial
+  ENDIF
+  !
+  IF( l_forces ) THEN
+     nbndall = nbndloc*4
+     IF( l_bse .OR. l_hybrid_tddft ) THEN
+        nbndall = nbndall+nbndval0x-n_trunc_bands
+     ENDIF
+     mem_partial = (1.0_DP/Mb)*complex_size*npwx*kpt_pool%nloc*nbndall
+     WRITE(stdout,'(5x,"[MEM] forces                  ",f10.2," Mb", 5x,"(",i7,",",i5,")")') &
+        mem_partial, npwx, kpt_pool%nloc*nbndall
+     IF( mpime == root ) CALL json%add( 'memory.forces', mem_partial )
      mem_tot = mem_tot + mem_partial
   ENDIF
   !

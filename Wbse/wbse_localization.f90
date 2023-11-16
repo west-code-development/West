@@ -69,7 +69,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   !
   CALL start_clock('local')
   !
-  SELECT CASE(TRIM(localization))
+  SELECT CASE(localization)
   CASE('W','w')
      l_wann = .TRUE.
   CASE('B','b')
@@ -112,7 +112,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
            ENDDO
         ENDDO
         !
-        CALL io_push_title('Wannier localization')
+        CALL io_push_title('Wannier (A matrices)')
         !
         CALL start_bar_type(barra,'wann',barra_load)
         !
@@ -217,15 +217,15 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !$acc enter data copyin(u_matrix)
         !
         !$acc host_data use_device(u_matrix,evc_loc)
-        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,u_matrix,&
-        & nbnd_do,(0._DP,0._DP),evc_loc,npwx)
+        CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(1,nbnd_s),npwx,u_matrix,nbnd_do,&
+        & (0._DP,0._DP),evc_loc,npwx)
         !$acc end host_data
         !
         !$acc exit data delete(u_matrix)
         !
         ! compute overlap
         !
-        CALL io_push_title('Wannier overlap')
+        CALL io_push_title('Wannier (overlap)')
         !
         CALL start_bar_type(barra,'wann',barra_load)
         !
@@ -379,8 +379,8 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
      !$acc enter data copyin(u_matrix)
      !
      !$acc host_data use_device(u_matrix,evc_loc)
-     CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(:,nbnd_s:nbnd_e),npwx,u_matrix,&
-     & nbnd_do,(0._DP,0._DP),evc_loc,npwx)
+     CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(1,nbnd_s),npwx,u_matrix,nbnd_do,&
+     & (0._DP,0._DP),evc_loc,npwx)
      !$acc end host_data
      !
      !$acc exit data delete(u_matrix)

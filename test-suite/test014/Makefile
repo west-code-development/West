@@ -1,3 +1,4 @@
+# Makefile
 
 include ../maketest.inc
 
@@ -31,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "NV- diamond test spin-polarized QDET"
+	@echo "NV- diamond gamma_only spin-polarized QDET"
 	@echo

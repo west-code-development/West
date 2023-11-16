@@ -55,13 +55,10 @@ SUBROUTINE compute_d0psi_rs()
   USE mp,                   ONLY : mp_bcast
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,single_invfft_gamma,double_fwfft_gamma,&
                                  & double_invfft_gamma
-  USE fft_at_k,             ONLY : single_fwfft_k,single_invfft_k
   USE buffers,              ONLY : get_buffer
-  USE control_flags,        ONLY : gamma_only
   USE gvect,                ONLY : gstart
-  USE noncollin_module,     ONLY : npol
   USE io_push,              ONLY : io_push_title
-  USE pwcom,                ONLY : isk,igk_k,ngk,lsda,npw,npwx
+  USE pwcom,                ONLY : isk,ngk,lsda,npw,npwx
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,d0psi
   USE distribution_center,  ONLY : kpt_pool,band_group
 #if defined(__CUDA)
@@ -160,74 +157,16 @@ SUBROUTINE compute_d0psi_rs()
 #endif
      ENDIF
      !
-     IF(gamma_only) THEN
+     DO lbnd = 1, nbnd_do, 2
         !
-        DO lbnd = 1, nbnd_do, 2
-           !
-           ibnd = band_group%l2g(lbnd)+n_trunc_bands
-           jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
-           !
-           IF(lbnd < nbnd_do) THEN
-              !
-              ! double bands @ gamma
-              !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
-              !
-              !$acc kernels present(aux_r)
-              aux_r(:) = psic
-              !$acc end kernels
-              !
-              DO ip = 1, n_ipol
-                 !
-                 !$acc parallel loop present(aux_r,r)
-                 DO ir = 1, dffts_nnr
-                    psic(ir) = aux_r(ir)*r(ir,ip)*alat
-                 ENDDO
-                 !$acc end parallel
-                 !
-                 !$acc host_data use_device(d0psi)
-                 CALL double_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,lbnd,iks,ip),d0psi(:,lbnd+1,iks,ip),'Wave')
-                 !$acc end host_data
-                 !
-              ENDDO
-              !
-           ELSE
-              !
-              ! single band @ gamma
-              !
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
-              !
-              !$acc kernels present(aux_r)
-              aux_r(:) = psic
-              !$acc end kernels
-              !
-              DO ip = 1, n_ipol
-                 !
-                 !$acc parallel loop present(aux_r,r)
-                 DO ir = 1, dffts_nnr
-                    psic(ir) = CMPLX(REAL(aux_r(ir),KIND=DP)*r(ir,ip)*alat,KIND=DP)
-                 ENDDO
-                 !$acc end parallel
-                 !
-                 !$acc host_data use_device(d0psi)
-                 CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,lbnd,iks,ip),'Wave')
-                 !$acc end host_data
-                 !
-              ENDDO
-              !
-           ENDIF
-           !
-        ENDDO
+        ibnd = band_group%l2g(lbnd)+n_trunc_bands
+        jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
         !
-     ELSE
-        !
-        ! only single bands
-        !
-        DO lbnd = 1, nbnd_do
+        IF(lbnd < nbnd_do) THEN
            !
-           ibnd = band_group%l2g(lbnd)+n_trunc_bands
+           ! double bands @ gamma
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
+           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
            !
            !$acc kernels present(aux_r)
            aux_r(:) = psic
@@ -242,44 +181,38 @@ SUBROUTINE compute_d0psi_rs()
               !$acc end parallel
               !
               !$acc host_data use_device(d0psi)
-              CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(:,lbnd,iks,ip),'Wave',igk_k(:,current_k))
+              CALL double_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,lbnd,iks,ip),d0psi(:,lbnd+1,iks,ip),'Wave')
               !$acc end host_data
               !
            ENDDO
            !
-        ENDDO
-        !
-        IF(npol == 2) THEN
+        ELSE
            !
-           DO lbnd = 1, nbnd_do
+           ! single band @ gamma
+           !
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+           !
+           !$acc kernels present(aux_r)
+           aux_r(:) = psic
+           !$acc end kernels
+           !
+           DO ip = 1, n_ipol
               !
-              ibnd = band_group%l2g(lbnd)+n_trunc_bands
-              !
-              CALL single_invfft_k(dffts,npw,npwx,evc_work(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,current_k))
-              !
-              !$acc kernels present(aux_r)
-              aux_r(:) = psic
-              !$acc end kernels
-              !
-              DO ip = 1, n_ipol
-                 !
-                 !$acc parallel loop present(aux_r,r)
-                 DO ir = 1, dffts_nnr
-                    psic(ir) = aux_r(ir)*r(ir,ip)*alat
-                 ENDDO
-                 !$acc end parallel
-                 !
-                 !$acc host_data use_device(d0psi)
-                 CALL single_fwfft_k(dffts,npw,npwx,psic,d0psi(npwx+1:npwx*2,lbnd,iks,ip),'Wave',igk_k(:,current_k))
-                 !$acc end host_data
-                 !
+              !$acc parallel loop present(aux_r,r)
+              DO ir = 1, dffts_nnr
+                 psic(ir) = CMPLX(REAL(aux_r(ir),KIND=DP)*r(ir,ip)*alat,KIND=DP)
               ENDDO
+              !$acc end parallel
+              !
+              !$acc host_data use_device(d0psi)
+              CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,lbnd,iks,ip),'Wave')
+              !$acc end host_data
               !
            ENDDO
            !
         ENDIF
         !
-     ENDIF
+     ENDDO
      !
 #if defined(__CUDA)
      CALL reallocate_ps_gpu(nbndval,nbnd_do)
@@ -293,7 +226,7 @@ SUBROUTINE compute_d0psi_rs()
      !
   ENDDO
   !
-  IF(gstart == 2 .AND. gamma_only) THEN
+  IF(gstart == 2) THEN
      kpt_pool_nloc = kpt_pool%nloc
      band_group_nloc = band_group%nloc
      !
@@ -386,7 +319,6 @@ SUBROUTINE compute_d0psi_dfpt()
   USE mp,                   ONLY : mp_bcast
   USE buffers,              ONLY : get_buffer
   USE uspp_init,            ONLY : init_us_2
-  USE control_flags,        ONLY : gamma_only
   USE gvect,                ONLY : gstart
   USE noncollin_module,     ONLY : npol
   USE io_push,              ONLY : io_push_title
@@ -395,11 +327,10 @@ SUBROUTINE compute_d0psi_dfpt()
                                  & l_kinetic_only,d0psi,l_skip_nl_part_of_hcomr
   USE distribution_center,  ONLY : kpt_pool,band_group
 #if defined(__CUDA)
-  USE uspp,                 ONLY : vkb,nkb,deeq,qq_at
+  USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
-  USE wvfct_gpum,           ONLY : using_et,using_et_d,et=>et_d
-  USE becmod_subs_gpum,     ONLY : using_becp_auto,using_becp_d_auto
+  USE wvfct_gpum,           ONLY : et=>et_d
   USE west_gpu,             ONLY : allocate_macropol_gpu,deallocate_macropol_gpu,reallocate_ps_gpu
 #else
   USE uspp,                 ONLY : vkb,nkb
@@ -463,16 +394,6 @@ SUBROUTINE compute_d0psi_dfpt()
      ENDIF
      !
 #if defined(__CUDA)
-     !
-     ! ... Sync GPU
-     !
-     CALL using_becp_auto(2)
-     CALL using_becp_d_auto(0)
-     CALL using_et(2)
-     CALL using_et_d(0)
-     !
-     !$acc update device(deeq,qq_at)
-     !
      CALL allocate_macropol_gpu(1)
      CALL reallocate_ps_gpu(nbndval,3)
 #endif
@@ -554,7 +475,7 @@ SUBROUTINE compute_d0psi_dfpt()
      !
   ENDDO
   !
-  IF(gstart == 2 .AND. gamma_only) THEN
+  IF(gstart == 2) THEN
      kpt_pool_nloc = kpt_pool%nloc
      band_group_nloc = band_group%nloc
      !

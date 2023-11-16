@@ -231,7 +231,7 @@ wstat_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank = 0.
 
 .. data:: n_exx_lowrank
 
@@ -603,6 +603,8 @@ westpp_control
        - "X" : Output the exciton state.
        - "P" : Output the density response to exciton state.
        - "B" : Output the unitary transformation matrix of Boys/Wannier localization.
+       - "C" : Output the decomposition of BSE/TDDFT excited state, and the transition dipole moments.
+       - "M" : Output the spin multiplicity of the BSE/TDDFT excited state (<S^2>, nspin=2).
 
 .. data:: westpp_range
 
@@ -727,6 +729,61 @@ westpp_control
    * - **Description**
      - Box [x_0, x_1, y_0, y_1, z_0, z_1] (in a.u.) within which the localization factor is computed (the "L" runlevel).
 
+.. data:: westpp_l_spin_flip
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then a spin-flip calculation is performed. Used only when westpp_calculation = "C" or "M" and nspin = 2.
+
+.. data:: westpp_wannier_tr_rel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-6
+   * - **Description**
+     - Relative convergence threshold for Wannier localization. Used only when westpp_calculation = "B".
+
+.. data:: westpp_l_compute_tdm
+
+.. list-table::
+      :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - If (True), then the transition dipole moment is computed. Used only when westpp_calculation = "C".
+
+.. data:: westpp_l_dipole_realspace
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - False
+   * - **Description**
+     - Controls how the dipole is computed. Used only when westpp_calculation = "C".
+
+       - If (False), then the dipole is computed in the reciprocal space by computing [H,r]. Choice valid for isolated and condensed systems.
+       - If (True), then the dipole is computed in the real space. Choice valid for isolated systems only.
+
 |
 
 
@@ -816,8 +873,21 @@ wbse_init_control
      - Available options are:
 
        - "N" : Kohn-Sham orbitals are not localized.
-       - "B" : Bisected orbitals are used. Valid only when bse_method is "FF_QBOX".
+       - "B" : Bisected orbitals are used. Valid only when bse_method = "FF_QBOX".
        - "W" : Wannier orbitals are used.
+
+.. data:: wannier_tr_rel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-6
+   * - **Description**
+     - Relative convergence threshold for Wannier localization. Used only when localization = "W".
 
 .. data:: wfc_from_qbox
 
@@ -830,7 +900,7 @@ wbse_init_control
    * - **Default**
      - "qb_wfc"
    * - **Description**
-     - Name of the file that contains Qbox wavefunctions. Used only when bse_method is "FF_QBOX" and localization is "B".
+     - Name of the file that contains Qbox wavefunctions. Used only when bse_method = "FF_QBOX" and localization = "B".
 
 .. data:: bisection_info
 
@@ -843,7 +913,7 @@ wbse_init_control
    * - **Default**
      - "bis_info"
    * - **Description**
-     - Name of the file that contains info about bisection. Used only when bse_method is "FF_QBOX" and localization is "B".
+     - Name of the file that contains info about bisection. Used only when bse_method = "FF_QBOX" and localization = "B".
 
 .. data:: chi_kernel
 
@@ -876,7 +946,7 @@ wbse_init_control
    * - **Default**
      - 0.0
    * - **Description**
-     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization is "B" or "W".
+     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization = "B" or "W".
 
 .. data:: n_trunc_bands
 
@@ -890,23 +960,6 @@ wbse_init_control
      - 0
    * - **Description**
      - If n_trunc_bands > 0, then the n_trunc_bands lowest occupied bands are not considered when summing over occupied bands.
-
-.. data:: o_restart_time
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - float
-   * - **Default**
-     - 0.0
-   * - **Description**
-     - Available options are:
-
-       - If ( o_restart_time == 0 ) A checkpoint is written at every iteration of the loop that computes screened exchange integrals.
-       - If ( o_restart_time >  0 ) A checkpoint is written every o_restart_time minutes.
-       - If ( o_restart_time <  0 ) A checkpoint is NEVER written. Restart will not be possible.
 
 |
 
@@ -973,7 +1026,7 @@ wbse_control
    * - **Default**
      - 1
    * - **Description**
-     - Number of Liouville eigenvectors and eigenvalues. Used only when wbse_calculation is "D" or "d".
+     - Number of Liouville eigenvectors and eigenvalues. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_liouville_times
 
@@ -986,7 +1039,7 @@ wbse_control
    * - **Default**
      - 4
    * - **Description**
-     - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times. Used only when wbse_calculation is "D" or "d".
+     - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_liouville_maxiter
 
@@ -999,7 +1052,7 @@ wbse_control
    * - **Default**
      - 100
    * - **Description**
-     - Maximum number of iterations of the Davidson method. Used only when wbse_calculation is "D" or "d".
+     - Maximum number of iterations of the Davidson method. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_liouville_read_from_file
 
@@ -1012,7 +1065,7 @@ wbse_control
    * - **Default**
      - 0
    * - **Description**
-     - Number of Liouville eigenvectors that can be read from file. Used only when wbse_calculation is "D" or "d".
+     - Number of Liouville eigenvectors that can be read from file. Used only when wbse_calculation = "D" or "d".
 
 .. data:: trev_liouville
 
@@ -1025,7 +1078,7 @@ wbse_control
    * - **Default**
      - 0.001
    * - **Description**
-     - Absolute convergence threshold for Liouville eigenvalues. Used only when wbse_calculation is "D" or "d".
+     - Absolute convergence threshold for Liouville eigenvalues. Used only when wbse_calculation = "D" or "d".
 
 .. data:: trev_liouville_rel
 
@@ -1038,7 +1091,7 @@ wbse_control
    * - **Default**
      - 0.1
    * - **Description**
-     - Relative convergence threshold for Liouville eigenvalues. Used only when wbse_calculation is "D" or "d".
+     - Relative convergence threshold for Liouville eigenvalues. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_lanczos
 
@@ -1051,7 +1104,7 @@ wbse_control
    * - **Default**
      - 1000
    * - **Description**
-     - Number of Lanczos iterations to be performed. Used only when wbse_calculation is "L" or "l".
+     - Number of Lanczos iterations to be performed. Used only when wbse_calculation = "L" or "l".
 
 .. data:: n_steps_write_restart
 
@@ -1098,7 +1151,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - Controls how the dipole is computed. Used only when wbse_calculation is "L" or "l".
+     - Controls how the dipole is computed. Used only when wbse_calculation = "L" or "l".
 
        - If (False), then the dipole is computed in the reciprocal space by computing [H,r]. Choice valid for isolated and condensed systems.
        - If (True), then the dipole is computed in the real space. Choice valid for isolated systems only.
@@ -1127,10 +1180,10 @@ wbse_control
    * - **Default**
      - "S"
    * - **Description**
-     - Available options are:
+     - Used only when nspin = 1. If nspin = 2, use instead l_spin_flip to choose spin-conserving or spin-flip excitations. Available options are:
 
        - "S" : Singlet.
-       - "T" : Triplet.
+       - "T" : Triplet. Valid only when solver = "BSE".
 
 .. data:: l_preconditioning
 
@@ -1143,7 +1196,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then preconditioning is used. Used only when wbse_calculation is "D" or "d". Should be set to True in most cases.
+     - If (True), then preconditioning is used. Used only when wbse_calculation = "D" or "d". Should be set to True in most cases.
 
 .. data:: l_pre_shift
 
@@ -1156,7 +1209,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the preconditioner is shifted by the corresponding Kohn-Sham orbital energy. Used only when wbse_calculation is "D" or "d" and l_preconditioning is True. Should be set to True for isolated systems and False for perodic systems.
+     - If (True), then the preconditioner is shifted by the corresponding Kohn-Sham orbital energy. Used only when wbse_calculation = "D" or "d" and l_preconditioning is True. Should be set to True for isolated systems and False for perodic systems.
 
 .. data:: l_spin_flip
 
@@ -1169,7 +1222,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then a spin-flip calculation is performed. Used only when wbse_calculation is "D" or "d" and nspin is 2.
+     - If (True), then a spin-flip calculation is performed. Used only when wbse_calculation = "D" or "d" and nspin = 2.
 
 .. data:: l_spin_flip_kernel
 
@@ -1210,7 +1263,7 @@ wbse_control
    * - **Description**
      - If (True), then the spin-flip kernel is written to a cube file. Used only in spin-flip TDDFT calculations and when l_spin_flip_kernel is True.
 
-.. data:: spin_flip_cut1
+.. data:: spin_flip_cut
 
 .. list-table::
    :widths: 10 90
@@ -1219,11 +1272,11 @@ wbse_control
    * - **Type**
      - float
    * - **Default**
-     - 1e3
+     - 1e-3
    * - **Description**
-     - Spin-flip cutoff to prevent divergence by setting values greater than spin_flip_cut1 to zero on a grid. Used only in spin-flip TDDFT calculations using GGA type exchange-correlation functionals and when l_spin_flip_kernel is True and l_spin_flip_alda0 is False.
+     - Spin-flip cutoff to prevent divergence by setting values to zero on a grid point if the density on this point is smaller than spin_flip_cut. Used only in spin-flip TDDFT calculations.
 
-.. data:: l_reduce_io
+.. data:: l_forces
 
 .. list-table::
    :widths: 10 90
@@ -1232,9 +1285,94 @@ wbse_control
    * - **Type**
      - bool
    * - **Default**
-     - True
+     - False
    * - **Description**
-     - Speeds up the calculation by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.
+     - If (True), then analytical forces are computed for the forces_state excited state. Used only when wbse_calculation = “D” or “d”.
+
+.. data:: forces_state
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1
+   * - **Description**
+     - Excited state for which analytical forces are computed. Used only when l_forces is True.
+
+.. data:: forces_zeq_cg_tr
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-10
+   * - **Description**
+     - Convergence threshold in the CG method that solves the Z vector equation. Used only when l_forces is True.
+
+.. data:: forces_zeq_n_cg_maxiter
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 500
+   * - **Description**
+     - Maximum number of iterations in the CG solver of the Z vector equation. Used only when l_forces is True.
+
+.. data:: ddvxc_fd_coeff
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-2
+   * - **Description**
+     - Finite difference step size to compute the second derivative of the local part of the exchange-correlation kernel. Used only when l_forces is True.
+
+.. data:: forces_inexact_krylov
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 0
+   * - **Description**
+     - Apply the inexact krylov subspace approximation in the CG solver of the Z vector equation. Used only when l_forces is True.
+
+       - 0 : Do not apply the approximation.
+       - 1 : Skip the exact-exchange term once the CG solver converges to forces_inexact_krylov_tr.
+       - 2 : Skip the K_1d term once the CG solver converges to forces_inexact_krylov_tr.
+       - 3 : Skip the K_2d term once the CG solver converges to forces_inexact_krylov_tr.
+       - 4 : Skip the K_1d and K_2d terms once the CG solver converges to forces_inexact_krylov_tr.
+       - 5 : Skip the exact-exchange, K_1d, and K_2d terms once the CG solver converges to forces_inexact_krylov_tr.
+
+.. data:: forces_inexact_krylov_tr
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-16
+   * - **Description**
+     - Apply the inexact krylov subspace approximation if the norm of the residual vector is smaller than this threshold. Used only when l_forces is True.
 
 .. data:: l_minimize_exx_if_active
 
@@ -1247,7 +1385,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank = 0.
 
 .. data:: n_exx_lowrank
 
@@ -1261,3 +1399,16 @@ wbse_control
      - dynamically set to match the number of bands, read from the ground state
    * - **Description**
      - If ( n_exx_lowrank > 0 ), then the exact-exchange is computed with a low-rank approximation of rank n_exx_lowrank.
+
+.. data:: l_reduce_io
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - bool
+   * - **Default**
+     - True
+   * - **Description**
+     - Speeds up the calculation by reducing I/O, at the price of increasing memory consumption. Turn off to save memory.

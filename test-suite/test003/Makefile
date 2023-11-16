@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "CH4 molecule gamma_only spin-polarized"
+	@echo "CH4 molecule gamma_only spin-polarized GW"
 	@echo

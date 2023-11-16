@@ -26,10 +26,9 @@ MODULE dfpt_module
       USE io_global,             ONLY : stdout
       USE fft_base,              ONLY : dffts
       USE gvect,                 ONLY : gstart
-      USE mp,                    ONLY : mp_sum,mp_barrier,mp_bcast
+      USE mp,                    ONLY : mp_sum,mp_bcast
       USE mp_global,             ONLY : inter_image_comm,my_image_id,inter_pool_comm,nbgrp,my_bgrp_id,&
                                       & inter_bgrp_comm,intra_bgrp_comm
-      USE mp_world,              ONLY : world_comm
       USE buffers,               ONLY : get_buffer
       USE noncollin_module,      ONLY : noncolin,npol
       USE pwcom,                 ONLY : current_spin,isk,npw,npwx,lsda,current_k,ngk,igk_k,nbnd
@@ -49,8 +48,7 @@ MODULE dfpt_module
 #if defined(__CUDA)
       USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
       USE wavefunctions,         ONLY : evc_host=>evc
-      USE wvfct_gpum,            ONLY : using_et,using_et_d,et=>et_d
-      USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
+      USE wvfct_gpum,            ONLY : et=>et_d
       USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,allocate_linsolve_gpu,&
                                       & deallocate_linsolve_gpu,reallocate_ps_gpu
       USE cublas
@@ -102,8 +100,6 @@ MODULE dfpt_module
       CHARACTER(LEN=512) :: title
       !
       COMPLEX(DP), PARAMETER :: zero = (0._DP,0._DP)
-      !
-      CALL mp_barrier( world_comm )
       !
       IF (l_frac_occ .AND. .NOT. gamma_only) THEN
          CALL errore('dfpt', 'fraction occupation only implemented for gamma-only case', 1)
@@ -190,23 +186,14 @@ MODULE dfpt_module
 #if defined(__CUDA)
             IF ( my_image_id == 0 ) CALL get_buffer( evc_host, lrwfc, iuwfc, iks )
             CALL mp_bcast( evc_host, 0, inter_image_comm )
+            !
+            CALL using_evc(2)
+            CALL using_evc_d(0)
 #else
             IF ( my_image_id == 0 ) CALL get_buffer( evc_work, lrwfc, iuwfc, iks )
             CALL mp_bcast( evc_work, 0, inter_image_comm )
 #endif
          ENDIF
-         !
-#if defined(__CUDA)
-         !
-         ! ... Sync GPU
-         !
-         CALL using_becp_auto(2)
-         CALL using_becp_d_auto(0)
-         CALL using_evc(2)
-         CALL using_evc_d(0)
-         CALL using_et(2)
-         CALL using_et_d(0)
-#endif
          !
          IF (gamma_only) THEN
             !
@@ -587,8 +574,6 @@ MODULE dfpt_module
       CALL deallocate_gpu()
       CALL deallocate_linsolve_gpu()
 #endif
-      !
-      CALL mp_barrier( world_comm )
       !
       CALL stop_bar_type( barra, 'dfpt' )
       !

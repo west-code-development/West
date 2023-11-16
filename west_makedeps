@@ -108,7 +108,7 @@ for dir in $dirs; do
     # list of all cuda-related modules
     cudadeps="cublas cublas_v2 cudafor curand cufft flops_tracker cusolverdn \
               zhegvdx_gpu dsyevd_gpu dsygvdx_gpu eigsolve_vars \
-              nvtx_inters"
+              nvtx_inters nccl"
 
     skipdeps="west_version $sysdeps $libdeps $cudadeps"
 

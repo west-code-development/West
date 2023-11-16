@@ -34,7 +34,7 @@ MODULE lanczos_restart
       USE lsda_mod,            ONLY : nspin
       USE plep_io,             ONLY : plep_merge_and_write_G
       USE distribution_center, ONLY : kpt_pool,band_group
-      USE west_mp,             ONLY : mp_root_sum_c16_3d
+      USE west_mp,             ONLY : west_mp_root_sum
       USE json_module,         ONLY : json_file
       USE west_io,             ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN
       USE base64_module,       ONLY : islittleendian
@@ -123,8 +123,8 @@ MODULE lanczos_restart
             ENDDO
          ENDDO
          !
-         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_pool_comm)
-         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
+         CALL west_mp_root_sum(evc1_tmp,0,inter_pool_comm)
+         CALL west_mp_root_sum(evc1_tmp,0,inter_bgrp_comm)
          !
          IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             fname = TRIM(wbse_restart_dir)//'/evc1.dat'
@@ -141,8 +141,8 @@ MODULE lanczos_restart
             ENDDO
          ENDDO
          !
-         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_pool_comm)
-         CALL mp_root_sum_c16_3d(evc1_tmp,0,inter_bgrp_comm)
+         CALL west_mp_root_sum(evc1_tmp,0,inter_pool_comm)
+         CALL west_mp_root_sum(evc1_tmp,0,inter_bgrp_comm)
          !
          IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
             fname = TRIM(wbse_restart_dir)//'/evc1_old.dat'
@@ -161,7 +161,7 @@ MODULE lanczos_restart
       time_spent(2) = get_clock('lan_restart')
       !
       WRITE(stdout,'(/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART written in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location   : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
@@ -312,7 +312,7 @@ MODULE lanczos_restart
       time_spent(2) = get_clock('lan_restart')
       !
       WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a20)') human_readable_time(time_spent(2)-time_spent(1))
+      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
       WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wbse_restart_dir)
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !

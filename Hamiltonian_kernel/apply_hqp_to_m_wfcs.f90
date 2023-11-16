@@ -74,7 +74,9 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      !
      !$acc host_data use_device(f,ps_r)
      CALL glbrak_gamma(evc,f,ps_r,npw,npwx,nbnd,m,nbnd,npol)
+     !$acc end host_data
      !
+     !$acc host_data use_device(ps_r)
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !$acc end host_data
      !
@@ -99,7 +101,9 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      !
      !$acc host_data use_device(f,ps_c)
      CALL glbrak_k(evc,f,ps_c,npw,npwx,nbnd,m,nbnd,npol)
+     !$acc end host_data
      !
+     !$acc host_data use_device(ps_c)
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !$acc end host_data
      !

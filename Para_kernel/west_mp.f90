@@ -14,31 +14,50 @@
 MODULE west_mp
   !-----------------------------------------------------------------------
   !
-  USE kinds,                 ONLY : DP,i8b,sgl
+  USE kinds,                 ONLY : DP,i8b
   USE parallel_include
   !
   IMPLICIT NONE
   !
   PRIVATE
   !
-  PUBLIC :: mp_alltoallv
-  PUBLIC :: mp_circular_shift_left_begin
-  PUBLIC :: mp_circular_shift_left_c16_4d
-  PUBLIC :: mp_root_sum_c16_3d
+  PUBLIC :: west_mp_alltoallv
+  PUBLIC :: west_mp_circ_shift_start
+  PUBLIC :: west_mp_circ_shift
+  PUBLIC :: west_mp_root_sum
+  PUBLIC :: west_mp_get
+  PUBLIC :: west_mp_iallgatherv_start
+  PUBLIC :: west_mp_wait
   !
-  INTERFACE mp_alltoallv
-    MODULE PROCEDURE mp_alltoallv_i4_1d, mp_alltoallv_i8_1d, mp_alltoallv_r8_1d, &
-                     mp_alltoallv_r8_2d, mp_alltoallv_c16_1d, mp_alltoallv_c16_2d
+  INTERFACE west_mp_alltoallv
+    MODULE PROCEDURE alltoallv_i4_1d, alltoallv_i8_1d, alltoallv_r8_1d, &
+                     alltoallv_r8_2d, alltoallv_c16_1d, alltoallv_c16_2d
   END INTERFACE
   !
-  INTERFACE mp_circular_shift_left_begin
-    MODULE PROCEDURE mp_circular_shift_left_begin_c8_2d, mp_circular_shift_left_begin_c16_2d
+  INTERFACE west_mp_circ_shift_start
+    MODULE PROCEDURE circ_shift_start_c16_2d
+  END INTERFACE
+  !
+  INTERFACE west_mp_circ_shift
+    MODULE PROCEDURE circ_shift_c16_4d
+  END INTERFACE
+  !
+  INTERFACE west_mp_root_sum
+    MODULE PROCEDURE root_sum_c16_3d
+  END INTERFACE
+  !
+  INTERFACE west_mp_get
+    MODULE PROCEDURE get_c16_3d
+  END INTERFACE
+  !
+  INTERFACE west_mp_iallgatherv_start
+    MODULE PROCEDURE iallgatherv_gpu_start_c16_2d
   END INTERFACE
   !
   CONTAINS
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_alltoallv_i4_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
+    SUBROUTINE alltoallv_i4_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -63,7 +82,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_alltoallv_i8_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
+    SUBROUTINE alltoallv_i8_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -88,7 +107,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_alltoallv_r8_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
+    SUBROUTINE alltoallv_r8_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -113,7 +132,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_alltoallv_r8_2d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
+    SUBROUTINE alltoallv_r8_2d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -138,7 +157,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_alltoallv_c16_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
+    SUBROUTINE alltoallv_c16_1d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -163,7 +182,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_alltoallv_c16_2d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
+    SUBROUTINE alltoallv_c16_2d(send_buf,send_count,send_displ,recv_buf,recv_count,recv_displ,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -188,40 +207,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_circular_shift_left_begin_c8_2d(send_buf,recv_buf,itag,comm,requests)
-    !-----------------------------------------------------------------------
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      COMPLEX(sgl), INTENT(IN) :: send_buf(:,:)
-      COMPLEX(sgl), INTENT(OUT) :: recv_buf(:,:)
-      INTEGER, INTENT(IN) :: itag
-      INTEGER, INTENT(IN) :: comm
-      INTEGER, INTENT(OUT) :: requests(2)
-      !
-      ! Workspace
-      !
-      INTEGER :: ierr
-      INTEGER :: nproc
-      INTEGER :: mpime
-      INTEGER :: sour
-      INTEGER :: dest
-      !
-      CALL MPI_COMM_SIZE(comm,nproc,ierr)
-      CALL MPI_COMM_RANK(comm,mpime,ierr)
-      !
-      sour = MOD(mpime+1,nproc)
-      dest = MOD(mpime-1+nproc,nproc)
-      !
-      CALL MPI_IRECV(recv_buf,SIZE(recv_buf),MPI_COMPLEX,sour,itag,comm,requests(1),ierr)
-      CALL MPI_ISEND(send_buf,SIZE(send_buf),MPI_COMPLEX,dest,itag,comm,requests(2),ierr)
-      !
-    END SUBROUTINE
-    !
-    !-----------------------------------------------------------------------
-    SUBROUTINE mp_circular_shift_left_begin_c16_2d(send_buf,recv_buf,itag,comm,requests)
+    SUBROUTINE circ_shift_start_c16_2d(send_buf,recv_buf,itag,comm,requests)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -254,7 +240,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_circular_shift_left_c16_4d(buf,itag,comm)
+    SUBROUTINE circ_shift_c16_4d(buf,itag,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -285,7 +271,7 @@ MODULE west_mp
     END SUBROUTINE
     !
     !-----------------------------------------------------------------------
-    SUBROUTINE mp_root_sum_c16_3d(buf,root,comm)
+    SUBROUTINE root_sum_c16_3d(buf,root,comm)
     !-----------------------------------------------------------------------
       !
       IMPLICIT NONE
@@ -308,6 +294,91 @@ MODULE west_mp
       ELSE
          CALL MPI_REDUCE(buf,MPI_IN_PLACE,SIZE(buf),MPI_DOUBLE_COMPLEX,MPI_SUM,root,comm,ierr)
       ENDIF
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE get_c16_3d(recv_buf,send_buf,mpime,dest,sour,itag,comm)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP), INTENT(OUT) :: recv_buf(:,:,:)
+      COMPLEX(DP), INTENT(IN) :: send_buf(:,:,:)
+      INTEGER, INTENT(IN) :: mpime
+      INTEGER, INTENT(IN) :: dest
+      INTEGER, INTENT(IN) :: sour
+      INTEGER, INTENT(IN) :: itag
+      INTEGER, INTENT(IN) :: comm
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      INTEGER :: istat(MPI_STATUS_SIZE)
+      !
+      IF(sour == dest) THEN
+         recv_buf(:,:,:) = send_buf
+      ELSE
+         IF(mpime == sour) THEN
+            CALL MPI_SEND(send_buf,SIZE(send_buf),MPI_DOUBLE_COMPLEX,dest,itag,comm,ierr)
+         ELSEIF(mpime == dest) THEN
+            CALL MPI_RECV(recv_buf,SIZE(recv_buf),MPI_DOUBLE_COMPLEX,sour,itag,comm,istat,ierr)
+         ENDIF
+      ENDIF
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE iallgatherv_gpu_start_c16_2d(send_buf,send_count,recv_buf,recv_count,recv_displ,comm,req)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      COMPLEX(DP), INTENT(IN) :: send_buf(:,:)
+      INTEGER, INTENT(IN) :: send_count
+      COMPLEX(DP), INTENT(OUT) :: recv_buf(:,:)
+      INTEGER, INTENT(IN) :: recv_count(:)
+      INTEGER, INTENT(IN) :: recv_displ(:)
+      INTEGER, INTENT(IN) :: comm
+      INTEGER, INTENT(OUT) :: req
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      !
+#if defined(__GPU_MPI)
+      !$acc host_data use_device(send_buf,recv_buf)
+#else
+      !$acc update host(send_buf)
+#endif
+      CALL MPI_IALLGATHERV(send_buf,send_count,MPI_DOUBLE_COMPLEX,recv_buf,recv_count,recv_displ,&
+      & MPI_DOUBLE_COMPLEX,comm,req,ierr)
+#if defined(__GPU_MPI)
+      !$acc end host_data
+#endif
+      !
+    END SUBROUTINE
+    !
+    !-----------------------------------------------------------------------
+    SUBROUTINE west_mp_wait(req)
+    !-----------------------------------------------------------------------
+      !
+      IMPLICIT NONE
+      !
+      ! I/O
+      !
+      INTEGER, INTENT(IN) :: req
+      !
+      ! Workspace
+      !
+      INTEGER :: ierr
+      INTEGER :: istat(MPI_STATUS_SIZE)
+      !
+      CALL MPI_WAIT(req,istat,ierr)
       !
     END SUBROUTINE
     !

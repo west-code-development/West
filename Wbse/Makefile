@@ -21,16 +21,20 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 
 WBSE_OBJS = \
 bse_kernel.o \
+build_rhs_zvector_eq.o \
 calc_tau.o \
 check_ovl_wfc.o \
+hybrid_kernel.o \
 lanczos_restart.o \
+solve_zvector_eq_cg.o \
 td_liouville_oper.o \
+wbse_bgrp.o \
 wbse_calc_dens.o \
+wbse_calc_forces.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
 wbse_dv.o \
 wbse_init_readin.o \
-wbse_init_restart.o \
 wbse_init_setup.o \
 wbse_lanczos_diago.o \
 wbse_localization.o\
@@ -60,7 +64,7 @@ WESTLIBS = \
 
 TLDEPS = bindir mods pwlibs pw
 
-all : title tldeps wbse.x wbse_init.x
+all : title tldeps wbse.x wbse_init.x libwbse.a
 
 wbse.x : wbse.o $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
 	$(LD) $(LDFLAGS) -o $@ $^ $(QELIBS) $(PYT_LDFLAGS)
@@ -72,6 +76,10 @@ wbse_init.x : wbse_init.o $(WBSE_OBJS) $(WESTLIBS) $(PWOBJS) $(QEMODS)
 
 tldeps :
 	test -n "$(TLDEPS)" && ( cd ../.. ; $(MAKE) $(MFLAGS) $(TLDEPS) || exit 1) || :
+
+libwbse.a : $(WBSE_OBJS)
+	$(AR) $(ARFLAGS) $@ $?
+	$(RANLIB) $@
 
 clean :
 	- /bin/rm -f *.x *.o *.a *~ *_tmp.f90 *.d *.mod *.i *.L

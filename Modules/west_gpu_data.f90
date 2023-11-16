@@ -92,16 +92,20 @@ MODULE west_gpu_data
    !
    ! BSE
    !
+   REAL(DP), ALLOCATABLE :: factors(:)
    REAL(DP), ALLOCATABLE :: raux1(:)
    REAL(DP), ALLOCATABLE :: raux2(:)
-   COMPLEX(DP), PINNED, ALLOCATABLE :: caux1(:,:)
-   COMPLEX(DP), PINNED, ALLOCATABLE :: caux2(:,:)
+   COMPLEX(DP), ALLOCATABLE :: caux1(:,:)
+   COMPLEX(DP), ALLOCATABLE :: caux2(:,:)
+   COMPLEX(DP), ALLOCATABLE :: caux3(:,:)
+   COMPLEX(DP), ALLOCATABLE :: caux4(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
    COMPLEX(DP), ALLOCATABLE :: hevc1(:,:)
    COMPLEX(DP), ALLOCATABLE :: psic2(:)
-   COMPLEX(DP), PINNED, ALLOCATABLE :: dvaux(:,:)
+   COMPLEX(DP), ALLOCATABLE :: dvaux(:,:)
+   COMPLEX(DP), ALLOCATABLE :: gdrho(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: dvhart(:)
-   !$acc declare device_resident(raux1,raux2,hevc1,psic2,dvhart)
+   !$acc declare device_resident(factors,raux1,raux2,caux3,caux4,hevc1,psic2,dvaux,gdrho,dvhart)
    COMPLEX(DP), PINNED, ALLOCATABLE :: gaux(:)
    !
    ! Workspace
@@ -126,10 +130,6 @@ MODULE west_gpu_data
    !
    USE control_flags,         ONLY : use_gpu
    USE io_global,             ONLY : stdout
-#if defined(__SP_FFT)
-   USE control_flags,         ONLY : use_sp_fft
-   USE command_line_options,  ONLY : single_precision_fft_
-#endif
    !
    IMPLICIT NONE
    !
@@ -141,10 +141,6 @@ MODULE west_gpu_data
    !
    use_gpu = check_gpu_support
    IF(.NOT. use_gpu) CALL errore('gpu_start','use_gpu .FALSE.',1)
-   !
-#if defined(__SP_FFT)
-   use_sp_fft = (use_gpu .AND. single_precision_fft_)
-#endif
    !
    istat = cusolverDnCreate(cusolv_h)
    IF(istat /= 0) CALL errore('gpu_start','coSOLVER init failed',istat)
@@ -176,13 +172,26 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE fft_base,              ONLY : dffts
-   USE pwcom,                 ONLY : wg,ngk
+   USE pwcom,                 ONLY : wg,ngk,nks
    USE westcom,               ONLY : igq_q
+   USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d
+   USE wvfct_gpum,            ONLY : using_et,using_et_d
+   USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
    !
    IMPLICIT NONE
    !
    dfft_nl_d => dffts%nl_d
    dfft_nlm_d => dffts%nlm_d
+   !
+   CALL using_et(2)
+   CALL using_et_d(0)
+   CALL using_becp_auto(2)
+   CALL using_becp_d_auto(0)
+   !
+   IF(nks == 1) THEN
+      CALL using_evc(2)
+      CALL using_evc_d(0)
+   ENDIF
    !
    !$acc enter data copyin(wg,ngk,igq_q)
    !
@@ -665,31 +674,40 @@ MODULE west_gpu_data
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE allocate_bse_gpu(nbndloc)
+   SUBROUTINE allocate_bse_gpu(nbndlocx)
    !-----------------------------------------------------------------------
    !
    USE control_flags,         ONLY : gamma_only
    USE lsda_mod,              ONLY : nspin
    USE wvfct,                 ONLY : npwx
-   USE noncollin_module,      ONLY : npol
+   USE noncollin_module,      ONLY : npol,nspin_gga
    USE fft_base,              ONLY : dffts
-   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_bse,l_hybrid_tddft,et_qp,u_matrix
+   USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_bse,l_hybrid_tddft,l_local_repr,&
+                                   & et_qp,u_matrix
    !
    IMPLICIT NONE
    !
    ! I/O
    !
-   INTEGER, INTENT(IN) :: nbndloc
+   INTEGER, INTENT(IN) :: nbndlocx
    !
+   ALLOCATE(factors(nbndlocx))
    IF(l_bse .OR. l_hybrid_tddft) THEN
       ALLOCATE(raux1(dffts%nnr))
       ALLOCATE(raux2(dffts%nnr))
       ALLOCATE(caux1(npwx,nbndval0x-n_trunc_bands))
-      ALLOCATE(caux2(npwx,nbndval0x-n_trunc_bands))
+      ALLOCATE(caux2(npwx,nbndlocx))
+      IF(l_local_repr) THEN
+         ALLOCATE(caux3(npwx,nbndval0x-n_trunc_bands))
+      ENDIF
       ALLOCATE(gaux(npwx))
       !$acc enter data create(caux1,caux2,gaux)
    ENDIF
-   ALLOCATE(hevc1(npwx*npol,nbndloc))
+   IF(.NOT. l_bse) THEN
+      ALLOCATE(caux4(3,dffts%nnr,nspin_gga))
+      ALLOCATE(gdrho(3,dffts%nnr,nspin_gga))
+   ENDIF
+   ALLOCATE(hevc1(npwx*npol,nbndlocx))
    ALLOCATE(dvrs(dffts%nnr,nspin))
    !$acc enter data create(dvrs)
    IF(gamma_only) THEN
@@ -701,10 +719,7 @@ MODULE west_gpu_data
    IF(.NOT. gamma_only) THEN
       ALLOCATE(psic2(dffts%nnr))
    ENDIF
-   IF(.NOT. l_bse) THEN
-      ALLOCATE(dvaux(dffts%nnr,nspin))
-      !$acc enter data create(dvaux)
-   ENDIF
+   ALLOCATE(dvaux(dffts%nnr,nspin))
    ALLOCATE(dvhart(dffts%nnr))
    !
    !$acc enter data copyin(et_qp,u_matrix)
@@ -719,6 +734,9 @@ MODULE west_gpu_data
    !
    IMPLICIT NONE
    !
+   IF(ALLOCATED(factors)) THEN
+      DEALLOCATE(factors)
+   ENDIF
    IF(ALLOCATED(raux1)) THEN
       DEALLOCATE(raux1)
    ENDIF
@@ -733,9 +751,18 @@ MODULE west_gpu_data
       !$acc exit data delete(caux2)
       DEALLOCATE(caux2)
    ENDIF
+   IF(ALLOCATED(caux3)) THEN
+      DEALLOCATE(caux3)
+   ENDIF
+   IF(ALLOCATED(caux4)) THEN
+      DEALLOCATE(caux4)
+   ENDIF
    IF(ALLOCATED(gaux)) THEN
       !$acc exit data delete(gaux)
       DEALLOCATE(gaux)
+   ENDIF
+   IF(ALLOCATED(gdrho)) THEN
+      DEALLOCATE(gdrho)
    ENDIF
    IF(ALLOCATED(hevc1)) THEN
       DEALLOCATE(hevc1)
@@ -756,7 +783,6 @@ MODULE west_gpu_data
       DEALLOCATE(psic2)
    ENDIF
    IF(ALLOCATED(dvaux)) THEN
-      !$acc exit data delete(dvaux)
       DEALLOCATE(dvaux)
    ENDIF
    IF(ALLOCATED(dvhart)) THEN
@@ -772,5 +798,35 @@ MODULE west_gpu_data
    !$acc exit data delete(et_qp,u_matrix)
    !
    END SUBROUTINE
+   !
+   !-----------------------------------------------------------------------
+   SUBROUTINE allocate_forces_gpu()
+   !-----------------------------------------------------------------------
+   !
+   USE fft_base,              ONLY : dffts
+   USE uspp,                  ONLY : dvan_d,dvan
+   !
+   IMPLICIT NONE
+   !
+   ALLOCATE(tmp_r(dffts%nnr))
+   !$acc enter data create(tmp_r)
+   !
+   dvan_d(:,:,:) = dvan
+   !
+   END SUBROUTINE
+   !
+   !-----------------------------------------------------------------------
+   SUBROUTINE deallocate_forces_gpu()
+   !-----------------------------------------------------------------------
+   !
+   IMPLICIT NONE
+   !
+   IF(ALLOCATED(tmp_r)) THEN
+      !$acc exit data delete(tmp_r)
+      DEALLOCATE(tmp_r)
+   ENDIF
+   !
+   END SUBROUTINE
 #endif
+   !
 END MODULE

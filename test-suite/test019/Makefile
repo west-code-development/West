@@ -9,16 +9,16 @@ all: prepare_inputs run
 prepare_inputs:
 	bash prepare_inputs.sh
 
-run: pw wbse_init wbse
+run: pw wstat wfreq
 
 pw:
 	${PARA_PREFIX_QE} ${BINDIR}/pw.x -i pw.in > pw.out 2> pw.err
 
-wbse_init: pw
-	${PARA_PREFIX} ${BINDIR}/wbse_init.x -nimage ${NIMAGE} -nband ${NBAND} -i wbse_init.in > wbse_init.out 2> wbse_init.err
+wstat: pw
+	${PARA_PREFIX} ${BINDIR}/wstat.x -nimage ${NIMAGE} -nband ${NBAND} -i wstat.in > wstat.out 2> wstat.err
 
-wbse: wbse_init
-	${PARA_PREFIX} ${BINDIR}/wbse.x -nimage ${NIMAGE} -nband ${NBAND} -i wbse.in > wbse.out 2> wbse.err
+wfreq: wstat
+	${PARA_PREFIX} ${BINDIR}/wfreq.x -nimage ${NIMAGE} -nband ${NBAND} -i wfreq.in > wfreq.out 2> wfreq.err
 
 clean:
 	- /bin/rm -rf *out *err *in *xml *upf *tab *restart *save *wfc* CRASH > /dev/null 2>&1
@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule test hybrid TDDFT Davidson"
+	@echo "SiH4 molecule gamma_only GW hybrid no ACE"
 	@echo

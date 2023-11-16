@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule gamma_only test qp_bands"
+	@echo "SiH4 molecule gamma_only GW qp_bands"
 	@echo

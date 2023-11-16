@@ -69,17 +69,17 @@ SUBROUTINE exx_go()
         ecutfock = ecutwfc*4
      ENDIF
      !
-     WRITE(stdout,'(7X,"** WARNING : EXX-use_ace          = ",L1)') use_ace
-     WRITE(stdout,'(7X,"** WARNING : EXX-alpha            = ",F14.6)') exxalfa
-     WRITE(stdout,'(7X,"** WARNING : EXX-erfc_scrlen      = ",F14.6)') erfc_scrlen
-     WRITE(stdout,'(7X,"** WARNING : EXX-gau_scrlen       = ",F14.6)') gau_scrlen
-     WRITE(stdout,'(7X,"** WARNING : EXX-ecutfock         = ",F14.6)') ecutfock
-     WRITE(stdout,'(7X,"** WARNING : EXX-exxdiv_treatment = ",A14)') exxdiv_treatment
+     WRITE(stdout,'(7X,"** WARNING : EXX use_ace          = ",L1)') use_ace
+     WRITE(stdout,'(7X,"** WARNING : EXX alpha            = ",F14.6)') exxalfa
+     WRITE(stdout,'(7X,"** WARNING : EXX erfc_scrlen      = ",F14.6)') erfc_scrlen
+     WRITE(stdout,'(7X,"** WARNING : EXX gau_scrlen       = ",F14.6)') gau_scrlen
+     WRITE(stdout,'(7X,"** WARNING : EXX ecutfock         = ",F14.6)') ecutfock
+     WRITE(stdout,'(7X,"** WARNING : EXX exxdiv_treatment = ",A)') TRIM(exxdiv_treatment)
      !
      wfc_dir = tmp_dir
      nwordwfc = nbnd*npwx*npol
      io_level = 1
-     CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
+     IF(n_exx_lowrank < 1) CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
      !
      CALL start_exx()
      CALL weights()
@@ -102,7 +102,7 @@ SUBROUTINE exx_go()
      exxdiv = exx_divergence()
      WRITE(stdout,'(7X,"** WARNING : EXX-exxdiv           = ",F14.6)') exxdiv
      !
-     CALL close_buffer(iunwfc,'KEEP')
+     IF(n_exx_lowrank < 1) CALL close_buffer(iunwfc,'KEEP')
      !
   ENDIF
   !

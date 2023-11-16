@@ -17,7 +17,8 @@ SUBROUTINE do_wann()
   USE kinds,                ONLY : DP
   USE constants,            ONLY : tpi
   USE cell_base,            ONLY : at,alat
-  USE westcom,              ONLY : iuwfc,lrwfc,westpp_range,logfile
+  USE westcom,              ONLY : iuwfc,lrwfc,westpp_range,westpp_wannier_tr_rel,wannier_tr_rel,&
+                                 & logfile
   USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE mp_global,            ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
@@ -70,6 +71,7 @@ SUBROUTINE do_wann()
      CALL json%load(filename=TRIM(logfile))
   ENDIF
   !
+  wannier_tr_rel = westpp_wannier_tr_rel
   nstate = westpp_range(2)-westpp_range(1)+1
   !
 #if defined(__CUDA)
@@ -114,16 +116,14 @@ SUBROUTINE do_wann()
 #if defined(__CUDA)
         IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_host,0,inter_image_comm)
+        !
+        CALL using_evc(2)
+        CALL using_evc_d(0)
 #else
         IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
      ENDIF
-     !
-#if defined(__CUDA)
-     CALL using_evc(2)
-     CALL using_evc_d(0)
-#endif
      !
      ! compute unitary transformation matrix
      !

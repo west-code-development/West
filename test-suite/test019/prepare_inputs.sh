@@ -38,29 +38,37 @@ K_POINTS {gamma}
 EOF
 
 
-cat > wbse_init.in << EOF
+cat > wstat.in << EOF
 input_west:
   qe_prefix: test
   west_prefix: test
   outdir: ./
 
-wbse_init_control:
-  wbse_init_calculation: S
-  solver: TDDFT
+wstat_control:
+  wstat_calculation: S
+  n_pdep_eigen: 30
+  l_minimize_exx_if_active: True
+  n_exx_lowrank: 0
 EOF
 
 
-cat > wbse.in << EOF
+cat > wfreq.in << EOF
 input_west:
   qe_prefix: test
   west_prefix: test
   outdir: ./
 
-wbse_init_control:
-  wbse_init_calculation: S
-  solver: TDDFT
+wstat_control:
+  wstat_calculation: S
+  n_pdep_eigen: 30
+  l_minimize_exx_if_active: True
+  n_exx_lowrank: 0
 
-wbse_control:
-  wbse_calculation: D
-  n_liouville_eigen: 10
+wfreq_control:
+  wfreq_calculation: XWGQ
+  macropol_calculation: N
+  n_pdep_eigen_to_use: 30
+  qp_bandrange: [1,5]
+  n_refreq: 300
+  ecut_refreq: 2.0
 EOF

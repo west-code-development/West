@@ -6,7 +6,7 @@ v5.5.0 (2023/08/10)
 
 - Code updated for compatibility with Quantum ESPRESSO 7.2. QE must be compiled without CMake.
 - Added support to TDDFT: hybrid functionals, and spin-flip.
-- Changed default `macropol_calculation` from N to C. If the system has vacuum, one should set `macropol_calculation` to N. 
+- Changed default `macropol_calculation` from N to C. If the system has vacuum, one should set `macropol_calculation` to N.
 - Enabled the use of the adaptively compressed exchange (ACE) method when evaluating the exact exchange in GW, QDET, BSE, and TDDFT calculations on top of hybrid functionals.
 - Ported `westpp` to GPU.
 - Improved the performance of TDDFT and BSE on GPU.

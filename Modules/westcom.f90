@@ -264,7 +264,7 @@ MODULE westpp_center
   !
   ! INPUT FOR westpp_control
   !
-  CHARACTER(LEN=9) :: westpp_calculation
+  CHARACTER(LEN=11) :: westpp_calculation
   CHARACTER(LEN=7) :: westpp_format
   INTEGER :: westpp_n_pdep_eigen_to_use
   INTEGER :: westpp_range(2)
@@ -275,6 +275,10 @@ MODULE westpp_center
   REAL(DP) :: westpp_rmax
   REAL(DP) :: westpp_epsinfty
   INTEGER :: westpp_n_liouville_to_use
+  LOGICAL :: westpp_l_spin_flip
+  LOGICAL :: westpp_l_compute_tdm
+  REAL(DP) :: westpp_wannier_tr_rel
+  LOGICAL :: westpp_l_dipole_realspace
   !
   ! Common workspace
   !
@@ -297,7 +301,8 @@ MODULE wbse_init_center
   CHARACTER(LEN=20) :: chi_kernel
   CHARACTER(LEN=512) :: wfc_from_qbox  ! wavefunction file name, extension is spin channel, e.g. 'qb_wfc.1'
   CHARACTER(LEN=512) :: bisection_info ! bisection file name, extension is spin channel, e.g. 'bis_info.1'
-  REAL(DP) :: overlap_thr              ! overlap threshold for idx_matrix in wbse_init_qboxcoupling
+  REAL(DP) :: wannier_tr_rel
+  REAL(DP) :: overlap_thr
   INTEGER :: spin_channel
   INTEGER :: n_trunc_bands
   LOGICAL :: l_local_repr
@@ -338,9 +343,16 @@ MODULE wbse_center
   LOGICAL :: l_spin_flip_kernel
   LOGICAL :: l_spin_flip_alda0
   LOGICAL :: l_print_spin_flip_kernel
-  REAL(DP) :: spin_flip_cut1
+  REAL(DP) :: spin_flip_cut
   REAL(DP) :: wbse_epsinfty
   CHARACTER(LEN=1) :: spin_excitation
+  LOGICAL :: l_forces
+  INTEGER :: forces_state
+  REAL(DP) :: forces_zeq_cg_tr
+  INTEGER :: forces_zeq_n_cg_maxiter
+  REAL(DP) :: ddvxc_fd_coeff
+  INTEGER :: forces_inexact_krylov
+  REAL(DP) :: forces_inexact_krylov_tr
   !
   ! FOR global variables
   !
@@ -354,6 +366,7 @@ MODULE wbse_center
   INTEGER :: n_tau
   REAL(DP) :: sigma_c_head
   REAL(DP) :: sigma_x_head
+  LOGICAL :: do_inexact_krylov
   !
   ! FOR global Lanzcos diago vars
   !
@@ -369,6 +382,7 @@ MODULE wbse_center
   REAL(DP),    ALLOCATABLE :: et_qp(:,:)
   COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
   REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: evc1_all(:,:,:)
   INTEGER,     ALLOCATABLE :: n_bse_idx(:)
   INTEGER,     ALLOCATABLE :: idx_matrix(:,:,:)
   INTEGER,     ALLOCATABLE :: tau_is_read(:,:,:)

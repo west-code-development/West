@@ -45,17 +45,40 @@ PROGRAM westpp
   !
   lgate = .FALSE.
   DO i = 1, 11
-     IF( westpp_calculation(i:i) == 'r' .OR. westpp_calculation(i:i) == 'R' ) lgate(1) = .TRUE. ! Rho --> density
-     IF( westpp_calculation(i:i) == 'w' .OR. westpp_calculation(i:i) == 'W' ) lgate(2) = .TRUE. ! Wavefunction
-     IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE. ! Eigenpotentials
-     IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) lgate(4) = .TRUE. ! Screened exact exchange
-     IF( westpp_calculation(i:i) == 'd' .OR. westpp_calculation(i:i) == 'D' ) lgate(5) = .TRUE. ! Dipole matrix
-     IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(6) = .TRUE. ! Localization
-     IF( westpp_calculation(i:i) == 'x' .OR. westpp_calculation(i:i) == 'X' ) lgate(7) = .TRUE. ! Exciton
-     IF( westpp_calculation(i:i) == 'p' .OR. westpp_calculation(i:i) == 'P' ) lgate(8) = .TRUE. ! Density response to exciton
-     IF( westpp_calculation(i:i) == 'b' .OR. westpp_calculation(i:i) == 'B' ) lgate(9) = .TRUE. ! Boys / Wannier localization
-     IF( westpp_calculation(i:i) == 'c' .OR. westpp_calculation(i:i) == 'C' ) lgate(10) = .TRUE. ! Decomposition of excited state
-     IF( westpp_calculation(i:i) == 'm' .OR. westpp_calculation(i:i) == 'M' ) lgate(11) = .TRUE. ! Spin multiplicity of excited state
+     !
+     ! Rho --> density
+     IF( westpp_calculation(i:i) == 'r' .OR. westpp_calculation(i:i) == 'R' ) lgate(1) = .TRUE.
+     !
+     ! Wavefunction
+     IF( westpp_calculation(i:i) == 'w' .OR. westpp_calculation(i:i) == 'W' ) lgate(2) = .TRUE.
+     !
+     ! Eigenpotentials
+     IF( westpp_calculation(i:i) == 'e' .OR. westpp_calculation(i:i) == 'E' ) lgate(3) = .TRUE.
+     !
+     ! Screened exact exchange
+     IF( westpp_calculation(i:i) == 's' .OR. westpp_calculation(i:i) == 'S' ) lgate(4) = .TRUE.
+     !
+     ! Dipole matrix
+     IF( westpp_calculation(i:i) == 'd' .OR. westpp_calculation(i:i) == 'D' ) lgate(5) = .TRUE.
+     !
+     ! Localization factor and inverse participation ratio
+     IF( westpp_calculation(i:i) == 'l' .OR. westpp_calculation(i:i) == 'L' ) lgate(6) = .TRUE.
+     !
+     ! Exciton
+     IF( westpp_calculation(i:i) == 'x' .OR. westpp_calculation(i:i) == 'X' ) lgate(7) = .TRUE.
+     !
+     ! Density response to exciton
+     IF( westpp_calculation(i:i) == 'p' .OR. westpp_calculation(i:i) == 'P' ) lgate(8) = .TRUE.
+     !
+     ! Boys / Wannier localization
+     IF( westpp_calculation(i:i) == 'b' .OR. westpp_calculation(i:i) == 'B' ) lgate(9) = .TRUE.
+     !
+     ! Decomposition of BSE/TDDFT excited state and calculation of dipole moments
+     IF( westpp_calculation(i:i) == 'c' .OR. westpp_calculation(i:i) == 'C' ) lgate(10) = .TRUE.
+     !
+     ! Spin multiplicity of BSE/TDDFT excited state (<S^2>, for nspin==2 only)
+     IF( westpp_calculation(i:i) == 'm' .OR. westpp_calculation(i:i) == 'M' ) lgate(11) = .TRUE.
+     !
   ENDDO
   !
   IF( lgate(1) ) CALL do_rho( )

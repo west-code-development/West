@@ -231,7 +231,7 @@ wstat_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank = 0.
 
 .. data:: n_exx_lowrank
 
@@ -603,8 +603,8 @@ westpp_control
        - "X" : Output the exciton state.
        - "P" : Output the density response to exciton state.
        - "B" : Output the unitary transformation matrix of Boys/Wannier localization.
-       - "C" : Output the decomposition of excited state.
-       - "M" : Output the spin multiplicity of excited state.
+       - "C" : Output the decomposition of BSE/TDDFT excited state, and the transition dipole moments.
+       - "M" : Output the spin multiplicity of the BSE/TDDFT excited state (<S^2>, nspin=2).
 
 .. data:: westpp_range
 
@@ -740,7 +740,7 @@ westpp_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then a spin-flip calculation is performed. Used only when westpp_calculation is "C" or "M" and nspin is 2.
+     - If (True), then a spin-flip calculation is performed. Used only when westpp_calculation = "C" or "M" and nspin = 2.
 
 .. data:: westpp_wannier_tr_rel
 
@@ -753,7 +753,7 @@ westpp_control
    * - **Default**
      - 1e-6
    * - **Description**
-     - Relative convergence threshold for Wannier localization. Used only when westpp_calculation is "B".
+     - Relative convergence threshold for Wannier localization. Used only when westpp_calculation = "B".
 
 .. data:: westpp_l_compute_tdm
 
@@ -766,7 +766,7 @@ westpp_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the transition dipole moment is computed. Used only when westpp_calculation is "C".
+     - If (True), then the transition dipole moment is computed. Used only when westpp_calculation = "C".
 
 .. data:: westpp_l_dipole_realspace
 
@@ -779,7 +779,7 @@ westpp_control
    * - **Default**
      - False
    * - **Description**
-     - Controls how the dipole is computed. Used only when westpp_calculation is "C".
+     - Controls how the dipole is computed. Used only when westpp_calculation = "C".
 
        - If (False), then the dipole is computed in the reciprocal space by computing [H,r]. Choice valid for isolated and condensed systems.
        - If (True), then the dipole is computed in the real space. Choice valid for isolated systems only.
@@ -873,7 +873,7 @@ wbse_init_control
      - Available options are:
 
        - "N" : Kohn-Sham orbitals are not localized.
-       - "B" : Bisected orbitals are used. Valid only when bse_method is "FF_QBOX".
+       - "B" : Bisected orbitals are used. Valid only when bse_method = "FF_QBOX".
        - "W" : Wannier orbitals are used.
 
 .. data:: wannier_tr_rel
@@ -887,7 +887,7 @@ wbse_init_control
    * - **Default**
      - 1e-6
    * - **Description**
-     - Relative convergence threshold for Wannier localization. Used only when localization is "W".
+     - Relative convergence threshold for Wannier localization. Used only when localization = "W".
 
 .. data:: wfc_from_qbox
 
@@ -900,7 +900,7 @@ wbse_init_control
    * - **Default**
      - "qb_wfc"
    * - **Description**
-     - Name of the file that contains Qbox wavefunctions. Used only when bse_method is "FF_QBOX" and localization is "B".
+     - Name of the file that contains Qbox wavefunctions. Used only when bse_method = "FF_QBOX" and localization = "B".
 
 .. data:: bisection_info
 
@@ -913,7 +913,7 @@ wbse_init_control
    * - **Default**
      - "bis_info"
    * - **Description**
-     - Name of the file that contains info about bisection. Used only when bse_method is "FF_QBOX" and localization is "B".
+     - Name of the file that contains info about bisection. Used only when bse_method = "FF_QBOX" and localization = "B".
 
 .. data:: chi_kernel
 
@@ -946,7 +946,7 @@ wbse_init_control
    * - **Default**
      - 0.0
    * - **Description**
-     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization is "B" or "W".
+     - If the overlap between two orbitals is below this threshold, the corresponding screened exchange integral is not computed. Used only when localization = "B" or "W".
 
 .. data:: n_trunc_bands
 
@@ -1026,7 +1026,7 @@ wbse_control
    * - **Default**
      - 1
    * - **Description**
-     - Number of Liouville eigenvectors and eigenvalues. Used only when wbse_calculation is "D" or "d".
+     - Number of Liouville eigenvectors and eigenvalues. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_liouville_times
 
@@ -1039,7 +1039,7 @@ wbse_control
    * - **Default**
      - 4
    * - **Description**
-     - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times. Used only when wbse_calculation is "D" or "d".
+     - Maximum dimension of the search space = n_liouville_eigen * n_liouville_times. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_liouville_maxiter
 
@@ -1052,7 +1052,7 @@ wbse_control
    * - **Default**
      - 100
    * - **Description**
-     - Maximum number of iterations of the Davidson method. Used only when wbse_calculation is "D" or "d".
+     - Maximum number of iterations of the Davidson method. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_liouville_read_from_file
 
@@ -1065,7 +1065,7 @@ wbse_control
    * - **Default**
      - 0
    * - **Description**
-     - Number of Liouville eigenvectors that can be read from file. Used only when wbse_calculation is "D" or "d".
+     - Number of Liouville eigenvectors that can be read from file. Used only when wbse_calculation = "D" or "d".
 
 .. data:: trev_liouville
 
@@ -1078,7 +1078,7 @@ wbse_control
    * - **Default**
      - 0.001
    * - **Description**
-     - Absolute convergence threshold for Liouville eigenvalues. Used only when wbse_calculation is "D" or "d".
+     - Absolute convergence threshold for Liouville eigenvalues. Used only when wbse_calculation = "D" or "d".
 
 .. data:: trev_liouville_rel
 
@@ -1091,7 +1091,7 @@ wbse_control
    * - **Default**
      - 0.1
    * - **Description**
-     - Relative convergence threshold for Liouville eigenvalues. Used only when wbse_calculation is "D" or "d".
+     - Relative convergence threshold for Liouville eigenvalues. Used only when wbse_calculation = "D" or "d".
 
 .. data:: n_lanczos
 
@@ -1104,7 +1104,7 @@ wbse_control
    * - **Default**
      - 1000
    * - **Description**
-     - Number of Lanczos iterations to be performed. Used only when wbse_calculation is "L" or "l".
+     - Number of Lanczos iterations to be performed. Used only when wbse_calculation = "L" or "l".
 
 .. data:: n_steps_write_restart
 
@@ -1151,7 +1151,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - Controls how the dipole is computed. Used only when wbse_calculation is "L" or "l".
+     - Controls how the dipole is computed. Used only when wbse_calculation = "L" or "l".
 
        - If (False), then the dipole is computed in the reciprocal space by computing [H,r]. Choice valid for isolated and condensed systems.
        - If (True), then the dipole is computed in the real space. Choice valid for isolated systems only.
@@ -1180,10 +1180,10 @@ wbse_control
    * - **Default**
      - "S"
    * - **Description**
-     - Used only when nspin is 1. When nspin is 2, use l_spin_flip to choose spin-conserving or spin-flip excitations. Available options are:
+     - Used only when nspin = 1. If nspin = 2, use instead l_spin_flip to choose spin-conserving or spin-flip excitations. Available options are:
 
        - "S" : Singlet.
-       - "T" : Triplet. Valid only when solver is "BSE".
+       - "T" : Triplet. Valid only when solver = "BSE".
 
 .. data:: l_preconditioning
 
@@ -1196,7 +1196,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then preconditioning is used. Used only when wbse_calculation is "D" or "d". Should be set to True in most cases.
+     - If (True), then preconditioning is used. Used only when wbse_calculation = "D" or "d". Should be set to True in most cases.
 
 .. data:: l_pre_shift
 
@@ -1209,7 +1209,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the preconditioner is shifted by the corresponding Kohn-Sham orbital energy. Used only when wbse_calculation is "D" or "d" and l_preconditioning is True. Should be set to True for isolated systems and False for perodic systems.
+     - If (True), then the preconditioner is shifted by the corresponding Kohn-Sham orbital energy. Used only when wbse_calculation = "D" or "d" and l_preconditioning is True. Should be set to True for isolated systems and False for perodic systems.
 
 .. data:: l_spin_flip
 
@@ -1222,7 +1222,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then a spin-flip calculation is performed. Used only when wbse_calculation is "D" or "d" and nspin is 2.
+     - If (True), then a spin-flip calculation is performed. Used only when wbse_calculation = "D" or "d" and nspin = 2.
 
 .. data:: l_spin_flip_kernel
 
@@ -1287,7 +1287,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then analytical forces are computed for the forces_state excited state. Used only when wbse_calculation is “D” or “d”.
+     - If (True), then analytical forces are computed for the forces_state excited state. Used only when wbse_calculation = “D” or “d”.
 
 .. data:: forces_state
 
@@ -1385,7 +1385,7 @@ wbse_control
    * - **Default**
      - False
    * - **Description**
-     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank == 0.
+     - If (True), then the exact-exchange term in the Hamiltonian is computed with the cutoff of the wavefunction. Used only when n_exx_lowrank = 0.
 
 .. data:: n_exx_lowrank
 

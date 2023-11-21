@@ -49,12 +49,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                                  & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,my_pool_id,&
                                  & intra_bgrp_comm
-  USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE pwcom,                ONLY : et,nbnd
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE constants,            ONLY : rytoev,pi
-  USE west_io,              ONLY : serial_table_output
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband,pert_offd
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
@@ -83,8 +80,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
   INTEGER :: ib,ibloc,ib_index,jb,jb_index,ipair,iloc_pair,nloc_pairs,iks,iks_g
   INTEGER :: ifixed,ip,ifreq,il,im,im_index,glob_im,glob_jp,glob_ifreq
-  REAL(DP),ALLOCATABLE :: out_tab(:,:)
-  CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
   REAL(DP),ALLOCATABLE :: dtemp(:)
   REAL(DP),ALLOCATABLE :: dtemp2(:,:)
@@ -706,27 +701,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
         CALL io_push_title('CONVERGENCE **NOT** ACHIEVED !!!')
      ENDIF
      !
-     ! Output it per k-point
-     !
-     ALLOCATE(out_tab(n_bands,7))
-     !
-     DO iks = 1, k_grid%nps
-        DO ib = 1, n_bands
-           out_tab(ib,1) = REAL(qp_bands(ib),KIND=DP)
-           out_tab(ib,2) = et(qp_bands(ib),iks) * rytoev
-           out_tab(ib,3) = (et(qp_bands(ib),iks)+sigma_hf(ib,iks)) * rytoev
-           out_tab(ib,4) = qp_energy(ib,iks) * rytoev
-           out_tab(ib,5) = (qp_energy(ib,iks)-et(qp_bands(ib),iks)) * rytoev
-           out_tab(ib,6) = REAL(sigma_cor_out(ib,iks),KIND=DP) * rytoev
-           out_tab(ib,7) = AIMAG(sigma_cor_out(ib,iks)) * rytoev
-        ENDDO
-        WRITE(myglobk,'(I5.5)') iks
-        !
-        CALL serial_table_output(mpime==root,'eqp_K'//myglobk,out_tab,n_bands,7,&
-           & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
-     ENDDO
-     !
-     DEALLOCATE( out_tab )
      DEALLOCATE( sigma_cor_in )
      DEALLOCATE( sigma_cor_out )
      DEALLOCATE( z_in )
@@ -820,12 +794,9 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
                                  & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                  & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
-  USE mp_world,             ONLY : mpime,root
   USE mp,                   ONLY : mp_sum
   USE pwcom,                ONLY : et,nbnd
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE constants,            ONLY : rytoev,pi
-  USE west_io,              ONLY : serial_table_output
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
@@ -855,8 +826,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   INTEGER :: ib,ibloc,ib_index,iks,ik,ikks,ikk,iq,is,iss
   INTEGER :: ifixed,ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq
   REAL(DP) :: g0(3)
-  REAL(DP),ALLOCATABLE :: out_tab(:,:)
-  CHARACTER(LEN=5) :: myglobk
   INTEGER :: notconv
   REAL(DP),ALLOCATABLE :: dtemp(:)
   COMPLEX(DP),ALLOCATABLE :: ztemp2(:,:)
@@ -1277,27 +1246,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         CALL io_push_title('CONVERGENCE **NOT** ACHIEVED !!!')
      ENDIF
      !
-     ! Output it per k-point
-     !
-     ALLOCATE(out_tab(n_bands,7))
-     !
-     DO iks = 1, k_grid%nps
-        DO ib = 1, n_bands
-           out_tab(ib,1) = REAL(qp_bands(ib),KIND=DP)
-           out_tab(ib,2) = et(qp_bands(ib),iks) * rytoev
-           out_tab(ib,3) = (et(qp_bands(ib),iks)+sigma_hf(ib,iks)) * rytoev
-           out_tab(ib,4) = qp_energy(ib,iks) * rytoev
-           out_tab(ib,5) = (qp_energy(ib,iks)-et(qp_bands(ib),iks)) * rytoev
-           out_tab(ib,6) = REAL(sigma_cor_out(ib,iks),KIND=DP) * rytoev
-           out_tab(ib,7) = AIMAG(sigma_cor_out(ib,iks)) * rytoev
-        ENDDO
-        WRITE(myglobk,'(I5.5)') iks
-        !
-        CALL serial_table_output(mpime==root,'eqp_K'//myglobk,out_tab,n_bands,7,&
-           & (/'      band','    E0[eV]','   EHF[eV]','   Eqp[eV]','Eqp-E0[eV]','Sc_Eqp[eV]',' Width[eV]'/))
-     ENDDO
-     !
-     DEALLOCATE( out_tab )
      DEALLOCATE( sigma_cor_in )
      DEALLOCATE( sigma_cor_out )
      DEALLOCATE( z_in )

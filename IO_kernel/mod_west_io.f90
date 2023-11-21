@@ -997,46 +997,4 @@ MODULE west_io
       !
     END SUBROUTINE
     !
-    ! ###############
-    ! ## OUTPUT #####
-    ! ###############
-    !
-    ! OUTPUT
-    !
-    SUBROUTINE serial_table_output(lproc,fname,d2dummy,nrow,ncol,header)
-      IMPLICIT NONE
-      LOGICAL,INTENT(IN) :: lproc
-      CHARACTER(*),INTENT(IN) :: fname
-      INTEGER,INTENT(IN) :: nrow,ncol
-      CHARACTER(*),INTENT(IN) :: header(ncol)
-      REAL(DP),INTENT(IN) :: d2dummy(nrow,ncol)
-      !
-      CHARACTER(512) :: fullname
-      CHARACTER(512) :: format_string
-      INTEGER :: iunit
-      INTEGER :: ierr,i,j
-      REAL(DP) :: help(ncol)
-      !
-      IF(.NOT. lproc) RETURN
-      !
-      fullname = 'o-'//TRIM(ADJUSTL(fname))//'.tab'
-      ierr = 0
-      !
-      OPEN(NEWUNIT=iunit,FILE=TRIM(fullname),IOSTAT=ierr)
-      IF(ierr /= 0) CALL errore('WEST/IO','Cannot open file: '//TRIM(fullname),ABS(ierr))
-      !
-      WRITE(format_string,*) '("#",',ncol,'(a16))'
-      WRITE(iunit,TRIM(format_string)) header
-      WRITE(format_string,*) '(" ",',ncol,'(f16.6))'
-      DO i = 1,nrow
-         DO j = 1,ncol
-            help(j) = d2dummy(i,j)
-         ENDDO
-         WRITE(iunit,TRIM(format_string),IOSTAT=ierr) help(1:ncol)
-         IF(ierr /= 0) CALL errore('WEST/IO','Cannot write file: '//TRIM(fullname),ABS(ierr))
-      ENDDO
-      CLOSE(iunit,IOSTAT=ierr)
-      !
-    END SUBROUTINE
-    !
 END MODULE

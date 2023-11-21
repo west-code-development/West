@@ -17,6 +17,7 @@ import sys
 # INTERFACE #
 #############
 
+
 def my_mkdir(*args, **kwargs):
     #
     path = args[0]
@@ -24,24 +25,26 @@ def my_mkdir(*args, **kwargs):
     try:
         mkdir(path)
     except OSError:
-        #print (f"Creation of the directory {path} failed")
+        # print (f"Creation of the directory {path} failed")
         pass
     else:
-        #print (f"Successfully created the directory {path} ")
+        # print (f"Successfully created the directory {path} ")
         pass
     sys.stdout.flush()
+
 
 ########
 # TEST #
 ########
 
-def test() :
+
+def test():
     #
     dirname = "./wstat.save"
     #
     my_mkdir(dirname)
 
+
 if __name__ == "__main__":
     # execute only if run as a script
     test()
-

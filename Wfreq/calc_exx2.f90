@@ -77,7 +77,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   TYPE(idistribute) :: vband
   TYPE(bar_type) :: barra
   !
-  WRITE(stdout,'(5x,a)') ''
+  WRITE(stdout,*)
   CALL io_push_bar()
   WRITE(stdout,'(5x,a)') '(X)-Sigma'
   CALL io_push_bar()
@@ -157,7 +157,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
      DO ibloc = 1,band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         IF(gamma_only) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ib),psic,'Wave')
@@ -170,7 +170,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
         !
         DO jb_index = 1,n_bands
            !
-           jb = qp_bands(jb_index)
+           jb = qp_bands(jb_index,is)
            !
            IF(l_enable_off_diagonal) THEN
               IF(jb > ib) CYCLE
@@ -222,7 +222,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
                  ! for QDET double counting term, all states need to be within qp_bands
                  !
                  IF(l_QDET) THEN
-                    IF(ALL(qp_bands(:) /= iv)) CYCLE
+                    IF(ALL(qp_bands(:,is) /= iv)) CYCLE
                  ENDIF
                  !
                  IF(gamma_only) THEN

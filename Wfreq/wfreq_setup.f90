@@ -16,10 +16,10 @@ SUBROUTINE wfreq_setup
   !
   USE mp_global,              ONLY : inter_image_comm,my_image_id,inter_pool_comm,intra_bgrp_comm,nbgrp
   USE mp,                     ONLY : mp_bcast,mp_sum
-  USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,&
-                                   & n_imfreq,l_macropol,macropol_calculation,n_refreq,qp_bandrange,&
-                                   & wfreq_calculation,qp_bands,n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,&
-                                   & sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
+  USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,n_imfreq,&
+                                   & l_macropol,macropol_calculation,n_refreq,wfreq_calculation,qp_bands,&
+                                   & n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,&
+                                   & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                    & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
                                    & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,sigma_exx_full,&
                                    & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
@@ -34,7 +34,6 @@ SUBROUTINE wfreq_setup
   USE distribution_center,    ONLY : pert,kpt_pool,band_group,macropert,ifr,rfr,aband,occband,pert_offd
   USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
-  USE io_global,              ONLY : stdout
   USE ldaU,                   ONLY : lda_plus_u
   USE bp,                     ONLY : lelfield
   USE realus,                 ONLY : real_space
@@ -44,32 +43,20 @@ SUBROUTINE wfreq_setup
   IMPLICIT NONE
   !
   COMPLEX(DP),EXTERNAL :: get_alpha_pv
-  INTEGER :: i,ib,jb,ipair,iks,iks_g,ib_index
+  INTEGER :: i,ib,jb,ipair,iks,iks_g,is,ib_index
   LOGICAL :: l_generate_plot
   LOGICAL :: l_QDET
   REAL(DP),ALLOCATABLE :: overlap_ab(:,:)
   !
   CALL do_setup()
   !
+  n_bands = SIZE(qp_bands,1)
+  !
   ! Calculate ALPHA_PV
   !
   alphapv_dfpt = get_alpha_pv()
   !
   CALL set_npwq()
-  !
-  IF(qp_bands(1) == 0) THEN
-     WRITE(stdout,'(7X,"** WARNING : qp_bands is set automatically according to qp_bandrange")')
-     IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
-     ALLOCATE(qp_bands(qp_bandrange(2)-qp_bandrange(1)+1))
-     DO i = 1, SIZE(qp_bands)
-        qp_bands(i) = qp_bandrange(1)+i-1
-     ENDDO
-  ENDIF
-  !
-  n_bands = SIZE(qp_bands)
-  !
-  IF(qp_bands(1) > nbnd) CALL errore('wfreq_setup','qp_bands(1)>nbnd',1)
-  IF(qp_bands(n_bands) > nbnd) CALL errore('wfreq_setup','qp_bands(n_bands)>nbnd',1)
   !
   CALL set_nbndocc()
   !
@@ -193,7 +180,7 @@ SUBROUTINE wfreq_setup
      DO iks = 1, kpt_pool%nloc
         !
         iks_g = kpt_pool%l2g(iks)
-        !
+        is = k_grid%is(iks_g)
         npw = ngk(iks)
         !
         IF(kpt_pool%nloc > 1) THEN
@@ -202,7 +189,7 @@ SUBROUTINE wfreq_setup
         ENDIF
         !
         DO ib_index = 1, n_bands
-           ib = qp_bands(ib_index)
+           ib = qp_bands(ib_index,is)
            proj_c(:,ib_index,iks_g) = evc(:,ib)
         ENDDO
         !

@@ -339,7 +339,7 @@ wfreq_control
    * - **Default**
      - [0]
    * - **Description**
-     - List of bands to compute the QP corrections. If qp_bands is not set, qp_bands is determined from qp_bandrange: qp_bands = [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
+     - List of bands to compute the QP corrections. If nspin = 2, two distinct sets of bands can be specified for the two spin channels, for example, [[1, 3, 4], [2, 3, 4]]. If nspin = 2 and qp_bands specifies only one set of bands, then the same bands are used for both channels. If qp_bands is not set, it is determined from qp_bandrange as [qp_bandrange(1), qp_bandrange(1)+1, ..., qp_bandrange(2)].
 
 .. data:: macropol_calculation
 
@@ -604,7 +604,7 @@ westpp_control
        - "P" : Output the density response to exciton state.
        - "B" : Output the unitary transformation matrix of Boys/Wannier localization.
        - "C" : Output the decomposition of BSE/TDDFT excited state, and the transition dipole moments.
-       - "M" : Output the spin multiplicity of the BSE/TDDFT excited state (<S^2>, nspin=2).
+       - "M" : Output the spin multiplicity of the BSE/TDDFT excited state (<S^2>, nspin = 2).
 
 .. data:: westpp_range
 

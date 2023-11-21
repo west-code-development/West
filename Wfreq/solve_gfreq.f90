@@ -42,7 +42,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
@@ -76,7 +76,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,jb,ib_index,jb_index,ipair
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,is,jb,ib_index,jb_index,ipair
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
@@ -144,9 +144,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   DO iks = 1,kpt_pool%nloc
      IF(iks < bks%lastdone_ks) CYCLE
      !
+     iks_g = kpt_pool%l2g(iks)
+     is = k_grid%is(iks_g)
+     !
      DO ibloc = 1,band_group%nloc
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
@@ -235,6 +238,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      IF(iks < bks%lastdone_ks) CYCLE
      !
      iks_g = kpt_pool%l2g(iks)
+     is = k_grid%is(iks_g)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -277,7 +281,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      DO ibloc = 1,band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
@@ -370,7 +374,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            DO jb_index = 1,n_bands
               !
-              jb = qp_bands(jb_index)
+              jb = qp_bands(jb_index,is)
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
                  !
@@ -469,12 +473,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         IF( o_restart_time >= 0._DP ) THEN
            IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
-           IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
+           IF( ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
         ENDIF
         !
         ! Write final restart file
         !
-        IF( iks == k_grid%nps .AND. ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
+        IF( iks == k_grid%nps .AND. ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
         !
         ! But do not write here when using pool or band group
         !
@@ -535,7 +539,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   IF( npool*nbgrp > 1 ) THEN
      bks%lastdone_ks = k_grid%nps
-     bks%lastdone_band = qp_bands(n_bands)
+     bks%lastdone_band = qp_bands(n_bands,nspin)
      CALL solvegfreq_restart_write( bks )
   ENDIF
   !
@@ -556,7 +560,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
   USE uspp,                 ONLY : vkb,nkb
@@ -590,7 +594,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,im,ikks,ikk,iq,ib_index
+  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,is,im,ikks,ikk,iq,ib_index
   INTEGER :: npwk
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
@@ -660,9 +664,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   DO ikks = 1,k_grid%nps
      IF(ikks < bksks%lastdone_ks) CYCLE
      !
+     is = k_grid%is(ikks)
+     !
      DO ibloc = 1,band_group%nloc
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         IF(ikks == bksks%lastdone_ks .AND. ib < bksks%lastdone_band) CYCLE
         !
@@ -762,6 +768,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         IF(ikks == bksks%lastdone_ks .AND. iks < bksks%lastdone_kks) CYCLE
         !
         ik = k_grid%ip(iks)
+        is = k_grid%is(iks)
         !
         time_spent(1) = get_clock( 'glanczos' )
         !
@@ -838,7 +845,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         DO ibloc = 1,band_group%nloc
            !
            ib_index = band_group%l2g(ibloc)
-           ib = qp_bands(ib_index)
+           ib = qp_bands(ib_index,is)
            !
            IF(ikks == bksks%lastdone_ks .AND. iks == bksks%lastdone_kks .AND. ib <= bksks%lastdone_band) CYCLE
            !
@@ -975,12 +982,12 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            IF( o_restart_time >= 0._DP ) THEN
               IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
-              IF( ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
+              IF( ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
            ENDIF
            !
            ! Write final restart file
            !
-           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bands(n_bands) ) l_write_restart = .TRUE.
+           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
            !
            ! But do not write here when using band group
            !
@@ -1050,7 +1057,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   IF( nbgrp > 1 ) THEN
      bksks%lastdone_ks = k_grid%nps
      bksks%lastdone_kks = k_grid%nps
-     bksks%lastdone_band = qp_bands(n_bands)
+     bksks%lastdone_band = qp_bands(n_bands,nspin)
      CALL solvegfreq_restart_write_q( bksks )
   ENDIF
   !

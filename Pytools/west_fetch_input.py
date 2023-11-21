@@ -186,7 +186,7 @@ def update_default_values(key, kwargs):
 
 
 def open_and_parse_file(fileName="west.in"):
-    """Opens a file and parses it using the YAML sintax
+    """Opens a file and parses it using the YAML sintax.
 
     :param fileName: name of the file
     :type fileName: ``string``
@@ -238,6 +238,53 @@ def check_dict(parsed_data={}, default_data={}):
             data[key] = default_data[key]
     #
     return data
+
+
+############
+# QP BANDS #
+############
+
+
+def parse_qp_bands(data_in, keyword, kwargs):
+    """Parse qp_bands.
+
+    :param data_in: input data
+    :type data_in: ``dict``
+    :param keyword: keyword
+    :type keyword: ``string``
+    :param kwargs: kwargs dictionary
+    :type kwargs: ``dict``
+    :return: updated data
+    :rtype: ``dict``
+    """
+    #
+    if keyword == "wfreq_control":
+        #
+        assert ("nspin") in kwargs.keys()
+        nspin = kwargs["nspin"]
+        qp_bandrange = data_in["qp_bandrange"]
+        qp_bands = data_in["qp_bands"]
+        qp_bands_new = []
+        #
+        if qp_bands == [0]:
+            qp_bands_new = [list(range(qp_bandrange[0], qp_bandrange[1] + 1))] * nspin
+        else:
+            if isinstance(qp_bands[0], list):
+                if nspin == 1:
+                    qp_bands_new = qp_bands
+                elif nspin == 2:
+                    if len(qp_bands) == 1:
+                        qp_bands_new = qp_bands * nspin
+                    else:
+                        assert isinstance(qp_bands[1], list)
+                        assert len(qp_bands[0]) == len(qp_bands[1])
+                        qp_bands_new = qp_bands
+            else:
+                qp_bands_new = [qp_bands] * nspin
+        #
+        data_in["qp_bands"] = qp_bands_new
+    #
+    return data_in
 
 
 ###########
@@ -297,7 +344,7 @@ def print_dict(title="input_west", data={}):
 
 
 def read_keyword_from_file(*args, **kwargs):
-    """Read keyword from file
+    """Read keyword from file.
 
     :return: read data
     :rtype: ``dict``
@@ -324,6 +371,9 @@ def read_keyword_from_file(*args, **kwargs):
     #
     data = check_dict(parsed_data, default_data)
     #
+    # Parse qp_bandrange and qp_bands
+    #
+    data = parse_qp_bands(data, keyword, kwargs)
     # Print
     #
     if verbose:

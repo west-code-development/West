@@ -44,7 +44,7 @@ SUBROUTINE solve_h1e()
      DO is = 1, kpt_pool%nloc
         is_g = kpt_pool%l2g(is)
         DO ib = 1, n_bands
-           h1e(ijpmap(ib,ib),is_g) = et(qp_bands(ib),is)
+           h1e(ijpmap(ib,ib),is_g) = et(qp_bands(ib,is_g),is)
         ENDDO
      ENDDO
   ELSE
@@ -54,7 +54,7 @@ SUBROUTINE solve_h1e()
      DO is = 1, kpt_pool%nloc
         is_g = kpt_pool%l2g(is)
         DO ib = 1, n_bands
-           h1e_diag(ib,is_g) = et(qp_bands(ib),is)
+           h1e_diag(ib,is_g) = et(qp_bands(ib,is_g),is)
         ENDDO
      ENDDO
   ENDIF
@@ -153,7 +153,7 @@ SUBROUTINE compute_hartree_double_counting(h1e_tmp)
   DO is1 = 1, kpt_pool%nloc
      is1_g = kpt_pool%l2g(is1)
      DO jb = 1, n_bands
-        occ(jb,is1_g) = occupation(qp_bands(jb),is1)
+        occ(jb,is1_g) = occupation(qp_bands(jb,is1_g),is1)
      ENDDO
   ENDDO
   !
@@ -213,7 +213,7 @@ SUBROUTINE compute_hartree_double_counting_diag(h1e_diag_tmp)
   DO is1 = 1, kpt_pool%nloc
      is1_g = kpt_pool%l2g(is1)
      DO jb = 1, n_bands
-        occ(jb,is1_g) = occupation(qp_bands(jb),is1)
+        occ(jb,is1_g) = occupation(qp_bands(jb,is1_g),is1)
      ENDDO
   ENDDO
   !
@@ -227,7 +227,7 @@ SUBROUTINE compute_hartree_double_counting_diag(h1e_diag_tmp)
            DO jb = 1, n_bands
               jpair = ijpmap(jb,jb)
               h1e_diag_tmp(ib,is1_g) = h1e_diag_tmp(ib,is1_g) &
-              & - prefactor*eri_w(ipair,jpair,is1_g,is2)*occupation(qp_bands(jb),is2)
+              & - prefactor*eri_w(ipair,jpair,is1_g,is2)*occupation(qp_bands(jb,is2),is2)
            ENDDO
         ENDDO
      ENDDO

@@ -245,9 +245,7 @@ SUBROUTINE do_wann()
            !
            WRITE(label_b,'(I9)') ib
            !
-           CALL json%add('output.B.K'//label_k//'.wan_center('//label_b//').x',wan_center(1))
-           CALL json%add('output.B.K'//label_k//'.wan_center('//label_b//').y',wan_center(2))
-           CALL json%add('output.B.K'//label_k//'.wan_center('//label_b//').z',wan_center(3))
+           CALL json%add('output.B.K'//label_k//'.wan_center('//label_b//')',wan_center)
            !
         ENDDO
         !

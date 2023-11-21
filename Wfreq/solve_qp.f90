@@ -50,7 +50,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,my_pool_id,&
                                  & intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_bcast
-  USE pwcom,                ONLY : et,nbnd
+  USE pwcom,                ONLY : et,nbnd,nspin
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband,pert_offd
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -78,7 +78,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
-  INTEGER :: ib,ibloc,ib_index,jb,jb_index,ipair,iloc_pair,nloc_pairs,iks,iks_g
+  INTEGER :: ib,ibloc,ib_index,jb,jb_index,ipair,iloc_pair,nloc_pairs,iks,iks_g,is
   INTEGER :: ifixed,ip,ifreq,il,im,im_index,glob_im,glob_jp,glob_ifreq
   INTEGER :: notconv
   REAL(DP),ALLOCATABLE :: dtemp(:)
@@ -171,13 +171,17 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   IF( l_enable_off_diagonal ) THEN
      !
      nloc_pairs = 0
-     DO ibloc = 1, band_group%nloc
-        ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
-        DO jb_index = 1, n_bands
-           jb = qp_bands(jb_index)
-           IF(jb <= ib) nloc_pairs = nloc_pairs+1
+     DO is = 1, nspin
+        im = 0
+        DO ibloc = 1, band_group%nloc
+           ib_index = band_group%l2g(ibloc)
+           ib = qp_bands(ib_index,is)
+           DO jb_index = 1, n_bands
+              jb = qp_bands(jb_index,is)
+              IF(jb <= ib) im = im+1
+           ENDDO
         ENDDO
+        nloc_pairs = MAX(nloc_pairs,im)
      ENDDO
      !
      IF( .NOT. l_QDET ) THEN
@@ -253,12 +257,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   DO iks = 1,kpt_pool%nloc ! KPOINT-SPIN
      !
      iks_g = kpt_pool%l2g(iks)
+     is = k_grid%is(iks_g)
      iloc_pair = 0
      !
      DO ibloc = 1, band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         CALL readin_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
         !
@@ -274,7 +279,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
         !
         DO jb_index = 1, n_bands
            !
-           jb = qp_bands(jb_index)
+           jb = qp_bands(jb_index,is)
            !
            IF(l_enable_off_diagonal .AND. jb <= ib) THEN
               !
@@ -303,7 +308,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                  !$acc loop collapse(2)
                  DO ifreq = 1, ifr_nloc
                     DO im_index = 1, n_bands
-                       im = qp_bands(im_index)
+                       im = qp_bands(im_index,is)
                        reduce_r = 0._DP
                        !$acc loop collapse(2) reduction(+:reduce_r)
                        DO glob_jp = 1, n_pdep_eigen_to_use
@@ -368,7 +373,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                  !$acc loop collapse(2)
                  DO ifreq = 1, rfr_nloc
                     DO im_index = 1, n_bands
-                       im = qp_bands(im_index)
+                       im = qp_bands(im_index,is)
                        reduce_c = 0._DP
                        !$acc loop collapse(2) reduction(+:reduce_c)
                        DO glob_jp = 1, n_pdep_eigen_to_use
@@ -567,11 +572,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      DO iks = 1, kpt_pool%nloc
         !
         iks_g = kpt_pool%l2g(iks)
+        is = k_grid%is(iks_g)
         !
         DO ib = 1, n_bands
-           en(ib,iks_g,1) = et(qp_bands(ib),iks) - eshift*0.5_DP
-           en(ib,iks_g,2) = et(qp_bands(ib),iks) + eshift*0.5_DP
+           en(ib,iks_g,1) = et(qp_bands(ib,is),iks) - eshift*0.5_DP
+           en(ib,iks_g,2) = et(qp_bands(ib,is),iks) + eshift*0.5_DP
         ENDDO
+        !
      ENDDO
      CALL mp_sum(en,inter_pool_comm)
      !
@@ -605,10 +612,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      ! en 2 = EKS + Z * ( sigmax - vxc + sigmacorrin)
      !
      DO iks = 1, k_grid%nps
+        is = k_grid%is(iks)
         DO ib = 1, n_bands
-           en(ib,iks,1) = et(qp_bands(ib),iks)
+           en(ib,iks,1) = et(qp_bands(ib,is),iks)
            sc(ib,iks,1) = sigma_cor_in(ib,iks)
-           en(ib,iks,2) = et(qp_bands(ib),iks) + z_in(ib,iks) &
+           en(ib,iks,2) = et(qp_bands(ib,is),iks) + z_in(ib,iks) &
            & * ( sigma_hf(ib,iks) + REAL( sigma_cor_in(ib,iks),KIND=DP) )
         ENDDO
      ENDDO
@@ -630,10 +638,11 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            ! Resulting new energy:
            !
            DO iks = 1, k_grid%nps
+              is = k_grid%is(iks)
               DO ib = 1, n_bands
                   IF( .NOT. l_conv(ib,iks) ) THEN
                      qp_energy(ib,iks) = en(ib,iks,2) &
-                     & +(et(qp_bands(ib),iks)+sigma_hf(ib,iks)+REAL(sc(ib,iks,2),KIND=DP)-en(ib,iks,2)) &
+                     & +(et(qp_bands(ib,is),iks)+sigma_hf(ib,iks)+REAL(sc(ib,iks,2),KIND=DP)-en(ib,iks,2)) &
                      & /(1._DP-REAL(sc(ib,iks,2)-sc(ib,iks,1),KIND=DP)/(en(ib,iks,2)-en(ib,iks,1)))
                   ENDIF
               ENDDO
@@ -957,7 +966,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      DO ibloc = 1, band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         DO ikks = 1, k_grid%nps   ! KPOINT-SPIN (INTEGRAL OVER K')
            !
@@ -1137,9 +1146,10 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ! 1st step of secant solver : E_KS + 0.5 * eshift
      !
      DO iks = 1, k_grid%nps
+        is = k_grid%is(iks)
         DO ib = 1, n_bands
-           en(ib,iks,1) = et(qp_bands(ib),iks) - eshift*0.5_DP
-           en(ib,iks,2) = et(qp_bands(ib),iks) + eshift*0.5_DP
+           en(ib,iks,1) = et(qp_bands(ib,is),iks) - eshift*0.5_DP
+           en(ib,iks,2) = et(qp_bands(ib,is),iks) + eshift*0.5_DP
         ENDDO
      ENDDO
      !
@@ -1166,10 +1176,11 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ! en 2 = EKS + Z * ( sigmax - vxc + sigmacorrin)
      !
      DO iks = 1, k_grid%nps
+        is = k_grid%is(iks)
         DO ib = 1, n_bands
-           en(ib,iks,1) = et(qp_bands(ib),iks)
+           en(ib,iks,1) = et(qp_bands(ib,is),iks)
            sc(ib,iks,1) = sigma_cor_in(ib,iks)
-           en(ib,iks,2) = et(qp_bands(ib),iks) + z_in(ib,iks) &
+           en(ib,iks,2) = et(qp_bands(ib,is),iks) + z_in(ib,iks) &
            & * ( sigma_hf(ib,iks) + REAL( sigma_cor_in(ib,iks),KIND=DP) )
         ENDDO
      ENDDO
@@ -1189,10 +1200,11 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         ! Resulting new energy:
         !
         DO iks = 1, k_grid%nps
+           is = k_grid%is(iks)
            DO ib = 1, n_bands
                IF( .NOT. l_conv(ib,iks) ) THEN
                   qp_energy(ib,iks) = en(ib,iks,2) + &
-                  & ( et(qp_bands(ib),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2) ) / &
+                  & ( et(qp_bands(ib,is),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2) ) / &
                   & ( 1._DP - REAL( sc(ib,iks,2) - sc(ib,iks,1), KIND=DP ) / ( en(ib,iks,2) - en(ib,iks,1) ) )
                ENDIF
            ENDDO
@@ -1333,7 +1345,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
   ! STDOUT
   !
   lnospin = ( k_grid%nps == k_grid%np )
-  WRITE(stdout,'(5X)')
+  WRITE(stdout,*)
   CALL io_push_bar()
   IF( iteration >= 0 ) WRITE(stdout,'(5X,"Iter: ",I6.6)') iteration
   DO ik = 1, k_grid%np
@@ -1344,7 +1356,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
         DO ib = 1, n_bands
            symb(1)='  no'
            IF( (iteration /= 0) .AND. (ABS(en2(ib,iks)-en1(ib,iks)) < trev_secant) ) symb(1)=' yes'
-           WRITE(stdout,'(5X,I6.6,1X,1F14.6,1X,A)') qp_bands(ib), en2(ib,iks)*rytoev, symb(1)
+           WRITE(stdout,'(5X,I6.6,1X,1F14.6,1X,A)') qp_bands(ib,1), en2(ib,iks)*rytoev, symb(1)
         ENDDO
      ELSE
         WRITE(stdout,'(5X,A,1X,A,1X,A,1X,A,1X,A)') 'band  ', '   QP en. [eV]', 'conv', '   QP en. [eV]', 'conv'
@@ -1354,7 +1366,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
              & < trev_secant) ) symb(1)=' yes'
            IF( (iteration /= 0) .AND. (ABS(en2(ib,k_grid%ipis2ips(ik,2))-en1(ib,k_grid%ipis2ips(ik,2))) &
              & < trev_secant) ) symb(2)=' yes'
-           WRITE(stdout,'(5X,I6.6,1X,1F14.6,1X,A,1F14.6,1X,A)') qp_bands(ib), en2(ib,k_grid%ipis2ips(ik,1))*rytoev, &
+           WRITE(stdout,'(5X,I6.6,1X,1F14.6,1X,A,1F14.6,1X,A)') qp_bands(ib,1), en2(ib,k_grid%ipis2ips(ik,1))*rytoev, &
            symb(1), en2(ib,k_grid%ipis2ips(ik,2))*rytoev, symb(2)
         ENDDO
      ENDIF
@@ -1387,7 +1399,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
         ik = k_grid%ip(iks)
         is = k_grid%is(iks)
         DO ib_index = 1, n_bands
-           ib = qp_bands(ib_index)
+           ib = qp_bands(ib_index,is)
            counter = counter + 1
            WRITE(ccounter, '(I10)') counter
            CALL json%add('exec.Q.en('//TRIM(ADJUSTL(ccounter))//').ksb',(/ik,is,ib/))

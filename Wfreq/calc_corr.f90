@@ -52,7 +52,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   !
   ! Workspace
   !
-  INTEGER :: iks,iks_g,ib,ibloc,ib_index,jb,jb_index,ipair,iloc_pair
+  INTEGER :: iks,iks_g,is,ib,ibloc,ib_index,jb,jb_index,ipair,iloc_pair
   INTEGER :: ifreq,glob_ifreq,il,im,glob_im,ip
   INTEGER :: nbndval,nbndval_full
   REAL(DP) :: peso
@@ -108,17 +108,18 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
      !
      iks_g = kpt_pool%l2g(iks)
+     is = k_grid%is(iks_g)
      nbndval = nbnd_occ(iks)
      iloc_pair = 0
      !
      DO ibloc = 1,band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         DO jb_index = 1, n_bands
            !
-           jb = qp_bands(jb_index)
+           jb = qp_bands(jb_index,is)
            !
            IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
            & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
@@ -152,7 +153,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                  ! for QDET double counting term, all states need to be within qp_bands
                  !
                  IF (l_QDET) THEN
-                    IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+                    IF ( ALL(qp_bands(:,is) /= glob_im) ) CYCLE
                  ENDIF
                  !
                  enrg = et(glob_im,iks) - energy(ib_index,iks_g)
@@ -239,13 +240,13 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
      DO ibloc = 1,band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         enrg = energy(ib_index,iks_g)
         !
         DO jb_index = 1, n_bands
            !
-           jb = qp_bands(jb_index)
+           jb = qp_bands(jb_index,is)
            !
            IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
            & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
@@ -267,7 +268,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
               ! for QDET double counting term, all states need to be within qp_bands
               !
               IF (l_QDET) THEN
-                 IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+                 IF ( ALL(qp_bands(:,is) /= glob_im) ) CYCLE
               ENDIF
               !
               this_is_a_pole=.FALSE.
@@ -359,7 +360,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                  ! for QDET double counting term, all states need to be within qp_bands
                  !
                  IF (l_QDET) THEN
-                    IF ( ALL(qp_bands(:) /= glob_im) ) CYCLE
+                    IF ( ALL(qp_bands(:,is) /= glob_im) ) CYCLE
                  ENDIF
                  !
                  this_is_a_pole=.FALSE.
@@ -538,7 +539,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
      DO ibloc = 1,band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         partial_h = 0._DP
         partial_b = 0._DP
@@ -632,7 +633,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
      DO ibloc = 1,band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index)
+        ib = qp_bands(ib_index,is)
         !
         enrg = energy(ib_index,iks)
         !

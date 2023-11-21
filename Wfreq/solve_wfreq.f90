@@ -2078,7 +2078,7 @@ SUBROUTINE output_eps_head( )
      !
      time_spent(2) = get_clock( 'optics' )
      !
-     WRITE(stdout,'(5x," ")')
+     WRITE(stdout,*)
      CALL io_push_bar()
      WRITE(stdout,'(5x, "File ",a," written in ",a)') TRIM(wfreq_save_dir)//'/optics.json',&
      & TRIM(human_readable_time(time_spent(2)-time_spent(1)))

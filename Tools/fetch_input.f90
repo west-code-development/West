@@ -40,6 +40,7 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
                              & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
                              & l_reduce_io
   USE mp_world,         ONLY : mpime,root
+  USE pwcom,            ONLY : nspin
   !
   IMPLICIT NONE
   !
@@ -48,6 +49,11 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
   INTEGER, INTENT(IN) :: num_drivers
   INTEGER, INTENT(IN) :: driver(num_drivers)
   TYPE(json_file), INTENT(INOUT) :: json
+  !
+  ! Workspace
+  !
+  CHARACTER :: label
+  INTEGER :: is
   !
   IF(mpime == root) THEN
      !
@@ -84,7 +90,10 @@ SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
         CALL json%add('input.wfreq_control.wfreq_calculation',TRIM(wfreq_calculation))
         CALL json%add('input.wfreq_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
         CALL json%add('input.wfreq_control.qp_bandrange',qp_bandrange)
-        CALL json%add('input.wfreq_control.qp_bands',qp_bands)
+        DO is = 1,nspin
+           WRITE(label,'(i1)') is
+           CALL json%add('input.wfreq_control.qp_bands('//label//')',qp_bands(:,is))
+        ENDDO
         CALL json%add('input.wfreq_control.macropol_calculation',macropol_calculation)
         CALL json%add('input.wfreq_control.n_lanczos',n_lanczos)
         CALL json%add('input.wfreq_control.n_imfreq',n_imfreq)
@@ -225,7 +234,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   USE start_k,          ONLY : nk1,nk2,nk3
   USE control_flags,    ONLY : gamma_only
   USE json_module,      ONLY : json_file
-  USE pwcom,            ONLY : nelec,nbnd
+  USE pwcom,            ONLY : nelec,nbnd,nspin
   !
   IMPLICIT NONE
   !
@@ -239,9 +248,9 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   TYPE(tuple) :: args
   TYPE(dict) :: kwargs
   TYPE(module_py) :: pymod
-  TYPE(object) :: return_obj,tmp_obj
+  TYPE(object) :: return_obj,tmp_obj,tmp_obj2
   TYPE(dict) :: return_dict
-  TYPE(list) :: tmp_list
+  TYPE(list) :: tmp_list,tmp_list2
   INTEGER :: list_len
   INTEGER :: i
   INTEGER :: nq
@@ -343,6 +352,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = dict_create(kwargs)
         IERR = kwargs%setitem('nelec', nelec)
         IERR = kwargs%setitem('ecutrho', ecutrho)
+        IERR = kwargs%setitem('nspin', nspin)
         !
         IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
@@ -355,21 +365,31 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%get(n_pdep_eigen_to_use, 'n_pdep_eigen_to_use', DUMMY_DEFAULT)
         IERR = return_dict%getitem(tmp_obj, 'qp_bandrange')
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%len(list_len)
         IERR = tmp_list%getitem(qp_bandrange(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(qp_bandrange(2), 1) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         IERR = return_dict%getitem(tmp_obj, 'qp_bands')
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%len(list_len)
+        IERR = tmp_list%getitem(tmp_obj2, 0)
+        IERR = cast(tmp_list2,tmp_obj2)
+        IERR = tmp_list2%len(list_len)
         IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
-        ALLOCATE(qp_bands(list_len))
+        ALLOCATE(qp_bands(list_len,nspin))
         DO i = 0, list_len-1 ! Python indices start at 0
-           IERR = tmp_list%getitem(qp_bands(i+1), i) ! Fortran indices start at 1
+           IERR = tmp_list2%getitem(qp_bands(i+1,1), i) ! Fortran indices start at 1
         ENDDO
+        IF(nspin == 2) THEN
+           IERR = tmp_list%getitem(tmp_obj2, 1)
+           IERR = cast(tmp_list2,tmp_obj2)
+           DO i = 0, list_len-1 ! Python indices start at 0
+              IERR = tmp_list2%getitem(qp_bands(i+1,2), i) ! Fortran indices start at 1
+           ENDDO
+        ENDIF
         CALL tmp_list%destroy
+        CALL tmp_list2%destroy
         CALL tmp_obj%destroy
+        CALL tmp_obj2%destroy
         IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(n_lanczos, 'n_lanczos', DUMMY_DEFAULT)
         IERR = return_dict%get(n_imfreq, 'n_imfreq', DUMMY_DEFAULT)
@@ -632,11 +652,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(wfreq_calculation,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(qp_bandrange,root,world_comm)
-     IF(mpime == root) n_qp_bands = SIZE(qp_bands)
+     IF(mpime == root) n_qp_bands = SIZE(qp_bands,1)
      CALL mp_bcast(n_qp_bands,root,world_comm)
      IF(mpime /= root) THEN
         IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
-        ALLOCATE(qp_bands(n_qp_bands))
+        ALLOCATE(qp_bands(n_qp_bands,nspin))
      ENDIF
      CALL mp_bcast(qp_bands,root,world_comm)
      CALL mp_bcast(macropol_calculation,root,world_comm)
@@ -672,14 +692,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(qp_bandrange(1) < 1) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
      IF(qp_bandrange(2) < 1) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
      IF(qp_bandrange(2) < qp_bandrange(1)) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
-     IF(qp_bands(1) /= 0) THEN
-        DO i = 0, SIZE(qp_bands)-1 ! Python indices start at 0
-           IF(qp_bands(i+1) < 1) CALL errore('fetch_input','Err: qp_bands<1',1)
-           IF(i /= SIZE(qp_bands)-1) THEN
-              IF(qp_bands(i+1) >= qp_bands(i+2)) CALL errore('fetch_input','Err: qp_bands must be sorted in ascending order',1)
-           ENDIF
-        ENDDO
-     ENDIF
      IF(ecut_imfreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF(ecut_refreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF(ecut_spectralf(2) < ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)

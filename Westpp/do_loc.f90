@@ -16,7 +16,8 @@ SUBROUTINE do_loc ( )
   !
   USE kinds,                 ONLY : DP
   USE constants,             ONLY : fpi
-  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk
+  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk,nspin
+  USE noncollin_module,      ONLY : npol
   USE gvect,                 ONLY : ngm
   USE io_push,               ONLY : io_push_title
   USE westcom,               ONLY : iuwfc,lrwfc,logfile,westpp_format,westpp_range,westpp_box,&
@@ -35,7 +36,7 @@ SUBROUTINE do_loc ( )
   USE control_flags,         ONLY : gamma_only
   USE types_bz_grid,         ONLY : k_grid
   USE cell_base,             ONLY : alat,at,omega
-  USE json_module,           ONLY : json_file
+  USE json_module,           ONLY : json_file,json_core,json_value
 #if defined(__CUDA)
   USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE wavefunctions,         ONLY : evc_host=>evc
@@ -49,19 +50,24 @@ SUBROUTINE do_loc ( )
   ! ... LOCAL variables
   !
   LOGICAL :: l_box
-  INTEGER :: ir, i, iks, local_ib, global_ib, global_ib2, ir1, ir2, ir3, n_points, nbnd_, iunit
+  INTEGER :: ig, ir, i, iks, ib, ib_g, ib2_g, jb, ir1, ir2, ir3, n_points, nbnd_, iunit
   INTEGER :: dffts_nnr
   REAL(DP), ALLOCATABLE :: local_fac(:,:), ipr(:,:)
   REAL(DP), ALLOCATABLE :: filter(:), filter_loc(:)
   REAL(DP), ALLOCATABLE :: spav(:)
+  REAL(DP), ALLOCATABLE :: ovlp_ab(:,:)
   COMPLEX(DP), ALLOCATABLE :: auxc(:), auxg(:)
   !$acc declare device_resident(auxc)
+  COMPLEX(DP), ALLOCATABLE :: evc_tmp(:,:,:)
   REAL(DP) :: rho, r_vec(3)
   REAL(DP) :: r, dr
   REAL(DP) :: reduce, reduce2
   CHARACTER(LEN=5) :: label_k
+  CHARACTER(LEN=9) :: label_b
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
+  TYPE(json_core) :: jcor
+  TYPE(json_value), POINTER :: jval
   !
   nbnd_ = westpp_range(2) - westpp_range(1) + 1
   aband = idistribute()
@@ -75,7 +81,7 @@ SUBROUTINE do_loc ( )
   !
   l_box = .TRUE.
   DO i = 1, 7
-     IF( westpp_format(i:i) == 's' .OR. westpp_format(i:i) == 'S' ) l_box = .FALSE.
+     IF(westpp_format(i:i) == 's' .OR. westpp_format(i:i) == 'S') l_box = .FALSE.
   ENDDO
   !
   IF(l_box) THEN
@@ -90,10 +96,15 @@ SUBROUTINE do_loc ( )
   ENDIF
   ALLOCATE(local_fac(nbnd_,k_grid%nps))
   ALLOCATE(ipr(nbnd_,k_grid%nps))
+  IF(gamma_only .AND. nspin == 2) THEN
+     ALLOCATE(evc_tmp(npwx,nbnd_,nspin))
+     ALLOCATE(ovlp_ab(nbnd_,nbnd_))
+     !$acc enter data create(evc_tmp,ovlp_ab)
+  ENDIF
   !
   CALL io_push_title('(L)ocalization Factor')
   !
-  CALL start_bar_type( barra, 'westpp', k_grid%nps * MAX(aband%nloc,1) )
+  CALL start_bar_type(barra, 'westpp', k_grid%nps * MAX(aband%nloc,1))
   !
   IF(l_box) THEN
      !
@@ -114,16 +125,16 @@ SUBROUTINE do_loc ( )
                  ! create real-space vector
                  !
                  DO i = 1, 3
-                    r_vec(i) = alat * ( REAL(ir1-1,KIND=DP)/REAL(dffts%nr1,KIND=DP)*at(i,1) &
-                                    & + REAL(ir2-1,KIND=DP)/REAL(dffts%nr2,KIND=DP)*at(i,2) &
-                                    & + REAL(ir3-1,KIND=DP)/REAL(dffts%nr3,KIND=DP)*at(i,3) )
+                    r_vec(i) = alat * (REAL(ir1-1,KIND=DP)/REAL(dffts%nr1,KIND=DP)*at(i,1) &
+                                   & + REAL(ir2-1,KIND=DP)/REAL(dffts%nr2,KIND=DP)*at(i,2) &
+                                   & + REAL(ir3-1,KIND=DP)/REAL(dffts%nr3,KIND=DP)*at(i,3))
                  ENDDO
                  !
                  ! check point is in box
                  !
-                 IF( (r_vec(1) > westpp_box(1)) .AND. (r_vec(1) < westpp_box(2)) .AND. &
-                   & (r_vec(2) > westpp_box(3)) .AND. (r_vec(2) < westpp_box(4)) .AND. &
-                   & (r_vec(3) > westpp_box(5)) .AND. (r_vec(3) < westpp_box(6)) ) THEN
+                 IF((r_vec(1) > westpp_box(1)) .AND. (r_vec(1) < westpp_box(2)) .AND. &
+                  & (r_vec(2) > westpp_box(3)) .AND. (r_vec(2) < westpp_box(4)) .AND. &
+                  & (r_vec(3) > westpp_box(5)) .AND. (r_vec(3) < westpp_box(6))) THEN
                     n_points = n_points + 1
                     filter(ir) = 1._DP
                  ENDIF
@@ -141,7 +152,7 @@ SUBROUTINE do_loc ( )
      !
      CALL mp_bcast(n_points, root_bgrp, intra_bgrp_comm)
      !
-     IF( n_points == 0 ) CALL errore('do_loc','no point found in integration volume',1)
+     IF(n_points == 0) CALL errore('do_loc','no point found in integration volume',1)
      !
   ELSE
      !
@@ -174,19 +185,31 @@ SUBROUTINE do_loc ( )
 #endif
      ENDIF
      !
-     DO local_ib = 1,aband%nloc
+     IF(gamma_only .AND. nspin == 2) THEN
+        !
+        !$acc parallel loop collapse(2) present(evc_tmp)
+        DO ib_g = westpp_range(1), westpp_range(2)
+           DO ig = 1, npwx
+              evc_tmp(ig,ib_g,iks) = evc_work(ig,ib_g)
+           ENDDO
+        ENDDO
+        !$acc end parallel
+        !
+     ENDIF
+     !
+     DO ib = 1,aband%nloc
         !
         ! local -> global
         !
-        global_ib = aband%l2g(local_ib)+westpp_range(1)-1
-        global_ib2 = aband%l2g(local_ib)
+        ib_g = aband%l2g(ib)+westpp_range(1)-1
+        ib2_g = aband%l2g(ib)
         !
         reduce = 0._DP
         reduce2 = 0._DP
         !
-        IF( gamma_only ) THEN
+        IF(gamma_only) THEN
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ib_g),psic,'Wave')
            !
            IF(l_box) THEN
               !
@@ -198,8 +221,8 @@ SUBROUTINE do_loc ( )
               ENDDO
               !$acc end parallel
               !
-              local_fac(global_ib2,iks) = reduce
-              ipr(global_ib2,iks) = reduce2
+              local_fac(ib2_g,iks) = reduce
+              ipr(ib2_g,iks) = reduce2
               !
            ELSE
               !
@@ -211,7 +234,7 @@ SUBROUTINE do_loc ( )
               ENDDO
               !$acc end parallel
               !
-              ipr(global_ib2,iks) = reduce2
+              ipr(ib2_g,iks) = reduce2
               !
               !$acc host_data use_device(auxc,auxg)
               CALL single_fwfft_gamma(dffts,ngm,ngm,auxc,auxg,'Rho')
@@ -230,13 +253,13 @@ SUBROUTINE do_loc ( )
               ENDDO
               !$acc end parallel
               !
-              local_fac(global_ib2,iks) = reduce
+              local_fac(ib2_g,iks) = reduce
               !
            ENDIF
            !
         ELSE
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ib_g),psic,'Wave',igk_k(:,current_k))
            !
            !$acc parallel loop reduction(+:reduce,reduce2) present(filter_loc) copy(reduce,reduce2)
            DO ir = 1, dffts_nnr
@@ -246,12 +269,12 @@ SUBROUTINE do_loc ( )
            ENDDO
            !$acc end parallel
            !
-           local_fac(global_ib2,iks) = reduce
-           ipr(global_ib2,iks) = reduce2
+           local_fac(ib2_g,iks) = reduce
+           ipr(ib2_g,iks) = reduce2
            !
         ENDIF
         !
-        CALL update_bar_type( barra,'westpp', 1 )
+        CALL update_bar_type(barra,'westpp', 1)
         !
      ENDDO
      !
@@ -273,6 +296,18 @@ SUBROUTINE do_loc ( )
   CALL mp_sum(local_fac,inter_image_comm)
   CALL mp_sum(ipr,inter_image_comm)
   !
+  IF(gamma_only .AND. nspin == 2) THEN
+     !
+     !$acc host_data use_device(evc_tmp,ovlp_ab)
+     CALL glbrak_gamma(evc_tmp(:,:,2),evc_tmp(:,:,1),ovlp_ab,npw,npwx,nbnd_,nbnd_,nbnd_,npol)
+     !$acc end host_data
+     !
+     !$acc update host(ovlp_ab)
+     !
+     CALL mp_sum(ovlp_ab,intra_bgrp_comm)
+     !
+  ENDIF
+  !
   ! root writes JSON file
   !
   IF(mpime == root) THEN
@@ -282,14 +317,30 @@ SUBROUTINE do_loc ( )
      !
      ! output localization factor and IPR
      !
-     DO iks = 1,k_grid%nps
-        !
+     DO iks = 1, k_grid%nps
         WRITE(label_k,'(I5.5)') iks
-        !
         CALL json%add('output.L.K'//label_k//'.local_factor',local_fac(:,iks))
         CALL json%add('output.L.K'//label_k//'.ipr',ipr(:,iks))
-        !
      ENDDO
+     !
+     IF(gamma_only .AND. nspin == 2) THEN
+        !
+        CALL jcor%create_array(jval,'overlap_ab')
+        CALL json%add('output.L.overlap_ab',jval)
+        !
+        DO ib = 1, nbnd_
+           !
+           jb = MAXLOC(ABS(ovlp_ab(:,ib)),DIM=1)
+           !
+           WRITE(label_b,'(I9)') ib
+           !
+           CALL json%add('output.L.overlap_ab('//label_b//').ib',ib+westpp_range(1)-1)
+           CALL json%add('output.L.overlap_ab('//label_b//').jb',jb+westpp_range(1)-1)
+           CALL json%add('output.L.overlap_ab('//label_b//').val',ABS(ovlp_ab(jb,ib)))
+           !
+        ENDDO
+        !
+     ENDIF
      !
      OPEN(NEWUNIT=iunit,FILE=TRIM(logfile))
      CALL json%print(iunit)
@@ -298,7 +349,7 @@ SUBROUTINE do_loc ( )
      !
   ENDIF
   !
-  CALL stop_bar_type( barra, 'westpp' )
+  CALL stop_bar_type(barra, 'westpp')
   !
   IF(l_box) THEN
      DEALLOCATE(filter)
@@ -312,6 +363,11 @@ SUBROUTINE do_loc ( )
   ENDIF
   DEALLOCATE(local_fac)
   DEALLOCATE(ipr)
+  IF(gamma_only .AND. nspin == 2) THEN
+     !$acc exit data delete(evc_tmp,ovlp_ab)
+     DEALLOCATE(evc_tmp)
+     DEALLOCATE(ovlp_ab)
+  ENDIF
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()

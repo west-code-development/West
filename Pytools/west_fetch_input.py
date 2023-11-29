@@ -318,7 +318,7 @@ def print_dict(title="input_west", data={}):
     :param title: title
     :type title: ``string``
     :param data: data to print
-    :type default_data: ``dict``
+    :type data: ``dict``
 
     """
     #
@@ -338,6 +338,32 @@ def print_dict(title="input_west", data={}):
     sys.stdout.flush()
 
 
+def print_json(fileName="west.json", title="input_west", data={}):
+    """Prints data.
+
+    :param fileName: name of the file
+    :type title: ``string``
+    :param title: title
+    :type title: ``string``
+    :param data: data to print
+    :type data: ``dict``
+
+    """
+    #
+    try:
+        with open(fileName, "r") as f:
+            j = json.load(f)
+    except:
+        j = {}
+    #
+    if not "input" in j.keys():
+        j["input"] = {}
+    j["input"][title] = data
+    #
+    with open(fileName, "w") as f:
+        json.dump(j, f, indent=2)
+
+
 #############
 # INTERFACE #
 #############
@@ -354,6 +380,7 @@ def read_keyword_from_file(*args, **kwargs):
     fileName = args[0]
     keyword = args[1]
     verbose = args[2]
+    logfile = args[3]
     #
     # Assign static & dynamical defaults
     #
@@ -378,6 +405,7 @@ def read_keyword_from_file(*args, **kwargs):
     #
     if verbose:
         print_dict(keyword, data)
+        print_json(logfile, keyword, data)
     #
     return data
 
@@ -390,6 +418,7 @@ def read_keyword_from_file(*args, **kwargs):
 def test():
     #
     fileName = "west.in"
+    jsonName = "west.json"
     #
     with open(fileName, "w") as file:
         file.write(
@@ -406,15 +435,16 @@ server_control :
 """
         )
     #
-    read_keyword_from_file(fileName, "input_west", True)
-    read_keyword_from_file(fileName, "wstat_control", True, nq=20, nelec=10)
-    read_keyword_from_file(fileName, "wfreq_control", True, nelec=10, ecutrho=30.0)
-    read_keyword_from_file(fileName, "westpp_control", True)
-    read_keyword_from_file(fileName, "server_control", True)
-    read_keyword_from_file(fileName, "wbse_init_control", True)
-    read_keyword_from_file(fileName, "wbse_control", True)
+    read_keyword_from_file(fileName, "input_west", True, jsonName)
+    read_keyword_from_file(fileName, "wstat_control", True, jsonName, nq=20, nelec=10, nbnd=30)
+    read_keyword_from_file(fileName, "wfreq_control", True, jsonName, nelec=10, ecutrho=30.0, nspin=2)
+    read_keyword_from_file(fileName, "westpp_control", True, jsonName)
+    read_keyword_from_file(fileName, "server_control", True, jsonName)
+    read_keyword_from_file(fileName, "wbse_init_control", True, jsonName, nelec=10)
+    read_keyword_from_file(fileName, "wbse_control", True, jsonName, nbnd=30)
     #
     remove(fileName)
+    remove(jsonName)
 
 
 if __name__ == "__main__":

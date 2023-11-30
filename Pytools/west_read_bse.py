@@ -13,6 +13,7 @@
 import h5py
 import numpy as np
 
+
 def bse_read_qb_param(*args, **kwargs):
     #
     fileName = args[0]
@@ -27,6 +28,7 @@ def bse_read_qb_param(*args, **kwargs):
     # return dictionary
     return data
 
+
 def bse_read_qb_wfc(*args, **kwargs):
     #
     fileName = args[0]
@@ -37,14 +39,15 @@ def bse_read_qb_wfc(*args, **kwargs):
     # return numpy ndarray
     return wfc
 
-def test() :
+
+def test():
     #
     fileName = "qb_wfc.1"
     nwfcs = 4
     nx = 30
     ny = 30
     nz = 30
-    data = np.ones(nx*ny*nz, dtype="float64")
+    data = np.ones(nx * ny * nz, dtype="float64")
     #
     with h5py.File(fileName, "w") as f:
         # metadata
@@ -59,6 +62,7 @@ def test() :
     #
     print(bse_read_qb_param(fileName))
     print(bse_read_qb_wfc(fileName, 1))
+
 
 if __name__ == "__main__":
     # execute only if run as a script

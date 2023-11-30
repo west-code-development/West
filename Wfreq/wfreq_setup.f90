@@ -16,15 +16,14 @@ SUBROUTINE wfreq_setup
   !
   USE mp_global,              ONLY : inter_image_comm,my_image_id,inter_pool_comm,intra_bgrp_comm,nbgrp
   USE mp,                     ONLY : mp_bcast,mp_sum
-  USE westcom,                ONLY : nbnd_occ,alphapv_dfpt,wfreq_save_dir,n_pdep_eigen_to_use,n_imfreq,&
-                                   & l_macropol,macropol_calculation,n_refreq,wfreq_calculation,qp_bands,&
-                                   & n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,&
-                                   & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
-                                   & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,n_spectralf,&
-                                   & l_enable_off_diagonal,ijpmap,pijmap,n_pairs,sigma_exx_full,&
-                                   & sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,sigma_sc_eks_full,&
-                                   & sigma_sc_eqplin_full,sigma_corr_full,proj_c,lrwfc,iuwfc,&
-                                   & n_pdep_eigen_off_diagonal
+  USE westcom,                ONLY : lrwfc,iuwfc,wfreq_save_dir,wfreq_calculation,nbnd_occ,occupation,&
+                                   & qp_bands,n_bands,alphapv_dfpt,n_imfreq,n_refreq,n_pdep_eigen_to_use,&
+                                   & n_pdep_eigen_off_diagonal,l_macropol,macropol_calculation,sigma_exx,&
+                                   & sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,&
+                                   & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,&
+                                   & sigma_freq,n_spectralf,l_enable_off_diagonal,ijpmap,pijmap,n_pairs,&
+                                   & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,&
+                                   & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,proj_c
   USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
   USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx,nspin,ngk
@@ -46,6 +45,7 @@ SUBROUTINE wfreq_setup
   INTEGER :: i,ib,jb,ipair,iks,iks_g,is,ib_index
   LOGICAL :: l_generate_plot
   LOGICAL :: l_QDET
+  REAL(DP) :: this_occ,next_occ
   REAL(DP),ALLOCATABLE :: overlap_ab(:,:)
   !
   CALL do_setup()
@@ -76,9 +76,7 @@ SUBROUTINE wfreq_setup
   band_group = idistribute()
   pert_offd = idistribute()
   IF(n_pdep_eigen_off_diagonal > 0 .AND. n_pdep_eigen_off_diagonal < n_pdep_eigen_to_use &
-  & .AND. l_enable_off_diagonal) THEN
-     CALl pert_offd%init(n_pdep_eigen_off_diagonal,'i','npdep_offd',.FALSE.)
-  ENDIF
+  & .AND. l_enable_off_diagonal) CALl pert_offd%init(n_pdep_eigen_off_diagonal,'i','npdep_offd',.FALSE.)
   !
   kpt_pool = idistribute()
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)
@@ -173,6 +171,28 @@ SUBROUTINE wfreq_setup
      IF(lda_plus_u) CALL errore('wfreq_setup','QDET with lda_plus_u not supported',1)
      IF(lelfield) CALL errore('wfreq_setup','QDET with lelfield not supported',1)
      IF(.NOT. gamma_only) CALL errore('wfreq_setup','QDET requires gamma_only',1)
+     !
+     ! qp_bands can be sorted or unsorted, but all occupied bands must appear before empty ones
+     !
+     DO iks = 1, kpt_pool%nloc
+        !
+        iks_g = kpt_pool%l2g(iks)
+        is = k_grid%is(iks_g)
+        !
+        DO ib_index = 1, n_bands-1
+           !
+           ib = qp_bands(ib_index,is)
+           this_occ = occupation(ib,iks)
+           !
+           ib = qp_bands(ib_index+1,is)
+           next_occ = occupation(ib,iks)
+           !
+           IF(next_occ > this_occ) &
+           & CALL errore('wfreq_setup','occupied bands must be given before empty ones in qp_bands',1)
+           !
+        ENDDO
+        !
+     ENDDO
      !
      ALLOCATE(proj_c(npwx,n_bands,k_grid%nps))
      !

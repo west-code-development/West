@@ -1,6 +1,17 @@
 Change Log
 ==========
 
+To be released
+-------------------
+
+- Code repository migrated to [GitHub](https://github.com/west-code-development/).
+- Code updated for compatibility with Quantum ESPRESSO 7.3. QE must be compiled without CMake.
+- Release of TDDFT analytical forces (Jin et al., J. Chem. Theory Comput. 19, 8689 (2023)).
+- Improved the performance of TDDFT and BSE on GPU.
+- In spin-polarized QDET calculations, the two spin channels can have different bands in the active space.
+- Updated CI/CD. Added tests to cover the new functionalities.
+- Updated documentation. Added more tutorials.
+
 v5.5.0 (2023/08/10)
 -------------------
 

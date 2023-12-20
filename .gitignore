@@ -20,3 +20,4 @@ Pytools/dist/
 Pytools/files.txt
 .ipynb_checkpoints/
 tags
+.DS_Store

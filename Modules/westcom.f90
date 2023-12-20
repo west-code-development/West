@@ -172,7 +172,7 @@ MODULE wfreq_center
   INTEGER :: n_imfreq
   INTEGER :: n_refreq
   INTEGER :: qp_bandrange(2)
-  INTEGER, ALLOCATABLE :: qp_bands(:)
+  INTEGER, ALLOCATABLE :: qp_bands(:,:)
   REAL(DP) :: ecut_imfreq
   REAL(DP) :: ecut_refreq
   REAL(DP) :: wfreq_eta

@@ -11,184 +11,8 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE add_intput_parameters_to_json_file(num_drivers, driver, json)
-  !-----------------------------------------------------------------------
-  !
-  USE json_module,      ONLY : json_file
-  USE westcom,          ONLY : qe_prefix,west_prefix,outdir,wstat_calculation,n_pdep_eigen,&
-                             & n_pdep_times,n_pdep_maxiter,n_dfpt_maxiter,n_pdep_read_from_file,&
-                             & n_steps_write_restart,trev_pdep,trev_pdep_rel,tr2_dfpt,&
-                             & l_kinetic_only,l_minimize_exx_if_active,n_exx_lowrank,l_use_ecutrho,&
-                             & qlist,wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
-                             & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
-                             & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
-                             & l_qdet_verbose,l_enable_off_diagonal,n_pdep_eigen_off_diagonal,&
-                             & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
-                             & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
-                             & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
-                             & westpp_wannier_tr_rel,westpp_l_dipole_realspace,document,&
-                             & wbse_init_calculation,solver,bse_method,localization,wannier_tr_rel,&
-                             & wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,spin_channel,&
-                             & n_trunc_bands,wbse_calculation,qp_correction,scissor_ope,&
-                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & wbse_ipol,l_dipole_realspace,wbse_epsinfty,spin_excitation,&
-                             & l_preconditioning,l_pre_shift,l_spin_flip,l_spin_flip_kernel,&
-                             & l_spin_flip_alda0,l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
-                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
-                             & l_reduce_io
-  USE mp_world,         ONLY : mpime,root
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  INTEGER, INTENT(IN) :: num_drivers
-  INTEGER, INTENT(IN) :: driver(num_drivers)
-  TYPE(json_file), INTENT(INOUT) :: json
-  !
-  IF(mpime == root) THEN
-     !
-     IF(ANY(driver(:)==1)) THEN
-        !
-        CALL json%add('input.input_west.qe_prefix',TRIM(qe_prefix))
-        CALL json%add('input.input_west.west_prefix',TRIM(west_prefix))
-        CALL json%add('input.input_west.outdir',TRIM(outdir))
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==2)) THEN
-        !
-        CALL json%add('input.wstat_control.wstat_calculation',TRIM(wstat_calculation))
-        CALL json%add('input.wstat_control.n_pdep_eigen',n_pdep_eigen)
-        CALL json%add('input.wstat_control.n_pdep_times',n_pdep_times)
-        CALL json%add('input.wstat_control.n_pdep_maxiter',n_pdep_maxiter)
-        CALL json%add('input.wstat_control.n_dfpt_maxiter',n_dfpt_maxiter)
-        CALL json%add('input.wstat_control.n_pdep_read_from_file',n_pdep_read_from_file)
-        CALL json%add('input.wstat_control.n_steps_write_restart',n_steps_write_restart)
-        CALL json%add('input.wstat_control.trev_pdep',trev_pdep)
-        CALL json%add('input.wstat_control.trev_pdep_rel',trev_pdep_rel)
-        CALL json%add('input.wstat_control.tr2_dfpt',tr2_dfpt)
-        CALL json%add('input.wstat_control.l_kinetic_only',l_kinetic_only)
-        CALL json%add('input.wstat_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
-        CALL json%add('input.wstat_control.n_exx_lowrank',n_exx_lowrank)
-        CALL json%add('input.wstat_control.l_use_ecutrho',l_use_ecutrho)
-        CALL json%add('input.wstat_control.qlist',qlist)
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==3)) THEN
-        !
-        CALL json%add('input.wfreq_control.wfreq_calculation',TRIM(wfreq_calculation))
-        CALL json%add('input.wfreq_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
-        CALL json%add('input.wfreq_control.qp_bandrange',qp_bandrange)
-        CALL json%add('input.wfreq_control.qp_bands',qp_bands)
-        CALL json%add('input.wfreq_control.macropol_calculation',macropol_calculation)
-        CALL json%add('input.wfreq_control.n_lanczos',n_lanczos)
-        CALL json%add('input.wfreq_control.n_imfreq',n_imfreq)
-        CALL json%add('input.wfreq_control.n_refreq',n_refreq)
-        CALL json%add('input.wfreq_control.ecut_imfreq',ecut_imfreq)
-        CALL json%add('input.wfreq_control.ecut_refreq',ecut_refreq)
-        CALL json%add('input.wfreq_control.wfreq_eta',wfreq_eta)
-        CALL json%add('input.wfreq_control.n_secant_maxiter',n_secant_maxiter)
-        CALL json%add('input.wfreq_control.trev_secant',trev_secant)
-        CALL json%add('input.wfreq_control.l_enable_lanczos',l_enable_lanczos)
-        CALL json%add('input.wfreq_control.l_qdet_verbose',l_qdet_verbose)
-        CALL json%add('input.wfreq_control.l_enable_off_diagonal',l_enable_off_diagonal)
-        CALL json%add('input.wfreq_control.n_pdep_eigen_off_diagonal',n_pdep_eigen_off_diagonal)
-        CALL json%add('input.wfreq_control.o_restart_time',o_restart_time)
-        CALL json%add('input.wfreq_control.ecut_spectralf',ecut_spectralf)
-        CALL json%add('input.wfreq_control.n_spectralf',n_spectralf)
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==4)) THEN
-        !
-        CALL json%add('input.westpp_control.westpp_calculation',TRIM(westpp_calculation))
-        CALL json%add('input.westpp_control.westpp_range',westpp_range)
-        CALL json%add('input.westpp_control.westpp_format',TRIM(westpp_format))
-        CALL json%add('input.westpp_control.westpp_sign',westpp_sign)
-        CALL json%add('input.westpp_control.westpp_n_pdep_eigen_to_use',westpp_n_pdep_eigen_to_use)
-        CALL json%add('input.westpp_control.westpp_r0',westpp_r0)
-        CALL json%add('input.westpp_control.westpp_nr',westpp_nr)
-        CALL json%add('input.westpp_control.westpp_rmax',westpp_rmax)
-        CALL json%add('input.westpp_control.westpp_epsinfty',westpp_epsinfty)
-        CALL json%add('input.westpp_control.westpp_box',westpp_box)
-        CALL json%add('input.westpp_control.westpp_n_liouville_to_use',westpp_n_liouville_to_use)
-        CALL json%add('input.westpp_control.westpp_l_spin_flip',westpp_l_spin_flip)
-        CALL json%add('input.westpp_control.westpp_l_compute_tdm',westpp_l_compute_tdm)
-        CALL json%add('input.westpp_control.westpp_wannier_tr_rel',westpp_wannier_tr_rel)
-        CALL json%add('input.westpp_control.westpp_l_dipole_realspace',westpp_l_dipole_realspace)
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==5)) THEN
-        !
-        CALL json%add('input.server_control.document',TRIM(document))
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==6)) THEN
-        !
-        CALL json%add('input.wbse_init_control.wbse_init_calculation',TRIM(wbse_init_calculation))
-        CALL json%add('input.wbse_init_control.solver',TRIM(solver))
-        CALL json%add('input.wbse_init_control.bse_method',TRIM(bse_method))
-        CALL json%add('input.wbse_init_control.n_pdep_eigen_to_use',n_pdep_eigen_to_use)
-        CALL json%add('input.wbse_init_control.localization',localization)
-        CALL json%add('input.wbse_init_control.wannier_tr_rel',wannier_tr_rel)
-        CALL json%add('input.wbse_init_control.wfc_from_qbox',TRIM(wfc_from_qbox))
-        CALL json%add('input.wbse_init_control.bisection_info',TRIM(bisection_info))
-        CALL json%add('input.wbse_init_control.chi_kernel',TRIM(chi_kernel))
-        CALL json%add('input.wbse_init_control.overlap_thr',overlap_thr)
-        CALL json%add('input.wbse_init_control.spin_channel',spin_channel)
-        CALL json%add('input.wbse_init_control.n_trunc_bands',n_trunc_bands)
-        !
-     ENDIF
-     !
-     IF(ANY(driver(:)==7)) THEN
-        !
-        CALL json%add('input.wbse_control.wbse_calculation',TRIM(wbse_calculation))
-        CALL json%add('input.wbse_control.qp_correction',TRIM(qp_correction))
-        CALL json%add('input.wbse_control.scissor_ope',scissor_ope)
-        CALL json%add('input.wbse_control.n_liouville_eigen',n_liouville_eigen)
-        CALL json%add('input.wbse_control.n_liouville_times',n_liouville_times)
-        CALL json%add('input.wbse_control.n_liouville_maxiter',n_liouville_maxiter)
-        CALL json%add('input.wbse_control.n_liouville_read_from_file',n_liouville_read_from_file)
-        CALL json%add('input.wbse_control.trev_liouville',trev_liouville)
-        CALL json%add('input.wbse_control.trev_liouville_rel',trev_liouville_rel)
-        CALL json%add('input.wbse_control.n_lanczos',n_lanczos)
-        CALL json%add('input.wbse_control.n_steps_write_restart',n_steps_write_restart)
-        CALL json%add('input.wbse_control.wbse_ipol',TRIM(wbse_ipol))
-        CALL json%add('input.wbse_control.l_dipole_realspace',l_dipole_realspace)
-        CALL json%add('input.wbse_control.wbse_epsinfty',wbse_epsinfty)
-        CALL json%add('input.wbse_control.spin_excitation',spin_excitation)
-        CALL json%add('input.wbse_control.l_preconditioning',l_preconditioning)
-        CALL json%add('input.wbse_control.l_pre_shift',l_pre_shift)
-        CALL json%add('input.wbse_control.l_spin_flip',l_spin_flip)
-        CALL json%add('input.wbse_control.l_spin_flip_kernel',l_spin_flip_kernel)
-        CALL json%add('input.wbse_control.l_spin_flip_alda0',l_spin_flip_alda0)
-        CALL json%add('input.wbse_control.l_print_spin_flip_kernel',l_print_spin_flip_kernel)
-        CALL json%add('input.wbse_control.spin_flip_cut',spin_flip_cut)
-        CALL json%add('input.wbse_control.l_forces',l_forces)
-        CALL json%add('input.wbse_control.forces_state',forces_state)
-        CALL json%add('input.wbse_control.forces_zeq_cg_tr',forces_zeq_cg_tr)
-        CALL json%add('input.wbse_control.forces_zeq_n_cg_maxiter',forces_zeq_n_cg_maxiter)
-        CALL json%add('input.wbse_control.ddvxc_fd_coeff',ddvxc_fd_coeff)
-        CALL json%add('input.wbse_control.forces_inexact_krylov',forces_inexact_krylov)
-        CALL json%add('input.wbse_control.forces_inexact_krylov_tr',forces_inexact_krylov_tr)
-        CALL json%add('input.wbse_control.l_minimize_exx_if_active',l_minimize_exx_if_active)
-        CALL json%add('input.wbse_control.n_exx_lowrank',n_exx_lowrank)
-        CALL json%add('input.wbse_control.l_reduce_io',l_reduce_io)
-        !
-     ENDIF
-     !
-  ENDIF
-  !
-END SUBROUTINE
-!
 SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
+  !-----------------------------------------------------------------------
   !
   USE forpy_mod,        ONLY : call_py,import_py,module_py,tuple,tuple_create,dict,dict_create,&
                              & list,object,cast
@@ -224,8 +48,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   USE gvect,            ONLY : ecutrho
   USE start_k,          ONLY : nk1,nk2,nk3
   USE control_flags,    ONLY : gamma_only
-  USE json_module,      ONLY : json_file
-  USE pwcom,            ONLY : nelec,nbnd
+  USE pwcom,            ONLY : nelec,nbnd,nspin
   !
   IMPLICIT NONE
   !
@@ -239,17 +62,16 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   TYPE(tuple) :: args
   TYPE(dict) :: kwargs
   TYPE(module_py) :: pymod
-  TYPE(object) :: return_obj,tmp_obj
+  TYPE(object) :: return_obj,tmp_obj,tmp_obj2
   TYPE(dict) :: return_dict
-  TYPE(list) :: tmp_list
+  TYPE(list) :: tmp_list,tmp_list2
   INTEGER :: list_len
   INTEGER :: i
   INTEGER :: nq
   INTEGER :: n_qp_bands
   CHARACTER(LEN=512), EXTERNAL :: trimcheck
   CHARACTER(LEN=:),ALLOCATABLE :: cvalue
-  TYPE(json_file) :: json
-  INTEGER :: iunit, lenc
+  INTEGER :: lenc
   INTEGER, PARAMETER :: DUMMY_DEFAULT = -1210
   !
   CALL start_clock('fetch_input')
@@ -260,10 +82,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      !
      IF(ANY(driver(:)==1)) THEN
         !
-        IERR = tuple_create(args, 3)
+        IERR = tuple_create(args, 4)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
         IERR = args%setitem(1, 'input_west')
         IERR = args%setitem(2, verbose)
+        IERR = args%setitem(3, TRIM(ADJUSTL(logfile)))
         IERR = dict_create(kwargs)
         !
         IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
@@ -289,10 +112,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
            nq = nk1*nk2*nk3
         ENDIF
         !
-        IERR = tuple_create(args, 3)
+        IERR = tuple_create(args, 4)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
         IERR = args%setitem(1, 'wstat_control')
         IERR = args%setitem(2, verbose)
+        IERR = args%setitem(3, TRIM(ADJUSTL(logfile)))
         IERR = dict_create(kwargs)
         IERR = kwargs%setitem('nq', nq)
         IERR = kwargs%setitem('nelec', nelec)
@@ -336,13 +160,15 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      !
      IF(ANY(driver(:)==3)) THEN
         !
-        IERR = tuple_create(args, 3)
+        IERR = tuple_create(args, 4)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
         IERR = args%setitem(1, 'wfreq_control')
         IERR = args%setitem(2, verbose)
+        IERR = args%setitem(3, TRIM(ADJUSTL(logfile)))
         IERR = dict_create(kwargs)
         IERR = kwargs%setitem('nelec', nelec)
         IERR = kwargs%setitem('ecutrho', ecutrho)
+        IERR = kwargs%setitem('nspin', nspin)
         !
         IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
         IERR = cast(return_dict, return_obj)
@@ -355,21 +181,31 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%get(n_pdep_eigen_to_use, 'n_pdep_eigen_to_use', DUMMY_DEFAULT)
         IERR = return_dict%getitem(tmp_obj, 'qp_bandrange')
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%len(list_len)
         IERR = tmp_list%getitem(qp_bandrange(1), 0) ! Fortran indices start at 1
         IERR = tmp_list%getitem(qp_bandrange(2), 1) ! Fortran indices start at 1
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         IERR = return_dict%getitem(tmp_obj, 'qp_bands')
         IERR = cast(tmp_list,tmp_obj)
-        IERR = tmp_list%len(list_len)
+        IERR = tmp_list%getitem(tmp_obj2, 0)
+        IERR = cast(tmp_list2,tmp_obj2)
+        IERR = tmp_list2%len(list_len)
         IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
-        ALLOCATE(qp_bands(list_len))
+        ALLOCATE(qp_bands(list_len,nspin))
         DO i = 0, list_len-1 ! Python indices start at 0
-           IERR = tmp_list%getitem(qp_bands(i+1), i) ! Fortran indices start at 1
+           IERR = tmp_list2%getitem(qp_bands(i+1,1), i) ! Fortran indices start at 1
         ENDDO
+        IF(nspin == 2) THEN
+           IERR = tmp_list%getitem(tmp_obj2, 1)
+           IERR = cast(tmp_list2,tmp_obj2)
+           DO i = 0, list_len-1 ! Python indices start at 0
+              IERR = tmp_list2%getitem(qp_bands(i+1,2), i) ! Fortran indices start at 1
+           ENDDO
+        ENDIF
         CALL tmp_list%destroy
+        CALL tmp_list2%destroy
         CALL tmp_obj%destroy
+        CALL tmp_obj2%destroy
         IERR = return_dict%getitem(cvalue, 'macropol_calculation'); macropol_calculation = TRIM(ADJUSTL(cvalue))
         IERR = return_dict%get(n_lanczos, 'n_lanczos', DUMMY_DEFAULT)
         IERR = return_dict%get(n_imfreq, 'n_imfreq', DUMMY_DEFAULT)
@@ -398,10 +234,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      !
      IF(ANY(driver(:)==4)) THEN
         !
-        IERR = tuple_create(args, 3)
+        IERR = tuple_create(args, 4)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
         IERR = args%setitem(1, 'westpp_control')
         IERR = args%setitem(2, verbose)
+        IERR = args%setitem(3, TRIM(ADJUSTL(logfile)))
         IERR = dict_create(kwargs)
         !
         IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
@@ -453,10 +290,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      !
      IF(ANY(driver(:)==5)) THEN
         !
-        IERR = tuple_create(args, 3)
+        IERR = tuple_create(args, 4)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
         IERR = args%setitem(1, 'server_control')
         IERR = args%setitem(2, verbose)
+        IERR = args%setitem(3, TRIM(ADJUSTL(logfile)))
         IERR = dict_create(kwargs)
         !
         IERR = call_py(return_obj, pymod, 'read_keyword_from_file', args, kwargs)
@@ -478,10 +316,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         ALLOCATE(qlist(1))
         qlist = (/1/)
         !
-        IERR = tuple_create(args, 3)
+        IERR = tuple_create(args, 4)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
         IERR = args%setitem(1, 'wbse_init_control')
         IERR = args%setitem(2, verbose)
+        IERR = args%setitem(3, TRIM(ADJUSTL(logfile)))
         IERR = dict_create(kwargs)
         IERR = kwargs%setitem('nelec', nelec)
         !
@@ -511,10 +350,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      !
      IF(ANY(driver(:)==7)) THEN
         !
-        IERR = tuple_create(args, 3)
+        IERR = tuple_create(args, 4)
         IERR = args%setitem(0, TRIM(ADJUSTL(main_input_file)))
         IERR = args%setitem(1, 'wbse_control')
         IERR = args%setitem(2, verbose)
+        IERR = args%setitem(3, TRIM(ADJUSTL(logfile)))
         IERR = dict_create(kwargs)
         IERR = kwargs%setitem('nbnd', nbnd)
         !
@@ -632,11 +472,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(wfreq_calculation,root,world_comm)
      CALL mp_bcast(n_pdep_eigen_to_use,root,world_comm)
      CALL mp_bcast(qp_bandrange,root,world_comm)
-     IF(mpime == root) n_qp_bands = SIZE(qp_bands)
+     IF(mpime == root) n_qp_bands = SIZE(qp_bands,1)
      CALL mp_bcast(n_qp_bands,root,world_comm)
      IF(mpime /= root) THEN
         IF(ALLOCATED(qp_bands)) DEALLOCATE(qp_bands)
-        ALLOCATE(qp_bands(n_qp_bands))
+        ALLOCATE(qp_bands(n_qp_bands,nspin))
      ENDIF
      CALL mp_bcast(qp_bands,root,world_comm)
      CALL mp_bcast(macropol_calculation,root,world_comm)
@@ -672,14 +512,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(qp_bandrange(1) < 1) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
      IF(qp_bandrange(2) < 1) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
      IF(qp_bandrange(2) < qp_bandrange(1)) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
-     IF(qp_bands(1) /= 0) THEN
-        DO i = 0, SIZE(qp_bands)-1 ! Python indices start at 0
-           IF(qp_bands(i+1) < 1) CALL errore('fetch_input','Err: qp_bands<1',1)
-           IF(i /= SIZE(qp_bands)-1) THEN
-              IF(qp_bands(i+1) >= qp_bands(i+2)) CALL errore('fetch_input','Err: qp_bands must be sorted in ascending order',1)
-           ENDIF
-        ENDDO
-     ENDIF
      IF(ecut_imfreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF(ecut_refreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF(ecut_spectralf(2) < ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
@@ -894,20 +726,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
   ENDIF
   !
   CALL mp_barrier(world_comm)
-  !
-  IF(verbose .AND. mpime == root) THEN
-     !
-     CALL json%initialize()
-     CALL json%load(filename=TRIM(logfile))
-     !
-     CALL add_intput_parameters_to_json_file(num_drivers, driver, json)
-     !
-     OPEN(NEWUNIT=iunit, FILE=TRIM(logfile))
-     CALL json%print(iunit)
-     CLOSE(iunit)
-     CALL json%destroy()
-     !
-  ENDIF
   !
   CALL stop_clock('fetch_input')
   !

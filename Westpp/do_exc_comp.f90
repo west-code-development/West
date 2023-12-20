@@ -309,8 +309,8 @@ SUBROUTINE do_exc_comp()
      ENDDO
      !
      IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
-        WRITE(stdout, "(5x, '#     TDM_x                |   TDM_y               |    TDM_z             ')")
-        WRITE(stdout, "(9x, f18.9, 5x, '|', f17.9, 6x, '|', f16.9, 2x)") &
+        WRITE(stdout, "(5x, '#     TDM_x                |   TDM_y               |    TDM_z')")
+        WRITE(stdout, "(9x, f18.9, 5x, '|', f17.9, 6x, '|', f16.9)") &
         & transition_dipole_cart(1,iexc),transition_dipole_cart(2,iexc),transition_dipole_cart(3,iexc)
      ENDIF
      !

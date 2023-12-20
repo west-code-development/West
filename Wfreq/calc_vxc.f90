@@ -62,7 +62,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   REAL(DP) :: vtxc_
   REAL(DP) :: ee_
   REAL(DP), ALLOCATABLE :: vxc(:,:)
-  INTEGER :: ib,ir,iks,iks_g,jb_glob,ipair
+  INTEGER :: ib,ir,iks,iks_g,is,jb_glob,ipair
   COMPLEX(DP) :: braket
   REAL(DP) :: nnr
   TYPE(bar_type) :: barra
@@ -79,7 +79,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   IF (l_enable_off_diagonal) ALLOCATE( psic1 (dfftp%nnr) )
   !
-  WRITE(stdout,'(5x,a)') ' '
+  WRITE(stdout,*)
   CALL io_push_bar()
   WRITE(stdout,'(5x,a)') 'Vxc'
   CALL io_push_bar()
@@ -110,6 +110,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   DO iks = 1, kpt_pool%nloc ! KPOINT-SPIN
      !
      iks_g = kpt_pool%l2g(iks)
+     is = k_grid%is(iks_g)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -137,9 +138,9 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
            !
            DO ib = 1, gwbnd%nloc
 #if defined(__CUDA)
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,qp_bands(gwbnd%l2g(ib))),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave')
 #else
-              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,qp_bands(gwbnd%l2g(ib))),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave')
 #endif
               !
               DO jb_glob = 1, n_bands
@@ -151,10 +152,10 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
 #if defined(__CUDA)
                     !$acc host_data use_device(psic1)
-                    CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,qp_bands(jb_glob)),psic1,'Wave')
+                    CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,qp_bands(jb_glob,is)),psic1,'Wave')
                     !$acc end host_data
 #else
-                    CALL single_invfft_gamma(dffts,npw,npwx,evc(:,qp_bands(jb_glob)),psic1,'Wave')
+                    CALL single_invfft_gamma(dffts,npw,npwx,evc(:,qp_bands(jb_glob,is)),psic1,'Wave')
 #endif
                     !$acc parallel loop reduction(+:braket) present(psic1,vxc) copy(braket)
                     DO ir = 1, dfftp_nnr
@@ -181,10 +182,10 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
            !
            DO ib = 1, gwbnd%nloc
 #if defined(__CUDA)
-              CALL single_invfft_k(dffts,npw,npwx,evc_d(:,qp_bands(gwbnd%l2g(ib))),psic,'Wave',&
+              CALL single_invfft_k(dffts,npw,npwx,evc_d(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave',&
               & igk_k(:,current_k))
 #else
-              CALL single_invfft_k(dffts,npw,npwx,evc(:,qp_bands(gwbnd%l2g(ib))),psic,'Wave',&
+              CALL single_invfft_k(dffts,npw,npwx,evc(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave',&
               & igk_k(:,current_k))
 #endif
               braket = 0._DP
@@ -200,10 +201,10 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
               !
               DO ib = 1,gwbnd%nloc
 #if defined(__CUDA)
-                 CALL single_invfft_k(dffts,npw,npwx,evc_d(1+npwx:npwx*2,qp_bands(gwbnd%l2g(ib))),&
+                 CALL single_invfft_k(dffts,npw,npwx,evc_d(1+npwx:npwx*2,qp_bands(gwbnd%l2g(ib),is)),&
                  & psic,'Wave',igk_k(:,current_k))
 #else
-                 CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx:npwx*2,qp_bands(gwbnd%l2g(ib))),&
+                 CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx:npwx*2,qp_bands(gwbnd%l2g(ib),is)),&
                  & psic,'Wave',igk_k(:,current_k))
 #endif
                  braket = 0._DP
@@ -233,7 +234,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
            !
            xpsi = 0._DP
            DO ib=1,gwbnd%nloc
-              xpsi(:,ib) = evc(:,qp_bands(gwbnd%l2g(ib)))
+              xpsi(:,ib) = evc(:,qp_bands(gwbnd%l2g(ib),is))
            ENDDO
            !
            vxpsi = 0._DP
@@ -256,8 +257,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                     IF (l_enable_off_diagonal) ipair = ijpmap(jb_glob,gwbnd%l2g(ib))
                     !
                     IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
-                       braket = 2._DP * REAL( ZDOTC( npw, evc(1,qp_bands(jb_glob)),1,vxpsi(1,ib),1), KIND=DP )
-                       IF(gstart==2) braket = braket - REAL( evc(1,qp_bands(jb_glob)), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
+                       braket = 2._DP * REAL( ZDOTC( npw, evc(1,qp_bands(jb_glob,is)),1,vxpsi(1,ib),1), KIND=DP )
+                       IF(gstart==2) braket = braket - REAL( evc(1,qp_bands(jb_glob,is)), KIND=DP) * REAL( vxpsi(1,ib), KIND=DP)
                        sigma_vxcnl_full(ipair,iks_g) = REAL( braket, KIND=DP )
                     ELSEIF ( jb_glob == gwbnd%l2g(ib) ) THEN
                        braket = 2._DP * DDOT( 2*npw, xpsi(1,ib), 1, vxpsi(1,ib), 1)

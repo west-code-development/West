@@ -396,7 +396,7 @@ MODULE west_gpu_data
    !
    IF(gamma_only) THEN
       IF(ALLOCATED(ps_r)) THEN
-         IF(SIZE(ps_r,DIM=1) /= nbndval .OR. SIZE(ps_r,DIM=2) /= m) THEN
+         IF(SIZE(ps_r,1) /= nbndval .OR. SIZE(ps_r,2) /= m) THEN
             DEALLOCATE(ps_r)
          ENDIF
       ENDIF
@@ -405,7 +405,7 @@ MODULE west_gpu_data
       ENDIF
    ELSE
       IF(ALLOCATED(ps_c)) THEN
-         IF(SIZE(ps_c,DIM=1) /= nbndval .OR. SIZE(ps_c,DIM=2) /= m) THEN
+         IF(SIZE(ps_c,1) /= nbndval .OR. SIZE(ps_c,2) /= m) THEN
             DEALLOCATE(ps_c)
          ENDIF
       ENDIF

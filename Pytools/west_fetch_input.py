@@ -186,7 +186,7 @@ def update_default_values(key, kwargs):
 
 
 def open_and_parse_file(fileName="west.in"):
-    """Opens a file and parses it using the YAML sintax
+    """Opens a file and parses it using the YAML sintax.
 
     :param fileName: name of the file
     :type fileName: ``string``
@@ -240,6 +240,53 @@ def check_dict(parsed_data={}, default_data={}):
     return data
 
 
+############
+# QP BANDS #
+############
+
+
+def parse_qp_bands(data_in, keyword, kwargs):
+    """Parse qp_bands.
+
+    :param data_in: input data
+    :type data_in: ``dict``
+    :param keyword: keyword
+    :type keyword: ``string``
+    :param kwargs: kwargs dictionary
+    :type kwargs: ``dict``
+    :return: updated data
+    :rtype: ``dict``
+    """
+    #
+    if keyword == "wfreq_control":
+        #
+        assert ("nspin") in kwargs.keys()
+        nspin = kwargs["nspin"]
+        qp_bandrange = data_in["qp_bandrange"]
+        qp_bands = data_in["qp_bands"]
+        qp_bands_new = []
+        #
+        if qp_bands == [0]:
+            qp_bands_new = [list(range(qp_bandrange[0], qp_bandrange[1] + 1))] * nspin
+        else:
+            if isinstance(qp_bands[0], list):
+                if nspin == 1:
+                    qp_bands_new = qp_bands
+                elif nspin == 2:
+                    if len(qp_bands) == 1:
+                        qp_bands_new = qp_bands * nspin
+                    else:
+                        assert isinstance(qp_bands[1], list)
+                        assert len(qp_bands[0]) == len(qp_bands[1])
+                        qp_bands_new = qp_bands
+            else:
+                qp_bands_new = [qp_bands] * nspin
+        #
+        data_in["qp_bands"] = qp_bands_new
+    #
+    return data_in
+
+
 ###########
 # SUPPORT #
 ###########
@@ -271,7 +318,7 @@ def print_dict(title="input_west", data={}):
     :param title: title
     :type title: ``string``
     :param data: data to print
-    :type default_data: ``dict``
+    :type data: ``dict``
 
     """
     #
@@ -291,13 +338,39 @@ def print_dict(title="input_west", data={}):
     sys.stdout.flush()
 
 
+def print_json(fileName="west.json", title="input_west", data={}):
+    """Prints data.
+
+    :param fileName: name of the file
+    :type title: ``string``
+    :param title: title
+    :type title: ``string``
+    :param data: data to print
+    :type data: ``dict``
+
+    """
+    #
+    try:
+        with open(fileName, "r") as f:
+            j = json.load(f)
+    except:
+        j = {}
+    #
+    if not "input" in j.keys():
+        j["input"] = {}
+    j["input"][title] = data
+    #
+    with open(fileName, "w") as f:
+        json.dump(j, f, indent=2)
+
+
 #############
 # INTERFACE #
 #############
 
 
 def read_keyword_from_file(*args, **kwargs):
-    """Read keyword from file
+    """Read keyword from file.
 
     :return: read data
     :rtype: ``dict``
@@ -307,6 +380,7 @@ def read_keyword_from_file(*args, **kwargs):
     fileName = args[0]
     keyword = args[1]
     verbose = args[2]
+    logfile = args[3]
     #
     # Assign static & dynamical defaults
     #
@@ -324,10 +398,14 @@ def read_keyword_from_file(*args, **kwargs):
     #
     data = check_dict(parsed_data, default_data)
     #
+    # Parse qp_bandrange and qp_bands
+    #
+    data = parse_qp_bands(data, keyword, kwargs)
     # Print
     #
     if verbose:
         print_dict(keyword, data)
+        print_json(logfile, keyword, data)
     #
     return data
 
@@ -340,6 +418,7 @@ def read_keyword_from_file(*args, **kwargs):
 def test():
     #
     fileName = "west.in"
+    jsonName = "west.json"
     #
     with open(fileName, "w") as file:
         file.write(
@@ -356,15 +435,16 @@ server_control :
 """
         )
     #
-    read_keyword_from_file(fileName, "input_west", True)
-    read_keyword_from_file(fileName, "wstat_control", True, nq=20, nelec=10)
-    read_keyword_from_file(fileName, "wfreq_control", True, nelec=10, ecutrho=30.0)
-    read_keyword_from_file(fileName, "westpp_control", True)
-    read_keyword_from_file(fileName, "server_control", True)
-    read_keyword_from_file(fileName, "wbse_init_control", True)
-    read_keyword_from_file(fileName, "wbse_control", True)
+    read_keyword_from_file(fileName, "input_west", True, jsonName)
+    read_keyword_from_file(fileName, "wstat_control", True, jsonName, nq=20, nelec=10, nbnd=30)
+    read_keyword_from_file(fileName, "wfreq_control", True, jsonName, nelec=10, ecutrho=30.0, nspin=2)
+    read_keyword_from_file(fileName, "westpp_control", True, jsonName)
+    read_keyword_from_file(fileName, "server_control", True, jsonName)
+    read_keyword_from_file(fileName, "wbse_init_control", True, jsonName, nelec=10)
+    read_keyword_from_file(fileName, "wbse_control", True, jsonName, nbnd=30)
     #
     remove(fileName)
+    remove(jsonName)
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ MODULE wfreq_db
       USE mp_global,            ONLY : inter_pool_comm
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,n_spectralf,logfile,&
+      USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,logfile,&
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,&
                                      & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
                                      & sigma_freq,sigma_spectralf,l_enable_off_diagonal,pijmap,n_pairs,&
@@ -50,7 +50,7 @@ MODULE wfreq_db
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks,iks_g,ib,ipair
+      INTEGER :: iks,iks_g,is,ib,ipair
       CHARACTER(LEN=6) :: my_label_k,my_label_b
       CHARACTER(LEN=10) :: label
       !
@@ -75,8 +75,9 @@ MODULE wfreq_db
       occ(:,:) = 0._DP
       DO iks = 1,kpt_pool%nloc
          iks_g = kpt_pool%l2g(iks)
+         is = k_grid%is(iks_g)
          DO ib = 1,n_bands
-            occ(ib,iks_g) = occupation(qp_bands(ib),iks)
+            occ(ib,iks_g) = occupation(qp_bands(ib,is),iks)
          ENDDO
       ENDDO
       !
@@ -96,8 +97,6 @@ MODULE wfreq_db
             IF(wfreq_calculation(i:i) == 'O') l_optics = .TRUE.
          ENDDO
          !
-         CALL json%add('output.Q.bandmap',qp_bands)
-         !
          IF(ALLOCATED(pijmap)) THEN
             DO ipair = 1,n_pairs
                WRITE(label,'(i10)') ipair
@@ -116,8 +115,10 @@ MODULE wfreq_db
          !
          DO iks = 1,k_grid%nps
             !
+            is = k_grid%is(iks)
+            !
             DO ib = 1,n_bands
-               eks(ib) = et(qp_bands(ib),iks)
+               eks(ib) = et(qp_bands(ib,is),iks)
             ENDDO
             !
             WRITE(my_label_k,'(i6.6)') iks
@@ -166,7 +167,7 @@ MODULE wfreq_db
             !
             IF(l_generate_plot) THEN
                DO ib = 1,n_bands
-                  WRITE(my_label_b,'(i6.6)') qp_bands(ib)
+                  WRITE(my_label_b,'(i6.6)') qp_bands(ib,is)
                   CALL json%add('output.P.K'//my_label_k//'.B'//my_label_b//'.sigmac.re',&
                   & REAL(sigma_spectralf(:,ib,iks),KIND=DP)*rytoev)
                   CALL json%add('output.P.K'//my_label_k//'.B'//my_label_b//'.sigmac.im',&

@@ -346,9 +346,9 @@ SUBROUTINE do_sxx ( )
   !
   ! STDOUT
   !
-  WRITE(stdout,'(5X)')
+  WRITE(stdout,*)
   CALL io_push_bar()
-  WRITE(stdout,'(5X,a,1X,a,1X,a,1X,a,1X,a,1X,a)') &
+  WRITE(stdout,'(5X,a,X,a,X,a,X,a,X,a,X,a)') &
   & 'K     ', 'B     ', '      Eks [eV]', '       Sx [eV]', '      Sxx [eV]', '        Sxx/Sx'
   CALL io_push_bar()
   !
@@ -361,7 +361,7 @@ SUBROUTINE do_sxx ( )
         out_tab( ib - westpp_range(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
-        WRITE(stdout,'(5X,i5.5,1X,i6.6,1X,1f14.6,1X,1f14.6,1X,1f14.6,1X,1f14.6)') &
+        WRITE(stdout,'(5X,i5.5,X,i6.6,X,f14.6,X,f14.6,X,f14.6,X,f14.6)') &
         & iks, ib, et(ib,iks)*rytoev, sigma_exx(ib,iks)*rytoev, sigma_sxx(ib,iks)*rytoev, sigma_sxx(ib,iks)/sigma_exx(ib,iks)
      ENDDO
      IF (k_grid%nps>1.AND.iks<k_grid%nps) CALL io_push_bar()

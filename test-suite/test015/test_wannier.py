@@ -21,17 +21,7 @@ def read_wannier_center_from_json(fileName):
     with open(fileName, "r") as f:
         raw_ = json.load(f)
 
-    wanc = raw_["output"]["B"]["K00001"]["wan_center"]
-    n_wanc = len(wanc)
-
-    wan_center = np.zeros((n_wanc, 3))
-
-    for i, wanc_ in enumerate(wanc):
-        wan_center[i, 0] = wanc_["x"]
-        wan_center[i, 1] = wanc_["y"]
-        wan_center[i, 2] = wanc_["z"]
-
-    return wan_center
+    return np.array(raw_["output"]["B"]["K00001"]["wan_center"], dtype=float)
 
 
 def test_trans_matrix():

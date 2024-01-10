@@ -83,7 +83,6 @@ SUBROUTINE exx_go()
      IF(n_exx_lowrank < 1) CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
      !
      CALL start_exx()
-     CALL weights()
      CALL exx_grid_init()
      ! exx_mp_init necessary when k points are used
      CALL exx_mp_init()

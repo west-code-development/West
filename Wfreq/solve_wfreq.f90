@@ -50,7 +50,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE constants,            ONLY : fpi,e2
   USE pwcom,                ONLY : npw,npwx,et,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
-  USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
+  USE becmod,               ONLY : becp,allocate_bec_type_acc,deallocate_bec_type_acc
   USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
@@ -165,11 +165,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   ! This is to reduce memory
   !
-  CALL deallocate_bec_type( becp )
+  CALL deallocate_bec_type_acc( becp )
   IF(l_macropol) THEN
-     CALL allocate_bec_type ( nkb, MAX(mypara%nloc,3), becp ) ! I just need 2 becp at a time
+     CALL allocate_bec_type_acc( nkb, MAX(mypara%nloc,3), becp ) ! I just need 2 becp at a time
   ELSE
-     CALL allocate_bec_type ( nkb, mypara%nloc, becp ) ! I just need 2 becp at a time
+     CALL allocate_bec_type_acc( nkb, mypara%nloc, becp ) ! I just need 2 becp at a time
   ENDIF
   !
   ! ALLOCATE dmati, zmatr, where chi0 is stored
@@ -1082,7 +1082,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE constants,            ONLY : fpi,e2
   USE pwcom,                ONLY : npw,npwx,et,current_spin,isk,nbnd,lsda,igk_k,current_k,ngk
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
-  USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
+  USE becmod,               ONLY : becp,allocate_bec_type_acc,deallocate_bec_type_acc
   USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
@@ -1198,11 +1198,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! This is to reduce memory
   !
-  CALL deallocate_bec_type( becp )
+  CALL deallocate_bec_type_acc( becp )
   IF(l_macropol) THEN
-     CALL allocate_bec_type ( nkb, MAX(mypara%nloc,3), becp ) ! I just need 2 becp at a time
+     CALL allocate_bec_type_acc( nkb, MAX(mypara%nloc,3), becp ) ! I just need 2 becp at a time
   ELSE
-     CALL allocate_bec_type ( nkb, mypara%nloc, becp ) ! I just need 2 becp at a time
+     CALL allocate_bec_type_acc( nkb, mypara%nloc, becp ) ! I just need 2 becp at a time
   ENDIF
   !
   ! ALLOCATE zmati_q, zmatr_q, where chi0 is stored

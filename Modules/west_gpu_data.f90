@@ -13,7 +13,7 @@ MODULE west_gpu_data
    !
    USE kinds,         ONLY : DP,i8b
 #if defined(__CUDA)
-   USE becmod_gpum,   ONLY : bec_type_d
+   USE becmod,        ONLY : bec_type
    USE cublas
    USE cusolverdn
    !
@@ -47,14 +47,8 @@ MODULE west_gpu_data
    COMPLEX(DP), ALLOCATABLE :: dvkb(:,:)
    COMPLEX(DP), ALLOCATABLE :: work(:,:)
    !$acc declare device_resident(gk,deff,deff_nc,ps2,psc,dvkb,work)
-   REAL(DP), DEVICE, POINTER :: becp1_d_r_d(:,:)
-   REAL(DP), DEVICE, POINTER :: becp2_d_r_d(:,:)
-   COMPLEX(DP), DEVICE, POINTER :: becp1_d_k_d(:,:)
-   COMPLEX(DP), DEVICE, POINTER :: becp2_d_k_d(:,:)
-   COMPLEX(DP), DEVICE, POINTER :: becp1_d_nc_d(:,:,:)
-   COMPLEX(DP), DEVICE, POINTER :: becp2_d_nc_d(:,:,:)
-   TYPE(bec_type_d), TARGET :: becp1_d ! (nkb,m)
-   TYPE(bec_type_d), TARGET :: becp2_d ! (nkb,m)
+   TYPE(bec_type) :: becp1 ! (nkb,m)
+   TYPE(bec_type) :: becp2 ! (nkb,m)
    !
    ! Chi invert
    !
@@ -176,7 +170,6 @@ MODULE west_gpu_data
    USE westcom,               ONLY : igq_q
    USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d
    USE wvfct_gpum,            ONLY : using_et,using_et_d
-   USE becmod_subs_gpum,      ONLY : using_becp_auto,using_becp_d_auto
    !
    IMPLICIT NONE
    !
@@ -185,8 +178,6 @@ MODULE west_gpu_data
    !
    CALL using_et(2)
    CALL using_et_d(0)
-   CALL using_becp_auto(2)
-   CALL using_becp_d_auto(0)
    !
    IF(nks == 1) THEN
       CALL using_evc(2)
@@ -420,14 +411,13 @@ MODULE west_gpu_data
    SUBROUTINE allocate_macropol_gpu(m)
    !-----------------------------------------------------------------------
    !
-   USE control_flags,         ONLY : gamma_only
    USE ions_base,             ONLY : nat
    USE lsda_mod,              ONLY : nspin
    USE noncollin_module,      ONLY : noncolin,npol
    USE uspp,                  ONLY : nkb
    USE uspp_param,            ONLY : nhm
    USE wvfct,                 ONLY : npwx
-   USE becmod_subs_gpum,      ONLY : allocate_bec_type_gpu
+   USE becmod,                ONLY : allocate_bec_type_acc
    USE westcom,               ONLY : l_skip_nl_part_of_hcomr
    !
    IMPLICIT NONE
@@ -450,19 +440,8 @@ MODULE west_gpu_data
          ALLOCATE(ps2(nkb,m,2))
       ENDIF
       !
-      CALL allocate_bec_type_gpu(nkb,m,becp1_d)
-      CALL allocate_bec_type_gpu(nkb,m,becp2_d)
-      !
-      IF(noncolin) THEN
-         becp1_d_nc_d => becp1_d%nc_d
-         becp2_d_nc_d => becp2_d%nc_d
-      ELSEIF(gamma_only) THEN
-         becp1_d_r_d => becp1_d%r_d
-         becp2_d_r_d => becp2_d%r_d
-      ELSE
-         becp1_d_k_d => becp1_d%k_d
-         becp2_d_k_d => becp2_d%k_d
-      ENDIF
+      CALL allocate_bec_type_acc(nkb,m,becp1)
+      CALL allocate_bec_type_acc(nkb,m,becp2)
    ENDIF
    !
    END SUBROUTINE
@@ -471,7 +450,7 @@ MODULE west_gpu_data
    SUBROUTINE deallocate_macropol_gpu()
    !-----------------------------------------------------------------------
    !
-   USE becmod_subs_gpum,      ONLY : deallocate_bec_type_gpu
+   USE becmod,                ONLY : deallocate_bec_type_acc
    USE uspp,                  ONLY : nkb
    USE westcom,               ONLY : l_skip_nl_part_of_hcomr
 
@@ -500,28 +479,10 @@ MODULE west_gpu_data
    IF(ALLOCATED(ps2)) THEN
       DEALLOCATE(ps2)
    ENDIF
-   IF(ASSOCIATED(becp1_d_r_d)) THEN
-      NULLIFY(becp1_d_r_d)
-   ENDIF
-   IF(ASSOCIATED(becp2_d_r_d)) THEN
-      NULLIFY(becp2_d_r_d)
-   ENDIF
-   IF(ASSOCIATED(becp1_d_k_d)) THEN
-      NULLIFY(becp1_d_k_d)
-   ENDIF
-   IF(ASSOCIATED(becp2_d_k_d)) THEN
-      NULLIFY(becp2_d_k_d)
-   ENDIF
-   IF(ASSOCIATED(becp1_d_nc_d)) THEN
-      NULLIFY(becp1_d_nc_d)
-   ENDIF
-   IF(ASSOCIATED(becp2_d_nc_d)) THEN
-      NULLIFY(becp2_d_nc_d)
-   ENDIF
    !
    IF(.NOT. l_skip_nl_part_of_hcomr .AND. nkb > 0) THEN
-      CALL deallocate_bec_type_gpu(becp1_d)
-      CALL deallocate_bec_type_gpu(becp2_d)
+      CALL deallocate_bec_type_acc(becp1)
+      CALL deallocate_bec_type_acc(becp2)
    ENDIF
    !
    END SUBROUTINE

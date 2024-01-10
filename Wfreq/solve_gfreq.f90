@@ -44,7 +44,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
-  USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
+  USE becmod,               ONLY : becp,allocate_bec_type_acc,deallocate_bec_type_acc
   USE uspp,                 ONLY : vkb,nkb
   USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
@@ -119,8 +119,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! This is to reduce memory
   !
-  CALL deallocate_bec_type( becp )
-  CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
+  CALL deallocate_bec_type_acc( becp )
+  CALL allocate_bec_type_acc( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL pot3D%init('Wave',.FALSE.,'default')
   !
@@ -562,7 +562,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
-  USE becmod,               ONLY : becp,allocate_bec_type,deallocate_bec_type
+  USE becmod,               ONLY : becp,allocate_bec_type_acc,deallocate_bec_type_acc
   USE uspp,                 ONLY : vkb,nkb
   USE uspp_init,            ONLY : init_us_2
   USE pdep_db,              ONLY : generate_pdep_fname
@@ -640,8 +640,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   ! This is to reduce memory
   !
-  CALL deallocate_bec_type( becp )
-  CALL allocate_bec_type ( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
+  CALL deallocate_bec_type_acc( becp )
+  CALL allocate_bec_type_acc( nkb, pert%nloc, becp ) ! I just need 2 becp at a time
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !

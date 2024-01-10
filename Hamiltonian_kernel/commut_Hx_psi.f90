@@ -40,6 +40,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   USE uspp_init,        ONLY : gen_us_dj, gen_us_dy
   USE control_flags,    ONLY : gamma_only
   USE pwcom,            ONLY : igk_k, current_k
+  USE control_flags,    ONLY : offload_type
   !
   IMPLICIT NONE
   !
@@ -181,8 +182,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      CALL allocate_bec_type ( nkb, m, becp1 )
      CALL allocate_bec_type ( nkb, m, becp2 )
      !
-     CALL calbec (npw,  vkb, psi, becp1, m)
-     CALL calbec (npw, work, psi, becp2, m)
+     CALL calbec (offload_type, npw,  vkb, psi, becp1, m)
+     CALL calbec (offload_type, npw, work, psi, becp2, m)
      !
      IF( noncolin ) THEN
         ALLOCATE( psc (nkb,npol,m,2) )
@@ -299,14 +300,14 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   USE gvect,            ONLY : g
   USE wvfct,            ONLY : npw, npwx, et, g2kin
   USE noncollin_module, ONLY : noncolin, npol
+  USE becmod,           ONLY : calbec_cuf
   USE uspp,             ONLY : nkb, vkb
   USE uspp_param,       ONLY : nh
   USE uspp_init,        ONLY : gen_us_dj, gen_us_dy
   USE control_flags,    ONLY : gamma_only
   USE pwcom,            ONLY : igk_k, current_k
-  USE becmod_subs_gpum, ONLY : calbec_gpu
-  USE west_gpu,         ONLY : gk, dvkb, work, ps2, psc, deff, deff_nc, becp1_d, becp2_d, becp1_d_nc_d, &
-                             & becp2_d_nc_d, becp1_d_r_d, becp2_d_r_d, becp1_d_k_d, becp2_d_k_d
+  USE control_flags,    ONLY : offload_type
+  USE west_gpu,         ONLY : gk, dvkb, work, ps2, psc, deff, deff_nc, becp1, becp2
   USE cublas
   !
   IMPLICIT NONE
@@ -445,13 +446,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
         !$acc end parallel
      ENDIF
      !
-     !$acc host_data use_device(vkb)
-     CALL calbec_gpu(npw,vkb,psi_d,becp1_d,m)
-     !$acc end host_data
-     !
-     !$acc host_data use_device(work)
-     CALL calbec_gpu(npw,work,psi_d,becp2_d,m)
-     !$acc end host_data
+     CALL calbec_cuf(offload_type,npw,vkb,psi_d,becp1,m)
+     CALL calbec_cuf(offload_type,npw,work,psi_d,becp2,m)
      !
      IF(noncolin) THEN
         !$acc kernels present(psc)
@@ -476,22 +472,22 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                  nh_nt = nh(nt)
                  IF(noncolin) THEN
                     IF(npol == 1) THEN
-                       !$acc parallel present(deff_nc,psc)
+                       !$acc parallel present(deff_nc,psc,becp2%nc,becp1%nc)
                        !$acc loop
                        DO ih = 1,nh_nt
                           reduce = 0._DP
                           reduce2 = 0._DP
                           !$acc loop reduction(+:reduce,reduce2)
                           DO jh = 1,nh_nt
-                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
-                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
+                             reduce = reduce + (0._DP,-1._DP) * becp2%nc(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
+                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1%nc(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
                           ENDDO
                           psc(ijkb0+ih,1,ibnd,1) = reduce
                           psc(ijkb0+ih,1,ibnd,2) = reduce2
                        ENDDO
                        !$acc end parallel
                     ELSEIF(npol == 2) THEN
-                       !$acc parallel present(deff_nc,psc)
+                       !$acc parallel present(deff_nc,psc,becp2%nc,becp1%nc)
                        !$acc loop
                        DO ih = 1,nh_nt
                           reduce = 0._DP
@@ -501,15 +497,15 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                           !$acc loop reduction(+:reduce,reduce2,reduce3,reduce4)
                           DO jh = 1,nh_nt
                              ! is = 1, js = 1,2
-                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
-                             reduce = reduce + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,2)
-                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
-                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,2)
+                             reduce = reduce + (0._DP,-1._DP) * becp2%nc(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
+                             reduce = reduce + (0._DP,-1._DP) * becp2%nc(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,2)
+                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1%nc(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,1)
+                             reduce2 = reduce2 + (0._DP,-1._DP) * becp1%nc(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,2)
                              ! is = 2, js = 1,2
-                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,3)
-                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,4)
-                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,3)
-                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1_d_nc_d(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,4)
+                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2%nc(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,3)
+                             reduce3 = reduce3 + (0._DP,-1._DP) * becp2%nc(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,4)
+                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1%nc(ijkb0+jh,1,ibnd) * deff_nc(ih,jh,na,3)
+                             reduce4 = reduce4 + (0._DP,-1._DP) * becp1%nc(ijkb0+jh,2,ibnd) * deff_nc(ih,jh,na,4)
                           ENDDO
                           psc(ijkb0+ih,1,ibnd,1) = reduce
                           psc(ijkb0+ih,1,ibnd,2) = reduce2
@@ -522,30 +518,30 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
                     ! Note the different prefactors due to the factor of i introduced to work(:,:),
                     ! as becp[1,2] are real.
                     !
-                    !$acc parallel present(deff,ps2)
+                    !$acc parallel present(deff,ps2,becp2%r,becp1%r)
                     !$acc loop
                     DO ih = 1,nh_nt
                        reduce = 0._DP
                        reduce2 = 0._DP
                        !$acc loop reduction(+:reduce,reduce2)
                        DO jh = 1,nh_nt
-                          reduce = reduce + becp2_d_r_d(ijkb0+jh,ibnd) * (1._DP,0._DP) * deff(ih,jh,na)
-                          reduce2 = reduce2 + becp1_d_r_d(ijkb0+jh,ibnd) * (-1._DP,0._DP) * deff(ih,jh,na)
+                          reduce = reduce + becp2%r(ijkb0+jh,ibnd) * (1._DP,0._DP) * deff(ih,jh,na)
+                          reduce2 = reduce2 + becp1%r(ijkb0+jh,ibnd) * (-1._DP,0._DP) * deff(ih,jh,na)
                        ENDDO
                        ps2(ijkb0+ih,ibnd,1) = reduce
                        ps2(ijkb0+ih,ibnd,2) = reduce2
                     ENDDO
                     !$acc end parallel
                  ELSE
-                    !$acc parallel present(deff,ps2)
+                    !$acc parallel present(deff,ps2,becp2%k,becp1%k)
                     !$acc loop
                     DO ih = 1,nh_nt
                        reduce = 0._DP
                        reduce2 = 0._DP
                        !$acc loop reduction(+:reduce,reduce2)
                        DO jh = 1,nh_nt
-                          reduce = reduce + becp2_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff(ih,jh,na)
-                          reduce2 = reduce2 + becp1_d_k_d(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff(ih,jh,na)
+                          reduce = reduce + becp2%k(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff(ih,jh,na)
+                          reduce2 = reduce2 + becp1%k(ijkb0+jh,ibnd) * (0._DP,-1._DP) * deff(ih,jh,na)
                        ENDDO
                        ps2(ijkb0+ih,ibnd,1) = reduce
                        ps2(ijkb0+ih,ibnd,2) = reduce2

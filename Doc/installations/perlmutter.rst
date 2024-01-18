@@ -13,7 +13,7 @@ Perlmutter is an HPE Cray EX supercomputer located at National Energy Research S
 Building WEST (GPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on September 17, 2023):
+WEST executables can be compiled using the following script (tested on January 18, 2024):
 
 .. code-block:: bash
 
@@ -21,12 +21,12 @@ WEST executables can be compiled using the following script (tested on September
    #!/bin/bash
 
    module load PrgEnv-nvidia
-   module load nvidia/22.7
-   module load cudatoolkit/11.7
+   module load nvidia/23.9
+   module load cudatoolkit/12.2
    module load craype-accel-nvidia80
-   module load cray-python/3.9.13.1
+   module load cray-python/3.11.5
 
-   ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.7 --with-cuda-cc=80 --with-cuda-mpi=yes
+   ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=12.2 --with-cuda-cc=80 --with-cuda-mpi=yes
 
    # Manually edit make.inc:
 
@@ -79,18 +79,17 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --cpus-per-task=32
 
    module load PrgEnv-nvidia
-   module load nvidia/22.7
-   module load cudatoolkit/11.7
+   module load nvidia/23.9
+   module load cudatoolkit/12.2
    module load craype-accel-nvidia80
-   module load cray-python/3.9.13.1
+   module load cray-python/3.11.5
 
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
    export MPICH_GPU_SUPPORT_ENABLED=1
-   export MPICH_MPIIO_HINTS="*:romio_cb_write=enable:romio_ds_write=disable"
    export ROMIO_FSTYPE_FORCE="ufs:"
 
-   srun -N 2 -n 8 -c 32 -G 8 ./wstat.x -i wstat.in &> wstat.out
+   srun -n 8 ./wstat.x -i wstat.in &> wstat.out
 
 Job submission is done with the following:
 
@@ -101,7 +100,7 @@ Job submission is done with the following:
 Building WEST (CPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on September 17, 2023):
+WEST executables can be compiled using the following script (tested on January 18, 2024):
 
 .. code-block:: bash
 
@@ -109,8 +108,8 @@ WEST executables can be compiled using the following script (tested on September
    #!/bin/bash
 
    module load cpu
-   module load cray-fftw/3.3.10.3
-   module load cray-python/3.9.13.1
+   module load cray-fftw/3.3.10.6
+   module load cray-python/3.11.5
 
    export CRAYPE_LINK_TYPE=dynamic
    export MPIF90=ftn
@@ -122,7 +121,7 @@ WEST executables can be compiled using the following script (tested on September
    # Manually edit make.inc:
 
    # DFLAGS = -D__FFTW3 -D__MPI -D__SCALAPACK
-   # IFLAGS = -I. -I$(TOPDIR)/include -I$(TOPDIR)/FoX/finclude -I/opt/cray/pe/fftw/3.3.10.3/x86_milan/include
+   # IFLAGS = -I. -I$(TOPDIR)/include -I$(TOPDIR)/FoX/finclude -I/opt/cray/pe/fftw/3.3.10.6/x86_milan/include
    # BLAS_LIBS = # leave blank
    # LAPACK_LIBS = # leave blank
 
@@ -167,15 +166,14 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --cpus-per-task=2
 
    module load cpu
-   module load cray-fftw/3.3.10.3
-   module load cray-python/3.9.13.1
+   module load cray-fftw/3.3.10.6
+   module load cray-python/3.11.5
 
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
-   export MPICH_MPIIO_HINTS="*:romio_cb_write=enable:romio_ds_write=disable"
    export ROMIO_FSTYPE_FORCE="ufs:"
 
-   srun -N 2 -n 256 -c 2 ./wstat.x -i wstat.in &> wstat.out
+   srun -n 256 ./wstat.x -i wstat.in &> wstat.out
 
 Job submission is done with the following:
 

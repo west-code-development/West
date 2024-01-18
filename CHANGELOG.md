@@ -10,7 +10,7 @@ To be released
 - Improved the performance of TDDFT and BSE on GPU.
 - In spin-polarized QDET calculations, the two spin channels can have different bands in the active space.
 - Updated CI/CD. Added tests to cover the new functionalities.
-- Updated documentation. Added more tutorials.
+- Updated documentation. Updated build instructions for NERSC/Perlmutter. Added more tutorials.
 
 v5.5.0 (2023/08/10)
 -------------------

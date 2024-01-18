@@ -18,6 +18,8 @@ SUBROUTINE west_readin(code)
   USE uspp,             ONLY : okvan
   USE mp_global,        ONLY : npool,nbgrp
   USE pwcom,            ONLY : nkstot,lsda
+  USE symm_base,        ONLY : nosym
+  USE control_flags,    ONLY : noinv
   USE westcom,          ONLY : l_spin_flip
   !
   IMPLICIT NONE
@@ -69,7 +71,11 @@ SUBROUTINE west_readin(code)
   !
   IF(okvan) CALL errore('west_readin','ultrasoft pseudopotential not implemented',1)
   IF(doublegrid) CALL errore('west_readin','double grid not implemented',1)
-  IF(nkpt > 1 .AND. npool > 1) CALL errore('west_readin','pools only implemented for spin, not k-points',1)
+  IF(nkpt > 1) THEN
+     IF(npool > 1) CALL errore('west_readin','pools only implemented for spin, not k-points',1)
+     IF(.NOT. nosym) CALL errore('west_readin','pwscf flags nosym, noinv required for k-points',1)
+     IF(.NOT. noinv) CALL errore('west_readin','pwscf flags nosym, noinv required for k-points',1)
+  ENDIF
   !
   ! Code specific checks
   !

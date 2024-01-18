@@ -39,6 +39,7 @@ types_bz_grid.o \
 v_x.o \
 wannier.o \
 west_environment.o \
+west_readin.o \
 west_print_clocks.o
 
 TLDEPS = bindir mods pwlibs pw

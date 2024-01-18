@@ -39,7 +39,7 @@ PROGRAM wfreq
   !
   CALL west_environment_start( code )
   !
-  CALL wfreq_readin( )
+  CALL west_readin( code )
   !
   CALL wfreq_setup( )
   !

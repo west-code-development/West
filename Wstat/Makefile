@@ -23,7 +23,6 @@ davidson_diago.o \
 davidson_restart.o \
 wstat.o \
 wstat_memory_report.o \
-wstat_readin.o \
 wstat_setup.o \
 wstat_tools.o
 

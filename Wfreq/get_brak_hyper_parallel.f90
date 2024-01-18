@@ -88,9 +88,7 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     !$acc host_data use_device(dvpsi,x,tmp)
      CALL glbrak_gamma(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
-     !$acc end host_data
      !
      !$acc parallel loop collapse(3) present(brak,tmp)
      DO il = 1,NLSTEPS
@@ -209,9 +207,7 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     !$acc host_data use_device(dvpsi,x,tmp)
      CALL glbrak_k(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
-     !$acc end host_data
      !
      !$acc parallel loop collapse(3) present(brak,tmp)
      DO il = 1,NLSTEPS

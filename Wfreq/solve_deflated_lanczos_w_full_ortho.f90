@@ -79,11 +79,9 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho(nbnd_to_deflate, NRHS, NLSTEPS, b
   !
   DO il=1,NLSTEPS
      !
-!$OMP PARALLEL DO
      DO ip = 1, NRHS
         q_s(:,ip,il) = r(:,ip) / beta(ip)
      ENDDO
-!$OMP END PARALLEL DO
      !
      ! NEW Q WAS FOUND !
      !

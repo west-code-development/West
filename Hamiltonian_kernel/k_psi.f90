@@ -48,12 +48,7 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
   !
   ! ... Here we apply the kinetic energy (k+G)^2 psi
   !
-#if defined(__CUDA)
   !$acc parallel loop collapse(2) present(hpsi,g2kin,psi)
-#else
-  !$OMP PARALLEL DEFAULT(NONE) SHARED(m,n,hpsi,g2kin,psi,lda,noncolin) PRIVATE(ibnd,ig)
-  !$OMP DO COLLAPSE(2)
-#endif
   DO ibnd = 1,m
      DO ig = 1,lda
         IF(ig <= n) THEN
@@ -69,29 +64,16 @@ SUBROUTINE k_psi(lda,n,m,psi,hpsi)
         ENDIF
      ENDDO
   ENDDO
-#if defined(__CUDA)
   !$acc end parallel
-#else
-  !$OMP ENDDO
-  !$OMP END PARALLEL
-#endif
   !
   ! ... Gamma-only trick: set to zero the imaginary part of hpsi at G=0
   !
   IF(gamma_only .AND. gstart == 2) THEN
-#if defined(__CUDA)
      !$acc parallel loop present(hpsi)
-#else
-     !$OMP PARALLEL DO
-#endif
      DO ibnd = 1,m
         hpsi(1,ibnd) = CMPLX(REAL(hpsi(1,ibnd),KIND=DP),0._DP,KIND=DP)
      ENDDO
-#if defined(__CUDA)
      !$acc end parallel
-#else
-     !$OMP END PARALLEL DO
-#endif
   ENDIF
   !
 #if defined(__CUDA)

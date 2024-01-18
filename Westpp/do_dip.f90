@@ -29,15 +29,11 @@ SUBROUTINE do_dip()
   USE buffers,              ONLY : get_buffer
   USE types_bz_grid,        ONLY : k_grid
   USE json_module,          ONLY : json_file,json_core,json_value
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE uspp,                 ONLY : vkb,nkb
-  USE wavefunctions,        ONLY : evc_host=>evc
+  USE wavefunctions,        ONLY : evc
+#if defined(__CUDA)
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_macropol_gpu,&
                                  & deallocate_macropol_gpu
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc
-  USE uspp,                 ONLY : vkb,nkb
 #endif
   !
   IMPLICIT NONE
@@ -117,35 +113,22 @@ SUBROUTINE do_dip()
      ! ... read in wavefunctions
      !
      IF(k_grid%nps > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      DO ipol = 1,3
         !
-        !$acc host_data use_device(Hx_psi)
-        CALL commut_Hx_psi(iks,nstate,ipol,evc_work(:,westpp_range(1):westpp_range(2)),Hx_psi,&
+        CALL commut_Hx_psi(iks,nstate,ipol,evc(:,westpp_range(1):westpp_range(2)),Hx_psi,&
         & l_skip_nl_part_of_hcomr)
-        !$acc end host_data
         !
         IF(gamma_only) THEN
-           !$acc host_data use_device(Hx_psi,dip_cryst_r)
-           CALL glbrak_gamma(evc_work(:,westpp_range(1):westpp_range(2)),Hx_psi,&
+           CALL glbrak_gamma(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,&
            & dip_cryst_r(:,:,ipol),npw,npwx,nstate,nstate,nstate,npol)
-           !$acc end host_data
         ELSE
-           !$acc host_data use_device(Hx_psi,dip_cryst_c)
-           CALL glbrak_k(evc_work(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_cryst_c(:,:,ipol),&
+           CALL glbrak_k(evc(:,westpp_range(1):westpp_range(2)),Hx_psi,dip_cryst_c(:,:,ipol),&
            & npw,npwx,nstate,nstate,nstate,npol)
-           !$acc end host_data
         ENDIF
         !
         CALL update_bar_type(barra,'westpp',1)

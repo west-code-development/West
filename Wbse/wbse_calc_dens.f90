@@ -29,12 +29,9 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
   USE westcom,                ONLY : iuwfc,lrwfc,nbnd_occ,n_trunc_bands
   USE fft_at_gamma,           ONLY : double_invfft_gamma
   USE distribution_center,    ONLY : kpt_pool,band_group
+  USE wavefunctions,          ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,     ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,          ONLY : evc_host=>evc
   USE west_gpu,               ONLY : tmp_r
-#else
-  USE wavefunctions,          ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -92,16 +89,9 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
      ! ... read GS wavefunctions
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      !$acc kernels present(tmp_r)
@@ -117,9 +107,7 @@ SUBROUTINE wbse_calc_dens(devc, drho, sf)
         !
         w1 = wg(ibnd,iks_do)/omega
         !
-        !$acc host_data use_device(devc)
-        CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),devc(:,lbnd,iks),psic,'Wave')
-        !$acc end host_data
+        CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),devc(:,lbnd,iks),psic,'Wave')
         !
         !$acc parallel loop present(tmp_r)
         DO ir = 1, dffts_nnr

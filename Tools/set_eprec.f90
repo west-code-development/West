@@ -30,9 +30,6 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   INTEGER,INTENT(IN) :: m
   COMPLEX(DP),INTENT(IN) :: wfc(npwx*npol,m)
   REAL(DP),INTENT(OUT) :: eprec(m)
-#if defined(__CUDA)
-  ATTRIBUTES(DEVICE) :: wfc,eprec
-#endif
   !
   ! Workspace
   !
@@ -40,7 +37,7 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   REAL(DP) :: reduce
   REAL(DP),PARAMETER :: factor = 1.35_DP
   !
-  !$acc parallel vector_length(1024) present(g2kin)
+  !$acc parallel vector_length(1024) present(wfc,g2kin,eprec)
   !$acc loop
   DO ibnd = 1,m
      reduce = 0._DP
@@ -55,6 +52,8 @@ SUBROUTINE set_eprec(m,wfc,eprec)
   ENDDO
   !$acc end parallel
   !
+  !$acc host_data use_device(eprec)
   CALL mp_sum(eprec,intra_bgrp_comm)
+  !$acc end host_data
   !
 END SUBROUTINE

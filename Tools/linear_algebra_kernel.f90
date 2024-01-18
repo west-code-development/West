@@ -42,16 +42,12 @@ MODULE linear_algebra_kernel
       !
       ap = 0._DP
       !
-!$OMP PARALLEL SHARED(n,a,ap) PRIVATE(i2,i1,i3)
-!$OMP DO
       DO i2 = 1,n
          DO i1 = 1,i2
             i3 = ((i2-1)*i2)/2
             ap(i3+i1) = a(i1,i2)
          ENDDO
       ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
       !
     END SUBROUTINE
     !
@@ -75,16 +71,12 @@ MODULE linear_algebra_kernel
       !
       a = 0._DP
       !
-!$OMP PARALLEL SHARED(n,a,ap) PRIVATE(i2,i1,i3)
-!$OMP DO
       DO i2 = 1,n
          DO i1 = 1,i2
             i3 = ((i2-1)*i2)/2
             a(i1,i2) = ap(i3+i1)
          ENDDO
       ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
       !
     END SUBROUTINE
     !

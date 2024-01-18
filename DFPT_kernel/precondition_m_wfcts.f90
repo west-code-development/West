@@ -32,11 +32,7 @@ SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
   !
   INTEGER :: ibnd, ig
   !
-#if defined(__CUDA)
   !$acc parallel loop collapse(2) present(pf,f,g2kin,eprec)
-#else
-  !$OMP PARALLEL DO COLLAPSE(2)
-#endif
   DO ibnd = 1,m
      DO ig = 1,npwx
         IF(ig <= npw) THEN
@@ -52,10 +48,6 @@ SUBROUTINE precondition_m_wfcts (m,f,pf,eprec)
         ENDIF
      ENDDO
   ENDDO
-#if defined(__CUDA)
   !$acc end parallel
-#else
-  !$OMP END PARALLEL DO
-#endif
   !
 END SUBROUTINE

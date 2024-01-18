@@ -34,12 +34,11 @@ SUBROUTINE glbrak_gamma(a,b,c,ng,ngx,na,nb,ldc,np)
   REAL(DP), INTENT(IN) :: a(2*ngx,na) ! complex passed as real for cublas compatibility
   REAL(DP), INTENT(IN) :: b(2*ngx,nb) ! same as a
   REAL(DP), INTENT(OUT) :: c(ldc,nb)
-#if defined(__CUDA)
-  ATTRIBUTES(DEVICE) :: a,b,c
-#endif
   !
+  !$acc host_data use_device(a,b,c)
   CALL DGEMM('C','N',na,nb,2*ng,2._DP,a,2*ngx,b,2*ngx,0._DP,c,ldc)
   IF(gstart == 2) CALL DGER(na,nb,-1._DP,a,2*ngx,b,2*ngx,c,ldc)
+  !$acc end host_data
   !
 END SUBROUTINE
 !
@@ -66,16 +65,15 @@ SUBROUTINE glbrak_k(a,b,c,ng,ngx,na,nb,ldc,np)
   COMPLEX(DP), INTENT(IN) :: a(ngx*np,na)
   COMPLEX(DP), INTENT(IN) :: b(ngx*np,nb)
   COMPLEX(DP), INTENT(OUT) :: c(ldc,nb)
-#if defined(__CUDA)
-  ATTRIBUTES(DEVICE) :: a,b,c
-#endif
   !
   ! Workspace
   !
   COMPLEX(DP), PARAMETER :: zero = (0._DP,0._DP)
   COMPLEX(DP), PARAMETER :: one = (1._DP,0._DP)
   !
+  !$acc host_data use_device(a,b,c)
   CALL ZGEMM('C','N',na,nb,ng,one,a,ngx*np,b,ngx*np,zero,c,ldc)
   IF(np == 2) CALL ZGEMM('C','N',na,nb,ng,one,a(ngx+1,1),ngx*np,b(1+ngx,1),ngx*np,one,c,ldc)
+  !$acc end host_data
   !
 END SUBROUTINE

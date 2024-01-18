@@ -175,11 +175,7 @@ SUBROUTINE compute_braket(braket)
   USE distribution_center,  ONLY : kpt_pool,macropert,bandpair
   USE pdep_db,              ONLY : generate_pdep_fname
   USE pdep_io,              ONLY : pdep_read_G_and_distribute
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : psic=>psic_d
-#else
   USE wavefunctions,        ONLY : psic
-#endif
   !
   IMPLICIT NONE
   !
@@ -245,7 +241,7 @@ SUBROUTINE compute_braket(braket)
         !
         ! Mulitply by V_c^0.5
         !
-        !$acc parallel loop present(phi,pot3D)
+        !$acc parallel loop present(phi,pot3D,pot3D%sqvc)
         DO ig = 1, npwq
            phi(ig) = pot3D%sqvc(ig) * phi(ig)
         ENDDO
@@ -259,9 +255,7 @@ SUBROUTINE compute_braket(braket)
            i = pijmap(1,p1)
            j = pijmap(2,p1)
            !
-           !$acc host_data use_device(proj_c)
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s_g),proj_c(:,j,s_g),psic,'Wave')
-           !$acc end host_data
            !
            !$acc parallel loop present(rho_r)
            DO ir = 1, dffts_nnr
@@ -269,9 +263,7 @@ SUBROUTINE compute_braket(braket)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(rho_r,rho_g)
            CALL single_fwfft_gamma(dffts,npwq,npwqx,rho_r,rho_g,TRIM(fftdriver))
-           !$acc end host_data
            !
            ! Assume Gamma only
            !
@@ -333,11 +325,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   USE io_push,              ONLY : io_push_title
   USE gvect,                ONLY : gstart,ngm
   USE cell_base,            ONLY : omega
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : psic=>psic_d
-#else
   USE wavefunctions,        ONLY : psic
-#endif
   !
   IMPLICIT NONE
   !
@@ -385,9 +373,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
         i = pijmap(1,p1)
         j = pijmap(2,p1)
         !
-        !$acc host_data use_device(proj_c)
         CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1_g),proj_c(:,j,s1_g),psic,'Wave')
-        !$acc end host_data
         !
         !$acc parallel loop present(rho_r)
         DO ir = 1, dffts_nnr
@@ -395,11 +381,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
         ENDDO
         !$acc end parallel
         !
-        !$acc host_data use_device(rho_r,rho_g1)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
-        !$acc end host_data
         !
-        !$acc parallel loop present(rho_g1,pot3D)
+        !$acc parallel loop present(rho_g1,pot3D,pot3D%sqvc)
         DO ig = 1, ngm
            rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
         ENDDO
@@ -426,9 +410,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            k = pijmap(1,p2)
            l = pijmap(2,p2)
            !
-           !$acc host_data use_device(proj_c)
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s1_g),proj_c(:,l,s1_g),psic,'Wave')
-           !$acc end host_data
            !
            !$acc parallel loop present(rho_r)
            DO ir = 1, dffts_nnr
@@ -436,11 +418,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(rho_r,rho_g2)
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
-           !$acc end host_data
            !
-           !$acc parallel loop present(rho_g2,pot3D)
+           !$acc parallel loop present(rho_g2,pot3D,pot3D%sqvc)
            DO ig = 1, ngm
               rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
            ENDDO
@@ -492,9 +472,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
         i = pijmap(1,p1)
         j = pijmap(2,p1)
         !
-        !$acc host_data use_device(proj_c)
         CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,i,s1),proj_c(:,j,s1),psic,'Wave')
-        !$acc end host_data
         !
         !$acc parallel loop present(rho_r)
         DO ir = 1, dffts_nnr
@@ -502,11 +480,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
         ENDDO
         !$acc end parallel
         !
-        !$acc host_data use_device(rho_r,rho_g1)
         CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g1,'Rho')
-        !$acc end host_data
         !
-        !$acc parallel loop present(rho_g1,pot3D)
+        !$acc parallel loop present(rho_g1,pot3D,pot3D%sqvc)
         DO ig = 1, ngm
            rho_g1(ig) = pot3D%sqvc(ig) * rho_g1(ig)
         ENDDO
@@ -519,9 +495,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
            k = pijmap(1,p2)
            l = pijmap(2,p2)
            !
-           !$acc host_data use_device(proj_c)
            CALL double_invfft_gamma(dffts,npwq,npwqx,proj_c(:,k,s2),proj_c(:,l,s2),psic,'Wave')
-           !$acc end host_data
            !
            !$acc parallel loop present(rho_r)
            DO ir = 1, dffts_nnr
@@ -529,11 +503,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(rho_r,rho_g2)
            CALL single_fwfft_gamma(dffts,ngm,ngm,rho_r,rho_g2,'Rho')
-           !$acc end host_data
            !
-           !$acc parallel loop present(rho_g2,pot3D)
+           !$acc parallel loop present(rho_g2,pot3D,pot3D%sqvc)
            DO ig = 1, ngm
               rho_g2(ig) = pot3D%sqvc(ig) * rho_g2(ig)
            ENDDO

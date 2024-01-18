@@ -224,9 +224,7 @@ SUBROUTINE wfreq_setup
         ALLOCATE(overlap_ab(n_bands,n_bands))
         !$acc enter data create(overlap_ab)
         !
-        !$acc host_data use_device(proj_c,overlap_ab)
         CALL glbrak_gamma(proj_c(:,:,1),proj_c(:,:,2),overlap_ab,npw,npwx,n_bands,n_bands,n_bands,npol)
-        !$acc end host_data
         !
         !$acc update host(overlap_ab)
         !

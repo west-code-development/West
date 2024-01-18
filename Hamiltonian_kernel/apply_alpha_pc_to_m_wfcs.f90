@@ -23,12 +23,10 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
   USE mp,                   ONLY : mp_sum
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : npol
+  USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : evc=>evc_d
   USE west_gpu,             ONLY : ps_r,ps_c
   USE cublas
-#else
-  USE wavefunctions,        ONLY : evc
 #endif
   !
   IMPLICIT NONE
@@ -64,15 +62,13 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      ps_r = 0.0_DP
 #endif
      !
-     !$acc host_data use_device(f,ps_r)
      CALL glbrak_gamma( evc, f, ps_r, npw, npwx, nbndval, m, nbndval, npol)
-     !$acc end host_data
      !
      !$acc host_data use_device(ps_r)
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc host_data use_device(ps_r,f)
+     !$acc host_data use_device(evc,ps_r,f)
      CALL DGEMM('N','N',2*npwx*npol,m,nbndval,-alpha_r,evc,2*npwx*npol,ps_r,nbndval,alpha_r,f,2*npwx*npol)
      !$acc end host_data
      !
@@ -87,15 +83,13 @@ SUBROUTINE apply_alpha_pc_to_m_wfcs(nbndval,m,f,alpha)
      ps_c = (0.0_DP,0.0_DP)
 #endif
      !
-     !$acc host_data use_device(f,ps_c)
      CALL glbrak_k( evc, f, ps_c, npw, npwx, nbndval, m, nbndval, npol)
-     !$acc end host_data
      !
      !$acc host_data use_device(ps_c)
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc host_data use_device(ps_c,f)
+     !$acc host_data use_device(evc,ps_c,f)
      CALL ZGEMM('N','N',npwx*npol,m,nbndval,-alpha,evc,npwx*npol,ps_c,nbndval,alpha,f,npwx*npol)
      !$acc end host_data
      !

@@ -40,13 +40,9 @@ SUBROUTINE do_sxx ( )
   USE pdep_db,               ONLY : pdep_db_read
   USE types_bz_grid,         ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,         ONLY : pot3D
+  USE wavefunctions,         ONLY : evc,psic,psic_nc
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d,&
-                                  & psic_nc=>psic_nc_d
-  USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,         ONLY : evc_work=>evc,psic,psic_nc
 #endif
   !
   IMPLICIT NONE
@@ -126,16 +122,9 @@ SUBROUTINE do_sxx ( )
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      DO ib = 1, nbnd
@@ -143,12 +132,12 @@ SUBROUTINE do_sxx ( )
         IF( ib < westpp_range(1) .OR. ib > westpp_range(2) ) CYCLE
         !
         IF(gamma_only) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ib),psic,'Wave')
         ELSEIF(noncolin) THEN
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(1:npwx,ib),psic_nc(:,1),'Wave',igk_k(:,current_k))
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(1+npwx:npwx*2,ib),psic_nc(:,2),'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(1:npwx,ib),psic_nc(:,1),'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx:npwx*2,ib),psic_nc(:,2),'Wave',igk_k(:,current_k))
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ib),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ib),psic,'Wave',igk_k(:,current_k))
         ENDIF
         !
         DO iq = 1, q_grid%np
@@ -199,64 +188,52 @@ SUBROUTINE do_sxx ( )
               ! Bring it to R-space
               IF(gamma_only) THEN
                  !
-                 !$acc host_data use_device(pertr)
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,iv),pertr,'Wave')
-                 !$acc end host_data
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc(:,iv),pertr,'Wave')
                  !
                  !$acc parallel loop present(pertr)
-                 DO ir=1,dffts_nnr
+                 DO ir = 1, dffts_nnr
                     pertr(ir)=psic(ir)*pertr(ir)
                  ENDDO
                  !$acc end parallel
                  !
-                 !$acc host_data use_device(pertr,pertg)
                  CALL single_fwfft_gamma(dffts,npwq,npwqx,pertr,pertg,TRIM(fftdriver))
-                 !$acc end host_data
                  !
               ELSEIF(noncolin) THEN
                  !
-                 !$acc host_data use_device(evckmq,pertr_nc)
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,iv),pertr_nc(:,1),'Wave',igk_k(:,ikqs))
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1+npwx:npwx*2,iv),pertr_nc(:,2),'Wave',igk_k(:,ikqs))
-                 !$acc end host_data
                  !
                  !$acc parallel loop present(pertr_nc,phase)
-                 DO ir=1,dffts_nnr
+                 DO ir = 1, dffts_nnr
                     pertr_nc(ir,1)=CONJG(pertr_nc(ir,1)*phase(ir))*psic_nc(ir,1)+CONJG(pertr_nc(ir,2)*phase(ir))*psic_nc(ir,2)
                  ENDDO
                  !$acc end parallel
                  !
-                 !$acc host_data use_device(pertr_nc,pertg)
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr_nc(:,1),pertg,'Rho') ! no igk
-                 !$acc end host_data
                  !
               ELSE
                  !
-                 !$acc host_data use_device(evckmq,pertr)
                  CALL single_invfft_k(dffts,npwkq,npwx,evckmq(:,iv),pertr,'Wave',igk_k(:,ikqs))
-                 !$acc end host_data
                  !
                  !$acc parallel loop present(pertr,phase)
-                 DO ir=1,dffts_nnr
+                 DO ir = 1, dffts_nnr
                     pertr(ir)=CONJG(pertr(ir)*phase(ir)) * psic(ir)
                  ENDDO
                  !$acc end parallel
                  !
-                 !$acc host_data use_device(pertr,pertg)
                  CALL single_fwfft_k(dffts,ngm,ngm,pertr,pertg,'Rho') ! no igk
-                 !$acc end host_data
                  !
               ENDIF
               !
-              !$acc parallel loop present(pertg,pot3D)
-              DO ig = 1,ngm
+              !$acc parallel loop present(pertg,pot3D,pot3D%sqvc)
+              DO ig = 1, ngm
                  pertg(ig) = pertg(ig) * pot3D%sqvc(ig)
               ENDDO
               !$acc end parallel
               !
               dot_tmp = 0._DP
               !$acc parallel loop reduction(+:dot_tmp) present(pertg) copy(dot_tmp)
-              DO ig = 1,ngm
+              DO ig = 1, ngm
                  dot_tmp = dot_tmp+REAL(pertg(ig),KIND=DP)**2+AIMAG(pertg(ig))**2
               ENDDO
               !$acc end parallel
@@ -267,9 +244,7 @@ SUBROUTINE do_sxx ( )
               ! -- < SXX >
               !
               IF( gamma_only ) THEN
-                 !$acc host_data use_device(pertg,dvg,dproj)
                  CALL glbrak_gamma( pertg, dvg, dproj, npwq, npwqx, 1, pert%nloc, 1, npol)
-                 !$acc end host_data
                  !$acc update host(dproj)
                  CALL mp_sum( dproj, intra_bgrp_comm )
                  DO ip = 1, pert%nloc
@@ -278,9 +253,7 @@ SUBROUTINE do_sxx ( )
                  ENDDO
                  IF( ib == iv ) sigma_sxx( ib, iks ) = sigma_sxx( ib, iks ) - (1._DP/westpp_epsinfty-1._DP) * pot3D%div
               ELSE
-                 !$acc host_data use_device(pertg,dvg,zproj)
                  CALL glbrak_k( pertg, dvg, zproj, npwq, npwqx, 1, pert%nloc, 1, npol)
-                 !$acc end host_data
                  !$acc update host(zproj)
                  CALL mp_sum( zproj, intra_bgrp_comm )
                  DO ip = 1, pert%nloc
@@ -354,7 +327,7 @@ SUBROUTINE do_sxx ( )
   !
   ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,5))
   !
-  DO iks=1,k_grid%nps
+  DO iks = 1, k_grid%nps
      DO ib = westpp_range(1), westpp_range(2)
         out_tab( ib - westpp_range(1) + 1, 1) = REAL( ib, KIND=DP)
         out_tab( ib - westpp_range(1) + 1, 2) = et(ib,iks) * rytoev

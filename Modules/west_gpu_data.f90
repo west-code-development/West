@@ -107,8 +107,6 @@ MODULE west_gpu_data
    COMPLEX(DP), ALLOCATABLE :: tmp_c3(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: ps_c(:,:)
    !$acc declare device_resident(tmp_r3,ps_r,tmp_c3,ps_c)
-   INTEGER, DEVICE, POINTER :: dfft_nl_d(:)
-   INTEGER, DEVICE, POINTER :: dfft_nlm_d(:)
    TYPE(cusolverDnHandle) :: cusolv_h
    TYPE(cusolverDnParams) :: cusolv_p
    !
@@ -161,27 +159,49 @@ MODULE west_gpu_data
    SUBROUTINE allocate_gpu()
    !-----------------------------------------------------------------------
    !
-   USE fft_base,              ONLY : dffts
+   USE fft_base,              ONLY : dffts,dfftp
    USE pwcom,                 ONLY : wg,ngk,nks
    USE cell_base,             ONLY : bg
    USE westcom,               ONLY : igq_q
-   USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d
-   USE wvfct_gpum,            ONLY : using_et,using_et_d
+   USE wavefunctions,         ONLY : evc,psic,psic_nc
+   USE wavefunctions_gpum,    ONLY : evc_d,psic_d,psic_nc_d
+   USE wvfct,                 ONLY : et
    !
    IMPLICIT NONE
    !
-   dfft_nl_d => dffts%nl_d
-   dfft_nlm_d => dffts%nlm_d
-   !
-   CALL using_et(2)
-   CALL using_et_d(0)
-   !
-   IF(nks == 1) THEN
-      CALL using_evc(2)
-      CALL using_evc_d(0)
+   IF(ALLOCATED(evc_d)) THEN
+      DEALLOCATE(evc_d)
+   ENDIF
+   IF(ALLOCATED(psic_d)) THEN
+      DEALLOCATE(psic_d)
+   ENDIF
+   IF(ALLOCATED(psic_nc_d)) THEN
+      DEALLOCATE(psic_nc_d)
    ENDIF
    !
-   !$acc enter data copyin(wg,ngk,bg,igq_q)
+   !$acc enter data create(psic) copyin(wg,ngk,bg,igq_q,et)
+   IF(nks == 1) THEN
+      !$acc enter data copyin(evc)
+   ELSE
+      !$acc enter data create(evc)
+   ENDIF
+   IF(ALLOCATED(psic_nc)) THEN
+      !$acc enter data create(psic_nc)
+   ENDIF
+   !$acc enter data copyin(dffts)
+   IF(ALLOCATED(dffts%nl)) THEN
+      !$acc enter data copyin(dffts%nl)
+   ENDIF
+   IF(ALLOCATED(dffts%nlm)) THEN
+      !$acc enter data copyin(dffts%nlm)
+   ENDIF
+   !$acc enter data copyin(dfftp)
+   IF(ALLOCATED(dfftp%nl)) THEN
+      !$acc enter data copyin(dfftp%nl)
+   ENDIF
+   IF(ALLOCATED(dfftp%nlm)) THEN
+      !$acc enter data copyin(dfftp%nlm)
+   ENDIF
    !
    END SUBROUTINE
    !
@@ -189,20 +209,33 @@ MODULE west_gpu_data
    SUBROUTINE deallocate_gpu()
    !-----------------------------------------------------------------------
    !
+   USE fft_base,              ONLY : dffts,dfftp
    USE pwcom,                 ONLY : wg,ngk
    USE cell_base,             ONLY : bg
    USE westcom,               ONLY : igq_q
+   USE wavefunctions,         ONLY : evc,psic,psic_nc
+   USE wvfct,                 ONLY : et
    !
    IMPLICIT NONE
    !
-   IF(ASSOCIATED(dfft_nl_d)) THEN
-      NULLIFY(dfft_nl_d)
+   !$acc exit data delete(wg,ngk,bg,igq_q,et,evc,psic)
+   IF(ALLOCATED(psic_nc)) THEN
+      !$acc exit data delete(psic_nc)
    ENDIF
-   IF(ASSOCIATED(dfft_nlm_d)) THEN
-      NULLIFY(dfft_nlm_d)
+   IF(ALLOCATED(dffts%nl)) THEN
+      !$acc exit data delete(dffts%nl)
    ENDIF
-   !
-   !$acc exit data delete(wg,ngk,bg,igq_q)
+   IF(ALLOCATED(dffts%nlm)) THEN
+      !$acc exit data delete(dffts%nlm)
+   ENDIF
+   !$acc exit data delete(dffts)
+   IF(ALLOCATED(dfftp%nl)) THEN
+      !$acc exit data delete(dfftp%nl)
+   ENDIF
+   IF(ALLOCATED(dfftp%nlm)) THEN
+      !$acc exit data delete(dfftp%nlm)
+   ENDIF
+   !$acc exit data delete(dfftp)
    !
    END SUBROUTINE
    !
@@ -617,7 +650,7 @@ MODULE west_gpu_data
    USE lsda_mod,              ONLY : nspin
    USE wvfct,                 ONLY : npwx
    USE noncollin_module,      ONLY : npol,nspin_gga
-   USE fft_base,              ONLY : dffts
+   USE fft_base,              ONLY : dffts,dfftp
    USE westcom,               ONLY : nbndval0x,n_trunc_bands,l_bse,l_hybrid_tddft,l_local_repr,&
                                    & et_qp,u_matrix
    !
@@ -640,8 +673,8 @@ MODULE west_gpu_data
       !$acc enter data create(caux1,caux2,gaux)
    ENDIF
    IF(.NOT. l_bse) THEN
-      ALLOCATE(caux4(3,dffts%nnr,nspin_gga))
-      ALLOCATE(gdrho(3,dffts%nnr,nspin_gga))
+      ALLOCATE(caux4(3,dfftp%nnr,nspin_gga))
+      ALLOCATE(gdrho(3,dfftp%nnr,nspin_gga))
    ENDIF
    ALLOCATE(hevc1(npwx*npol,nbndlocx))
    ALLOCATE(dvrs(dffts%nnr,nspin))
@@ -655,8 +688,8 @@ MODULE west_gpu_data
    IF(.NOT. gamma_only) THEN
       ALLOCATE(psic2(dffts%nnr))
    ENDIF
-   ALLOCATE(dvaux(dffts%nnr,nspin))
-   ALLOCATE(dvhart(dffts%nnr))
+   ALLOCATE(dvaux(dfftp%nnr,nspin))
+   ALLOCATE(dvhart(dfftp%nnr))
    !
    !$acc enter data copyin(et_qp,u_matrix)
    !
@@ -744,10 +777,14 @@ MODULE west_gpu_data
    !
    IMPLICIT NONE
    !
+   IF(ALLOCATED(dvan_d)) THEN
+      DEALLOCATE(dvan_d)
+   ENDIF
+   !
+   !$acc enter data copyin(dvan)
+   !
    ALLOCATE(tmp_r(dffts%nnr))
    !$acc enter data create(tmp_r)
-   !
-   dvan_d(:,:,:) = dvan
    !
    END SUBROUTINE
    !
@@ -755,7 +792,11 @@ MODULE west_gpu_data
    SUBROUTINE deallocate_forces_gpu()
    !-----------------------------------------------------------------------
    !
+   USE uspp,                  ONLY : dvan
+   !
    IMPLICIT NONE
+   !
+   !$acc exit data delete(dvan)
    !
    IF(ALLOCATED(tmp_r)) THEN
       !$acc exit data delete(tmp_r)

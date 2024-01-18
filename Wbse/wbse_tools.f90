@@ -723,12 +723,7 @@ MODULE wbse_tools
       USE distribution_center,  ONLY : pert,kpt_pool,band_group
       USE pwcom,                ONLY : npwx
       USE westcom,              ONLY : nbnd_occ,n_trunc_bands
-#if defined(__CUDA)
-      USE wvfct,                ONLY : g2kin
-      USE wvfct_gpum,           ONLY : et=>et_d
-#else
       USE wvfct,                ONLY : g2kin,et
-#endif
       !
       IMPLICIT NONE
       !
@@ -809,7 +804,7 @@ MODULE wbse_tools
          !
          !$acc enter data copyin(nbnd_loc)
          !
-         !$acc parallel vector_length(1024) present(nbnd_loc,g2kin_save,ag)
+         !$acc parallel vector_length(1024) present(nbnd_loc,g2kin_save,et,ag)
          !$acc loop
          DO il1 = l1_s,l1_e
             !$acc loop seq

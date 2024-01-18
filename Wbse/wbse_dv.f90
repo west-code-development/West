@@ -98,7 +98,7 @@ MODULE wbse_dv
     USE qpoint,                ONLY : xq
     USE eqv,                   ONLY : dmuxc
 #if defined(__CUDA)
-    USE west_gpu,              ONLY : dvaux,dvhart,dfft_nl_d,dfft_nlm_d
+    USE west_gpu,              ONLY : dvaux,dvhart
 #endif
     !
     IMPLICIT NONE
@@ -226,26 +226,14 @@ MODULE wbse_dv
     CALL fwfft('Rho', dvscf(:,1), dfftp)
     !$acc end host_data
     !
-#if defined(__CUDA)
+#if !defined(__CUDA)
+    ALLOCATE(dvhart(dfftp%nnr))
+#endif
     !$acc kernels present(dvhart)
     dvhart(:) = (0._DP,0._DP)
     !$acc end kernels
     !
-    !$acc parallel loop present(g,xq,dvhart,dvscf)
-    DO ig = 1, ngm
-       !
-       qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
-       !
-       IF(qg2 > eps8) THEN
-          dvhart(dfft_nl_d(ig)) = e2 * fpi * dvscf(dfft_nl_d(ig),1) / (tpiba2 * qg2)
-       ENDIF
-       !
-    ENDDO
-    !$acc end parallel
-#else
-    ALLOCATE(dvhart(dfftp%nnr))
-    dvhart(:) = (0._DP,0._DP)
-    !
+    !$acc parallel loop present(g,xq,dvhart,dfftp,dfftp%nl,dvscf)
     DO ig = 1, ngm
        !
        qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
@@ -255,7 +243,9 @@ MODULE wbse_dv
        ENDIF
        !
     ENDDO
+    !$acc end parallel
     !
+#if !defined(__CUDA)
     IF(do_comp_mt) THEN
        !
        ALLOCATE(dvaux_mt(ngm))
@@ -271,17 +261,11 @@ MODULE wbse_dv
     ENDIF
 #endif
     !
-#if defined(__CUDA)
-    !$acc parallel loop present(dvhart)
-    DO ig = 1, ngm
-       dvhart(dfft_nlm_d(ig)) = CONJG(dvhart(dfft_nl_d(ig)))
-    ENDDO
-    !$acc end parallel
-#else
+    !$acc parallel loop present(dvhart,dfftp,dfftp%nlm,dfftp%nl)
     DO ig = 1, ngm
        dvhart(dfftp%nlm(ig)) = CONJG(dvhart(dfftp%nl(ig)))
     ENDDO
-#endif
+    !$acc end parallel
     !
     ! Transformed back to real space
     !
@@ -731,7 +715,6 @@ MODULE wbse_dv
     USE cell_base,             ONLY : tpiba
     USE fft_types,             ONLY : fft_type_descriptor
     USE fft_interfaces,        ONLY : fwfft,invfft
-    USE west_gpu,              ONLY : dfft_nl_d,dfft_nlm_d
     !
     IMPLICIT NONE
     !
@@ -770,16 +753,16 @@ MODULE wbse_dv
        gaux(:) = (0._DP,0._DP)
        !$acc end kernels
        !
-       !$acc parallel loop present(gaux,xq,g,aux)
+       !$acc parallel loop present(gaux,dfft,dfft%nl,xq,g,aux)
        DO ig = 1,dfft_ngm
-          gaux(dfft_nl_d(ig)) = CMPLX(0._DP,xq(ipol)+g(ipol,ig),KIND=DP) * aux(dfft_nl_d(ig))
+          gaux(dfft%nl(ig)) = CMPLX(0._DP,xq(ipol)+g(ipol,ig),KIND=DP) * aux(dfft%nl(ig))
        ENDDO
        !$acc end parallel
        !
        IF(dfft%lgamma) THEN
-          !$acc parallel loop present(gaux)
+          !$acc parallel loop present(gaux,dfft,dfft%nlm,dfft%nl)
           DO ig = 1,dfft_ngm
-             gaux(dfft_nlm_d(ig)) = CONJG(gaux(dfft_nl_d(ig)))
+             gaux(dfft%nlm(ig)) = CONJG(gaux(dfft%nl(ig)))
           ENDDO
           !$acc end parallel
        ENDIF
@@ -809,7 +792,6 @@ MODULE wbse_dv
     USE cell_base,             ONLY : tpiba
     USE fft_types,             ONLY : fft_type_descriptor
     USE fft_interfaces,        ONLY : fwfft,invfft
-    USE west_gpu,              ONLY : dfft_nl_d,dfft_nlm_d
     !
     IMPLICIT NONE
     !
@@ -849,18 +831,18 @@ MODULE wbse_dv
        CALL fwfft('Rho', aux, dfft)
        !$acc end host_data
        !
-       !$acc parallel loop present(da,xq,g,aux)
+       !$acc parallel loop present(da,dfft,dfft%nl,xq,g,aux)
        DO ig = 1,dfft_ngm
-          da(dfft_nl_d(ig)) = da(dfft_nl_d(ig)) + CMPLX(0._DP,xq(ipol)+g(ipol,ig),KIND=DP) * aux(dfft_nl_d(ig))
+          da(dfft%nl(ig)) = da(dfft%nl(ig)) + CMPLX(0._DP,xq(ipol)+g(ipol,ig),KIND=DP) * aux(dfft%nl(ig))
        ENDDO
        !$acc end parallel
        !
     ENDDO
     !
     IF(dfft%lgamma) THEN
-       !$acc parallel loop present(da)
+       !$acc parallel loop present(da,dfft,dfft%nlm,dfft%nl)
        DO ig = 1,dfft_ngm
-          da(dfft_nlm_d(ig)) = CONJG(da(dfft_nl_d(ig)))
+          da(dfft%nlm(ig)) = CONJG(da(dfft%nl(ig)))
        ENDDO
        !$acc end parallel
     ENDIF

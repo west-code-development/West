@@ -78,13 +78,9 @@ SUBROUTINE dump_r ( auxr, fname )
      !$acc end kernels
      !
      IF( gamma_only ) THEN
-        !$acc host_data use_device(auxr_,auxg)
         CALL single_fwfft_gamma(dffts,ngm,ngm,auxr_,auxg,'Rho')
-        !$acc end host_data
      ELSE
-        !$acc host_data use_device(auxr_,auxg)
         CALL single_fwfft_k(dffts,ngm,ngm,auxr_,auxg,'Rho')
-        !$acc end host_data
      ENDIF
      !
      !$acc update host(auxg)

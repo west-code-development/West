@@ -19,9 +19,6 @@ MODULE fft_at_k
   USE kinds,                ONLY : DP
   USE fft_interfaces,       ONLY : fwfft,invfft
   USE fft_types,            ONLY : fft_type_descriptor
-#if defined(__CUDA)
-  USE west_gpu,             ONLY : dfft_nl_d,dfft_nlm_d
-#endif
   !
   IMPLICIT NONE
   !
@@ -46,9 +43,6 @@ MODULE fft_at_k
     INTEGER,INTENT(IN) :: n,nx
     COMPLEX(DP),INTENT(IN) :: a1(nx)
     COMPLEX(DP),INTENT(OUT) :: b(dfft%nnr)
-#if defined(__CUDA)
-    ATTRIBUTES(DEVICE) :: a1,b
-#endif
     CHARACTER(LEN=*),INTENT(IN) :: cdriver
     INTEGER,INTENT(IN),OPTIONAL :: igk(n)
     !
@@ -56,33 +50,27 @@ MODULE fft_at_k
     !
     INTEGER :: ig
     !
-    !$acc kernels
+    !$acc kernels present(b)
     b(:) = z_0
     !$acc end kernels
     !
     IF(PRESENT(igk)) THEN
-       !$acc parallel loop present(igk)
+       !$acc parallel loop present(b,dfft,dfft%nl,igk,a1)
        DO ig = 1,n
-#if defined(__CUDA)
-          b(dfft_nl_d(igk(ig))) = a1(ig)
-#else
           b(dfft%nl(igk(ig))) = a1(ig)
-#endif
        ENDDO
        !$acc end parallel
     ELSE
-       !$acc parallel loop
+       !$acc parallel loop present(b,dfft,dfft%nl,a1)
        DO ig = 1,n
-#if defined(__CUDA)
-          b(dfft_nl_d(ig)) = a1(ig)
-#else
           b(dfft%nl(ig)) = a1(ig)
-#endif
        ENDDO
        !$acc end parallel
     ENDIF
     !
+    !$acc host_data use_device(b)
     CALL invfft(cdriver,b,dfft)
+    !$acc end host_data
     !
   END SUBROUTINE
   !
@@ -103,9 +91,6 @@ MODULE fft_at_k
     INTEGER,INTENT(IN) :: n,nx
     COMPLEX(DP),INTENT(INOUT) :: a(dfft%nnr)
     COMPLEX(DP),INTENT(OUT) :: b1(nx)
-#if defined(__CUDA)
-    ATTRIBUTES(DEVICE) :: a,b1
-#endif
     CHARACTER(LEN=*),INTENT(IN) :: cdriver
     INTEGER,INTENT(IN),OPTIONAL :: igk(n)
     !
@@ -113,32 +98,26 @@ MODULE fft_at_k
     !
     INTEGER :: ig
     !
+    !$acc host_data use_device(a)
     CALL fwfft(cdriver,a,dfft)
+    !$acc end host_data
     !
     IF(PRESENT(igk)) THEN
-       !$acc parallel loop present(igk)
+       !$acc parallel loop present(b1,a,dfft,dfft%nl,igk)
        DO ig = 1,n
-#if defined(__CUDA)
-          b1(ig) = a(dfft_nl_d(igk(ig)))
-#else
           b1(ig) = a(dfft%nl(igk(ig)))
-#endif
        ENDDO
        !$acc end parallel
     ELSE
-       !$acc parallel loop
+       !$acc parallel loop present(b1,a,dfft,dfft%nl)
        DO ig = 1,n
-#if defined(__CUDA)
-          b1(ig) = a(dfft_nl_d(ig))
-#else
           b1(ig) = a(dfft%nl(ig))
-#endif
        ENDDO
        !$acc end parallel
     ENDIF
     !
     IF(nx > n) THEN
-       !$acc kernels
+       !$acc kernels present(b1)
        b1(n+1:nx) = z_0
        !$acc end kernels
     ENDIF

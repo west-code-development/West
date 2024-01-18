@@ -33,12 +33,9 @@ SUBROUTINE do_wann()
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE json_module,          ONLY : json_file,json_core,json_value
+  USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -113,16 +110,9 @@ SUBROUTINE do_wann()
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      ! compute unitary transformation matrix
@@ -138,7 +128,7 @@ SUBROUTINE do_wann()
         global_ib = aband%l2g(local_ib)
         ib = global_ib+westpp_range(1)-1
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ib),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ib),psic,'Wave')
         !
         !$acc kernels present(aux)
         aux(:) = REAL(psic,KIND=DP)
@@ -150,7 +140,7 @@ SUBROUTINE do_wann()
            !
            IF(global_jb < nstate) THEN
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,jb),evc_work(:,jb+1),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,jb),evc(:,jb+1),psic,'Wave')
               !
               DO il = 1,6
                  !
@@ -190,7 +180,7 @@ SUBROUTINE do_wann()
               !
            ELSE
               !
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,jb),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,jb),psic,'Wave')
               !
               DO il = 1,6
                  !

@@ -60,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = data["name"]
-copyright = u'2023, Marco Govoni'
+copyright = u'2024, Marco Govoni'
 author = u'Marco Govoni'
 
 # The version info for the project you're documenting, acts as replacement for

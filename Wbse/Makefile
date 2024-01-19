@@ -34,12 +34,10 @@ wbse_calc_forces.o \
 wbse_davidson_diago.o \
 wbse_dot.o \
 wbse_dv.o \
-wbse_init_readin.o \
 wbse_init_setup.o \
 wbse_lanczos_diago.o \
 wbse_localization.o\
 wbse_memory_report.o \
-wbse_readin.o \
 wbse_setup.o \
 wbse_solve_e_psi.o \
 wbse_tools.o

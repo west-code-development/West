@@ -36,7 +36,7 @@ PROGRAM wstat
   !
   CALL west_environment_start( code )
   !
-  CALL wstat_readin( )
+  CALL west_readin( code )
   !
   CALL wstat_setup( )
   !

@@ -36,7 +36,7 @@ PROGRAM wbse_init
   !
   CALL west_environment_start( code )
   !
-  CALL wbse_init_readin( )
+  CALL west_readin( code )
   !
   CALL wbse_init_setup( )
   !

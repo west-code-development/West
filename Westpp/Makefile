@@ -28,7 +28,6 @@ do_loc.o \
 do_resp.o \
 dump_r.o \
 westpp.o \
-westpp_readin.o \
 westpp_setup.o \
 write_wfc_1d_r.o \
 write_wfc_spav.o

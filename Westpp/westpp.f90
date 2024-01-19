@@ -39,7 +39,7 @@ PROGRAM westpp
   !
   CALL west_environment_start( code )
   !
-  CALL westpp_readin( )
+  CALL west_readin( code )
   !
   CALL westpp_setup( )
   !

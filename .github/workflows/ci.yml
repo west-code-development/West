@@ -11,7 +11,7 @@ jobs:
     container: miccomcenter/bot:gcc1320_0001
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         path: West
     - name: Build QE

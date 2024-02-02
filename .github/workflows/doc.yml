@@ -8,7 +8,7 @@ jobs:
     container: continuumio/miniconda3:latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Init
       run: |
         apt-get update

@@ -123,7 +123,7 @@ SUBROUTINE do_exc_comp()
      !
   ENDIF
   !
-  ALLOCATE(projection_matrix(nks,nbndx_occ,nbndx_emp,westpp_n_liouville_to_use))
+  ALLOCATE(projection_matrix(nbndx_emp,nbndx_occ,nks,westpp_n_liouville_to_use))
   !$acc enter data create(projection_matrix) copyin(dvg_exc)
   !
   !$acc kernels present(projection_matrix)
@@ -187,7 +187,7 @@ SUBROUTINE do_exc_comp()
                  reduce = reduce - REAL(dvg_exc(1,iocc,iks,lexc),KIND=DP)*REAL(evc_work(1,nbndval+iemp),KIND=DP)
               ENDIF
               !
-              projection_matrix(iks,iocc,iemp,iexc) = reduce
+              projection_matrix(iemp,iocc,iks,iexc) = reduce
               !
            ENDDO
         ENDDO
@@ -299,9 +299,9 @@ SUBROUTINE do_exc_comp()
         !
         DO iocc = 1,nbnd_occ(iks_do)
            DO iemp = 1,(nbnd - nbnd_occ(iks))
-              IF(ABS(projection_matrix(iks,iocc,iemp,iexc)) >= 0.1_DP) THEN
+              IF(ABS(projection_matrix(iemp,iocc,iks,iexc)) >= 0.1_DP) THEN
                  WRITE(stdout, "(4x, i8, 4x, i8, 8x, '|', i4, 4x, i8, 7x, '|', f13.6)") &
-                 & iks_do,iocc,iks,iemp+nbnd_occ(iks),projection_matrix(iks,iocc,iemp,iexc)
+                 & iks_do,iocc,iks,iemp+nbnd_occ(iks),projection_matrix(iemp,iocc,iks,iexc)
               ENDIF
            ENDDO
         ENDDO
@@ -359,7 +359,7 @@ SUBROUTINE do_exc_comp()
                  !
                  CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection('//label_d//').trans',trans)
                  !
-                 reduce = projection_matrix(iks,iocc,iemp,iexc)
+                 reduce = projection_matrix(iemp,iocc,iks,iexc)
                  CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection('//label_d//').value',reduce)
                  !
               ENDDO

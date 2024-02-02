@@ -20,6 +20,8 @@ Intro tutorials:
    tutorials/basic/basic_008.ipynb
    tutorials/basic/basic_009.ipynb
    tutorials/basic/basic_010.ipynb
+   tutorials/basic/basic_011.ipynb
+   tutorials/basic/basic_012.ipynb
 
 Advanced tutorials:
 

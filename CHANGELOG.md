@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-To be released
+v6.0.0 (2024/02/01)
 -------------------
 
 - Code repository migrated to [GitHub](https://github.com/west-code-development/).

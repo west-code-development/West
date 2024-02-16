@@ -30,6 +30,8 @@ jobs:
       run: |
         pip3 install -q -U pip
         pip3 install -q -U numpy
+        pip3 install -q -U pytest
+        pip3 install -q -U setuptools
         mv West qe
         cd qe/West
         git describe --tags --always
@@ -58,7 +60,7 @@ jobs:
         make clean
         make NP=8 NB=2
     - name: Archive artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: '!success()'
       with:
         name: artifacts

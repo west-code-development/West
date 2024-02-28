@@ -7,7 +7,7 @@ title \
 install
 
 install:
-	- ${PYT} setup.py install --user --prefix= --record files.txt
+	- ${PYT} -m pip install --user .
 
 clean:
 	- rm -rf west.egg-info

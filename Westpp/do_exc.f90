@@ -153,12 +153,11 @@ SUBROUTINE do_exc()
   !
   CALL start_bar_type(barra,'westpp',barra_load*k_grid%nps*SUM(nbnd_occ))
   !
-  DO lexc = 1,pert%nloc
+  DO lexc = 1,pert%nlocx
      !
      ! local -> global
      !
      iexc = pert%l2g(lexc)
-     IF(iexc < westpp_range(1) .OR. iexc > westpp_range(2)) CYCLE
      !
      DO iks = 1, k_grid%nps  ! KPOINT-SPIN LOOP
         !
@@ -182,6 +181,10 @@ SUBROUTINE do_exc()
            CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
         ENDIF
+        !
+        ! CYCLE here because of mp_bcast above
+        !
+        IF(iexc < westpp_range(1) .OR. iexc > westpp_range(2)) CYCLE
         !
         !$acc kernels present(rho_aux)
         rho_aux(:) = 0._DP

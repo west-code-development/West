@@ -97,18 +97,6 @@ MODULE wfreq_db
             IF(wfreq_calculation(i:i) == 'O') l_optics = .TRUE.
          ENDDO
          !
-         IF(ALLOCATED(pijmap)) THEN
-            DO ipair = 1,n_pairs
-               WRITE(label,'(i10)') ipair
-               CALL json%add('output.Q.indexmap('//label//')',(/pijmap(1,ipair),pijmap(2,ipair)/))
-            ENDDO
-         ELSE
-            DO ib = 1,n_bands
-               WRITE(label,'(i10)') ib
-               CALL json%add('output.Q.indexmap('//label//')',(/ib,ib/))
-            ENDDO
-         ENDIF
-         !
          IF(l_generate_plot) CALL json%add('output.P.freqlist',sigma_freq*rytoev)
          !
          ALLOCATE(eks(n_bands))

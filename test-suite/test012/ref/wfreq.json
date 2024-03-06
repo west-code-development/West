@@ -62,9 +62,11 @@
         2
       ],
       "qp_bands": [
-        8,
-        9,
-        10
+        [
+          8,
+          9,
+          10
+        ]
       ],
       "macropol_calculation": "N",
       "n_lanczos": 30,

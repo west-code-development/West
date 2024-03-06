@@ -24,13 +24,13 @@ def read_and_test_total_energies(fileA,fileB,tol):
     Reads and tests the total energies
     """
 
-    test_energy = read_total_energy(fileA)
-    ref_energy = read_total_energy(fileB)
+    test_en = read_total_energy(fileA)
+    ref_en = read_total_energy(fileB)
 
-    maxDiff = np.amax(np.abs(test_energy-ref_energy))
+    maxDiff = np.amax(np.abs(test_en-ref_en))
     print(f'Total energy (pwscf) max diff: {maxDiff}')
 
-    assert np.allclose(test_energy,ref_energy,rtol=0,atol=tol),'Total energies changed'
+    assert np.allclose(test_en,ref_en,rtol=0,atol=tol),'Total energies changed'
 
 
 def read_wstat_eigenvalues(fileName):
@@ -83,7 +83,7 @@ def read_wfreq_energies(fileName):
         for key in data['output']['Q'][kindex]:
             if 'im' in data['output']['Q'][kindex][key] and 're' in data['output']['Q'][kindex][key]:
                 en[ik][key] = np.array(data['output']['Q'][kindex][key]['re'],dtype='c16')
-                en[ik][key] += 1j * np.array(data['output']['Q'][kindex][key]['im'],dtype='c16')
+                en[ik][key] += 1j*np.array(data['output']['Q'][kindex][key]['im'],dtype='c16')
             else:
                 if key != 'occupation':
                     en[ik][key] = np.array(data['output']['Q'][kindex][key],dtype='f8')
@@ -200,6 +200,85 @@ def read_and_test_wbse_forces(fileA,fileB,tol):
         assert np.allclose(test_f[key],ref_f[key],rtol=0,atol=tol),f'TDDFT forces changed, field {key}'
 
 
+def read_qdet_1body(fileName):
+    """
+    Reads QDET one-body term
+    """
+
+    with open(fileName,'r') as f:
+        data = json.load(f)
+
+    nband = len(data['input']['wfreq_control']['qp_bands'][0])
+    npair = nband*(nband+1)//2
+    nspin = int(data['system']['electron']['nspin'])
+
+    h1e = np.zeros((nspin,npair))
+
+    for is1 in range(nspin):
+        sindex1 = f'K{is1+1:06d}'
+        h1e[is1,:] = np.array(data['qdet']['h1e'][sindex1],dtype='f8')
+
+    return h1e
+
+
+def read_and_test_qdet_1body(fileA,fileB,tol):
+    """
+    Reads and tests QDET one-body term
+    """
+
+    test_h1e = read_qdet_1body(fileA)
+    ref_h1e = read_qdet_1body(fileB)
+
+    maxDiff = np.amax(np.abs(np.abs(test_h1e)-np.abs(ref_h1e)))
+    print(f'QDET 1-body (wfreq) max diff: {maxDiff}')
+
+    assert np.allclose(np.abs(test_h1e),np.abs(ref_h1e),rtol=0,atol=tol),'QDET 1-body changed'
+
+
+def read_qdet_2body(fileName):
+    """
+    Reads QDET two-body term
+    """
+
+    with open(fileName,'r') as f:
+        data = json.load(f)
+
+    nband = len(data['input']['wfreq_control']['qp_bands'][0])
+    npair = int(nband*(nband+1)/2)
+    nspin = int(data['system']['electron']['nspin'])
+
+    eri = {}
+    for key in ['eri_w','eri_w_full','eri_vc']:
+        if key in data['qdet']:
+            eri[key] = np.zeros((nspin,nspin,npair,npair))
+            for is1 in range(nspin):
+                sindex1 = f'K{is1+1:06d}'
+                for is2 in range(nspin):
+                    sindex2 = f'K{is2+1:06d}'
+                    for ipair in range(npair):
+                        pindex = f'pair{ipair+1:06d}'
+                        eri[key][is1,is2,ipair,:] = np.array(data['qdet']['eri_w'][sindex1][sindex2][pindex],dtype='f8')
+
+    return eri
+
+
+def read_and_test_qdet_2body(fileA,fileB,tol):
+    """
+    Reads and tests QDET one-body term
+    """
+
+    test_eri = read_qdet_2body(fileA)
+    ref_eri = read_qdet_2body(fileB)
+
+    maxDiff = 0.0
+    for key in test_eri:
+        maxDiff = max(maxDiff,np.amax(np.abs(np.abs(test_eri[key])-np.abs(ref_eri[key]))))
+    print(f'QDET 2-body (wfreq) max diff: {maxDiff}')
+
+    for key in test_eri:
+        assert np.allclose(np.abs(test_eri[key]),np.abs(ref_eri[key]),rtol=0,atol=tol),f'QDET 2-body changed, field {key}'
+
+
 #########
 # TESTS #
 #########
@@ -224,6 +303,14 @@ def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))
+
+
+@pytest.mark.parametrize('testdir',['test012','test013','test014'])
+def test_qdet(testdir):
+    with open('parameters.json','r') as f:
+        parameters = json.load(f)
+    read_and_test_qdet_1body(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['qdet']))
+    read_and_test_qdet_2body(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['qdet']))
 
 
 @pytest.mark.parametrize('testdir',['test016','test018'])

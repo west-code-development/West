@@ -150,7 +150,6 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   REAL(DP), ALLOCATABLE :: aux_rr(:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux1_r(:,:),aux1_g(:)
   REAL(DP), ALLOCATABLE :: frspin(:,:)
-  !$acc declare device_resident(aux_r)
   !
   CHARACTER(LEN=:), ALLOCATABLE :: lockfile
   CHARACTER(LEN=:), ALLOCATABLE :: fname
@@ -235,7 +234,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   ALLOCATE(tau(npwx))
   ALLOCATE(aux_r(dffts%nnr))
   ALLOCATE(aux1_g(npwx))
-  !$acc enter data create(tau,aux1_g) copyin(dvg)
+  !$acc enter data create(tau,aux_r,aux1_g) copyin(dvg)
   IF(l_pdep) THEN
      ALLOCATE(dotp(pert%nloc))
      !$acc enter data create(dotp)
@@ -484,7 +483,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   !
   CALL stop_bar_type(barra,'tau')
   !
-  !$acc exit data delete(dvg,tau,aux1_g)
+  !$acc exit data delete(dvg,tau,aux_r,aux1_g)
   DEALLOCATE(tau)
   DEALLOCATE(aux_r)
   DEALLOCATE(aux1_g)

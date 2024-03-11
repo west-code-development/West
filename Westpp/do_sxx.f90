@@ -52,7 +52,6 @@ SUBROUTINE do_sxx ( )
   INTEGER :: ir, ip, ig, iks, ib, iv, ip_glob, ik, is, ikqs, ikq, iq, nbndval, npwkq
   INTEGER :: dffts_nnr
   COMPLEX(DP),ALLOCATABLE :: pertg(:), pertr(:), pertr_nc(:,:)
-  !$acc declare device_resident(pertg,pertr,pertr_nc)
   COMPLEX(DP),ALLOCATABLE :: evckmq(:,:), phase(:)
   LOGICAL :: l_gammaq
   REAL(DP) :: g0(3)
@@ -85,10 +84,13 @@ SUBROUTINE do_sxx ( )
   sigma_sxx = 0._DP
   !
   ALLOCATE( pertg(ngm) )
+  !$acc enter data create(pertg)
   IF(noncolin) THEN
      ALLOCATE( pertr_nc( dffts%nnr, npol ) )
+     !$acc enter data create(pertr_nc)
   ELSE
      ALLOCATE( pertr( dffts%nnr ) )
+     !$acc enter data create(pertr)
   ENDIF
   !
   IF( gamma_only ) THEN
@@ -290,14 +292,17 @@ SUBROUTINE do_sxx ( )
   !
   sigma_sxx = sigma_exx + sigma_sxx
   !
+  !$acc exit data delete(pertg)
   DEALLOCATE( pertg )
   IF( noncolin ) THEN
-    DEALLOCATE( pertr_nc )
+     !$acc exit data delete(pertr_nc)
+     DEALLOCATE( pertr_nc )
   ELSE
-    DEALLOCATE( pertr )
+     !$acc exit data delete(pertr)
+     DEALLOCATE( pertr )
   ENDIF
   IF( gamma_only ) THEN
-     !$acc exit data delete(dproj,phase,evckmq,dvg)
+     !$acc exit data delete(dproj,dvg)
      DEALLOCATE( dproj )
   ELSE
      !$acc exit data delete(zproj,phase,evckmq)

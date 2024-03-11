@@ -44,7 +44,6 @@ SUBROUTINE do_resp()
   REAL(DP) :: w1
   REAL(DP), ALLOCATABLE :: rho(:)
   COMPLEX(DP), ALLOCATABLE :: psic_aux(:)
-  !$acc declare device_resident(psic_aux)
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
   !
@@ -67,7 +66,10 @@ SUBROUTINE do_resp()
   !
   ALLOCATE(rho(dffts%nnr))
   !$acc enter data create(rho) copyin(dvg_exc)
-  IF(.NOT. gamma_only) ALLOCATE(psic_aux(dffts%nnr))
+  IF(.NOT. gamma_only) THEN
+     !$acc enter data create(psic_aux)
+     ALLOCATE(psic_aux(dffts%nnr))
+  ENDIF
   !
   dffts_nnr = dffts%nnr
   !
@@ -155,7 +157,10 @@ SUBROUTINE do_resp()
   !
   !$acc exit data delete(rho,dvg_exc)
   DEALLOCATE(rho)
-  IF(.NOT. gamma_only) DEALLOCATE(psic_aux)
+  IF(.NOT. gamma_only) THEN
+     !$acc exit data delete(psic_aux)
+     DEALLOCATE(psic_aux)
+  ENDIF
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()

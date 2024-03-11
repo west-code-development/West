@@ -183,7 +183,6 @@ SUBROUTINE compute_braket(braket)
   !
   COMPLEX(DP),ALLOCATABLE :: phi(:)
   COMPLEX(DP),ALLOCATABLE :: rho_r(:), rho_g(:)
-  !$acc declare device_resident(rho_r,rho_g)
   !
   INTEGER :: s, s_g, m, p1, p1loc, i, j, ig, ir, mloc
   INTEGER :: barra_load
@@ -205,9 +204,9 @@ SUBROUTINE compute_braket(braket)
   !$acc enter data copyin(pot3D%sqvc)
   !
   ALLOCATE( phi(npwqx) )
-  !$acc enter data create(phi)
-  ALLOCATE( rho_g(npwqx) )
   ALLOCATE( rho_r(dffts%nnr) )
+  ALLOCATE( rho_g(npwqx) )
+  !$acc enter data create(phi,rho_r,rho_g)
   !
   dffts_nnr = dffts%nnr
   !
@@ -298,7 +297,7 @@ SUBROUTINE compute_braket(braket)
   !
   CALL stop_bar_type( barra,'eri_brak' )
   !
-  !$acc exit data delete(phi)
+  !$acc exit data delete(phi,rho_r,rho_g)
   DEALLOCATE( phi )
   DEALLOCATE( rho_r )
   DEALLOCATE( rho_g )
@@ -332,7 +331,6 @@ SUBROUTINE compute_eri_vc(eri_vc)
   REAL(DP),INTENT(OUT) :: eri_vc(n_pairs,n_pairs,nspin,nspin)
   !
   COMPLEX(DP),ALLOCATABLE :: rho_g1(:), rho_g2(:), rho_r(:)
-  !$acc declare device_resident(rho_g1,rho_g2,rho_r)
   !
   INTEGER :: i, j, k, l, p1, p1loc, p2, s1, s1_g, s2
   INTEGER :: ir, ig
@@ -354,6 +352,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   ALLOCATE( rho_r(dffts%nnr) )
   ALLOCATE( rho_g1(ngm) )
   ALLOCATE( rho_g2(ngm) )
+  !$acc enter data create(rho_r,rho_g1,rho_g2)
   !
   dffts_nnr = dffts%nnr
   !
@@ -541,6 +540,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   CALL mp_sum( eri_vc, intra_bgrp_comm )
   CALL mp_sum( eri_vc, inter_image_comm )
   !
+  !$acc exit data delete(rho_r,rho_g1,rho_g2)
   DEALLOCATE( rho_r )
   DEALLOCATE( rho_g1 )
   DEALLOCATE( rho_g2 )

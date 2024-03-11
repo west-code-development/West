@@ -112,7 +112,6 @@ MODULE linear_algebra_kernel
       CHARACTER :: ev_mode
 #endif
       REAL(DP),ALLOCATABLE :: work(:)
-      !$acc declare device_resident(work)
       REAL(DP),ALLOCATABLE :: m(:,:)
       !
 #if defined(__CUDA)
@@ -126,19 +125,23 @@ MODULE linear_algebra_kernel
       !
       n8 = INT(n,KIND=i8b)
       !
-      !$acc host_data use_device(a,e,info_d)
+      !$acc host_data use_device(a,e)
       info = cusolverDnXsyevd_buffersize(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
            & cudaDataType(CUDA_R_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_R_64F),&
            & ld8,lh8)
+      !$acc end host_data
       !
       ALLOCATE(work(ld8/8))
+      !$acc enter data create(work)
       ALLOCATE(work_h(lh8/8))
       !
+      !$acc host_data use_device(a,e,work,info_d)
       info = cusolverDnXsyevd(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
            & cudaDataType(CUDA_R_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_R_64F),&
            & work,ld8,work_h,lh8,info_d)
       !$acc end host_data
       !
+      !$acc exit data delete(work)
       DEALLOCATE(work)
       DEALLOCATE(work_h)
       !
@@ -210,7 +213,6 @@ MODULE linear_algebra_kernel
 #endif
       REAL(DP),ALLOCATABLE :: rwork(:)
       COMPLEX(DP),ALLOCATABLE :: work(:)
-      !$acc declare device_resident(work)
       COMPLEX(DP),ALLOCATABLE :: m(:,:)
       !
 #if defined(__CUDA)
@@ -224,19 +226,23 @@ MODULE linear_algebra_kernel
       !
       n8 = INT(n,KIND=i8b)
       !
-      !$acc host_data use_device(a,e,info_d)
+      !$acc host_data use_device(a,e)
       info = cusolverDnXsyevd_buffersize(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
            & cudaDataType(CUDA_C_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_C_64F),&
            & ld8,lh8)
+      !$acc end host_data
       !
       ALLOCATE(work(ld8/16))
+      !$acc enter data create(work)
       ALLOCATE(work_h(lh8/16))
       !
+      !$acc host_data use_device(a,e,work,info_d)
       info = cusolverDnXsyevd(cusolv_h,cusolv_p,ev_mode,CUBLAS_FILL_MODE_UPPER,n8,&
            & cudaDataType(CUDA_C_64F),a,n8,cudaDataType(CUDA_R_64F),e,cudaDataType(CUDA_C_64F),&
            & work,ld8,work_h,lh8,info_d)
       !$acc end host_data
       !
+      !$acc exit data delete(work)
       DEALLOCATE(work)
       DEALLOCATE(work_h)
       !

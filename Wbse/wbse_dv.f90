@@ -731,13 +731,13 @@ MODULE wbse_dv
     INTEGER :: ipol, ig, ir
     INTEGER :: dfft_nnr, dfft_ngm
     COMPLEX(DP), ALLOCATABLE :: aux(:), gaux(:)
-    !$acc declare device_resident(aux,gaux)
     !
     dfft_nnr = dfft%nnr
     dfft_ngm = dfft%ngm
     !
-    ALLOCATE(gaux(dfft%nnr))
     ALLOCATE(aux(dfft%nnr))
+    ALLOCATE(gaux(dfft%nnr))
+    !$acc enter data create(aux,gaux)
     !
     !$acc kernels present(aux,a)
     aux(:) = a
@@ -779,6 +779,7 @@ MODULE wbse_dv
        !
     ENDDO
     !
+    !$acc exit data delete(aux,gaux)
     DEALLOCATE(aux)
     DEALLOCATE(gaux)
     !
@@ -808,12 +809,12 @@ MODULE wbse_dv
     INTEGER :: ipol, ig, ir
     INTEGER :: dfft_nnr, dfft_ngm
     COMPLEX(DP), ALLOCATABLE :: aux(:)
-    !$acc declare device_resident(aux)
     !
     dfft_nnr = dfft%nnr
     dfft_ngm = dfft%ngm
     !
     ALLOCATE(aux(dfft%nnr))
+    !$acc enter data create(aux)
     !
     !$acc kernels present(da)
     da(:) = (0._DP,0._DP)
@@ -855,6 +856,7 @@ MODULE wbse_dv
     da(:) = da * tpiba
     !$acc end kernels
     !
+    !$acc exit data delete(aux)
     DEALLOCATE(aux)
     !
   END SUBROUTINE

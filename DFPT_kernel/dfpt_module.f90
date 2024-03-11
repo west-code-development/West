@@ -76,13 +76,11 @@ MODULE dfpt_module
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
-      !$acc declare device_resident(eprec,eprec_loc,et_loc)
       REAL(DP), ALLOCATABLE :: psi_dvpsi(:,:)
       !
       COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:),dpsi(:,:)
       COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:)
       COMPLEX(DP), ALLOCATABLE :: dpsic(:)
-      !$acc declare device_resident(dvpsi,dpsi,aux_r,dpsic)
       !
       COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
 #if defined(__CUDA)
@@ -116,13 +114,13 @@ MODULE dfpt_module
       ALLOCATE(dpsi(npwx*npol,band_group%nloc))
       ALLOCATE(aux_r(dffts%nnr))
       ALLOCATE(aux_g(npwqx))
-      !$acc enter data create(aux_g)
+      !$acc enter data create(eprec,eprec_loc,et_loc,dvpsi,dpsi,aux_r,aux_g)
       !
       IF (.NOT. gamma_only) THEN
          ALLOCATE(dpsic(dffts%nnr))
          ALLOCATE(phase(dffts%nnr))
          ALLOCATE(evckmq(npwx*npol,nbnd))
-         !$acc enter data create(phase,evckmq)
+         !$acc enter data create(dpsic,phase,evckmq)
       ENDIF
       !
 #if defined(__CUDA)
@@ -139,7 +137,7 @@ MODULE dfpt_module
       ENDIF
       CALL io_push_title(TRIM(ADJUSTL(title)))
       !
-      dng = zero
+      dng(:,:) = zero
       !
       CALL start_bar_type( barra, 'dfpt', MAX(m,1) * kpt_pool%nloc )
       !
@@ -514,7 +512,7 @@ MODULE dfpt_module
       !
       CALL mp_sum(dng,inter_pool_comm)
       !
-      !$acc exit data delete(aux_g)
+      !$acc exit data delete(eprec,eprec_loc,et_loc,dvpsi,dpsi,aux_r,aux_g)
       DEALLOCATE(eprec)
       DEALLOCATE(eprec_loc)
       DEALLOCATE(et_loc)
@@ -524,7 +522,7 @@ MODULE dfpt_module
       DEALLOCATE(aux_g)
       !
       IF (.NOT. gamma_only) THEN
-         !$acc exit data delete(phase,evckmq)
+         !$acc exit data delete(dpsic,phase,evckmq)
          DEALLOCATE(dpsic)
          DEALLOCATE(phase)
          DEALLOCATE(evckmq)

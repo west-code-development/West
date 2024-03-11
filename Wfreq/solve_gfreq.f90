@@ -85,14 +85,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   REAL(DP),ALLOCATABLE :: diago1(:,:),subdiago1(:,:)
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
-  !$acc declare device_resident(q_s)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dvpsi
 #endif
   COMPLEX(DP),ALLOCATABLE :: psic1(:),dvpsi1(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
-  !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: pertg_all
@@ -110,7 +108,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   INTEGER,ALLOCATABLE :: l2g(:)
-  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -181,18 +178,17 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ALLOCATE(ps_r(nbnd,pert%nloc))
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
-  !$acc enter data create(dvpsi)
   ALLOCATE(overlap(pert%nglob,nbnd))
-  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
+  !$acc enter data create(dvpsi,overlap,pertr,pertg)
   IF(l_enable_lanczos) THEN
      ALLOCATE(bnorm(pert%nloc))
      ALLOCATE(diago(n_lanczos,pert%nloc))
      ALLOCATE(subdiago(n_lanczos-1,pert%nloc))
      ALLOCATE(q_s(npwx*npol,pert%nloc,n_lanczos))
      ALLOCATE(braket(pert%nglob,n_lanczos,pert%nloc))
-     !$acc enter data create(braket)
+     !$acc enter data create(q_s,braket)
      IF(l_enable_off_diagonal) THEN
         ALLOCATE(dvpsi1(npwx*npol,pert%nlocx))
         ALLOCATE(psic1(dffts%nnr))
@@ -202,6 +198,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      ENDIF
   ENDIF
   ALLOCATE(l2g(pert%nloc))
+  !$acc enter data create(l2g)
   !
   !$acc parallel loop present(l2g)
   DO ip = 1,pert_nloc
@@ -487,9 +484,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if !defined(__CUDA)
   DEALLOCATE(ps_r)
 #endif
-  !$acc exit data delete(dvpsi)
+  !$acc exit data delete(dvpsi,overlap,pertr,pertg)
   DEALLOCATE(dvpsi)
-  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
@@ -497,8 +493,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      DEALLOCATE(bnorm)
      DEALLOCATE(diago)
      DEALLOCATE(subdiago)
+     !$acc exit data delete(q_s,braket)
      DEALLOCATE(q_s)
-     !$acc exit data delete(braket)
      DEALLOCATE(braket)
      IF(l_enable_off_diagonal) THEN
         !$acc exit data delete(dvpsi1,psic1)
@@ -508,6 +504,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         DEALLOCATE(diago1)
      ENDIF
   ENDIF
+  !$acc exit data delete(l2g)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !
@@ -583,20 +580,17 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ATTRIBUTES(PINNED) :: braket
 #endif
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
-  !$acc declare device_resident(q_s)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dvpsi
 #endif
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
-  !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evck(:,:),phase(:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: pertg_all,evck
 #endif
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
-  !$acc declare device_resident(psick,psick_nc)
 #if !defined(__CUDA)
   COMPLEX(DP),ALLOCATABLE :: ps_c(:,:)
 #endif
@@ -610,7 +604,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bksks_type) :: bksks
   INTEGER,ALLOCATABLE :: l2g(:)
-  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -664,8 +657,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   IF(noncolin) THEN
      ALLOCATE(psick_nc(dffts%nnr,npol))
+     !$acc enter data create(psick_nc)
   ELSE
      ALLOCATE(psick(dffts%nnr))
+     !$acc enter data create(psick)
   ENDIF
   ALLOCATE(phase(dffts%nnr))
   ALLOCATE(evck(npwx*npol,nbnd))
@@ -687,20 +682,20 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ALLOCATE(ps_c(nbnd,pert%nloc))
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
-  !$acc enter data create(dvpsi)
   ALLOCATE(overlap(pert%nglob,nbnd))
-  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
+  !$acc enter data create(dvpsi,overlap,pertr,pertg)
   IF(l_enable_lanczos) THEN
      ALLOCATE(bnorm(pert%nloc))
      ALLOCATE(diago(n_lanczos,pert%nloc))
      ALLOCATE(subdiago(n_lanczos-1,pert%nloc))
      ALLOCATE(q_s(npwx*npol,pert%nloc,n_lanczos))
      ALLOCATE(braket(pert%nglob,n_lanczos,pert%nloc))
-     !$acc enter data create(braket)
+     !$acc enter data create(q_s,braket)
   ENDIF
   ALLOCATE(l2g(pert%nloc))
+  !$acc enter data create(l2g)
   !
   !$acc parallel loop present(l2g)
   DO ip = 1,pert_nloc
@@ -977,8 +972,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   !
   IF(noncolin) THEN
+     !$acc exit data delete(psick_nc)
      DEALLOCATE(psick_nc)
   ELSE
+     !$acc exit data delete(psick)
      DEALLOCATE(psick)
   ENDIF
   !$acc exit data delete(phase,evck)
@@ -988,9 +985,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if !defined(__CUDA)
   DEALLOCATE(ps_c)
 #endif
-  !$acc exit data delete(dvpsi)
+  !$acc exit data delete(dvpsi,overlap,pertr,pertg)
   DEALLOCATE(dvpsi)
-  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
@@ -998,10 +994,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      DEALLOCATE(bnorm)
      DEALLOCATE(diago)
      DEALLOCATE(subdiago)
+     !$acc exit data delete(q_s,braket)
      DEALLOCATE(q_s)
-     !$acc exit data delete(braket)
      DEALLOCATE(braket)
   ENDIF
+  !$acc exit data delete(l2g)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !

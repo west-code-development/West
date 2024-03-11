@@ -46,7 +46,6 @@ SUBROUTINE do_exc()
   COMPLEX(DP) :: zcoeff
   REAL(DP), ALLOCATABLE :: r(:,:),dr(:),rho(:)
   COMPLEX(DP), ALLOCATABLE :: psic_aux(:),rho_aux(:)
-  !$acc declare device_resident(psic_aux,rho_aux)
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: n_ipol = 3
@@ -89,9 +88,12 @@ SUBROUTINE do_exc()
   ALLOCATE(r(dffts%nnr,n_ipol))
   ALLOCATE(dr(dffts%nnr))
   ALLOCATE(rho(dffts%nnr))
-  !$acc enter data create(rho) copyin(dvg_exc)
   ALLOCATE(rho_aux(dffts%nnr))
-  IF(.NOT. gamma_only) ALLOCATE(psic_aux(dffts%nnr))
+  !$acc enter data create(rho,rho_aux) copyin(dvg_exc)
+  IF(.NOT. gamma_only) THEN
+     ALLOCATE(psic_aux(dffts%nnr))
+     !$acc enter data create(psic_aux)
+  ENDIF
   !
   r(:,:) = 0._DP
   !
@@ -259,10 +261,13 @@ SUBROUTINE do_exc()
   !
   DEALLOCATE(r)
   DEALLOCATE(dr)
-  !$acc exit data delete(rho,dvg_exc)
+  !$acc exit data delete(rho,rho_aux,dvg_exc)
   DEALLOCATE(rho)
   DEALLOCATE(rho_aux)
-  IF(.NOT. gamma_only) DEALLOCATE(psic_aux)
+  IF(.NOT. gamma_only) THEN
+     !$acc exit data delete(psic_aux)
+     DEALLOCATE(psic_aux)
+  ENDIF
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()

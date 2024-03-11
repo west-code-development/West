@@ -76,7 +76,6 @@ SUBROUTINE compute_d0psi_rs()
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: r(:,:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:)
-  !$acc declare device_resident(aux_r)
   !
   CALL io_push_title('Calculation of the dipole in real space')
   !
@@ -84,7 +83,7 @@ SUBROUTINE compute_d0psi_rs()
   !
   ALLOCATE(aux_r(dffts%nnr))
   ALLOCATE(r(dffts%nnr,n_ipol))
-  !$acc enter data create(r)
+  !$acc enter data create(aux_r,r)
   !
   r(:,:) = 0._DP
   !
@@ -225,8 +224,8 @@ SUBROUTINE compute_d0psi_rs()
      !$acc end parallel
   ENDIF
   !
+  !$acc exit data delete(aux_r,r)
   DEALLOCATE(aux_r)
-  !$acc exit data delete(r)
   DEALLOCATE(r)
   !
 END SUBROUTINE
@@ -329,7 +328,6 @@ SUBROUTINE compute_d0psi_dfpt()
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
-  !$acc declare device_resident(eprec,e,phi)
   !
   CALL io_push_title('Calculation of the dipole using DFPT method')
   !
@@ -376,7 +374,7 @@ SUBROUTINE compute_d0psi_dfpt()
      ALLOCATE(e(n_ipol))
      ALLOCATE(phi_tmp(npwx*npol,n_ipol))
      ALLOCATE(phi(npwx*npol,n_ipol))
-     !$acc enter data create(phi_tmp)
+     !$acc enter data create(eprec,e,phi_tmp,phi)
      !
      ! LOOP over band states
      !
@@ -431,9 +429,9 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      !$acc update device(d0psi)
      !
+     !$acc exit data delete(eprec,e,phi_tmp,phi)
      DEALLOCATE(eprec)
      DEALLOCATE(e)
-     !$acc exit data delete(phi_tmp)
      DEALLOCATE(phi_tmp)
      DEALLOCATE(phi)
      !

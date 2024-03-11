@@ -942,7 +942,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   COMPLEX(DP) :: tmp_c
   COMPLEX(DP) :: za
   COMPLEX(DP),ALLOCATABLE :: zbraket(:)
-  !$acc declare device_resident(zbraket)
   COMPLEX(DP),ALLOCATABLE :: vec(:)
   COMPLEX(DP),PARAMETER :: mone = (-1._DP,0._DP)
   !
@@ -962,7 +961,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
      ALLOCATE(vec(npwqx))
      ALLOCATE(zbraket(pert%nloc))
      !
-     !$acc enter data create(vec) copyin(amat)
+     !$acc enter data create(vec,zbraket) copyin(amat)
      !
      ! 2) Localize m_global_start
      !
@@ -1099,7 +1098,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
         !
      ENDDO
      !
-     !$acc exit data delete(vec) copyout(amat)
+     !$acc exit data delete(vec,zbraket) copyout(amat)
      !
      DEALLOCATE(vec)
      DEALLOCATE(zbraket)

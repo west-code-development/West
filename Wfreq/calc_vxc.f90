@@ -67,14 +67,16 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   INTEGER :: dfftp_nnr
   COMPLEX(DP), ALLOCATABLE :: xpsi(:,:),vxpsi(:,:)
   COMPLEX(DP), ALLOCATABLE :: psic1(:)
-  !$acc declare device_resident(psic1)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
   TYPE(idistribute) :: gwbnd
   !
   ALLOCATE( vxc(dfftp%nnr,nspin) )
   !
-  IF (l_enable_off_diagonal) ALLOCATE( psic1 (dfftp%nnr) )
+  IF (l_enable_off_diagonal) THEN
+     ALLOCATE( psic1(dfftp%nnr) )
+     !$acc enter data create(psic1)
+  ENDIF
   !
   WRITE(stdout,*)
   CALL io_push_bar()
@@ -293,7 +295,10 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   !$acc exit data delete(vxc)
   DEALLOCATE( vxc )
-  IF (l_enable_off_diagonal) DEALLOCATE( psic1 )
+  IF (l_enable_off_diagonal) THEN
+     !$acc exit data delete(psic1)
+     DEALLOCATE( psic1 )
+  ENDIF
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()

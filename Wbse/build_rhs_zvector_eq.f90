@@ -152,7 +152,6 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   INTEGER :: req
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part1(:,:,:),tmp_vec(:,:,:)
-  !$acc declare device_resident(z_rhs_vec_part1,tmp_vec)
   COMPLEX(DP), ALLOCATABLE :: drhox(:,:)
   TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: flks(2) = [2,1]
@@ -162,6 +161,8 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   dffts_nnr = dffts%nnr
   !
   ALLOCATE(z_rhs_vec_part1(npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  !$acc enter data create(z_rhs_vec_part1)
+  !
   !$acc kernels present(z_rhs_vec_part1)
   z_rhs_vec_part1(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
@@ -169,6 +170,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   IF(l_bse .OR. l_hybrid_tddft) THEN
      !
      ALLOCATE(tmp_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc))
+     !$acc enter data create(tmp_vec)
      !
      !$acc kernels present(tmp_vec)
      tmp_vec(:,:,:) = (0._DP,0._DP)
@@ -323,8 +325,12 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p1 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part1)
   DEALLOCATE(z_rhs_vec_part1)
-  IF(l_bse .OR. l_hybrid_tddft) DEALLOCATE(tmp_vec)
+  IF(l_bse .OR. l_hybrid_tddft) THEN
+     !$acc exit data delete(tmp_vec)
+     DEALLOCATE(tmp_vec)
+  ENDIF
   !$acc exit data delete(drhox)
   DEALLOCATE(drhox)
   !
@@ -370,7 +376,6 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   INTEGER :: dffts_nnr,band_group_myoffset
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),aux_g(:,:),evc_copy(:,:)
-  !$acc declare device_resident(z_rhs_vec_part2,aux_g,evc_copy)
   REAL(DP) :: reduce,reduce2
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
@@ -391,7 +396,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
   ALLOCATE(dpcpart(npwx*npol, nbndval0x-n_trunc_bands))
   ALLOCATE(dvrs(dffts%nnr,nspin))
-  !$acc enter data create(dv_vv_mat,dpcpart,dvrs)
+  !$acc enter data create(z_rhs_vec_part2,aux_g,dv_vv_mat,dpcpart,dvrs)
   !
   !$acc kernels present(z_rhs_vec_part2)
   z_rhs_vec_part2(:,:,:) = (0._DP,0._DP)
@@ -617,6 +622,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
      IF(l_spin_flip_kernel) THEN
         !
         ALLOCATE(evc_copy(npwx, nbndval0x-n_trunc_bands))
+        !$acc enter data create(evc_copy)
         !
         ! Calculation of the charge density response
         !
@@ -859,6 +865,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            !
         ENDDO
         !
+        !$acc exit data delete(evc_copy)
         DEALLOCATE(evc_copy)
         !
      ENDIF
@@ -875,9 +882,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p2 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part2,aux_g,dv_vv_mat,dpcpart,dvrs)
   DEALLOCATE(z_rhs_vec_part2)
   DEALLOCATE(aux_g)
-  !$acc exit data delete(dv_vv_mat,dpcpart,dvrs)
   DEALLOCATE(dv_vv_mat)
   DEALLOCATE(dpcpart)
   DEALLOCATE(dvrs)
@@ -921,7 +928,6 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part3(:,:,:)
-  !$acc declare device_resident(z_rhs_vec_part3)
   COMPLEX(DP), ALLOCATABLE :: ddvxc(:,:)
   TYPE(bar_type) :: barra
   !
@@ -930,11 +936,13 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   dffts_nnr = dffts%nnr
   !
   ALLOCATE(z_rhs_vec_part3(npwx*npol,band_group%nlocx,kpt_pool%nloc))
-  ALLOCATE(ddvxc(dffts%nnr,nspin))
+  !$acc enter data create(z_rhs_vec_part3)
   !
   !$acc kernels present(z_rhs_vec_part3)
   z_rhs_vec_part3(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
+  !
+  ALLOCATE(ddvxc(dffts%nnr,nspin))
   !
   IF(.NOT. l_spin_flip) THEN
      CALL compute_ddvxc_5p(dvg_exc_tmp, ddvxc)
@@ -1043,8 +1051,8 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p3 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part3,ddvxc)
   DEALLOCATE(z_rhs_vec_part3)
-  !$acc exit data delete(ddvxc)
   DEALLOCATE(ddvxc)
   !
 END SUBROUTINE
@@ -1336,9 +1344,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   REAL(DP) :: reduce
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part4(:,:,:),tmp_vec(:,:)
-  !$acc declare device_resident(z_rhs_vec_part4,tmp_vec)
   REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:)
-  !$acc declare device_resident(dv_vv_mat)
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dpcpart
@@ -1354,7 +1360,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
   ALLOCATE(tmp_vec(npwx*npol, band_group%nlocx))
   ALLOCATE(dpcpart(npwx*npol, nbndval0x-n_trunc_bands))
-  !$acc enter data create(dpcpart)
+  !$acc enter data create(z_rhs_vec_part4,dv_vv_mat,tmp_vec,dpcpart)
   !
   !$acc kernels present(z_rhs_vec_part4)
   z_rhs_vec_part4(:,:,:) = (0._DP,0._DP)
@@ -1505,10 +1511,10 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p4 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part4,dv_vv_mat,tmp_vec,dpcpart)
   DEALLOCATE(z_rhs_vec_part4)
   DEALLOCATE(dv_vv_mat)
   DEALLOCATE(tmp_vec)
-  !$acc exit data delete(dpcpart)
   DEALLOCATE(dpcpart)
   !
 END SUBROUTINE

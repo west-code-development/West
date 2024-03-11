@@ -48,7 +48,6 @@ SUBROUTINE do_exc_spin()
   REAL(DP), ALLOCATABLE :: om(:,:),collect_ds2(:)
   REAL(DP), ALLOCATABLE :: dvgdvg_uu(:,:),dvgdvg_dd(:,:),dvgdvg_ud(:,:),dvgevc_ud(:,:),dvgevc_du(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc_copy(:,:)
-  !$acc declare device_resident(evc_copy)
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   !
@@ -69,8 +68,8 @@ SUBROUTINE do_exc_spin()
   ! COMPUTE <S^2> FOR THE GROUND STATE
   !
   ALLOCATE(om(nbnd, nbnd))
-  !$acc enter data create(om)
   ALLOCATE(evc_copy(npwx, nbnd))
+  !$acc enter data create(om,evc_copy)
   !
   IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,1)
   CALL mp_bcast(evc,0,inter_image_comm)
@@ -559,7 +558,7 @@ SUBROUTINE do_exc_spin()
      !
   ENDIF
   !
-  !$acc exit data delete(om)
+  !$acc exit data delete(om,evc_copy)
   DEALLOCATE(om)
   DEALLOCATE(evc_copy)
   !

@@ -93,20 +93,17 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ATTRIBUTES(PINNED) :: braket
 #endif
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
-  !$acc declare device_resident(q_s)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dvpsi
 #endif
   COMPLEX(DP),ALLOCATABLE :: phi(:,:)
   COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
-  !$acc declare device_resident(phi_tmp)
   COMPLEX(DP),ALLOCATABLE :: phis(:,:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: phis
 #endif
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
-  !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: pertg_all
@@ -141,7 +138,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   INTEGER,ALLOCATABLE :: l2g(:)
   REAL(DP),ALLOCATABLE :: eprec_loc(:)
   REAL(DP),ALLOCATABLE :: et_loc(:)
-  !$acc declare device_resident(l2g,eprec_loc,et_loc)
   COMPLEX(DP),POINTER :: evc_work(:,:)
   !
   CALL io_push_title('(W)-Lanczos')
@@ -265,12 +261,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !$acc enter data copyin(imfreq_list,refreq_list)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
-  !$acc enter data create(dvpsi)
   ALLOCATE(overlap(mypara%nglob,nbnd-nbndval_full))
-  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
   ALLOCATE(l2g(mypara%nloc))
+  !$acc enter data create(dvpsi,overlap,pertr,pertg,l2g)
   !
   !$acc parallel loop present(l2g)
   DO ip = 1,mypara_nloc
@@ -370,7 +365,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         ALLOCATE(et_loc(3))
         ALLOCATE(phi_tmp(npwx*npol,3))
         ALLOCATE(phi(npwx*npol,3))
-        !$acc enter data create(phi)
+        !$acc enter data create(eprec_loc,et_loc,phi_tmp,phi)
         !
         ! PHI
         !
@@ -424,7 +419,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
         ENDDO
         !
-        !$acc exit data delete(phi)
+        !$acc exit data delete(eprec_loc,et_loc,phi_tmp,phi)
         DEALLOCATE(eprec_loc)
         DEALLOCATE(et_loc)
         DEALLOCATE(phi_tmp)
@@ -448,7 +443,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
         ALLOCATE(diago(n_lanczos,mypara%nloc))
         ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
-        !$acc enter data create(diago,braket)
+        !$acc enter data create(q_s,diago,braket)
      ENDIF
      !
      CALL band_group%init(nbndval,'b','band_group',.FALSE.)
@@ -797,8 +792,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         DEALLOCATE(bnorm)
         DEALLOCATE(subdiago)
+        !$acc exit data delete(q_s,diago,braket)
         DEALLOCATE(q_s)
-        !$acc exit data delete(diago,braket)
         DEALLOCATE(diago)
         DEALLOCATE(braket)
      ENDIF
@@ -816,9 +811,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      !$acc exit data copyout(dmati,zmatr)
   ENDIF
   !$acc exit data delete(imfreq_list,refreq_list)
-  !$acc exit data delete(dvpsi)
+  !$acc exit data delete(dvpsi,overlap,pertr,pertg,l2g)
   DEALLOCATE(dvpsi)
-  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
@@ -1097,7 +1091,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ATTRIBUTES(PINNED) :: braket
 #endif
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
-  !$acc declare device_resident(q_s)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dvpsi
@@ -1108,9 +1101,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ATTRIBUTES(PINNED) :: phis
 #endif
   COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
-  !$acc declare device_resident(phi_tmp)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
-  !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evckpq(:,:)
 #if defined(__CUDA)
@@ -1118,7 +1109,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 #endif
   COMPLEX(DP),ALLOCATABLE :: phase(:)
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
-  !$acc declare device_resident(psick,psick_nc)
   INTEGER :: npwkq
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
@@ -1149,7 +1139,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   INTEGER,ALLOCATABLE :: l2g(:)
   REAL(DP),ALLOCATABLE :: eprec_loc(:)
   REAL(DP),ALLOCATABLE :: et_loc(:)
-  !$acc declare device_resident(l2g,eprec_loc,et_loc)
   !
   CALL io_push_title('(W)-Lanczos')
   !
@@ -1179,8 +1168,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   IF (noncolin) THEN
      ALLOCATE( psick_nc(dffts%nnr,npol) )
+     !$acc enter data create(psick_nc)
   ELSE
      ALLOCATE( psick(dffts%nnr) )
+     !$acc enter data create(psick)
   ENDIF
   ALLOCATE( phase(dffts%nnr) )
   ALLOCATE( evckpq(npwx*npol,nbnd) )
@@ -1251,12 +1242,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !$acc enter data copyin(bg,imfreq_list,refreq_list)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
-  !$acc enter data create(dvpsi)
   ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
-  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
   ALLOCATE(l2g(mypara%nloc))
+  !$acc enter data create(dvpsi,overlap,pertr,pertg,l2g)
   !
   !$acc parallel loop present(l2g)
   DO ip = 1,mypara_nloc
@@ -1365,7 +1355,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            ALLOCATE(et_loc(3))
            ALLOCATE(phi_tmp(npwx*npol,3))
            ALLOCATE(phi(npwx*npol,3))
-           !$acc enter data create(phi)
+           !$acc enter data create(eprec_loc,et_loc,phi_tmp,phi)
            !
            ! PHI
            !
@@ -1419,7 +1409,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
            ENDDO
            !
-           !$acc exit data delete(phi)
+           !$acc exit data delete(eprec_loc,et_loc,phi_tmp,phi)
            DEALLOCATE(eprec_loc)
            DEALLOCATE(et_loc)
            DEALLOCATE(phi_tmp)
@@ -1443,7 +1433,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            ALLOCATE(q_s(npwx*npol,mypara%nloc,n_lanczos))
            ALLOCATE(diago(n_lanczos,mypara%nloc))
            ALLOCATE(braket(mypara%nglob,n_lanczos,mypara%nloc))
-           !$acc enter data create(diago,braket)
+           !$acc enter data create(q_s,diago,braket)
         ENDIF
         !
         CALL band_group%init(nbndval,'b','band_group',.FALSE.)
@@ -1756,8 +1746,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            DEALLOCATE(bnorm)
            DEALLOCATE(subdiago)
+           !$acc exit data delete(q_s,diago,braket)
            DEALLOCATE(q_s)
-           !$acc exit data delete(diago,braket)
            DEALLOCATE(diago)
            DEALLOCATE(braket)
         ENDIF
@@ -1775,8 +1765,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 #endif
   !
   IF(noncolin) THEN
+     !$acc exit data delete(psick_nc)
      DEALLOCATE(psick_nc)
   ELSE
+     !$acc exit data delete(psick)
      DEALLOCATE(psick)
   ENDIF
   !$acc exit data delete(phase,evckpq)
@@ -1785,9 +1777,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   !$acc exit data copyout(zmati_q,zmatr_q)
   !$acc exit data delete(bg,imfreq_list,refreq_list)
-  !$acc exit data delete(dvpsi)
+  !$acc exit data delete(dvpsi,overlap,pertr,pertg,l2g)
   DEALLOCATE(dvpsi)
-  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)

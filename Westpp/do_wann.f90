@@ -54,7 +54,6 @@ SUBROUTINE do_wann()
   REAL(DP), ALLOCATABLE :: amat(:,:,:)
   REAL(DP), ALLOCATABLE :: umat(:,:)
   REAL(DP), ALLOCATABLE :: aux(:)
-  !$acc declare device_resident(aux)
   CHARACTER(LEN=5) :: label_k
   CHARACTER(LEN=9) :: label_b
   TYPE(bar_type) :: barra
@@ -75,11 +74,11 @@ SUBROUTINE do_wann()
   CALL allocate_gpu()
 #endif
   !
-  ALLOCATE(proj(dffts%nnr,6))
-  !$acc enter data create(proj)
   ALLOCATE(amat(nstate,nstate,6))
   ALLOCATE(umat(nstate,nstate))
+  ALLOCATE(proj(dffts%nnr,6))
   ALLOCATE(aux(dffts%nnr))
+  !$acc enter data create(proj,aux)
   !
   dffts_nnr = dffts%nnr
   !
@@ -249,9 +248,9 @@ SUBROUTINE do_wann()
   !
   CALL stop_bar_type(barra,'westpp')
   !
-  DEALLOCATE(umat)
   DEALLOCATE(amat)
-  !$acc exit data delete(proj)
+  DEALLOCATE(umat)
+  !$acc exit data delete(proj,aux)
   DEALLOCATE(proj)
   DEALLOCATE(aux)
   !

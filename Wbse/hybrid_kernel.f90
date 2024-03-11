@@ -46,7 +46,6 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: aux_hybrid2(:,:)
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
-  !$acc declare device_resident(aux_hybrid2,caux,gaux,raux)
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('hybrid_k2')
@@ -62,6 +61,7 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
   ALLOCATE(caux(dffts%nnr))
   ALLOCATE(gaux(npwx))
   ALLOCATE(raux(dffts%nnr))
+  !$acc enter data create(aux_hybrid2,caux,gaux,raux)
   !
   DO ikq = 1,kpt_pool%nloc
      !
@@ -149,6 +149,7 @@ SUBROUTINE hybrid_kernel_term2(current_spin, evc1, hybrid_kd2, sf)
      !
   ENDDO
   !
+  !$acc exit data delete(aux_hybrid2,caux,gaux,raux)
   DEALLOCATE(aux_hybrid2)
   DEALLOCATE(caux)
   DEALLOCATE(gaux)
@@ -198,7 +199,6 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: aux_hybrid3(:,:)
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
-  !$acc declare device_resident(aux_hybrid3,caux,gaux,raux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
@@ -213,6 +213,7 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
   ALLOCATE(caux(dffts%nnr))
   ALLOCATE(gaux(npwx))
   ALLOCATE(raux(dffts%nnr))
+  !$acc enter data create(aux_hybrid3,caux,gaux,raux)
   !
   DO ikq = 1,kpt_pool%nloc
      !
@@ -315,6 +316,7 @@ SUBROUTINE hybrid_kernel_term3(current_spin, evc1, hybrid_kd3, sf)
      !
   ENDDO
   !
+  !$acc exit data delete(aux_hybrid3,caux,gaux,raux)
   DEALLOCATE(aux_hybrid3)
   DEALLOCATE(caux)
   DEALLOCATE(gaux)
@@ -364,7 +366,6 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: aux_hybrid4(:,:)
   COMPLEX(DP), ALLOCATABLE :: caux(:), gaux(:), raux(:)
-  !$acc declare device_resident(aux_hybrid4,caux,gaux,raux)
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
 #if defined(__CUDA)
@@ -379,6 +380,7 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
   ALLOCATE(caux(dffts%nnr))
   ALLOCATE(gaux(npwx))
   ALLOCATE(raux(dffts%nnr))
+  !$acc enter data create(aux_hybrid4,caux,gaux,raux)
   !
   DO ikq = 1,kpt_pool%nloc
      !
@@ -474,6 +476,7 @@ SUBROUTINE hybrid_kernel_term4(current_spin, evc1, hybrid_kd4, sf)
      !
   ENDDO
   !
+  !$acc exit data delete(aux_hybrid4,caux,gaux,raux)
   DEALLOCATE(aux_hybrid4)
   DEALLOCATE(caux)
   DEALLOCATE(gaux)

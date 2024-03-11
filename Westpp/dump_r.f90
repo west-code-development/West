@@ -34,14 +34,13 @@ SUBROUTINE dump_r ( auxr, fname )
   !
   COMPLEX(DP),ALLOCATABLE :: auxg(:)
   COMPLEX(DP),ALLOCATABLE :: auxr_(:)
-  !$acc declare device_resident(auxr_)
   !
   ! Workspace
   !
   INTEGER :: i
   LOGICAL :: lgate(5)
   !
-  lgate=.FALSE.
+  lgate = .FALSE.
   DO i = 1, 7
      IF( westpp_format(i:i) == 'c' .OR. westpp_format(i:i) == 'C' ) lgate(1) = .TRUE. ! generate fname.cube
      IF( westpp_format(i:i) == 'x' .OR. westpp_format(i:i) == 'X' ) lgate(2) = .TRUE. ! generate fname.plavx
@@ -70,8 +69,8 @@ SUBROUTINE dump_r ( auxr, fname )
   IF( lgate(5) ) THEN
      !
      ALLOCATE(auxg(ngm))
-     !$acc enter data create(auxg)
      ALLOCATE(auxr_(dffts%nnr))
+     !$acc enter data create(auxg,auxr_)
      !
      !$acc kernels present(auxr_,auxr)
      auxr_(:) = CMPLX( auxr, 0._DP, KIND = DP)
@@ -86,7 +85,7 @@ SUBROUTINE dump_r ( auxr, fname )
      !$acc update host(auxg)
      CALL write_wfc_spav ( TRIM(fname)//'.spavr', auxg, westpp_r0, westpp_nr, westpp_rmax )
      !
-     !$acc exit data delete(auxg)
+     !$acc exit data delete(auxg,auxr_)
      DEALLOCATE(auxg)
      DEALLOCATE(auxr_)
      !

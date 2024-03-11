@@ -57,7 +57,6 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   REAL(DP),ALLOCATABLE :: a_matrix(:,:,:)
   REAL(DP),ALLOCATABLE :: aux(:)
   REAL(DP),ALLOCATABLE :: aux2(:)
-  !$acc declare device_resident(aux,aux2)
   COMPLEX(DP),ALLOCATABLE :: u_matrix(:,:)
   COMPLEX(DP),ALLOCATABLE :: evc_tmp(:,:)
   TYPE(bar_type) :: barra
@@ -94,6 +93,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         ALLOCATE(a_matrix(nbnd_do,nbnd_do,6))
         ALLOCATE(aux(dffts_nnr))
         ALLOCATE(aux2(dffts_nnr))
+        !$acc enter data create(aux,aux2)
         ALLOCATE(u_real(nbnd_do,nbnd_do))
         !
         CALL wann_calc_proj(proj)
@@ -286,6 +286,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         CALL stop_bar_type(barra,'wann')
         !
+        !$acc exit data delete(aux,aux2)
         DEALLOCATE(aux)
         DEALLOCATE(aux2)
         !

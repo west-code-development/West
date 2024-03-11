@@ -133,7 +133,6 @@ MODULE wann_loc_wfc
       INTEGER,ALLOCATABLE :: top(:),bot(:)
       REAL(DP),ALLOCATABLE :: ev(:)
       REAL(DP),ALLOCATABLE :: rot(:,:),aux(:,:)
-      !$acc declare device_resident(rot,aux)
       !
       INTEGER,PARAMETER :: itermax = 100
       !
@@ -151,6 +150,7 @@ MODULE wann_loc_wfc
       !
       ALLOCATE(rot(m,m))
       ALLOCATE(aux(m,m))
+      !$acc enter data create(rot,aux)
       !
       ! Handle odd m
       !
@@ -346,7 +346,7 @@ MODULE wann_loc_wfc
          !
       ENDDO
       !
-      !$acc exit data delete(top,bot) copyout(a,u)
+      !$acc exit data delete(rot,aux,top,bot) copyout(a,u)
       DEALLOCATE(rot)
       DEALLOCATE(aux)
       DEALLOCATE(top)

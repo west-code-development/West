@@ -42,7 +42,6 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   COMPLEX(DP), ALLOCATABLE :: r_old(:,:,:),r_new(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: p(:,:,:),Ap(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z(:,:,:)
-  !$acc declare device_resident(r_old,r_new,p,Ap,z)
   !
   REAL(DP) :: time_spent(2)
   REAL(DP), EXTERNAL :: get_clock
@@ -66,6 +65,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   ALLOCATE(p    (npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(Ap   (npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(z    (npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  !$acc enter data create(r_old,r_new,p,Ap,z)
   !
   ALLOCATE(residual_old(nspin))
   ALLOCATE(residual_new(nspin))
@@ -211,6 +211,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   do_inexact_krylov = .FALSE.
   !
+  !$acc exit data delete(r_old,r_new,p,Ap,z)
   DEALLOCATE(r_new)
   DEALLOCATE(r_old)
   DEALLOCATE(p)

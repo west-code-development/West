@@ -64,9 +64,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
   REAL(DP) :: dot_tmp
   COMPLEX(DP) :: braket
   COMPLEX(DP), ALLOCATABLE :: pertg(:),pertr(:),pertr_nc(:,:)
-  !$acc declare device_resident(pertg,pertr,pertr_nc)
   COMPLEX(DP), ALLOCATABLE :: psic1(:),pertg1(:),pertr1(:)
-  !$acc declare device_resident(psic1,pertg1,pertr1)
   COMPLEX(DP), ALLOCATABLE :: evckmq(:,:),phase(:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: evckmq
@@ -85,6 +83,7 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
         ALLOCATE(psic1(dffts%nnr))
         ALLOCATE(pertr1(dffts%nnr))
         ALLOCATE(pertg1(ngm))
+        !$acc enter data create(psic1,pertr1,pertg1)
      ENDIF
   ELSE
      peso = 1._DP
@@ -93,10 +92,13 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
      !$acc enter data create(phase,evckmq)
   ENDIF
   ALLOCATE(pertg(ngm))
+  !$acc enter data create(pertg)
   IF(noncolin) THEN
      ALLOCATE(pertr_nc(dffts%nnr,npol))
+     !$acc enter data create(pertr_nc)
   ELSE
      ALLOCATE(pertr(dffts%nnr))
+     !$acc enter data create(pertr)
   ENDIF
   !
   ! Set to zero
@@ -319,9 +321,9 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
      CALL mp_sum(sigma_exx_full,inter_image_comm)
   ENDIF
   !
-  DEALLOCATE(pertg)
   IF(gamma_only) THEN
      IF(l_enable_off_diagonal) THEN
+        !$acc exit data delete(psic1,pertr1,pertg1)
         DEALLOCATE(psic1)
         DEALLOCATE(pertr1)
         DEALLOCATE(pertg1)
@@ -331,9 +333,13 @@ SUBROUTINE calc_exx2(sigma_exx, l_QDET)
      DEALLOCATE(phase)
      DEALLOCATE(evckmq)
   ENDIF
+  !$acc exit data delete(pertg)
+  DEALLOCATE(pertg)
   IF(noncolin) THEN
+     !$acc exit data delete(pertr_nc)
      DEALLOCATE(pertr_nc)
   ELSE
+     !$acc exit data delete(pertr)
      DEALLOCATE(pertr)
   ENDIF
   !

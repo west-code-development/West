@@ -134,7 +134,7 @@ SUBROUTINE do_exc_comp()
   !
   CALL start_bar_type(barra,'westpp',pert%nloc*k_grid%nps)
   !
-  DO lexc = 1,pert%nloc
+  DO lexc = 1,pert%nlocx
      !
      ! local -> global
      !
@@ -161,6 +161,10 @@ SUBROUTINE do_exc_comp()
            CALL mp_bcast(evc_work,0,inter_image_comm)
 #endif
         ENDIF
+        !
+        ! CYCLE here because of mp_bcast above
+        !
+        IF(iexc > westpp_n_liouville_to_use) CYCLE
         !
         IF(westpp_l_spin_flip) THEN
            iks_do = flks(iks)
@@ -197,9 +201,24 @@ SUBROUTINE do_exc_comp()
         !
      ENDDO
      !
-     ! Compute the transition dipole moment
+  ENDDO
+  !
+  !$acc update host(projection_matrix)
+  !
+  CALL mp_sum(projection_matrix,intra_bgrp_comm)
+  CALL mp_sum(projection_matrix,inter_image_comm)
+  !
+  CALL stop_bar_type(barra,'westpp')
+  !
+  ! Compute the transition dipole moment
+  !
+  IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
      !
-     IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
+     DO lexc = 1,pert%nloc
+        !
+        ! local -> global
+        !
+        iexc = pert%l2g(lexc)
         !
         DO ipol = 1, 3
            !
@@ -244,16 +263,7 @@ SUBROUTINE do_exc_comp()
            !
         ENDDO
         !
-     ENDIF
-     !
-  ENDDO
-  !
-  !$acc update host(projection_matrix)
-  !
-  CALL mp_sum(projection_matrix,intra_bgrp_comm)
-  CALL mp_sum(projection_matrix,inter_image_comm)
-  !
-  IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
+     ENDDO
      !
      CALL mp_sum(transition_dipole_cry,intra_bgrp_comm)
      CALL mp_sum(transition_dipole_cry,inter_image_comm)
@@ -277,8 +287,6 @@ SUBROUTINE do_exc_comp()
      ENDIF
      !
   ENDIF
-  !
-  CALL stop_bar_type(barra,'westpp')
   !
   ! ... Print out results
   !

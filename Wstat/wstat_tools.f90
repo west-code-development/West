@@ -413,9 +413,9 @@ MODULE wstat_tools
             !
             IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
                !
-               !$acc update device(ag) wait
+               !$acc update device(ag)
                !
-               !$acc parallel vector_length(1024) async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+               !$acc parallel vector_length(1024) present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
                !$acc loop collapse(2)
                DO il1 = 1,l1_e
                   DO il2 = l2_s,l2_e
@@ -451,7 +451,7 @@ MODULE wstat_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e)) wait
+            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e))
             !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
             !
             CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)
@@ -538,9 +538,9 @@ MODULE wstat_tools
             !
             IF(l1_e > 0 .AND. l2_e >= l2_s) THEN
                !
-               !$acc update device(ag) wait
+               !$acc update device(ag)
                !
-               !$acc parallel vector_length(1024) async present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
+               !$acc parallel vector_length(1024) present(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
                !$acc loop collapse(2)
                DO il1 = 1,l1_e
                   DO il2 = l2_s,l2_e
@@ -571,7 +571,7 @@ MODULE wstat_tools
          !
          IF(l2_e >= l2_s) THEN
             !
-            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e)) wait
+            !$acc update host(c_distr(1:pert_nglob,l2_s:l2_e))
             !$acc exit data delete(ag,bg,c_distr(1:pert_nglob,l2_s:l2_e))
             !
             CALL mp_sum(c_distr(:,l2_s:l2_e),intra_bgrp_comm)

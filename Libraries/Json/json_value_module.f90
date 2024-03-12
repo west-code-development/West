@@ -1107,7 +1107,7 @@
         me%escape_solidus = escape_solidus
     end if
 
-    ! how to handle null to read conversions:
+    ! how to handle null to real conversions:
     if (present(null_to_real_mode)) then
         select case (null_to_real_mode)
         case(1_IK:3_IK)
@@ -1289,7 +1289,7 @@
 !     implicit none
 !     type(json_core) :: json
 !     type(json_value),pointer :: j1, j2
-!     call json%load('../files/inputs/test1.json',j1)
+!     call json%load('files/inputs/test1.json',j1)
 !     call json%clone(j1,j2) !now have two independent copies
 !     call json%destroy(j1)  !destroys j1, but j2 remains
 !     call json%print(j2,'j2.json')
@@ -8763,8 +8763,14 @@
     real(real64),intent(in),optional    :: default !! default value if not found
 
     real(RK) :: tmp
+    real(RK) :: tmp_default
 
-    call json%get(me, path, tmp, found, default)
+    if (present(default)) then
+        tmp_default = real(default, RK)
+        call json%get(me, path, tmp, found, tmp_default)
+    else
+        call json%get(me, path, tmp, found)
+    end if
     value = real(tmp,real64)
 
     end subroutine json_get_real64_by_path
@@ -8826,8 +8832,14 @@
     real(real64),dimension(:),intent(in),optional     :: default !! default value if not found
 
     real(RK),dimension(:),allocatable :: tmp
+    real(RK),dimension(:),allocatable :: tmp_default
 
-    call json%get(me, path, tmp, found, default)
+    if (present(default)) then
+        tmp_default = real(default, RK)
+        call json%get(me, path, tmp, found, tmp_default)
+    else
+        call json%get(me, path, tmp, found)
+    end if
     if (allocated(tmp)) vec = real(tmp,real64)
 
     end subroutine json_get_real64_vec_by_path

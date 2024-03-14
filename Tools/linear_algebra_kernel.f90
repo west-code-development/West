@@ -130,9 +130,8 @@ MODULE linear_algebra_kernel
          ev_mode = CUSOLVER_EIG_MODE_VECTOR
       ENDIF
       !
-      !$acc data copyin(a) copyout(e,info_d)
+      !$acc enter data create(e,info_d) copyin(a)
       !
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n,KIND=i8b)
       !
       !$acc host_data use_device(a,e,info_d)
@@ -150,24 +149,11 @@ MODULE linear_algebra_kernel
       !
       DEALLOCATE(work)
       DEALLOCATE(work_h)
-#else
-      !$acc host_data use_device(a,e,info_d)
-      info = cusolverDnDsyevd_bufferSize(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
-      !$acc end host_data
-      !
-      ALLOCATE(work(lwork))
-      !
-      !$acc host_data use_device(a,e,work,info_d)
-      info = cusolverDnDsyevd(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
-      !$acc end host_data
-      !
-      DEALLOCATE(work)
-#endif
       !
       IF(.NOT. l_just_ev) THEN
          !$acc update host(a)
       ENDIF
-      !$acc end data
+      !$acc exit data delete(a,info_d) copyout(e)
 #else
       IF(l_just_ev) THEN
          ALLOCATE(m(n,n))
@@ -242,9 +228,8 @@ MODULE linear_algebra_kernel
          ev_mode = CUSOLVER_EIG_MODE_VECTOR
       ENDIF
       !
-      !$acc data copyin(a) copyout(e,info_d)
+      !$acc enter data create(e,info_d) copyin(a)
       !
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n,KIND=i8b)
       !
       !$acc host_data use_device(a,e,info_d)
@@ -262,24 +247,11 @@ MODULE linear_algebra_kernel
       !
       DEALLOCATE(work)
       DEALLOCATE(work_h)
-#else
-      !$acc host_data use_device(a,e,info_d)
-      info = cusolverDnZheevd_bufferSize(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,lwork)
-      !$acc end host_data
-      !
-      ALLOCATE(work(lwork))
-      !
-      !$acc host_data use_device(a,e,work,info_d)
-      info = cusolverDnZheevd(cusolv_h,ev_mode,CUBLAS_FILL_MODE_UPPER,n,a,n,e,work,lwork,info_d)
-      !$acc end host_data
-      !
-      DEALLOCATE(work)
-#endif
       !
       IF(.NOT. l_just_ev) THEN
          !$acc update host(a)
       ENDIF
-      !$acc end data
+      !$acc exit data delete(a,info_d) copyout(e)
 #else
       IF(l_just_ev) THEN
          ALLOCATE(m(n,n))
@@ -343,14 +315,11 @@ MODULE linear_algebra_kernel
 #if defined(__CUDA)
       n8 = INT(n,KIND=i8b)
       !
-      !$acc data create(info_d)
+      !$acc enter data create(info_d)
+      !
       !$acc host_data use_device(a,piv,work_c,info_d)
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrf(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_C_64F),a,n8,piv,&
            & cudaDataType(CUDA_C_64F),work_c,l_inv,work_c_h,l_inv_h,info_d)
-#else
-      info = cusolverDnZgetrf(cusolv_h,n,n,a,n,work_c,piv,info_d)
-#endif
       !$acc end host_data
       !
       !$acc kernels present(work_c)
@@ -364,14 +333,11 @@ MODULE linear_algebra_kernel
       !$acc end parallel
       !
       !$acc host_data use_device(a,piv,work_c,info_d)
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrs(cusolv_h,cusolv_p,CUBLAS_OP_N,n8,n8,cudaDataType(CUDA_C_64F),a,&
            & n8,piv,cudaDataType(CUDA_C_64F),work_c(1:n**2),n8,info_d)
-#else
-      info = cusolverDnZgetrs(cusolv_h,CUBLAS_OP_N,n,n,a,n,piv,work_c(1:n**2),n,info_d)
-#endif
       !$acc end host_data
-      !$acc end data
+      !
+      !$acc exit data delete(info_d)
       !
       !$acc parallel loop collapse(2) present(a,work_c)
       DO i2 = 1,n
@@ -430,14 +396,11 @@ MODULE linear_algebra_kernel
 #if defined(__CUDA)
       n8 = INT(n,KIND=i8b)
       !
-      !$acc data copyout(info_d)
+      !$acc enter data create(info_d)
+      !
       !$acc host_data use_device(a,piv,work_r,info_d)
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrf(cusolv_h,cusolv_p,n8,n8,cudaDataType(CUDA_R_64F),a,n8,piv,&
            & cudaDataType(CUDA_R_64F),work_r,l_inv,work_r_h,l_inv_h,info_d)
-#else
-      info = cusolverDnDgetrf(cusolv_h,n,n,a,n,work_r,piv,info_d)
-#endif
       !$acc end host_data
       !
       !$acc kernels present(work_r)
@@ -451,14 +414,11 @@ MODULE linear_algebra_kernel
       !$acc end parallel
       !
       !$acc host_data use_device(a,piv,work_r,info_d)
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       info = cusolverDnXgetrs(cusolv_h,cusolv_p,CUBLAS_OP_N,n8,n8,cudaDataType(CUDA_R_64F),a,&
            & n8,piv,cudaDataType(CUDA_R_64F),work_r(1:n**2),n8,info_d)
-#else
-      info = cusolverDnDgetrs(cusolv_h,CUBLAS_OP_N,n,n,a,n,piv,work_r(1:n**2),n,info_d)
-#endif
       !$acc end host_data
-      !$acc end data
+      !
+      !$acc exit data delete(info_d)
       !
       !$acc parallel loop collapse(2) present(a,work_r)
       DO i2 = 1,n

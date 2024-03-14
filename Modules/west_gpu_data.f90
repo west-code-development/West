@@ -54,11 +54,7 @@ MODULE west_gpu_data
    !
    INTEGER(i8b) :: l_inv
    INTEGER(i8b) :: l_inv_h
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
    INTEGER(i8b), ALLOCATABLE :: piv(:)
-#else
-   INTEGER, ALLOCATABLE :: piv(:)
-#endif
    !$acc declare device_resident(piv)
    REAL(DP), ALLOCATABLE :: work_r_h(:)
    REAL(DP), ALLOCATABLE :: work_r(:)
@@ -504,7 +500,6 @@ MODULE west_gpu_data
    ! Workspace
    !
    INTEGER :: istat
-   INTEGER :: lwork
    INTEGER(i8b) :: n8
    !
    ALLOCATE(piv(n_pdep_eigen_to_use))
@@ -518,7 +513,6 @@ MODULE west_gpu_data
          ALLOCATE(tempt_r(3,3))
       ENDIF
       !
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
       !
       !$acc host_data use_device(x_r)
@@ -530,16 +524,6 @@ MODULE west_gpu_data
       !
       ALLOCATE(work_r(l_inv/8))
       ALLOCATE(work_r_h(l_inv_h/8))
-#else
-      !$acc host_data use_device(x_r)
-      istat = cusolverDnDgetrf_bufferSize(cusolv_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,x_r,&
-            & n_pdep_eigen_to_use,lwork)
-      !$acc end host_data
-      !
-      lwork = MAX(lwork,n_pdep_eigen_to_use**2)
-      !
-      ALLOCATE(work_r(lwork))
-#endif
    ELSE
       ALLOCATE(x_c(n_pdep_eigen_to_use,n_pdep_eigen_to_use))
       IF(l_macropol) THEN
@@ -550,7 +534,6 @@ MODULE west_gpu_data
          ALLOCATE(tempt_c(3,3))
       ENDIF
       !
-#if CUDA_VERSION > 11010 && (__PGIC__ > 21 || (__PGIC__ == 21 && __PGIC_MINOR > 2))
       n8 = INT(n_pdep_eigen_to_use,KIND=i8b)
       !
       !$acc host_data use_device(x_c)
@@ -562,16 +545,6 @@ MODULE west_gpu_data
       !
       ALLOCATE(work_c(l_inv/16))
       ALLOCATE(work_c_h(l_inv_h/16))
-#else
-      !$acc host_data use_device(x_c)
-      istat = cusolverDnZgetrf_bufferSize(cusolv_h,n_pdep_eigen_to_use,n_pdep_eigen_to_use,x_c,&
-            & n_pdep_eigen_to_use,lwork)
-      !$acc end host_data
-      !
-      lwork = MAX(lwork,n_pdep_eigen_to_use**2)
-      !
-      ALLOCATE(work_c(lwork))
-#endif
    ENDIF
    !
    END SUBROUTINE

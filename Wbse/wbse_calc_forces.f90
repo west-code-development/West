@@ -636,8 +636,7 @@ SUBROUTINE wbse_calc_dvgdvg_mat(dvg_exc_tmp, dvgdvg_mat)
      !$acc end parallel
      !
      IF(gstart == 2) THEN
-        !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
-        !$acc loop collapse(2)
+        !$acc parallel loop collapse(2) present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
         DO lbnd = 1,nbnd_do
            DO ibnd = 1,nbndval - n_trunc_bands
               dvgdvg_mat(ibnd,lbnd,iks) = dvgdvg_mat(ibnd,lbnd,iks) &

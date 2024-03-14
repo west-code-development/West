@@ -393,43 +393,23 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      work(:,:) = 0._DP
      !$acc end kernels
      !
-     ijkb0 = 0
-     DO nt = 1,ntyp
-        nh_nt = nh(nt)
-        DO na = 1,nat
-           IF(nt == ityp(na)) THEN
-              !$acc parallel loop collapse(2) present(work,dvkb,gk)
-              DO ikb = 1,nh_nt
-                 DO ig = 1,npw
-                    jkb = ijkb0+ikb
-                    work(ig,jkb) = dvkb(ig,jkb) * (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig))
-                 ENDDO
-              ENDDO
-              !$acc end parallel
-              ijkb0 = ijkb0+nh(nt)
-           ENDIF
+     !$acc parallel loop collapse(2) present(work,dvkb,gk)
+     DO ikb = 1,nkb
+        DO ig = 1,npw
+           work(ig,ikb) = dvkb(ig,ikb) * (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig))
         ENDDO
      ENDDO
+     !$acc end parallel
      !
      CALL gen_us_dy(ik,at(1,ipol),dvkb)
      !
-     ijkb0 = 0
-     DO nt = 1,ntyp
-        nh_nt = nh(nt)
-        DO na = 1,nat
-           IF(nt == ityp(na)) THEN
-              !$acc parallel loop collapse(2) present(work,dvkb)
-              DO ikb = 1,nh_nt
-                 DO ig = 1,npw
-                    jkb = ijkb0+ikb
-                    work(ig,jkb) = work(ig,jkb) + dvkb(ig,jkb)
-                 ENDDO
-              ENDDO
-              !$acc end parallel
-              ijkb0 = ijkb0+nh(nt)
-           ENDIF
+     !$acc parallel loop collapse(2) present(work,dvkb)
+     DO ikb = 1,nkb
+        DO ig = 1,npw
+           work(ig,ikb) = work(ig,ikb) + dvkb(ig,ikb)
         ENDDO
      ENDDO
+     !$acc end parallel
      !
      ! In the case of gamma point systems becp2 is real
      ! so we have to include a factor of i before calling

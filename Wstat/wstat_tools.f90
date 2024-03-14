@@ -1036,18 +1036,15 @@ MODULE wstat_tools
                   !
                   ig1 = nimage*(il1-1)+idx+1
                   !
-                  !$acc loop
+                  !$acc loop collapse(2)
                   DO il2 = l2_s,l2_e
-                     !
-                     dconst = vr_distr(ig1,il2)
-                     !
-                     !$acc loop
                      DO il3 = 1,npwq
+                        dconst = vr_distr(ig1,il2)
                         hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
                         hg2(il3,il2) = dconst*bg(il3,il1)+hg2(il3,il2)
                      ENDDO
-                     !
                   ENDDO
+                  !
                ENDDO
                !$acc end parallel
                !
@@ -1189,18 +1186,15 @@ MODULE wstat_tools
                   !
                   ig1 = nimage*(il1-1)+idx+1
                   !
-                  !$acc loop
+                  !$acc loop collapse(2)
                   DO il2 = l2_s,l2_e
-                     !
-                     zconst = vr_distr(ig1,il2)
-                     !
-                     !$acc loop
                      DO il3 = 1,npwq
+                        zconst = vr_distr(ig1,il2)
                         hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
                         hg2(il3,il2) = zconst*bg(il3,il1)+hg2(il3,il2)
                      ENDDO
-                     !
                   ENDDO
+                  !
                ENDDO
                !$acc end parallel
                !
@@ -1331,17 +1325,14 @@ MODULE wstat_tools
                   !
                   ig1 = nimage*(il1-1)+idx+1
                   !
-                  !$acc loop
+                  !$acc loop collapse(2)
                   DO il2 = l2_s,l2_e
-                     !
-                     dconst = vr_distr(ig1,il2)
-                     !
-                     !$acc loop
                      DO il3 = 1,npwq
+                        dconst = vr_distr(ig1,il2)
                         hg(il3,il2) = dconst*ag(il3,il1)+hg(il3,il2)
                      ENDDO
-                     !
                   ENDDO
+                  !
                ENDDO
                !$acc end parallel
                !
@@ -1487,17 +1478,14 @@ MODULE wstat_tools
                   !
                   ig1 = nimage*(il1-1)+idx+1
                   !
-                  !$acc loop
+                  !$acc loop collapse(2)
                   DO il2 = l2_s,l2_e
-                     !
-                     zconst = vr_distr(ig1,il2)
-                     !
-                     !$acc loop
                      DO il3 = 1,npwq
+                        zconst = vr_distr(ig1,il2)
                         hg(il3,il2) = zconst*ag(il3,il1)+hg(il3,il2)
                      ENDDO
-                     !
                   ENDDO
+                  !
                ENDDO
                !$acc end parallel
                !

@@ -208,7 +208,8 @@ MODULE wann_loc_wfc
             rot(:,:) = 0._DP
             !$acc end kernels
             !
-            !$acc parallel loop present(top,bot,rot,a)
+            !$acc parallel present(top,bot,rot,a)
+            !$acc loop
             DO k = 1,mwork/2
                !
                p = MIN(top(k),bot(k))
@@ -224,6 +225,7 @@ MODULE wann_loc_wfc
                   g12 = 0._DP
                   g22 = 0._DP
                   !
+                  !$acc loop seq
                   DO ia = 1,na
                      h1 = a(p,p,ia)-a(q,q,ia)
                      h2 = 2._DP*a(p,q,ia)

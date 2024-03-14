@@ -299,8 +299,7 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
         IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
-     !$acc parallel vector_length(1024) present(g2kin_save,px,x)
-     !$acc loop
+     !$acc parallel loop collapse(2) present(g2kin_save,px,x)
      DO lbnd = 1,nbnd_do
         DO ig = 1,npwx
            !

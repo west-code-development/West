@@ -31,7 +31,7 @@ SUBROUTINE do_exc_comp()
   USE distribution_center,   ONLY : pert,kpt_pool,band_group
   USE class_idistribute,     ONLY : idistribute
   USE types_bz_grid,         ONLY : k_grid
-  USE json_module,           ONLY : json_file,json_core,json_value
+  USE json_module,           ONLY : json_file
   USE wvfct,                 ONLY : nbnd
 #if defined(__CUDA)
   USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d
@@ -45,20 +45,18 @@ SUBROUTINE do_exc_comp()
   !
   ! ... LOCAL variables
   !
-  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iaux,iunit,ipol,icart
-  INTEGER :: trans(4)
+  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iunit,ipol,icart
+  INTEGER :: from_bands(2),to_bands(2)
+  INTEGER :: naux,iaux
   INTEGER :: nbndx_occ,nbndx_emp
   INTEGER :: nbndval,flnbndval
-  CHARACTER(5) :: label_exc
-  CHARACTER(5) :: label_k
-  CHARACTER(9) :: label_d
+  CHARACTER(5) :: label_exc,label_k
   REAL(DP) :: reduce
   REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:)
   REAL(DP), ALLOCATABLE :: transition_dipole_cry(:,:), transition_dipole_cart(:,:)
+  REAL(DP), ALLOCATABLE :: aux(:)
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
-  TYPE(json_core) :: jcor
-  TYPE(json_value), POINTER :: jval
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
   COMPLEX(DP), EXTERNAL :: get_alpha_pv
@@ -280,7 +278,7 @@ SUBROUTINE do_exc_comp()
         DO icart = 1,3
            DO ipol = 1,3
               transition_dipole_cart(icart,:) = transition_dipole_cart(icart,:) &
-                      & +bg(icart,ipol)*transition_dipole_cry(ipol,:)
+              & +bg(icart,ipol)*transition_dipole_cry(ipol,:)
            ENDDO
         ENDDO
         !
@@ -347,32 +345,39 @@ SUBROUTINE do_exc_comp()
            !
            WRITE(label_k,'(I5.5)') iks
            !
-           CALL jcor%create_array(jval,'projection')
-           CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection',jval)
+           CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.from_spin',iks_do)
+           CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.to_spin',iks)
+           !
+           from_bands(1) = westpp_range(1)
+           from_bands(2) = nbnd_occ(iks_do)
+           !
+           CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.from_bandrange',from_bands)
+           !
+           to_bands(1) = nbnd_occ(iks)+1
+           to_bands(2) = westpp_range(2)
+           !
+           CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.to_bandrange',to_bands)
+           !
+           ! Number of transitions to output
+           !
+           naux = (from_bands(2)-from_bands(1)+1) * (to_bands(2)-to_bands(1)+1)
+           ALLOCATE(aux(naux))
+           !
+           ! Pack
            !
            iaux = 0
-           trans = 0
-           !
            DO iocc = westpp_range(1),nbnd_occ(iks_do)
-              !
-              trans(1) = iks_do
-              trans(2) = iocc
-              !
               DO iemp = 1,(westpp_range(2) - nbnd_occ(iks))
-                 !
-                 trans(3) = iks
-                 trans(4) = iemp + nbnd_occ(iks)
                  iaux = iaux+1
-                 WRITE(label_d,'(I9)') iaux
-                 !
-                 CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection('//label_d//').trans',trans)
-                 !
-                 reduce = projection_matrix(iemp,iocc,iks,iexc)
-                 CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection('//label_d//').value',reduce)
-                 !
+                 aux(iaux) = projection_matrix(iemp,iocc,iks,iexc)
               ENDDO
-              !
            ENDDO
+           !
+           ! Output
+           !
+           CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.vals',aux)
+           !
+           DEALLOCATE(aux)
            !
         ENDDO
         !

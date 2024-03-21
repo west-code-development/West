@@ -13,7 +13,7 @@ Polaris is a GPU-accelerated supercomputer located at Argonne National Laborator
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on September 17, 2023):
+WEST executables can be compiled using the following script (tested on March 21, 2024):
 
 .. code-block:: bash
 
@@ -21,13 +21,12 @@ WEST executables can be compiled using the following script (tested on September
    #!/bin/bash
 
    module load nvhpc/23.3
-   module load cray-libsci/21.08.1.2
-   module load cray-python/3.9.12.1
+   module load cray-libsci/23.02.1.1
+   module load cray-python/3.9.13.1
 
    export MPICH_GPU_SUPPORT_ENABLED=1
-   export CUDA_HOME=/opt/nvidia/hpc_sdk/Linux_x86_64/23.3/cuda/11.8
 
-   ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=11.8 --with-cuda-cc=80 --with-cuda-mpi=yes
+   ./configure --with-cuda=/opt/nvidia/hpc_sdk/Linux_x86_64/23.3/cuda/11.8 --with-cuda-runtime=11.8 --with-cuda-cc=80 --with-cuda-mpi=yes
 
    # Manually edit make.inc:
 
@@ -42,7 +41,7 @@ WEST executables can be compiled using the following script (tested on September
 
    cd West
 
-   make conf PYT=python3 PYT_LDFLAGS="-L/opt/cray/pe/python/3.9.12.1/lib -lpython3.9"
+   make conf PYT=python3 PYT_LDFLAGS="-L/opt/cray/pe/python/3.9.13.1/lib -lpython3.9"
    make -j 8 all
 
 To use the script do:
@@ -78,8 +77,8 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #PBS -N job_name
 
    module load nvhpc/23.3
-   module load cray-libsci/21.08.1.2
-   module load cray-python/3.9.12.1
+   module load cray-libsci/23.02.1.1
+   module load cray-python/3.9.13.1
 
    export MPICH_GPU_SUPPORT_ENABLED=1
    export ROMIO_FSTYPE_FORCE="ufs:"

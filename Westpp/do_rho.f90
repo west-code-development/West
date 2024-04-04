@@ -17,7 +17,7 @@ SUBROUTINE do_rho ( )
   USE kinds,                 ONLY : DP
   USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk,nbnd
   USE io_push,               ONLY : io_push_title
-  USE westcom,               ONLY : iuwfc,lrwfc,westpp_save_dir,nbnd_occ
+  USE westcom,               ONLY : iuwfc,lrwfc,westpp_save_dir,nbnd_occ,occupation
   USE mp_global,             ONLY : inter_image_comm,my_image_id
   USE mp,                    ONLY : mp_bcast,mp_sum
   USE fft_base,              ONLY : dffts
@@ -42,7 +42,7 @@ SUBROUTINE do_rho ( )
   ! ... LOCAL variables
   !
   INTEGER :: ir, iks, local_ib, global_ib, dffts_nnr
-  REAL(DP) :: wt
+  REAL(DP) :: wt_k, wt_b
   REAL(DP),ALLOCATABLE :: auxr(:)
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
@@ -73,7 +73,7 @@ SUBROUTINE do_rho ( )
      !
      current_k = iks
      npw = ngk(iks)
-     wt = k_grid%weight(iks)
+     wt_k = k_grid%weight(iks)
      !
      ! ... read in wavefunctions from the previous iteration
      !
@@ -90,25 +90,27 @@ SUBROUTINE do_rho ( )
 #endif
      ENDIF
      !
-     DO local_ib=1,aband%nloc
+     DO local_ib = 1, aband%nloc
         !
         ! local -> global
         !
         global_ib = aband%l2g(local_ib)
         IF( global_ib > nbnd_occ(iks) ) CYCLE
         !
+        wt_b = occupation(global_ib,iks)
+        !
         IF( gamma_only ) THEN
            CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave')
            !$acc parallel loop present(auxr)
            DO ir = 1, dffts_nnr
-              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP) * wt
+              auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) * REAL( psic(ir), KIND=DP) * wt_k * wt_b
            ENDDO
            !$acc end parallel
         ELSE
            CALL single_invfft_k(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave',igk_k(:,current_k))
            !$acc parallel loop present(auxr)
            DO ir = 1, dffts_nnr
-              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * wt
+              auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * wt_k * wt_b
            ENDDO
            !$acc end parallel
         ENDIF
@@ -125,7 +127,7 @@ SUBROUTINE do_rho ( )
   CALL stop_bar_type( barra, 'westpp' )
   !
   fname = TRIM( westpp_save_dir ) // '/rho'
-  IF(my_image_id==0) CALL dump_r( auxr, fname)
+  IF(my_image_id == 0) CALL dump_r(auxr, fname)
   !
   !$acc exit data delete(auxr)
   DEALLOCATE( auxr )

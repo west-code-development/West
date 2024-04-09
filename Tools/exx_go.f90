@@ -42,6 +42,8 @@ SUBROUTINE exx_go()
   ! Workspace
   !
   LOGICAL :: is_westpp
+  LOGICAL :: is_wbse_init
+  LOGICAL :: do_exxinit
   LOGICAL :: exst
   LOGICAL, EXTERNAL :: matches
   !
@@ -50,8 +52,15 @@ SUBROUTINE exx_go()
   CALL mp_start_exx(1,ntg_,intra_bgrp_comm)
   !
   is_westpp = matches('westpp.x',command_line)
+  is_wbse_init = matches('wbse_init.x',command_line)
   !
-  IF(is_westpp) RETURN
+  ! Initialize EXX only if calling h_psi
+  !
+  IF(is_westpp .OR. is_wbse_init) THEN
+     do_exxinit = .FALSE.
+  ELSE
+     do_exxinit = .TRUE.
+  ENDIF
   !
   IF(xclib_dft_is('hybrid')) THEN
      !
@@ -80,32 +89,33 @@ SUBROUTINE exx_go()
      wfc_dir = tmp_dir
      nwordwfc = nbnd*npwx*npol
      io_level = 1
-     IF(n_exx_lowrank < 1) CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
      !
      CALL start_exx()
      CALL exx_grid_init()
      ! exx_mp_init necessary when k points are used
      CALL exx_mp_init()
-     IF(use_ace) THEN
-        nbndproj = n_exx_lowrank
-        ALLOCATE(xi(npwx*npol,nbndproj,nks))
+     IF(do_exxinit) THEN
+        IF(use_ace) THEN
+           nbndproj = n_exx_lowrank
+           ALLOCATE(xi(npwx*npol,nbndproj,nks))
 #if defined(__CUDA)
-        ALLOCATE(xi_d(npwx*npol,nbndproj))
+           ALLOCATE(xi_d(npwx*npol,nbndproj))
 #endif
-        IF(my_image_id == 0) CALL aceinit0()
-        CALL mp_bcast(xi,0,inter_image_comm)
-        nbndproj = n_exx_lowrank
+           IF(my_image_id == 0) CALL aceinit0()
+           CALL mp_bcast(xi,0,inter_image_comm)
+           nbndproj = n_exx_lowrank
 #if defined (__CUDA)
-        IF(nks == 1) xi_d(:,:) = xi(:,:,1)
+           IF(nks == 1) xi_d(:,:) = xi(:,:,1)
 #endif
-     ELSE
-        CALL exxinit(DoLoc=.FALSE.)
+        ELSE
+           CALL open_buffer(iunwfc,'wfc',nwordwfc,io_level,exst)
+           CALL exxinit(DoLoc=.FALSE.)
+           CALL close_buffer(iunwfc,'KEEP')
+        ENDIF
      ENDIF
      CALL exx_div_check()
      exxdiv = exx_divergence()
      WRITE(stdout,'(7X,"** WARNING : EXX-exxdiv           = ",F14.6)') exxdiv
-     !
-     IF(n_exx_lowrank < 1) CALL close_buffer(iunwfc,'KEEP')
      !
   ENDIF
   !

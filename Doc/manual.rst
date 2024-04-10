@@ -758,7 +758,7 @@ westpp_control
 .. data:: westpp_l_compute_tdm
 
 .. list-table::
-      :widths: 10 90
+   :widths: 10 90
    :stub-columns: 0
 
    * - **Type**

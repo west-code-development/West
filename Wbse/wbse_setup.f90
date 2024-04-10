@@ -313,7 +313,7 @@ SUBROUTINE read_qp_eigs()
   USE mp,                   ONLY : mp_bcast
   USE mp_global,            ONLY : intra_pool_comm,my_bgrp_id,me_bgrp
   USE wvfct,                ONLY : et
-  USE westcom,              ONLY : et_qp,qp_correction
+  USE westcom,              ONLY : nbnd_occ,et_qp,delta_qp,qp_correction
   USE pwcom,                ONLY : nspin,nbnd
   USE json_module,          ONLY : json_file
   USE distribution_center,  ONLY : kpt_pool
@@ -323,14 +323,15 @@ SUBROUTINE read_qp_eigs()
   ! Workspace
   !
   LOGICAL :: found
-  INTEGER :: is,is_g,ib,nspin_tmp,qp_s,qp_e
-  REAL(DP) :: delta
+  INTEGER :: is,is_g,ib,nspin_tmp,qp_bands_start,qp_bands_end,qp_bands_mid,nbndval
   CHARACTER(LEN=6) :: labels
+  REAL(DP) :: delta
   INTEGER,ALLOCATABLE :: ivals(:)
   REAL(DP),ALLOCATABLE :: rvals(:)
   TYPE(json_file) :: json
   !
   ALLOCATE(et_qp(nbnd,kpt_pool%nloc))
+  ALLOCATE(delta_qp(kpt_pool%nloc))
   !
   IF(my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      !
@@ -343,26 +344,54 @@ SUBROUTINE read_qp_eigs()
      !
      CALL json%get('input.wfreq_control.qp_bandrange',ivals,found)
      IF(.NOT. found) CALL errore('read_qp_eigs','qp_bandrange not found',1)
-     qp_s = ivals(1)
-     qp_e = ivals(2)
+     qp_bands_start = ivals(1)
+     qp_bands_end = ivals(2)
      !
      DO is = 1,kpt_pool%nloc
         !
         is_g = kpt_pool%l2g(is)
+        nbndval = nbnd_occ(is)
         !
         WRITE(labels,'(i6.6)') is_g
         !
         CALL json%get('output.Q.K'//labels//'.eqpSec',rvals,found)
         IF(.NOT. found) CALL errore('read_qp_eigs','eqpSec not found',1)
-        et_qp(qp_s:qp_e,is) = rvals/RYTOEV
+        et_qp(qp_bands_start:qp_bands_end,is) = rvals/RYTOEV
         !
-        delta = et_qp(qp_s,is)-et(qp_s,is)
-        DO ib = 1,qp_s-1
+        qp_bands_mid = (qp_bands_start+nbndval)/2
+        delta = 0._DP
+        !
+        ! delta_qp for valence bands is averaged between qp_bands_start and qp_bands_mid
+        !
+        ! band index: 1 ... qp_bands_start ... qp_bands_mid ... nbndval ... qp_bands_end ... nbnd
+        !                   |<--------- average --------->|
+        !
+        DO ib = qp_bands_start,qp_bands_mid
+           delta = delta+et_qp(ib,is)-et(ib,is)
+        ENDDO
+        !
+        delta = delta/(qp_bands_mid-qp_bands_start+1)
+        !
+        DO ib = 1,qp_bands_start-1
            et_qp(ib,is) = et(ib,is)+delta
         ENDDO
         !
-        delta = et_qp(qp_e,is)-et(qp_e,is)
-        DO ib = qp_e+1,nbnd
+        qp_bands_mid = (qp_bands_end+nbndval+1)/2
+        delta = 0._DP
+        !
+        ! delta_qp for conduction bands is averaged between qp_bands_mid and qp_bands_end
+        !
+        ! band index: 1 ... qp_bands_start ... nbndval ... qp_bands_mid ... qp_bands_end ... nbnd
+        !                                                  |<-------- average -------->|
+        !
+        DO ib = qp_bands_mid,qp_bands_end
+           delta = delta+et_qp(ib,is)-et(ib,is)
+        ENDDO
+        !
+        delta = delta/(qp_bands_end-qp_bands_mid+1)
+        delta_qp(is) = delta
+        !
+        DO ib = qp_bands_end+1,nbnd
            et_qp(ib,is) = et(ib,is)+delta
         ENDDO
         !
@@ -373,5 +402,6 @@ SUBROUTINE read_qp_eigs()
   ENDIF
   !
   CALL mp_bcast(et_qp,0,intra_pool_comm)
+  CALL mp_bcast(delta_qp,0,intra_pool_comm)
   !
 END SUBROUTINE

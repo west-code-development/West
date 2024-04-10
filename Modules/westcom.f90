@@ -380,6 +380,7 @@ MODULE wbse_center
   COMPLEX(DP), ALLOCATABLE :: dvg_exc(:,:,:,:)
   !
   REAL(DP),    ALLOCATABLE :: et_qp(:,:)
+  REAL(DP),    ALLOCATABLE :: delta_qp(:)
   COMPLEX(DP), ALLOCATABLE :: u_matrix(:,:,:)
   REAL(DP),    ALLOCATABLE :: ovl_matrix(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: evc1_all(:,:,:)

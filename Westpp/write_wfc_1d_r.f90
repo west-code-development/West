@@ -34,20 +34,22 @@ SUBROUTINE write_wfc_1D_r ( dfft, fname, wfc_distr, ipol)
   INTEGER :: iu
   INTEGER :: nr1, nr2, nr3, nr1x, nr2x, nr3x
   INTEGER :: ir,ntot
-  REAL(DP) :: wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x)
+  REAL(DP),ALLOCATABLE :: wfc_gat(:)
   REAL(DP),ALLOCATABLE :: integral(:)
   REAL(DP) :: conversion_1, conversion_2
   !
-  wfc_gat=0.0_DP
+  ALLOCATE(wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x))
+  wfc_gat(:) = 0.0_DP
+  !
   CALL gather_grid(dfft,wfc_distr,wfc_gat)
   !
   alat = celldm(1)
   nr1 = dfft%nr1
   nr2 = dfft%nr2
   nr3 = dfft%nr3
-  nr1x= dfft%nr1x
-  nr2x= dfft%nr2x
-  nr3x= dfft%nr3x
+  nr1x = dfft%nr1x
+  nr2x = dfft%nr2x
+  nr3x = dfft%nr3x
   !
   ! ipol
   !
@@ -105,6 +107,7 @@ SUBROUTINE write_wfc_1D_r ( dfft, fname, wfc_distr, ipol)
      CLOSE(iu)
   ENDIF
   !
+  DEALLOCATE(wfc_gat)
   DEALLOCATE(integral)
   !
 END SUBROUTINE
@@ -116,9 +119,9 @@ SUBROUTINE calc_int_x(func,nr1,nr2,nr3,integral)
   !
   IMPLICIT NONE
   !
-  REAL(DP) :: func(nr1,nr2,nr3)
-  INTEGER :: nr1,nr2,nr3
-  REAL(DP) :: integral(nr1)
+  REAL(DP),INTENT(IN) :: func(nr1,nr2,nr3)
+  INTEGER,INTENT(IN) :: nr1,nr2,nr3
+  REAL(DP),INTENT(OUT) :: integral(nr1)
   !
   INTEGER :: i1,i2,i3
   !
@@ -142,9 +145,9 @@ SUBROUTINE calc_int_y(func,nr1,nr2,nr3,integral)
   !
   IMPLICIT NONE
   !
-  REAL(DP) :: func(nr1,nr2,nr3)
-  INTEGER :: nr1,nr2,nr3
-  REAL(DP) :: integral(nr2)
+  REAL(DP),INTENT(IN) :: func(nr1,nr2,nr3)
+  INTEGER,INTENT(IN) :: nr1,nr2,nr3
+  REAL(DP),INTENT(OUT) :: integral(nr2)
   !
   INTEGER :: i1,i2,i3
   !
@@ -168,9 +171,9 @@ SUBROUTINE calc_int_z(func,nr1,nr2,nr3,integral)
   !
   IMPLICIT NONE
   !
-  REAL(DP) :: func(nr1,nr2,nr3)
-  INTEGER :: nr1,nr2,nr3
-  REAL(DP) :: integral(nr3)
+  REAL(DP),INTENT(IN) :: func(nr1,nr2,nr3)
+  INTEGER,INTENT(IN) :: nr1,nr2,nr3
+  REAL(DP),INTENT(OUT) :: integral(nr3)
   !
   INTEGER :: i1,i2,i3
   !

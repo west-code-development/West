@@ -84,7 +84,7 @@ MODULE wbse_dv
     !  (Hartree and XC) due to the perturbation.
     !
     USE kinds,                 ONLY : DP
-    USE constants,             ONLY : e2,fpi
+    USE constants,             ONLY : e2,fpi,eps8
     USE fft_base,              ONLY : dfftp
     USE fft_interfaces,        ONLY : fwfft,invfft
     USE gvect,                 ONLY : ngm,g
@@ -236,7 +236,7 @@ MODULE wbse_dv
        !
        qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
        !
-       IF(qg2 > 1.E-8_DP) THEN
+       IF(qg2 > eps8) THEN
           dvhart(dfft_nl_d(ig)) = e2 * fpi * dvscf(dfft_nl_d(ig),1) / (tpiba2 * qg2)
        ENDIF
        !
@@ -250,7 +250,7 @@ MODULE wbse_dv
        !
        qg2 = (g(1,ig)+xq(1))**2 + (g(2,ig)+xq(2))**2 + (g(3,ig)+xq(3))**2
        !
-       IF(qg2 > 1.E-8_DP) THEN
+       IF(qg2 > eps8) THEN
           dvhart(dfftp%nl(ig)) = e2 * fpi * dvscf(dfftp%nl(ig),1) / (tpiba2 * qg2)
        ENDIF
        !

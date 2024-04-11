@@ -820,6 +820,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                     reduce2 = reduce2 + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
                     &                 + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
                  ENDDO
+                 !$acc end parallel
                  !
                  IF(gstart == 2) THEN
                     !$acc serial present(aux_g) copy(reduce,reduce2)
@@ -860,6 +861,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                     reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
                     &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
                  ENDDO
+                 !$acc end parallel
                  !
                  IF(gstart == 2) THEN
                     !$acc serial present(aux_g) copy(reduce)

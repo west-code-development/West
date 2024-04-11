@@ -34,8 +34,8 @@ MODULE wfreq_db
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,logfile,&
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,&
-                                     & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
-                                     & sigma_freq,sigma_spectralf,l_enable_off_diagonal,pijmap,n_pairs,&
+                                     & sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,&
+                                     & sigma_diff,sigma_freq,sigma_spectralf,l_enable_off_diagonal,&
                                      & sigma_vxcl_full,sigma_vxcnl_full,sigma_exx_full,sigma_hf_full,&
                                      & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,occupation
       USE pwcom,                ONLY : et,nspin
@@ -50,9 +50,8 @@ MODULE wfreq_db
       REAL(DP),EXTERNAL :: GET_CLOCK
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
-      INTEGER :: iks,iks_g,is,ib,ipair
+      INTEGER :: iks,iks_g,is,ib
       CHARACTER(LEN=6) :: my_label_k,my_label_b
-      CHARACTER(LEN=10) :: label
       !
       TYPE(json_file) :: json
       INTEGER :: iun,i

@@ -22,7 +22,6 @@ exx_go.o \
 exx_ungo.o \
 fetch_input.o \
 get_alpha_pv.o \
-gradcorr_x.o \
 heapsort.o \
 human_readable_time.o \
 init_pw_arrays.o \
@@ -36,7 +35,6 @@ set_eprec.o \
 set_nbndocc.o \
 set_npwq.o \
 types_bz_grid.o \
-v_x.o \
 wannier.o \
 west_environment.o \
 west_readin.o \

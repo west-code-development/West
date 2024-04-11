@@ -159,7 +159,6 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   CHARACTER(LEN=:), ALLOCATABLE :: fname
   CHARACTER :: slabel
   CHARACTER(LEN=6) :: ilabel,jlabel
-  CHARACTER(LEN=6) :: flabel
   !
   LOGICAL :: l_xcchi,l_skip,l_restart
   !
@@ -195,8 +194,6 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
 #if defined(__CUDA)
   CALL allocate_gpu()
 #endif
-  !
-  WRITE(flabel,'(A,I1,A)') '.',current_spin,'.dat'
   !
   tmp_size = nbnd_do*nbnd_do
   ALLOCATE(idx_matrix(tmp_size,2))

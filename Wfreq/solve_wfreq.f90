@@ -269,7 +269,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      nbndval_full = MINVAL(nbnd_occ)
   ENDIF
   !
-  !$acc enter data copyin(bg,imfreq_list,refreq_list)
+  !$acc enter data copyin(imfreq_list,refreq_list)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
   !$acc enter data create(dvpsi)
@@ -846,7 +846,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ELSE
      !$acc exit data copyout(dmati,zmatr)
   ENDIF
-  !$acc exit data delete(bg,imfreq_list,refreq_list)
+  !$acc exit data delete(imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
   !$acc exit data delete(overlap)

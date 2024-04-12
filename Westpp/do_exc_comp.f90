@@ -21,7 +21,6 @@ SUBROUTINE do_exc_comp()
   USE gvect,                 ONLY : gstart
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
-  USE cell_base,             ONLY : bg
   USE buffers,               ONLY : get_buffer
   USE westcom,               ONLY : logfile,iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
                                   & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
@@ -45,15 +44,14 @@ SUBROUTINE do_exc_comp()
   !
   ! ... LOCAL variables
   !
-  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iunit,ipol,icart
+  INTEGER :: iks,iks_do,iexc,lexc,ig,iocc,iemp,iunit,ipol
   INTEGER :: from_bands(2),to_bands(2)
   INTEGER :: naux,iaux
   INTEGER :: nbndx_occ,nbndx_emp
   INTEGER :: nbndval,flnbndval
   CHARACTER(5) :: label_exc,label_k
   REAL(DP) :: reduce
-  REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:)
-  REAL(DP), ALLOCATABLE :: transition_dipole_cry(:,:), transition_dipole_cart(:,:)
+  REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:),transition_dipole(:,:)
   REAL(DP), ALLOCATABLE :: aux(:)
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
@@ -114,10 +112,8 @@ SUBROUTINE do_exc_comp()
      !
      CALL solve_e_psi()
      !
-     ALLOCATE(transition_dipole_cry(3,westpp_n_liouville_to_use))
-     ALLOCATE(transition_dipole_cart(3,westpp_n_liouville_to_use))
-     transition_dipole_cry(:,:) = 0._DP
-     transition_dipole_cart(:,:) = 0._DP
+     ALLOCATE(transition_dipole(3,westpp_n_liouville_to_use))
+     transition_dipole(:,:) = 0._DP
      !
   ENDIF
   !
@@ -257,32 +253,16 @@ SUBROUTINE do_exc_comp()
               !
            ENDDO
            !
-           transition_dipole_cry(ipol,iexc) = reduce
+           transition_dipole(ipol,iexc) = reduce
            !
         ENDDO
         !
      ENDDO
      !
-     CALL mp_sum(transition_dipole_cry,intra_bgrp_comm)
-     CALL mp_sum(transition_dipole_cry,inter_image_comm)
+     CALL mp_sum(transition_dipole,intra_bgrp_comm)
+     CALL mp_sum(transition_dipole,inter_image_comm)
      !
-     IF(nks == 1) transition_dipole_cry(:,:) = SQRT(2._DP) * transition_dipole_cry
-     !
-     IF(westpp_l_dipole_realspace) THEN
-        !
-        transition_dipole_cart(:,:) = transition_dipole_cry(:,:)
-        !
-     ELSE
-        !
-        transition_dipole_cart(:,:) = 0._DP
-        DO icart = 1,3
-           DO ipol = 1,3
-              transition_dipole_cart(icart,:) = transition_dipole_cart(icart,:) &
-              & +bg(icart,ipol)*transition_dipole_cry(ipol,:)
-           ENDDO
-        ENDDO
-        !
-     ENDIF
+     IF(nks == 1) transition_dipole(:,:) = SQRT(2._DP) * transition_dipole
      !
   ENDIF
   !
@@ -317,7 +297,7 @@ SUBROUTINE do_exc_comp()
      IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
         WRITE(stdout, "(5x, '#     TDM_x                |   TDM_y               |    TDM_z')")
         WRITE(stdout, "(9x, f18.9, 5x, '|', f17.9, 6x, '|', f16.9)") &
-        & transition_dipole_cart(1,iexc),transition_dipole_cart(2,iexc),transition_dipole_cart(3,iexc)
+        & transition_dipole(1,iexc),transition_dipole(2,iexc),transition_dipole(3,iexc)
      ENDIF
      !
   ENDDO
@@ -333,7 +313,7 @@ SUBROUTINE do_exc_comp()
         CALL json%add('output.E'//label_exc//'.excitation_energy',ev(iexc))
         !
         IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) &
-        & CALL json%add('output.E'//label_exc//'.transition_dipole_moment',transition_dipole_cart(:,iexc))
+        & CALL json%add('output.E'//label_exc//'.transition_dipole_moment',transition_dipole(:,iexc))
         !
         DO iks = 1,nks
            !
@@ -394,8 +374,7 @@ SUBROUTINE do_exc_comp()
   IF((.NOT. westpp_l_spin_flip) .AND. westpp_l_compute_tdm) THEN
      !$acc exit data delete(d0psi)
      DEALLOCATE(d0psi)
-     DEALLOCATE(transition_dipole_cry)
-     DEALLOCATE(transition_dipole_cart)
+     DEALLOCATE(transition_dipole)
   ENDIF
   !
   IF(mpime == root) THEN

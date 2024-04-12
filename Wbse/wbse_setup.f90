@@ -27,7 +27,7 @@ SUBROUTINE wbse_setup()
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_sf_kernel_setup
   USE xc_lib,               ONLY : xclib_dft_is
-  USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
+  USE exx_base,             ONLY : erfc_scrlen
   USE pwcom,                ONLY : nkstot,nks,nspin
   USE distribution_center,  ONLY : kpt_pool
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
@@ -112,13 +112,13 @@ SUBROUTINE wbse_setup()
         !
         ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = erfc_scrlen
         !
-        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=-1._DP,mymu=erfc_scrlen)
+        CALL pot3D%init('Rho',.FALSE.,'gb',mya=1._DP,myb=-1._DP,mymu=erfc_scrlen)
         !
      ELSE
         !
         ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid divergence
         !
-        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=0._DP,mymu=1._DP)
+        CALL pot3D%init('Rho',.FALSE.,'gb',mya=1._DP,myb=0._DP,mymu=1._DP)
         !
      ENDIF
      !
@@ -184,11 +184,12 @@ SUBROUTINE bse_start()
   !
   ! the divergence term in Fock potential
   !
-  sigma_x_head = pot3D%div
+  sigma_x_head = pot3D%compute_divergence('gb')
   !
   ! compute macroscopic term, it needs macroscopic dielectric constant from input
   !
-  sigma_c_head = ((1._DP/wbse_epsinfty) - 1._DP) * (2._DP*e2/pi) * ((6._DP*pi*pi/omega)**(1._DP/3._DP))
+  sigma_c_head = pot3D%compute_divergence('default')
+  sigma_c_head = sigma_c_head * ((1._DP/wbse_epsinfty) - 1._DP)
   !
   WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:",f9.5)') sigma_c_head
   !

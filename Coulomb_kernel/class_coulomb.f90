@@ -177,9 +177,9 @@ MODULE class_coulomb
       !
       IF ( q_grid%l_pIsGamma(this%iq) ) THEN
          IF ( l_abmu ) THEN
-            CALL this%compute_divergence(singularity_removal_mode,mya,myb,mymu)
+            this%div = this%compute_divergence(singularity_removal_mode,mya,myb,mymu)
          ELSE
-            CALL this%compute_divergence()
+            this%div = this%compute_divergence()
          ENDIF
       ENDIF
       !
@@ -188,7 +188,7 @@ MODULE class_coulomb
    END SUBROUTINE
    !
    !-----------------------------------------------------------------------
-   SUBROUTINE compute_divergence(this,singularity_removal_mode,mya,myb,mymu)
+   FUNCTION compute_divergence(this,singularity_removal_mode,mya,myb,mymu) RESULT(div)
       !-----------------------------------------------------------------------
       !
       USE constants,            ONLY : pi,tpi,fpi,e2,eps8
@@ -209,12 +209,12 @@ MODULE class_coulomb
       CLASS(coulomb) :: this
       CHARACTER(LEN=*), INTENT(IN), OPTIONAL :: singularity_removal_mode
       REAL(DP), INTENT(IN), OPTIONAL :: mya, myb, mymu
+      REAL(DP) :: div
       !
       ! Workspace
       !
       LOGICAL :: l_abmu
       CHARACTER(LEN=7) :: singularity_removal_mode_use
-      REAL(DP) :: div
       LOGICAL :: i_am_ort, on_double_grid
       REAL(DP) :: qg(3), qgnorm2, alpha, peso
       INTEGER :: i1, i2, i3, iq, ig, ipol
@@ -246,7 +246,7 @@ MODULE class_coulomb
          !
          ! In this case we use the spherical region
          !
-         div = ( (6._DP * pi * pi / ( omega*REAL(q_grid%np,KIND=DP) ) )**(1._DP/3._DP) ) / ( 2._DP * pi * pi ) * fpi * e2
+         div = (2._DP*e2/pi) * ((6._DP*(pi**2)/(omega*REAL(q_grid%np,KIND=DP)))**(1._DP/3._DP))
          !
          ! If the angles are all 90 deg then overwrite div as follows:
          !
@@ -390,9 +390,7 @@ MODULE class_coulomb
          !
       END SELECT
       !
-      this%div = div
-      !
-   END SUBROUTINE
+   END FUNCTION
    !
    !-----------------------------------------------------------------------
    SUBROUTINE print_divergence( this )
@@ -407,8 +405,7 @@ MODULE class_coulomb
       !
       CLASS(coulomb) :: this
       !
-      IF ( .NOT. q_grid%l_pIsGamma(this%iq) ) RETURN
-      WRITE(stdout,"(5X,'Divergence = ',es14.6)") this%div
+      IF( q_grid%l_pIsGamma(this%iq) ) WRITE(stdout,"(5X,'Divergence = ',es14.6)") this%div
       !
    END SUBROUTINE
    !

@@ -621,10 +621,7 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
   !
   CALL start_bar_type(barra, 'Wp', 1)
   !
-  IF (l_macropol) THEN
-     CALL pot3D%compute_divergence('default')
-     div = pot3D%div
-  ENDIF
+  IF (l_macropol) div = pot3D%compute_divergence('default')
   !
   bandpair_nloc = bandpair%nloc
   !

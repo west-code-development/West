@@ -190,7 +190,7 @@ SUBROUTINE do_loc ( )
         !$acc parallel loop collapse(2) present(evc_tmp)
         DO ib_g = westpp_range(1), westpp_range(2)
            DO ig = 1, npwx
-              evc_tmp(ig,ib_g,iks) = evc_work(ig,ib_g)
+              evc_tmp(ig,ib_g - westpp_range(1) + 1,iks) = evc_work(ig,ib_g)
            ENDDO
         ENDDO
         !$acc end parallel

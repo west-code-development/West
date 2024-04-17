@@ -39,7 +39,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & l_spin_flip_alda0,l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
                              & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
                              & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
-                             & l_reduce_io,main_input_file,logfile
+                             & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast,mp_barrier
@@ -396,7 +396,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(forces_inexact_krylov_tr, 'forces_inexact_krylov_tr')
         IERR = return_dict%getitem(l_minimize_exx_if_active, 'l_minimize_exx_if_active')
         IERR = return_dict%get(n_exx_lowrank, 'n_exx_lowrank', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(l_reduce_io, 'l_reduce_io')
         !
         CALL return_dict%destroy
         !
@@ -511,7 +510,11 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(n_spectralf < 2) CALL errore('fetch_input','Err: n_spectralf<1',1)
      IF(qp_bandrange(1) < 1) CALL errore('fetch_input','Err: qp_bandrange(1)<1',1)
      IF(qp_bandrange(2) < 1) CALL errore('fetch_input','Err: qp_bandrange(2)<1',1)
+     IF(qp_bandrange(1) > nbnd) CALL errore('fetch_input','Err: qp_bandrange(1)>nbnd',1)
+     IF(qp_bandrange(2) > nbnd) CALL errore('fetch_input','Err: qp_bandrange(2)>nbnd',1)
      IF(qp_bandrange(2) < qp_bandrange(1)) CALL errore('fetch_input','Err: qp_bandrange(2)<qp_bandrange(1)',1)
+     IF(ANY(qp_bands(:,:) < 1)) CALL errore('fetch_input','Err: qp_bands<1',1)
+     IF(ANY(qp_bands(:,:) > nbnd)) CALL errore('fetch_input','Err: qp_bands>nbnd',1)
      IF(ecut_imfreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF(ecut_refreq <= 0._DP) CALL errore('fetch_input','Err: ecut_imfreq<0.',1)
      IF(ecut_spectralf(2) < ecut_spectralf(1)) CALL errore('fetch_input','Err: ecut_spectralf(2)<ecut_spectralf(1)',1)
@@ -673,7 +676,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(forces_inexact_krylov_tr,root,world_comm)
      CALL mp_bcast(l_minimize_exx_if_active,root,world_comm)
      CALL mp_bcast(n_exx_lowrank,root,world_comm)
-     CALL mp_bcast(l_reduce_io,root,world_comm)
      !
      ! CHECKS
      !

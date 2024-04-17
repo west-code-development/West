@@ -27,7 +27,7 @@ SUBROUTINE wbse_setup()
   USE types_coulomb,        ONLY : pot3D
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_sf_kernel_setup
   USE xc_lib,               ONLY : xclib_dft_is
-  USE exx_base,             ONLY : exxdiv_treatment,erfc_scrlen
+  USE exx_base,             ONLY : erfc_scrlen
   USE pwcom,                ONLY : nkstot,nks,nspin
   USE distribution_center,  ONLY : kpt_pool
   USE class_idistribute,    ONLY : idistribute,IDIST_BLK
@@ -112,13 +112,13 @@ SUBROUTINE wbse_setup()
         !
         ! HSE functional, mya = 1._DP, myb = -1._DP, mymu = erfc_scrlen
         !
-        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=-1._DP,mymu=erfc_scrlen)
+        CALL pot3D%init('Rho',.FALSE.,'gb',mya=1._DP,myb=-1._DP,mymu=erfc_scrlen)
         !
      ELSE
         !
         ! PBE0 functional, mya = 1._DP, myb = 0._DP, mymu = 1._DP to avoid divergence
         !
-        CALL pot3D%init('Rho',.FALSE.,exxdiv_treatment,mya=1._DP,myb=0._DP,mymu=1._DP)
+        CALL pot3D%init('Rho',.FALSE.,'gb',mya=1._DP,myb=0._DP,mymu=1._DP)
         !
      ENDIF
      !
@@ -163,9 +163,9 @@ SUBROUTINE bse_start()
   USE kinds,                ONLY : DP
   USE io_global,            ONLY : stdout
   USE pwcom,                ONLY : npwx
-  USE westcom,              ONLY : l_reduce_io,tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,&
-                                 & n_trunc_bands,sigma_c_head,sigma_x_head,wbse_epsinfty,&
-                                 & l_local_repr,overlap_thr,u_matrix,ovl_matrix,n_bse_idx,idx_matrix
+  USE westcom,              ONLY : tau_is_read,tau_all,n_tau,nbnd_occ,nbndval0x,n_trunc_bands,&
+                                 & sigma_c_head,sigma_x_head,wbse_epsinfty,l_local_repr,&
+                                 & overlap_thr,u_matrix,ovl_matrix,n_bse_idx,idx_matrix
   USE constants,            ONLY : e2,pi
   USE cell_base,            ONLY : omega
   USE types_coulomb,        ONLY : pot3D
@@ -184,11 +184,12 @@ SUBROUTINE bse_start()
   !
   ! the divergence term in Fock potential
   !
-  sigma_x_head = pot3D%div
+  sigma_x_head = pot3D%compute_divergence('gb')
   !
   ! compute macroscopic term, it needs macroscopic dielectric constant from input
   !
-  sigma_c_head = ((1._DP/wbse_epsinfty) - 1._DP) * (2._DP*e2/pi) * ((6._DP*pi*pi/omega)**(1._DP/3._DP))
+  sigma_c_head = pot3D%compute_divergence('default')
+  sigma_c_head = sigma_c_head * ((1._DP/wbse_epsinfty) - 1._DP)
   !
   WRITE(stdout,'(/,5X,"Macroscopic dielectric constant correction:",f9.5)') sigma_c_head
   !
@@ -253,52 +254,48 @@ SUBROUTINE bse_start()
      !
   ENDDO
   !
-  IF(l_reduce_io) THEN
+  ! I/O is minimized by reading tau only once
+  !
+  ALLOCATE(tau_is_read(nbnd_do,nbnd_do,kpt_pool%nloc))
+  !
+  tau_is_read(:,:,:) = 0
+  n_tau = 0
+  !
+  DO iks = 1,kpt_pool%nloc
      !
-     ! I/O is reduced by reading tau only once
+     do_idx = n_bse_idx(iks)
      !
-     ALLOCATE(tau_is_read(nbnd_do,nbnd_do,kpt_pool%nloc))
+     ! count number of tau needed by my band group
      !
-     tau_is_read(:,:,:) = 0
-     n_tau = 0
-     !
-     DO iks = 1,kpt_pool%nloc
+     DO lbnd = 1,band_group%nloc
         !
-        do_idx = n_bse_idx(iks)
+        my_ibnd = band_group%l2g(lbnd)
         !
-        ! count number of tau needed by my band group
-        !
-        DO lbnd = 1,band_group%nloc
+        DO ipair = 1, do_idx
            !
-           my_ibnd = band_group%l2g(lbnd)
+           ibnd = idx_matrix(ipair,1,iks)-n_trunc_bands
+           jbnd = idx_matrix(ipair,2,iks)-n_trunc_bands
            !
-           DO ipair = 1, do_idx
-              !
-              ibnd = idx_matrix(ipair,1,iks)-n_trunc_bands
-              jbnd = idx_matrix(ipair,2,iks)-n_trunc_bands
-              !
-              IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,iks) = 1
-              !
-           ENDDO
+           IF(ibnd == my_ibnd) tau_is_read(ibnd,jbnd,iks) = 1
            !
-        ENDDO
-        !
-        DO jbnd = 1,nbnd_do
-           DO ibnd = jbnd,nbnd_do
-              IF(tau_is_read(ibnd,jbnd,iks) == 1 .OR. tau_is_read(jbnd,ibnd,iks) == 1) n_tau = n_tau+1
-           ENDDO
         ENDDO
         !
      ENDDO
      !
-     ALLOCATE(tau_all(npwx,n_tau))
+     DO jbnd = 1,nbnd_do
+        DO ibnd = jbnd,nbnd_do
+           IF(tau_is_read(ibnd,jbnd,iks) == 1 .OR. tau_is_read(jbnd,ibnd,iks) == 1) n_tau = n_tau+1
+        ENDDO
+     ENDDO
      !
-     ! reset counter for actual reading in wbse_io
-     !
-     tau_is_read(:,:,:) = 0
-     n_tau = 0
-     !
-  ENDIF
+  ENDDO
+  !
+  ALLOCATE(tau_all(npwx,n_tau))
+  !
+  ! reset counter for actual reading in wbse_io
+  !
+  tau_is_read(:,:,:) = 0
+  n_tau = 0
   !
 END SUBROUTINE
 !

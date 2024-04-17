@@ -27,8 +27,11 @@ SUBROUTINE dump_r ( auxr, fname )
   !
   ! I/O
   !
-  REAL(DP) :: auxr(dffts%nnr)
+  REAL(DP),INTENT(IN) :: auxr(dffts%nnr)
   CHARACTER(LEN=*),INTENT(IN) :: fname
+  !
+  ! Workspace
+  !
   COMPLEX(DP),ALLOCATABLE :: auxg(:)
   COMPLEX(DP),ALLOCATABLE :: auxr_(:)
   !$acc declare device_resident(auxr_)

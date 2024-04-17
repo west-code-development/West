@@ -62,6 +62,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   !
+  REAL(DP) :: div
   REAL(DP) :: partial_b,partial_h
   REAL(DP) :: segno, enrg, enrg1
   COMPLEX(DP) :: residues_b,residues_h
@@ -76,7 +77,7 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
   sigma_corr = 0._DP
   IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full = 0._DP
   !
-  CALL pot3D%compute_divergence('default')
+  div = pot3D%compute_divergence('default')
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
@@ -201,9 +202,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
            CALL mp_sum( partial_b, inter_image_comm)
            !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
-           & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP )
+           & + CMPLX( partial_b/omega/pi + partial_h*div/pi, 0._DP, KIND=DP )
            IF (l_enable_off_diagonal .AND. l_full ) sigma_corr_full(ipair,iks_g) = sigma_corr_full(ipair,iks_g) &
-           & + CMPLX( partial_b/omega/pi + partial_h*pot3D%div/pi, 0._DP, KIND=DP )
+           & + CMPLX( partial_b/omega/pi + partial_h*div/pi, 0._DP, KIND=DP )
            !
            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
            !
@@ -433,9 +434,9 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
            CALL mp_sum( residues_b, inter_image_comm )
            !
            IF (jb == ib) sigma_corr(ib_index,iks_g) = sigma_corr(ib_index,iks_g) &
-           & + residues_b/omega + residues_h*pot3D%div
+           & + residues_b/omega + residues_h*div
            IF (l_enable_off_diagonal .AND. l_full) sigma_corr_full(ipair,iks_g) = sigma_corr_full(ipair,iks_g) &
-           & + residues_b/omega + residues_h*pot3D%div
+           & + residues_b/omega + residues_h*div
            !
            IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
            !
@@ -498,6 +499,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   !
+  REAL(DP) :: div
   COMPLEX(DP) :: partial_b,partial_h
   REAL(DP) :: segno, enrg
   REAL(DP) :: g0(3)
@@ -513,7 +515,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
   !
   sigma_corr = 0._DP
   !
-  CALL pot3D%compute_divergence('default')
+  div = pot3D%compute_divergence('default')
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
@@ -600,7 +602,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         CALL mp_sum( partial_b, intra_bgrp_comm)
         CALL mp_sum( partial_b, inter_image_comm)
         !
-        sigma_corr(ib_index,iks) = sigma_corr(ib_index,iks) + partial_b/omega/pi + partial_h*pot3D%div/pi
+        sigma_corr(ib_index,iks) = sigma_corr(ib_index,iks) + partial_b/omega/pi + partial_h*div/pi
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_i', 1 )
         !
@@ -690,7 +692,7 @@ SUBROUTINE calc_corr_k( sigma_corr, energy, l_verbose)
         CALL mp_sum( residues_b, intra_bgrp_comm )
         CALL mp_sum( residues_b, inter_image_comm )
         !
-        sigma_corr(ib_index,iks) = sigma_corr(ib_index,iks) + residues_b/omega + residues_h*pot3D%div
+        sigma_corr(ib_index,iks) = sigma_corr(ib_index,iks) + residues_b/omega + residues_h*div
         !
         IF(l_verbose) CALL update_bar_type( barra, 'sigmac_r', 1 )
         !

@@ -52,12 +52,6 @@ CONTAINS
     INTEGER :: ios, crashunit, n_json
     INTEGER, PARAMETER :: n_json_max = 100
     !
-    ! ... Intel compilers v .ge.8 allocate a lot of stack space
-    ! ... Stack limit is often small, thus causing SIGSEGV and crash
-    !
-#if defined(__INTEL_COMPILER)
-    CALL remove_stack_limit ( )
-#endif
     CALL start_forpy()
     !
     ! Input from (-i), output from (-o)

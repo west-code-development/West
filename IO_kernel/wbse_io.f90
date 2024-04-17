@@ -24,8 +24,7 @@ MODULE wbse_io
     USE pwcom,          ONLY : npwx
     USE mp_global,      ONLY : npool
     USE pdep_io,        ONLY : pdep_read_G_and_distribute
-    USE westcom,        ONLY : wbse_init_save_dir,l_bse,l_reduce_io,tau_is_read,tau_all,n_tau,&
-                             & n_trunc_bands
+    USE westcom,        ONLY : wbse_init_save_dir,l_bse,tau_is_read,tau_all,n_tau,n_trunc_bands
     !
     IMPLICIT NONE
     !
@@ -49,14 +48,10 @@ MODULE wbse_io
     band_i = MIN(fixed_band_i,fixed_band_j)
     band_j = MAX(fixed_band_i,fixed_band_j)
     !
-    IF(l_reduce_io) THEN
-       !
-       iread = tau_is_read(band_i,band_j,lspin)
-       IF(iread > 0) THEN
-          rhog(:) = tau_all(:,iread)
-          RETURN
-       ENDIF
-       !
+    iread = tau_is_read(band_i,band_j,lspin)
+    IF(iread > 0) THEN
+       rhog(:) = tau_all(:,iread)
+       RETURN
     ENDIF
     !
     WRITE(my_labeli,'(i6.6)') band_i+n_trunc_bands
@@ -70,13 +65,9 @@ MODULE wbse_io
     ENDIF
     CALL pdep_read_G_and_distribute(fname,rhog)
     !
-    IF(l_reduce_io) THEN
-       !
-       n_tau = n_tau+1
-       tau_is_read(band_i,band_j,lspin) = n_tau
-       tau_all(:,n_tau) = rhog
-       !
-    ENDIF
+    n_tau = n_tau+1
+    tau_is_read(band_i,band_j,lspin) = n_tau
+    tau_all(:,n_tau) = rhog
     !
   END SUBROUTINE
   !

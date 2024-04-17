@@ -19,8 +19,6 @@ SUBROUTINE solve_e_psi()
   !
   IMPLICIT NONE
   !
-  INTEGER, PARAMETER :: n_ipol = 3
-  !
   IF(okvan) CALL errore('solve_e_psi','Real space dipole + USPP not supported',1)
   !
 #if defined(__CUDA)
@@ -254,6 +252,7 @@ SUBROUTINE shift_d0psi(r,n_ipol)
   !
   USE fft_base,             ONLY : dffts
   USE kinds,                ONLY : DP
+  USE constants,            ONLY : eps6
   USE ions_base,            ONLY : nat,tau
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : at
@@ -278,7 +277,7 @@ SUBROUTINE shift_d0psi(r,n_ipol)
      ENDDO
   ENDDO
   !
-  IF(check_cell > 1.E-5_DP) CALL errore('shift_d0psi','This type of the supercell is not supported',1)
+  IF(check_cell > eps6) CALL errore('shift_d0psi','This type of the supercell is not supported',1)
   !
   mmin(:) = 2000._DP
   mmax(:) = -2000._DP
@@ -326,14 +325,14 @@ SUBROUTINE compute_d0psi_dfpt()
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,&
                                  & l_kinetic_only,d0psi,l_skip_nl_part_of_hcomr
   USE distribution_center,  ONLY : kpt_pool,band_group
-#if defined(__CUDA)
+  USE cell_base,            ONLY : bg
   USE uspp,                 ONLY : vkb,nkb
+#if defined(__CUDA)
   USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE wavefunctions,        ONLY : evc_host=>evc
   USE wvfct_gpum,           ONLY : et=>et_d
   USE west_gpu,             ONLY : allocate_macropol_gpu,deallocate_macropol_gpu,reallocate_ps_gpu
 #else
-  USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions,        ONLY : evc_work=>evc
   USE wvfct,                ONLY : et
 #endif
@@ -342,13 +341,13 @@ SUBROUTINE compute_d0psi_dfpt()
   !
   ! ... Local variables
   !
-  INTEGER :: iv, ip, ibnd, lbnd, iks, ie, ierr
+  INTEGER :: iv, ip, ibnd, lbnd, iks, ig, ierr
   INTEGER :: nbndval, nbnd_do
   INTEGER :: kpt_pool_nloc, band_group_nloc
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
-  !$acc declare device_resident(eprec,e,phi_tmp)
+  !$acc declare device_resident(eprec,e,phi)
   !
   CALL io_push_title('Calculation of the dipole using DFPT method')
   !
@@ -395,14 +394,14 @@ SUBROUTINE compute_d0psi_dfpt()
      !
 #if defined(__CUDA)
      CALL allocate_macropol_gpu(1)
-     CALL reallocate_ps_gpu(nbndval,3)
+     CALL reallocate_ps_gpu(nbndval,n_ipol)
 #endif
      !
-     ALLOCATE(eprec(3))
-     ALLOCATE(e(3))
-     ALLOCATE(phi_tmp(npwx*npol,3))
-     ALLOCATE(phi(npwx*npol,3))
-     !$acc enter data create(phi)
+     ALLOCATE(eprec(n_ipol))
+     ALLOCATE(e(n_ipol))
+     ALLOCATE(phi_tmp(npwx*npol,n_ipol))
+     ALLOCATE(phi(npwx*npol,n_ipol))
+     !$acc enter data create(phi_tmp)
      !
      ! LOOP over band states
      !
@@ -418,36 +417,44 @@ SUBROUTINE compute_d0psi_dfpt()
         CALL commut_Hx_psi(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
         !$acc end host_data
         !
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,3,phi_tmp,(1._DP,0._DP))
+        !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
+        DO ip = 1, n_ipol
+           DO ig = 1, npwx*npol
+              phi(ig,ip) = phi_tmp(ig,1)*bg(ip,1)+phi_tmp(ig,2)*bg(ip,2)+phi_tmp(ig,3)*bg(ip,3)
+           ENDDO
+        ENDDO
+        !$acc end parallel
+        !
+        CALL apply_alpha_pc_to_m_wfcs(nbndval,n_ipol,phi,(1._DP,0._DP))
         !
         !$acc host_data use_device(eprec)
         CALL set_eprec(1,evc_work(:,iv),eprec(1))
         !$acc end host_data
         !
         !$acc parallel loop present(eprec,e)
-        DO ie = 1,3
-           eprec(ie) = eprec(1)
-           e(ie) = et(iv,iks)
+        DO ip = 1, n_ipol
+           eprec(ip) = eprec(1)
+           e(ip) = et(iv,iks)
         ENDDO
         !$acc end parallel
         !
-        CALL precondition_m_wfcts(3,phi_tmp,phi,eprec)
+        CALL precondition_m_wfcts(n_ipol,phi,phi_tmp,eprec)
         !
         tr2_dfpt = 1.E-12_DP
         n_dfpt_maxiter = 250
         l_kinetic_only = .FALSE.
         !
 #if defined(__CUDA)
-        CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi_tmp,phi,e,eprec,tr2_dfpt,ierr)
+        CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,n_ipol,phi,phi_tmp,e,eprec,tr2_dfpt,ierr)
 #else
-        CALL linsolve_sternheimer_m_wfcts(nbndval,3,phi_tmp,phi,e,eprec,tr2_dfpt,ierr)
+        CALL linsolve_sternheimer_m_wfcts(nbndval,n_ipol,phi,phi_tmp,e,eprec,tr2_dfpt,ierr)
 #endif
         !
         IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
         !
-        !$acc update host(phi)
+        !$acc update host(phi_tmp)
         !
-        d0psi(:,lbnd,iks,:) = phi
+        d0psi(:,lbnd,iks,:) = phi_tmp
         !
      ENDDO
      !
@@ -455,8 +462,8 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      DEALLOCATE(eprec)
      DEALLOCATE(e)
+     !$acc exit data delete(phi_tmp)
      DEALLOCATE(phi_tmp)
-     !$acc exit data delete(phi)
      DEALLOCATE(phi)
      !
 #if defined(__CUDA)

@@ -133,7 +133,6 @@ default["wbse_control"]["forces_inexact_krylov"] = 0
 default["wbse_control"]["forces_inexact_krylov_tr"] = 1e-16
 default["wbse_control"]["l_minimize_exx_if_active"] = False
 default["wbse_control"]["n_exx_lowrank"] = 0  # dynamically set to the number of bands
-default["wbse_control"]["l_reduce_io"] = True
 
 ############################
 # DYNAMICAL DEFAULT VALUES #
@@ -186,7 +185,7 @@ def update_default_values(key, kwargs):
 
 
 def open_and_parse_file(fileName="west.in"):
-    """Opens a file and parses it using the YAML sintax.
+    """Opens a file and parses it using the YAML syntax.
 
     :param fileName: name of the file
     :type fileName: ``string``
@@ -194,15 +193,18 @@ def open_and_parse_file(fileName="west.in"):
     :rtype: ``dict``
 
     """
-    data = {}
     try:
         with open(fileName, "r") as stream:
             try:
                 data = yaml.load(stream, Loader=yaml.SafeLoader)
             except:
-                print("Cannot parse file")
+                print(f"Cannot parse file: {fileName}")
     except:
-        print("Cannot open file : ", fileName)
+        print(f"Cannot open file: {fileName}")
+    #
+    # Stop if input is not read successfully
+    #
+    assert isinstance(data, dict)
     #
     if "server_control" in data.keys():
         if "document" in data["server_control"].keys():
@@ -401,6 +403,7 @@ def read_keyword_from_file(*args, **kwargs):
     # Parse qp_bandrange and qp_bands
     #
     data = parse_qp_bands(data, keyword, kwargs)
+    #
     # Print
     #
     if verbose:

@@ -405,6 +405,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                     DO ig = 1,npwq
                        pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
                     ENDDO
+                    !$acc end parallel
                     !
                     ! Bring it to R-space
                     !

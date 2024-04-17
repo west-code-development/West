@@ -70,8 +70,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   ! Workspace for ScaLAPACK
   !
-  REAL(DP),ALLOCATABLE :: la(:,:),lv(:,:)
-  REAL(DP) :: ge(glob_ndim)
+  REAL(DP),ALLOCATABLE :: ge(:),la(:,:),lv(:,:)
   INTEGER :: NB,MYROW,MYCOL,LDROW,LDCOL
   INTEGER :: BLACS_CONTEXT
   INTEGER :: DESC(9)
@@ -145,8 +144,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   ALLOCATE(send_count(nproc))
   ALLOCATE(recv_count(nproc))
   !
-  send_count = 0
-  recv_count = 0
+  send_count(:) = 0
+  recv_count(:) = 0
   !
   IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(dest(n_j_loc*glob_ndim))
@@ -182,8 +181,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
         tmp_i8(i_val) = idx_send(swap(i_val))
      ENDDO
      !
-     val_send = tmp_r
-     idx_send = tmp_i8
+     val_send(:) = tmp_r
+     idx_send(:) = tmp_i8
      !
      DEALLOCATE(swap)
      DEALLOCATE(tmp_r)
@@ -210,8 +209,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   ALLOCATE(send_displ(nproc))
   ALLOCATE(recv_displ(nproc))
   !
-  send_displ = 0
-  recv_displ = 0
+  send_displ(:) = 0
+  recv_displ(:) = 0
   !
   DO i_proc = 2,nproc
      send_displ(i_proc) = SUM(send_count(1:i_proc-1))
@@ -246,7 +245,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   ! 3) Diagonalize
   ! ==============
   !
-  ge = 0.0_DP
+  ALLOCATE(ge(glob_ndim))
+  ge(:) = 0.0_DP
   !
 #if defined(__ELPA)
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
@@ -351,8 +351,9 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   ! Redistribute eigenvalues
   !
-  e = ge(1:glob_nselect)
+  e(:) = ge(1:glob_nselect)
   CALL mp_bcast(e,0,world_comm)
+  DEALLOCATE(ge)
   !
   ! Redistribute eigenvectors
   !
@@ -392,8 +393,8 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
         tmp_i8(i_val) = idx_recv(swap(i_val))
      ENDDO
      !
-     val_recv = tmp_r
-     idx_recv = tmp_i8
+     val_recv(:) = tmp_r
+     idx_recv(:) = tmp_i8
      !
      DEALLOCATE(swap)
      DEALLOCATE(tmp_r)
@@ -413,7 +414,7 @@ SUBROUTINE parallel_distributed_diago_dsy(glob_nselect,glob_ndim,glob_ndimx,a_di
   DEALLOCATE(val_recv)
   DEALLOCATE(idx_recv)
   !
-  v_distr = 0.0_DP
+  v_distr(:,:) = 0.0_DP
   !
   IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(swap(n_j_loc*glob_ndim))
@@ -504,7 +505,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   ! Workspace for ScaLAPACK
   !
   COMPLEX(DP),ALLOCATABLE :: la(:,:),lv(:,:)
-  REAL(DP) :: ge(glob_ndim)
+  REAL(DP),ALLOCATABLE :: ge(:)
   INTEGER :: NB,MYROW,MYCOL,LDROW,LDCOL
   INTEGER :: BLACS_CONTEXT
   INTEGER :: DESC(9)
@@ -579,8 +580,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   ALLOCATE(send_count(nproc))
   ALLOCATE(recv_count(nproc))
   !
-  send_count = 0
-  recv_count = 0
+  send_count(:) = 0
+  recv_count(:) = 0
   !
   IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(dest(n_j_loc*glob_ndim))
@@ -616,8 +617,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
         tmp_i8(i_val) = idx_send(swap(i_val))
      ENDDO
      !
-     val_send = tmp_c
-     idx_send = tmp_i8
+     val_send(:) = tmp_c
+     idx_send(:) = tmp_i8
      !
      DEALLOCATE(swap)
      DEALLOCATE(tmp_c)
@@ -644,8 +645,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   ALLOCATE(send_displ(nproc))
   ALLOCATE(recv_displ(nproc))
   !
-  send_displ = 0
-  recv_displ = 0
+  send_displ(:) = 0
+  recv_displ(:) = 0
   !
   DO i_proc = 2,nproc
      send_displ(i_proc) = SUM(send_count(1:i_proc-1))
@@ -680,7 +681,8 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   ! 3) Diagonalize
   ! ==============
   !
-  ge = 0.0_DP
+  ALLOCATE(ge(glob_ndim))
+  ge(:) = 0.0_DP
   !
 #if defined(__ELPA)
   IF(MYROW /= -1 .OR. MYCOL /= -1) THEN
@@ -801,8 +803,9 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   !
   ! Redistribute eigenvalues
   !
-  e = ge(1:glob_nselect)
+  e(:) = ge(1:glob_nselect)
   CALL mp_bcast(e,0,world_comm)
+  DEALLOCATE(ge)
   !
   ! Redistribute eigenvectors
   !
@@ -863,7 +866,7 @@ SUBROUTINE parallel_distributed_diago_zhe(glob_nselect,glob_ndim,glob_ndimx,a_di
   DEALLOCATE(val_recv)
   DEALLOCATE(idx_recv)
   !
-  v_distr = 0.0_DP
+  v_distr(:,:) = 0.0_DP
   !
   IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
      ALLOCATE(swap(n_j_loc*glob_ndim))

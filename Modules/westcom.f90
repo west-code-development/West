@@ -362,7 +362,6 @@ MODULE wbse_center
   LOGICAL :: l_lanczos
   LOGICAL :: l_davidson
   LOGICAL :: l_bse_triplet
-  LOGICAL :: l_reduce_io
   INTEGER :: n_tau
   REAL(DP) :: sigma_c_head
   REAL(DP) :: sigma_x_head

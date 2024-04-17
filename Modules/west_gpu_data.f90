@@ -167,6 +167,7 @@ MODULE west_gpu_data
    !
    USE fft_base,              ONLY : dffts
    USE pwcom,                 ONLY : wg,ngk,nks
+   USE cell_base,             ONLY : bg
    USE westcom,               ONLY : igq_q
    USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d
    USE wvfct_gpum,            ONLY : using_et,using_et_d
@@ -184,7 +185,7 @@ MODULE west_gpu_data
       CALL using_evc_d(0)
    ENDIF
    !
-   !$acc enter data copyin(wg,ngk,igq_q)
+   !$acc enter data copyin(wg,ngk,bg,igq_q)
    !
    END SUBROUTINE
    !
@@ -193,6 +194,7 @@ MODULE west_gpu_data
    !-----------------------------------------------------------------------
    !
    USE pwcom,                 ONLY : wg,ngk
+   USE cell_base,             ONLY : bg
    USE westcom,               ONLY : igq_q
    !
    IMPLICIT NONE
@@ -204,7 +206,7 @@ MODULE west_gpu_data
       NULLIFY(dfft_nlm_d)
    ENDIF
    !
-   !$acc exit data delete(wg,ngk,igq_q)
+   !$acc exit data delete(wg,ngk,bg,igq_q)
    !
    END SUBROUTINE
    !

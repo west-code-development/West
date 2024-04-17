@@ -42,9 +42,11 @@ MODULE cubefile
    INTEGER :: iu,i,nt,at_num
    INTEGER,EXTERNAL :: atomic_number
    REAL(DP) :: at_chrg,tpos(3),inpos(3)
-   REAL(DP) :: wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x)
+   REAL(DP),ALLOCATABLE :: wfc_gat(:)
    !
-   wfc_gat=0.0_DP
+   ALLOCATE(wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x))
+   wfc_gat(:) = 0.0_DP
+   !
    CALL gather_grid(dfft,wfc_distr,wfc_gat)
    !
    !      WRITE A FORMATTED 'DENSITY-STYLE' CUBEFILE VERY SIMILAR
@@ -100,6 +102,8 @@ MODULE cubefile
       !
    ENDIF
    !
+   DEALLOCATE(wfc_gat)
+   !
  END SUBROUTINE
  !
  !-----------------------------------------------------------------
@@ -125,8 +129,7 @@ MODULE cubefile
    REAL(DP) :: alat
    INTEGER :: iu,i
    INTEGER,EXTERNAL :: atomic_number
-   REAL(DP) :: wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x)
-   !
+   REAL(DP),ALLOCATABLE :: wfc_gat(:)
    !
    !      WRITE A FORMATTED 'DENSITY-STYLE' CUBEFILE VERY SIMILAR
    !      TO THOSE CREATED BY THE GAUSSIAN PROGRAM OR THE CUBEGEN UTILITY.
@@ -144,8 +147,10 @@ MODULE cubefile
    !
    !      ALL COORDINATES ARE GIVEN IN ATOMIC UNITS.
    !
-   wfc_gat = 0._DP
-   wfc_distr=0.0_DP
+   ALLOCATE(wfc_gat(dfft%nr1x*dfft%nr2x*dfft%nr3x))
+   !
+   wfc_gat(:) = 0.0_DP
+   wfc_distr(:) = 0.0_DP
    !
    alat = celldm(1)
    !
@@ -170,6 +175,8 @@ MODULE cubefile
    ENDIF
    !
    CALL scatter_grid(dfft,wfc_gat,wfc_distr)
+   !
+   DEALLOCATE(wfc_gat)
    !
  END SUBROUTINE
  !

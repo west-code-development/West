@@ -70,7 +70,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
                                  & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
-                                 & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
+                                 & reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -98,7 +98,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ATTRIBUTES(PINNED) :: dvpsi
 #endif
   COMPLEX(DP),ALLOCATABLE :: phi(:,:)
-  COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
   COMPLEX(DP),ALLOCATABLE :: phis(:,:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: phis
@@ -356,14 +355,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      IF(l_macropol) THEN
 #if defined(__CUDA)
         CALL allocate_macropol_gpu(1)
-        CALL reallocate_ps_gpu(nbndval,3)
+        CALL reallocate_ps_gpu(nbndval_full,3)
 #endif
         !
         ALLOCATE(eprec_loc(3))
         ALLOCATE(et_loc(3))
-        ALLOCATE(phi_tmp(npwx*npol,3))
         ALLOCATE(phi(npwx*npol,3))
-        !$acc enter data create(eprec_loc,et_loc,phi_tmp,phi)
+        !$acc enter data create(eprec_loc,et_loc,phi)
         !
         ! PHI
         !
@@ -377,20 +375,20 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
            iv = occband%l2g(ivloc)
            !
-           IF(l_QDET) THEN
-              CALL commut_Hx_psi(iks,1,1,evc_copy(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi(iks,1,2,evc_copy(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi(iks,1,3,evc_copy(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-           ELSE
-              CALL commut_Hx_psi(iks,1,1,evc(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi(iks,1,2,evc(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi(iks,1,3,evc(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-           ENDIF
+           !$acc enter data create(phis(:,:,ivloc))
            !
-           !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
+           DO i1 = 1,3
+              IF(l_QDET) THEN
+                 CALL commut_Hx_psi(iks,1,i1,evc_copy(:,iv),phis(:,i1,ivloc),l_skip_nl_part_of_hcomr)
+              ELSE
+                 CALL commut_Hx_psi(iks,1,i1,evc(:,iv),phis(:,i1,ivloc),l_skip_nl_part_of_hcomr)
+              ENDIF
+           ENDDO
+           !
+           !$acc parallel loop collapse(2) present(phi,phis(:,:,ivloc),bg)
            DO i1 = 1,3
               DO i3 = 1,npwx*npol
-                 phi(i3,i1) = phi_tmp(i3,1)*bg(i1,1)+phi_tmp(i3,2)*bg(i1,2)+phi_tmp(i3,3)*bg(i1,3)
+                 phi(i3,i1) = phis(i3,1,ivloc)*bg(i1,1)+phis(i3,2,ivloc)*bg(i1,2)+phis(i3,3,ivloc)*bg(i1,3)
               ENDDO
            ENDDO
            !$acc end parallel
@@ -410,27 +408,22 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            ENDDO
            !$acc end parallel
            !
-           CALL precondition_m_wfcts(3,phi,phi_tmp,eprec_loc)
+           CALL precondition_m_wfcts(3,phi,phis(:,:,ivloc),eprec_loc)
 #if defined(__CUDA)
-           CALL linsolve_sternheimer_m_wfcts_gpu(nbndval_full,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
+           CALL linsolve_sternheimer_m_wfcts_gpu(nbndval_full,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
 #else
-           CALL linsolve_sternheimer_m_wfcts(nbndval_full,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
+           CALL linsolve_sternheimer_m_wfcts(nbndval_full,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
 #endif
            !
            IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
            !
-#if defined(__CUDA)
-           CALL memcpy_D2H(phis(:,:,ivloc),phi_tmp,npwx*npol*3)
-#else
-           phis(:,:,ivloc) = phi_tmp(:,:)
-#endif
+           !$acc exit data copyout(phis(:,:,ivloc))
            !
         ENDDO
         !
-        !$acc exit data delete(eprec_loc,et_loc,phi_tmp,phi)
+        !$acc exit data delete(eprec_loc,et_loc,phi)
         DEALLOCATE(eprec_loc)
         DEALLOCATE(et_loc)
-        DEALLOCATE(phi_tmp)
         DEALLOCATE(phi)
         !
 #if defined(__CUDA)
@@ -501,11 +494,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
            IF(glob_ip<=n_pdep_eigen_to_use) THEN
               !
-#if defined(__CUDA)
-              CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
-#else
               pertg(:) = pertg_all(:,ip)
-#endif
+              !$acc update device(pertg)
               !
               ! Multiply by sqvc
               !
@@ -1081,7 +1071,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
                                  & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
                                  & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
-                                 & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
+                                 & reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -1114,7 +1104,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: phis
 #endif
-  COMPLEX(DP),ALLOCATABLE :: phi_tmp(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evckpq(:,:)
@@ -1367,9 +1356,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            ALLOCATE(eprec_loc(3))
            ALLOCATE(et_loc(3))
-           ALLOCATE(phi_tmp(npwx*npol,3))
            ALLOCATE(phi(npwx*npol,3))
-           !$acc enter data create(eprec_loc,et_loc,phi_tmp,phi)
+           !$acc enter data create(eprec_loc,et_loc,phi)
            !
            ! PHI
            !
@@ -1377,20 +1365,22 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            ALLOCATE(phis(npwx*npol,3,occband%nloc))
            !
-           phis = 0._DP
+           phis(:,:,:) = 0._DP
            !
            DO ivloc = 1, occband%nloc
               !
               iv = occband%l2g(ivloc)
               !
-              CALL commut_Hx_psi(iks,1,1,evc(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi(iks,1,2,evc(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-              CALL commut_Hx_psi(iks,1,3,evc(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
+              !$acc enter data create(phis(:,:,ivloc))
               !
-              !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
+              DO i1 = 1,3
+                 CALL commut_Hx_psi(iks,1,i1,evc(:,iv),phis(:,i1,ivloc),l_skip_nl_part_of_hcomr)
+              ENDDO
+              !
+              !$acc parallel loop collapse(2) present(phi,phis(:,:,ivloc),bg)
               DO i1 = 1,3
                  DO i3 = 1,npwx*npol
-                    phi(i3,i1) = phi_tmp(i3,1)*bg(i1,1)+phi_tmp(i3,2)*bg(i1,2)+phi_tmp(i3,3)*bg(i1,3)
+                    phi(i3,i1) = phis(i3,1,ivloc)*bg(i1,1)+phis(i3,2,ivloc)*bg(i1,2)+phis(i3,3,ivloc)*bg(i1,3)
                  ENDDO
               ENDDO
               !$acc end parallel
@@ -1406,27 +1396,22 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               ENDDO
               !$acc end parallel
               !
-              CALL precondition_m_wfcts(3,phi,phi_tmp,eprec_loc)
+              CALL precondition_m_wfcts(3,phi,phis(:,:,ivloc),eprec_loc)
 #if defined(__CUDA)
-              CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
+              CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
 #else
-              CALL linsolve_sternheimer_m_wfcts(nbndval,3,phi,phi_tmp,et_loc,eprec_loc,tr2_dfpt,ierr)
+              CALL linsolve_sternheimer_m_wfcts(nbndval,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
 #endif
               !
               IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
               !
-#if defined(__CUDA)
-              CALL memcpy_D2H(phis(:,:,ivloc),phi_tmp,npwx*npol*3)
-#else
-              phis(:,:,ivloc) = phi_tmp(:,:)
-#endif
+              !$acc exit data copyout(phis(:,:,ivloc))
               !
            ENDDO
            !
-           !$acc exit data delete(eprec_loc,et_loc,phi_tmp,phi)
+           !$acc exit data delete(eprec_loc,et_loc,phi)
            DEALLOCATE(eprec_loc)
            DEALLOCATE(et_loc)
-           DEALLOCATE(phi_tmp)
            DEALLOCATE(phi)
            !
 #if defined(__CUDA)
@@ -1498,11 +1483,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
               IF(glob_ip<=n_pdep_eigen_to_use) THEN
                  !
-#if defined(__CUDA)
-                 CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
-#else
-                 pertg = pertg_all(:,ip)
-#endif
+                 pertg(:) = pertg_all(:,ip)
+                 !$acc update device(pertg)
                  !
                  ! Multiply by sqvc
                  !

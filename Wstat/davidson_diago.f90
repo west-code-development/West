@@ -1010,7 +1010,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               IF(gamma_only) THEN
                  anorm = 2._DP*anorm
                  IF(gstart == 2) THEN
-                    !$acc update host(amat(1:1,k_local:k_local))
+                    !$acc update host(amat(1,k_local))
                     anorm = anorm-REAL(amat(1,k_local),KIND=DP)**2
                  ENDIF
               ENDIF

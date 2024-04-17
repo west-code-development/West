@@ -43,7 +43,7 @@ SUBROUTINE wbse_davidson_diago ( )
   USE wbse_bgrp,            ONLY : init_gather_bands
 #if defined(__CUDA)
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,deallocate_bse_gpu,&
-                                 & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
+                                 & reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -230,11 +230,8 @@ SUBROUTINE wbse_davidson_diago ( )
      DO ip = mstart, mstart+max_mloc-1
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*band_group%nlocx*kpt_pool%nloc)
-#else
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-#endif
+           !$acc update device(dvg_exc_tmp)
         ELSE
            !$acc kernels present(dvg_exc_tmp)
            dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
@@ -244,11 +241,8 @@ SUBROUTINE wbse_davidson_diago ( )
         CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_spin_flip)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*band_group%nlocx*kpt_pool%nloc)
-#else
+           !$acc update host(dng_exc_tmp)
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-#endif
         ENDIF
         !
      ENDDO
@@ -425,11 +419,8 @@ SUBROUTINE wbse_davidson_diago ( )
      DO ip = mstart, mstart+max_mloc-1
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*band_group%nlocx*kpt_pool%nloc)
-#else
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-#endif
+           !$acc update device(dvg_exc_tmp)
         ELSE
            !$acc kernels present(dvg_exc_tmp)
            dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
@@ -439,11 +430,8 @@ SUBROUTINE wbse_davidson_diago ( )
         CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_spin_flip)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*band_group%nlocx*kpt_pool%nloc)
-#else
+           !$acc update host(dng_exc_tmp)
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-#endif
         ENDIF
         !
      ENDDO

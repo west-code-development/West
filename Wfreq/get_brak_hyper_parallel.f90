@@ -21,12 +21,10 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
-#if defined(__CUDA)
   USE mp,                   ONLY : mp_sum,mp_waitall
   USE west_mp,              ONLY : west_mp_circ_shift_start
-  USE west_gpu,             ONLY : tmp=>tmp_r3,dvpsi_h,memcpy_H2D
-#else
-  USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : tmp=>tmp_r3,dvpsi2
 #endif
   !
   IMPLICIT NONE
@@ -43,18 +41,21 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !
   INTEGER :: i1,i2,i1_glob,il
   INTEGER :: icycl,idx,nblock_i
-#if defined(__CUDA)
   INTEGER :: reqs(2)
-#else
+#if !defined(__CUDA)
   REAL(DP), ALLOCATABLE :: tmp(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvpsi2(:,:)
 #endif
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('brak')
 #else
   CALL start_clock('brak')
+#endif
   !
+#if !defined(__CUDA)
   ALLOCATE(tmp(idistr%nlocx,NRHS,NLSTEPS))
+  ALLOCATE(dvpsi2(npwx*npol,idistr%nlocx))
 #endif
   !
   ! -------------------
@@ -69,26 +70,38 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !$acc end kernels
   !
   DO icycl = 0,nimage-1
-#if defined(__CUDA)
-     !
-     ! Cycle dvpsi (start)
-     !
-     IF(MOD(icycl,2) == 0) THEN
-        CALL west_mp_circ_shift_start(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
-        !
-        !$acc update device(dvpsi)
-     ELSE
-        CALL west_mp_circ_shift_start(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
-        !
-        CALL memcpy_H2D(dvpsi,dvpsi_h,npwx*npol*idistr%nlocx)
-     ENDIF
-#endif
      !
      idx = MOD(my_image_id+icycl,nimage)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     CALL glbrak_gamma(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     ! Cycle dvpsi (start)
+     !
+     IF(MOD(icycl,2) == 0) THEN
+        !
+        ! Start sending dvpsi to dvpsi2 for next round
+        !
+        CALL west_mp_circ_shift_start(dvpsi,dvpsi2,icycl,inter_image_comm,reqs)
+        !
+        ! Use dvpsi this round
+        !
+        !$acc update device(dvpsi)
+        !
+        CALL glbrak_gamma(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+        !
+     ELSE
+        !
+        ! Start sending dvpsi2 to dvpsi for next round
+        !
+        CALL west_mp_circ_shift_start(dvpsi2,dvpsi,icycl,inter_image_comm,reqs)
+        !
+        ! Use dvpsi2 this round
+        !
+        !$acc update device(dvpsi2)
+        !
+        CALL glbrak_gamma(dvpsi2,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+        !
+     ENDIF
      !
      !$acc parallel loop collapse(3) present(brak,tmp)
      DO il = 1,NLSTEPS
@@ -107,11 +120,7 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      !
      ! Cycle dvpsi (end)
      !
-#if defined(__CUDA)
      CALL mp_waitall(reqs)
-#else
-     CALL mp_circular_shift_left(dvpsi,icycl,inter_image_comm)
-#endif
      !
   ENDDO
   !
@@ -119,11 +128,14 @@ SUBROUTINE get_brak_hyper_parallel(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !
   CALL mp_sum(brak,intra_bgrp_comm)
   !
+#if !defined(__CUDA)
+  DEALLOCATE(tmp)
+  DEALLOCATE(dvpsi2)
+#endif
+  !
 #if defined(__CUDA)
   CALL stop_clock_gpu('brak')
 #else
-  DEALLOCATE(tmp)
-  !
   CALL stop_clock('brak')
 #endif
   !
@@ -140,12 +152,10 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol
   USE class_idistribute,    ONLY : idistribute
-#if defined(__CUDA)
   USE mp,                   ONLY : mp_sum,mp_waitall
   USE west_mp,              ONLY : west_mp_circ_shift_start
-  USE west_gpu,             ONLY : tmp=>tmp_c3,dvpsi_h,memcpy_H2D
-#else
-  USE mp,                   ONLY : mp_sum,mp_circular_shift_left
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : tmp=>tmp_c3,dvpsi2
 #endif
   !
   IMPLICIT NONE
@@ -162,18 +172,21 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !
   INTEGER :: i1,i2,i1_glob,il
   INTEGER :: icycl,idx,nblock_i
-#if defined(__CUDA)
   INTEGER :: reqs(2)
-#else
+#if !defined(__CUDA)
   COMPLEX(DP), ALLOCATABLE :: tmp(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: dvpsi2(:,:)
 #endif
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('brak')
 #else
   CALL start_clock('brak')
+#endif
   !
+#if !defined(__CUDA)
   ALLOCATE(tmp(idistr%nlocx,NRHS,NLSTEPS))
+  ALLOCATE(dvpsi2(npwx*npol,idistr%nlocx))
 #endif
   !
   ! -------------------
@@ -188,26 +201,38 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !$acc end kernels
   !
   DO icycl = 0,nimage-1
-#if defined(__CUDA)
-     !
-     ! Cycle dvpsi (start)
-     !
-     IF(MOD(icycl,2) == 0) THEN
-        CALL west_mp_circ_shift_start(dvpsi,dvpsi_h,icycl,inter_image_comm,reqs)
-        !
-        !$acc update device(dvpsi)
-     ELSE
-        CALL west_mp_circ_shift_start(dvpsi_h,dvpsi,icycl,inter_image_comm,reqs)
-        !
-        CALL memcpy_H2D(dvpsi,dvpsi_h,npwx*npol*idistr%nlocx)
-     ENDIF
-#endif
      !
      idx = MOD(my_image_id+icycl,nimage)
      nblock_i = idistr%nglob/nimage
      IF(idx < MOD(idistr%nglob,nimage)) nblock_i = nblock_i+1
      !
-     CALL glbrak_k(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+     ! Cycle dvpsi (start)
+     !
+     IF(MOD(icycl,2) == 0) THEN
+        !
+        ! Start sending dvpsi to dvpsi2 for next round
+        !
+        CALL west_mp_circ_shift_start(dvpsi,dvpsi2,icycl,inter_image_comm,reqs)
+        !
+        ! Use dvpsi this round
+        !
+        !$acc update device(dvpsi)
+        !
+        CALL glbrak_k(dvpsi,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+        !
+     ELSE
+        !
+        ! Start sending dvpsi2 to dvpsi for next round
+        !
+        CALL west_mp_circ_shift_start(dvpsi2,dvpsi,icycl,inter_image_comm,reqs)
+        !
+        ! Use dvpsi2 this round
+        !
+        !$acc update device(dvpsi2)
+        !
+        CALL glbrak_k(dvpsi2,x,tmp,npw,npwx,nblock_i,NLSTEPS*NRHS,idistr%nlocx,npol)
+        !
+     ENDIF
      !
      !$acc parallel loop collapse(3) present(brak,tmp)
      DO il = 1,NLSTEPS
@@ -226,11 +251,7 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
      !
      ! Cycle dvpsi (end)
      !
-#if defined(__CUDA)
      CALL mp_waitall(reqs)
-#else
-     CALL mp_circular_shift_left(dvpsi,icycl,inter_image_comm)
-#endif
      !
   ENDDO
   !
@@ -238,11 +259,14 @@ SUBROUTINE get_brak_hyper_parallel_complex(dvpsi,NRHS,NLSTEPS,x,brak,idistr)
   !
   CALL mp_sum(brak,intra_bgrp_comm)
   !
+#if !defined(__CUDA)
+  DEALLOCATE(tmp)
+  DEALLOCATE(dvpsi2)
+#endif
+  !
 #if defined(__CUDA)
   CALL stop_clock_gpu('brak')
 #else
-  DEALLOCATE(tmp)
-  !
   CALL stop_clock('brak')
 #endif
   !

@@ -57,9 +57,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
-#if defined(__CUDA)
-  USE west_gpu,             ONLY : memcpy_D2H
-#endif
   !
   IMPLICIT NONE
   !
@@ -94,9 +91,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
 #endif
   REAL(DP),ALLOCATABLE :: diago_tmp(:,:),braket_tmp(:,:,:)
   REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
-#if defined(__CUDA)
-  REAL(DP),ALLOCATABLE :: d_body2_ifr_tmp(:,:,:)
-#endif
   REAL(DP),ALLOCATABLE :: d_epsm1_ifr_trans(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr_trans(:,:,:)
   TYPE(bar_type) :: barra
@@ -161,10 +155,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      ALLOCATE( braket( pert%nglob, n_lanczos, pert%nloc ) )
      !$acc enter data create(braket)
      ALLOCATE( diago( n_lanczos, pert%nloc ) )
-#if defined(__CUDA)
-     ALLOCATE( d_body2_ifr_tmp( n_lanczos, pert%nloc, ifr%nloc ) )
-     !$acc enter data create(d_body2_ifr_tmp)
-#endif
   ENDIF
   IF( l_enable_off_diagonal ) THEN
      !
@@ -467,37 +457,47 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                  ENDDO
               ENDDO
               !
-              !$acc parallel present(braket,d_epsm1_ifr,d_body2_ifr_tmp)
-              !$acc loop collapse(3)
-              DO ifreq = 1, ifr_nloc
-                 DO ip = 1, pert_nloc
-                    DO il = 1, n_lanczos
-                       reduce_r = 0._DP
-                       !$acc loop reduction(+:reduce_r)
-                       DO glob_jp = 1, pert_nglob
-                          reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
-                       ENDDO
-#if defined(__CUDA)
-                       d_body2_ifr_tmp(il,ip,ifreq) = reduce_r
-#else
-                       IF(l_enable_off_diagonal .AND. jb <= ib) THEN
+              IF(l_enable_off_diagonal .AND. jb <= ib) THEN
+                 !$acc enter data create(d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
+                 !
+                 !$acc parallel present(braket,d_epsm1_ifr,d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
+                 !$acc loop collapse(3)
+                 DO ifreq = 1, ifr_nloc
+                    DO ip = 1, pert_nloc
+                       DO il = 1, n_lanczos
+                          reduce_r = 0._DP
+                          !$acc loop reduction(+:reduce_r)
+                          DO glob_jp = 1, pert_nglob
+                             reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                          ENDDO
                           d_body2_ifr_full(il,ip,ifreq,iloc_pair,iks_g) = reduce_r
-                       ELSE
-                          d_body2_ifr(il,ip,ifreq,ibloc,iks_g) = reduce_r
-                       ENDIF
-#endif
+                       ENDDO
                     ENDDO
                  ENDDO
-              ENDDO
-              !$acc end parallel
-              !
-#if defined(__CUDA)
-              IF(l_enable_off_diagonal .AND. jb <= ib) THEN
-                 CALL memcpy_D2H(d_body2_ifr_full(:,:,:,iloc_pair,iks_g),d_body2_ifr_tmp,n_lanczos*pert%nloc*ifr%nloc)
+                 !$acc end parallel
+                 !
+                 !$acc exit data copyout(d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
               ELSE
-                 CALL memcpy_D2H(d_body2_ifr(:,:,:,ibloc,iks_g),d_body2_ifr_tmp,n_lanczos*pert%nloc*ifr%nloc)
+                 !$acc enter data create(d_body2_ifr(:,:,:,ibloc,iks_g))
+                 !
+                 !$acc parallel present(braket,d_epsm1_ifr,d_body2_ifr(:,:,:,ibloc,iks_g))
+                 !$acc loop collapse(3)
+                 DO ifreq = 1, ifr_nloc
+                    DO ip = 1, pert_nloc
+                       DO il = 1, n_lanczos
+                          reduce_r = 0._DP
+                          !$acc loop reduction(+:reduce_r)
+                          DO glob_jp = 1, pert_nglob
+                             reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                          ENDDO
+                          d_body2_ifr(il,ip,ifreq,ibloc,iks_g) = reduce_r
+                       ENDDO
+                    ENDDO
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc exit data copyout(d_body2_ifr(:,:,:,ibloc,iks_g))
               ENDIF
-#endif
               !
            ENDIF
            !
@@ -540,10 +540,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      !$acc exit data delete(braket)
      DEALLOCATE( braket )
      DEALLOCATE( diago )
-#if defined(__CUDA)
-     !$acc exit data delete(d_body2_ifr_tmp)
-     DEALLOCATE( d_body2_ifr_tmp )
-#endif
   ENDIF
   !
   ! Get Sigma_X
@@ -812,9 +808,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
-#if defined(__CUDA)
-  USE west_gpu,             ONLY : memcpy_D2H
-#endif
   !
   IMPLICIT NONE
   !
@@ -849,9 +842,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ATTRIBUTES(PINNED) :: braket,overlap
 #endif
   COMPLEX(DP),ALLOCATABLE :: overlap_loc(:,:)
-#if defined(__CUDA)
-  COMPLEX(DP), ALLOCATABLE :: z_body2_ifr_q_tmp(:,:,:)
-#endif
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_trans_q(:,:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_trans_q(:,:,:,:)
   TYPE(bar_type) :: barra
@@ -918,10 +908,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   z_epsm1_ifr_trans_q = RESHAPE( z_epsm1_ifr_q, [pert%nloc,pert%nglob,ifr%nloc,q_grid%np], ORDER=[2,1,3,4] )
   z_epsm1_rfr_trans_q = RESHAPE( z_epsm1_rfr_q, [pert%nloc,pert%nglob,rfr%nloc,q_grid%np], ORDER=[2,1,3,4] )
   !$acc enter data copyin(z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
-#if defined(__CUDA)
-  ALLOCATE( z_body2_ifr_q_tmp( n_lanczos, pert%nloc, ifr%nloc ) )
-  !$acc enter data create(z_body2_ifr_q_tmp)
-#endif
   !
   pert_nloc = pert%nloc
   pert_nglob = pert%nglob
@@ -1009,7 +995,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            ENDDO ! ifreq
            !$acc end parallel
            !
-           !$acc update host(ztemp2(1:nbnd,1:ifr_nloc))
+           !$acc update host(ztemp2(:,1:ifr_nloc))
            !
            CALL mp_sum(ztemp2(:,1:ifr%nloc),inter_image_comm)
            !
@@ -1041,7 +1027,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            ENDDO ! ifreq
            !$acc end parallel
            !
-           !$acc update host(ztemp2(1:nbnd,1:rfr_nloc))
+           !$acc update host(ztemp2(:,1:rfr_nloc))
            !
            CALL mp_sum(ztemp2(:,1:rfr%nloc),inter_image_comm)
            !
@@ -1069,7 +1055,9 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
                  ENDDO
               ENDDO
               !
-              !$acc parallel present(braket,z_epsm1_ifr_q,z_body2_ifr_q_tmp)
+              !$acc enter data create(z_body2_ifr_q(:,:,:,ibloc,iks,iq))
+              !
+              !$acc parallel present(braket,z_epsm1_ifr_q,z_body2_ifr_q(:,:,:,ibloc,iks,iq))
               !$acc loop collapse(3)
               DO ifreq = 1, ifr_nloc
                  DO ip = 1, pert_nloc
@@ -1079,19 +1067,13 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
                        DO glob_jp = 1, pert_nglob
                           reduce = reduce+braket(glob_jp,il,ip)*z_epsm1_ifr_q(glob_jp,ip,ifreq,iq)
                        ENDDO
-#if defined(__CUDA)
-                       z_body2_ifr_q_tmp(il,ip,ifreq) = reduce
-#else
                        z_body2_ifr_q(il,ip,ifreq,ibloc,iks,iq) = reduce
-#endif
                     ENDDO
                  ENDDO
               ENDDO
               !$acc end parallel
               !
-#if defined(__CUDA)
-              CALL memcpy_D2H(z_body2_ifr_q(:,:,:,ibloc,iks,iq),z_body2_ifr_q_tmp,n_lanczos*pert%nloc*ifr%nloc)
-#endif
+              !$acc exit data copyout(z_body2_ifr_q(:,:,:,ibloc,iks,iq))
               !
            ENDIF
            !
@@ -1114,10 +1096,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   DEALLOCATE( ztemp2 )
   DEALLOCATE( z_epsm1_ifr_trans_q )
   DEALLOCATE( z_epsm1_rfr_trans_q )
-#if defined(__CUDA)
-  !$acc exit data delete(z_body2_ifr_q_tmp)
-  DEALLOCATE( z_body2_ifr_q_tmp )
-#endif
   IF( l_enable_lanczos ) THEN
      !$acc exit data delete(braket)
      DEALLOCATE( braket )

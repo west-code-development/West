@@ -68,20 +68,14 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   ALLOCATE( gk(3,npwx) )
   !
   dpsi = 0._DP
-!$OMP PARALLEL DEFAULT(none) SHARED(npw,gk,xk,ik,g,igk_k,tpiba,g2kin,current_k) PRIVATE(ig)
-!$OMP DO
   DO ig = 1, npw
      gk (1:3, ig) = (xk (1:3, ik) + g (1:3, igk_k (ig,current_k) ) ) * tpiba
      g2kin (ig) = SUM(gk (1:3, ig) **2 )
   ENDDO
-!$OMP ENDDO
-!$OMP END PARALLEL
   !
   ! this is the kinetic contribution to [H,x]: -2i (k+G)_ipol * psi
   !
   IF( noncolin ) THEN
-!$OMP PARALLEL DEFAULT(none) SHARED(m,npw,dpsi,at,ipol,gk,psi,npwx) PRIVATE(ibnd,ig)
-!$OMP DO
      DO ibnd = 1, m
         DO ig = 1, npw ! first spin-component
            dpsi(ig,ibnd) = SUM( at(1:3,ipol ) * gk(1:3,ig) ) * (0._DP,-2._DP) * psi(ig,ibnd)
@@ -90,18 +84,12 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
            dpsi(ig+npwx,ibnd) = SUM( at(1:3,ipol) * gk(1:3,ig) ) * (0._DP,-2._DP) * psi(ig+npwx,ibnd)
         ENDDO
      ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
   ELSE
-!$OMP PARALLEL DEFAULT(none) SHARED(m,npw,dpsi,at,ipol,gk,psi) PRIVATE(ibnd,ig)
-!$OMP DO COLLAPSE(2)
      DO ibnd = 1, m
         DO ig = 1, npw
            dpsi(ig,ibnd) = SUM(at(1:3,ipol)*gk(1:3,ig))*(0._DP,-2._DP)*psi(ig,ibnd)
         ENDDO
      ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
   ENDIF
   !
   IF( (.NOT. l_skip_nlpp) .AND. nkb > 0 ) THEN
@@ -118,8 +106,6 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
      !
      work = 0._DP
      !
-!$OMP PARALLEL DEFAULT(none) SHARED(npw,g2kin,gk) PRIVATE(ig)
-!$OMP DO
      DO ig = 1, npw
         IF (g2kin (ig) < tol) THEN
            gk (1, ig) = 0._DP
@@ -131,8 +117,6 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
            gk (3, ig) = gk (3, ig) / SQRT (g2kin (ig) )
         ENDIF
      ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
      !
      CALL gen_us_dj (ik, dvkb)
      !
@@ -279,7 +263,7 @@ END SUBROUTINE
 !
 #else
 !-----------------------------------------------------------------------
-SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
+SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   !-----------------------------------------------------------------------
   !
   ! On input : psi(m-bands)  = | psi_ik >
@@ -317,8 +301,8 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   INTEGER, INTENT(IN) :: ik ! k-point index
   INTEGER, INTENT(IN) :: m ! number of bands to process
   INTEGER, INTENT(IN) :: ipol ! polarization index
-  COMPLEX(DP), DEVICE, INTENT(IN) :: psi_d(npwx*npol,m) ! input wavefunctions
-  COMPLEX(DP), DEVICE, INTENT(OUT) :: dpsi_d(npwx*npol,m) ! output wavefunctions
+  COMPLEX(DP), INTENT(IN) :: psi(npwx*npol,m) ! input wavefunctions
+  COMPLEX(DP), INTENT(OUT) :: dpsi(npwx*npol,m) ! output wavefunctions
   LOGICAL, INTENT(IN) :: l_skip_nlpp ! skip NLPP
   !
   ! Workspace
@@ -351,18 +335,18 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
   !
   ! this is the kinetic contribution to [H,x]: -2i (k+G)_ipol * psi
   !
-  !$acc parallel loop collapse(2) present(gk)
+  !$acc parallel loop collapse(2) present(dpsi,gk,psi)
   DO ibnd = 1,m
      DO ig = 1,npwx
         IF(ig <= npw) THEN
-           dpsi_d(ig,ibnd) = (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig)) * (0._DP,-2._DP) * psi_d(ig,ibnd)
+           dpsi(ig,ibnd) = (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig)) * (0._DP,-2._DP) * psi(ig,ibnd)
            IF(noncolin) THEN
-              dpsi_d(ig+npwx,ibnd) = (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig)) * (0._DP,-2._DP) * psi_d(ig+npwx,ibnd)
+              dpsi(ig+npwx,ibnd) = (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig)) * (0._DP,-2._DP) * psi(ig+npwx,ibnd)
            ENDIF
         ELSE
-           dpsi_d(ig,ibnd) = 0._DP
+           dpsi(ig,ibnd) = 0._DP
            IF(noncolin) THEN
-              dpsi_d(ig+npwx,ibnd) = 0._DP
+              dpsi(ig+npwx,ibnd) = 0._DP
            ENDIF
         ENDIF
      ENDDO
@@ -393,43 +377,23 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      work(:,:) = 0._DP
      !$acc end kernels
      !
-     ijkb0 = 0
-     DO nt = 1,ntyp
-        nh_nt = nh(nt)
-        DO na = 1,nat
-           IF(nt == ityp(na)) THEN
-              !$acc parallel loop collapse(2) present(work,dvkb,gk)
-              DO ikb = 1,nh_nt
-                 DO ig = 1,npw
-                    jkb = ijkb0+ikb
-                    work(ig,jkb) = dvkb(ig,jkb) * (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig))
-                 ENDDO
-              ENDDO
-              !$acc end parallel
-              ijkb0 = ijkb0+nh(nt)
-           ENDIF
+     !$acc parallel loop collapse(2) present(work,dvkb,gk)
+     DO ikb = 1,nkb
+        DO ig = 1,npw
+           work(ig,ikb) = dvkb(ig,ikb) * (at1*gk(1,ig) + at2*gk(2,ig) + at3*gk(3,ig))
         ENDDO
      ENDDO
+     !$acc end parallel
      !
      CALL gen_us_dy(ik,at(1,ipol),dvkb)
      !
-     ijkb0 = 0
-     DO nt = 1,ntyp
-        nh_nt = nh(nt)
-        DO na = 1,nat
-           IF(nt == ityp(na)) THEN
-              !$acc parallel loop collapse(2) present(work,dvkb)
-              DO ikb = 1,nh_nt
-                 DO ig = 1,npw
-                    jkb = ijkb0+ikb
-                    work(ig,jkb) = work(ig,jkb) + dvkb(ig,jkb)
-                 ENDDO
-              ENDDO
-              !$acc end parallel
-              ijkb0 = ijkb0+nh(nt)
-           ENDIF
+     !$acc parallel loop collapse(2) present(work,dvkb)
+     DO ikb = 1,nkb
+        DO ig = 1,npw
+           work(ig,ikb) = work(ig,ikb) + dvkb(ig,ikb)
         ENDDO
      ENDDO
+     !$acc end parallel
      !
      ! In the case of gamma point systems becp2 is real
      ! so we have to include a factor of i before calling
@@ -446,8 +410,10 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
         !$acc end parallel
      ENDIF
      !
-     CALL calbec_cuf(offload_type,npw,vkb,psi_d,becp1,m)
-     CALL calbec_cuf(offload_type,npw,work,psi_d,becp2,m)
+     !$acc host_data use_device(psi)
+     CALL calbec_cuf(offload_type,npw,vkb,psi,becp1,m)
+     CALL calbec_cuf(offload_type,npw,work,psi,becp2,m)
+     !$acc end host_data
      !
      IF(noncolin) THEN
         !$acc kernels present(psc)
@@ -555,14 +521,14 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi_d, dpsi_d, l_skip_nlpp)
      ENDDO ! m
      !
      IF(noncolin) THEN
-        !$acc host_data use_device(vkb,psc,work)
-        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),vkb,npwx,psc,nkb,(1._DP,0._DP),dpsi_d,npwx)
-        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work,npwx,psc(1,1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
+        !$acc host_data use_device(vkb,psc,dpsi,work)
+        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),vkb,npwx,psc,nkb,(1._DP,0._DP),dpsi,npwx)
+        CALL ZGEMM('N','N',npw,m*npol,nkb,(1._DP,0._DP),work,npwx,psc(1,1,1,2),nkb,(1._DP,0._DP),dpsi,npwx)
         !$acc end host_data
      ELSE
-        !$acc host_data use_device(vkb,ps2,work)
-        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),vkb,npwx,ps2,nkb,(1._DP,0._DP),dpsi_d,npwx)
-        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work,npwx,ps2(1,1,2),nkb,(1._DP,0._DP),dpsi_d,npwx)
+        !$acc host_data use_device(vkb,ps2,dpsi,work)
+        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),vkb,npwx,ps2,nkb,(1._DP,0._DP),dpsi,npwx)
+        CALL ZGEMM('N','N',npw,m,nkb,(1._DP,0._DP),work,npwx,ps2(1,1,2),nkb,(1._DP,0._DP),dpsi,npwx)
         !$acc end host_data
      ENDIF
      !

@@ -33,7 +33,6 @@ SUBROUTINE wbse_lanczos_diago()
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wbse_bgrp,            ONLY : init_gather_bands
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,&
                                  & deallocate_bse_gpu,reallocate_ps_gpu
 #endif
@@ -296,11 +295,7 @@ SUBROUTINE wbse_lanczos_diago()
            IF(kpt_pool%nloc > 1) THEN
               IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
               CALL mp_bcast(evc,0,inter_image_comm)
-              !
-#if defined(__CUDA)
-              CALL using_evc(2)
-              CALL using_evc_d(0)
-#endif
+              !$acc update device(evc)
            ENDIF
            !
 #if defined(__CUDA)

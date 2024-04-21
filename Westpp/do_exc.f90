@@ -30,12 +30,9 @@ SUBROUTINE do_exc()
   USE distribution_center,   ONLY : pert,kpt_pool,band_group
   USE class_idistribute,     ONLY : idistribute
   USE types_bz_grid,         ONLY : k_grid
+  USE wavefunctions,         ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,         ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -49,7 +46,6 @@ SUBROUTINE do_exc()
   COMPLEX(DP) :: zcoeff
   REAL(DP), ALLOCATABLE :: r(:,:),dr(:),rho(:)
   COMPLEX(DP), ALLOCATABLE :: psic_aux(:),rho_aux(:)
-  !$acc declare device_resident(psic_aux,rho_aux)
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: n_ipol = 3
@@ -92,9 +88,12 @@ SUBROUTINE do_exc()
   ALLOCATE(r(dffts%nnr,n_ipol))
   ALLOCATE(dr(dffts%nnr))
   ALLOCATE(rho(dffts%nnr))
-  !$acc enter data create(rho) copyin(dvg_exc)
   ALLOCATE(rho_aux(dffts%nnr))
-  IF(.NOT. gamma_only) ALLOCATE(psic_aux(dffts%nnr))
+  !$acc enter data create(rho,rho_aux) copyin(dvg_exc)
+  IF(.NOT. gamma_only) THEN
+     ALLOCATE(psic_aux(dffts%nnr))
+     !$acc enter data create(psic_aux)
+  ENDIF
   !
   r(:,:) = 0._DP
   !
@@ -170,16 +169,9 @@ SUBROUTINE do_exc()
         ! ... read in wavefunctions from the previous iteration
         !
         IF(k_grid%nps > 1) THEN
-#if defined(__CUDA)
-           IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-           CALL mp_bcast(evc_host,0,inter_image_comm)
-           !
-           CALL using_evc(2)
-           CALL using_evc_d(0)
-#else
-           IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-           CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+           IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+           CALL mp_bcast(evc,0,inter_image_comm)
+           !$acc update device(evc)
         ENDIF
         !
         ! CYCLE here because of mp_bcast above
@@ -196,9 +188,7 @@ SUBROUTINE do_exc()
            !
            IF(gamma_only) THEN
               !
-              !$acc host_data use_device(dvg_exc)
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),dvg_exc(:,ibnd,iks,lexc),psic,'Wave')
-              !$acc end host_data
+              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),dvg_exc(:,ibnd,iks,lexc),psic,'Wave')
               !
               rcoeff = 0._DP
               IF(drmin_id > 0) THEN
@@ -215,10 +205,8 @@ SUBROUTINE do_exc()
               !
            ELSE
               !
-              CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave',igk_k(:,current_k))
-              !$acc host_data use_device(dvg_exc,psic_aux)
+              CALL single_invfft_k(dffts,npw,npwx,evc(:,ibnd),psic,'Wave',igk_k(:,current_k))
               CALL single_invfft_k(dffts,npw,npwx,dvg_exc(:,ibnd,iks,lexc),psic_aux,'Wave',igk_k(:,current_k))
-              !$acc end host_data
               !
               zcoeff = 0._DP
               IF(drmin_id > 0) THEN
@@ -273,10 +261,13 @@ SUBROUTINE do_exc()
   !
   DEALLOCATE(r)
   DEALLOCATE(dr)
-  !$acc exit data delete(rho,dvg_exc)
+  !$acc exit data delete(rho,rho_aux,dvg_exc)
   DEALLOCATE(rho)
   DEALLOCATE(rho_aux)
-  IF(.NOT. gamma_only) DEALLOCATE(psic_aux)
+  IF(.NOT. gamma_only) THEN
+     !$acc exit data delete(psic_aux)
+     DEALLOCATE(psic_aux)
+  ENDIF
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()

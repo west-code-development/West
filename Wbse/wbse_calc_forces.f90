@@ -42,10 +42,8 @@ SUBROUTINE wbse_calc_forces(dvg_exc_tmp)
   INTEGER :: iks, n, ia, ipol
   INTEGER, ALLOCATABLE :: reqs(:)
   REAL(DP), ALLOCATABLE :: forces(:), dvgdvg_mat(:,:,:)
-  !$acc declare device_resident(dvgdvg_mat)
   REAL(DP) :: sumforces
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec(:,:,:), zvector(:,:,:), drhox1(:,:), drhox2(:,:)
-  !$acc declare device_resident(z_rhs_vec,zvector)
   TYPE(json_file) :: json
   INTEGER :: iunit
   !
@@ -59,6 +57,7 @@ SUBROUTINE wbse_calc_forces(dvg_exc_tmp)
   ALLOCATE(forces(n))
   forces(:) = 0._DP
   ALLOCATE(dvgdvg_mat(nbndval0x-n_trunc_bands, band_group%nlocx, kpt_pool%nloc))
+  !$acc enter data create(dvgdvg_mat)
   ALLOCATE(drhox1(dffts%nnr, nspin))
   !
   DO iks = 1,kpt_pool%nloc
@@ -92,6 +91,7 @@ SUBROUTINE wbse_calc_forces(dvg_exc_tmp)
   !
   ALLOCATE(z_rhs_vec(npwx, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(zvector(npwx, band_group%nlocx, kpt_pool%nloc))
+  !$acc enter data create(z_rhs_vec,zvector)
   !
 #if defined(__CUDA)
   CALL allocate_bse_gpu(band_group%nlocx)
@@ -107,6 +107,7 @@ SUBROUTINE wbse_calc_forces(dvg_exc_tmp)
   !
   CALL wbse_forces_drhoz(n, zvector, forces)
   !
+  !$acc exit data delete(z_rhs_vec,zvector)
   DEALLOCATE(z_rhs_vec)
   DEALLOCATE(zvector)
   !
@@ -178,6 +179,7 @@ SUBROUTINE wbse_calc_forces(dvg_exc_tmp)
   !
   DEALLOCATE(reqs)
   DEALLOCATE(forces)
+  !$acc exit data delete(dvgdvg_mat)
   DEALLOCATE(dvgdvg_mat)
   DEALLOCATE(drhox1)
   DEALLOCATE(drhox2)
@@ -204,11 +206,7 @@ SUBROUTINE wbse_calc_drhox1(dvg_exc_tmp, drhox1)
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_pool_comm,inter_bgrp_comm
   USE io_push,              ONLY : io_push_title
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : psic=>psic_d
-#else
   USE wavefunctions,        ONLY : psic
-#endif
   !
   IMPLICIT NONE
   !
@@ -294,9 +292,7 @@ SUBROUTINE wbse_calc_drhox1(dvg_exc_tmp, drhox1)
         w1 = wg(ibnd,iks_do)/omega
         w2 = wg(jbnd,iks_do)/omega
         !
-        !$acc host_data use_device(dvg_exc_tmp)
         CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks),dvg_exc_tmp(:,lbnd+1,iks),psic,'Wave')
-        !$acc end host_data
         !
         !$acc parallel loop present(tmp_r)
         DO ir = 1,dffts_nnr
@@ -317,9 +313,7 @@ SUBROUTINE wbse_calc_drhox1(dvg_exc_tmp, drhox1)
         !
         w1 = wg(ibnd,iks_do)/omega
         !
-        !$acc host_data use_device(dvg_exc_tmp)
         CALL single_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks),psic,'Wave')
-        !$acc end host_data
         !
         !$acc parallel loop present(tmp_r)
         DO ir = 1,dffts_nnr
@@ -386,7 +380,6 @@ SUBROUTINE wbse_forces_drhox1(n, dvg_exc_tmp, drhox1, forces)
   ! Workspace
   !
   COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:,:)
-  !$acc declare device_resident(dvpsi)
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, ipol, lbnd, ibnd, ig
   REAL(DP) :: reduce, factor, this_wk
   REAL(DP), ALLOCATABLE :: forces_drhox1(:), forcelc(:,:), rdrhox1(:,:)
@@ -410,6 +403,7 @@ SUBROUTINE wbse_forces_drhox1(n, dvg_exc_tmp, drhox1, forces)
   ALLOCATE(forces_drhox1(n))
   ALLOCATE(forcelc(3, nat))
   ALLOCATE(dvpsi(npwx, band_group%nlocx, 3))
+  !$acc enter data create(dvpsi)
   ALLOCATE(rdrhox1(dffts%nnr, nspin))
   !
   forces_drhox1(:) = 0._DP
@@ -554,6 +548,7 @@ SUBROUTINE wbse_forces_drhox1(n, dvg_exc_tmp, drhox1, forces)
   !
   DEALLOCATE(forces_drhox1)
   DEALLOCATE(forcelc)
+  !$acc exit data delete(dvpsi)
   DEALLOCATE(dvpsi)
   DEALLOCATE(rdrhox1)
   !
@@ -636,8 +631,7 @@ SUBROUTINE wbse_calc_dvgdvg_mat(dvg_exc_tmp, dvgdvg_mat)
      !$acc end parallel
      !
      IF(gstart == 2) THEN
-        !$acc parallel present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
-        !$acc loop collapse(2)
+        !$acc parallel loop collapse(2) present(dvgdvg_mat,evc1_all,dvg_exc_tmp)
         DO lbnd = 1,nbnd_do
            DO ibnd = 1,nbndval - n_trunc_bands
               dvgdvg_mat(ibnd,lbnd,iks) = dvgdvg_mat(ibnd,lbnd,iks) &
@@ -675,12 +669,7 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_pool_comm,inter_bgrp_comm
   USE io_push,              ONLY : io_push_title
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
-#endif
+  USE wavefunctions,        ONLY : evc,psic
   !
   IMPLICIT NONE
   !
@@ -695,7 +684,6 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
   INTEGER :: barra_load
   REAL(DP) :: prod, w1
   REAL(DP), ALLOCATABLE :: aux_r(:)
-  !$acc declare device_resident(aux_r)
   TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: flks(2) = [2,1]
   !
@@ -704,8 +692,7 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
   dffts_nnr = dffts%nnr
   !
   ALLOCATE(aux_r(dffts%nnr))
-  !
-  !$acc enter data create(drhox2)
+  !$acc enter data create(aux_r,drhox2)
   !
   !$acc kernels present(drhox2)
   drhox2(:,:) = (0._DP,0._DP)
@@ -759,16 +746,9 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
      ! ... read GS wavefunctions
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      DO lbnd = 1,nbnd_do
@@ -777,7 +757,7 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
         !
         w1 = wg(ibnd,iks_do)/omega
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
         !
         !$acc parallel loop present(aux_r)
         DO ir = 1,dffts_nnr
@@ -791,7 +771,7 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
            !
            IF(jbnd < nbndval-n_trunc_bands) THEN
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,jbndp),evc_work(:,jbndp+1),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,jbndp),evc(:,jbndp+1),psic,'Wave')
               !
               !$acc parallel loop present(aux_r,dvgdvg_mat,drhox2)
               DO ir = 1,dffts_nnr
@@ -803,7 +783,7 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
               !
            ELSE
               !
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,jbndp),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,jbndp),psic,'Wave')
               !
               !$acc parallel loop present(aux_r,dvgdvg_mat,drhox2)
               DO ir = 1,dffts_nnr
@@ -829,6 +809,7 @@ SUBROUTINE wbse_calc_drhox2(dvgdvg_mat, drhox2)
   !
   CALL stop_bar_type(barra,'drhox2')
   !
+  !$acc exit data delete(aux_r)
   DEALLOCATE(aux_r)
   !
 END SUBROUTINE
@@ -858,13 +839,10 @@ SUBROUTINE wbse_forces_drhox2(n, dvgdvg_mat, drhox2, forces)
   USE json_module,          ONLY : json_file
   USE mp_world,             ONLY : mpime,root
   USE io_push,              ONLY : io_push_title
+  USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
   USE west_gpu,             ONLY : allocate_forces_gpu,deallocate_forces_gpu
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE cublas
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc
 #endif
   !
   IMPLICIT NONE
@@ -879,7 +857,6 @@ SUBROUTINE wbse_forces_drhox2(n, dvgdvg_mat, drhox2, forces)
   ! Workspace
   !
   COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:,:), aux1(:,:), aux2(:,:)
-  !$acc declare device_resident(dvpsi,aux1,aux2)
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, ipol, lbnd, ibnd, ig
   INTEGER :: band_group_myoffset
   REAL(DP) :: reduce, factor, this_wk
@@ -905,10 +882,11 @@ SUBROUTINE wbse_forces_drhox2(n, dvgdvg_mat, drhox2, forces)
   !
   ALLOCATE(forces_drhox2(n))
   ALLOCATE(forcelc(3, nat))
-  ALLOCATE(dvpsi(npwx, band_group%nlocx, 3))
   ALLOCATE(rdrhox2(dffts%nnr, nspin))
+  ALLOCATE(dvpsi(npwx, band_group%nlocx, 3))
   ALLOCATE(aux1(npwx, band_group%nlocx))
   ALLOCATE(aux2(npwx, band_group%nlocx))
+  !$acc enter data create(dvpsi,aux1,aux2)
   !
   forces_drhox2(:) = 0._DP
   !
@@ -955,26 +933,19 @@ SUBROUTINE wbse_forces_drhox2(n, dvgdvg_mat, drhox2, forces)
      ! ... read in GS wavefunctions iks
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
-     !$acc parallel loop collapse(2) present(aux1)
+     !$acc parallel loop collapse(2) present(aux1,evc)
      DO lbnd = 1,nbnd_do
         !
         ! ibnd = band_group%l2g(lbnd)+n_trunc_bands
         !
         DO ig = 1,npw
            ibnd = band_group_myoffset+lbnd+n_trunc_bands
-           aux1(ig,lbnd) = evc_work(ig,ibnd)
+           aux1(ig,lbnd) = evc(ig,ibnd)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -987,9 +958,9 @@ SUBROUTINE wbse_forces_drhox2(n, dvgdvg_mat, drhox2, forces)
         !
         ! 2) forces_drhox2 = < evc_iv2 | dvpsi_ia_iv >
         !
-        !$acc host_data use_device(dvgdvg_mat,aux2)
+        !$acc host_data use_device(evc,dvgdvg_mat,aux2)
         CALL DGEMM('N', 'N', 2*npw, band_group%nloc, nbndval-n_trunc_bands, 1._DP, &
-        & evc_work(1,n_trunc_bands+1), 2*npwx, dvgdvg_mat(1,1,iks), nbndval0x-n_trunc_bands, &
+        & evc(1,n_trunc_bands+1), 2*npwx, dvgdvg_mat(1,1,iks), nbndval0x-n_trunc_bands, &
         & 0._DP, aux2, 2*npwx)
         !$acc end host_data
         !
@@ -1085,8 +1056,9 @@ SUBROUTINE wbse_forces_drhox2(n, dvgdvg_mat, drhox2, forces)
   !
   DEALLOCATE(forces_drhox2)
   DEALLOCATE(forcelc)
-  DEALLOCATE(dvpsi)
   DEALLOCATE(rdrhox2)
+  !$acc exit data delete(dvpsi,aux1,aux2)
+  DEALLOCATE(dvpsi)
   DEALLOCATE(aux1)
   DEALLOCATE(aux2)
   !
@@ -1120,12 +1092,9 @@ SUBROUTINE wbse_forces_drhoz(n, zvector, forces)
   USE json_module,          ONLY : json_file
   USE mp_world,             ONLY : mpime,root
   USE io_push,              ONLY : io_push_title
+  USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
   USE west_gpu,             ONLY : allocate_forces_gpu,deallocate_forces_gpu
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wavefunctions,        ONLY : evc_host=>evc
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc
 #endif
   !
   IMPLICIT NONE
@@ -1139,7 +1108,6 @@ SUBROUTINE wbse_forces_drhoz(n, zvector, forces)
   ! Workspace
   !
   COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:,:), aux1(:,:), drhoz(:,:)
-  !$acc declare device_resident(dvpsi,aux1)
   INTEGER :: iks, iks_do, nbndval, nbnd_do, ia, ipol, lbnd, ibnd, ig
   INTEGER :: band_group_myoffset
   REAL(DP) :: reduce, factor, this_wk
@@ -1164,11 +1132,11 @@ SUBROUTINE wbse_forces_drhoz(n, zvector, forces)
   !
   ALLOCATE(forces_drhoz(n))
   ALLOCATE(forcelc(3, nat))
-  ALLOCATE(dvpsi(npwx, band_group%nlocx, 3))
   ALLOCATE(rdrhoz(dffts%nnr, nspin))
+  ALLOCATE(dvpsi(npwx, band_group%nlocx, 3))
   ALLOCATE(drhoz(dffts%nnr, nspin))
-  !$acc enter data create(drhoz)
   ALLOCATE(aux1(npwx, band_group%nlocx))
+  !$acc enter data create(dvpsi,drhoz,aux1)
   !
   forces_drhoz(:) = 0._DP
   !
@@ -1217,26 +1185,19 @@ SUBROUTINE wbse_forces_drhoz(n, zvector, forces)
      ! ... read in GS wavefunctions iks
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
-     !$acc parallel loop collapse(2) present(aux1)
+     !$acc parallel loop collapse(2) present(aux1,evc)
      DO lbnd = 1,nbnd_do
         !
         ! ibnd = band_group%l2g(lbnd)+n_trunc_bands
         !
         DO ig = 1,npw
            ibnd = band_group_myoffset+lbnd+n_trunc_bands
-           aux1(ig,lbnd) = evc_work(ig,ibnd)
+           aux1(ig,lbnd) = evc(ig,ibnd)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -1345,9 +1306,9 @@ SUBROUTINE wbse_forces_drhoz(n, zvector, forces)
   !
   DEALLOCATE(forces_drhoz)
   DEALLOCATE(forcelc)
-  DEALLOCATE(dvpsi)
   DEALLOCATE(rdrhoz)
-  !$acc exit data delete(drhoz)
+  !$acc exit data delete(dvpsi,drhoz,aux1)
+  DEALLOCATE(dvpsi)
   DEALLOCATE(drhoz)
   DEALLOCATE(aux1)
   !
@@ -1366,15 +1327,13 @@ SUBROUTINE wbse_get_dvpsi_gamma_nonlocal(i_at, dvg_tmp, dvpsi)
   USE gvect,                ONLY : g,gstart
   USE noncollin_module,     ONLY : npol
   USE uspp_param,           ONLY : nh
+  USE uspp,                 ONLY : dvan,vkb
   USE pwcom,                ONLY : npw,npwx
   USE mp_bands,             ONLY : intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
   USE distribution_center,  ONLY : band_group
 #if defined(__CUDA)
-  USE uspp,                 ONLY : dvan_work=>dvan_d,vkb
   USE cublas
-#else
-  USE uspp,                 ONLY : dvan_work=>dvan,vkb
 #endif
   !
   IMPLICIT NONE
@@ -1392,7 +1351,6 @@ SUBROUTINE wbse_get_dvpsi_gamma_nonlocal(i_at, dvg_tmp, dvpsi)
   COMPLEX(DP) :: factor
   REAL(DP), ALLOCATABLE :: bec1(:,:), bec2(:,:)
   COMPLEX(DP), ALLOCATABLE :: work(:,:)
-  !$acc declare device_resident(bec1,bec2,work)
   !
   !$acc kernels present(dvpsi)
   dvpsi(:,:,:) = (0._DP,0._DP)
@@ -1418,6 +1376,7 @@ SUBROUTINE wbse_get_dvpsi_gamma_nonlocal(i_at, dvg_tmp, dvpsi)
   ALLOCATE(work(npwx,nh_nt))
   ALLOCATE(bec1(nh_nt,band_group%nlocx))
   ALLOCATE(bec2(nh_nt,band_group%nlocx))
+  !$acc enter data create(work,bec1,bec2)
   !
   DO ic = 1,3
      !
@@ -1450,10 +1409,10 @@ SUBROUTINE wbse_get_dvpsi_gamma_nonlocal(i_at, dvg_tmp, dvpsi)
      CALL mp_sum(bec1,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc parallel loop collapse(2) present(bec1)
+     !$acc parallel loop collapse(2) present(bec1,dvan)
      DO ib = 1,band_group_nloc
         DO ih = 1,nh_nt
-           bec1(ih,ib) = dvan_work(ih,ih,nt)*bec1(ih,ib)
+           bec1(ih,ib) = dvan(ih,ih,nt)*bec1(ih,ib)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -1484,10 +1443,10 @@ SUBROUTINE wbse_get_dvpsi_gamma_nonlocal(i_at, dvg_tmp, dvpsi)
      CALL mp_sum(bec2,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc parallel loop collapse(2) present(bec2)
+     !$acc parallel loop collapse(2) present(bec2,dvan)
      DO ib = 1,band_group_nloc
         DO ih = 1,nh_nt
-           bec2(ih,ib) = dvan_work(ih,ih,nt)*bec2(ih,ib)
+           bec2(ih,ib) = dvan(ih,ih,nt)*bec2(ih,ib)
         ENDDO
      ENDDO
      !$acc end parallel
@@ -1499,6 +1458,7 @@ SUBROUTINE wbse_get_dvpsi_gamma_nonlocal(i_at, dvg_tmp, dvpsi)
      !
   ENDDO
   !
+  !$acc exit data delete(work,bec1,bec2)
   DEALLOCATE(work)
   DEALLOCATE(bec1)
   DEALLOCATE(bec2)

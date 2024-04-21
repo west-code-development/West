@@ -28,7 +28,7 @@ SUBROUTINE calc_tau()
   USE distribution_center,  ONLY : pert,kpt_pool
   USE qbox_interface,       ONLY : init_qbox,finalize_qbox
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
 #endif
   !
   IMPLICIT NONE
@@ -41,6 +41,8 @@ SUBROUTINE calc_tau()
   !
 #if defined(__CUDA)
   IF(.NOT. l_pdep) CALL errore('calc_tau','GPU not implemented for FF_Qbox',1)
+  !
+  CALL allocate_gpu()
 #endif
   !
   IF(l_bse) THEN
@@ -68,11 +70,7 @@ SUBROUTINE calc_tau()
      IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-        !
-#if defined(__CUDA)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#endif
+        !$acc update device(evc)
      ENDIF
      !
      IF((.NOT. spin_resolve) .OR. (spin_resolve .AND. current_spin == spin_channel)) THEN
@@ -89,6 +87,10 @@ SUBROUTINE calc_tau()
         CALL finalize_qbox()
      ENDIF
   ENDIF
+  !
+#if defined(__CUDA)
+  CALL deallocate_gpu()
+#endif
   !
 END SUBROUTINE
 !
@@ -122,12 +124,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wbse_dv,              ONLY : wbse_dv_setup,wbse_dv_of_drho
   USE distribution_center,  ONLY : pert
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : evc_work=>evc_d,psic=>psic_d
-  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
-#endif
+  USE wavefunctions,        ONLY : evc,psic
   !
   IMPLICIT NONE
   !
@@ -153,7 +150,6 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   REAL(DP), ALLOCATABLE :: aux_rr(:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux1_r(:,:),aux1_g(:)
   REAL(DP), ALLOCATABLE :: frspin(:,:)
-  !$acc declare device_resident(aux_r)
   !
   CHARACTER(LEN=:), ALLOCATABLE :: lockfile
   CHARACTER(LEN=:), ALLOCATABLE :: fname
@@ -190,10 +186,6 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   !
   nbnd_do = nbndval-n_trunc_bands
   dffts_nnr = dffts%nnr
-  !
-#if defined(__CUDA)
-  CALL allocate_gpu()
-#endif
   !
   tmp_size = nbnd_do*nbnd_do
   ALLOCATE(idx_matrix(tmp_size,2))
@@ -242,7 +234,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   ALLOCATE(tau(npwx))
   ALLOCATE(aux_r(dffts%nnr))
   ALLOCATE(aux1_g(npwx))
-  !$acc enter data create(tau,aux1_g) copyin(dvg)
+  !$acc enter data create(tau,aux_r,aux1_g) copyin(dvg)
   IF(l_pdep) THEN
      ALLOCATE(dotp(pert%nloc))
      !$acc enter data create(dotp)
@@ -274,11 +266,9 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
      IF(.NOT. l_skip) THEN
         !
         IF(l_local_repr) THEN
-           !$acc host_data use_device(evc_loc)
            CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),evc_loc(:,jbnd),psic,'Wave')
-           !$acc end host_data
         ELSE
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd_g),evc_work(:,jbnd_g),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd_g),evc(:,jbnd_g),psic,'Wave')
         ENDIF
         !
         !$acc parallel loop present(aux_r)
@@ -289,9 +279,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
         !
         ! aux_r -> aux1_g
         !
-        !$acc host_data use_device(aux_r,aux1_g)
         CALL single_fwfft_gamma(dffts,npw,npwx,aux_r,aux1_g,'Wave')
-        !$acc end host_data
         !
         ! vc in fock like term
         !
@@ -299,7 +287,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
         tau(:) = (0._DP,0._DP)
         !$acc end kernels
         !
-        !$acc parallel loop present(tau,aux1_g,pot3D)
+        !$acc parallel loop present(tau,aux1_g,pot3D,pot3D%sqvc)
         DO ig = 1,npw
            tau(ig) = aux1_g(ig)*(pot3D%sqvc(ig)**2)
         ENDDO
@@ -309,15 +297,13 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
            !
            IF(l_pdep) THEN
               !
-              !$acc parallel loop present(aux1_g,pot3D)
+              !$acc parallel loop present(aux1_g,pot3D,pot3D%sqvc)
               DO ig = 1,npw
                  aux1_g(ig) = aux1_g(ig)*pot3D%sqvc(ig)
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(aux1_g,dvg,dotp)
               CALL glbrak_gamma(aux1_g,dvg,dotp,npw,npwx,1,pert%nloc,1,npol)
-              !$acc end host_data
               !
               !$acc update host(dotp)
               !
@@ -346,7 +332,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
                  !$acc update device(aux1_g)
               ENDIF
               !
-              !$acc parallel loop present(tau,aux1_g,pot3D)
+              !$acc parallel loop present(tau,aux1_g,pot3D,pot3D%sqvc)
               DO ig = 1,npw
                  tau(ig) = tau(ig)+aux1_g(ig)*pot3D%sqvc(ig)
               ENDDO
@@ -497,7 +483,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
   !
   CALL stop_bar_type(barra,'tau')
   !
-  !$acc exit data delete(dvg,tau,aux1_g)
+  !$acc exit data delete(dvg,tau,aux_r,aux1_g)
   DEALLOCATE(tau)
   DEALLOCATE(aux_r)
   DEALLOCATE(aux1_g)
@@ -505,10 +491,6 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
      !$acc exit data delete(dotp)
      DEALLOCATE(dotp)
   ENDIF
-  !
-#if defined(__CUDA)
-  CALL deallocate_gpu()
-#endif
   !
   DEALLOCATE(idx_matrix)
   !

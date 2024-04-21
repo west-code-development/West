@@ -23,14 +23,11 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
   USE control_flags,        ONLY : gamma_only
   USE noncollin_module,     ONLY : npol
   USE westcom,              ONLY : et_qp,delta_qp
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : evc=>evc_d
-  USE wvfct_gpum,           ONLY : et=>et_d
-  USE west_gpu,             ONLY : ps_r,ps_c
-  USE cublas
-#else
   USE wavefunctions,        ONLY : evc
   USE wvfct,                ONLY : et
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : ps_r,ps_c
+  USE cublas
 #endif
   !
   IMPLICIT NONE
@@ -67,15 +64,13 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      ps_r = 0.0_DP
 #endif
      !
-     !$acc host_data use_device(f,ps_r)
      CALL glbrak_gamma(evc,f,ps_r,npw,npwx,nbnd,m,nbnd,npol)
-     !$acc end host_data
      !
      !$acc host_data use_device(ps_r)
      CALL mp_sum(ps_r,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc parallel loop collapse(2) present(ps_r,et_qp)
+     !$acc parallel loop collapse(2) present(ps_r,et_qp,et)
      DO ibnd = 1,m
         DO jbnd = 1,nbnd
            ps_r(jbnd,ibnd) = ps_r(jbnd,ibnd)*(et_qp(jbnd,iks)-et(jbnd,iks)-delta)
@@ -83,7 +78,7 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      ENDDO
      !$acc end parallel
      !
-     !$acc host_data use_device(ps_r,g)
+     !$acc host_data use_device(evc,ps_r,g)
      CALL DGEMM('N','N',2*npwx*npol,m,nbnd,1.0_DP,evc,2*npwx*npol,ps_r,nbnd,1.0_DP,g,2*npwx*npol)
      !$acc end host_data
      !
@@ -94,15 +89,13 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      ps_c = (0.0_DP,0.0_DP)
 #endif
      !
-     !$acc host_data use_device(f,ps_c)
      CALL glbrak_k(evc,f,ps_c,npw,npwx,nbnd,m,nbnd,npol)
-     !$acc end host_data
      !
      !$acc host_data use_device(ps_c)
      CALL mp_sum(ps_c,intra_bgrp_comm)
      !$acc end host_data
      !
-     !$acc parallel loop collapse(2) present(ps_c,et_qp)
+     !$acc parallel loop collapse(2) present(ps_c,et_qp,et)
      DO ibnd = 1,m
         DO jbnd = 1,nbnd
            ps_c(jbnd,ibnd) = ps_c(jbnd,ibnd)*(et_qp(jbnd,iks)-et(jbnd,iks)-delta)
@@ -110,7 +103,7 @@ SUBROUTINE apply_hqp_to_m_wfcs(iks,m,f,g)
      ENDDO
      !$acc end parallel
      !
-     !$acc host_data use_device(ps_c,g)
+     !$acc host_data use_device(evc,ps_c,g)
      CALL ZGEMM('N','N',npwx*npol,m,nbnd,(1.0_DP,0.0_DP),evc,npwx*npol,ps_c,nbnd,(1.0_DP,0.0_DP),g,npwx*npol)
      !$acc end host_data
      !

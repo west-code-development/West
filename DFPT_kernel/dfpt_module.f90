@@ -45,16 +45,13 @@ MODULE dfpt_module
       USE westcom,               ONLY : iuwfc,lrwfc,npwqx,npwq,igq_q,fftdriver,l_frac_occ,nbnd_occ,&
                                       & nbnd_occ_full,occupation,docc_thr,de_thr
       USE distribution_center,   ONLY : kpt_pool,band_group
+      USE wavefunctions,         ONLY : evc,psic
+      USE wvfct,                 ONLY : et
 #if defined(__CUDA)
-      USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-      USE wavefunctions,         ONLY : evc_host=>evc
-      USE wvfct_gpum,            ONLY : et=>et_d
       USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,allocate_linsolve_gpu,&
                                       & deallocate_linsolve_gpu,reallocate_ps_gpu
       USE cublas
 #else
-      USE wavefunctions,         ONLY : evc_work=>evc,psic
-      USE wvfct,                 ONLY : et
 #endif
       !
       IMPLICIT NONE
@@ -79,13 +76,11 @@ MODULE dfpt_module
       REAL(DP), ALLOCATABLE :: eprec(:)
       REAL(DP), ALLOCATABLE :: eprec_loc(:)
       REAL(DP), ALLOCATABLE :: et_loc(:)
-      !$acc declare device_resident(eprec,eprec_loc,et_loc)
       REAL(DP), ALLOCATABLE :: psi_dvpsi(:,:)
       !
       COMPLEX(DP), ALLOCATABLE :: dvpsi(:,:),dpsi(:,:)
       COMPLEX(DP), ALLOCATABLE :: aux_r(:),aux_g(:)
       COMPLEX(DP), ALLOCATABLE :: dpsic(:)
-      !$acc declare device_resident(dvpsi,dpsi,aux_r,dpsic)
       !
       COMPLEX(DP), ALLOCATABLE :: evckmq(:,:)
 #if defined(__CUDA)
@@ -119,13 +114,13 @@ MODULE dfpt_module
       ALLOCATE(dpsi(npwx*npol,band_group%nloc))
       ALLOCATE(aux_r(dffts%nnr))
       ALLOCATE(aux_g(npwqx))
-      !$acc enter data create(aux_g)
+      !$acc enter data create(eprec,eprec_loc,et_loc,dvpsi,dpsi,aux_r,aux_g)
       !
       IF (.NOT. gamma_only) THEN
          ALLOCATE(dpsic(dffts%nnr))
          ALLOCATE(phase(dffts%nnr))
          ALLOCATE(evckmq(npwx*npol,nbnd))
-         !$acc enter data create(phase,evckmq)
+         !$acc enter data create(dpsic,phase,evckmq)
       ENDIF
       !
 #if defined(__CUDA)
@@ -142,7 +137,7 @@ MODULE dfpt_module
       ENDIF
       CALL io_push_title(TRIM(ADJUSTL(title)))
       !
-      dng = zero
+      dng(:,:) = zero
       !
       CALL start_bar_type( barra, 'dfpt', MAX(m,1) * kpt_pool%nloc )
       !
@@ -183,16 +178,9 @@ MODULE dfpt_module
          ! ... Read wavefuctions at k in G space, for all bands, and store them in evc
          !
          IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-            IF ( my_image_id == 0 ) CALL get_buffer( evc_host, lrwfc, iuwfc, iks )
-            CALL mp_bcast( evc_host, 0, inter_image_comm )
-            !
-            CALL using_evc(2)
-            CALL using_evc_d(0)
-#else
-            IF ( my_image_id == 0 ) CALL get_buffer( evc_work, lrwfc, iuwfc, iks )
-            CALL mp_bcast( evc_work, 0, inter_image_comm )
-#endif
+            IF ( my_image_id == 0 ) CALL get_buffer( evc, lrwfc, iuwfc, iks )
+            CALL mp_bcast( evc, 0, inter_image_comm )
+            !$acc update device(evc)
          ENDIF
          !
          IF (gamma_only) THEN
@@ -221,13 +209,11 @@ MODULE dfpt_module
             !$acc update device(evckmq,phase)
          ENDIF
          !
-         !$acc host_data use_device(eprec)
-         CALL set_eprec(nbndval,evc_work,eprec)
-         !$acc end host_data
+         CALL set_eprec(nbndval,evc,eprec)
          !
          band_group_nloc = band_group%nloc
          !
-         !$acc parallel loop present(eprec_loc,eprec,et_loc)
+         !$acc parallel loop present(eprec_loc,eprec,et_loc,et)
          DO lbnd = 1,band_group_nloc
             !
             ! ibnd = band_group%l2g(lbnd)
@@ -246,13 +232,11 @@ MODULE dfpt_module
             !
             ! ... inverse Fourier transform of the perturbation: (q+)G ---> R
             !
-            !$acc host_data use_device(aux_g,aux_r)
             IF (gamma_only) THEN
                CALL single_invfft_gamma(dffts,npwq,npwqx,aux_g,aux_r,TRIM(fftdriver))
             ELSE
                CALL single_invfft_k(dffts,npwq,npwqx,aux_g,aux_r,'Wave',igq_q(:,iq))
             ENDIF
-            !$acc end host_data
             !
             ! The perturbation is in aux_r
             !
@@ -264,7 +248,7 @@ MODULE dfpt_module
                   ibnd = band_group%l2g(lbnd)
                   jbnd = band_group%l2g(lbnd+1)
                   !
-                  CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+                  CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
                   !
                   !$acc parallel loop present(aux_r)
                   DO ir = 1,dffts_nnr
@@ -272,9 +256,7 @@ MODULE dfpt_module
                   ENDDO
                   !$acc end parallel
                   !
-                  !$acc host_data use_device(dvpsi)
                   CALL double_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(:,lbnd),dvpsi(:,lbnd+1),'Wave')
-                  !$acc end host_data
                   !
                ENDDO
                !
@@ -284,7 +266,7 @@ MODULE dfpt_module
                   lbnd = band_group%nloc
                   ibnd = band_group%l2g(lbnd)
                   !
-                  CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+                  CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
                   !
                   !$acc parallel loop present(aux_r)
                   DO ir = 1,dffts_nnr
@@ -292,9 +274,7 @@ MODULE dfpt_module
                   ENDDO
                   !$acc end parallel
                   !
-                  !$acc host_data use_device(dvpsi)
                   CALL single_fwfft_gamma(dffts,npw,npwx,psic,dvpsi(:,lbnd),'Wave')
-                  !$acc end host_data
                   !
                ENDIF
                !
@@ -306,9 +286,7 @@ MODULE dfpt_module
                   !
                   ! ... inverse Fourier transform of wfs at [k-q]: (k-q+)G ---> R
                   !
-                  !$acc host_data use_device(evckmq)
                   CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,ibnd),psic,'Wave',igk_k(:,ikqs))
-                  !$acc end host_data
                   !
                   ! ... construct right-hand-side term of Sternheimer equation:
                   ! ... product of wavefunction at [k-q], phase and perturbation in real space
@@ -322,9 +300,7 @@ MODULE dfpt_module
                   ! Fourier transform product of wf at [k-q], phase and
                   ! perturbation of wavevector q: R ---> (k+)G
                   !
-                  !$acc host_data use_device(dvpsi)
                   CALL single_fwfft_k(dffts,npw,npwx,psic,dvpsi(1:npwx,lbnd),'Wave',igk_k(:,iks))
-                  !$acc end host_data
                   !
                   ! dv|psi> is in dvpsi
                   !
@@ -335,9 +311,7 @@ MODULE dfpt_module
                      !
                      ibnd = band_group%l2g(lbnd)
                      !
-                     !$acc host_data use_device(evckmq)
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,ikqs))
-                     !$acc end host_data
                      !
                      !$acc parallel loop present(phase,aux_r)
                      DO ir = 1,dffts_nnr
@@ -345,9 +319,7 @@ MODULE dfpt_module
                      ENDDO
                      !$acc end parallel
                      !
-                     !$acc host_data use_device(dvpsi)
                      CALL single_fwfft_k(dffts,npw,npwx,psic,dvpsi(npwx+1:npwx*2,lbnd),'Wave',igk_k(:,iks))
-                     !$acc end host_data
                      !
                   ENDDO
                ENDIF
@@ -358,10 +330,8 @@ MODULE dfpt_module
                !
                ! Compute <psi_j| dV |psi_i>
                !
-               !$acc host_data use_device(dvpsi,psi_dvpsi)
-               CALL glbrak_gamma(evc_work(1,nbndval_full+1),dvpsi,psi_dvpsi,npw,npwx,nbndval_frac,&
+               CALL glbrak_gamma(evc(1,nbndval_full+1),dvpsi,psi_dvpsi,npw,npwx,nbndval_frac,&
                & band_group%nloc,nbndval_frac,npol)
-               !$acc end host_data
                !$acc update host(psi_dvpsi)
                !
                CALL mp_sum(psi_dvpsi,intra_bgrp_comm)
@@ -428,8 +398,8 @@ MODULE dfpt_module
                ENDDO
                !
                !$acc update device(psi_dvpsi)
-               !$acc host_data use_device(psi_dvpsi,dpsi)
-               CALL DGEMM('N','N',2*npw,band_group%nloc,nbndval_frac,1._DP,evc_work(1,nbndval_full+1),2*npwx,&
+               !$acc host_data use_device(evc,psi_dvpsi,dpsi)
+               CALL DGEMM('N','N',2*npw,band_group%nloc,nbndval_frac,1._DP,evc(1,nbndval_full+1),2*npwx,&
                & psi_dvpsi,nbndval_frac,1._DP,dpsi,2*npwx)
                !$acc end host_data
                !
@@ -446,9 +416,7 @@ MODULE dfpt_module
                   !
                   ibnd = band_group%l2g(lbnd)
                   !
-                  !$acc host_data use_device(dpsi)
-                  CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),dpsi(:,lbnd),psic,'Wave')
-                  !$acc end host_data
+                  CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),dpsi(:,lbnd),psic,'Wave')
                   !
                   this_occ = occupation(ibnd,iks)
                   !$acc parallel loop present(aux_r)
@@ -467,15 +435,11 @@ MODULE dfpt_module
                   !
                   ! inverse Fourier transform of wavefunction at [k-q]: (k-q+)G ---> R
                   !
-                  !$acc host_data use_device(evckmq)
                   CALL single_invfft_k(dffts,npwkq,npwx,evckmq(1:npwx,ibnd),psic,'Wave',igk_k(:,ikqs))
-                  !$acc end host_data
                   !
                   ! inverse Fourier transform of perturbed wavefunction: (k+)G ---> R
                   !
-                  !$acc host_data use_device(dpsi,dpsic)
                   CALL single_invfft_k(dffts,npw,npwx,dpsi(1:npwx,lbnd),dpsic,'Wave',igk_k(:,iks))
-                  !$acc end host_data
                   !
                   !$acc parallel loop present(aux_r,phase,dpsic)
                   DO ir = 1,dffts_nnr
@@ -490,13 +454,9 @@ MODULE dfpt_module
                      !
                      ibnd = band_group%l2g(lbnd)
                      !
-                     !$acc host_data use_device(evckmq)
                      CALL single_invfft_k(dffts,npwkq,npwx,evckmq(npwx+1:npwx*2,ibnd),psic,'Wave',igk_k(:,ikqs))
-                     !$acc end host_data
                      !
-                     !$acc host_data use_device(dpsi,dpsic)
                      CALL single_invfft_k(dffts,npw,npwx,dpsi(npwx+1:npwx*2,lbnd),dpsic,'Wave',igk_k(:,iks))
-                     !$acc end host_data
                      !
                      !$acc parallel loop present(aux_r,phase,dpsic)
                      DO ir = 1,dffts_nnr
@@ -519,13 +479,11 @@ MODULE dfpt_module
             !
             ! The perturbation is in aux_r
             !
-            !$acc host_data use_device(aux_r,aux_g)
             IF(gamma_only) THEN
                CALL single_fwfft_gamma(dffts,npwq,npwqx,aux_r,aux_g,TRIM(fftdriver))
             ELSE
                CALL single_fwfft_k(dffts,npwq,npwqx,aux_r,aux_g,'Wave',igq_q(:,iq))
             ENDIF
-            !$acc end host_data
             !
             !$acc update host(aux_g)
             !
@@ -554,7 +512,7 @@ MODULE dfpt_module
       !
       CALL mp_sum(dng,inter_pool_comm)
       !
-      !$acc exit data delete(aux_g)
+      !$acc exit data delete(eprec,eprec_loc,et_loc,dvpsi,dpsi,aux_r,aux_g)
       DEALLOCATE(eprec)
       DEALLOCATE(eprec_loc)
       DEALLOCATE(et_loc)
@@ -564,7 +522,7 @@ MODULE dfpt_module
       DEALLOCATE(aux_g)
       !
       IF (.NOT. gamma_only) THEN
-         !$acc exit data delete(phase,evckmq)
+         !$acc exit data delete(dpsic,phase,evckmq)
          DEALLOCATE(dpsic)
          DEALLOCATE(phase)
          DEALLOCATE(evckmq)

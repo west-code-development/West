@@ -19,9 +19,6 @@ MODULE fft_at_gamma
   USE kinds,                ONLY : DP
   USE fft_interfaces,       ONLY : fwfft,invfft
   USE fft_types,            ONLY : fft_type_descriptor
-#if defined(__CUDA)
-  USE west_gpu,             ONLY : dfft_nl_d,dfft_nlm_d
-#endif
   !
   IMPLICIT NONE
   !
@@ -49,43 +46,26 @@ MODULE fft_at_gamma
     COMPLEX(DP),INTENT(IN) :: a1(nx)
     COMPLEX(DP),INTENT(IN) :: a2(nx)
     COMPLEX(DP),INTENT(OUT) :: b(dfft%nnr)
-#if defined(__CUDA)
-    ATTRIBUTES(DEVICE) :: a1,a2,b
-#endif
     CHARACTER(LEN=*),INTENT(IN) :: cdriver
     !
     ! Workspace
     !
     INTEGER :: ig
     !
-#if defined(__CUDA)
-    !$acc kernels
+    !$acc kernels present(b)
     b(:) = z_0
     !$acc end kernels
     !
-    !$acc parallel loop
+    !$acc parallel loop present(b,dfft,dfft%nl,a1,a2,dfft%nlm)
     DO ig = 1,n
-       b(dfft_nl_d(ig)) = a1(ig)+z_i*a2(ig)
-       b(dfft_nlm_d(ig)) = CONJG(a1(ig)-z_i*a2(ig))
+       b(dfft%nl(ig)) = a1(ig)+z_i*a2(ig)
+       b(dfft%nlm(ig)) = CONJG(a1(ig)-z_i*a2(ig))
     ENDDO
     !$acc end parallel
-#else
-    !$OMP PARALLEL PRIVATE(ig)
-    !$OMP DO
-    DO ig = 1,dfft%nnr
-       b(ig) = z_0
-    ENDDO
-    !$OMP ENDDO
-    !$OMP DO
-    DO ig = 1,n
-       b(dfft%nl (ig)) =       a1(ig) + z_i * a2(ig)
-       b(dfft%nlm(ig)) = CONJG(a1(ig) - z_i * a2(ig))
-    ENDDO
-    !$OMP ENDDO
-    !$OMP END PARALLEL
-#endif
     !
+    !$acc host_data use_device(b)
     CALL invfft(cdriver,b,dfft)
+    !$acc end host_data
     !
   END SUBROUTINE
   !
@@ -108,9 +88,6 @@ MODULE fft_at_gamma
     COMPLEX(DP),INTENT(INOUT) :: a(dfft%nnr)
     COMPLEX(DP),INTENT(OUT) :: b1(nx)
     COMPLEX(DP),INTENT(OUT) :: b2(nx)
-#if defined(__CUDA)
-    ATTRIBUTES(DEVICE) :: a,b1,b2
-#endif
     CHARACTER(LEN=*),INTENT(IN) :: cdriver
     !
     ! Workspace
@@ -118,43 +95,27 @@ MODULE fft_at_gamma
     INTEGER :: ig
     COMPLEX(DP) :: fm,fp
     !
+    !$acc host_data use_device(a)
     CALL fwfft(cdriver,a,dfft)
+    !$acc end host_data
     !
     ! Keep only G>=0
     !
-#if defined(__CUDA)
-    !$acc parallel loop
+    !$acc parallel loop present(a,dfft,dfft%nl,dfft%nlm,b1,b2)
     DO ig = 1,n
-       fp = (a(dfft_nl_d(ig))+a(dfft_nlm_d(ig)))*0.5_DP
-       fm = (a(dfft_nl_d(ig))-a(dfft_nlm_d(ig)))*0.5_DP
+       fp = (a(dfft%nl(ig))+a(dfft%nlm(ig)))*0.5_DP
+       fm = (a(dfft%nl(ig))-a(dfft%nlm(ig)))*0.5_DP
        b1(ig) = CMPLX(REAL(fp,KIND=DP),AIMAG(fm),KIND=DP)
        b2(ig) = CMPLX(AIMAG(fp),-REAL(fm,KIND=DP),KIND=DP)
     ENDDO
     !$acc end parallel
     !
     IF(nx > n) THEN
-       !$acc kernels
+       !$acc kernels present(b1,b2)
        b1(n+1:nx) = z_0
        b2(n+1:nx) = z_0
        !$acc end kernels
     ENDIF
-#else
-    !$OMP PARALLEL PRIVATE(ig,fp,fm)
-    !$OMP DO
-    DO ig = 1,n
-       fp = ( a(dfft%nl (ig)) + a(dfft%nlm(ig)) )*0.5_DP
-       fm = ( a(dfft%nl (ig)) - a(dfft%nlm(ig)) )*0.5_DP
-       b1(ig) = CMPLX(REAL(fp,KIND=DP), AIMAG(fm), KIND=DP)
-       b2(ig) = CMPLX(AIMAG(fp), -REAL(fm,KIND=DP), KIND=DP)
-    ENDDO
-    !$OMP ENDDO
-    !$OMP END PARALLEL
-    !
-    DO ig = (n+1),nx
-       b1(ig) = z_0
-       b2(ig) = z_0
-    ENDDO
-#endif
     !
   END SUBROUTINE
   !
@@ -175,43 +136,26 @@ MODULE fft_at_gamma
     INTEGER,INTENT(IN) :: n,nx
     COMPLEX(DP),INTENT(IN) :: a1(nx)
     COMPLEX(DP),INTENT(OUT) :: b(dfft%nnr)
-#if defined(__CUDA)
-    ATTRIBUTES(DEVICE) :: a1,b
-#endif
     CHARACTER(LEN=*),INTENT(IN) :: cdriver
     !
     ! Workspace
     !
     INTEGER :: ig
     !
-#if defined(__CUDA)
-    !$acc kernels
+    !$acc kernels present(b)
     b(:) = z_0
     !$acc end kernels
     !
-    !$acc parallel loop
+    !$acc parallel loop present(b,dfft,dfft%nl,a1,dfft%nlm)
     DO ig = 1,n
-       b(dfft_nl_d(ig)) = a1(ig)
-       b(dfft_nlm_d(ig)) = CONJG(a1(ig))
-    ENDDO
-    !$acc end parallel
-#else
-    !$OMP PARALLEL PRIVATE(ig)
-    !$OMP DO
-    DO ig = 1,dfft%nnr
-       b(ig) = z_0
-    ENDDO
-    !$OMP ENDDO
-    !$OMP DO
-    DO ig = 1,n
-       b(dfft%nl (ig)) =       a1(ig)
+       b(dfft%nl(ig)) = a1(ig)
        b(dfft%nlm(ig)) = CONJG(a1(ig))
     ENDDO
-    !$OMP ENDDO
-    !$OMP END PARALLEL
-#endif
+    !$acc end parallel
     !
+    !$acc host_data use_device(b)
     CALL invfft(cdriver,b,dfft)
+    !$acc end host_data
     !
   END SUBROUTINE
   !
@@ -232,44 +176,29 @@ MODULE fft_at_gamma
     INTEGER,INTENT(IN) :: n,nx
     COMPLEX(DP),INTENT(INOUT) :: a(dfft%nnr)
     COMPLEX(DP),INTENT(OUT) :: b1(nx)
-#if defined(__CUDA)
-    ATTRIBUTES(DEVICE) :: a,b1
-#endif
     CHARACTER(LEN=*),INTENT(IN) :: cdriver
     !
     ! Workspace
     !
     INTEGER :: ig
     !
+    !$acc host_data use_device(a)
     CALL fwfft(cdriver,a,dfft)
+    !$acc end host_data
     !
     ! Keep only G>=0
     !
-#if defined(__CUDA)
-    !$acc parallel loop
+    !$acc parallel loop present(b1,a,dfft,dfft%nl)
     DO ig = 1,n
-       b1(ig) = a(dfft_nl_d(ig))
+       b1(ig) = a(dfft%nl(ig))
     ENDDO
     !$acc end parallel
     !
     IF(nx > n) THEN
-       !$acc kernels
+       !$acc kernels present(b1)
        b1(n+1:nx) = z_0
        !$acc end kernels
     ENDIF
-#else
-    !$OMP PARALLEL PRIVATE(ig)
-    !$OMP DO
-    DO ig=1,n
-       b1(ig) = a(dfft%nl(ig))
-    ENDDO
-    !$OMP ENDDO
-    !$OMP END PARALLEL
-    !
-    DO ig = (n+1),nx
-       b1(ig) = z_0
-    ENDDO
-#endif
     !
   END SUBROUTINE
   !

@@ -59,12 +59,9 @@ SUBROUTINE compute_d0psi_rs()
   USE pwcom,                ONLY : isk,ngk,lsda,npw,npwx
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,d0psi
   USE distribution_center,  ONLY : kpt_pool,band_group
+  USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : reallocate_ps_gpu
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -79,7 +76,6 @@ SUBROUTINE compute_d0psi_rs()
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: r(:,:)
   COMPLEX(DP), ALLOCATABLE :: aux_r(:)
-  !$acc declare device_resident(aux_r)
   !
   CALL io_push_title('Calculation of the dipole in real space')
   !
@@ -87,7 +83,7 @@ SUBROUTINE compute_d0psi_rs()
   !
   ALLOCATE(aux_r(dffts%nnr))
   ALLOCATE(r(dffts%nnr,n_ipol))
-  !$acc enter data create(r)
+  !$acc enter data create(aux_r,r)
   !
   r(:,:) = 0._DP
   !
@@ -143,16 +139,9 @@ SUBROUTINE compute_d0psi_rs()
      ! ... read in wavefunctions from the previous iteration
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      DO lbnd = 1, nbnd_do, 2
@@ -164,7 +153,7 @@ SUBROUTINE compute_d0psi_rs()
            !
            ! double bands @ gamma
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
            !
            !$acc kernels present(aux_r)
            aux_r(:) = psic
@@ -178,9 +167,7 @@ SUBROUTINE compute_d0psi_rs()
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(d0psi)
               CALL double_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,lbnd,iks,ip),d0psi(:,lbnd+1,iks,ip),'Wave')
-              !$acc end host_data
               !
            ENDDO
            !
@@ -188,7 +175,7 @@ SUBROUTINE compute_d0psi_rs()
            !
            ! single band @ gamma
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
            !
            !$acc kernels present(aux_r)
            aux_r(:) = psic
@@ -202,9 +189,7 @@ SUBROUTINE compute_d0psi_rs()
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(d0psi)
               CALL single_fwfft_gamma(dffts,npw,npwx,psic,d0psi(:,lbnd,iks,ip),'Wave')
-              !$acc end host_data
               !
            ENDDO
            !
@@ -239,8 +224,8 @@ SUBROUTINE compute_d0psi_rs()
      !$acc end parallel
   ENDIF
   !
+  !$acc exit data delete(aux_r,r)
   DEALLOCATE(aux_r)
-  !$acc exit data delete(r)
   DEALLOCATE(r)
   !
 END SUBROUTINE
@@ -327,14 +312,10 @@ SUBROUTINE compute_d0psi_dfpt()
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE cell_base,            ONLY : bg
   USE uspp,                 ONLY : vkb,nkb
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wavefunctions,        ONLY : evc_host=>evc
-  USE wvfct_gpum,           ONLY : et=>et_d
-  USE west_gpu,             ONLY : allocate_macropol_gpu,deallocate_macropol_gpu,reallocate_ps_gpu
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc
+  USE wavefunctions,        ONLY : evc
   USE wvfct,                ONLY : et
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : allocate_macropol_gpu,deallocate_macropol_gpu,reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -347,7 +328,6 @@ SUBROUTINE compute_d0psi_dfpt()
   INTEGER, PARAMETER :: n_ipol = 3
   REAL(DP), ALLOCATABLE :: eprec(:), e(:)
   COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
-  !$acc declare device_resident(eprec,e,phi)
   !
   CALL io_push_title('Calculation of the dipole using DFPT method')
   !
@@ -380,16 +360,9 @@ SUBROUTINE compute_d0psi_dfpt()
      ! ... read in wavefunctions from the previous iteration
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
 #if defined(__CUDA)
@@ -401,7 +374,7 @@ SUBROUTINE compute_d0psi_dfpt()
      ALLOCATE(e(n_ipol))
      ALLOCATE(phi_tmp(npwx*npol,n_ipol))
      ALLOCATE(phi(npwx*npol,n_ipol))
-     !$acc enter data create(phi_tmp)
+     !$acc enter data create(eprec,e,phi_tmp,phi)
      !
      ! LOOP over band states
      !
@@ -411,11 +384,9 @@ SUBROUTINE compute_d0psi_dfpt()
         !
         iv = band_group%l2g(lbnd)+n_trunc_bands
         !
-        !$acc host_data use_device(phi_tmp)
-        CALL commut_Hx_psi(iks,1,1,evc_work(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi(iks,1,2,evc_work(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi(iks,1,3,evc_work(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-        !$acc end host_data
+        CALL commut_Hx_psi(iks,1,1,evc(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
+        CALL commut_Hx_psi(iks,1,2,evc(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
+        CALL commut_Hx_psi(iks,1,3,evc(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
         !
         !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
         DO ip = 1, n_ipol
@@ -427,11 +398,9 @@ SUBROUTINE compute_d0psi_dfpt()
         !
         CALL apply_alpha_pc_to_m_wfcs(nbndval,n_ipol,phi,(1._DP,0._DP))
         !
-        !$acc host_data use_device(eprec)
-        CALL set_eprec(1,evc_work(:,iv),eprec(1))
-        !$acc end host_data
+        CALL set_eprec(1,evc(:,iv),eprec(1))
         !
-        !$acc parallel loop present(eprec,e)
+        !$acc parallel loop present(eprec,e,et)
         DO ip = 1, n_ipol
            eprec(ip) = eprec(1)
            e(ip) = et(iv,iks)
@@ -460,9 +429,9 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      !$acc update device(d0psi)
      !
+     !$acc exit data delete(eprec,e,phi_tmp,phi)
      DEALLOCATE(eprec)
      DEALLOCATE(e)
-     !$acc exit data delete(phi_tmp)
      DEALLOCATE(phi_tmp)
      DEALLOCATE(phi)
      !

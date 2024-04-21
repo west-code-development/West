@@ -214,21 +214,13 @@ SUBROUTINE gq_l2gmap_kdip( npw_g, ngk_g, ngk, igk_l2g, igk_l2g_kdip )
   !
   ALLOCATE( igwk_lup( npw_g ) )
   !
-!$OMP PARALLEL PRIVATE(ig_, ig)
-!$OMP WORKSHARE
   igwk_lup = 0
-!$OMP END WORKSHARE
-!$OMP DO
   DO ig_ = 1, ngk_g
      igwk_lup(igwk_(ig_)) = ig_
   ENDDO
-!$OMP END DO
-!$OMP DO
   DO ig = 1, ngk
      igk_l2g_kdip(ig) = igwk_lup(igk_l2g(ig))
   ENDDO
-!$OMP END DO
-!$OMP END PARALLEL
   !
   DEALLOCATE( igwk_lup )
   !

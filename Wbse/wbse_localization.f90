@@ -30,11 +30,9 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   USE class_idistribute,    ONLY : idistribute
   USE io_push,              ONLY : io_push_title
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : evc=>evc_d,psic=>psic_d
-  USE cublas
-#else
   USE wavefunctions,        ONLY : evc,psic
+#if defined(__CUDA)
+  USE cublas
 #endif
   !
   IMPLICIT NONE
@@ -59,7 +57,6 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
   REAL(DP),ALLOCATABLE :: a_matrix(:,:,:)
   REAL(DP),ALLOCATABLE :: aux(:)
   REAL(DP),ALLOCATABLE :: aux2(:)
-  !$acc declare device_resident(aux,aux2)
   COMPLEX(DP),ALLOCATABLE :: u_matrix(:,:)
   COMPLEX(DP),ALLOCATABLE :: evc_tmp(:,:)
   TYPE(bar_type) :: barra
@@ -96,6 +93,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         ALLOCATE(a_matrix(nbnd_do,nbnd_do,6))
         ALLOCATE(aux(dffts_nnr))
         ALLOCATE(aux2(dffts_nnr))
+        !$acc enter data create(aux,aux2)
         ALLOCATE(u_real(nbnd_do,nbnd_do))
         !
         CALL wann_calc_proj(proj)
@@ -216,7 +214,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         !$acc enter data copyin(u_matrix)
         !
-        !$acc host_data use_device(u_matrix,evc_loc)
+        !$acc host_data use_device(evc,u_matrix,evc_loc)
         CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(1,nbnd_s),npwx,u_matrix,nbnd_do,&
         & (0._DP,0._DP),evc_loc,npwx)
         !$acc end host_data
@@ -233,9 +231,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
            !
            ibnd = band_group%l2g(ibnd_l)
            !
-           !$acc host_data use_device(evc_loc)
            CALL single_invfft_gamma(dffts,npw,npwx,evc_loc(:,ibnd),psic,'Wave')
-           !$acc end host_data
            !
            !$acc kernels present(aux)
            aux(:) = REAL(psic,KIND=DP)
@@ -245,9 +241,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
               !
               IF(jbnd < nbnd_do) THEN
                  !
-                 !$acc host_data use_device(evc_loc)
                  CALL double_invfft_gamma(dffts,npw,npwx,evc_loc(:,jbnd),evc_loc(:,jbnd+1),psic,'Wave')
-                 !$acc end host_data
                  !
                  !$acc kernels present(aux2)
                  aux2(:) = REAL(psic,KIND=DP)
@@ -269,9 +263,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
                  !
               ELSE
                  !
-                 !$acc host_data use_device(evc_loc)
                  CALL single_invfft_gamma(dffts,npw,npwx,evc_loc(:,jbnd),psic,'Wave')
-                 !$acc end host_data
                  !
                  !$acc kernels present(aux2)
                  aux2(:) = REAL(psic,KIND=DP)
@@ -294,6 +286,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
         !
         CALL stop_bar_type(barra,'wann')
         !
+        !$acc exit data delete(aux,aux2)
         DEALLOCATE(aux)
         DEALLOCATE(aux2)
         !
@@ -378,7 +371,7 @@ SUBROUTINE wbse_localization(current_spin,nbnd_s,nbnd_e,evc_loc,ovl_matrix,l_res
      !
      !$acc enter data copyin(u_matrix)
      !
-     !$acc host_data use_device(u_matrix,evc_loc)
+     !$acc host_data use_device(evc,u_matrix,evc_loc)
      CALL ZGEMM('N','N',npw,nbnd_do,nbnd_do,(1._DP,0._DP),evc(1,nbnd_s),npwx,u_matrix,nbnd_do,&
      & (0._DP,0._DP),evc_loc,npwx)
      !$acc end host_data

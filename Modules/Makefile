@@ -14,8 +14,6 @@ MODFLAGS = $(MOD_FLAG)../../Modules \
 
 MODULES_OBJS = \
 west_gpu.o \
-west_gpu_data.o \
-west_gpu_tools.o \
 west_version.o \
 westcom.o
 

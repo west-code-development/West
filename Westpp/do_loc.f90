@@ -37,12 +37,9 @@ SUBROUTINE do_loc ( )
   USE types_bz_grid,         ONLY : k_grid
   USE cell_base,             ONLY : alat,at,omega
   USE json_module,           ONLY : json_file,json_core,json_value
+  USE wavefunctions,         ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,         ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -57,7 +54,6 @@ SUBROUTINE do_loc ( )
   REAL(DP), ALLOCATABLE :: spav(:)
   REAL(DP), ALLOCATABLE :: ovlp_ab(:,:)
   COMPLEX(DP), ALLOCATABLE :: auxc(:), auxg(:)
-  !$acc declare device_resident(auxc)
   COMPLEX(DP), ALLOCATABLE :: evc_tmp(:,:,:)
   REAL(DP) :: rho, r_vec(3)
   REAL(DP) :: r, dr
@@ -92,7 +88,7 @@ SUBROUTINE do_loc ( )
      ALLOCATE(auxc(dffts%nnr))
      ALLOCATE(auxg(ngm))
      ALLOCATE(spav(westpp_nr+1))
-     !$acc enter data create(auxg,spav)
+     !$acc enter data create(auxc,auxg,spav)
   ENDIF
   ALLOCATE(local_fac(nbnd_,k_grid%nps))
   ALLOCATE(ipr(nbnd_,k_grid%nps))
@@ -173,24 +169,17 @@ SUBROUTINE do_loc ( )
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      IF(gamma_only .AND. nspin == 2) THEN
         !
-        !$acc parallel loop collapse(2) present(evc_tmp)
+        !$acc parallel loop collapse(2) present(evc_tmp,evc)
         DO ib_g = westpp_range(1), westpp_range(2)
            DO ig = 1, npwx
-              evc_tmp(ig,ib_g - westpp_range(1) + 1,iks) = evc_work(ig,ib_g)
+              evc_tmp(ig,ib_g-westpp_range(1)+1,iks) = evc(ig,ib_g)
            ENDDO
         ENDDO
         !$acc end parallel
@@ -209,7 +198,7 @@ SUBROUTINE do_loc ( )
         !
         IF(gamma_only) THEN
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ib_g),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ib_g),psic,'Wave')
            !
            IF(l_box) THEN
               !
@@ -236,9 +225,7 @@ SUBROUTINE do_loc ( )
               !
               ipr(ib2_g,iks) = reduce2
               !
-              !$acc host_data use_device(auxc,auxg)
               CALL single_fwfft_gamma(dffts,ngm,ngm,auxc,auxg,'Rho')
-              !$acc end host_data
               !
               !$acc update host(auxg)
               !
@@ -259,7 +246,7 @@ SUBROUTINE do_loc ( )
            !
         ELSE
            !
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,ib_g),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,ib_g),psic,'Wave',igk_k(:,current_k))
            !
            !$acc parallel loop reduction(+:reduce,reduce2) present(filter_loc) copy(reduce,reduce2)
            DO ir = 1, dffts_nnr
@@ -298,9 +285,7 @@ SUBROUTINE do_loc ( )
   !
   IF(gamma_only .AND. nspin == 2) THEN
      !
-     !$acc host_data use_device(evc_tmp,ovlp_ab)
      CALL glbrak_gamma(evc_tmp(:,:,2),evc_tmp(:,:,1),ovlp_ab,npw,npwx,nbnd_,nbnd_,nbnd_,npol)
-     !$acc end host_data
      !
      !$acc update host(ovlp_ab)
      !
@@ -356,8 +341,8 @@ SUBROUTINE do_loc ( )
      !$acc exit data delete(filter_loc)
      DEALLOCATE(filter_loc)
   ELSE
+     !$acc exit data delete(auxc,auxg,spav)
      DEALLOCATE(auxc)
-     !$acc exit data delete(auxg,spav)
      DEALLOCATE(auxg)
      DEALLOCATE(spav)
   ENDIF

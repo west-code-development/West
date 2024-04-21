@@ -942,7 +942,6 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
   COMPLEX(DP) :: tmp_c
   COMPLEX(DP) :: za
   COMPLEX(DP),ALLOCATABLE :: zbraket(:)
-  !$acc declare device_resident(zbraket)
   COMPLEX(DP),ALLOCATABLE :: vec(:)
   COMPLEX(DP),PARAMETER :: mone = (-1._DP,0._DP)
   !
@@ -962,7 +961,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
      ALLOCATE(vec(npwqx))
      ALLOCATE(zbraket(pert%nloc))
      !
-     !$acc enter data create(vec) copyin(amat)
+     !$acc enter data create(vec,zbraket) copyin(amat)
      !
      ! 2) Localize m_global_start
      !
@@ -1011,7 +1010,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
               IF(gamma_only) THEN
                  anorm = 2._DP*anorm
                  IF(gstart == 2) THEN
-                    !$acc update host(amat(1:1,k_local:k_local))
+                    !$acc update host(amat(1,k_local))
                     anorm = anorm-REAL(amat(1,k_local),KIND=DP)**2
                  ENDIF
               ENDIF
@@ -1099,7 +1098,7 @@ SUBROUTINE do_mgs(amat,m_global_start,m_global_end)
         !
      ENDDO
      !
-     !$acc exit data delete(vec) copyout(amat)
+     !$acc exit data delete(vec,zbraket) copyout(amat)
      !
      DEALLOCATE(vec)
      DEALLOCATE(zbraket)
@@ -1165,8 +1164,6 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend )
      ENDDO
      !
      amat(:,il1) = 0._DP
-!$OMP PARALLEL private(ig,rr,arg)
-!$OMP DO
      DO ig=gstart,npwq
         rr = random_num_debug(1,ig_l2g(ig))
         arg = tpi * random_num_debug(2,ig_l2g(ig))
@@ -1175,8 +1172,6 @@ SUBROUTINE do_randomize ( amat, mglobalstart, mglobalend )
                         g(2,ig)*g(2,ig) + &
                         g(3,ig)*g(3,ig) + 1._DP )
      ENDDO
-!$OMP ENDDO
-!$OMP END PARALLEL
      !
   ENDDO
   !
@@ -1237,8 +1232,6 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
      ENDDO
      !
      amat(:,il1) = 0._DP
-!$OMP PARALLEL private(ig,rr,arg)
-!$OMP DO
      DO ig=1,ngq(iq)
         qg(:) = q_grid%p_cart(:,iq) + g(:,igq_q(ig,iq))
         qgnorm2 = SUM( qg(:)**2 ) * tpiba2
@@ -1247,8 +1240,6 @@ SUBROUTINE do_randomize_q (amat, mglobalstart, mglobalend, iq)
         arg = tpi * random_num_debug(2,ig_l2g(igq_q(ig,iq)))
         amat(ig,il1) = CMPLX( rr*COS( arg ), rr*SIN( arg ), KIND=DP) / ( qgnorm2 + 1._DP )
      ENDDO
-!$OMP ENDDO
-!$OMP END PARALLEL
      !
   ENDDO
   !

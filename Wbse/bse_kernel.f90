@@ -25,12 +25,10 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
   USE wbse_io,               ONLY : read_bse_pots_g
   USE wbse_bgrp,             ONLY : gather_bands
   USE west_mp,               ONLY : west_mp_wait
+  USE wavefunctions,         ONLY : psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : psic=>psic_d
   USE west_gpu,              ONLY : raux1,raux2,caux1,caux2,caux3,gaux
   USE cublas
-#else
-  USE wavefunctions,         ONLY : psic
 #endif
   !
   IMPLICIT NONE
@@ -148,9 +146,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
               !
               !$acc update device(gaux)
               !
-              !$acc host_data use_device(caux1,gaux)
               CALL double_invfft_gamma(dffts,npw,npwx,caux1(:,jbnd),gaux,psic,'Wave')
-              !$acc end host_data
               !
               IF(ibnd == my_ibnd) THEN
                  !$acc parallel loop present(raux1)
@@ -182,9 +178,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(caux2)
            CALL double_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,lbnd),caux2(:,lbnd+1),'Wave')
-           !$acc end host_data
            !
         ELSE
            !
@@ -194,9 +188,7 @@ SUBROUTINE bse_kernel_gamma(current_spin,evc1,bse_k1d,sf)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(caux2)
            CALL single_fwfft_gamma(dffts,npw,npwx,psic,caux2(:,lbnd),'Wave')
-           !$acc end host_data
            !
         ENDIF
         !

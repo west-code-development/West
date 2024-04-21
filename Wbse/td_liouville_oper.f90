@@ -39,15 +39,11 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
   USE xc_lib,               ONLY : stop_exx,start_exx
   USE wbse_bgrp,            ONLY : gather_bands
   USE west_mp,              ONLY : west_mp_wait
+  USE wavefunctions,        ONLY : evc,psic
+  USE wvfct,                ONLY : et
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
-  USE wvfct_gpum,           ONLY : et=>et_d
   USE west_gpu,             ONLY : factors,dvrs,hevc1,reallocate_ps_gpu
   USE cublas
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
-  USE wvfct,                ONLY : et
 #endif
   !
   IMPLICIT NONE
@@ -167,16 +163,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ! ... read in GS wavefunctions iks
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      IF(do_k1e) THEN
@@ -188,7 +177,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            ibnd = band_group%l2g(lbnd)+n_trunc_bands
            jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
            !
            !$acc parallel loop present(dvrs)
            DO ir = 1,dffts_nnr
@@ -196,9 +185,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(evc1_new)
            CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),evc1_new(:,lbnd+1,iks),'Wave')
-           !$acc end host_data
            !
         ENDDO
         !
@@ -209,7 +196,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            lbnd = nbnd_do
            ibnd = band_group%l2g(lbnd)+n_trunc_bands
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
            !
            !$acc parallel loop present(dvrs)
            DO ir = 1,dffts_nnr
@@ -217,9 +204,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(evc1_new)
            CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc1_new(:,lbnd,iks),'Wave')
-           !$acc end host_data
            !
         ENDIF
         !
@@ -320,16 +305,9 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ! load evc from iks to apply Pc of the current spin channel
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
 #if defined(__CUDA)
@@ -375,12 +353,9 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
                                  & n_trunc_bands,lrwfc,iuwfc,forces_inexact_krylov,do_inexact_krylov
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
+  USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE west_gpu,             ONLY : dvrs,evc2_new=>hevc1,reallocate_ps_gpu
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -481,16 +456,9 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
      ! ... read in GS wavefunctions iks
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks_do)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      IF(do_k2e) THEN
@@ -502,7 +470,7 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
            ibnd = band_group%l2g(lbnd)+n_trunc_bands
            jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
            !
-           CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+           CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
            !
            !$acc parallel loop present(dvrs)
            DO ir = 1,dffts_nnr
@@ -510,9 +478,7 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(evc2_new)
            CALL double_fwfft_gamma(dffts,npw,npwx,psic,evc2_new(:,lbnd),evc2_new(:,lbnd+1),'Wave')
-           !$acc end host_data
            !
         ENDDO
         !
@@ -523,7 +489,7 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
            lbnd = nbnd_do
            ibnd = band_group%l2g(lbnd)+n_trunc_bands
            !
-           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
            !
            !$acc parallel loop present(dvrs)
            DO ir = 1,dffts_nnr
@@ -531,9 +497,7 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(evc2_new)
            CALL single_fwfft_gamma(dffts,npw,npwx,psic,evc2_new(:,lbnd),'Wave')
-           !$acc end host_data
            !
         ENDIF
         !
@@ -560,16 +524,9 @@ SUBROUTINE west_apply_liouvillian_btda(evc1,evc1_new,sf)
      ! load evc from iks to apply Pc of the current spin channel
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
 #if defined(__CUDA)

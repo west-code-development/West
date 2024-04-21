@@ -27,7 +27,6 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
   USE wavefunctions,        ONLY : evc
   USE distribution_center,  ONLY : kpt_pool,band_group
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
   USE west_gpu,             ONLY : reallocate_ps_gpu
 #endif
   !
@@ -91,11 +90,7 @@ SUBROUTINE build_rhs_zvector_eq(dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_v
      IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-        !
-#if defined(__CUDA)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#endif
+        !$acc update device(evc)
      ENDIF
      !
      ! Pc[k]*z_rhs_vec
@@ -135,12 +130,9 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   USE wbse_dv,              ONLY : wbse_dv_of_drho
   USE wbse_bgrp,            ONLY : gather_bands
   USE west_mp,              ONLY : west_mp_wait
+  USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE cublas
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -160,7 +152,6 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   INTEGER :: req
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part1(:,:,:),tmp_vec(:,:,:)
-  !$acc declare device_resident(z_rhs_vec_part1,tmp_vec)
   COMPLEX(DP), ALLOCATABLE :: drhox(:,:)
   TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: flks(2) = [2,1]
@@ -170,6 +161,8 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   dffts_nnr = dffts%nnr
   !
   ALLOCATE(z_rhs_vec_part1(npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  !$acc enter data create(z_rhs_vec_part1)
+  !
   !$acc kernels present(z_rhs_vec_part1)
   z_rhs_vec_part1(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
@@ -177,6 +170,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   IF(l_bse .OR. l_hybrid_tddft) THEN
      !
      ALLOCATE(tmp_vec(npwx*npol, band_group%nlocx, kpt_pool%nloc))
+     !$acc enter data create(tmp_vec)
      !
      !$acc kernels present(tmp_vec)
      tmp_vec(:,:,:) = (0._DP,0._DP)
@@ -230,16 +224,9 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
      ! ... read in GS wavefunctions iks
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      ! ... Apply \Delta V_HXC on the z-vector
@@ -251,7 +238,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         ibnd = band_group%l2g(lbnd)+n_trunc_bands
         jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
         !
-        CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+        CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
         !
         !$acc parallel loop present(drhox)
         DO ir = 1,dffts_nnr
@@ -259,9 +246,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         ENDDO
         !$acc end parallel
         !
-        !$acc host_data use_device(z_rhs_vec_part1)
         CALL double_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part1(:,lbnd,iks),z_rhs_vec_part1(:,lbnd+1,iks),'Wave')
-        !$acc end host_data
         !
      ENDDO
      !
@@ -272,7 +257,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         lbnd = nbnd_do
         ibnd = band_group%l2g(lbnd)+n_trunc_bands
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
         !
         !$acc parallel loop present(drhox)
         DO ir = 1,dffts_nnr
@@ -280,9 +265,7 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
         ENDDO
         !$acc end parallel
         !
-        !$acc host_data use_device(z_rhs_vec_part1)
         CALL single_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part1(:,lbnd,iks),'Wave')
-        !$acc end host_data
         !
      ENDIF
      !
@@ -298,8 +281,8 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
            iks_do = iks
         ENDIF
         !
-        !$acc host_data use_device(dvgdvg_mat,tmp_vec)
-        CALL DGEMM('N','N',2*npwx*npol,nbnd_do,nbndval-n_trunc_bands,-1._DP,evc_work(1,1+n_trunc_bands),&
+        !$acc host_data use_device(evc,dvgdvg_mat,tmp_vec)
+        CALL DGEMM('N','N',2*npwx*npol,nbnd_do,nbndval-n_trunc_bands,-1._DP,evc(1,1+n_trunc_bands),&
         & 2*npwx*npol,dvgdvg_mat(1,1,iks_do),nbndval0x-n_trunc_bands,0._DP,tmp_vec(1,1,iks),2*npwx*npol)
         !$acc end host_data
         !
@@ -342,8 +325,12 @@ SUBROUTINE rhs_zvector_part1( dvg_exc_tmp, dvgdvg_mat, drhox1, drhox2, z_rhs_vec
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p1 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part1)
   DEALLOCATE(z_rhs_vec_part1)
-  IF(l_bse .OR. l_hybrid_tddft) DEALLOCATE(tmp_vec)
+  IF(l_bse .OR. l_hybrid_tddft) THEN
+     !$acc exit data delete(tmp_vec)
+     DEALLOCATE(tmp_vec)
+  ENDIF
   !$acc exit data delete(drhox)
   DEALLOCATE(drhox)
   !
@@ -370,12 +357,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,intra_bgrp_comm
   USE wbse_dv,              ONLY : wbse_dv_of_drho,wbse_dv_of_drho_sf
+  USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE cublas
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -392,7 +376,6 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   INTEGER :: dffts_nnr,band_group_myoffset
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part2(:,:,:),aux_g(:,:),evc_copy(:,:)
-  !$acc declare device_resident(z_rhs_vec_part2,aux_g,evc_copy)
   REAL(DP) :: reduce,reduce2
   COMPLEX(DP), ALLOCATABLE :: dvrs(:,:)
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
@@ -413,7 +396,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
   ALLOCATE(dpcpart(npwx*npol, nbndval0x-n_trunc_bands))
   ALLOCATE(dvrs(dffts%nnr,nspin))
-  !$acc enter data create(dv_vv_mat,dpcpart,dvrs)
+  !$acc enter data create(z_rhs_vec_part2,aux_g,dv_vv_mat,dpcpart,dvrs)
   !
   !$acc kernels present(z_rhs_vec_part2)
   z_rhs_vec_part2(:,:,:) = (0._DP,0._DP)
@@ -461,16 +444,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
         ! ... read in GS wavefunctions iks
         !
         IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-           IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-           CALL mp_bcast(evc_host,0,inter_image_comm)
-           !
-           CALL using_evc(2)
-           CALL using_evc_d(0)
-#else
-           IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-           CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+           IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+           CALL mp_bcast(evc,0,inter_image_comm)
+           !$acc update device(evc)
         ENDIF
         !
         ! ... Apply \Delta V_HXC on vector
@@ -479,9 +455,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
         !
         DO lbnd = 1,nbnd_do-MOD(nbnd_do,2),2
            !
-           !$acc host_data use_device(dvg_exc_tmp)
            CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks),dvg_exc_tmp(:,lbnd+1,iks),psic,'Wave')
-           !$acc end host_data
            !
            !$acc parallel loop present(dvrs)
            DO ir = 1,dffts_nnr
@@ -489,9 +463,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(z_rhs_vec_part2)
            CALL double_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part2(:,lbnd,iks),z_rhs_vec_part2(:,lbnd+1,iks),'Wave')
-           !$acc end host_data
            !
         ENDDO
         !
@@ -501,9 +473,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            !
            lbnd = nbnd_do
            !
-           !$acc host_data use_device(dvg_exc_tmp)
            CALL single_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks),psic,'Wave')
-           !$acc end host_data
            !
            !$acc parallel loop present(dvrs)
            DO ir = 1,dffts_nnr
@@ -511,9 +481,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(z_rhs_vec_part2)
            CALL single_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part2(:,lbnd,iks),'Wave')
-           !$acc end host_data
            !
         ENDIF
         !
@@ -532,7 +500,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               jbndp = jbnd+n_trunc_bands
               kbndp = kbnd+n_trunc_bands
               !
-              CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,jbndp),evc_work(:,kbndp),psic,'Wave')
+              CALL double_invfft_gamma(dffts,npw,npwx,evc(:,jbndp),evc(:,kbndp),psic,'Wave')
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -540,25 +508,23 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(aux_g)
               CALL double_fwfft_gamma(dffts,npw,npwx,psic,aux_g(:,1),aux_g(:,2),'Wave')
-              !$acc end host_data
               !
               reduce = 0._DP
               reduce2 = 0._DP
-              !$acc parallel loop reduction(+:reduce,reduce2) present(aux_g) copy(reduce,reduce2)
+              !$acc parallel loop reduction(+:reduce,reduce2) present(evc,aux_g) copy(reduce,reduce2)
               DO ig = 1, npw
-                 reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
-                 &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
-                 reduce2 = reduce2 + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
-                 &                 + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
+                 reduce = reduce + REAL(evc(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
+                 &               + AIMAG(evc(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                 reduce2 = reduce2 + REAL(evc(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
+                 &                 + AIMAG(evc(ig,ibndp)) * AIMAG(aux_g(ig,2))
               ENDDO
               !$acc end parallel
               !
               IF(gstart == 2) THEN
-                 !$acc serial present(aux_g) copy(reduce,reduce2)
-                 reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
-                 reduce2 = reduce2 - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
+                 !$acc serial present(evc,aux_g) copy(reduce,reduce2)
+                 reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                 reduce2 = reduce2 - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
                  !$acc end serial
               ENDIF
               !
@@ -574,7 +540,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               jbnd = nbndval - n_trunc_bands
               jbndp = jbnd + n_trunc_bands
               !
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,jbndp),psic,'Wave')
+              CALL single_invfft_gamma(dffts,npw,npwx,evc(:,jbndp),psic,'Wave')
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -582,21 +548,19 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(aux_g)
               CALL single_fwfft_gamma(dffts,npw,npwx,psic,aux_g(:,1),'Wave')
-              !$acc end host_data
               !
               reduce = 0._DP
-              !$acc parallel loop reduction(+:reduce) present(aux_g) copy(reduce)
+              !$acc parallel loop reduction(+:reduce) present(evc,aux_g) copy(reduce)
               DO ig = 1, npw
-                 reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
-                 &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                 reduce = reduce + REAL(evc(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
+                 &               + AIMAG(evc(ig,ibndp)) * AIMAG(aux_g(ig,1))
               ENDDO
               !$acc end parallel
               !
               IF(gstart == 2) THEN
-                 !$acc serial present(aux_g) copy(reduce)
-                 reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                 !$acc serial present(evc,aux_g) copy(reduce)
+                 reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
                  !$acc end serial
               ENDIF
               !
@@ -658,6 +622,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
      IF(l_spin_flip_kernel) THEN
         !
         ALLOCATE(evc_copy(npwx, nbndval0x-n_trunc_bands))
+        !$acc enter data create(evc_copy)
         !
         ! Calculation of the charge density response
         !
@@ -694,16 +659,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            ! ... read in GS wavefunctions iks
            !
            IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-              IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-              CALL mp_bcast(evc_host,0,inter_image_comm)
-              !
-              CALL using_evc(2)
-              CALL using_evc_d(0)
-#else
-              IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-              CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+              IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+              CALL mp_bcast(evc,0,inter_image_comm)
+              !$acc update device(evc)
            ENDIF
            !
            ! ... Apply \Delta V_HXC on vector
@@ -712,9 +670,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            !
            DO lbnd = 1,nbnd_do-MOD(nbnd_do,2),2
               !
-              !$acc host_data use_device(dvg_exc_tmp)
               CALL double_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks_do),dvg_exc_tmp(:,lbnd+1,iks_do),psic,'Wave')
-              !$acc end host_data
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -722,9 +678,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(z_rhs_vec_part2)
               CALL double_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part2(:,lbnd,iks),z_rhs_vec_part2(:,lbnd+1,iks),'Wave')
-              !$acc end host_data
               !
            ENDDO
            !
@@ -734,9 +688,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !
               lbnd = nbnd_do
               !
-              !$acc host_data use_device(dvg_exc_tmp)
               CALL single_invfft_gamma(dffts,npw,npwx,dvg_exc_tmp(:,lbnd,iks_do),psic,'Wave')
-              !$acc end host_data
               !
               !$acc parallel loop present(dvrs)
               DO ir = 1,dffts_nnr
@@ -744,35 +696,26 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               ENDDO
               !$acc end parallel
               !
-              !$acc host_data use_device(z_rhs_vec_part2)
               CALL single_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part2(:,lbnd,iks),'Wave')
-              !$acc end host_data
               !
            ENDIF
            !
-           !$acc parallel loop collapse(2) present(evc_copy)
+           !$acc parallel loop collapse(2) present(evc_copy,evc)
            DO ibnd = 1,nbndval-n_trunc_bands
               DO ig = 1,npwx
-                 evc_copy(ig,ibnd) = evc_work(ig,ibnd+n_trunc_bands)
+                 evc_copy(ig,ibnd) = evc(ig,ibnd+n_trunc_bands)
               ENDDO
            ENDDO
            !$acc end parallel
            !
            IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-              IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks_do)
-              CALL mp_bcast(evc_host,0,inter_image_comm)
-              !
-              CALL using_evc(2)
-              CALL using_evc_d(0)
-#else
-              IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks_do)
-              CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+              IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks_do)
+              CALL mp_bcast(evc,0,inter_image_comm)
+              !$acc update device(evc)
            ENDIF
            !
            ! evc_copy -> current spin channel
-           ! evc_work -> opposite spin channel
+           ! evc -> opposite spin channel
            !
            ! recompute nbnd_do for the opposite spin channel
            !
@@ -797,9 +740,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  jbndp = jbnd+n_trunc_bands
                  kbndp = kbnd+n_trunc_bands
                  !
-                 !$acc host_data use_device(evc_copy)
                  CALL double_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbnd),evc_copy(:,kbnd),psic,'Wave')
-                 !$acc end host_data
                  !
                  !$acc parallel loop present(dvrs)
                  DO ir = 1,dffts_nnr
@@ -807,25 +748,23 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  ENDDO
                  !$acc end parallel
                  !
-                 !$acc host_data use_device(aux_g)
                  CALL double_fwfft_gamma(dffts,npw,npwx,psic,aux_g(:,1),aux_g(:,2),'Wave')
-                 !$acc end host_data
                  !
                  reduce = 0._DP
                  reduce2 = 0._DP
-                 !$acc parallel loop reduction(+:reduce,reduce2) present(aux_g) copy(reduce,reduce2)
+                 !$acc parallel loop reduction(+:reduce,reduce2) present(evc,aux_g) copy(reduce,reduce2)
                  DO ig = 1, npw
-                    reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
-                    &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
-                    reduce2 = reduce2 + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
-                    &                 + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,2))
+                    reduce = reduce + REAL(evc(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
+                    &               + AIMAG(evc(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                    reduce2 = reduce2 + REAL(evc(ig,ibndp),KIND=DP) * REAL(aux_g(ig,2),KIND=DP) &
+                    &                 + AIMAG(evc(ig,ibndp)) * AIMAG(aux_g(ig,2))
                  ENDDO
                  !$acc end parallel
                  !
                  IF(gstart == 2) THEN
-                    !$acc serial present(aux_g) copy(reduce,reduce2)
-                    reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
-                    reduce2 = reduce2 - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
+                    !$acc serial present(evc,aux_g) copy(reduce,reduce2)
+                    reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                    reduce2 = reduce2 - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
                     !$acc end serial
                  ENDIF
                  !
@@ -841,9 +780,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  jbnd = nbndval - n_trunc_bands
                  jbndp = jbnd + n_trunc_bands
                  !
-                 !$acc host_data use_device(evc_copy)
                  CALL single_invfft_gamma(dffts,npw,npwx,evc_copy(:,jbnd),psic,'Wave')
-                 !$acc end host_data
                  !
                  !$acc parallel loop present(dvrs)
                  DO ir = 1,dffts_nnr
@@ -851,21 +788,19 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  ENDDO
                  !$acc end parallel
                  !
-                 !$acc host_data use_device(aux_g)
                  CALL single_fwfft_gamma(dffts,npw,npwx,psic,aux_g(:,1),'Wave')
-                 !$acc end host_data
                  !
                  reduce = 0._DP
-                 !$acc parallel loop reduction(+:reduce) present(aux_g) copy(reduce)
+                 !$acc parallel loop reduction(+:reduce) present(evc,aux_g) copy(reduce)
                  DO ig = 1, npw
-                    reduce = reduce + REAL(evc_work(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
-                    &               + AIMAG(evc_work(ig,ibndp)) * AIMAG(aux_g(ig,1))
+                    reduce = reduce + REAL(evc(ig,ibndp),KIND=DP) * REAL(aux_g(ig,1),KIND=DP) &
+                    &               + AIMAG(evc(ig,ibndp)) * AIMAG(aux_g(ig,1))
                  ENDDO
                  !$acc end parallel
                  !
                  IF(gstart == 2) THEN
-                    !$acc serial present(aux_g) copy(reduce)
-                    reduce = reduce - 0.5_DP * REAL(evc_work(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
+                    !$acc serial present(evc,aux_g) copy(reduce)
+                    reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
                     !$acc end serial
                  ENDIF
                  !
@@ -930,6 +865,7 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
            !
         ENDDO
         !
+        !$acc exit data delete(evc_copy)
         DEALLOCATE(evc_copy)
         !
      ENDIF
@@ -946,9 +882,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p2 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part2,aux_g,dv_vv_mat,dpcpart,dvrs)
   DEALLOCATE(z_rhs_vec_part2)
   DEALLOCATE(aux_g)
-  !$acc exit data delete(dv_vv_mat,dpcpart,dvrs)
   DEALLOCATE(dv_vv_mat)
   DEALLOCATE(dpcpart)
   DEALLOCATE(dvrs)
@@ -974,12 +910,9 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id
+  USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE cublas
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -995,7 +928,6 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   INTEGER :: dffts_nnr
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part3(:,:,:)
-  !$acc declare device_resident(z_rhs_vec_part3)
   COMPLEX(DP), ALLOCATABLE :: ddvxc(:,:)
   TYPE(bar_type) :: barra
   !
@@ -1004,11 +936,13 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   dffts_nnr = dffts%nnr
   !
   ALLOCATE(z_rhs_vec_part3(npwx*npol,band_group%nlocx,kpt_pool%nloc))
-  ALLOCATE(ddvxc(dffts%nnr,nspin))
+  !$acc enter data create(z_rhs_vec_part3)
   !
   !$acc kernels present(z_rhs_vec_part3)
   z_rhs_vec_part3(:,:,:) = (0._DP,0._DP)
   !$acc end kernels
+  !
+  ALLOCATE(ddvxc(dffts%nnr,nspin))
   !
   IF(.NOT. l_spin_flip) THEN
      CALL compute_ddvxc_5p(dvg_exc_tmp, ddvxc)
@@ -1042,16 +976,9 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
      ! ... read in GS wavefunctions iks
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      ! ... Apply \Delta V_HXC
@@ -1063,7 +990,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
         ibnd = band_group%l2g(lbnd)+n_trunc_bands
         jbnd = band_group%l2g(lbnd+1)+n_trunc_bands
         !
-        CALL double_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),evc_work(:,jbnd),psic,'Wave')
+        CALL double_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),evc(:,jbnd),psic,'Wave')
         !
         !$acc parallel loop present(ddvxc)
         DO ir = 1,dffts_nnr
@@ -1071,9 +998,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
         ENDDO
         !$acc end parallel
         !
-        !$acc host_data use_device(z_rhs_vec_part3)
         CALL double_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part3(:,lbnd,iks),z_rhs_vec_part3(:,lbnd+1,iks),'Wave')
-        !$acc end host_data
         !
      ENDDO
      !
@@ -1084,7 +1009,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
         lbnd = nbnd_do
         ibnd = band_group%l2g(lbnd)+n_trunc_bands
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ibnd),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ibnd),psic,'Wave')
         !
         !$acc parallel loop present(ddvxc)
         DO ir = 1,dffts_nnr
@@ -1092,9 +1017,7 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
         ENDDO
         !$acc end parallel
         !
-        !$acc host_data use_device(z_rhs_vec_part3)
         CALL single_fwfft_gamma(dffts,npw,npwx,psic,z_rhs_vec_part3(:,lbnd,iks),'Wave')
-        !$acc end host_data
         !
      ENDIF
      !
@@ -1128,8 +1051,8 @@ SUBROUTINE rhs_zvector_part3( dvg_exc_tmp, z_rhs_vec )
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p3 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part3,ddvxc)
   DEALLOCATE(z_rhs_vec_part3)
-  !$acc exit data delete(ddvxc)
   DEALLOCATE(ddvxc)
   !
 END SUBROUTINE
@@ -1147,11 +1070,7 @@ SUBROUTINE compute_ddvxc_5p( dvg_exc_tmp, ddvxc )
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE fft_interfaces,       ONLY : fwfft
   USE westcom,              ONLY : ddvxc_fd_coeff
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : psic=>psic_d
-#else
   USE wavefunctions,        ONLY : psic
-#endif
   !
   IMPLICIT NONE
   !
@@ -1406,12 +1325,9 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id,inter_bgrp_comm,intra_bgrp_comm
+  USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wavefunctions,        ONLY : evc_host=>evc
   USE cublas
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc
 #endif
   !
   IMPLICIT NONE
@@ -1428,9 +1344,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   REAL(DP) :: reduce
   COMPLEX(DP), ALLOCATABLE :: dotp(:)
   COMPLEX(DP), ALLOCATABLE :: z_rhs_vec_part4(:,:,:),tmp_vec(:,:)
-  !$acc declare device_resident(z_rhs_vec_part4,tmp_vec)
   REAL(DP), ALLOCATABLE :: dv_vv_mat(:,:)
-  !$acc declare device_resident(dv_vv_mat)
   COMPLEX(DP), ALLOCATABLE :: dpcpart(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dpcpart
@@ -1446,7 +1360,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   ALLOCATE(dv_vv_mat(nbndval0x-n_trunc_bands, band_group%nlocx))
   ALLOCATE(tmp_vec(npwx*npol, band_group%nlocx))
   ALLOCATE(dpcpart(npwx*npol, nbndval0x-n_trunc_bands))
-  !$acc enter data create(dpcpart)
+  !$acc enter data create(z_rhs_vec_part4,dv_vv_mat,tmp_vec,dpcpart)
   !
   !$acc kernels present(z_rhs_vec_part4)
   z_rhs_vec_part4(:,:,:) = (0._DP,0._DP)
@@ -1491,16 +1405,9 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      ! ... read in GS wavefunctions iks
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      ! Compute the first part
@@ -1515,7 +1422,7 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
      !
      CALL bse_kernel_gamma(current_spin,evc1_all(:,:,iks),tmp_vec,l_spin_flip)
      !
-     !$acc parallel vector_length(1024) present(tmp_vec,dv_vv_mat)
+     !$acc parallel vector_length(1024) present(evc,tmp_vec,dv_vv_mat)
      !$acc loop collapse(2)
      DO jbnd = 1, nbndval - n_trunc_bands
         DO lbnd = 1, nbnd_do
@@ -1525,12 +1432,12 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
            reduce = 0._DP
            !$acc loop reduction(+:reduce)
            DO ig = 1, npw
-              reduce = reduce + REAL(evc_work(ig,jbndp),KIND=DP) * REAL(tmp_vec(ig,lbnd),KIND=DP) &
-              &               + AIMAG(evc_work(ig,jbndp)) * AIMAG(tmp_vec(ig,lbnd))
+              reduce = reduce + REAL(evc(ig,jbndp),KIND=DP) * REAL(tmp_vec(ig,lbnd),KIND=DP) &
+              &               + AIMAG(evc(ig,jbndp)) * AIMAG(tmp_vec(ig,lbnd))
            ENDDO
            !
            IF(gstart == 2) THEN
-              reduce = reduce - 0.5_DP * REAL(evc_work(1,jbndp),KIND=DP) * REAL(tmp_vec(1,lbnd),KIND=DP)
+              reduce = reduce - 0.5_DP * REAL(evc(1,jbndp),KIND=DP) * REAL(tmp_vec(1,lbnd),KIND=DP)
            ENDIF
            !
            dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
@@ -1604,10 +1511,10 @@ SUBROUTINE rhs_zvector_part4( dvg_exc_tmp, z_rhs_vec )
   WRITE(stdout,"(5x,'Norm of z_rhs_vec p4 = ',ES15.8)") SUM(REAL(dotp,KIND=DP))
   !
   DEALLOCATE(dotp)
+  !$acc exit data delete(z_rhs_vec_part4,dv_vv_mat,tmp_vec,dpcpart)
   DEALLOCATE(z_rhs_vec_part4)
   DEALLOCATE(dv_vv_mat)
   DEALLOCATE(tmp_vec)
-  !$acc exit data delete(dpcpart)
   DEALLOCATE(dpcpart)
   !
 END SUBROUTINE

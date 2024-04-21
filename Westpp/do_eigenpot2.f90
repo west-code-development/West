@@ -27,11 +27,9 @@ SUBROUTINE do_eigenpot2 ( )
   USE control_flags,         ONLY : gamma_only
   USE pdep_db,               ONLY : pdep_db_read
   USE types_bz_grid,         ONLY : q_grid
-#if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : psic=>psic_d
-  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
-#else
   USE wavefunctions,         ONLY : psic
+#if defined(__CUDA)
+  USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
 #endif
   !
   IMPLICIT NONE
@@ -86,13 +84,9 @@ SUBROUTINE do_eigenpot2 ( )
         IF( global_j < westpp_range(1) .OR. global_j > westpp_range(2) ) CYCLE
         !
         IF( gamma_only ) THEN
-           !$acc host_data use_device(dvg)
            CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,local_j),psic,TRIM(fftdriver))
-           !$acc end host_data
         ELSE
-           !$acc host_data use_device(dvg)
            CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,local_j),psic,'Wave',igq_q(:,iq))
-           !$acc end host_data
         ENDIF
         IF( westpp_sign ) THEN
            !$acc parallel loop present(auxr)

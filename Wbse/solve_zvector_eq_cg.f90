@@ -42,7 +42,6 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   COMPLEX(DP), ALLOCATABLE :: r_old(:,:,:),r_new(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: p(:,:,:),Ap(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: z(:,:,:)
-  !$acc declare device_resident(r_old,r_new,p,Ap,z)
   !
   REAL(DP) :: time_spent(2)
   REAL(DP), EXTERNAL :: get_clock
@@ -66,6 +65,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   ALLOCATE(p    (npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(Ap   (npwx*npol, band_group%nlocx, kpt_pool%nloc))
   ALLOCATE(z    (npwx*npol, band_group%nlocx, kpt_pool%nloc))
+  !$acc enter data create(r_old,r_new,p,Ap,z)
   !
   ALLOCATE(residual_old(nspin))
   ALLOCATE(residual_new(nspin))
@@ -211,6 +211,7 @@ SUBROUTINE solve_zvector_eq_cg(z_rhs, z_out)
   !
   do_inexact_krylov = .FALSE.
   !
+  !$acc exit data delete(r_old,r_new,p,Ap,z)
   DEALLOCATE(r_new)
   DEALLOCATE(r_old)
   DEALLOCATE(p)
@@ -242,15 +243,10 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
   USE westcom,              ONLY : nbnd_occ,lrwfc,iuwfc,n_trunc_bands
   USE distribution_center,  ONLY : kpt_pool,band_group
   USE mp_global,            ONLY : inter_image_comm,my_image_id
-#if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wavefunctions,        ONLY : evc_host=>evc
-  USE wvfct,                ONLY : g2kin
-  USE wvfct_gpum,           ONLY : et=>et_d
-  USE west_gpu,             ONLY : reallocate_ps_gpu
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc
+  USE wavefunctions,        ONLY : evc
   USE wvfct,                ONLY : g2kin,et
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -299,8 +295,7 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
         IF(ibnd > n_trunc_bands .AND. ibnd <= nbndval) nbnd_do = nbnd_do+1
      ENDDO
      !
-     !$acc parallel vector_length(1024) present(g2kin_save,px,x)
-     !$acc loop
+     !$acc parallel loop collapse(2) present(g2kin_save,et,px,x)
      DO lbnd = 1,nbnd_do
         DO ig = 1,npwx
            !
@@ -333,16 +328,9 @@ SUBROUTINE cg_precondition(x, px, turn_shift)
      ! load evc from iks to apply Pc of the current spin channel
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
 #if defined(__CUDA)

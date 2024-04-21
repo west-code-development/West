@@ -31,12 +31,9 @@ SUBROUTINE do_exc_spin()
   USE types_bz_grid,         ONLY : k_grid
   USE json_module,           ONLY : json_file
   USE wvfct,                 ONLY : nbnd
+  USE wavefunctions,         ONLY : evc
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,         ONLY : evc_work=>evc
 #endif
   !
   IMPLICIT NONE
@@ -51,7 +48,6 @@ SUBROUTINE do_exc_spin()
   REAL(DP), ALLOCATABLE :: om(:,:),collect_ds2(:)
   REAL(DP), ALLOCATABLE :: dvgdvg_uu(:,:),dvgdvg_dd(:,:),dvgdvg_ud(:,:),dvgevc_ud(:,:),dvgevc_du(:,:)
   COMPLEX(DP), ALLOCATABLE :: evc_copy(:,:)
-  !$acc declare device_resident(evc_copy)
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   !
@@ -72,36 +68,22 @@ SUBROUTINE do_exc_spin()
   ! COMPUTE <S^2> FOR THE GROUND STATE
   !
   ALLOCATE(om(nbnd, nbnd))
-  !$acc enter data create(om)
   ALLOCATE(evc_copy(npwx, nbnd))
+  !$acc enter data create(om,evc_copy)
   !
-#if defined(__CUDA)
-  IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,1)
-  CALL mp_bcast(evc_host,0,inter_image_comm)
+  IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,1)
+  CALL mp_bcast(evc,0,inter_image_comm)
+  !$acc update device(evc)
   !
-  CALL using_evc(2)
-  CALL using_evc_d(0)
-#else
-  IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,1)
-  CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
-  !
-  !$acc kernels present(evc_copy)
-  evc_copy(:,:) = evc_work
+  !$acc kernels present(evc_copy,evc)
+  evc_copy(:,:) = evc
   !$acc end kernels
   !
-#if defined(__CUDA)
-  IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,2)
-  CALL mp_bcast(evc_host,0,inter_image_comm)
+  IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,2)
+  CALL mp_bcast(evc,0,inter_image_comm)
+  !$acc update device(evc)
   !
-  CALL using_evc(2)
-  CALL using_evc_d(0)
-#else
-  IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,2)
-  CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
-  !
-  !$acc parallel vector_length(1024) present(evc_copy,om)
+  !$acc parallel vector_length(1024) present(evc_copy,evc,om)
   !$acc loop collapse(2)
   DO ibnd1 = 1,nbnd
      DO ibnd2 = 1,nbnd
@@ -109,12 +91,12 @@ SUBROUTINE do_exc_spin()
         reduce = 0._DP
         !$acc loop reduction(+:reduce)
         DO ig = 1, npwx
-           reduce = reduce + 2._DP * REAL(evc_copy(ig,ibnd1),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
-                  &        + 2._DP * AIMAG(evc_copy(ig,ibnd1)) * AIMAG(evc_work(ig,ibnd2))
+           reduce = reduce + 2._DP * REAL(evc_copy(ig,ibnd1),KIND=DP) * REAL(evc(ig,ibnd2),KIND=DP) &
+                  &        + 2._DP * AIMAG(evc_copy(ig,ibnd1)) * AIMAG(evc(ig,ibnd2))
         ENDDO
         !
         IF (gstart==2) THEN
-           reduce = reduce - REAL(evc_copy(1,ibnd1),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
+           reduce = reduce - REAL(evc_copy(1,ibnd1),KIND=DP) * REAL(evc(1,ibnd2),KIND=DP)
         ENDIF
         !
         om(ibnd1, ibnd2) = reduce
@@ -269,7 +251,7 @@ SUBROUTINE do_exc_spin()
            !
            ! Part 3: up-down
            !
-           !$acc parallel vector_length(1024) present(dvg_exc,dvgdvg_ud,dvgevc_ud,evc_copy,dvgevc_du)
+           !$acc parallel vector_length(1024) present(dvg_exc,dvgdvg_ud,evc,dvgevc_ud,evc_copy,dvgevc_du)
            !$acc loop collapse(2)
            DO ibnd1 = 1, nbnd_up
               DO ibnd2 = 1, nbnd_dn
@@ -290,12 +272,12 @@ SUBROUTINE do_exc_spin()
                  reduce = 0._DP
                  !$acc loop reduction(+:reduce)
                  DO ig = 1, npwx
-                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
-                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc_work(ig,ibnd2))
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc(ig,ibnd2),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc(ig,ibnd2))
                  ENDDO
                  !
                  IF(gstart == 2) THEN
-                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc(1,ibnd2),KIND=DP)
                  ENDIF
                  !
                  dvgevc_ud(ibnd1,ibnd2) = reduce
@@ -404,7 +386,7 @@ SUBROUTINE do_exc_spin()
            !
            ! Part 3: up-down
            !
-           !$acc parallel vector_length(1024) present(dvg_exc,dvgevc_ud)
+           !$acc parallel vector_length(1024) present(dvg_exc,evc,dvgevc_ud)
            !$acc loop collapse(2)
            DO ibnd1 = 1, nbnd_dn
               DO ibnd2 = 1, nbnd_dn
@@ -412,12 +394,12 @@ SUBROUTINE do_exc_spin()
                  reduce = 0._DP
                  !$acc loop reduction(+:reduce)
                  DO ig = 1, npwx
-                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(ig,ibnd2),KIND=DP) &
-                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc_work(ig,ibnd2))
+                    reduce = reduce + 2._DP * REAL(dvg_exc(ig,ibnd1,1,lexc),KIND=DP) * REAL(evc(ig,ibnd2),KIND=DP) &
+                    &               + 2._DP * AIMAG(dvg_exc(ig,ibnd1,1,lexc)) * AIMAG(evc(ig,ibnd2))
                  ENDDO
                  !
                  IF(gstart == 2) THEN
-                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc_work(1,ibnd2),KIND=DP)
+                    reduce = reduce - REAL(dvg_exc(1,ibnd1,1,lexc),KIND=DP) * REAL(evc(1,ibnd2),KIND=DP)
                  ENDIF
                  !
                  dvgevc_ud(ibnd1,ibnd2) = reduce
@@ -576,7 +558,7 @@ SUBROUTINE do_exc_spin()
      !
   ENDIF
   !
-  !$acc exit data delete(om)
+  !$acc exit data delete(om,evc_copy)
   DEALLOCATE(om)
   DEALLOCATE(evc_copy)
   !

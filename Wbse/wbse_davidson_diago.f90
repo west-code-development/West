@@ -42,9 +42,8 @@ SUBROUTINE wbse_davidson_diago ( )
   USE wavefunctions,        ONLY : evc
   USE wbse_bgrp,            ONLY : init_gather_bands
 #if defined(__CUDA)
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d
   USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,allocate_bse_gpu,deallocate_bse_gpu,&
-                                 & reallocate_ps_gpu,memcpy_H2D,memcpy_D2H
+                                 & reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -231,11 +230,8 @@ SUBROUTINE wbse_davidson_diago ( )
      DO ip = mstart, mstart+max_mloc-1
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*band_group%nlocx*kpt_pool%nloc)
-#else
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-#endif
+           !$acc update device(dvg_exc_tmp)
         ELSE
            !$acc kernels present(dvg_exc_tmp)
            dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
@@ -245,11 +241,8 @@ SUBROUTINE wbse_davidson_diago ( )
         CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_spin_flip)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*band_group%nlocx*kpt_pool%nloc)
-#else
+           !$acc update host(dng_exc_tmp)
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-#endif
         ENDIF
         !
      ENDDO
@@ -380,11 +373,7 @@ SUBROUTINE wbse_davidson_diago ( )
            IF(kpt_pool%nloc > 1) THEN
               IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
               CALL mp_bcast(evc,0,inter_image_comm)
-              !
-#if defined(__CUDA)
-              CALL using_evc(2)
-              CALL using_evc_d(0)
-#endif
+              !$acc update device(evc)
            ENDIF
            !
            ! Pc amat
@@ -430,11 +419,8 @@ SUBROUTINE wbse_davidson_diago ( )
      DO ip = mstart, mstart+max_mloc-1
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_H2D(dvg_exc_tmp,dvg_exc(:,:,:,ip),npwx*band_group%nlocx*kpt_pool%nloc)
-#else
            dvg_exc_tmp(:,:,:) = dvg_exc(:,:,:,ip)
-#endif
+           !$acc update device(dvg_exc_tmp)
         ELSE
            !$acc kernels present(dvg_exc_tmp)
            dvg_exc_tmp(:,:,:) = (0._DP, 0._DP)
@@ -444,11 +430,8 @@ SUBROUTINE wbse_davidson_diago ( )
         CALL west_apply_liouvillian (dvg_exc_tmp, dng_exc_tmp, l_spin_flip)
         !
         IF (mstart <= ip .AND. ip <= mstart+mloc-1) THEN
-#if defined(__CUDA)
-           CALL memcpy_D2H(dng_exc(:,:,:,ip),dng_exc_tmp,npwx*band_group%nlocx*kpt_pool%nloc)
-#else
+           !$acc update host(dng_exc_tmp)
            dng_exc(:,:,:,ip) = dng_exc_tmp(:,:,:)
-#endif
         ENDIF
         !
      ENDDO

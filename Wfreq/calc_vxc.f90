@@ -41,12 +41,9 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   USE distribution_center,  ONLY : kpt_pool
   USE exx,                  ONLY : use_ace,vexx,vexxace_gamma,vexxace_k
   USE types_bz_grid,        ONLY : k_grid
-#if defined(__CUDA)
-  USE wavefunctions,        ONLY : evc
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_d,psic=>psic_d
-  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
-#else
   USE wavefunctions,        ONLY : evc,psic
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu
 #endif
   !
   IMPLICIT NONE
@@ -70,14 +67,16 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   INTEGER :: dfftp_nnr
   COMPLEX(DP), ALLOCATABLE :: xpsi(:,:),vxpsi(:,:)
   COMPLEX(DP), ALLOCATABLE :: psic1(:)
-  !$acc declare device_resident(psic1)
   REAL(DP), EXTERNAL :: DDOT
   COMPLEX(DP), EXTERNAL :: ZDOTC
   TYPE(idistribute) :: gwbnd
   !
   ALLOCATE( vxc(dfftp%nnr,nspin) )
   !
-  IF (l_enable_off_diagonal) ALLOCATE( psic1 (dfftp%nnr) )
+  IF (l_enable_off_diagonal) THEN
+     ALLOCATE( psic1(dfftp%nnr) )
+     !$acc enter data create(psic1)
+  ENDIF
   !
   WRITE(stdout,*)
   CALL io_push_bar()
@@ -123,11 +122,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
      IF(kpt_pool%nloc > 1) THEN
         IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
         CALL mp_bcast(evc,0,inter_image_comm)
-        !
-#if defined(__CUDA)
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#endif
+        !$acc update device(evc)
      ENDIF
      !
      ! NON-HYBRID CONTRIBUTION TO VXC
@@ -137,11 +132,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
         IF(gamma_only) THEN
            !
            DO ib = 1, gwbnd%nloc
-#if defined(__CUDA)
-              CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave')
-#else
               CALL single_invfft_gamma(dffts,npw,npwx,evc(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave')
-#endif
               !
               DO jb_glob = 1, n_bands
                  !
@@ -150,13 +141,7 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
                  IF (l_enable_off_diagonal) ipair = ijpmap(jb_glob,gwbnd%l2g(ib))
                  !
                  IF (l_enable_off_diagonal .AND. jb_glob < gwbnd%l2g(ib)) THEN
-#if defined(__CUDA)
-                    !$acc host_data use_device(psic1)
-                    CALL single_invfft_gamma(dffts,npw,npwx,evc_d(:,qp_bands(jb_glob,is)),psic1,'Wave')
-                    !$acc end host_data
-#else
                     CALL single_invfft_gamma(dffts,npw,npwx,evc(:,qp_bands(jb_glob,is)),psic1,'Wave')
-#endif
                     !$acc parallel loop reduction(+:braket) present(psic1,vxc) copy(braket)
                     DO ir = 1, dfftp_nnr
                        braket = braket + psic(ir) * CONJG(psic1(ir)) * vxc(ir,current_spin)
@@ -181,13 +166,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
         ELSE
            !
            DO ib = 1, gwbnd%nloc
-#if defined(__CUDA)
-              CALL single_invfft_k(dffts,npw,npwx,evc_d(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave',&
-              & igk_k(:,current_k))
-#else
               CALL single_invfft_k(dffts,npw,npwx,evc(:,qp_bands(gwbnd%l2g(ib),is)),psic,'Wave',&
               & igk_k(:,current_k))
-#endif
               braket = 0._DP
               !$acc parallel loop reduction(+:braket) present(vxc) copy(braket)
               DO ir = 1, dfftp_nnr
@@ -200,13 +180,8 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
            IF(noncolin) THEN
               !
               DO ib = 1,gwbnd%nloc
-#if defined(__CUDA)
-                 CALL single_invfft_k(dffts,npw,npwx,evc_d(1+npwx:npwx*2,qp_bands(gwbnd%l2g(ib),is)),&
-                 & psic,'Wave',igk_k(:,current_k))
-#else
                  CALL single_invfft_k(dffts,npw,npwx,evc(1+npwx:npwx*2,qp_bands(gwbnd%l2g(ib),is)),&
                  & psic,'Wave',igk_k(:,current_k))
-#endif
                  braket = 0._DP
                  !$acc parallel loop reduction(+:braket) present(vxc) copy(braket)
                  DO ir = 1, dfftp_nnr
@@ -320,7 +295,10 @@ SUBROUTINE calc_vxc( sigma_vxcl, sigma_vxcnl )
   !
   !$acc exit data delete(vxc)
   DEALLOCATE( vxc )
-  IF (l_enable_off_diagonal) DEALLOCATE( psic1 )
+  IF (l_enable_off_diagonal) THEN
+     !$acc exit data delete(psic1)
+     DEALLOCATE( psic1 )
+  ENDIF
   !
 #if defined(__CUDA)
   CALL deallocate_gpu()

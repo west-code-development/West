@@ -29,12 +29,9 @@ SUBROUTINE do_rho ( )
   USE class_idistribute,     ONLY : idistribute
   USE control_flags,         ONLY : gamma_only
   USE types_bz_grid,         ONLY : k_grid
+  USE wavefunctions,         ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
-  USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,         ONLY : evc_work=>evc,psic
 #endif
   !
   IMPLICIT NONE
@@ -78,16 +75,9 @@ SUBROUTINE do_rho ( )
      ! ... read in wavefunctions from the previous iteration
      !
      IF(k_grid%nps > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      DO local_ib = 1, aband%nloc
@@ -100,14 +90,14 @@ SUBROUTINE do_rho ( )
         wt_b = occupation(global_ib,iks)
         !
         IF( gamma_only ) THEN
-           CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave')
+           CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
            !$acc parallel loop present(auxr)
            DO ir = 1, dffts_nnr
               auxr(ir) = auxr(ir) + REAL( psic(ir), KIND=DP) * REAL( psic(ir), KIND=DP) * wt_k * wt_b
            ENDDO
            !$acc end parallel
         ELSE
-           CALL single_invfft_k(dffts,npw,npwx,evc_work(:,global_ib),psic,'Wave',igk_k(:,current_k))
+           CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
            !$acc parallel loop present(auxr)
            DO ir = 1, dffts_nnr
               auxr(ir) = auxr(ir) + REAL( CONJG( psic(ir) ) * psic(ir), KIND=DP) * wt_k * wt_b

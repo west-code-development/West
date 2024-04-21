@@ -32,12 +32,9 @@ SUBROUTINE do_exc_comp()
   USE types_bz_grid,         ONLY : k_grid
   USE json_module,           ONLY : json_file
   USE wvfct,                 ONLY : nbnd
+  USE wavefunctions,         ONLY : evc
 #if defined(__CUDA)
-  USE wavefunctions_gpum,    ONLY : using_evc,using_evc_d,evc_work=>evc_d
-  USE wavefunctions,         ONLY : evc_host=>evc
   USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu
-#else
-  USE wavefunctions,         ONLY : evc_work=>evc
 #endif
   !
   IMPLICIT NONE
@@ -144,16 +141,9 @@ SUBROUTINE do_exc_comp()
         ! ... read in wavefunctions from the previous iteration
         !
         IF(k_grid%nps > 1) THEN
-#if defined(__CUDA)
-           IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-           CALL mp_bcast(evc_host,0,inter_image_comm)
-           !
-           CALL using_evc(2)
-           CALL using_evc_d(0)
-#else
-           IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-           CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+           IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+           CALL mp_bcast(evc,0,inter_image_comm)
+           !$acc update device(evc)
         ENDIF
         !
         ! CYCLE here because of mp_bcast above
@@ -169,7 +159,7 @@ SUBROUTINE do_exc_comp()
         nbndval = nbnd_occ(iks)
         flnbndval = nbnd_occ(iks_do)
         !
-        !$acc parallel vector_length(1024) present(dvg_exc,projection_matrix)
+        !$acc parallel vector_length(1024) present(dvg_exc,evc,projection_matrix)
         !$acc loop collapse(2)
         DO iocc = 1, flnbndval
            DO iemp = 1, nbnd - nbndval
@@ -177,12 +167,12 @@ SUBROUTINE do_exc_comp()
               reduce = 0._DP
               !$acc loop reduction(+:reduce)
               DO ig = 1, npw
-                 reduce = reduce + 2._DP*REAL(dvg_exc(ig,iocc,iks,lexc),KIND=DP)*REAL(evc_work(ig,nbndval+iemp),KIND=DP) &
-                 &               + 2._DP*AIMAG(dvg_exc(ig,iocc,iks,lexc))*AIMAG(evc_work(ig,nbndval+iemp))
+                 reduce = reduce + 2._DP*REAL(dvg_exc(ig,iocc,iks,lexc),KIND=DP)*REAL(evc(ig,nbndval+iemp),KIND=DP) &
+                 &               + 2._DP*AIMAG(dvg_exc(ig,iocc,iks,lexc))*AIMAG(evc(ig,nbndval+iemp))
               ENDDO
               !
               IF(gstart == 2) THEN
-                 reduce = reduce - REAL(dvg_exc(1,iocc,iks,lexc),KIND=DP)*REAL(evc_work(1,nbndval+iemp),KIND=DP)
+                 reduce = reduce - REAL(dvg_exc(1,iocc,iks,lexc),KIND=DP)*REAL(evc(1,nbndval+iemp),KIND=DP)
               ENDIF
               !
               projection_matrix(iemp,iocc,iks,iexc) = reduce

@@ -58,13 +58,10 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
+  USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE wavefunctions,        ONLY : evc_host=>evc
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d,psic=>psic_d
   USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc,psic
+                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -88,14 +85,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #endif
   REAL(DP),ALLOCATABLE :: diago1(:,:),subdiago1(:,:)
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
-  !$acc declare device_resident(q_s)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dvpsi
 #endif
   COMPLEX(DP),ALLOCATABLE :: psic1(:),dvpsi1(:,:)
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
-  !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: pertg_all
@@ -113,7 +108,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   INTEGER,ALLOCATABLE :: l2g(:)
-  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -184,18 +178,17 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ALLOCATE(ps_r(nbnd,pert%nloc))
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
-  !$acc enter data create(dvpsi)
   ALLOCATE(overlap(pert%nglob,nbnd))
-  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
+  !$acc enter data create(dvpsi,overlap,pertr,pertg)
   IF(l_enable_lanczos) THEN
      ALLOCATE(bnorm(pert%nloc))
      ALLOCATE(diago(n_lanczos,pert%nloc))
      ALLOCATE(subdiago(n_lanczos-1,pert%nloc))
      ALLOCATE(q_s(npwx*npol,pert%nloc,n_lanczos))
      ALLOCATE(braket(pert%nglob,n_lanczos,pert%nloc))
-     !$acc enter data create(braket)
+     !$acc enter data create(q_s,braket)
      IF(l_enable_off_diagonal) THEN
         ALLOCATE(dvpsi1(npwx*npol,pert%nlocx))
         ALLOCATE(psic1(dffts%nnr))
@@ -205,6 +198,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      ENDIF
   ENDIF
   ALLOCATE(l2g(pert%nloc))
+  !$acc enter data create(l2g)
   !
   !$acc parallel loop present(l2g)
   DO ip = 1,pert_nloc
@@ -257,16 +251,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      ! ... read in wavefunctions from the previous iteration
      !
      IF(kpt_pool%nloc > 1) THEN
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
      ENDIF
      !
      nbndval = nbnd_occ(iks)
@@ -287,7 +274,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         ! PSIC
         !
-        CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,ib),psic,'Wave')
+        CALL single_invfft_gamma(dffts,npw,npwx,evc(:,ib),psic,'Wave')
         !
         !$acc kernels present(dvpsi)
         dvpsi(:,:) = 0._DP
@@ -295,17 +282,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         DO ip = 1,pert%nloc
            !
-           glob_ip = pert%l2g(ip)
-           !
-#if defined(__CUDA)
-           CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
-#else
-           pertg = pertg_all(:,ip)
-#endif
+           pertg(:) = pertg_all(:,ip)
+           !$acc update device(pertg)
            !
            ! Multiply by sqvc
            !
-           !$acc parallel loop present(pertg,pot3D)
+           !$acc parallel loop present(pertg,pot3D,pot3D%sqvc)
            DO ig = 1,npwq
               pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
            ENDDO
@@ -313,9 +295,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
            ! Bring it to R-space
            !
-           !$acc host_data use_device(pertg,pertr)
            CALL single_invfft_gamma(dffts,npwq,npwqx,pertg,pertr,TRIM(fftdriver))
-           !$acc end host_data
            !
            !$acc parallel loop present(pertr)
            DO ir = 1,dffts_nnr
@@ -323,17 +303,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            ENDDO
            !$acc end parallel
            !
-           !$acc host_data use_device(pertr,dvpsi)
            CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi(:,ip),'Wave')
-           !$acc end host_data
            !
         ENDDO ! pert
         !
         ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
         !
-        !$acc host_data use_device(dvpsi,ps_r)
-        CALL glbrak_gamma(evc_work,dvpsi,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol)
-        !$acc end host_data
+        CALL glbrak_gamma(evc,dvpsi,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol)
         !
         IF(nproc_bgrp > 1) THEN
            !$acc host_data use_device(ps_r)
@@ -382,9 +358,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  ! PSIC
                  !
-                 !$acc host_data use_device(psic1)
-                 CALL single_invfft_gamma(dffts,npw,npwx,evc_work(:,jb),psic1,'Wave')
-                 !$acc end host_data
+                 CALL single_invfft_gamma(dffts,npw,npwx,evc(:,jb),psic1,'Wave')
                  !
                  !$acc kernels present(dvpsi1)
                  dvpsi1(:,:) = 0._DP
@@ -392,16 +366,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  DO ip = 1,pert%nloc
                     !
-                    glob_ip = pert%l2g(ip)
-#if defined(__CUDA)
-                    CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
-#else
-                    pertg = pertg_all(:,ip)
-#endif
+                    pertg(:) = pertg_all(:,ip)
+                    !$acc update device(pertg)
                     !
                     ! Multiply by sqvc
                     !
-                    !$acc parallel loop present(pertg,pot3D)
+                    !$acc parallel loop present(pertg,pot3D,pot3D%sqvc)
                     DO ig = 1,npwq
                        pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
                     ENDDO
@@ -409,9 +379,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                     !
                     ! Bring it to R-space
                     !
-                    !$acc host_data use_device(pertg,pertr)
                     CALL single_invfft_gamma(dffts,npwq,npwqx,pertg,pertr,TRIM(fftdriver))
-                    !$acc end host_data
                     !
                     !$acc parallel loop present(pertr,psic1)
                     DO ir = 1,dffts_nnr
@@ -419,9 +387,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                     ENDDO
                     !$acc end parallel
                     !
-                    !$acc host_data use_device(pertr,dvpsi1)
                     CALL single_fwfft_gamma(dffts,npw,npwx,pertr,dvpsi1(:,ip),'Wave')
-                    !$acc end host_data
                     !
                  ENDDO ! pert
                  !
@@ -509,9 +475,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if !defined(__CUDA)
   DEALLOCATE(ps_r)
 #endif
-  !$acc exit data delete(dvpsi)
+  !$acc exit data delete(dvpsi,overlap,pertr,pertg)
   DEALLOCATE(dvpsi)
-  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
@@ -519,8 +484,8 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      DEALLOCATE(bnorm)
      DEALLOCATE(diago)
      DEALLOCATE(subdiago)
+     !$acc exit data delete(q_s,braket)
      DEALLOCATE(q_s)
-     !$acc exit data delete(braket)
      DEALLOCATE(braket)
      IF(l_enable_off_diagonal) THEN
         !$acc exit data delete(dvpsi1,psic1)
@@ -530,6 +495,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         DEALLOCATE(diago1)
      ENDIF
   ENDIF
+  !$acc exit data delete(l2g)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !
@@ -577,13 +543,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
+  USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
-  USE wavefunctions,        ONLY : evc_host=>evc
-  USE wavefunctions_gpum,   ONLY : using_evc,using_evc_d,evc_work=>evc_d
   USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu,memcpy_H2D
-#else
-  USE wavefunctions,        ONLY : evc_work=>evc
+                                 & allocate_lanczos_gpu,deallocate_lanczos_gpu,reallocate_ps_gpu
 #endif
   !
   IMPLICIT NONE
@@ -608,20 +571,17 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ATTRIBUTES(PINNED) :: braket
 #endif
   COMPLEX(DP),ALLOCATABLE :: q_s(:,:,:)
-  !$acc declare device_resident(q_s)
   COMPLEX(DP),ALLOCATABLE :: dvpsi(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dvpsi
 #endif
   COMPLEX(DP),ALLOCATABLE :: pertg(:),pertr(:)
-  !$acc declare device_resident(pertg,pertr)
   COMPLEX(DP),ALLOCATABLE :: pertg_all(:,:)
   COMPLEX(DP),ALLOCATABLE :: evck(:,:),phase(:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: pertg_all,evck
 #endif
   COMPLEX(DP),ALLOCATABLE :: psick(:),psick_nc(:,:)
-  !$acc declare device_resident(psick,psick_nc)
 #if !defined(__CUDA)
   COMPLEX(DP),ALLOCATABLE :: ps_c(:,:)
 #endif
@@ -635,7 +595,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bksks_type) :: bksks
   INTEGER,ALLOCATABLE :: l2g(:)
-  !$acc declare device_resident(l2g)
   !
   CALL io_push_title('(G)-Lanczos')
   !
@@ -689,8 +648,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   IF(noncolin) THEN
      ALLOCATE(psick_nc(dffts%nnr,npol))
+     !$acc enter data create(psick_nc)
   ELSE
      ALLOCATE(psick(dffts%nnr))
+     !$acc enter data create(psick)
   ENDIF
   ALLOCATE(phase(dffts%nnr))
   ALLOCATE(evck(npwx*npol,nbnd))
@@ -712,20 +673,20 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ALLOCATE(ps_c(nbnd,pert%nloc))
 #endif
   ALLOCATE(dvpsi(npwx*npol,pert%nlocx))
-  !$acc enter data create(dvpsi)
   ALLOCATE(overlap(pert%nglob,nbnd))
-  !$acc enter data create(overlap)
   ALLOCATE(pertr(dffts%nnr))
   ALLOCATE(pertg(npwqx))
+  !$acc enter data create(dvpsi,overlap,pertr,pertg)
   IF(l_enable_lanczos) THEN
      ALLOCATE(bnorm(pert%nloc))
      ALLOCATE(diago(n_lanczos,pert%nloc))
      ALLOCATE(subdiago(n_lanczos-1,pert%nloc))
      ALLOCATE(q_s(npwx*npol,pert%nloc,n_lanczos))
      ALLOCATE(braket(pert%nglob,n_lanczos,pert%nloc))
-     !$acc enter data create(braket)
+     !$acc enter data create(q_s,braket)
   ENDIF
   ALLOCATE(l2g(pert%nloc))
+  !$acc enter data create(l2g)
   !
   !$acc parallel loop present(l2g)
   DO ip = 1,pert_nloc
@@ -821,16 +782,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         !
         !$acc update device(phase)
         !
-#if defined(__CUDA)
-        IF(my_image_id == 0) CALL get_buffer(evc_host,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_host,0,inter_image_comm)
-        !
-        CALL using_evc(2)
-        CALL using_evc_d(0)
-#else
-        IF(my_image_id == 0) CALL get_buffer(evc_work,lrwfc,iuwfc,iks)
-        CALL mp_bcast(evc_work,0,inter_image_comm)
-#endif
+        IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
+        CALL mp_bcast(evc,0,inter_image_comm)
+        !$acc update device(evc)
         !
         ! Read PDEP
         !
@@ -853,14 +807,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            ! PSIC
            !
            IF(noncolin) THEN
-              !$acc host_data use_device(evck,psick_nc)
               CALL single_invfft_k(dffts,npwk,npwx,evck(1:npwx,ib),psick_nc(:,1),'Wave',igk_k(:,ikks))
               CALL single_invfft_k(dffts,npwk,npwx,evck(1+npwx:npwx*2,ib),psick_nc(:,2),'Wave',igk_k(:,ikks))
-              !$acc end host_data
            ELSE
-              !$acc host_data use_device(evck,psick)
               CALL single_invfft_k(dffts,npwk,npwx,evck(:,ib),psick,'Wave',igk_k(:,ikks))
-              !$acc end host_data
            ENDIF
            !
            !$acc kernels present(dvpsi)
@@ -868,17 +818,13 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !$acc end kernels
            !
            DO ip = 1,pert%nloc
-              glob_ip = pert%l2g(ip)
               !
-#if defined(__CUDA)
-              CALL memcpy_H2D(pertg,pertg_all(:,ip),npwqx)
-#else
-              pertg = pertg_all(:,ip)
-#endif
+              pertg(:) = pertg_all(:,ip)
+              !$acc update device(pertg)
               !
               ! Multiply by sqvc
               !
-              !$acc parallel loop present(pertg,pot3D)
+              !$acc parallel loop present(pertg,pot3D,pot3D%sqvc)
               DO ig = 1,npwq
                  pertg(ig) = pot3D%sqvc(ig)*pertg(ig)
               ENDDO
@@ -887,47 +833,35 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               ! Bring it to R-space
               !
               IF(noncolin) THEN
-                 !$acc host_data use_device(pertg,pertr)
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg,pertr,'Wave',igq_q(:,iq))
-                 !$acc end host_data
                  !$acc parallel loop present(pertr,phase,psick_nc)
                  DO ir = 1,dffts_nnr
                     pertr(ir) = CONJG(phase(ir))*psick_nc(ir,1)*CONJG(pertr(ir))
                  ENDDO
                  !$acc end parallel
-                 !$acc host_data use_device(pertr,dvpsi,pertg)
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1:npwx,ip),'Wave',igk_k(:,current_k))
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg,pertr,'Wave',igq_q(:,iq))
-                 !$acc end host_data
                  !$acc parallel loop present(pertr,phase,psick_nc)
                  DO ir = 1,dffts_nnr
                     pertr(ir) = CONJG(phase(ir))*psick_nc(ir,2)*CONJG(pertr(ir))
                  ENDDO
                  !$acc end parallel
-                 !$acc host_data use_device(pertr,dvpsi)
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(1+npwx:npwx*2,ip),'Wave',igk_k(:,current_k))
-                 !$acc end host_data
               ELSE
-                 !$acc host_data use_device(pertg,pertr)
                  CALL single_invfft_k(dffts,npwq,npwqx,pertg,pertr,'Wave',igq_q(:,iq))
-                 !$acc end host_data
                  !$acc parallel loop present(pertr,phase,psick)
                  DO ir = 1,dffts_nnr
                     pertr(ir) = CONJG(phase(ir))*psick(ir)*CONJG(pertr(ir))
                  ENDDO
                  !$acc end parallel
-                 !$acc host_data use_device(pertr,dvpsi)
                  CALL single_fwfft_k(dffts,npw,npwx,pertr,dvpsi(:,ip),'Wave',igk_k(:,current_k))
-                 !$acc end host_data
               ENDIF
               !
            ENDDO ! pert
            !
            ! OVERLAP( glob_ip, im=1:n_hstates ) = < psi_im iks | dvpsi_glob_ip >
            !
-           !$acc host_data use_device(dvpsi,ps_c)
-           CALL glbrak_k(evc_work,dvpsi,ps_c,npw,npwx,nbnd,pert%nloc,nbnd,npol)
-           !$acc end host_data
+           CALL glbrak_k(evc,dvpsi,ps_c,npw,npwx,nbnd,pert%nloc,nbnd,npol)
            !
            IF(nproc_bgrp > 1) THEN
               !$acc host_data use_device(ps_c)
@@ -1025,8 +959,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
   !
   IF(noncolin) THEN
+     !$acc exit data delete(psick_nc)
      DEALLOCATE(psick_nc)
   ELSE
+     !$acc exit data delete(psick)
      DEALLOCATE(psick)
   ENDIF
   !$acc exit data delete(phase,evck)
@@ -1036,9 +972,8 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if !defined(__CUDA)
   DEALLOCATE(ps_c)
 #endif
-  !$acc exit data delete(dvpsi)
+  !$acc exit data delete(dvpsi,overlap,pertr,pertg)
   DEALLOCATE(dvpsi)
-  !$acc exit data delete(overlap)
   DEALLOCATE(overlap)
   DEALLOCATE(pertr)
   DEALLOCATE(pertg)
@@ -1046,10 +981,11 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      DEALLOCATE(bnorm)
      DEALLOCATE(diago)
      DEALLOCATE(subdiago)
+     !$acc exit data delete(q_s,braket)
      DEALLOCATE(q_s)
-     !$acc exit data delete(braket)
      DEALLOCATE(braket)
   ENDIF
+  !$acc exit data delete(l2g)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !

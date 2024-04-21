@@ -13,18 +13,18 @@ Leonardo is a GPU-accelerated supercomputer located at `CINECA <https://www.cine
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on February 21, 2024):
+WEST executables can be compiled using the following script (tested on April 19, 2024):
 
 .. code-block:: bash
 
    $ cat build_west.sh
    #!/bin/bash
 
-   module load anaconda3/2023.03
-   module load nvhpc/23.1
-   module load openmpi/4.1.4--nvhpc--23.1-cuda-11.8
-   module load fftw/3.3.10--openmpi--4.1.4--nvhpc--23.1
-   module load openblas/0.3.21--nvhpc--23.1
+   module load anaconda3/2023.09-0
+   module load nvhpc/23.11
+   module load openmpi/4.1.6--nvhpc--23.11
+   module load fftw/3.3.10--openmpi--4.1.6--nvhpc--23.11
+   module load openblas/0.3.24--nvhpc--23.11
 
    export MPIF90=mpif90
    export F90=nvfortran
@@ -32,13 +32,13 @@ WEST executables can be compiled using the following script (tested on February 
    export BLAS_LIBS="-L$OPENBLAS_LIB -lopenblas"
    export LAPACK_LIBS="-L$OPENBLAS_LIB -lopenblas"
 
-   ./configure --with-cuda=/leonardo/prod/opt/compilers/cuda/11.8/none --with-cuda-runtime=11.8 --with-cuda-cc=80 --with-cuda-mpi=yes
+   ./configure --with-cuda=/leonardo/prod/opt/compilers/cuda/12.3/none --with-cuda-runtime=12.3 --with-cuda-cc=80 --with-cuda-mpi=yes
 
    make -j 8 pw
 
    cd West
 
-   make conf PYT=python3 PYT_LDFLAGS="-L$ANACONDA3_LIB -lpython3.10"
+   make conf PYT=python3 PYT_LDFLAGS="$ANACONDA3_LIB/libpython3.11.so"
    make -j 8 all
 
 To use the script do:
@@ -67,15 +67,15 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --gpus-per-node=4
    #SBATCH --gpu-bind=none
 
-   module load anaconda3/2023.03
-   module load nvhpc/23.1
-   module load openmpi/4.1.4--nvhpc--23.1-cuda-11.8
-   module load fftw/3.3.10--openmpi--4.1.4--nvhpc--23.1
-   module load openblas/0.3.21--nvhpc--23.1
+   module load anaconda3/2023.09-0
+   module load nvhpc/23.11
+   module load openmpi/4.1.6--nvhpc--23.11
+   module load fftw/3.3.10--openmpi--4.1.6--nvhpc--23.11
+   module load openblas/0.3.24--nvhpc--23.11
 
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
-   export PYTHONPATH=$PYTHONPATH:/path/to/qe/West/Pytools
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NVHPC_HOME/Linux_x86_64/23.11/cuda/12.3/lib64
 
    mpirun -n 4 ./wstat.x -i wstat.in > wstat.out
 

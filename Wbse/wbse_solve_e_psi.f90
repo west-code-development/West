@@ -298,7 +298,6 @@ END SUBROUTINE
 SUBROUTINE compute_d0psi_dfpt()
   !
   USE kinds,                ONLY : DP
-  USE io_global,            ONLY : stdout
   USE mp_global,            ONLY : my_image_id,inter_image_comm
   USE mp,                   ONLY : mp_bcast
   USE buffers,              ONLY : get_buffer
@@ -308,9 +307,8 @@ SUBROUTINE compute_d0psi_dfpt()
   USE io_push,              ONLY : io_push_title
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,current_k,ngk
   USE westcom,              ONLY : nbnd_occ,n_trunc_bands,iuwfc,lrwfc,tr2_dfpt,n_dfpt_maxiter,&
-                                 & l_kinetic_only,d0psi,l_skip_nl_part_of_hcomr
+                                 & l_kinetic_only,d0psi
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE cell_base,            ONLY : bg
   USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions,        ONLY : evc
   USE wvfct,                ONLY : et
@@ -322,12 +320,11 @@ SUBROUTINE compute_d0psi_dfpt()
   !
   ! ... Local variables
   !
-  INTEGER :: iv, ip, ibnd, lbnd, iks, ig, ierr
+  INTEGER :: iv, ip, ibnd, lbnd, iks
   INTEGER :: nbndval, nbnd_do
   INTEGER :: kpt_pool_nloc, band_group_nloc
   INTEGER, PARAMETER :: n_ipol = 3
-  REAL(DP), ALLOCATABLE :: eprec(:), e(:)
-  COMPLEX(DP), ALLOCATABLE :: phi(:,:), phi_tmp(:,:)
+  COMPLEX(DP), ALLOCATABLE :: phi_tmp(:,:)
   !
   CALL io_push_title('Calculation of the dipole using DFPT method')
   !
@@ -370,58 +367,21 @@ SUBROUTINE compute_d0psi_dfpt()
      CALL reallocate_ps_gpu(nbndval,n_ipol)
 #endif
      !
-     ALLOCATE(eprec(n_ipol))
-     ALLOCATE(e(n_ipol))
-     ALLOCATE(phi_tmp(npwx*npol,n_ipol))
-     ALLOCATE(phi(npwx*npol,n_ipol))
-     !$acc enter data create(eprec,e,phi_tmp,phi)
-     !
-     ! LOOP over band states
+     ! LOOP over bands
      !
      d0psi(:,:,iks,:) = (0._DP,0._DP)
+     !
+     ALLOCATE(phi_tmp(npwx*npol,n_ipol))
+     !
+     tr2_dfpt = 1.E-12_DP
+     n_dfpt_maxiter = 250
+     l_kinetic_only = .FALSE.
      !
      DO lbnd = 1, band_group%nloc
         !
         iv = band_group%l2g(lbnd)+n_trunc_bands
         !
-        CALL commut_Hx_psi(iks,1,1,evc(1,iv),phi_tmp(1,1),l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi(iks,1,2,evc(1,iv),phi_tmp(1,2),l_skip_nl_part_of_hcomr)
-        CALL commut_Hx_psi(iks,1,3,evc(1,iv),phi_tmp(1,3),l_skip_nl_part_of_hcomr)
-        !
-        !$acc parallel loop collapse(2) present(phi,phi_tmp,bg)
-        DO ip = 1, n_ipol
-           DO ig = 1, npwx*npol
-              phi(ig,ip) = phi_tmp(ig,1)*bg(ip,1)+phi_tmp(ig,2)*bg(ip,2)+phi_tmp(ig,3)*bg(ip,3)
-           ENDDO
-        ENDDO
-        !$acc end parallel
-        !
-        CALL apply_alpha_pc_to_m_wfcs(nbndval,n_ipol,phi,(1._DP,0._DP))
-        !
-        CALL set_eprec(1,evc(:,iv),eprec(1))
-        !
-        !$acc parallel loop present(eprec,e,et)
-        DO ip = 1, n_ipol
-           eprec(ip) = eprec(1)
-           e(ip) = et(iv,iks)
-        ENDDO
-        !$acc end parallel
-        !
-        CALL precondition_m_wfcts(n_ipol,phi,phi_tmp,eprec)
-        !
-        tr2_dfpt = 1.E-12_DP
-        n_dfpt_maxiter = 250
-        l_kinetic_only = .FALSE.
-        !
-#if defined(__CUDA)
-        CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,n_ipol,phi,phi_tmp,e,eprec,tr2_dfpt,ierr)
-#else
-        CALL linsolve_sternheimer_m_wfcts(nbndval,n_ipol,phi,phi_tmp,e,eprec,tr2_dfpt,ierr)
-#endif
-        !
-        IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",i8)') ierr
-        !
-        !$acc update host(phi_tmp)
+        CALL linsolve_commut_Hx(iks,nbndval,et(iv,iks),evc(:,iv),phi_tmp)
         !
         d0psi(:,lbnd,iks,:) = phi_tmp
         !
@@ -429,17 +389,10 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      !$acc update device(d0psi)
      !
-     !$acc exit data delete(eprec,e,phi_tmp,phi)
-     DEALLOCATE(eprec)
-     DEALLOCATE(e)
      DEALLOCATE(phi_tmp)
-     DEALLOCATE(phi)
      !
 #if defined(__CUDA)
      CALL deallocate_macropol_gpu()
-#endif
-     !
-#if defined(__CUDA)
      CALL reallocate_ps_gpu(nbndval,nbnd_do)
 #endif
      !

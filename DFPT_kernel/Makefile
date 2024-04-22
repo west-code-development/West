@@ -14,6 +14,7 @@ MODFLAGS = $(BASEMOD_FLAGS) \
 DFPT_KERNEL_OBJS = \
 apply_sternheimerop_to_m_wfcs.o \
 dfpt_module.o \
+linsolve_commut_Hx.o \
 linsolve_sternheimer_m_wfcts.o \
 precondition_m_wfcts.o
 

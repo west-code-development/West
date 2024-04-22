@@ -35,17 +35,17 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,z_epsm1_rfr,&
-                                 & l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,tr2_dfpt,&
-                                 & z_head_rfr,d_head_ifr,o_restart_time,l_skip_nl_part_of_hcomr,npwqx,&
-                                 & fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ,nbnd_occ_full,&
-                                 & n_bands,d_epsm1_ifr_a,d_head_ifr_a,z_epsm1_rfr_a,z_head_rfr_a
-  USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,npool,inter_bgrp_comm,&
-                                 & intra_bgrp_comm,nbgrp,nproc_bgrp
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,&
+                                 & z_epsm1_rfr,l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,&
+                                 & refreq_list,z_head_rfr,d_head_ifr,o_restart_time,npwqx,&
+                                 & fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ,&
+                                 & nbnd_occ_full,n_bands,d_epsm1_ifr_a,d_head_ifr_a,z_epsm1_rfr_a,&
+                                 & z_head_rfr_a
+  USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,npool,&
+                                 & inter_bgrp_comm,intra_bgrp_comm,nbgrp,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
-  USE io_global,            ONLY : stdout
-  USE cell_base,            ONLY : bg,omega
+  USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
   USE pwcom,                ONLY : npw,npwx,et,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
@@ -67,10 +67,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions,        ONLY : evc,psic
 #if defined(__CUDA)
-  USE west_gpu,             ONLY : ps_r,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
-                                 & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
-                                 & reallocate_ps_gpu
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,reallocate_ps_gpu,allocate_gw_gpu,&
+                                 & deallocate_gw_gpu,allocate_lanczos_gpu,deallocate_lanczos_gpu,&
+                                 & allocate_chi_gpu,deallocate_chi_gpu,allocate_macropol_gpu,&
+                                 & deallocate_macropol_gpu,ps_r
 #endif
   !
   IMPLICIT NONE
@@ -82,7 +82,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: i1,i3,ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ipol,iks_g
+  INTEGER :: ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ipol,iks_g
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval,nbndval_full
@@ -132,11 +132,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
-  INTEGER :: ierr
   REAL(DP) :: this_et,this_occ,docc
   INTEGER,ALLOCATABLE :: l2g(:)
-  REAL(DP),ALLOCATABLE :: eprec_loc(:)
-  REAL(DP),ALLOCATABLE :: et_loc(:)
   COMPLEX(DP),ALLOCATABLE :: evc_copy(:,:)
   !
   CALL io_push_title('(W)-Lanczos')
@@ -323,13 +320,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      !
      IF(l_QDET) THEN
         !
-        !$acc parallel loop collapse(2) present(evc_copy,evc)
-        DO i1 = 1,nbnd
-           DO i3 = 1,npwx*npol
-              evc_copy(i3,i1) = evc(i3,i1)
-           ENDDO
-        ENDDO
-        !$acc end parallel
+        !$acc kernels present(evc_copy,evc)
+        evc_copy(:,:) = evc
+        !$acc end kernels
         !
 #if defined(__CUDA)
         CALL reallocate_ps_gpu(n_bands,nbnd)
@@ -358,73 +351,23 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         CALL reallocate_ps_gpu(nbndval_full,3)
 #endif
         !
-        ALLOCATE(eprec_loc(3))
-        ALLOCATE(et_loc(3))
-        ALLOCATE(phi(npwx*npol,3))
-        !$acc enter data create(eprec_loc,et_loc,phi)
-        !
         ! PHI
         !
         CALL occband%init(nbndval,'i','occband',.FALSE.)
         !
         ALLOCATE(phis(npwx*npol,3,occband%nloc))
         !
-        phis(:,:,:) = 0._DP
-        !
         DO ivloc = 1, occband%nloc
            !
            iv = occband%l2g(ivloc)
            !
-           !$acc enter data create(phis(:,:,ivloc))
-           !
-           DO i1 = 1,3
-              IF(l_QDET) THEN
-                 CALL commut_Hx_psi(iks,1,i1,evc_copy(:,iv),phis(:,i1,ivloc),l_skip_nl_part_of_hcomr)
-              ELSE
-                 CALL commut_Hx_psi(iks,1,i1,evc(:,iv),phis(:,i1,ivloc),l_skip_nl_part_of_hcomr)
-              ENDIF
-           ENDDO
-           !
-           !$acc parallel loop collapse(2) present(phi,phis(:,:,ivloc),bg)
-           DO i1 = 1,3
-              DO i3 = 1,npwx*npol
-                 phi(i3,i1) = phis(i3,1,ivloc)*bg(i1,1)+phis(i3,2,ivloc)*bg(i1,2)+phis(i3,3,ivloc)*bg(i1,3)
-              ENDDO
-           ENDDO
-           !$acc end parallel
-           !
-           CALL apply_alpha_pc_to_m_wfcs(nbndval_full,3,phi,(1._DP,0._DP))
-           !
            IF(l_QDET) THEN
-              CALL set_eprec(1,evc_copy(:,iv),eprec_loc(1))
+              CALL linsolve_commut_Hx(iks,nbndval_full,et(iv,iks),evc_copy(:,iv),phis(:,:,ivloc))
            ELSE
-              CALL set_eprec(1,evc(:,iv),eprec_loc(1))
+              CALL linsolve_commut_Hx(iks,nbndval_full,et(iv,iks),evc(:,iv),phis(:,:,ivloc))
            ENDIF
            !
-           !$acc parallel loop present(eprec_loc,et_loc,et)
-           DO i1 = 1,3
-              eprec_loc(i1) = eprec_loc(1)
-              et_loc(i1) = et(iv,iks)
-           ENDDO
-           !$acc end parallel
-           !
-           CALL precondition_m_wfcts(3,phi,phis(:,:,ivloc),eprec_loc)
-#if defined(__CUDA)
-           CALL linsolve_sternheimer_m_wfcts_gpu(nbndval_full,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
-#else
-           CALL linsolve_sternheimer_m_wfcts(nbndval_full,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
-#endif
-           !
-           IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
-           !
-           !$acc exit data copyout(phis(:,:,ivloc))
-           !
         ENDDO
-        !
-        !$acc exit data delete(eprec_loc,et_loc,phi)
-        DEALLOCATE(eprec_loc)
-        DEALLOCATE(et_loc)
-        DEALLOCATE(phi)
         !
 #if defined(__CUDA)
         CALL deallocate_macropol_gpu()
@@ -1038,15 +981,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,z_epsm1_ifr_q,&
                                  & z_epsm1_rfr_q,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,&
-                                 & imfreq_list,refreq_list,tr2_dfpt,z_head_rfr,z_head_ifr,&
-                                 & o_restart_time,l_skip_nl_part_of_hcomr,npwqx,wstat_save_dir,&
-                                 & ngq,igq_q
+                                 & imfreq_list,refreq_list,z_head_rfr,z_head_ifr,o_restart_time,&
+                                 & npwqx,wstat_save_dir,ngq,igq_q
   USE mp_global,            ONLY : my_image_id,inter_image_comm,nimage,inter_bgrp_comm,&
                                  & intra_bgrp_comm,nbgrp,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
   USE mp_world,             ONLY : world_comm
-  USE io_global,            ONLY : stdout
-  USE cell_base,            ONLY : bg,omega
+  USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
   USE pwcom,                ONLY : npw,npwx,et,current_spin,isk,nbnd,lsda,igk_k,current_k,ngk
@@ -1068,10 +1009,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
-  USE west_gpu,             ONLY : ps_c,allocate_gpu,deallocate_gpu,allocate_gw_gpu,deallocate_gw_gpu,&
-                                 & allocate_macropol_gpu,deallocate_macropol_gpu,allocate_lanczos_gpu,&
-                                 & deallocate_lanczos_gpu,allocate_chi_gpu,deallocate_chi_gpu,&
-                                 & reallocate_ps_gpu
+  USE west_gpu,             ONLY : allocate_gpu,deallocate_gpu,reallocate_ps_gpu,allocate_gw_gpu,&
+                                 & deallocate_gw_gpu,allocate_lanczos_gpu,deallocate_lanczos_gpu,&
+                                 & allocate_chi_gpu,deallocate_chi_gpu,allocate_macropol_gpu,&
+                                 & deallocate_macropol_gpu,ps_c
 #endif
   !
   IMPLICIT NONE
@@ -1083,7 +1024,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: i1,i3,ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ik,is,iq,ikqs,ikq,ipol
+  INTEGER :: ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ik,is,iq,ikqs,ikq,ipol
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
@@ -1136,12 +1077,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   REAL(DP) :: time_spent(2)
   REAL(DP),EXTERNAL :: get_clock
   TYPE(bksq_type) :: bksq
-  INTEGER :: ierr
   REAL(DP) :: g0(3)
   REAL(DP) :: this_et
   INTEGER,ALLOCATABLE :: l2g(:)
-  REAL(DP),ALLOCATABLE :: eprec_loc(:)
-  REAL(DP),ALLOCATABLE :: et_loc(:)
   !
   CALL io_push_title('(W)-Lanczos')
   !
@@ -1242,7 +1180,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   rfr_nloc = rfr%nloc
   nbndval = MINVAL(nbnd_occ)
   !
-  !$acc enter data copyin(bg,imfreq_list,refreq_list)
+  !$acc enter data copyin(imfreq_list,refreq_list)
   !
   ALLOCATE(dvpsi(npwx*npol,mypara%nlocx))
   ALLOCATE(overlap(mypara%nglob,nbnd-nbndval))
@@ -1354,65 +1292,19 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            CALL reallocate_ps_gpu(nbndval,3)
 #endif
            !
-           ALLOCATE(eprec_loc(3))
-           ALLOCATE(et_loc(3))
-           ALLOCATE(phi(npwx*npol,3))
-           !$acc enter data create(eprec_loc,et_loc,phi)
-           !
            ! PHI
            !
            CALL occband%init(nbndval,'i','occband',.FALSE.)
            !
            ALLOCATE(phis(npwx*npol,3,occband%nloc))
            !
-           phis(:,:,:) = 0._DP
-           !
            DO ivloc = 1, occband%nloc
               !
               iv = occband%l2g(ivloc)
               !
-              !$acc enter data create(phis(:,:,ivloc))
-              !
-              DO i1 = 1,3
-                 CALL commut_Hx_psi(iks,1,i1,evc(:,iv),phis(:,i1,ivloc),l_skip_nl_part_of_hcomr)
-              ENDDO
-              !
-              !$acc parallel loop collapse(2) present(phi,phis(:,:,ivloc),bg)
-              DO i1 = 1,3
-                 DO i3 = 1,npwx*npol
-                    phi(i3,i1) = phis(i3,1,ivloc)*bg(i1,1)+phis(i3,2,ivloc)*bg(i1,2)+phis(i3,3,ivloc)*bg(i1,3)
-                 ENDDO
-              ENDDO
-              !$acc end parallel
-              !
-              CALL apply_alpha_pc_to_m_wfcs(nbndval,3,phi,(1._DP,0._DP))
-              !
-              CALL set_eprec(1,evc(:,iv),eprec_loc(1))
-              !
-              !$acc parallel loop present(eprec_loc,et_loc,et)
-              DO i1 = 1,3
-                 eprec_loc(i1) = eprec_loc(1)
-                 et_loc(i1) = et(iv,iks)
-              ENDDO
-              !$acc end parallel
-              !
-              CALL precondition_m_wfcts(3,phi,phis(:,:,ivloc),eprec_loc)
-#if defined(__CUDA)
-              CALL linsolve_sternheimer_m_wfcts_gpu(nbndval,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
-#else
-              CALL linsolve_sternheimer_m_wfcts(nbndval,3,phi,phis(:,:,ivloc),et_loc,eprec_loc,tr2_dfpt,ierr)
-#endif
-              !
-              IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
-              !
-              !$acc exit data copyout(phis(:,:,ivloc))
+              CALL linsolve_commut_Hx(iks,nbndval,et(iv,iks),evc(:,iv),phis(:,:,ivloc))
               !
            ENDDO
-           !
-           !$acc exit data delete(eprec_loc,et_loc,phi)
-           DEALLOCATE(eprec_loc)
-           DEALLOCATE(et_loc)
-           DEALLOCATE(phi)
            !
 #if defined(__CUDA)
            CALL deallocate_macropol_gpu()
@@ -1772,7 +1664,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   DEALLOCATE(evckpq)
   !
   !$acc exit data copyout(zmati_q,zmatr_q)
-  !$acc exit data delete(bg,imfreq_list,refreq_list)
+  !$acc exit data delete(imfreq_list,refreq_list)
   !$acc exit data delete(dvpsi,overlap,pertr,pertg,l2g)
   DEALLOCATE(dvpsi)
   DEALLOCATE(overlap)

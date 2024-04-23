@@ -163,26 +163,13 @@ MODULE west_gpu
    USE cell_base,             ONLY : bg
    USE westcom,               ONLY : igq_q
    USE wavefunctions,         ONLY : evc,psic,psic_nc
-   USE wavefunctions_gpum,    ONLY : evc_d,psic_d,psic_nc_d
    USE wvfct,                 ONLY : et
    !
    IMPLICIT NONE
    !
-   IF(ALLOCATED(evc_d)) THEN
-      DEALLOCATE(evc_d)
-   ENDIF
-   IF(ALLOCATED(psic_d)) THEN
-      DEALLOCATE(psic_d)
-   ENDIF
-   IF(ALLOCATED(psic_nc_d)) THEN
-      DEALLOCATE(psic_nc_d)
-   ENDIF
-   !
-   !$acc enter data create(psic) copyin(wg,ngk,bg,igq_q,et)
+   !$acc enter data create(evc,psic) copyin(wg,ngk,bg,igq_q,et)
    IF(nks == 1) THEN
-      !$acc enter data copyin(evc)
-   ELSE
-      !$acc enter data create(evc)
+      !$acc update device(evc)
    ENDIF
    IF(ALLOCATED(psic_nc)) THEN
       !$acc enter data create(psic_nc)
@@ -895,15 +882,8 @@ MODULE west_gpu
    !-----------------------------------------------------------------------
    !
    USE fft_base,              ONLY : dffts
-   USE uspp,                  ONLY : dvan_d,dvan
    !
    IMPLICIT NONE
-   !
-   IF(ALLOCATED(dvan_d)) THEN
-      DEALLOCATE(dvan_d)
-   ENDIF
-   !
-   !$acc enter data copyin(dvan)
    !
    ALLOCATE(tmp_r(dffts%nnr))
    !$acc enter data create(tmp_r)
@@ -914,11 +894,7 @@ MODULE west_gpu
    SUBROUTINE deallocate_forces_gpu()
    !-----------------------------------------------------------------------
    !
-   USE uspp,                  ONLY : dvan
-   !
    IMPLICIT NONE
-   !
-   !$acc exit data delete(dvan)
    !
    IF(ALLOCATED(tmp_r)) THEN
       !$acc exit data delete(tmp_r)

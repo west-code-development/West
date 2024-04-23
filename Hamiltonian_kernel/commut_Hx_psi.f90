@@ -40,7 +40,7 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
   USE control_flags,    ONLY : gamma_only, offload_type
   USE westcom,          ONLY : na_ikb, ijkb0_ikb
 #if defined(__CUDA)
-  USE becmod,           ONLY : calbec_cuf
+  USE becmod,           ONLY : calbec
   USE west_gpu,         ONLY : gk, dvkb, work, ps2, psc, becp1, becp2
   USE cublas
 #else
@@ -182,19 +182,16 @@ SUBROUTINE commut_Hx_psi(ik, m, ipol, psi, dpsi, l_skip_nlpp)
         !$acc end parallel
      ENDIF
      !
-#if defined(__CUDA)
-     CALL calbec_cuf(offload_type,npw,vkb,psi,becp1,m)
-     CALL calbec_cuf(offload_type,npw,work,psi,becp2,m)
-#else
+#if !defined(__CUDA)
      DEALLOCATE(gk)
      DEALLOCATE(dvkb)
      !
      CALL allocate_bec_type(nkb,m,becp1)
      CALL allocate_bec_type(nkb,m,becp2)
+#endif
      !
      CALL calbec(offload_type,npw,vkb,psi,becp1,m)
      CALL calbec(offload_type,npw,work,psi,becp2,m)
-#endif
      !
      IF(noncolin) THEN
 #if !defined(__CUDA)

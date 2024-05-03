@@ -371,7 +371,7 @@ MODULE west_mp
       !
       ! I/O
       !
-      INTEGER, INTENT(IN) :: req
+      INTEGER, INTENT(INOUT) :: req
       !
       ! Workspace
       !

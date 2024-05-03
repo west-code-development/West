@@ -444,7 +444,7 @@ wfreq_control
    * - **Type**
      - int
    * - **Default**
-     - 1
+     - 21
    * - **Description**
      - Maximum number of iterations in the secant solver.
 

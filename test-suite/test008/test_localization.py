@@ -10,7 +10,7 @@ def read_localization_from_json(fileName):
     with open(fileName, "r") as f:
         raw_ = json.load(f)
 
-    return np.array(raw_["output"]["L"]["K00001"]["local_factor"], dtype=float)
+    return np.array(raw_["output"]["L"]["K000001"]["local_factor"], dtype=float)
 
 
 def read_ipr_from_json(fileName):
@@ -21,7 +21,7 @@ def read_ipr_from_json(fileName):
     with open(fileName, "r") as f:
         raw_ = json.load(f)
 
-    return np.array(raw_["output"]["L"]["K00001"]["ipr"], dtype=float)
+    return np.array(raw_["output"]["L"]["K000001"]["ipr"], dtype=float)
 
 
 def test_localization():

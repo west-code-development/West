@@ -10,7 +10,7 @@ def read_trans_matrix_from_json(fileName):
     with open(fileName, "r") as f:
         raw_ = json.load(f)
 
-    return np.array(raw_["output"]["B"]["K00001"]["trans_matrix"], dtype=float)
+    return np.array(raw_["output"]["B"]["K000001"]["trans_matrix"], dtype=float)
 
 
 def read_wannier_center_from_json(fileName):
@@ -21,7 +21,7 @@ def read_wannier_center_from_json(fileName):
     with open(fileName, "r") as f:
         raw_ = json.load(f)
 
-    return np.array(raw_["output"]["B"]["K00001"]["wan_center"], dtype=float)
+    return np.array(raw_["output"]["B"]["K000001"]["wan_center"], dtype=float)
 
 
 def test_trans_matrix():

@@ -219,7 +219,8 @@ MODULE wfreq_db
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: iks,jks
-      CHARACTER(LEN=6) :: my_label_ik,my_label_jk,my_label_ipair
+      CHARACTER(LEN=6) :: my_label_ik,my_label_jk
+      CHARACTER(LEN=9) :: my_label_ipair
       !
       TYPE(json_file) :: json
       INTEGER :: iun,ipair
@@ -246,7 +247,7 @@ MODULE wfreq_db
                !
                DO ipair = 1,n_pairs
                   !
-                  WRITE(my_label_ipair,'(i6.6)') ipair
+                  WRITE(my_label_ipair,'(i9.9)') ipair
                   !
                   IF(PRESENT(eri_vc)) THEN
                      CALL json%add('qdet.eri_vc.K'//my_label_ik//'.K'//my_label_jk//'.pair'//&

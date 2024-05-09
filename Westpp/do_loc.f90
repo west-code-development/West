@@ -58,8 +58,8 @@ SUBROUTINE do_loc ( )
   REAL(DP) :: rho, r_vec(3)
   REAL(DP) :: r, dr
   REAL(DP) :: reduce, reduce2
-  CHARACTER(LEN=5) :: label_k
-  CHARACTER(LEN=9) :: label_b
+  CHARACTER(LEN=6) :: label_k
+  CHARACTER(LEN=6) :: label_b
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
   TYPE(json_core) :: jcor
@@ -303,7 +303,7 @@ SUBROUTINE do_loc ( )
      ! output localization factor and IPR
      !
      DO iks = 1, k_grid%nps
-        WRITE(label_k,'(I5.5)') iks
+        WRITE(label_k,'(I6.6)') iks
         CALL json%add('output.L.K'//label_k//'.local_factor',local_fac(:,iks))
         CALL json%add('output.L.K'//label_k//'.ipr',ipr(:,iks))
      ENDDO
@@ -317,7 +317,7 @@ SUBROUTINE do_loc ( )
            !
            jb = MAXLOC(ABS(ovlp_ab(:,ib)),DIM=1)
            !
-           WRITE(label_b,'(I9)') ib
+           WRITE(label_b,'(I6)') ib
            !
            CALL json%add('output.L.overlap_ab('//label_b//').ib',ib+westpp_range(1)-1)
            CALL json%add('output.L.overlap_ab('//label_b//').jb',jb+westpp_range(1)-1)

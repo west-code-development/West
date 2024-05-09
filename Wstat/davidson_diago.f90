@@ -579,17 +579,17 @@ SUBROUTINE davidson_diago_k ( )
         !
         IF ( wstat_calculation(1:1) == 'S' .OR. wstat_calculation(2:2) == 'S' ) THEN
            !
-           WRITE( stdout, '(/,5x,64a)' ) ('=',i=1,64)
-           WRITE( stdout, '(5x,a,i5.5,a,3f10.4,a)')&
+           WRITE( stdout, '(/,5x,65a)' ) ('=',i=1,65)
+           WRITE( stdout, '(5x,a,i6.6,a,3f10.4,a)')&
            'PDEP calculation at q(',iq,') = (',q_grid%p_cart(:,iq),' )'
-           WRITE( stdout, '(5x,64a)' ) ('-',i=1,64)
+           WRITE( stdout, '(5x,65a)' ) ('-',i=1,65)
            !
         ELSEIF ( (wstat_calculation(1:1) == 'R' .OR. wstat_calculation(2:2) == 'R') .AND. l_restart_q_done ) THEN
            !
-           WRITE( stdout, '(/,5x,64a)' ) ('=',i=1,64)
-           WRITE( stdout, '(5x,a,i5.5,a,3f10.4,a)')&
+           WRITE( stdout, '(/,5x,65a)' ) ('=',i=1,65)
+           WRITE( stdout, '(5x,a,i6.6,a,3f10.4,a)')&
            'PDEP calculation at q(',iq,') = (',q_grid%p_cart(:,iq),' )'
-           WRITE( stdout, '(5x,64a)' ) ('-',i=1,64)
+           WRITE( stdout, '(5x,65a)' ) ('-',i=1,65)
            !
         ENDIF
         !
@@ -1365,7 +1365,7 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
   INTEGER :: i,j
   CHARACTER(20),EXTERNAL :: human_readable_time
   CHARACTER(LEN=6) :: cdav
-  CHARACTER(LEN=5) :: cq
+  CHARACTER(LEN=6) :: cq
   INTEGER :: ndav(q_grid%np),iunit
   LOGICAL :: found
   !
@@ -1386,7 +1386,7 @@ SUBROUTINE output_ev_and_time_q(nvec,ev_,conv_,time,sternop,tr2,dfpt_dim,diago_d
      !
      CALL json%load(filename=TRIM(logfile))
      !
-     WRITE(cq,'(i5)') iq
+     WRITE(cq,'(i6)') iq
      !
      CALL json%get('exec.ndav.Q'//TRIM(ADJUSTL(cq)), ndav(iq), found)
      !

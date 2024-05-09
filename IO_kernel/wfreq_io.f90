@@ -56,8 +56,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     INTEGER(i8b) :: myoffset_i8b
     !
@@ -65,8 +65,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
     IF (l_enable_off_diagonal) THEN
@@ -110,8 +110,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     INTEGER(i8b) :: myoffset_i8b
     !
@@ -119,8 +119,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
     fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
@@ -157,9 +157,9 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ikks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=6) :: c_glob_ikks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     INTEGER(i8b) :: myoffset_i8b
     !
@@ -167,9 +167,9 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ikks,'(i5.5)') glob_ikks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ikks,'(i6.6)') glob_ikks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
     fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
@@ -205,8 +205,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     INTEGER(i8b) :: myoffset_i8b
     !
@@ -214,8 +214,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
     IF (l_enable_off_diagonal) THEN
@@ -259,8 +259,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     INTEGER(i8b) :: myoffset_i8b
     !
@@ -268,8 +268,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
     fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'B'//c_glob_ib//'.dat'
@@ -306,9 +306,9 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ikks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=6) :: c_glob_ikks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     INTEGER(i8b) :: myoffset_i8b
     !
@@ -316,9 +316,9 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ikks,'(i5.5)') glob_ikks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ikks,'(i6.6)') glob_ikks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     myoffset_i8b = 1_i8b*n_lanczos*myoffset
     fname = TRIM(wfreq_save_dir)//'/g_diag_K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib//'.dat'
@@ -354,8 +354,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     LOGICAL :: lproc
     !
@@ -363,8 +363,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
     lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
@@ -397,8 +397,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     LOGICAL :: lproc
     !
@@ -406,8 +406,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
     lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
@@ -441,9 +441,9 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ikks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=6) :: c_glob_ikks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     LOGICAL :: lproc
     !
@@ -451,9 +451,9 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ikks,'(i5.5)') glob_ikks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ikks,'(i6.6)') glob_ikks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib
     lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
@@ -488,8 +488,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     LOGICAL :: lproc
     !
@@ -497,8 +497,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
     lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
@@ -536,8 +536,8 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     LOGICAL :: lproc
     !
@@ -545,8 +545,8 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'_K'//c_glob_iks//'B'//c_glob_ib
     lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)
@@ -585,9 +585,9 @@ MODULE wfreq_io
     !
     ! Workspace
     !
-    CHARACTER(LEN=5) :: c_glob_iks
-    CHARACTER(LEN=5) :: c_glob_ikks
-    CHARACTER(LEN=5) :: c_glob_ib
+    CHARACTER(LEN=6) :: c_glob_iks
+    CHARACTER(LEN=6) :: c_glob_ikks
+    CHARACTER(LEN=9) :: c_glob_ib
     CHARACTER(LEN=512) :: fname
     LOGICAL :: lproc
     !
@@ -595,9 +595,9 @@ MODULE wfreq_io
     !
     ! Generate the filename
     !
-    WRITE(c_glob_iks,'(i5.5)') glob_iks
-    WRITE(c_glob_ikks,'(i5.5)') glob_ikks
-    WRITE(c_glob_ib,'(i5.5)') glob_ib
+    WRITE(c_glob_iks,'(i6.6)') glob_iks
+    WRITE(c_glob_ikks,'(i6.6)') glob_ikks
+    WRITE(c_glob_ib,'(i9.9)') glob_ib
     !
     fname = TRIM(wfreq_save_dir)//'/over_'//labellina//'K'//c_glob_iks//'KK'//c_glob_ikks//'B'//c_glob_ib
     lproc = (my_image_id == root_image .AND. me_bgrp == root_bgrp)

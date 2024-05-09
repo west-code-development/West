@@ -42,7 +42,7 @@ SUBROUTINE do_exc_spin()
   !
   INTEGER :: iexc,lexc,ig,ibnd1,ibnd2,ibnd3,iunit
   INTEGER :: nbndx_occ,nbnd_up,nbnd_dn
-  CHARACTER(5) :: label_exc
+  CHARACTER(6) :: label_exc
   REAL(DP) :: reduce,s2,ds2,ss,norm_u,norm_d,n_alpha,n_beta
   LOGICAL :: flip_up
   REAL(DP), ALLOCATABLE :: om(:,:),collect_ds2(:)
@@ -549,7 +549,7 @@ SUBROUTINE do_exc_spin()
      !
      IF(mpime == root) THEN
         DO iexc = 1,westpp_n_liouville_to_use
-           WRITE(label_exc,'(I5.5)') iexc
+           WRITE(label_exc,'(I6.6)') iexc
            CALL json%add('output.E'//label_exc//'.delta_spin_square',collect_ds2(iexc))
         ENDDO
      ENDIF

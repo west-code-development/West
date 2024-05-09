@@ -484,8 +484,8 @@ MODULE wfreq_restart
       ! Workspace
       !
       CHARACTER(LEN=512) :: fname
-      CHARACTER(LEN=29) :: my_label
-      CHARACTER(LEN=33) :: my_label2
+      CHARACTER(LEN=31) :: my_label
+      CHARACTER(LEN=35) :: my_label2
       INTEGER :: ip,ip_glob
       REAL(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -510,7 +510,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum(tmp_dmat,intra_bgrp_comm)
       !
-      WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
@@ -527,7 +527,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum(tmp_zmat,intra_bgrp_comm)
       !
-      WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
@@ -538,11 +538,11 @@ MODULE wfreq_restart
       !
       IF(bks%old_ks /= 0 .AND. bks%old_band /= 0) THEN
          IF(me_bgrp == 0) THEN
-            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
+            WRITE(my_label2,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
-            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
+            WRITE(my_label2,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
@@ -582,8 +582,8 @@ MODULE wfreq_restart
       ! Workspace
       !
       CHARACTER(LEN=512) :: fname
-      CHARACTER(LEN=29) :: my_label
-      CHARACTER(LEN=33) :: my_label2
+      CHARACTER(LEN=31) :: my_label
+      CHARACTER(LEN=35) :: my_label2
       INTEGER :: ip,ip_glob
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -608,7 +608,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum(tmp_dmat,intra_bgrp_comm)
       !
-      WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
@@ -625,7 +625,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum(tmp_zmat,intra_bgrp_comm)
       !
-      WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
       CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
@@ -636,11 +636,11 @@ MODULE wfreq_restart
       !
       IF(bks%old_ks /= 0 .AND. bks%old_band /= 0) THEN
          IF(me_bgrp == 0) THEN
-            WRITE(my_label2,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
+            WRITE(my_label2,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
-            WRITE(my_label2,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
+            WRITE(my_label2,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
@@ -681,8 +681,8 @@ MODULE wfreq_restart
       ! Workspace
       !
       CHARACTER(LEN=512) :: fname
-      CHARACTER(LEN=37) :: my_label
-      CHARACTER(LEN=41) :: my_label2
+      CHARACTER(LEN=40) :: my_label
+      CHARACTER(LEN=44) :: my_label2
       INTEGER :: ip,ip_glob,iq
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
@@ -709,7 +709,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum(tmp_dmat,intra_bgrp_comm)
       !
-      WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
+      WRITE(my_label,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
@@ -729,7 +729,7 @@ MODULE wfreq_restart
       ENDDO
       CALL mp_sum(tmp_zmat,intra_bgrp_comm)
       !
-      WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
+      WRITE(my_label,'("zmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp == 0)
@@ -741,11 +741,11 @@ MODULE wfreq_restart
       !
       IF(bksq%old_q /= 0 .AND. bksq%old_ks /= 0 .AND. bksq%old_band /= 0) THEN
          IF(me_bgrp == 0) THEN
-            WRITE(my_label2,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
+            WRITE(my_label2,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bksq%old_q,bksq%old_ks,bksq%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
-            WRITE(my_label2,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6,".dat")') &
+            WRITE(my_label2,'("zmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bksq%old_q,bksq%old_ks,bksq%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
@@ -789,7 +789,7 @@ MODULE wfreq_restart
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
       CHARACTER(LEN=20),EXTERNAL :: human_readable_time
-      CHARACTER(LEN=29) :: my_label
+      CHARACTER(LEN=31) :: my_label
       INTEGER :: ip,ip_glob
       REAL(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -815,7 +815,7 @@ MODULE wfreq_restart
       !
       ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
       !
-      WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
@@ -829,7 +829,7 @@ MODULE wfreq_restart
       !
       ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
       !
-      WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
@@ -882,7 +882,7 @@ MODULE wfreq_restart
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
       CHARACTER(LEN=20),EXTERNAL :: human_readable_time
-      CHARACTER(LEN=29) :: my_label
+      CHARACTER(LEN=31) :: my_label
       INTEGER :: ip,ip_glob
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
@@ -908,7 +908,7 @@ MODULE wfreq_restart
       !
       ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
       !
-      WRITE(my_label,'("dmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
@@ -922,7 +922,7 @@ MODULE wfreq_restart
       !
       ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
       !
-      WRITE(my_label,'("zmat_iks",i5.5,"_iv",i5.5,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
       CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
@@ -976,7 +976,7 @@ MODULE wfreq_restart
       REAL(DP),EXTERNAL :: get_clock
       REAL(DP) :: time_spent(2)
       CHARACTER(LEN=20),EXTERNAL :: human_readable_time
-      CHARACTER(LEN=37) :: my_label
+      CHARACTER(LEN=40) :: my_label
       INTEGER :: ip,ip_glob,iq
       COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:,:)
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
@@ -1002,7 +1002,7 @@ MODULE wfreq_restart
       !
       ALLOCATE(tmp_dmat(npg,npl,ifr%nglob,q_grid%np))
       !
-      WRITE(my_label,'("dmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
+      WRITE(my_label,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)
@@ -1019,7 +1019,7 @@ MODULE wfreq_restart
       !
       ALLOCATE(tmp_zmat(npg,npl,rfr%nglob,q_grid%np))
       !
-      WRITE(my_label,'("zmat_iq",i5.5,"_iks",i5.5,"_iv",i5.5,"_I",i6.6)') &
+      WRITE(my_label,'("zmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
       & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
       fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
       lproc = (me_bgrp==0)

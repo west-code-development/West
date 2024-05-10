@@ -256,7 +256,7 @@ def read_qdet_2body(fileName):
                 for is2 in range(nspin):
                     sindex2 = f'K{is2+1:06d}'
                     for ipair in range(npair):
-                        pindex = f'pair{ipair+1:06d}'
+                        pindex = f'pair{ipair+1:09d}'
                         eri[key][is1,is2,ipair,:] = np.array(data['qdet']['eri_w'][sindex1][sindex2][pindex],dtype='f8')
 
     return eri

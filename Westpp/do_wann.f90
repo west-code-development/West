@@ -54,8 +54,8 @@ SUBROUTINE do_wann()
   REAL(DP), ALLOCATABLE :: amat(:,:,:)
   REAL(DP), ALLOCATABLE :: umat(:,:)
   REAL(DP), ALLOCATABLE :: aux(:)
-  CHARACTER(LEN=5) :: label_k
-  CHARACTER(LEN=9) :: label_b
+  CHARACTER(LEN=6) :: label_k
+  CHARACTER(LEN=6) :: label_b
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   TYPE(json_file) :: json
@@ -213,7 +213,7 @@ SUBROUTINE do_wann()
      !
      IF(mpime == root) THEN
         !
-        WRITE(label_k,'(I5.5)') iks
+        WRITE(label_k,'(I6.6)') iks
         !
         ! output Wannier centers
         !
@@ -232,7 +232,7 @@ SUBROUTINE do_wann()
            !
            wan_center(:) = tmp(1)*at(:,1)*alat + tmp(2)*at(:,2)*alat + tmp(3)*at(:,3)*alat
            !
-           WRITE(label_b,'(I9)') ib
+           WRITE(label_b,'(I6)') ib
            !
            CALL json%add('output.B.K'//label_k//'.wan_center('//label_b//')',wan_center)
            !

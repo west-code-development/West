@@ -55,7 +55,7 @@ SUBROUTINE do_dip()
   COMPLEX(DP), ALLOCATABLE :: dip_cryst_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: dip_cart_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: Hx_psi(:,:)
-  CHARACTER(LEN=5) :: label_k
+  CHARACTER(LEN=6) :: label_k
   CHARACTER(LEN=9) :: label_d
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
@@ -161,7 +161,7 @@ SUBROUTINE do_dip()
      !
      IF(mpime == root) THEN
         !
-        WRITE(label_k,'(I5.5)') iks
+        WRITE(label_k,'(I6.6)') iks
         !
         CALL json%add('output.D.K'//label_k//'.weight',k_grid%weight(iks))
         CALL json%add('output.D.K'//label_k//'.energies',et(:,iks))

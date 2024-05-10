@@ -106,7 +106,7 @@ MODULE qbox_interface
     !
     ! read KS orbitals
     !
-    WRITE(stdout,'(5X,A,I5,A)') 'Qbox interface: loading ',nwfcs,' KS orbitals'
+    WRITE(stdout,'(5X,A,I6,A)') 'Qbox interface: loading ',nwfcs,' KS orbitals'
     !
     DO iwfc = 1,nwfcs
        !

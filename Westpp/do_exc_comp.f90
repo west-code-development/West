@@ -46,7 +46,7 @@ SUBROUTINE do_exc_comp()
   INTEGER :: naux,iaux
   INTEGER :: nbndx_occ,nbndx_emp
   INTEGER :: nbndval,flnbndval
-  CHARACTER(5) :: label_exc,label_k
+  CHARACTER(6) :: label_exc,label_k
   REAL(DP) :: reduce
   REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:),transition_dipole(:,:)
   REAL(DP), ALLOCATABLE :: aux(:)
@@ -298,7 +298,7 @@ SUBROUTINE do_exc_comp()
      !
      DO iexc = 1,westpp_n_liouville_to_use
         !
-        WRITE(label_exc,'(I5.5)') iexc
+        WRITE(label_exc,'(I6.6)') iexc
         !
         CALL json%add('output.E'//label_exc//'.excitation_energy',ev(iexc))
         !
@@ -313,7 +313,7 @@ SUBROUTINE do_exc_comp()
               iks_do = iks
            ENDIF
            !
-           WRITE(label_k,'(I5.5)') iks
+           WRITE(label_k,'(I6.6)') iks
            !
            CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.from_spin',iks_do)
            CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.to_spin',iks)

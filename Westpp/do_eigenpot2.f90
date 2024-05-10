@@ -41,7 +41,7 @@ SUBROUTINE do_eigenpot2 ( )
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
   CHARACTER(LEN=6) :: labeli
-  CHARACTER(LEN=5) :: labelq
+  CHARACTER(LEN=6) :: labelq
   LOGICAL :: l_print_pdep_read
   !
   pert = idistribute()
@@ -103,7 +103,7 @@ SUBROUTINE do_eigenpot2 ( )
         ENDIF
         !
         WRITE(labeli,'(i6.6)') global_j
-        WRITE(labelq,'(i5.5)') iq
+        WRITE(labelq,'(i6.6)') iq
         fname = TRIM( westpp_save_dir ) // '/eigQ'//labelq//'I'//labeli
         !$acc update host(auxr)
         CALL dump_r( auxr, fname)

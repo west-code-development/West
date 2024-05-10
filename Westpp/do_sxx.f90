@@ -60,7 +60,7 @@ SUBROUTINE do_sxx ( )
   REAL(DP),ALLOCATABLE :: sigma_exx(:,:)
   REAL(DP),ALLOCATABLE :: sigma_sxx(:,:)
   REAL(DP) :: peso
-  CHARACTER(LEN=5) :: label_k
+  CHARACTER(LEN=6) :: label_k
   REAL(DP),ALLOCATABLE :: out_tab(:,:)
   COMPLEX(DP),ALLOCATABLE :: zproj(:,:)
   REAL(DP),ALLOCATABLE :: dproj(:,:)
@@ -326,8 +326,7 @@ SUBROUTINE do_sxx ( )
   !
   WRITE(stdout,*)
   CALL io_push_bar()
-  WRITE(stdout,'(5X,a,X,a,X,a,X,a,X,a,X,a)') &
-  & 'K     ', 'B     ', '      Eks [eV]', '       Sx [eV]', '      Sxx [eV]', '        Sxx/Sx'
+  WRITE(stdout,'(5X,a)') 'K       B            Eks [eV]        Sx [eV]       Sxx [eV]         Sxx/Sx'
   CALL io_push_bar()
   !
   ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,5))
@@ -339,11 +338,11 @@ SUBROUTINE do_sxx ( )
         out_tab( ib - westpp_range(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) * rytoev
         out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
-        WRITE(stdout,'(5X,i5.5,X,i6.6,X,f14.6,X,f14.6,X,f14.6,X,f14.6)') &
+        WRITE(stdout,'(5X,i6.6,2X,i6.6,X,f14.6,X,f14.6,X,f14.6,X,f14.6)') &
         & iks, ib, et(ib,iks)*rytoev, sigma_exx(ib,iks)*rytoev, sigma_sxx(ib,iks)*rytoev, sigma_sxx(ib,iks)/sigma_exx(ib,iks)
      ENDDO
      IF (k_grid%nps>1.AND.iks<k_grid%nps) CALL io_push_bar()
-     WRITE(label_k,'(i5.5)') iks
+     WRITE(label_k,'(i6.6)') iks
      !
      IF(mpime==root) THEN
         !

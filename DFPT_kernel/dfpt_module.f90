@@ -51,7 +51,6 @@ MODULE dfpt_module
       USE west_gpu,              ONLY : allocate_gpu,deallocate_gpu,allocate_linsolve_gpu,&
                                       & deallocate_linsolve_gpu,reallocate_ps_gpu
       USE cublas
-#else
 #endif
       !
       IMPLICIT NONE

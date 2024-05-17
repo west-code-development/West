@@ -39,6 +39,9 @@ MODULE west_gpu
    !
    ! Macropol
    !
+   REAL(DP), ALLOCATABLE :: ep_pol(:)
+   REAL(DP), ALLOCATABLE :: e_pol(:)
+   COMPLEX(DP), ALLOCATABLE :: phi(:,:)
    REAL(DP), ALLOCATABLE :: gk(:,:)
    REAL(DP), ALLOCATABLE :: deff(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: deff_nc(:,:,:,:)
@@ -491,6 +494,12 @@ MODULE west_gpu
    !
    ALLOCATE(gk(3,npwx))
    !$acc enter data create(gk)
+   ALLOCATE(ep_pol(3))
+   !$acc enter data create(ep_pol)
+   ALLOCATE(e_pol(3))
+   !$acc enter data create(e_pol)
+   ALLOCATE(phi(npwx*npol,3))
+   !$acc enter data create(phi)
    IF(.NOT. l_skip_nl_part_of_hcomr .AND. nkb > 0) THEN
       ALLOCATE(dvkb(npwx,nkb))
       !$acc enter data create(dvkb)
@@ -530,6 +539,19 @@ MODULE west_gpu
       !$acc exit data delete(gk)
       DEALLOCATE(gk)
    ENDIF
+   IF(ALLOCATED(ep_pol)) THEN
+      !$acc exit data delete(ep_pol)
+      DEALLOCATE(ep_pol)
+   ENDIF
+   IF(ALLOCATED(e_pol)) THEN
+      !$acc exit data delete(e_pol)
+      DEALLOCATE(e_pol)
+   ENDIF
+   IF(ALLOCATED(phi)) THEN
+      !$acc exit data delete(phi)
+      DEALLOCATE(phi)
+   ENDIF
+   !
    IF(ALLOCATED(dvkb)) THEN
       !$acc exit data delete(dvkb)
       DEALLOCATE(dvkb)

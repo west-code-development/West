@@ -447,15 +447,19 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
               !
               !$acc update device(braket)
               !
-              DO ip = 1, pert%nloc
-                 DO il = 1, n_lanczos
-                    IF(l_enable_off_diagonal .AND. jb <= ib) THEN
+              IF (l_enable_off_diagonal .AND. jb <= ib) THEN
+                 DO ip = 1, pert%nloc
+                    DO il = 1, n_lanczos
                        d_diago_full(il,ip,iloc_pair,iks_g) = diago(il,ip)
-                    ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                       d_diago(il,ip,ibloc,iks_g) = diago(il,ip)
-                    ENDIF
-                 ENDDO
-              ENDDO
+                    END DO
+                 END DO
+              ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
+                 DO ip = 1, pert%nloc
+                    DO il = 1, n_lanczos
+                      d_diago(il,ip,ibloc,iks_g) = diago(il,ip)
+                    END DO
+                 END DO
+              ENDIF
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
                  !$acc enter data create(d_body2_ifr_full(:,:,:,iloc_pair,iks_g))

@@ -244,8 +244,7 @@ MODULE wstat_tools
       DO il2 = 1,pert%nloc
          ig2 = pert%l2g(il2)
          IF(ig2 > n) CYCLE
-         DO ig1 = 1,pert%nglob
-            IF(ig1 > n) CYCLE
+         DO ig1 = 1,n
             zz(ig1,ig2) = hr_distr(ig1,il2)
          ENDDO
       ENDDO
@@ -260,8 +259,7 @@ MODULE wstat_tools
       DO il2 = 1,pert%nloc
          ig2 = pert%l2g(il2)
          IF(ig2 > nselect) CYCLE
-         DO ig1 = 1,pert%nglob
-            IF(ig1 > n) CYCLE
+         DO ig1 = 1,n
             vr_distr(ig1,il2) = zz(ig1,ig2)
          ENDDO
       ENDDO
@@ -315,8 +313,7 @@ MODULE wstat_tools
       DO il2 = 1,pert%nloc
          ig2 = pert%l2g(il2)
          IF(ig2 > n) CYCLE
-         DO ig1 = 1,pert%nglob
-            IF(ig1 > n) CYCLE
+         DO ig1 = 1,n
             zz(ig1,ig2) = hr_distr(ig1,il2)
          ENDDO
       ENDDO
@@ -331,8 +328,7 @@ MODULE wstat_tools
       DO il2 = 1,pert%nloc
          ig2 = pert%l2g(il2)
          IF(ig2 > nselect) CYCLE
-         DO ig1 = 1,pert%nglob
-            IF(ig1 > n) CYCLE
+         DO ig1 = 1,n
             vr_distr(ig1,il2) = zz(ig1,ig2)
          ENDDO
       ENDDO

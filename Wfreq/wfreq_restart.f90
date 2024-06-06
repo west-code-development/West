@@ -80,8 +80,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE json_module,          ONLY : json_file
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       !
       IMPLICIT NONE
       !
@@ -116,8 +115,6 @@ MODULE wfreq_restart
          !
       ENDIF
       !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
@@ -125,8 +122,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE json_module,          ONLY : json_file
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       !
       IMPLICIT NONE
       !
@@ -165,8 +161,6 @@ MODULE wfreq_restart
          !
       ENDIF
       !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
@@ -174,8 +168,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE json_module,          ONLY : json_file
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       !
       IMPLICIT NONE
       !
@@ -213,8 +206,6 @@ MODULE wfreq_restart
          CALL json%destroy()
          !
       ENDIF
-      !
-      CALL mp_barrier(world_comm)
       !
     END SUBROUTINE
     !
@@ -438,8 +429,7 @@ MODULE wfreq_restart
     SUBROUTINE clear_bks(dirname,fname)
       !------------------------------------------------------------------------
       !
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       USE west_io,              ONLY : remove_if_present
       !
       IMPLICIT NONE
@@ -454,8 +444,6 @@ MODULE wfreq_restart
          !
       ENDIF
       !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     ! SOLVEWFREQ
@@ -466,9 +454,8 @@ MODULE wfreq_restart
       !
       USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
       !
@@ -491,9 +478,6 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       CALL start_clock('sw_restart')
       !
       ! MKDIR
@@ -564,9 +548,8 @@ MODULE wfreq_restart
       !
       USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
       !
@@ -589,9 +572,6 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       CALL start_clock('sw_restart')
       !
       ! MKDIR
@@ -662,9 +642,8 @@ MODULE wfreq_restart
       !
       USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
       USE types_bz_grid,        ONLY : q_grid
@@ -688,9 +667,6 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       CALL start_clock('sw_restart')
       !
       ! MKDIR
@@ -767,10 +743,9 @@ MODULE wfreq_restart
       !
       USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
       !
@@ -795,18 +770,10 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
       !
-      ! CREATE THE SUMMARY FILE
+      ! READ THE SUMMARY FILE
       !
       fname = 'summary_w.json'
       CALL read_bks(bks,wfreq_restart_dir,fname)
@@ -841,9 +808,6 @@ MODULE wfreq_restart
       ENDDO
       DEALLOCATE(tmp_zmat)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
@@ -860,10 +824,9 @@ MODULE wfreq_restart
       !
       USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
       !
@@ -888,18 +851,10 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
       !
-      ! CREATE THE SUMMARY FILE
+      ! READ THE SUMMARY FILE
       !
       fname = 'summary_w.json'
       CALL read_bks(bks,wfreq_restart_dir,fname)
@@ -934,9 +889,6 @@ MODULE wfreq_restart
       ENDDO
       DEALLOCATE(tmp_zmat)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
@@ -953,10 +905,9 @@ MODULE wfreq_restart
       !
       USE kinds,                ONLY : DP
       USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
       USE types_bz_grid,        ONLY : q_grid
@@ -982,18 +933,10 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
       !
-      ! CREATE THE SUMMARY FILE
+      ! READ THE SUMMARY FILE
       !
       fname = 'summary_w.json'
       CALL read_bksq(bksq,wfreq_restart_dir,fname)
@@ -1034,9 +977,6 @@ MODULE wfreq_restart
       ENDDO
       DEALLOCATE(tmp_zmat)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
@@ -1053,9 +993,7 @@ MODULE wfreq_restart
     SUBROUTINE solvegfreq_restart_write(bks)
       !------------------------------------------------------------------------
       !
-      USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1066,10 +1004,6 @@ MODULE wfreq_restart
       ! Workspace
       !
       CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! MKDIR
       !
@@ -1087,9 +1021,7 @@ MODULE wfreq_restart
     SUBROUTINE solvegfreq_restart_write_q(bksks)
       !------------------------------------------------------------------------
       !
-      USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1100,10 +1032,6 @@ MODULE wfreq_restart
       ! Workspace
       !
       CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! MKDIR
       !
@@ -1122,10 +1050,8 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1140,22 +1066,11 @@ MODULE wfreq_restart
       REAL(DP) :: time_spent(2)
       CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sg_restart')
       time_spent(1) = get_clock('sg_restart')
       !
       CALL read_bks(bks,wfreq_restart_dir,fname)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sg_restart')
       CALL stop_clock('sg_restart')
       !
@@ -1171,10 +1086,8 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1189,22 +1102,11 @@ MODULE wfreq_restart
       REAL(DP) :: time_spent(2)
       CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sg_restart')
       time_spent(1) = get_clock('sg_restart')
       !
       CALL read_bksks(bksks,wfreq_restart_dir,fname)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sg_restart')
       CALL stop_clock('sg_restart')
       !
@@ -1214,4 +1116,5 @@ MODULE wfreq_restart
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
+    !
 END MODULE

@@ -451,14 +451,14 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                  DO ip = 1, pert%nloc
                     DO il = 1, n_lanczos
                        d_diago_full(il,ip,iloc_pair,iks_g) = diago(il,ip)
-                    END DO
-                 END DO
+                    ENDDO
+                 ENDDO
               ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                  DO ip = 1, pert%nloc
                     DO il = 1, n_lanczos
-                      d_diago(il,ip,ibloc,iks_g) = diago(il,ip)
-                    END DO
-                 END DO
+                       d_diago(il,ip,ibloc,iks_g) = diago(il,ip)
+                    ENDDO
+                 ENDDO
               ENDIF
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN

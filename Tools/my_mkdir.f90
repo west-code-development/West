@@ -31,8 +31,6 @@ SUBROUTINE my_mkdir(dirname)
   TYPE(dict) :: kwargs
   TYPE(module_py) :: pymod
   !
-  ! BARRIER
-  !
   IF(mpime == root) THEN
      !
      ierr = import_py(pymod, "west_utils")
@@ -48,40 +46,8 @@ SUBROUTINE my_mkdir(dirname)
      !
   ENDIF
   !
-  CALL mp_barrier(world_comm)
-  !
-END SUBROUTINE
-!
-!
-!
-SUBROUTINE my_rmdir( dirname )
-  !
-  USE mp_world,       ONLY : root,mpime,world_comm
-  USE mp,             ONLY : mp_barrier,mp_bcast
-  USE clib_wrappers,  ONLY : f_rmdir
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  CHARACTER(LEN=*), INTENT(IN) :: dirname
-  !
-  ! Workspace
-  !
-  INTEGER :: ierr
-  !
   ! BARRIER
   !
   CALL mp_barrier(world_comm)
-  !
-  ! ... clear the directory
-  !
-  IF(mpime == root) THEN
-     ierr = f_rmdir(TRIM(dirname))
-  ENDIF
-  !
-  CALL mp_bcast(ierr, root, world_comm)
-  !
-  CALL errore('rm_directory', 'cannot rm dir', ierr)
   !
 END SUBROUTINE

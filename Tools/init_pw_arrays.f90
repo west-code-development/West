@@ -34,6 +34,7 @@ SUBROUTINE init_pw_arrays(ncalbec)
   USE pw_restart_new,         ONLY : read_collected_wfc
   USE lsda_mod,               ONLY : nspin
   USE wvfct,                  ONLY : nbnd,npwx
+  USE kinds,                  ONLY : i8b
   !
   IMPLICIT NONE
   !
@@ -47,6 +48,8 @@ SUBROUTINE init_pw_arrays(ncalbec)
   LOGICAL :: exst
   LOGICAL :: exst_mem
   LOGICAL :: l_open_buffer
+  INTEGER(i8b) :: lrwfc_int8
+  INTEGER(i8b),PARAMETER :: max_int4 = 2147483647
   !
   CALL start_clock('init_pw_ar')
   !
@@ -62,7 +65,10 @@ SUBROUTINE init_pw_arrays(ncalbec)
   !
   iunres = 88
   !
-  ! Here we should check if lrwfc overflows
+  ! Stop if lrwfc overflows 4-byte integer
+  !
+  lrwfc_int8 = 1_i8b*nbnd*npwx*npol
+  IF(lrwfc_int8 > max_int4) CALL errore('init_pw_ar','lrwfc too large',1)
   !
   lrwfc = nbnd*npwx*npol
   !
@@ -87,7 +93,7 @@ SUBROUTINE init_pw_arrays(ncalbec)
   !
   CALL mp_bcast(evc,0,inter_image_comm)
   !
-  ! Must make sure wfc files have been written before exx_go
+  ! Ensure wfc files have been written before exx_go
   !
   CALL mp_barrier(world_comm)
   !

@@ -23,10 +23,9 @@ MODULE lanczos_restart
       !----------------------------------------------------------------
       !
       USE kinds,               ONLY : DP,i8b
-      USE mp_world,            ONLY : mpime,root,world_comm
+      USE mp_world,            ONLY : mpime,root
       USE mp_global,           ONLY : my_image_id,inter_pool_comm,my_pool_id,inter_bgrp_comm,&
                                     & my_bgrp_id
-      USE mp,                  ONLY : mp_barrier
       USE io_global,           ONLY : stdout
       USE pwcom,               ONLY : npwx
       USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store,nbndval0x,&
@@ -59,10 +58,6 @@ MODULE lanczos_restart
       TYPE(json_file) :: json
       INTEGER :: header(HD_LENGTH)
       INTEGER(i8b) :: offset
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! MKDIR
       !
@@ -153,10 +148,6 @@ MODULE lanczos_restart
          !
       ENDIF
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
       CALL stop_clock('lan_restart')
       time_spent(2) = get_clock('lan_restart')
       !
@@ -171,7 +162,7 @@ MODULE lanczos_restart
       !
       USE kinds,               ONLY : DP,i8b
       USE mp_world,            ONLY : mpime,root,world_comm
-      USE mp,                  ONLY : mp_barrier,mp_bcast
+      USE mp,                  ONLY : mp_bcast
       USE io_global,           ONLY : stdout
       USE pwcom,               ONLY : npwx
       USE westcom,             ONLY : wbse_restart_dir,n_lanczos,beta_store,zeta_store,nbndval0x,&
@@ -206,10 +197,6 @@ MODULE lanczos_restart
       TYPE(json_file) :: json
       INTEGER :: header(HD_LENGTH)
       INTEGER(i8b) :: offset
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       CALL start_clock('lan_restart')
       time_spent(1) = get_clock('lan_restart')
@@ -304,10 +291,6 @@ MODULE lanczos_restart
       !
       DEALLOCATE(evc1_tmp)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
       CALL stop_clock('lan_restart')
       time_spent(2) = get_clock('lan_restart')
       !
@@ -323,8 +306,7 @@ MODULE lanczos_restart
       !----------------------------------------------------------------
       !
       USE kinds,               ONLY : DP
-      USE mp_world,            ONLY : mpime,root,world_comm
-      USE mp,                  ONLY : mp_barrier
+      USE mp_world,            ONLY : mpime,root
       USE westcom,             ONLY : logfile,n_lanczos,beta_store,zeta_store
       USE lsda_mod,            ONLY : nspin
       USE json_module,         ONLY : json_file
@@ -341,10 +323,6 @@ MODULE lanczos_restart
       CHARACTER(LEN=6) :: labels
       INTEGER :: iun,is
       TYPE(json_file) :: json
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       IF(mpime == root) THEN
          !
@@ -366,10 +344,6 @@ MODULE lanczos_restart
          !
       ENDIF
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
@@ -377,7 +351,7 @@ MODULE lanczos_restart
       !------------------------------------------------------------------------
       !
       USE mp_world,             ONLY : root,mpime,world_comm
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE westcom,              ONLY : wbse_restart_dir
       USE clib_wrappers,        ONLY : f_rmdir
       USE west_io,              ONLY : remove_if_present
@@ -387,10 +361,6 @@ MODULE lanczos_restart
       ! Workspace
       !
       INTEGER :: ierr
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! ... clear the main restart directory
       !
@@ -405,10 +375,6 @@ MODULE lanczos_restart
       CALL mp_bcast(ierr,root,world_comm)
       !
       CALL errore('lanczos_restart','cannot clear restart',ierr)
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
     END SUBROUTINE
     !

@@ -28,9 +28,9 @@ MODULE wfreq_db
     SUBROUTINE wfreq_db_write( )
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp,                   ONLY : mp_sum
       USE mp_global,            ONLY : inter_pool_comm
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : mpime,root
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,qp_bands,n_bands,wfreq_calculation,logfile,&
                                      & sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,&
@@ -57,10 +57,6 @@ MODULE wfreq_db
       INTEGER :: iun,i
       REAL(DP),ALLOCATABLE :: eks(:),occ(:,:)
       LOGICAL :: l_generate_plot,l_optics
-      !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! TIMING
       !
@@ -179,10 +175,6 @@ MODULE wfreq_db
       !
       DEALLOCATE(occ)
       !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
       ! TIMING
       !
       time_spent(2) = get_clock('wfreq_db')
@@ -200,8 +192,7 @@ MODULE wfreq_db
     SUBROUTINE qdet_db_write_eri(eri_w,eri_vc,eri_w_full)
     !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : mpime,root
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,logfile,n_pairs
       USE pwcom,                ONLY : nspin
@@ -224,10 +215,6 @@ MODULE wfreq_db
       !
       TYPE(json_file) :: json
       INTEGER :: iun,ipair
-      !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! TIMING
       !
@@ -274,10 +261,6 @@ MODULE wfreq_db
          !
       ENDIF
       !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
       ! TIMING
       !
       time_spent(2) = get_clock('qdet_db')
@@ -295,8 +278,7 @@ MODULE wfreq_db
     SUBROUTINE qdet_db_write_h1e(h1e)
     !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : mpime,root
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,logfile,n_pairs
       USE pwcom,                ONLY : nspin
@@ -316,10 +298,6 @@ MODULE wfreq_db
       !
       TYPE(json_file) :: json
       INTEGER :: iun
-      !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! TIMING
       !
@@ -343,10 +321,6 @@ MODULE wfreq_db
          !
       ENDIF
       !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier( world_comm )
-      !
       ! TIMING
       !
       time_spent(2) = get_clock('qdet_db')
@@ -364,8 +338,7 @@ MODULE wfreq_db
     SUBROUTINE qdet_db_write_overlap(overlap)
     !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : mpime,root
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_save_dir,logfile,n_bands
       USE io_push,              ONLY : io_push_bar
@@ -381,10 +354,6 @@ MODULE wfreq_db
       !
       TYPE(json_file) :: json
       INTEGER :: iun
-      !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! TIMING
       !
@@ -404,10 +373,6 @@ MODULE wfreq_db
          CALL json%destroy()
          !
       ENDIF
-      !
-      ! MPI BARRIER
-      !
-      CALL mp_barrier( world_comm )
       !
       ! TIMING
       !

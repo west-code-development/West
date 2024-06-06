@@ -33,8 +33,8 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_write_real(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier,mp_get
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp,                   ONLY : mp_get
+      USE mp_world,             ONLY : mpime,root
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,&
                                      & my_pool_id,inter_bgrp_comm,my_bgrp_id,me_bgrp
       USE io_global,            ONLY : stdout
@@ -73,10 +73,6 @@ MODULE davidson_restart
       !
       TYPE(json_file) :: json
       INTEGER :: iun
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       IF(ALLOCATED(dvg_exc)) THEN
          !
@@ -215,9 +211,6 @@ MODULE davidson_restart
          DEALLOCATE(tmp_exc)
       ENDIF
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock(TRIM(which))
       CALL stop_clock(TRIM(which))
       !
@@ -232,8 +225,8 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_write_complex(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr,lastdone_iq)
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier,mp_get
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp,                   ONLY : mp_get
+      USE mp_world,             ONLY : mpime,root
       USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,my_pool_id,my_bgrp_id,&
                                      & me_bgrp
       USE io_global,            ONLY : stdout
@@ -264,10 +257,6 @@ MODULE davidson_restart
       !
       TYPE(json_file) :: json
       INTEGER :: iun
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! MKDIR
       !
@@ -357,9 +346,6 @@ MODULE davidson_restart
          !
       ENDDO
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('wstat_restart')
       CALL stop_clock('wstat_restart')
       !
@@ -374,7 +360,7 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_clear()
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE mp_world,             ONLY : root,mpime,world_comm
       USE westcom,              ONLY : dvg_exc,n_pdep_basis,wstat_restart_dir,wbse_restart_dir
       USE clib_wrappers,        ONLY : f_rmdir
@@ -389,10 +375,6 @@ MODULE davidson_restart
       CHARACTER(LEN=512) :: fname
       INTEGER :: ierr,ip
       CHARACTER(6) :: my_label
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       IF(ALLOCATED(dvg_exc)) THEN
          which = 'wbse_restart'
@@ -425,18 +407,12 @@ MODULE davidson_restart
       !
       CALL errore(TRIM(which),'cannot clear restart',ierr)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
     SUBROUTINE davidson_restart_read_real(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr)
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
-      USE mp_global,            ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : dvg_exc,n_pdep_basis,wstat_restart_dir,wbse_restart_dir
       USE distribution_center,  ONLY : pert
@@ -458,10 +434,6 @@ MODULE davidson_restart
       REAL(DP) :: time_spent(2)
       CHARACTER(20),EXTERNAL :: human_readable_time
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
       IF(ALLOCATED(dvg_exc)) THEN
          which = 'wbse_restart'
          dirname = wbse_restart_dir
@@ -479,10 +451,6 @@ MODULE davidson_restart
       !
       CALL read_restart4_(nbase)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
       time_spent(2) = get_clock(TRIM(which))
       CALL stop_clock(TRIM(which))
       !
@@ -497,8 +465,6 @@ MODULE davidson_restart
     SUBROUTINE davidson_restart_read_complex(dav_iter,notcnv,nbase,ew,hr_distr,vr_distr,lastdone_iq,iq)
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
-      USE mp_global,            ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_basis,wstat_restart_dir
       USE distribution_center,  ONLY : pert
@@ -522,10 +488,6 @@ MODULE davidson_restart
       CHARACTER(20),EXTERNAL :: human_readable_time
       INTEGER :: ipol
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
       CALL start_clock('wstat_restart')
       time_spent(1) = get_clock('wstat_restart')
       !
@@ -534,10 +496,6 @@ MODULE davidson_restart
       CALL read_restart3z_(hr_distr,vr_distr)
       !
       CALL read_restart4_(nbase,lastdone_iq)
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       time_spent(2) = get_clock('wstat_restart')
       CALL stop_clock('wstat_restart')

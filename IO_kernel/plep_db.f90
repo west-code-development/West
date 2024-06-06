@@ -28,8 +28,7 @@ MODULE plep_db
     SUBROUTINE plep_db_write()
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : mpime,root
       USE mp_global,            ONLY : inter_pool_comm,my_pool_id,inter_bgrp_comm,my_bgrp_id
       USE io_global,            ONLY : stdout
       USE pwcom,                ONLY : npwx
@@ -54,10 +53,6 @@ MODULE plep_db
       TYPE(json_file) :: json
       LOGICAL :: lexists
       COMPLEX(DP),ALLOCATABLE :: dvg_tmp(:,:,:)
-      !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
       !
       ! Timing
       !
@@ -135,10 +130,6 @@ MODULE plep_db
       !
       DEALLOCATE(dvg_tmp)
       !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
-      !
       ! Timing
       !
       time_spent(2) = get_clock('plep_db')
@@ -160,7 +151,7 @@ MODULE plep_db
     SUBROUTINE plep_db_read(nglob_to_be_read)
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_bcast,mp_barrier
+      USE mp,                   ONLY : mp_bcast
       USE mp_world,             ONLY : mpime,root,world_comm
       USE io_global,            ONLY : stdout
       USE pwcom,                ONLY : npwx
@@ -190,10 +181,6 @@ MODULE plep_db
       TYPE(json_file) :: json
       CHARACTER(LEN=256) :: fname
       COMPLEX(DP),ALLOCATABLE :: dvg_tmp(:,:,:)
-      !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
       !
       CALL start_clock('plep_db')
       !
@@ -266,10 +253,6 @@ MODULE plep_db
       ENDDO
       !
       DEALLOCATE(dvg_tmp)
-      !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
       !
       ! Timing
       !

@@ -1173,7 +1173,6 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   USE kinds,                ONLY : DP
   USE lsda_mod,             ONLY : nspin
   USE wvfct,                ONLY : npwx
-  USE mp,                   ONLY : mp_barrier
   USE noncollin_module,     ONLY : npol,nspin_gga
   USE xc_lib,               ONLY : xclib_dft_is
   USE fft_base,             ONLY : dffts
@@ -1181,7 +1180,6 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   USE scf,                  ONLY : rho
   USE uspp,                 ONLY : nlcc_any
   USE distribution_center,  ONLY : kpt_pool,band_group
-  USE mp_world,             ONLY : world_comm
   USE westcom,              ONLY : wbse_save_dir,sf_kernel,l_spin_flip_kernel,l_spin_flip_alda0,&
                                  & spin_flip_cut,l_print_spin_flip_kernel
   USE qpoint,               ONLY : xq
@@ -1270,8 +1268,6 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
   !
   IF(l_print_spin_flip_kernel) THEN
      !
-     CALL mp_barrier(world_comm)
-     !
      fname=TRIM(wbse_save_dir)//'/rho_diff.cube'
      CALL write_wfc_cube_r(dffts, fname, rho%of_r(ir,2))
      !
@@ -1292,8 +1288,6 @@ SUBROUTINE compute_ddvxc_sf( dvg_exc_tmp, ddvxc )
      !
      fname=TRIM(wbse_save_dir)//'/ddvxc_down.cube'
      CALL write_wfc_cube_r(dffts, fname, REAL(ddvxc(:,2),KIND=DP))
-     !
-     CALL mp_barrier(world_comm)
      !
   ENDIF
   !

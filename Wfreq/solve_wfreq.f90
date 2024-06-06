@@ -775,7 +775,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   IF(npool*nbgrp > 1 .AND. .NOT. l_read_restart .AND. .NOT. l_QDET) THEN
      bks%lastdone_ks = k_grid%nps
-     bks%lastdone_band = nbndval
+     bks%lastdone_band = MAXVAL(nbnd_occ)
      CALL mp_sum(dmati,inter_bgrp_comm)
      CALL mp_sum(dmati,inter_pool_comm)
      CALL mp_sum(zmatr,inter_bgrp_comm)

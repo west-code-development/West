@@ -2,12 +2,12 @@
 
 ## List of tests
 
-1. SiH4 molecule,, GW, Gamma only
-2. CH4 molecule,, GW, Gamma only, JSON input
-3. CH4 molecule,, spin-polarized GW, Gamma only
+1. SiH4 molecule, GW, Gamma only
+2. CH4 molecule, GW, Gamma only, JSON input
+3. CH4 molecule, spin-polarized GW, Gamma only
 4. Si bulk, GW, k-mesh 1x1x2
-5. SiH4 molecule,, westpp output PDEP, Gamma only
-6. SiH4 molecule,, GW hybrid ACE, Gamma only
+5. SiH4 molecule, westpp output PDEP, Gamma only
+6. SiH4 molecule, GW hybrid ACE, Gamma only
 7. Si bulk, GW hybrid ACE, k-mesh 1x1x2
 8. MgO, westpp localization factor, Gamma only
 9. O2 molecule, GW fractional occupation, Gamma only
@@ -28,6 +28,7 @@
 24. O2 molecule, spin-flip TDDFT (LDA) forces, Gamma only
 25. O2 molecule, spin-flip TDDFT (PBE) forces, Gamma only
 26. O2 molecule, spin-flip TDDFT (PBE0) forces, Gamma only
+27. SiH4 molecule, QDET `n_pdep_eigen_off_diagonal`, Gamma only
 
 ## Executing tests
 

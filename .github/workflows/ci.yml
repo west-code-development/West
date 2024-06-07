@@ -47,5 +47,6 @@ jobs:
         path: |
           qe/West/test-suite/test*/*.out
           qe/West/test-suite/test*/*.err
+          qe/West/test-suite/test*/*.xml
           qe/West/test-suite/test*/test*/w*.json
         retention-days: 1

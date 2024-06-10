@@ -429,10 +429,10 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                     CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago_tmp, braket_tmp, &
                        & pert_offd%nloc, pert_offd%nglob, pert_offd%myoffset )
                     !
+                    diago(:,:) = 0._DP
                     diago(:,1:pert_offd%nloc) = diago_tmp
-                    diago(:,pert_offd%nloc+1:pert%nloc) = 0._DP
+                    braket(:,:,:) = 0._DP
                     braket(1:pert_offd%nglob,:,1:pert_offd%nloc) = braket_tmp
-                    braket(pert_offd%nglob+1:pert%nglob,:,pert_offd%nloc+1:pert%nloc) = 0._DP
                     !
                     DEALLOCATE(diago_tmp)
                     DEALLOCATE(braket_tmp)

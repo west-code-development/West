@@ -56,8 +56,7 @@ MODULE pdep_db
     SUBROUTINE pdep_db_write(iq,lprintinfo)
       !------------------------------------------------------------------------
       !
-      USE mp,                   ONLY : mp_barrier
-      USE mp_world,             ONLY : mpime,root,world_comm
+      USE mp_world,             ONLY : mpime,root
       USE mp_global,            ONLY : my_bgrp_id
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : n_pdep_eigen,ev,dvg,wstat_save_dir
@@ -108,10 +107,6 @@ MODULE pdep_db
       ELSE
          lprintinfo_ = default_lprintinfo
       ENDIF
-      !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
       !
       ! Timing
       !
@@ -201,10 +196,6 @@ MODULE pdep_db
          ENDDO
       ENDIF
       !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
-      !
       ! Timing
       !
       time_spent(2) = get_clock('pdep_db')
@@ -234,7 +225,7 @@ MODULE pdep_db
       !
       USE westcom,             ONLY : n_pdep_eigen,ev,dvg,npwqx,wstat_save_dir
       USE io_global,           ONLY : stdout
-      USE mp,                  ONLY : mp_bcast,mp_barrier
+      USE mp,                  ONLY : mp_bcast
       USE mp_world,            ONLY : world_comm,mpime,root
       USE pdep_io,             ONLY : pdep_read_G_and_distribute
       USE io_push,             ONLY : io_push_bar
@@ -282,10 +273,6 @@ MODULE pdep_db
       ELSE
          lprintinfo_ = default_lprintinfo
       ENDIF
-      !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
       !
       CALL start_clock('pdep_db')
       !
@@ -361,10 +348,6 @@ MODULE pdep_db
          CALL pdep_read_G_and_distribute(fname,dvg(:,local_j),iq_)
          !
       ENDDO
-      !
-      ! MPI barrier
-      !
-      CALL mp_barrier(world_comm)
       !
       ! Timing
       !

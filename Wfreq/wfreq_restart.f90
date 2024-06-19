@@ -80,8 +80,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE json_module,          ONLY : json_file
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       !
       IMPLICIT NONE
       !
@@ -116,8 +115,6 @@ MODULE wfreq_restart
          !
       ENDIF
       !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
@@ -125,8 +122,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE json_module,          ONLY : json_file
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       !
       IMPLICIT NONE
       !
@@ -165,8 +161,6 @@ MODULE wfreq_restart
          !
       ENDIF
       !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
@@ -174,8 +168,7 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE json_module,          ONLY : json_file
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       !
       IMPLICIT NONE
       !
@@ -213,8 +206,6 @@ MODULE wfreq_restart
          CALL json%destroy()
          !
       ENDIF
-      !
-      CALL mp_barrier(world_comm)
       !
     END SUBROUTINE
     !
@@ -438,8 +429,7 @@ MODULE wfreq_restart
     SUBROUTINE clear_bks(dirname,fname)
       !------------------------------------------------------------------------
       !
-      USE mp_world,             ONLY : mpime,root,world_comm
-      USE mp,                   ONLY : mp_barrier
+      USE mp_world,             ONLY : mpime,root
       USE west_io,              ONLY : remove_if_present
       !
       IMPLICIT NONE
@@ -454,8 +444,6 @@ MODULE wfreq_restart
          !
       ENDIF
       !
-      CALL mp_barrier(world_comm)
-      !
     END SUBROUTINE
     !
     ! SOLVEWFREQ
@@ -465,10 +453,9 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,intra_bgrp_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
       !
@@ -491,53 +478,56 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       CALL start_clock('sw_restart')
       !
       ! MKDIR
       !
       CALL my_mkdir(wfreq_restart_dir)
       !
-      ! DMAT
-      !
-      ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
-      tmp_dmat = 0._DP
-      DO ip = 1,ifr%nloc
-         ip_glob = ifr%l2g(ip)
-         tmp_dmat(:,:,ip_glob) = dmat(:,:,ip)
-      ENDDO
-      CALL mp_sum(tmp_dmat,intra_bgrp_comm)
-      !
-      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
-      !
-      DEALLOCATE(tmp_dmat)
-      !
-      ! ZMAT
-      !
-      ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
-      tmp_zmat = 0._DP
-      DO ip = 1,rfr%nloc
-         ip_glob = rfr%l2g(ip)
-         tmp_zmat(:,:,ip_glob) = zmat(:,:,ip)
-      ENDDO
-      CALL mp_sum(tmp_zmat,intra_bgrp_comm)
-      !
-      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
-      !
-      DEALLOCATE(tmp_zmat)
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! DMAT
+         !
+         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
+         tmp_dmat = 0._DP
+         DO ip = 1,ifr%nloc
+            ip_glob = ifr%l2g(ip)
+            tmp_dmat(:,:,ip_glob) = dmat(:,:,ip)
+         ENDDO
+         CALL mp_sum(tmp_dmat,intra_bgrp_comm)
+         !
+         WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp == 0)
+         CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
+         !
+         DEALLOCATE(tmp_dmat)
+         !
+         ! ZMAT
+         !
+         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
+         tmp_zmat = 0._DP
+         DO ip = 1,rfr%nloc
+            ip_glob = rfr%l2g(ip)
+            tmp_zmat(:,:,ip_glob) = zmat(:,:,ip)
+         ENDDO
+         CALL mp_sum(tmp_zmat,intra_bgrp_comm)
+         !
+         WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp == 0)
+         CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
+         !
+         DEALLOCATE(tmp_zmat)
+         !
+      ENDIF
       !
       ! CLEAR
       !
       IF(bks%old_ks /= 0 .AND. bks%old_band /= 0) THEN
-         IF(me_bgrp == 0) THEN
+         !
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+            !
             WRITE(my_label2,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
@@ -546,7 +536,9 @@ MODULE wfreq_restart
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
+            !
          ENDIF
+         !
       ENDIF
       !
       ! CREATE THE SUMMARY FILE
@@ -563,10 +555,9 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,intra_bgrp_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
       !
@@ -589,53 +580,56 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       CALL start_clock('sw_restart')
       !
       ! MKDIR
       !
       CALL my_mkdir(wfreq_restart_dir)
       !
-      ! DMAT
-      !
-      ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
-      tmp_dmat = 0._DP
-      DO ip = 1,ifr%nloc
-         ip_glob = ifr%l2g(ip)
-         tmp_dmat(:,:,ip_glob) = dmat(:,:,ip)
-      ENDDO
-      CALL mp_sum(tmp_dmat,intra_bgrp_comm)
-      !
-      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
-      !
-      DEALLOCATE(tmp_dmat)
-      !
-      ! ZMAT
-      !
-      ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
-      tmp_zmat = 0._DP
-      DO ip = 1,rfr%nloc
-         ip_glob = rfr%l2g(ip)
-         tmp_zmat(:,:,ip_glob) = zmat(:,:,ip)
-      ENDDO
-      CALL mp_sum(tmp_zmat,intra_bgrp_comm)
-      !
-      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
-      !
-      DEALLOCATE(tmp_zmat)
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! DMAT
+         !
+         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
+         tmp_dmat = 0._DP
+         DO ip = 1,ifr%nloc
+            ip_glob = ifr%l2g(ip)
+            tmp_dmat(:,:,ip_glob) = dmat(:,:,ip)
+         ENDDO
+         CALL mp_sum(tmp_dmat,intra_bgrp_comm)
+         !
+         WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp == 0)
+         CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
+         !
+         DEALLOCATE(tmp_dmat)
+         !
+         ! ZMAT
+         !
+         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
+         tmp_zmat = 0._DP
+         DO ip = 1,rfr%nloc
+            ip_glob = rfr%l2g(ip)
+            tmp_zmat(:,:,ip_glob) = zmat(:,:,ip)
+         ENDDO
+         CALL mp_sum(tmp_zmat,intra_bgrp_comm)
+         !
+         WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp == 0)
+         CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
+         !
+         DEALLOCATE(tmp_zmat)
+         !
+      ENDIF
       !
       ! CLEAR
       !
       IF(bks%old_ks /= 0 .AND. bks%old_band /= 0) THEN
-         IF(me_bgrp == 0) THEN
+         !
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+            !
             WRITE(my_label2,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
@@ -644,7 +638,9 @@ MODULE wfreq_restart
             & bks%old_ks,bks%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
+            !
          ENDIF
+         !
       ENDIF
       !
       ! CREATE THE SUMMARY FILE
@@ -661,10 +657,9 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,intra_bgrp_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_sum
+      USE mp,                   ONLY : mp_sum
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_write,remove_if_present
       USE types_bz_grid,        ONLY : q_grid
@@ -688,59 +683,62 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       CALL start_clock('sw_restart')
       !
       ! MKDIR
       !
       CALL my_mkdir(wfreq_restart_dir)
       !
-      ! DMAT
-      !
-      ALLOCATE(tmp_dmat(npg,npl,ifr%nglob,q_grid%np))
-      tmp_dmat = 0._DP
-      DO iq = 1,q_grid%np
-         DO ip = 1,ifr%nloc
-            ip_glob = ifr%l2g(ip)
-            tmp_dmat(:,:,ip_glob,iq) = dmat(:,:,ip,iq)
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! DMAT
+         !
+         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob,q_grid%np))
+         tmp_dmat = 0._DP
+         DO iq = 1,q_grid%np
+            DO ip = 1,ifr%nloc
+               ip_glob = ifr%l2g(ip)
+               tmp_dmat(:,:,ip_glob,iq) = dmat(:,:,ip,iq)
+            ENDDO
          ENDDO
-      ENDDO
-      CALL mp_sum(tmp_dmat,intra_bgrp_comm)
-      !
-      WRITE(my_label,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
-      & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
-      !
-      DEALLOCATE(tmp_dmat)
-      !
-      ! ZMAT
-      !
-      ALLOCATE(tmp_zmat(npg,npl,rfr%nglob,q_grid%np))
-      tmp_zmat = 0._DP
-      DO iq = 1,q_grid%np
-         DO ip = 1,rfr%nloc
-            ip_glob = rfr%l2g(ip)
-            tmp_zmat(:,:,ip_glob,iq) = zmat(:,:,ip,iq)
+         CALL mp_sum(tmp_dmat,intra_bgrp_comm)
+         !
+         WRITE(my_label,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
+         & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp == 0)
+         CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
+         !
+         DEALLOCATE(tmp_dmat)
+         !
+         ! ZMAT
+         !
+         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob,q_grid%np))
+         tmp_zmat = 0._DP
+         DO iq = 1,q_grid%np
+            DO ip = 1,rfr%nloc
+               ip_glob = rfr%l2g(ip)
+               tmp_zmat(:,:,ip_glob,iq) = zmat(:,:,ip,iq)
+            ENDDO
          ENDDO
-      ENDDO
-      CALL mp_sum(tmp_zmat,intra_bgrp_comm)
-      !
-      WRITE(my_label,'("zmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
-      & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp == 0)
-      CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
-      !
-      DEALLOCATE(tmp_zmat)
+         CALL mp_sum(tmp_zmat,intra_bgrp_comm)
+         !
+         WRITE(my_label,'("zmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
+         & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp == 0)
+         CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
+         !
+         DEALLOCATE(tmp_zmat)
+         !
+      ENDIF
       !
       ! CLEAR
       !
       IF(bksq%old_q /= 0 .AND. bksq%old_ks /= 0 .AND. bksq%old_band /= 0) THEN
-         IF(me_bgrp == 0) THEN
+         !
+         IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
+            !
             WRITE(my_label2,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
             & bksq%old_q,bksq%old_ks,bksq%old_band,my_image_id
             fname = TRIM(my_label2)
@@ -749,7 +747,9 @@ MODULE wfreq_restart
             & bksq%old_q,bksq%old_ks,bksq%old_band,my_image_id
             fname = TRIM(my_label2)
             CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
+            !
          ENDIF
+         !
       ENDIF
       !
       ! CREATE THE SUMMARY FILE
@@ -766,11 +766,11 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : my_image_id,my_pool_id,inter_pool_comm,my_bgrp_id,me_bgrp,&
+                                     & inter_bgrp_comm,intra_bgrp_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
       !
@@ -795,55 +795,53 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
       !
-      ! CREATE THE SUMMARY FILE
+      ! READ THE SUMMARY FILE
       !
       fname = 'summary_w.json'
       CALL read_bks(bks,wfreq_restart_dir,fname)
       !
-      ! READ
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! READ
+         !
+         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
+         !
+         WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp==0)
+         CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
+         !
+         CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
+         DO ip = 1,ifr%nloc
+            ip_glob = ifr%l2g(ip)
+            dmat(:,:,ip) = tmp_dmat(:,:,ip_glob)
+         ENDDO
+         DEALLOCATE(tmp_dmat)
+         !
+         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
+         !
+         WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp==0)
+         CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
+         !
+         CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
+         DO ip = 1,rfr%nloc
+            ip_glob = rfr%l2g(ip)
+            zmat(:,:,ip) = tmp_zmat(:,:,ip_glob)
+         ENDDO
+         DEALLOCATE(tmp_zmat)
+         !
+      ENDIF
       !
-      ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
+      CALL mp_bcast(dmat,0,inter_bgrp_comm)
+      CALL mp_bcast(dmat,0,inter_pool_comm)
+      CALL mp_bcast(zmat,0,inter_bgrp_comm)
+      CALL mp_bcast(zmat,0,inter_pool_comm)
       !
-      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp==0)
-      CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
-      !
-      CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
-      DO ip = 1,ifr%nloc
-         ip_glob = ifr%l2g(ip)
-         dmat(:,:,ip) = tmp_dmat(:,:,ip_glob)
-      ENDDO
-      DEALLOCATE(tmp_dmat)
-      !
-      ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
-      !
-      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp==0)
-      CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
-      !
-      CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
-      DO ip = 1,rfr%nloc
-         ip_glob = rfr%l2g(ip)
-         zmat(:,:,ip) = tmp_zmat(:,:,ip_glob)
-      ENDDO
-      DEALLOCATE(tmp_zmat)
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
@@ -859,11 +857,11 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : my_image_id,my_pool_id,inter_pool_comm,my_bgrp_id,me_bgrp,&
+                                     & inter_bgrp_comm,intra_bgrp_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
       !
@@ -888,55 +886,53 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
       !
-      ! CREATE THE SUMMARY FILE
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! READ THE SUMMARY FILE
+         !
+         fname = 'summary_w.json'
+         CALL read_bks(bks,wfreq_restart_dir,fname)
+         !
+         ! READ
+         !
+         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
+         !
+         WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp==0)
+         CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
+         !
+         CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
+         DO ip = 1,ifr%nloc
+            ip_glob = ifr%l2g(ip)
+            dmat(:,:,ip) = tmp_dmat(:,:,ip_glob)
+         ENDDO
+         DEALLOCATE(tmp_dmat)
+         !
+         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
+         !
+         WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp==0)
+         CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
+         !
+         CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
+         DO ip = 1,rfr%nloc
+            ip_glob = rfr%l2g(ip)
+            zmat(:,:,ip) = tmp_zmat(:,:,ip_glob)
+         ENDDO
+         DEALLOCATE(tmp_zmat)
+         !
+      ENDIF
       !
-      fname = 'summary_w.json'
-      CALL read_bks(bks,wfreq_restart_dir,fname)
+      CALL mp_bcast(dmat,0,inter_bgrp_comm)
+      CALL mp_bcast(dmat,0,inter_pool_comm)
+      CALL mp_bcast(zmat,0,inter_bgrp_comm)
+      CALL mp_bcast(zmat,0,inter_pool_comm)
       !
-      ! READ
-      !
-      ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
-      !
-      WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp==0)
-      CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
-      !
-      CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
-      DO ip = 1,ifr%nloc
-         ip_glob = ifr%l2g(ip)
-         dmat(:,:,ip) = tmp_dmat(:,:,ip_glob)
-      ENDDO
-      DEALLOCATE(tmp_dmat)
-      !
-      ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
-      !
-      WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp==0)
-      CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
-      !
-      CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
-      DO ip = 1,rfr%nloc
-         ip_glob = rfr%l2g(ip)
-         zmat(:,:,ip) = tmp_zmat(:,:,ip_glob)
-      ENDDO
-      DEALLOCATE(tmp_zmat)
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
@@ -952,11 +948,11 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,me_bgrp,intra_bgrp_comm
-      USE mp_world,             ONLY : world_comm
+      USE mp_global,            ONLY : my_image_id,my_pool_id,inter_pool_comm,my_bgrp_id,me_bgrp,&
+                                     & inter_bgrp_comm,intra_bgrp_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier,mp_bcast
+      USE mp,                   ONLY : mp_bcast
       USE distribution_center,  ONLY : ifr,rfr
       USE west_io,              ONLY : serial_data_read
       USE types_bz_grid,        ONLY : q_grid
@@ -982,61 +978,59 @@ MODULE wfreq_restart
       COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:,:)
       LOGICAL :: lproc
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sw_restart')
       time_spent(1) = get_clock('sw_restart')
       !
-      ! CREATE THE SUMMARY FILE
+      ! READ THE SUMMARY FILE
       !
       fname = 'summary_w.json'
       CALL read_bksq(bksq,wfreq_restart_dir,fname)
       !
-      ! READ
-      !
-      ALLOCATE(tmp_dmat(npg,npl,ifr%nglob,q_grid%np))
-      !
-      WRITE(my_label,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
-      & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp==0)
-      CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
-      !
-      CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
-      DO iq = 1,q_grid%np
-         DO ip = 1,ifr%nloc
-            ip_glob = ifr%l2g(ip)
-            dmat(:,:,ip,iq) = tmp_dmat(:,:,ip_glob,iq)
+      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
+         !
+         ! READ
+         !
+         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob,q_grid%np))
+         !
+         WRITE(my_label,'("dmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
+         & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp==0)
+         CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
+         !
+         CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
+         DO iq = 1,q_grid%np
+            DO ip = 1,ifr%nloc
+               ip_glob = ifr%l2g(ip)
+               dmat(:,:,ip,iq) = tmp_dmat(:,:,ip_glob,iq)
+            ENDDO
          ENDDO
-      ENDDO
-      DEALLOCATE(tmp_dmat)
-      !
-      ALLOCATE(tmp_zmat(npg,npl,rfr%nglob,q_grid%np))
-      !
-      WRITE(my_label,'("zmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
-      & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
-      fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-      lproc = (me_bgrp==0)
-      CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
-      !
-      CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
-      DO iq = 1,q_grid%np
-         DO ip = 1,rfr%nloc
-            ip_glob = rfr%l2g(ip)
-            zmat(:,:,ip,iq) = tmp_zmat(:,:,ip_glob,iq)
+         DEALLOCATE(tmp_dmat)
+         !
+         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob,q_grid%np))
+         !
+         WRITE(my_label,'("zmat_iq",i6.6,"_iks",i6.6,"_iv",i6.6,"_I",i6.6)') &
+         & bksq%lastdone_q,bksq%lastdone_ks,bksq%lastdone_band,my_image_id
+         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
+         lproc = (me_bgrp==0)
+         CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
+         !
+         CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
+         DO iq = 1,q_grid%np
+            DO ip = 1,rfr%nloc
+               ip_glob = rfr%l2g(ip)
+               zmat(:,:,ip,iq) = tmp_zmat(:,:,ip_glob,iq)
+            ENDDO
          ENDDO
-      ENDDO
-      DEALLOCATE(tmp_zmat)
+         DEALLOCATE(tmp_zmat)
+         !
+      ENDIF
       !
-      ! BARRIER
+      CALL mp_bcast(dmat,0,inter_bgrp_comm)
+      CALL mp_bcast(dmat,0,inter_pool_comm)
+      CALL mp_bcast(zmat,0,inter_bgrp_comm)
+      CALL mp_bcast(zmat,0,inter_pool_comm)
       !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sw_restart')
       CALL stop_clock('sw_restart')
       !
@@ -1053,9 +1047,7 @@ MODULE wfreq_restart
     SUBROUTINE solvegfreq_restart_write(bks)
       !------------------------------------------------------------------------
       !
-      USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1066,10 +1058,6 @@ MODULE wfreq_restart
       ! Workspace
       !
       CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! MKDIR
       !
@@ -1087,9 +1075,7 @@ MODULE wfreq_restart
     SUBROUTINE solvegfreq_restart_write_q(bksks)
       !------------------------------------------------------------------------
       !
-      USE mp_world,             ONLY : world_comm
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1100,10 +1086,6 @@ MODULE wfreq_restart
       ! Workspace
       !
       CHARACTER(LEN=*),PARAMETER :: fname = 'summary_g.json'
-      !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       !
       ! MKDIR
       !
@@ -1122,10 +1104,8 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1140,22 +1120,11 @@ MODULE wfreq_restart
       REAL(DP) :: time_spent(2)
       CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sg_restart')
       time_spent(1) = get_clock('sg_restart')
       !
       CALL read_bks(bks,wfreq_restart_dir,fname)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sg_restart')
       CALL stop_clock('sg_restart')
       !
@@ -1171,10 +1140,8 @@ MODULE wfreq_restart
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
-      USE mp_world,             ONLY : world_comm
       USE io_global,            ONLY : stdout
       USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_barrier
       !
       IMPLICIT NONE
       !
@@ -1189,22 +1156,11 @@ MODULE wfreq_restart
       REAL(DP) :: time_spent(2)
       CHARACTER(LEN=20),EXTERNAL :: human_readable_time
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
       CALL start_clock('sg_restart')
       time_spent(1) = get_clock('sg_restart')
       !
       CALL read_bksks(bksks,wfreq_restart_dir,fname)
       !
-      ! BARRIER
-      !
-      CALL mp_barrier(world_comm)
       time_spent(2) = get_clock('sg_restart')
       CALL stop_clock('sg_restart')
       !
@@ -1214,4 +1170,5 @@ MODULE wfreq_restart
       WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
       !
     END SUBROUTINE
+    !
 END MODULE

@@ -74,9 +74,7 @@ MODULE wbse_io
   SUBROUTINE write_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
     !
     USE kinds,          ONLY : DP,i8b
-    USE mp_world,       ONLY : world_comm
     USE io_global,      ONLY : stdout
-    USE mp,             ONLY : mp_barrier
     USE mp_global,      ONLY : my_image_id,my_bgrp_id,me_bgrp
     USE westcom,        ONLY : wbse_init_save_dir
     USE west_io,        ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
@@ -123,18 +121,13 @@ MODULE wbse_io
        !
     ENDIF
     !
-    ! BARRIER
-    !
-    CALL mp_barrier(world_comm)
-    !
   END SUBROUTINE
   !
   SUBROUTINE read_umatrix_and_omatrix(oumat_dim,ispin,umatrix,omatrix)
     !
     USE kinds,          ONLY : DP,i8b
     USE io_global,      ONLY : stdout
-    USE mp_world,       ONLY : world_comm
-    USE mp,             ONLY : mp_bcast,mp_barrier
+    USE mp,             ONLY : mp_bcast
     USE mp_global,      ONLY : intra_pool_comm,my_bgrp_id,me_bgrp
     USE westcom,        ONLY : wbse_init_save_dir
     USE west_io,        ONLY : HD_LENGTH,HD_VERSION,HD_ID_VERSION,HD_ID_LITTLE_ENDIAN,HD_ID_DIMENSION
@@ -158,10 +151,6 @@ MODULE wbse_io
     INTEGER(i8b) :: offset
     REAL(DP), ALLOCATABLE :: omatrix_tmp(:,:)
     COMPLEX(DP), ALLOCATABLE :: umatrix_tmp(:,:)
-    !
-    ! BARRIER
-    !
-    CALL mp_barrier(world_comm)
     !
     WRITE(my_spin,'(i1)') ispin
     fname = TRIM(wbse_init_save_dir)//'/o_and_u.'//my_spin//'.dat'

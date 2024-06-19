@@ -19,7 +19,7 @@ MODULE check_ovl_wfc
     SUBROUTINE read_bisection_loc(current_spin, numband, bisec_loc)
       !
       USE io_global,     ONLY : ionode, ionode_id
-      USE mp,            ONLY : mp_bcast, mp_barrier
+      USE mp,            ONLY : mp_bcast
       USE mp_world,      ONLY : world_comm
       USE westcom,       ONLY : bisection_info
       !
@@ -33,8 +33,6 @@ MODULE check_ovl_wfc
       CHARACTER(LEN=256) :: file_bisection
       !
       ! read eigenvalues from file
-      !
-      CALL mp_barrier(world_comm)
       !
       bisec_loc(:) = 0
       !

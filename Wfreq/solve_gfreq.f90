@@ -39,8 +39,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                                  & o_restart_time,npwqx,fftdriver,wstat_save_dir,l_enable_off_diagonal,&
                                  & ijpmap
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,npool,intra_bgrp_comm,nproc_bgrp,nbgrp
-  USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
-  USE mp_world,             ONLY : world_comm
+  USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
@@ -512,8 +511,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   CALL stop_bar_type( barra, 'glanczos' )
   !
-  CALL mp_barrier( world_comm )
-  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -524,8 +521,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,nbnd_occ,iuwfc,&
                                  & lrwfc,o_restart_time,npwqx,wstat_save_dir,ngq,igq_q
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,nproc_bgrp,nbgrp
-  USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
-  USE mp_world,             ONLY : world_comm
+  USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
@@ -999,7 +995,5 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ENDIF
   !
   CALL stop_bar_type( barra, 'glanczos' )
-  !
-  CALL mp_barrier( world_comm )
   !
 END SUBROUTINE

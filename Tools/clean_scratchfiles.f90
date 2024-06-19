@@ -15,9 +15,7 @@ SUBROUTINE clean_scratchfiles()
   !-----------------------------------------------------------------------
   !
   USE buffers,       ONLY : close_buffer
-  USE mp_world,      ONLY : world_comm
   USE mp_global,     ONLY : my_image_id
-  USE mp,            ONLY : mp_barrier
   USE westcom,       ONLY : iuwfc
   !
   IMPLICIT NONE
@@ -25,7 +23,5 @@ SUBROUTINE clean_scratchfiles()
   IF (my_image_id==0) THEN
      CALL close_buffer ( iuwfc, 'DELETE' )
   ENDIF
-  !
-  CALL mp_barrier(world_comm)
   !
 END SUBROUTINE

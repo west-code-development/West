@@ -42,7 +42,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
-  USE mp,               ONLY : mp_bcast,mp_barrier
+  USE mp,               ONLY : mp_bcast
   USE mp_world,         ONLY : mpime,root,world_comm
   USE mp_global,        ONLY : nimage
   USE gvect,            ONLY : ecutrho
@@ -726,8 +726,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(n_exx_lowrank == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_exx_lowrank',1)
      !
   ENDIF
-  !
-  CALL mp_barrier(world_comm)
   !
   CALL stop_clock('fetch_input')
   !

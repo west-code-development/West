@@ -322,8 +322,6 @@ MODULE wbse_dv
     USE scf,                   ONLY : rho,rho_core,rhog_core
     USE martyna_tuckerman,     ONLY : do_comp_mt
     USE funct,                 ONLY : nlc,dft_is_nonlocc
-    USE mp,                    ONLY : mp_barrier
-    USE mp_world,              ONLY : world_comm
     USE constants,             ONLY : e2
     USE cubefile,              ONLY : write_wfc_cube_r
     !
@@ -411,13 +409,9 @@ MODULE wbse_dv
     ! print spin flip kernel
     !
     IF(l_print_spin_flip_kernel) THEN
-       CALL mp_barrier( world_comm )
-       !
        !$acc update host(sf_kernel)
        fname = TRIM(wbse_save_dir)//'/sf_kernel.cube'
        CALL write_wfc_cube_r(dfftp, fname, sf_kernel)
-       !
-       CALL mp_barrier( world_comm )
     ENDIF
     !
     CALL stop_clock('sf_kernel')

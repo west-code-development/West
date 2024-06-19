@@ -43,8 +43,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                                  & z_head_rfr_a
   USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,npool,&
                                  & inter_bgrp_comm,intra_bgrp_comm,nbgrp,nproc_bgrp
-  USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
-  USE mp_world,             ONLY : world_comm
+  USE mp,                   ONLY : mp_bcast,mp_sum
   USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
@@ -776,7 +775,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   IF(npool*nbgrp > 1 .AND. .NOT. l_read_restart .AND. .NOT. l_QDET) THEN
      bks%lastdone_ks = k_grid%nps
-     bks%lastdone_band = nbndval
+     bks%lastdone_band = MAXVAL(nbnd_occ)
      CALL mp_sum(dmati,inter_bgrp_comm)
      CALL mp_sum(dmati,inter_pool_comm)
      CALL mp_sum(zmatr,inter_bgrp_comm)
@@ -970,8 +969,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      CALL output_eps_head()
   ENDIF
   !
-  CALL mp_barrier(world_comm)
-  !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
@@ -985,8 +982,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                                  & npwqx,wstat_save_dir,ngq,igq_q
   USE mp_global,            ONLY : my_image_id,inter_image_comm,nimage,inter_bgrp_comm,&
                                  & intra_bgrp_comm,nbgrp,nproc_bgrp
-  USE mp,                   ONLY : mp_bcast,mp_sum,mp_barrier
-  USE mp_world,             ONLY : world_comm
+  USE mp,                   ONLY : mp_bcast,mp_sum
   USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts
   USE constants,            ONLY : fpi,e2
@@ -1793,8 +1789,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   IF(l_generate_plot) THEN
      CALL output_eps_head()
   ENDIF
-  !
-  CALL mp_barrier(world_comm)
   !
 END SUBROUTINE
 !

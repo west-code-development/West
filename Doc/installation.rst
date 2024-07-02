@@ -14,7 +14,7 @@ QE can be installed with HDF5 support. Currently the installation of QE with CMa
 
    $ git clone -b 'qe-7.3' --single-branch --depth 1 https://gitlab.com/QEF/q-e.git QEdir
    $ cd QEdir
-   $ git clone -b 'v6.0.0' --single-branch --depth 1 https://github.com/west-code-development/West.git West
+   $ git clone -b 'v6.1.0' --single-branch --depth 1 https://github.com/west-code-development/West.git West
    $ ./configure
 
 .. note::

@@ -22,6 +22,7 @@ SUBROUTINE do_exc_comp()
   USE mp,                    ONLY : mp_sum,mp_bcast
   USE mp_global,             ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE buffers,               ONLY : get_buffer
+  USE noncollin_module,      ONLY : npol
   USE westcom,               ONLY : logfile,iuwfc,lrwfc,nbndval0x,nbnd_occ,dvg_exc,ev,westpp_range,&
                                   & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
                                   & westpp_l_dipole_realspace,l_dipole_realspace,d0psi,alphapv_dfpt
@@ -159,27 +160,8 @@ SUBROUTINE do_exc_comp()
         nbndval = nbnd_occ(iks)
         flnbndval = nbnd_occ(iks_do)
         !
-        !$acc parallel vector_length(1024) present(dvg_exc,evc,projection_matrix)
-        !$acc loop collapse(2)
-        DO iocc = 1, flnbndval
-           DO iemp = 1, nbnd - nbndval
-              !
-              reduce = 0._DP
-              !$acc loop reduction(+:reduce)
-              DO ig = 1, npw
-                 reduce = reduce + 2._DP*REAL(dvg_exc(ig,iocc,iks,lexc),KIND=DP)*REAL(evc(ig,nbndval+iemp),KIND=DP) &
-                 &               + 2._DP*AIMAG(dvg_exc(ig,iocc,iks,lexc))*AIMAG(evc(ig,nbndval+iemp))
-              ENDDO
-              !
-              IF(gstart == 2) THEN
-                 reduce = reduce - REAL(dvg_exc(1,iocc,iks,lexc),KIND=DP)*REAL(evc(1,nbndval+iemp),KIND=DP)
-              ENDIF
-              !
-              projection_matrix(iemp,iocc,iks,iexc) = reduce
-              !
-           ENDDO
-        ENDDO
-        !$acc end parallel
+        CALL glbrak_gamma(evc(1,nbndval+1),dvg_exc(1,1,iks,lexc),projection_matrix(1,1,iks,iexc),npw,npwx, &
+        & nbnd-nbndval,flnbndval,nbndx_emp,npol)
         !
         CALL update_bar_type(barra,'westpp',1)
         !

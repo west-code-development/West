@@ -10,7 +10,7 @@ env:
 jobs:
   test:
     runs-on: [self-hosted, linux]
-    container: miccomcenter/bot:gcc1320_0002
+    container: miccomcenter/bot:gcc1330_0002
 
     steps:
     - uses: actions/checkout@v4

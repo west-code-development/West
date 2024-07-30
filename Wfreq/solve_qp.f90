@@ -52,7 +52,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE mp,                   ONLY : mp_sum,mp_bcast
   USE pwcom,                ONLY : et,nbnd,nspin
   USE io_push,              ONLY : io_push_title,io_push_bar
-  USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband,pert_offd
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
@@ -89,7 +89,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: braket,overlap
 #endif
-  REAL(DP),ALLOCATABLE :: diago_tmp(:,:),braket_tmp(:,:,:)
   REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
   REAL(DP),ALLOCATABLE :: d_epsm1_ifr_trans(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: z_epsm1_rfr_trans(:,:,:)
@@ -422,24 +421,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
               !
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
-                 IF(pert_offd%nglob > 0 .AND. ib /= jb) THEN
-                    ALLOCATE(diago_tmp(n_lanczos,pert_offd%nloc))
-                    ALLOCATE(braket_tmp(pert_offd%nglob,n_lanczos,pert_offd%nloc))
-                    !
-                    CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago_tmp, braket_tmp, &
-                       & pert_offd%nloc, pert_offd%nglob, pert_offd%myoffset )
-                    !
-                    diago(:,:) = 0._DP
-                    diago(:,1:pert_offd%nloc) = diago_tmp
-                    braket(:,:,:) = 0._DP
-                    braket(1:pert_offd%nglob,:,1:pert_offd%nloc) = braket_tmp
-                    !
-                    DEALLOCATE(diago_tmp)
-                    DEALLOCATE(braket_tmp)
-                 ELSE
-                    CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, &
-                       & pert%nglob, pert%myoffset )
-                 ENDIF
+                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, &
+                    & pert%nglob, pert%myoffset )
               ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
                  CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, &
                     & pert%nglob, pert%myoffset )

@@ -18,9 +18,9 @@ SUBROUTINE wfreq_setup
   USE mp,                     ONLY : mp_bcast,mp_sum
   USE westcom,                ONLY : lrwfc,iuwfc,wfreq_save_dir,wfreq_calculation,nbnd_occ,occupation,&
                                    & qp_bands,n_bands,alphapv_dfpt,n_imfreq,n_refreq,n_pdep_eigen_to_use,&
-                                   & n_pdep_eigen_off_diagonal,l_macropol,macropol_calculation,sigma_exx,&
-                                   & sigma_vxcl,sigma_vxcnl,sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,&
-                                   & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,&
+                                   & l_macropol,macropol_calculation,sigma_exx,sigma_vxcl,sigma_vxcnl,&
+                                   & sigma_hf,sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,&
+                                   & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,&
                                    & sigma_freq,n_spectralf,l_enable_off_diagonal,ijpmap,pijmap,n_pairs,&
                                    & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,&
                                    & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,proj_c
@@ -30,7 +30,7 @@ SUBROUTINE wfreq_setup
   USE noncollin_module,       ONLY : npol
   USE kinds,                  ONLY : DP
   USE xc_lib,                 ONLY : xclib_dft_is
-  USE distribution_center,    ONLY : pert,kpt_pool,band_group,macropert,ifr,rfr,aband,occband,pert_offd
+  USE distribution_center,    ONLY : pert,kpt_pool,band_group,macropert,ifr,rfr,aband,occband
   USE class_idistribute,      ONLY : idistribute,IDIST_BLK
   USE types_bz_grid,          ONLY : k_grid
   USE ldaU,                   ONLY : lda_plus_u
@@ -74,9 +74,6 @@ SUBROUTINE wfreq_setup
   CALL aband%init(nbnd,'i','nbnd',.TRUE.)
   occband = idistribute()
   band_group = idistribute()
-  pert_offd = idistribute()
-  IF(n_pdep_eigen_off_diagonal > 0 .AND. n_pdep_eigen_off_diagonal < n_pdep_eigen_to_use &
-  & .AND. l_enable_off_diagonal) CALl pert_offd%init(n_pdep_eigen_off_diagonal,'i','npdep_offd',.FALSE.)
   !
   kpt_pool = idistribute()
   CALL kpt_pool%init(nkstot,'p','nkstot',.FALSE.,IDIST_BLK)

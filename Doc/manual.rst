@@ -516,7 +516,7 @@ wfreq_control
    * - **Default**
      - 0
    * - **Description**
-     - If ( n_pdep_eigen_off_diagonal > 0 ), then the off-diagonal matrix elements of the :math:`{G_0 W_0}` self-energy are computed using n_pdep_eigen_off_diagonal PDEPs. This is to reduce file system usage in large-scale QDET calculations. The diagonal matrix elements are always computed using n_pdep_eigen_to_use PDEPs. Used only when l_enable_off_diagonal is True.
+     - Deprecated parameter.
 
 .. data:: l_enable_gwetot
 

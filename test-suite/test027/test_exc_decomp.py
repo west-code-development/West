@@ -30,8 +30,8 @@ def test_proj_matrix():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_proj = read_proj_matrix_from_json("./test028/ref/westpp.json")
-    test_proj = read_proj_matrix_from_json("./test028/test.westpp.save/westpp.json")
+    ref_proj = read_proj_matrix_from_json("./test027/ref/westpp.json")
+    test_proj = read_proj_matrix_from_json("./test027/test.westpp.save/westpp.json")
 
     for iexc in ref_proj:
         np.testing.assert_almost_equal(

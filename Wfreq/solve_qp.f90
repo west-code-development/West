@@ -738,7 +738,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ALLOCATE( imfreq_list_integrate( 2, ifr%nloc ) )
   ALLOCATE( dtemp( n_imfreq ) )
   !
-  dtemp = 0._DP
+  dtemp(:) = 0._DP
   DO ifreq = 1, ifr%nloc
      glob_ifreq = ifr%l2g(ifreq)
      dtemp( glob_ifreq ) = imfreq_list( ifreq )
@@ -793,8 +793,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ENDDO
   !$acc end parallel
   !
-  z_body1_ifr_q = 0._DP
-  z_body_rfr_q = 0._DP
+  z_body1_ifr_q(:,:,:,:,:) = 0._DP
+  z_body_rfr_q(:,:,:,:,:) = 0._DP
   !
   ! d_body1_ifr_q, d_body2_ifr_q, z_diago_rfr_q, d_diago_q
   !
@@ -1083,8 +1083,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ENDDO
      !
      DO glob_ifreq = 1, n_spectralf
-        en = (ecut_spectralf(2)-ecut_spectralf(1)) / REAL(n_spectralf-1,KIND=DP) * REAL(glob_ifreq-1,KIND=DP) &
-        & + ecut_spectralf(1)
+        en(:,:,:) = (ecut_spectralf(2)-ecut_spectralf(1))/REAL(n_spectralf-1,KIND=DP)*REAL(glob_ifreq-1,KIND=DP) &
+        & +ecut_spectralf(1)
         CALL calc_corr_k( sc(:,:,1), en(:,:,1), .FALSE.)
         DO iks=1, k_grid%nps
            DO ib = 1, n_bands

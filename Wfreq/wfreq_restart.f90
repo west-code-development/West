@@ -63,14 +63,6 @@ MODULE wfreq_restart
      INTEGER :: min_band
   END TYPE bksks_type
   !
-  INTERFACE solvewfreq_restart_write
-     MODULE PROCEDURE solvewfreq_restart_write_real, solvewfreq_restart_write_complex, solvewfreq_restart_write_complex_q
-  END INTERFACE
-  !
-  INTERFACE solvewfreq_restart_read
-     MODULE PROCEDURE solvewfreq_restart_read_real, solvewfreq_restart_read_complex, solvewfreq_restart_read_complex_q
-  END INTERFACE
-  !
   CONTAINS
     !
     ! BKS
@@ -449,7 +441,7 @@ MODULE wfreq_restart
     ! SOLVEWFREQ
     !
     !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_write_real(bks,dmat,zmat,npg,npl)
+    SUBROUTINE solvewfreq_restart_write(bks,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
@@ -551,109 +543,7 @@ MODULE wfreq_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_write_complex(bks,dmat,zmat,npg,npl)
-      !------------------------------------------------------------------------
-      !
-      USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,intra_bgrp_comm
-      USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_sum
-      USE distribution_center,  ONLY : ifr,rfr
-      USE west_io,              ONLY : serial_data_write,remove_if_present
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      TYPE(bks_type),INTENT(IN) :: bks
-      INTEGER,INTENT(IN) :: npg,npl
-      COMPLEX(DP),INTENT(IN) :: dmat(npg,npl,ifr%nloc)
-      COMPLEX(DP),INTENT(IN) :: zmat(npg,npl,rfr%nloc)
-      !
-      ! Workspace
-      !
-      CHARACTER(LEN=512) :: fname
-      CHARACTER(LEN=31) :: my_label
-      CHARACTER(LEN=35) :: my_label2
-      INTEGER :: ip,ip_glob
-      COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
-      COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
-      LOGICAL :: lproc
-      !
-      CALL start_clock('sw_restart')
-      !
-      ! MKDIR
-      !
-      CALL my_mkdir(wfreq_restart_dir)
-      !
-      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-         !
-         ! DMAT
-         !
-         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
-         tmp_dmat = 0._DP
-         DO ip = 1,ifr%nloc
-            ip_glob = ifr%l2g(ip)
-            tmp_dmat(:,:,ip_glob) = dmat(:,:,ip)
-         ENDDO
-         CALL mp_sum(tmp_dmat,intra_bgrp_comm)
-         !
-         WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-         lproc = (me_bgrp == 0)
-         CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
-         !
-         DEALLOCATE(tmp_dmat)
-         !
-         ! ZMAT
-         !
-         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
-         tmp_zmat = 0._DP
-         DO ip = 1,rfr%nloc
-            ip_glob = rfr%l2g(ip)
-            tmp_zmat(:,:,ip_glob) = zmat(:,:,ip)
-         ENDDO
-         CALL mp_sum(tmp_zmat,intra_bgrp_comm)
-         !
-         WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-         lproc = (me_bgrp == 0)
-         CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
-         !
-         DEALLOCATE(tmp_zmat)
-         !
-      ENDIF
-      !
-      ! CLEAR
-      !
-      IF(bks%old_ks /= 0 .AND. bks%old_band /= 0) THEN
-         !
-         IF(my_pool_id == 0 .AND. my_bgrp_id == 0 .AND. me_bgrp == 0) THEN
-            !
-            WRITE(my_label2,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
-            & bks%old_ks,bks%old_band,my_image_id
-            fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
-            WRITE(my_label2,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6,".dat")') &
-            & bks%old_ks,bks%old_band,my_image_id
-            fname = TRIM(my_label2)
-            CALL remove_if_present(TRIM(wfreq_restart_dir)//'/'//TRIM(fname))
-            !
-         ENDIF
-         !
-      ENDIF
-      !
-      ! CREATE THE SUMMARY FILE
-      !
-      fname = 'summary_w.json'
-      CALL write_bks(bks,wfreq_restart_dir,fname)
-      !
-      CALL stop_clock('sw_restart')
-      !
-    END SUBROUTINE
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_write_complex_q(bksq,dmat,zmat,npg,npl)
+    SUBROUTINE solvewfreq_restart_write_q(bksq,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
@@ -762,7 +652,7 @@ MODULE wfreq_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_read_real(bks,dmat,zmat,npg,npl)
+    SUBROUTINE solvewfreq_restart_read(bks,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP
@@ -853,98 +743,7 @@ MODULE wfreq_restart
     END SUBROUTINE
     !
     !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_read_complex(bks,dmat,zmat,npg,npl)
-      !------------------------------------------------------------------------
-      !
-      USE kinds,                ONLY : DP
-      USE mp_global,            ONLY : my_image_id,my_pool_id,inter_pool_comm,my_bgrp_id,me_bgrp,&
-                                     & inter_bgrp_comm,intra_bgrp_comm
-      USE io_global,            ONLY : stdout
-      USE westcom,              ONLY : wfreq_restart_dir
-      USE mp,                   ONLY : mp_bcast
-      USE distribution_center,  ONLY : ifr,rfr
-      USE west_io,              ONLY : serial_data_read
-      !
-      IMPLICIT NONE
-      !
-      ! I/O
-      !
-      TYPE(bks_type),INTENT(OUT) :: bks
-      INTEGER,INTENT(IN) :: npg,npl
-      COMPLEX(DP),INTENT(OUT) :: dmat(npg,npl,ifr%nloc)
-      COMPLEX(DP),INTENT(OUT) :: zmat(npg,npl,rfr%nloc)
-      !
-      ! Workspace
-      !
-      CHARACTER(LEN=512) :: fname
-      REAL(DP),EXTERNAL :: get_clock
-      REAL(DP) :: time_spent(2)
-      CHARACTER(LEN=20),EXTERNAL :: human_readable_time
-      CHARACTER(LEN=31) :: my_label
-      INTEGER :: ip,ip_glob
-      COMPLEX(DP),ALLOCATABLE :: tmp_dmat(:,:,:)
-      COMPLEX(DP),ALLOCATABLE :: tmp_zmat(:,:,:)
-      LOGICAL :: lproc
-      !
-      CALL start_clock('sw_restart')
-      time_spent(1) = get_clock('sw_restart')
-      !
-      IF(my_pool_id == 0 .AND. my_bgrp_id == 0) THEN
-         !
-         ! READ THE SUMMARY FILE
-         !
-         fname = 'summary_w.json'
-         CALL read_bks(bks,wfreq_restart_dir,fname)
-         !
-         ! READ
-         !
-         ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
-         !
-         WRITE(my_label,'("dmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-         lproc = (me_bgrp==0)
-         CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
-         !
-         CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
-         DO ip = 1,ifr%nloc
-            ip_glob = ifr%l2g(ip)
-            dmat(:,:,ip) = tmp_dmat(:,:,ip_glob)
-         ENDDO
-         DEALLOCATE(tmp_dmat)
-         !
-         ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
-         !
-         WRITE(my_label,'("zmat_iks",i6.6,"_iv",i6.6,"_I",i6.6)') bks%lastdone_ks,bks%lastdone_band,my_image_id
-         fname = TRIM(wfreq_restart_dir)//'/'//TRIM(my_label)
-         lproc = (me_bgrp==0)
-         CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
-         !
-         CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
-         DO ip = 1,rfr%nloc
-            ip_glob = rfr%l2g(ip)
-            zmat(:,:,ip) = tmp_zmat(:,:,ip_glob)
-         ENDDO
-         DEALLOCATE(tmp_zmat)
-         !
-      ENDIF
-      !
-      CALL mp_bcast(dmat,0,inter_bgrp_comm)
-      CALL mp_bcast(dmat,0,inter_pool_comm)
-      CALL mp_bcast(zmat,0,inter_bgrp_comm)
-      CALL mp_bcast(zmat,0,inter_pool_comm)
-      !
-      time_spent(2) = get_clock('sw_restart')
-      CALL stop_clock('sw_restart')
-      !
-      WRITE(stdout,'(1/,5x,"[I/O] -------------------------------------------------------")')
-      WRITE(stdout,'(5x,"[I/O] RESTART read in ",a)') TRIM(human_readable_time(time_spent(2)-time_spent(1)))
-      WRITE(stdout,'(5x,"[I/O] In location : ",a)') TRIM(wfreq_restart_dir)
-      WRITE(stdout,'(5x,"[I/O] -------------------------------------------------------")')
-      !
-    END SUBROUTINE
-    !
-    !------------------------------------------------------------------------
-    SUBROUTINE solvewfreq_restart_read_complex_q(bksq,dmat,zmat,npg,npl)
+    SUBROUTINE solvewfreq_restart_read_q(bksq,dmat,zmat,npg,npl)
       !------------------------------------------------------------------------
       !
       USE kinds,                ONLY : DP

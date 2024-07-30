@@ -81,7 +81,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ipol,iks_g
+  INTEGER :: ip,glob_ip,ig,ir,iv,ivloc,ivloc2,ifloc,iks,iks_g,ipol
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval,nbndval_full
@@ -998,7 +998,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband,band_group
   USE class_idistribute,    ONLY : idistribute
-  USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bksq_type
+  USE wfreq_restart,        ONLY : solvewfreq_restart_write_q,solvewfreq_restart_read_q,bksq_type
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE chi_invert,           ONLY : chi_invert_complex
   USE types_coulomb,        ONLY : pot3D
@@ -1020,7 +1020,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,iv,ivloc,ivloc2,ifloc,iks,ik,is,iq,ikqs,ikq,ipol
+  INTEGER :: ip,glob_ip,ig,ir,iv,ivloc,ivloc2,ifloc,iks,ik,is,iq,ikqs,ikq,ipol
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   INTEGER :: nbndval
@@ -1115,7 +1115,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !$acc enter data create(phase,evckpq)
   !
   IF(l_read_restart) THEN
-     CALL solvewfreq_restart_read( bksq, zmati_q, zmatr_q, mypara%nglob, mypara%nloc )
+     CALL solvewfreq_restart_read_q( bksq, zmati_q, zmatr_q, mypara%nglob, mypara%nloc )
      !$acc update device(zmati_q,zmatr_q)
   ELSE
      bksq%lastdone_ks   = 0
@@ -1610,7 +1610,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               bksq%lastdone_ks = iks
               bksq%lastdone_band = iv
               !$acc update host(zmati_q,zmatr_q)
-              CALL solvewfreq_restart_write(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
+              CALL solvewfreq_restart_write_q(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
               bksq%old_q = iq
               bksq%old_ks = iks
               bksq%old_band = iv
@@ -1677,7 +1677,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
      bksq%lastdone_band = nbndval
      CALL mp_sum(zmati_q,inter_bgrp_comm)
      CALL mp_sum(zmatr_q,inter_bgrp_comm)
-     CALL solvewfreq_restart_write(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
+     CALL solvewfreq_restart_write_q(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
   ENDIF
   !
   CALL stop_bar_type( barra, 'wlanczos' )

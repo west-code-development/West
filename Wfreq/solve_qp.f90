@@ -39,13 +39,12 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bands,n_bands,imfreq_list_integrate,&
-                                 & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,n_imfreq,&
-                                 & d_epsm1_ifr,z_epsm1_rfr,n_spectralf,ecut_spectralf,d_body1_ifr,&
-                                 & d_body2_ifr,d_diago,z_body_rfr,sigma_z,sigma_eqplin,sigma_eqpsec,&
-                                 & sigma_sc_eks,sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,&
-                                 & sigma_spectralf,sigma_freq,l_enable_off_diagonal,ijpmap,&
-                                 & d_body1_ifr_full,d_body2_ifr_full,d_diago_full,z_body_rfr_full,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,qp_bands,n_bands,imfreq_list_integrate,&
+                                 & n_secant_maxiter,trev_secant,imfreq_list,n_imfreq,d_epsm1_ifr,&
+                                 & z_epsm1_rfr,n_spectralf,ecut_spectralf,d_body1_ifr,z_body_rfr,&
+                                 & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
+                                 & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,&
+                                 & l_enable_off_diagonal,ijpmap,d_body1_ifr_full,z_body_rfr_full,&
                                  & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,my_pool_id,&
                                  & intra_bgrp_comm
@@ -54,7 +53,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
+  USE wfreq_io,             ONLY : readin_overlap,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
   !
@@ -76,7 +75,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
   INTEGER :: ib,ibloc,ib_index,jb,jb_index,ipair,iloc_pair,nloc_pairs,iks,iks_g,is
-  INTEGER :: ifixed,ip,ifreq,il,im,im_index,glob_im,glob_jp,glob_ifreq
+  INTEGER :: ifixed,ip,ifreq,im,im_index,glob_im,glob_jp,glob_ifreq
   INTEGER :: notconv
   REAL(DP),ALLOCATABLE :: dtemp(:)
   REAL(DP),ALLOCATABLE :: dtemp2(:,:)
@@ -84,10 +83,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dtemp2,ztemp2
 #endif
-  REAL(DP),ALLOCATABLE :: diago(:,:)
-  REAL(DP),ALLOCATABLE :: braket(:,:,:),overlap(:,:)
+  REAL(DP),ALLOCATABLE :: overlap(:,:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: braket,overlap
+  ATTRIBUTES(PINNED) :: overlap
 #endif
   REAL(DP),ALLOCATABLE :: overlap_loc(:,:)
   REAL(DP),ALLOCATABLE :: d_epsm1_ifr_trans(:,:,:)
@@ -96,7 +94,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   INTEGER :: barra_load
   REAL(DP) :: reduce_r
   COMPLEX(DP) :: reduce_c
-  INTEGER :: pert_nloc,pert_nglob,ifr_nloc,rfr_nloc
+  INTEGER :: pert_nloc,ifr_nloc,rfr_nloc
   INTEGER,ALLOCATABLE :: l2g(:)
   !
 #if defined(__CUDA)
@@ -150,11 +148,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   d_epsm1_ifr_trans(:,:,:) = RESHAPE( d_epsm1_ifr, [pert%nloc,pert%nglob,ifr%nloc], ORDER=[2,1,3] )
   z_epsm1_rfr_trans(:,:,:) = RESHAPE( z_epsm1_rfr, [pert%nloc,pert%nglob,rfr%nloc], ORDER=[2,1,3] )
   !$acc enter data copyin(d_epsm1_ifr_trans,z_epsm1_rfr_trans)
-  IF( l_enable_lanczos ) THEN
-     ALLOCATE( braket( pert%nglob, n_lanczos, pert%nloc ) )
-     !$acc enter data create(braket)
-     ALLOCATE( diago( n_lanczos, pert%nloc ) )
-  ENDIF
   IF( l_enable_off_diagonal ) THEN
      !
      nloc_pairs = 0
@@ -174,41 +167,24 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      IF( .NOT. l_QDET ) THEN
         ALLOCATE( d_body1_ifr_full( aband%nloc, ifr%nloc, nloc_pairs, k_grid%nps ) )
         ALLOCATE( z_body_rfr_full( aband%nloc, rfr%nloc, nloc_pairs, k_grid%nps ) )
-        IF( l_enable_lanczos ) THEN
-           ALLOCATE( d_diago_full( n_lanczos, pert%nloc, nloc_pairs, k_grid%nps ) )
-           ALLOCATE( d_body2_ifr_full( n_lanczos, pert%nloc, ifr%nloc, nloc_pairs, k_grid%nps ) )
-        ENDIF
      ENDIF
      !
      d_body1_ifr_full(:,:,:,:) = 0._DP
      z_body_rfr_full(:,:,:,:) = 0._DP
-     IF( l_enable_lanczos ) THEN
-        d_body2_ifr_full(:,:,:,:,:) = 0._DP
-        d_diago_full(:,:,:,:) = 0._DP
-     ENDIF
      !
   ELSE
      !
      IF( .NOT. l_QDET ) THEN
         ALLOCATE( d_body1_ifr( aband%nloc, ifr%nloc, band_group%nloc, k_grid%nps ) )
         ALLOCATE( z_body_rfr( aband%nloc, rfr%nloc, band_group%nloc, k_grid%nps ) )
-        IF( l_enable_lanczos ) THEN
-           ALLOCATE( d_diago( n_lanczos, pert%nloc, band_group%nloc, k_grid%nps ) )
-           ALLOCATE( d_body2_ifr( n_lanczos, pert%nloc, ifr%nloc, band_group%nloc, k_grid%nps ) )
-        ENDIF
      ENDIF
      !
      d_body1_ifr(:,:,:,:) = 0._DP
      z_body_rfr(:,:,:,:) = 0._DP
-     IF( l_enable_lanczos ) THEN
-        d_body2_ifr(:,:,:,:,:) = 0._DP
-        d_diago(:,:,:,:) = 0._DP
-     ENDIF
      !
   ENDIF
   !
   pert_nloc = pert%nloc
-  pert_nglob = pert%nglob
   ifr_nloc = ifr%nloc
   rfr_nloc = rfr%nloc
   !
@@ -413,80 +389,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
            ENDDO
            !
            ! -----------------------------
-           ! LANCZOS part : d_diago, d_body2_ifr
+           ! LANCZOS part : d_diago, d_body2_ifr (computed in solve_gfreq)
            ! -----------------------------
-           !
-           ! For the QDET double-counting term, there are no contributions from the Lanczos chain
-           !
-           IF( .NOT. l_QDET .AND. l_enable_lanczos ) THEN
-              !
-              IF(l_enable_off_diagonal .AND. jb <= ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ipair, diago, braket, pert%nloc, &
-                    & pert%nglob, pert%myoffset )
-              ELSEIF(.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                 CALL readin_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, &
-                    & pert%nglob, pert%myoffset )
-              ENDIF
-              !
-              !$acc update device(braket)
-              !
-              IF (l_enable_off_diagonal .AND. jb <= ib) THEN
-                 DO ip = 1, pert%nloc
-                    DO il = 1, n_lanczos
-                       d_diago_full(il,ip,iloc_pair,iks_g) = diago(il,ip)
-                    ENDDO
-                 ENDDO
-              ELSEIF (.NOT. l_enable_off_diagonal .AND. jb == ib) THEN
-                 DO ip = 1, pert%nloc
-                    DO il = 1, n_lanczos
-                       d_diago(il,ip,ibloc,iks_g) = diago(il,ip)
-                    ENDDO
-                 ENDDO
-              ENDIF
-              !
-              IF(l_enable_off_diagonal .AND. jb <= ib) THEN
-                 !$acc enter data create(d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
-                 !
-                 !$acc parallel present(braket,d_epsm1_ifr,d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
-                 !$acc loop collapse(3)
-                 DO ifreq = 1, ifr_nloc
-                    DO ip = 1, pert_nloc
-                       DO il = 1, n_lanczos
-                          reduce_r = 0._DP
-                          !$acc loop reduction(+:reduce_r)
-                          DO glob_jp = 1, pert_nglob
-                             reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
-                          ENDDO
-                          d_body2_ifr_full(il,ip,ifreq,iloc_pair,iks_g) = reduce_r
-                       ENDDO
-                    ENDDO
-                 ENDDO
-                 !$acc end parallel
-                 !
-                 !$acc exit data copyout(d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
-              ELSE
-                 !$acc enter data create(d_body2_ifr(:,:,:,ibloc,iks_g))
-                 !
-                 !$acc parallel present(braket,d_epsm1_ifr,d_body2_ifr(:,:,:,ibloc,iks_g))
-                 !$acc loop collapse(3)
-                 DO ifreq = 1, ifr_nloc
-                    DO ip = 1, pert_nloc
-                       DO il = 1, n_lanczos
-                          reduce_r = 0._DP
-                          !$acc loop reduction(+:reduce_r)
-                          DO glob_jp = 1, pert_nglob
-                             reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
-                          ENDDO
-                          d_body2_ifr(il,ip,ifreq,ibloc,iks_g) = reduce_r
-                       ENDDO
-                    ENDDO
-                 ENDDO
-                 !$acc end parallel
-                 !
-                 !$acc exit data copyout(d_body2_ifr(:,:,:,ibloc,iks_g))
-              ENDIF
-              !
-           ENDIF
            !
            CALL update_bar_type( barra, 'coll_gw', 1 )
            !
@@ -499,17 +403,9 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   IF(l_enable_off_diagonal) THEN
      CALL mp_sum(d_body1_ifr_full,inter_pool_comm)
      CALL mp_sum(z_body_rfr_full,inter_pool_comm)
-     IF(l_enable_lanczos) THEN
-        CALL mp_sum(d_body2_ifr_full,inter_pool_comm)
-        CALL mp_sum(d_diago_full,inter_pool_comm)
-     ENDIF
   ELSE
      CALL mp_sum(d_body1_ifr,inter_pool_comm)
      CALL mp_sum(z_body_rfr,inter_pool_comm)
-     IF(l_enable_lanczos) THEN
-        CALL mp_sum(d_body2_ifr,inter_pool_comm)
-        CALL mp_sum(d_diago,inter_pool_comm)
-     ENDIF
   ENDIF
   !
   CALL stop_bar_type( barra, 'coll_gw' )
@@ -523,11 +419,6 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   DEALLOCATE( ztemp2 )
   DEALLOCATE( d_epsm1_ifr_trans )
   DEALLOCATE( z_epsm1_rfr_trans )
-  IF( l_enable_lanczos ) THEN
-     !$acc exit data delete(braket)
-     DEALLOCATE( braket )
-     DEALLOCATE( diago )
-  ENDIF
   !
   ! Get Sigma_X
   !
@@ -780,11 +671,10 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! ... Perturbations are distributed according to the POT mpi_communicator
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,qp_bands,n_bands,imfreq_list_integrate,&
-                                 & n_secant_maxiter,trev_secant,l_enable_lanczos,imfreq_list,n_imfreq,&
-                                 & z_epsm1_ifr_q,z_epsm1_rfr_q,n_spectralf,ecut_spectralf,&
-                                 & z_body1_ifr_q,z_body2_ifr_q,d_diago_q,z_body_rfr_q,sigma_z,&
-                                 & sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
+  USE westcom,              ONLY : n_pdep_eigen_to_use,qp_bands,n_bands,imfreq_list_integrate,&
+                                 & n_secant_maxiter,trev_secant,imfreq_list,n_imfreq,z_epsm1_ifr_q,&
+                                 & z_epsm1_rfr_q,n_spectralf,ecut_spectralf,z_body1_ifr_q,z_body_rfr_q,&
+                                 & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                  & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
   USE mp,                   ONLY : mp_sum
@@ -792,7 +682,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE wfreq_io,             ONLY : readin_overlap,readin_solvegfreq,readin_solvehf
+  USE wfreq_io,             ONLY : readin_overlap,readin_solvehf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
   !
@@ -814,7 +704,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   LOGICAL,ALLOCATABLE :: l_conv(:,:)
   REAL(DP),PARAMETER :: eshift = 0.007349862_DP ! = 0.1 eV
   INTEGER :: ib,ibloc,ib_index,iks,ik,ikks,ikk,iq,is,iss
-  INTEGER :: ifixed,ip,ifreq,il,im,glob_im,glob_jp,glob_ifreq
+  INTEGER :: ifixed,ip,ifreq,im,glob_im,glob_jp,glob_ifreq
   REAL(DP) :: g0(3)
   INTEGER :: notconv
   REAL(DP),ALLOCATABLE :: dtemp(:)
@@ -822,11 +712,9 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: ztemp2
 #endif
-  REAL(DP),ALLOCATABLE :: diago(:,:)
-  COMPLEX(DP),ALLOCATABLE :: braket(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: overlap(:,:)
 #if defined(__CUDA)
-  ATTRIBUTES(PINNED) :: braket,overlap
+  ATTRIBUTES(PINNED) :: overlap
 #endif
   COMPLEX(DP),ALLOCATABLE :: overlap_loc(:,:)
   COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_trans_q(:,:,:,:)
@@ -834,7 +722,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   COMPLEX(DP) :: reduce
-  INTEGER :: pert_nloc,pert_nglob,ifr_nloc,rfr_nloc
+  INTEGER :: pert_nloc,ifr_nloc,rfr_nloc
   INTEGER,ALLOCATABLE :: l2g(:)
   !
 #if defined(__CUDA)
@@ -883,13 +771,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ALLOCATE( z_body_rfr_q( aband%nloc, rfr%nloc, band_group%nloc, k_grid%nps, q_grid%nps ) )
   ALLOCATE( ztemp2( nbnd, MAX(ifr%nloc,rfr%nloc) ) )
   !$acc enter data create(overlap,overlap_loc,ztemp2) copyin(z_epsm1_ifr_q)
-  IF( l_enable_lanczos ) THEN
-     ALLOCATE( z_body2_ifr_q( n_lanczos, pert%nloc, ifr%nloc, band_group%nloc, k_grid%nps, q_grid%nps ) )
-     ALLOCATE( d_diago_q( n_lanczos, pert%nloc, band_group%nloc, k_grid%nps, q_grid%nps ) )
-     ALLOCATE( braket( pert%nglob, n_lanczos, pert%nloc ) )
-     !$acc enter data create(braket)
-     ALLOCATE( diago( n_lanczos, pert%nloc ) )
-  ENDIF
   ALLOCATE( z_epsm1_ifr_trans_q( pert%nloc, pert%nglob, ifr%nloc, q_grid%np ) )
   ALLOCATE( z_epsm1_rfr_trans_q( pert%nloc, pert%nglob, rfr%nloc, q_grid%np ) )
   z_epsm1_ifr_trans_q = RESHAPE( z_epsm1_ifr_q, [pert%nloc,pert%nglob,ifr%nloc,q_grid%np], ORDER=[2,1,3,4] )
@@ -897,7 +778,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !$acc enter data copyin(z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
   !
   pert_nloc = pert%nloc
-  pert_nglob = pert%nglob
   ifr_nloc = ifr%nloc
   rfr_nloc = rfr%nloc
   !
@@ -915,10 +795,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   z_body1_ifr_q = 0._DP
   z_body_rfr_q = 0._DP
-  IF( l_enable_lanczos ) THEN
-     z_body2_ifr_q = 0._DP
-     d_diago_q = 0._DP
-  ENDIF
   !
   ! d_body1_ifr_q, d_body2_ifr_q, z_diago_rfr_q, d_diago_q
   !
@@ -1026,43 +902,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            ENDDO
            !
            ! -----------------------------
-           ! LANCZOS part : d_diago_q, z_body2_ifr_q
+           ! LANCZOS part : d_diago_q, z_body2_ifr_q (computed in solve_gfreq)
            ! -----------------------------
-           !
-           IF( l_enable_lanczos ) THEN
-              !
-              CALL readin_solvegfreq( kpt_pool%l2g(iks), kpt_pool%l2g(ikks), ib, diago, braket, &
-                 & pert%nloc, pert%nglob, pert%myoffset )
-              !
-              !$acc update device(braket)
-              !
-              DO ip = 1, pert%nloc
-                 DO il = 1, n_lanczos
-                    d_diago_q(il,ip,ibloc,iks,iq) = diago(il,ip)
-                 ENDDO
-              ENDDO
-              !
-              !$acc enter data create(z_body2_ifr_q(:,:,:,ibloc,iks,iq))
-              !
-              !$acc parallel present(braket,z_epsm1_ifr_q,z_body2_ifr_q(:,:,:,ibloc,iks,iq))
-              !$acc loop collapse(3)
-              DO ifreq = 1, ifr_nloc
-                 DO ip = 1, pert_nloc
-                    DO il = 1, n_lanczos
-                       reduce = 0._DP
-                       !$acc loop reduction(+:reduce)
-                       DO glob_jp = 1, pert_nglob
-                          reduce = reduce+braket(glob_jp,il,ip)*z_epsm1_ifr_q(glob_jp,ip,ifreq,iq)
-                       ENDDO
-                       z_body2_ifr_q(il,ip,ifreq,ibloc,iks,iq) = reduce
-                    ENDDO
-                 ENDDO
-              ENDDO
-              !$acc end parallel
-              !
-              !$acc exit data copyout(z_body2_ifr_q(:,:,:,ibloc,iks,iq))
-              !
-           ENDIF
            !
            CALL update_bar_type( barra, 'coll_gw', 1 )
            !
@@ -1083,11 +924,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   DEALLOCATE( ztemp2 )
   DEALLOCATE( z_epsm1_ifr_trans_q )
   DEALLOCATE( z_epsm1_rfr_trans_q )
-  IF( l_enable_lanczos ) THEN
-     !$acc exit data delete(braket)
-     DEALLOCATE( braket )
-     DEALLOCATE( diago )
-  ENDIF
   !
   ! Get Sigma_X
   !

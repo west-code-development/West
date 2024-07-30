@@ -37,8 +37,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE kinds,                ONLY : DP
   USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
                                  & o_restart_time,npwqx,fftdriver,wstat_save_dir,l_enable_off_diagonal,&
-                                 & ijpmap
-  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,npool,intra_bgrp_comm,nproc_bgrp,nbgrp
+                                 & ijpmap,d_body2_ifr,d_diago,d_body2_ifr_full,d_diago_full,d_epsm1_ifr
+  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,npool,&
+                                 & intra_bgrp_comm,nproc_bgrp,nbgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
@@ -52,9 +53,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE noncollin_module,     ONLY : npol
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE distribution_center,  ONLY : pert,kpt_pool,band_group
+  USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr
   USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
-  USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
+  USE wfreq_io,             ONLY : writeout_overlap
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
   USE wavefunctions,        ONLY : evc,psic
@@ -72,11 +73,13 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,im,iks_g,is,jb,ib_index,jb_index,ipair
+  INTEGER :: ip,glob_ip,glob_jp,il,ig,ir,ib,ibloc,ib_index,jb,jb_index,im,iks,iks_g,is,ifreq
+  INTEGER :: ipair,iloc_pair,nloc_pairs
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
   INTEGER :: nbndval
-  INTEGER :: dffts_nnr,pert_nloc
+  INTEGER :: dffts_nnr,pert_nloc,pert_nglob,ifr_nloc
+  REAL(DP) :: reduce_r
   REAL(DP),ALLOCATABLE :: diago(:,:),subdiago(:,:),bnorm(:)
   REAL(DP),ALLOCATABLE :: braket(:,:,:)
 #if defined(__CUDA)
@@ -172,7 +175,10 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   dffts_nnr = dffts%nnr
   pert_nloc = pert%nloc
+  pert_nglob = pert%nglob
+  ifr_nloc = ifr%nloc
   !
+  !$acc enter data copyin(d_epsm1_ifr)
 #if !defined(__CUDA)
   ALLOCATE(ps_r(nbnd,pert%nloc))
 #endif
@@ -194,6 +200,30 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !$acc enter data create(dvpsi1,psic1)
         ALLOCATE(diago1(n_lanczos,pert%nloc))
         ALLOCATE(subdiago1(n_lanczos-1,pert%nloc))
+        !
+        nloc_pairs = 0
+        DO iks = 1,k_grid%nps
+           im = 0
+           DO ibloc = 1,band_group%nloc
+              ib_index = band_group%l2g(ibloc)
+              ib = qp_bands(ib_index,iks)
+              DO jb_index = 1,n_bands
+                 jb = qp_bands(jb_index,iks)
+                 IF(jb <= ib) im = im+1
+              ENDDO
+           ENDDO
+           nloc_pairs = MAX(nloc_pairs,im)
+        ENDDO
+        !
+        ALLOCATE(d_body2_ifr_full(n_lanczos,pert%nloc,ifr%nloc,nloc_pairs,k_grid%nps))
+        ALLOCATE(d_diago_full(n_lanczos,pert%nloc,nloc_pairs,k_grid%nps))
+        d_body2_ifr_full(:,:,:,:,:) = 0._DP
+        d_diago_full(:,:,:,:) = 0._DP
+     ELSE
+        ALLOCATE(d_body2_ifr(n_lanczos,pert%nloc,ifr%nloc,band_group%nloc,k_grid%nps))
+        ALLOCATE(d_diago(n_lanczos,pert%nloc,band_group%nloc,k_grid%nps))
+        d_body2_ifr(:,:,:,:,:) = 0._DP
+        d_diago(:,:,:,:) = 0._DP
      ENDIF
   ENDIF
   ALLOCATE(l2g(pert%nloc))
@@ -211,7 +241,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ! Read PDEP
   !
   ALLOCATE(pertg_all(npwqx,pert%nloc))
-  pertg_all = 0._DP
+  pertg_all(:,:) = 0._DP
   !
   DO ip = 1,pert%nloc
      glob_ip = pert%l2g(ip)
@@ -232,6 +262,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      iks_g = kpt_pool%l2g(iks)
      is = k_grid%is(iks_g)
+     iloc_pair = 0
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
      !
@@ -354,6 +385,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
               IF(l_enable_off_diagonal .AND. jb <= ib) THEN
                  !
                  ipair = ijpmap(jb_index,ib_index)
+                 iloc_pair = iloc_pair+1
                  !
                  ! PSIC
                  !
@@ -399,13 +431,32 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  diago1(:,:) = diago
                  subdiago1(:,:) = subdiago
                  !
-                 DO ip = 1, pert%nloc
+                 DO ip = 1,pert%nloc
                     CALL diago_lanczos(bnorm(ip),diago1(:,ip),subdiago1(:,ip),braket(:,:,ip),pert%nglob)
                  ENDDO
                  !
-                 ! MPI-IO
+                 d_diago_full(:,:,iloc_pair,iks_g) = diago1
                  !
-                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), ipair, diago1, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 !$acc enter data create(d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
+                 !$acc update device(braket)
+                 !
+                 !$acc parallel present(braket,d_epsm1_ifr,d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
+                 !$acc loop collapse(3)
+                 DO ifreq = 1,ifr_nloc
+                    DO ip = 1,pert_nloc
+                       DO il = 1,n_lanczos
+                          reduce_r = 0._DP
+                          !$acc loop reduction(+:reduce_r)
+                          DO glob_jp = 1,pert_nglob
+                             reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                          ENDDO
+                          d_body2_ifr_full(il,ip,ifreq,iloc_pair,iks_g) = reduce_r
+                       ENDDO
+                    ENDDO
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc exit data copyout(d_body2_ifr_full(:,:,:,iloc_pair,iks_g))
                  !
                  CALL update_bar_type( barra, 'glanczos', 1 )
                  !
@@ -413,13 +464,32 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                  !
                  CALL get_brak_hyper_parallel(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
                  !
-                 DO ip = 1, pert%nloc
+                 DO ip = 1,pert%nloc
                     CALL diago_lanczos(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),pert%nglob)
                  ENDDO
                  !
-                 ! MPI-IO
+                 d_diago(:,:,ibloc,iks_g) = diago
                  !
-                 CALL writeout_solvegfreq( kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, pert%nglob, pert%myoffset )
+                 !$acc enter data create(d_body2_ifr(:,:,:,ibloc,iks_g))
+                 !$acc update device(braket)
+                 !
+                 !$acc parallel present(braket,d_epsm1_ifr,d_body2_ifr(:,:,:,ibloc,iks_g))
+                 !$acc loop collapse(3)
+                 DO ifreq = 1,ifr_nloc
+                    DO ip = 1,pert_nloc
+                       DO il = 1,n_lanczos
+                          reduce_r = 0._DP
+                          !$acc loop reduction(+:reduce_r)
+                          DO glob_jp = 1,pert_nglob
+                             reduce_r = reduce_r+braket(glob_jp,il,ip)*d_epsm1_ifr(glob_jp,ip,ifreq)
+                          ENDDO
+                          d_body2_ifr(il,ip,ifreq,ibloc,iks_g) = reduce_r
+                       ENDDO
+                    ENDDO
+                 ENDDO
+                 !$acc end parallel
+                 !
+                 !$acc exit data copyout(d_body2_ifr(:,:,:,ibloc,iks_g))
                  !
                  CALL update_bar_type( barra, 'glanczos', 1 )
                  !
@@ -466,6 +536,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ENDIF
 #endif
   !
+  !$acc exit data delete(d_epsm1_ifr)
 #if !defined(__CUDA)
   DEALLOCATE(ps_r)
 #endif
@@ -496,12 +567,22 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !$acc exit data delete(pot3D%sqvc)
   !$acc exit data delete(pot3D)
   !
-  ! Write final restart file when using pool or band group
+  ! Synchronize and write final restart file when using pool or band group
   !
-  IF( npool*nbgrp > 1 ) THEN
+  IF(npool > 1 .AND. l_enable_lanczos) THEN
+     IF(l_enable_off_diagonal) THEN
+        CALL mp_sum(d_body2_ifr_full,inter_pool_comm)
+        CALL mp_sum(d_diago_full,inter_pool_comm)
+     ELSE
+        CALL mp_sum(d_body2_ifr,inter_pool_comm)
+        CALL mp_sum(d_diago,inter_pool_comm)
+     ENDIF
+  ENDIF
+  !
+  IF(npool*nbgrp > 1) THEN
      bks%lastdone_ks = k_grid%nps
      bks%lastdone_band = qp_bands(n_bands,nspin)
-     CALL solvegfreq_restart_write( bks )
+     CALL solvegfreq_restart_write(bks)
   ENDIF
   !
   CALL stop_bar_type( barra, 'glanczos' )
@@ -531,7 +612,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,kpt_pool,band_group
   USE wfreq_restart,        ONLY : solvegfreq_restart_write_q,solvegfreq_restart_read_q,bksks_type
-  USE wfreq_io,             ONLY : writeout_overlap,writeout_solvegfreq
+  USE wfreq_io,             ONLY : writeout_overlap
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
   USE wavefunctions,        ONLY : evc
@@ -549,7 +630,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! Workspace
   !
   LOGICAL :: l_write_restart
-  INTEGER :: ip,ig,glob_ip,ir,ib,ibloc,iks,ik,is,im,ikks,ikk,iq,ib_index
+  INTEGER :: ip,glob_ip,ig,ir,ib,ibloc,ib_index,im,iks,ik,is,ikks,ikk,iq
   INTEGER :: npwk
   CHARACTER(LEN=:),ALLOCATABLE :: fname
   CHARACTER(LEN=25) :: filepot
@@ -695,7 +776,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ! ... Outer k-point loop (wfc matrix element): ikks, npwk, evck, psick
   ! ... Inner k-point loop (wfc summed over k'): iks, npw, evc (passed to h_psi: current_k = iks)
   !
-  DO ikks = 1, k_grid%nps ! KPOINT-SPIN (MATRIX ELEMENT)
+  DO ikks = 1,k_grid%nps ! KPOINT-SPIN (MATRIX ELEMENT)
      !
      ! Exit loop if no work to do
      !
@@ -717,7 +798,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      bksks%max_band = nbndval
      bksks%min_band = 1
      !
-     DO iks = 1, k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
+     DO iks = 1,k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
         IF(ikks == bksks%lastdone_ks .AND. iks < bksks%lastdone_kks) CYCLE
         !
         ik = k_grid%ip(iks)
@@ -892,14 +973,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #endif
               CALL get_brak_hyper_parallel_complex(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
               !
-              DO ip = 1, pert%nloc
+              DO ip = 1,pert%nloc
                  CALL diago_lanczos_complex(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),pert%nglob)
               ENDDO
-              !
-              ! MPI-IO
-              !
-              CALL writeout_solvegfreq( kpt_pool%l2g(ikks), kpt_pool%l2g(iks), ib, diago, braket, pert%nloc, &
-              & pert%nglob, pert%myoffset )
               !
            ENDIF ! l_enable_lanczos
            !

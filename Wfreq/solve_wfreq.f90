@@ -58,7 +58,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,macropert,ifr,rfr,occband
   USE class_idistribute,    ONLY : idistribute
-  USE wfreq_restart,        ONLY : solvewfreq_restart_write,solvewfreq_restart_read,bks_type
+  USE wfreq_io,             ONLY : write_wfreq,read_wfreq
   USE types_bz_grid,        ONLY : k_grid
   USE chi_invert,           ONLY : chi_invert_real,chi_invert_complex
   USE types_coulomb,        ONLY : pot3D
@@ -126,7 +126,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dmatilda,dlambda,zmatilda,zlambda,dmati,zmatr,dmati_a,zmatr_a
 #endif
-  TYPE(bks_type) :: bks
   REAL(DP) :: this_et,this_occ,docc
   INTEGER,ALLOCATABLE :: l2g(:)
   COMPLEX(DP),ALLOCATABLE :: evc_copy(:,:)
@@ -175,26 +174,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   ENDIF
   !
   IF(l_read_restart) THEN
-     CALL solvewfreq_restart_read( bks, dmati, zmatr, mypara%nglob, mypara%nloc )
-     !
-     IF(l_QDET) THEN
-        bks%lastdone_ks   = 0
-        bks%lastdone_band = 0
-        bks%old_ks        = 0
-        bks%old_band      = 0
-        bks%max_ks        = k_grid%nps
-        bks%min_ks        = 1
-     ELSE
+     CALL read_wfreq(dmati,zmatr,mypara%nglob,mypara%nloc)
+     IF(.NOT. l_QDET) THEN
         !$acc update device(dmati,zmatr)
      ENDIF
   ELSE
-     bks%lastdone_ks   = 0
-     bks%lastdone_band = 0
-     bks%old_ks        = 0
-     bks%old_band      = 0
-     bks%max_ks        = k_grid%nps
-     bks%min_ks        = 1
-     !
      !$acc kernels present(dmati)
      dmati(:,:,:) = 0._DP
      !$acc end kernels
@@ -206,20 +190,14 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   barra_load = 0
   DO iks = 1,kpt_pool%nloc
-     IF(iks < bks%lastdone_ks) CYCLE
-     !
      CALL band_group%init(nbnd_occ(iks),'b','band_group',.FALSE.)
-     !
      DO ivloc = 1,band_group%nloc
-        iv = band_group%l2g(ivloc)
-        !
-        IF(iks == bks%lastdone_ks .AND. iv <= bks%lastdone_band) CYCLE
-        !
         barra_load = barra_load+1
      ENDDO
   ENDDO
+  IF(l_read_restart .AND. .NOT. l_QDET) barra_load = 0
   !
-  IF( barra_load == 0 ) THEN
+  IF(barra_load == 0) THEN
      CALL start_bar_type ( barra, 'wlanczos', 1 )
      CALL update_bar_type( barra, 'wlanczos', 1 )
   ELSE
@@ -287,8 +265,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      !
      IF(barra_load == 0) EXIT
      !
-     IF(iks < bks%lastdone_ks) CYCLE
-     !
      iks_g = kpt_pool%l2g(iks)
      !
      ! ... Set k-point, spin, kinetic energy, needed by Hpsi
@@ -336,10 +312,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      mwo = -k_grid%weight(iks_g)/omega
      zmwo = CMPLX(mwo,KIND=DP)
      !
-     bks%max_band = nbndval
-     bks%min_band = 1
-     !
      ! Parallel macropol
+     !
      IF(l_macropol) THEN
 #if defined(__CUDA)
         CALL allocate_macropol_gpu(1)
@@ -352,7 +326,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         ALLOCATE(phis(npwx*npol,3,occband%nloc))
         !
-        DO ivloc = 1, occband%nloc
+        DO ivloc = 1,occband%nloc
            !
            iv = occband%l2g(ivloc)
            !
@@ -391,8 +365,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         !
         iv = band_group%l2g(ivloc2)
         !
-        IF(iks == bks%lastdone_ks .AND. iv <= bks%lastdone_band .AND. .NOT. l_QDET) CYCLE
-        !
         ! MACROPOL CASE
         !
         IF(l_macropol) THEN
@@ -400,9 +372,9 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            ALLOCATE(phi(npwx*npol,3))
            phi(:,:) = 0._DP
            !
-           DO ivloc = 1, occband%nloc
-               IF( occband%l2g(ivloc) == iv ) THEN
-                   phi(:,:) = phis(:,:,ivloc)
+           DO ivloc = 1,occband%nloc
+               IF(occband%l2g(ivloc) == iv) THEN
+                  phi(:,:) = phis(:,:,ivloc)
                ENDIF
            ENDDO
            !
@@ -422,13 +394,13 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         dvpsi(:,:) = 0._DP
         !$acc end kernels
         !
-        DO ip=1,mypara%nloc
+        DO ip = 1,mypara%nloc
            !
            glob_ip = mypara%l2g(ip)
            !
            ! Decide whether read dbs E or dhpi
            !
-           IF(glob_ip<=n_pdep_eigen_to_use) THEN
+           IF(glob_ip <= n_pdep_eigen_to_use) THEN
               !
               pertg(:) = pertg_all(:,ip)
               !$acc update device(pertg)
@@ -634,7 +606,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
         ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
         !
-        IF( l_enable_lanczos ) THEN
+        IF(l_enable_lanczos) THEN
            !
 #if defined(__CUDA)
            CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,mypara%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
@@ -643,7 +615,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #endif
            CALL get_brak_hyper_parallel(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
            !
-           DO ip = 1, mypara%nloc
+           DO ip = 1,mypara%nloc
               CALL diago_lanczos(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),mypara%nglob)
            ENDDO
            !
@@ -674,7 +646,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
            ! Update zmatr with lanczos
            !
-           DO il = 1, n_lanczos
+           DO il = 1,n_lanczos
               !
               !$acc parallel loop collapse(3) present(refreq_list,diago,zmatr,braket)
               DO ifreq = 1,rfr_nloc
@@ -739,7 +711,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !$acc exit data delete(pot3D%sqvc)
   !$acc exit data delete(pot3D)
   !
-  ! Synchronize and write final restart file
+  ! Synchronize and write data
   !
   IF(.NOT. l_read_restart .AND. .NOT. l_QDET) THEN
      IF(npool > 1) THEN
@@ -750,9 +722,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         CALL mp_sum(dmati,inter_bgrp_comm)
         CALL mp_sum(zmatr,inter_bgrp_comm)
      ENDIF
-     bks%lastdone_ks = k_grid%nps
-     bks%lastdone_band = MAXVAL(nbnd_occ)
-     CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
+     CALL write_wfreq(dmati,zmatr,mypara%nglob,mypara%nloc)
   ENDIF
   !
   IF(l_QDET) THEN
@@ -974,7 +944,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,macropert,ifr,rfr,occband,band_group
   USE class_idistribute,    ONLY : idistribute
-  USE wfreq_restart,        ONLY : solvewfreq_restart_write_q,solvewfreq_restart_read_q,bksq_type
+  USE wfreq_io,             ONLY : write_wfreq,read_wfreq
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE chi_invert,           ONLY : chi_invert_complex
   USE types_coulomb,        ONLY : pot3D
@@ -1045,7 +1015,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ATTRIBUTES(PINNED) :: zmatilda,zlambda,zmati_q,zmatr_q
 #endif
   LOGICAL :: l_gammaq
-  TYPE(bksq_type) :: bksq
   REAL(DP) :: g0(3)
   REAL(DP) :: this_et
   INTEGER,ALLOCATABLE :: l2g(:)
@@ -1076,7 +1045,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ALLOCATE( zmatr_q( mypara%nglob, mypara%nloc, rfr%nloc, q_grid%np) )
   !$acc enter data create(zmati_q,zmatr_q)
   !
-  IF (noncolin) THEN
+  IF(noncolin) THEN
      ALLOCATE( psick_nc(dffts%nnr,npol) )
      !$acc enter data create(psick_nc)
   ELSE
@@ -1088,20 +1057,9 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !$acc enter data create(phase,evckpq)
   !
   IF(l_read_restart) THEN
-     CALL solvewfreq_restart_read_q( bksq, zmati_q, zmatr_q, mypara%nglob, mypara%nloc )
+     CALL read_wfreq(zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
      !$acc update device(zmati_q,zmatr_q)
   ELSE
-     bksq%lastdone_ks   = 0
-     bksq%lastdone_q    = 0
-     bksq%lastdone_band = 0
-     bksq%old_ks        = 0
-     bksq%old_q         = 0
-     bksq%old_band      = 0
-     bksq%max_q         = q_grid%np
-     bksq%max_ks        = k_grid%nps
-     bksq%min_q         = 1
-     bksq%min_ks        = 1
-     !
      !$acc kernels present(zmati_q)
      zmati_q(:,:,:,:) = 0._DP
      !$acc end kernels
@@ -1113,24 +1071,16 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   barra_load = 0
   DO iq = 1,q_grid%np
-     IF(iq < bksq%lastdone_q) CYCLE
-     !
      DO iks = 1,k_grid%nps
-        IF(iq == bksq%lastdone_q .AND. iks < bksq%lastdone_ks) CYCLE
-        !
         CALL band_group%init(nbnd_occ(iks),'b','band_group',.FALSE.)
-        !
         DO ivloc = 1,band_group%nloc
-           iv = band_group%l2g(ivloc)
-           !
-           IF(iq == bksq%lastdone_q .AND. iks == bksq%lastdone_ks .AND. iv <= bksq%lastdone_band) CYCLE
-           !
            barra_load = barra_load+1
         ENDDO
      ENDDO
   ENDDO
+  IF(l_read_restart) barra_load = 0
   !
-  IF( barra_load == 0 ) THEN
+  IF(barra_load == 0) THEN
      CALL start_bar_type ( barra, 'wlanczos', 1 )
      CALL update_bar_type( barra, 'wlanczos', 1 )
   ELSE
@@ -1171,13 +1121,11 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! LOOP
   !
-  DO iq = 1, q_grid%np   ! Q-POINT
+  DO iq = 1,q_grid%np   ! Q-POINT
      !
      ! Exit loop if no work to do
      !
      IF(barra_load == 0) EXIT
-     !
-     IF(iq < bksq%lastdone_q) CYCLE
      !
      npwq = ngq(iq)
      l_gammaq = q_grid%l_pIsGamma(iq)
@@ -1200,12 +1148,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ENDIF
      ENDDO
      !
-     DO iks = 1, k_grid%nps   ! KPOINT-SPIN
+     DO iks = 1,k_grid%nps   ! KPOINT-SPIN
         !
         ik = k_grid%ip(iks)
         is = k_grid%is(iks)
-        !
-        IF(iq==bksq%lastdone_q .AND. iks<bksq%lastdone_ks) CYCLE
         !
         ! ... Set k-point, spin, kinetic energy, needed by Hpsi
         !
@@ -1224,7 +1170,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         ! ... read in wavefunctions from the previous iteration
         !
-        IF(k_grid%nps>1) THEN
+        IF(k_grid%nps > 1) THEN
            IF(my_image_id == 0) CALL get_buffer(evc,lrwfc,iuwfc,iks)
            CALL mp_bcast(evc,0,inter_image_comm)
            !$acc update device(evc)
@@ -1240,7 +1186,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         ! Set wavefunctions at [k+q] in G space, for all bands,
         ! and store them in evckpq
         !
-        IF ( my_image_id == 0 ) CALL get_buffer( evckpq, lrwfc, iuwfc, ikqs )
+        IF(my_image_id == 0) CALL get_buffer( evckpq, lrwfc, iuwfc, ikqs )
         CALL mp_bcast( evckpq, 0, inter_image_comm )
         !
         !$acc update device(evckpq,phase)
@@ -1249,9 +1195,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
         !
         mwo = -k_grid%weight(iks)/omega
         zmwo = CMPLX(mwo,KIND=DP)
-        !
-        bksq%max_band = nbndval
-        bksq%min_band = 1
         !
         ! MACROPOL CASE
         !
@@ -1267,7 +1210,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            ALLOCATE(phis(npwx*npol,3,occband%nloc))
            !
-           DO ivloc = 1, occband%nloc
+           DO ivloc = 1,occband%nloc
               !
               iv = occband%l2g(ivloc)
               !
@@ -1302,8 +1245,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            !
            iv = band_group%l2g(ivloc2)
            !
-           IF(iq == bksq%lastdone_q .AND. iks == bksq%lastdone_ks .AND. iv <= bksq%lastdone_band) CYCLE
-           !
            ! MACROPOL CASE
            !
            IF(l_macropol .AND. l_gammaq) THEN
@@ -1311,8 +1252,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               ALLOCATE(phi(npwx*npol,3))
               phi = 0._DP
               !
-              DO ivloc = 1, occband%nloc
-                 IF( occband%l2g(ivloc) == iv ) THEN
+              DO ivloc = 1,occband%nloc
+                 IF(occband%l2g(ivloc) == iv) THEN
                     phi(:,:) = phis(:,:,ivloc)
                  ENDIF
               ENDDO
@@ -1334,13 +1275,13 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            dvpsi(:,:) = 0._DP
            !$acc end kernels
            !
-           DO ip=1,mypara%nloc
+           DO ip = 1,mypara%nloc
               !
               glob_ip = mypara%l2g(ip)
               !
               ! Decide whether read dbs E or dhpi
               !
-              IF(glob_ip<=n_pdep_eigen_to_use) THEN
+              IF(glob_ip <= n_pdep_eigen_to_use) THEN
                  !
                  pertg(:) = pertg_all(:,ip)
                  !$acc update device(pertg)
@@ -1382,7 +1323,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                  !
               ELSE
                  !
-                 IF (l_gammaq) THEN
+                 IF(l_gammaq) THEN
                     ipol = glob_ip-n_pdep_eigen_to_use
                     dvpsi(:,ip) = phi(:,ipol) * SQRT(fpi * e2)
                     !$acc update device(dvpsi(:,ip))
@@ -1499,7 +1440,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
            ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
            ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
            !
-           IF( l_enable_lanczos ) THEN
+           IF(l_enable_lanczos) THEN
               !
 #if defined(__CUDA)
               CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,mypara%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
@@ -1508,7 +1449,7 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 #endif
               CALL get_brak_hyper_parallel_complex(dvpsi,mypara%nloc,n_lanczos,q_s,braket,mypara)
               !
-              DO ip = 1, mypara%nloc
+              DO ip = 1,mypara%nloc
                  CALL diago_lanczos_complex(bnorm(ip),diago(:,ip),subdiago(:,ip),braket(:,:,ip),mypara%nglob)
               ENDDO
               !
@@ -1612,17 +1553,14 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !
-  ! Synchronize and write final restart file
+  ! Synchronize and write data
   !
   IF(.NOT. l_read_restart) THEN
      IF(nbgrp > 1) THEN
         CALL mp_sum(zmati_q,inter_bgrp_comm)
         CALL mp_sum(zmatr_q,inter_bgrp_comm)
      ENDIF
-     bksq%lastdone_q = q_grid%np
-     bksq%lastdone_ks = k_grid%nps
-     bksq%lastdone_band = nbndval
-     CALL solvewfreq_restart_write_q(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
+     CALL write_wfreq(zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
   ENDIF
   !
   CALL stop_bar_type( barra, 'wlanczos' )
@@ -1781,7 +1719,7 @@ SUBROUTINE output_eps_head( )
      ALLOCATE( out_tabella(rfr%nglob,8) )
      !
      out_tabella = 0._DP
-     DO ifreq = 1, rfr%nloc
+     DO ifreq = 1,rfr%nloc
         glob_ifreq = rfr%l2g(ifreq)
         rf =  REAL( z_head_rfr( ifreq ), KIND=DP ) + 1._DP
         lf = -AIMAG( z_head_rfr( ifreq ) )
@@ -1808,7 +1746,7 @@ SUBROUTINE output_eps_head( )
      !
      CALL mp_sum( out_tabella, intra_bgrp_comm )
      !
-     IF( mpime == root ) THEN
+     IF(mpime == root) THEN
         !
         CALL json%initialize()
         !

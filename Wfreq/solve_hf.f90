@@ -37,8 +37,7 @@ SUBROUTINE solve_hf_gamma( )
                                  & l_enable_off_diagonal,sigma_exx_full,sigma_vxcl_full,&
                                  & sigma_vxcnl_full,sigma_hf_full
   USE io_push,              ONLY : io_push_title
-  USE wfreq_io,             ONLY : writeout_solvehf
-  USE types_bz_grid,        ONLY : k_grid
+  USE wfreq_io,             ONLY : write_hf
   !
   IMPLICIT NONE
   !
@@ -60,7 +59,7 @@ SUBROUTINE solve_hf_gamma( )
   IF (l_enable_off_diagonal) &
   & sigma_hf_full(:,:) = sigma_exx_full(:,:) - sigma_vxcl_full(:,:) - sigma_vxcnl_full(:,:)
   !
-  CALL writeout_solvehf( sigma_hf, n_bands, k_grid%nps )
+  CALL write_hf(sigma_hf,n_bands)
   !
   CALL stop_clock( 'solve_hf' )
   !
@@ -75,8 +74,7 @@ SUBROUTINE solve_hf_k( )
   !
   USE westcom,              ONLY : n_bands,sigma_exx,sigma_vxcl,sigma_vxcnl,sigma_hf
   USE io_push,              ONLY : io_push_title
-  USE wfreq_io,             ONLY : writeout_solvehf
-  USE types_bz_grid,        ONLY : k_grid
+  USE wfreq_io,             ONLY : write_hf
   !
   IMPLICIT NONE
   !
@@ -96,7 +94,7 @@ SUBROUTINE solve_hf_k( )
   !
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
   !
-  CALL writeout_solvehf( sigma_hf, n_bands, k_grid%nps  )
+  CALL write_hf(sigma_hf,n_bands)
   !
   CALL stop_clock( 'solve_hf' )
   !

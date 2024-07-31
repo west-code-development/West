@@ -53,7 +53,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE wfreq_io,             ONLY : readin_overlap,readin_solvehf
+  USE wfreq_io,             ONLY : read_overlap,read_hf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid
   !
@@ -229,7 +229,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
         ib_index = band_group%l2g(ibloc)
         ib = qp_bands(ib_index,is)
         !
-        CALL readin_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
+        CALL read_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
         !
         !$acc update device(overlap)
         !
@@ -250,7 +250,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
               ipair = ijpmap(jb_index,ib_index)
               iloc_pair = iloc_pair+1
               !
-              CALL readin_overlap( 'g', kpt_pool%l2g(iks), jb, overlap, pert%nglob, nbnd )
+              CALL read_overlap( 'g', kpt_pool%l2g(iks), jb, overlap, pert%nglob, nbnd )
               !
               !$acc update device(overlap)
               !
@@ -422,7 +422,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ! Get Sigma_X
   !
   ALLOCATE( sigma_hf (n_bands,k_grid%nps) )
-  CALL readin_solvehf( sigma_hf, n_bands, k_grid%nps )
+  CALL read_hf( sigma_hf, n_bands )
   !
   ! For CORR
   !
@@ -681,7 +681,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   USE io_push,              ONLY : io_push_title,io_push_bar
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
-  USE wfreq_io,             ONLY : readin_overlap,readin_solvehf
+  USE wfreq_io,             ONLY : read_overlap,read_hf
   USE wfreq_db,             ONLY : wfreq_db_write
   USE types_bz_grid,        ONLY : k_grid,q_grid
   !
@@ -828,7 +828,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            !
            !$acc update device(z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
            !
-           CALL readin_overlap( 'g', kpt_pool%l2g(iks), kpt_pool%l2g(ikks), ib, overlap, pert%nglob, nbnd )
+           CALL read_overlap( 'g', kpt_pool%l2g(iks), kpt_pool%l2g(ikks), ib, overlap, pert%nglob, nbnd )
            !
            !$acc update device(overlap)
            !
@@ -931,7 +931,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! Get Sigma_X
   !
   ALLOCATE( sigma_hf (n_bands,k_grid%nps) )
-  CALL readin_solvehf( sigma_hf, n_bands, k_grid%nps )
+  CALL read_hf( sigma_hf, n_bands )
   !
   ! For CORR
   !

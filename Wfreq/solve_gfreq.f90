@@ -42,7 +42,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                                  & intra_bgrp_comm,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE fft_at_gamma,         ONLY : single_invfft_gamma,single_fwfft_gamma
   USE becmod,               ONLY : becp,allocate_bec_type_acc,deallocate_bec_type_acc
   USE uspp,                 ONLY : vkb,nkb
@@ -54,8 +54,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr
-  USE wfreq_restart,        ONLY : solvegfreq_restart_write,solvegfreq_restart_read,bks_type
-  USE wfreq_io,             ONLY : writeout_overlap
+  USE wfreq_io,             ONLY : write_overlap,write_gfreq,read_gfreq
   USE types_coulomb,        ONLY : pot3D
   USE types_bz_grid,        ONLY : k_grid
   USE wavefunctions,        ONLY : evc,psic
@@ -105,7 +104,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: overlap
 #endif
-  TYPE(bks_type) :: bks
   INTEGER,ALLOCATABLE :: l2g(:)
   !
   CALL io_push_title('(G)-Lanczos')
@@ -122,39 +120,22 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  IF(l_read_restart) THEN
-     CALL solvegfreq_restart_read( bks )
-  ELSE
-     bks%lastdone_ks   = 0
-     bks%lastdone_band = 0
-     bks%old_ks        = 0
-     bks%old_band      = 0
-     bks%max_ks        = k_grid%nps
-     bks%min_ks        = 1
-  ENDIF
-  !
   barra_load = 0
   DO iks = 1,kpt_pool%nloc
-     IF(iks < bks%lastdone_ks) CYCLE
-     !
      iks_g = kpt_pool%l2g(iks)
      is = k_grid%is(iks_g)
-     !
      DO ibloc = 1,band_group%nloc
         ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index,is)
-        !
-        IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
-        !
-        IF (l_enable_off_diagonal) THEN
-           barra_load = barra_load + ib_index
+        IF(l_enable_off_diagonal) THEN
+           barra_load = barra_load+ib_index
         ELSE
-           barra_load = barra_load + 1
+           barra_load = barra_load+1
         ENDIF
      ENDDO
   ENDDO
+  IF(l_read_restart) barra_load = 0
   !
-  IF( barra_load == 0 ) THEN
+  IF(barra_load == 0) THEN
      CALL start_bar_type( barra, 'glanczos', 1 )
      CALL update_bar_type( barra, 'glanczos', 1 )
   ELSE
@@ -165,9 +146,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   CALL allocate_gpu()
   CALL allocate_gw_gpu(pert%nlocx,pert%nloc)
   CALL reallocate_ps_gpu(nbnd,pert%nloc)
-  IF(l_enable_lanczos) THEN
-     CALL allocate_lanczos_gpu(pert%nloc)
-  ENDIF
+  IF(l_enable_lanczos) CALL allocate_lanczos_gpu(pert%nloc)
 #endif
   !
   !$acc enter data copyin(d_epsm1_ifr)
@@ -236,6 +215,14 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   ENDDO
   !$acc end parallel
   !
+  IF(l_read_restart .AND. l_enable_lanczos) THEN
+     IF(l_enable_off_diagonal) THEN
+        CALL read_gfreq(d_diago_full,d_body2_ifr_full,pert%nloc,nloc_pairs)
+     ELSE
+        CALL read_gfreq(d_diago,d_body2_ifr,pert%nloc,band_group%nloc)
+     ENDIF
+  ENDIF
+  !
   ! Read PDEP
   !
   ALLOCATE(pertg_all(npwqx,pert%nloc))
@@ -255,8 +242,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      ! Exit loop if no work to do
      !
      IF(barra_load == 0) EXIT
-     !
-     IF(iks < bks%lastdone_ks) CYCLE
      !
      iks_g = kpt_pool%l2g(iks)
      is = k_grid%is(iks_g)
@@ -286,17 +271,12 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      nbndval = nbnd_occ(iks)
      !
-     bks%max_band = nbndval
-     bks%min_band = 1
-     !
      ! LOOP over band states
      !
      DO ibloc = 1,band_group%nloc
         !
         ib_index = band_group%l2g(ibloc)
         ib = qp_bands(ib_index,is)
-        !
-        IF(iks == bks%lastdone_ks .AND. ib <= bks%lastdone_band) CYCLE
         !
         ! PSIC
         !
@@ -357,7 +337,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         !$acc update host(overlap)
         CALL mp_sum(overlap,inter_image_comm)
-        CALL writeout_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
+        CALL write_overlap( 'g', kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
         !
         CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi,(1._DP,0._DP))
         !
@@ -366,7 +346,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
         ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
         !
-        IF( l_enable_lanczos ) THEN
+        IF(l_enable_lanczos) THEN
            !
 #if defined(__CUDA)
            CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
@@ -502,9 +482,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if defined(__CUDA)
   CALL deallocate_gw_gpu()
   CALL deallocate_gpu()
-  IF(l_enable_lanczos) THEN
-     CALL deallocate_lanczos_gpu()
-  ENDIF
+  IF(l_enable_lanczos) CALL deallocate_lanczos_gpu()
 #endif
   !
   !$acc exit data delete(d_epsm1_ifr)
@@ -539,25 +517,22 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !$acc exit data delete(pot3D%sqvc)
   !$acc exit data delete(pot3D)
   !
-  ! Synchronize and write final restart file when using pool or band group
+  ! Synchronize and write data
   !
-  IF(.NOT. l_read_restart) THEN
-     IF(l_enable_lanczos) THEN
-        IF(l_enable_off_diagonal) THEN
-           IF(npool > 1) THEN
-              CALL mp_sum(d_body2_ifr_full,inter_pool_comm)
-              CALL mp_sum(d_diago_full,inter_pool_comm)
-           ENDIF
-        ELSE
-           IF(npool > 1) THEN
-              CALL mp_sum(d_body2_ifr,inter_pool_comm)
-              CALL mp_sum(d_diago,inter_pool_comm)
-           ENDIF
+  IF(.NOT. l_read_restart .AND. l_enable_lanczos) THEN
+     IF(l_enable_off_diagonal) THEN
+        IF(npool > 1) THEN
+           CALL mp_sum(d_body2_ifr_full,inter_pool_comm)
+           CALL mp_sum(d_diago_full,inter_pool_comm)
         ENDIF
+        CALL write_gfreq(d_diago_full,d_body2_ifr_full,pert%nloc,nloc_pairs)
+     ELSE
+        IF(npool > 1) THEN
+           CALL mp_sum(d_body2_ifr,inter_pool_comm)
+           CALL mp_sum(d_diago,inter_pool_comm)
+        ENDIF
+        CALL write_gfreq(d_diago,d_body2_ifr,pert%nloc,band_group%nloc)
      ENDIF
-     bks%lastdone_ks = k_grid%nps
-     bks%lastdone_band = qp_bands(n_bands,nspin)
-     CALL solvegfreq_restart_write(bks)
   ENDIF
   !
   CALL stop_bar_type( barra, 'glanczos' )
@@ -575,7 +550,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
+  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
   USE fft_at_k,             ONLY : single_invfft_k,single_fwfft_k
   USE becmod,               ONLY : becp,allocate_bec_type_acc,deallocate_bec_type_acc
   USE uspp,                 ONLY : vkb,nkb
@@ -587,8 +562,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE buffers,              ONLY : get_buffer
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr
-  USE wfreq_restart,        ONLY : solvegfreq_restart_write_q,solvegfreq_restart_read_q,bksks_type
-  USE wfreq_io,             ONLY : writeout_overlap
+  USE wfreq_io,             ONLY : write_overlap,write_gfreq,read_gfreq
   USE types_bz_grid,        ONLY : k_grid,q_grid,compute_phase
   USE types_coulomb,        ONLY : pot3D
   USE wavefunctions,        ONLY : evc
@@ -639,7 +613,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: overlap
 #endif
-  TYPE(bksks_type) :: bksks
   INTEGER,ALLOCATABLE :: l2g(:)
   !
   CALL io_push_title('(G)-Lanczos')
@@ -651,41 +624,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  IF(l_read_restart) THEN
-     CALL solvegfreq_restart_read_q( bksks )
-  ELSE
-     bksks%lastdone_ks     = 0
-     bksks%lastdone_kks    = 0
-     bksks%lastdone_band   = 0
-     bksks%old_ks          = 0
-     bksks%old_kks         = 0
-     bksks%old_band        = 0
-     bksks%max_ks          = k_grid%nps
-     bksks%min_ks          = 1
-     bksks%max_kks         = k_grid%nps
-     bksks%min_kks         = 1
-  ENDIF
+  barra_load = k_grid%nps*band_group%nloc*k_grid%nps
+  IF(l_read_restart) barra_load = 0
   !
-  barra_load = 0
-  DO ikks = 1,k_grid%nps
-     IF(ikks < bksks%lastdone_ks) CYCLE
-     !
-     is = k_grid%is(ikks)
-     !
-     DO ibloc = 1,band_group%nloc
-        ib_index = band_group%l2g(ibloc)
-        ib = qp_bands(ib_index,is)
-        !
-        IF(ikks == bksks%lastdone_ks .AND. ib < bksks%lastdone_band) CYCLE
-        !
-        DO iks = 1,k_grid%nps
-           IF(ikks == bksks%lastdone_ks .AND. ib == bksks%lastdone_band .AND. iks <= bksks%lastdone_kks) CYCLE
-           barra_load = barra_load+1
-        ENDDO
-     ENDDO
-  ENDDO
-  !
-  IF( barra_load == 0 ) THEN
+  IF(barra_load == 0) THEN
      CALL start_bar_type( barra, 'glanczos', 1 )
      CALL update_bar_type( barra, 'glanczos', 1 )
   ELSE
@@ -696,9 +638,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   CALL allocate_gpu()
   CALL allocate_gw_gpu(pert%nlocx,pert%nloc)
   CALL reallocate_ps_gpu(nbnd,pert%nloc)
-  IF(l_enable_lanczos) THEN
-     CALL allocate_lanczos_gpu(pert%nloc)
-  ENDIF
+  IF(l_enable_lanczos) CALL allocate_lanczos_gpu(pert%nloc)
 #endif
   !
   dffts_nnr = dffts%nnr
@@ -747,6 +687,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ENDDO
   !$acc end parallel
   !
+  IF(l_read_restart .AND. l_enable_lanczos) &
+  & CALL read_gfreq(d_diago_q,z_body2_ifr_q,pert%nloc,band_group%nloc)
+  !
   ALLOCATE(pertg_all(npwqx,pert%nloc))
   !
   ! LOOP
@@ -760,8 +703,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      IF(barra_load == 0) EXIT
      !
-     IF(ikks < bksks%lastdone_ks) CYCLE
-     !
      ikk = k_grid%ip(ikks)
      !
      npwk = ngk(ikks)
@@ -773,11 +714,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      !
      nbndval = nbnd_occ(ikks)
      !
-     bksks%max_band = nbndval
-     bksks%min_band = 1
-     !
      DO iks = 1,k_grid%nps ! KPOINT-SPIN (INTEGRAL OVER K')
-        IF(ikks == bksks%lastdone_ks .AND. iks < bksks%lastdone_kks) CYCLE
         !
         ik = k_grid%ip(iks)
         is = k_grid%is(iks)
@@ -849,8 +786,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            ib_index = band_group%l2g(ibloc)
            ib = qp_bands(ib_index,is)
-           !
-           IF(ikks == bksks%lastdone_ks .AND. iks == bksks%lastdone_kks .AND. ib <= bksks%lastdone_band) CYCLE
            !
            ! PSIC
            !
@@ -931,7 +866,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            !$acc update host(overlap)
            CALL mp_sum(overlap,inter_image_comm)
-           CALL writeout_overlap( 'g', kpt_pool%l2g(ikks), kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
+           CALL write_overlap( 'g', kpt_pool%l2g(ikks), kpt_pool%l2g(iks), ib, overlap, pert%nglob, nbnd )
            !
            CALL apply_alpha_pc_to_m_wfcs(nbnd,pert%nloc,dvpsi,(1._DP,0._DP))
            !
@@ -940,7 +875,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            ! Now dvpsi is distributed according to eigen_distr (image), I need to use it for lanczos
            ! In the gamma_only case I need to process 2 dvpsi at a time (+ the odd last one, eventually), otherwise 1 at a time.
            !
-           IF( l_enable_lanczos ) THEN
+           IF(l_enable_lanczos) THEN
               !
 #if defined(__CUDA)
               CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
@@ -992,9 +927,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if defined(__CUDA)
   CALL deallocate_gpu()
   CALL deallocate_gw_gpu()
-  IF(l_enable_lanczos) THEN
-     CALL deallocate_lanczos_gpu()
-  ENDIF
+  IF(l_enable_lanczos) CALL deallocate_lanczos_gpu()
 #endif
   !
   IF(noncolin) THEN
@@ -1028,14 +961,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !
-  ! Write final restart file
+  ! Write data
   !
-  IF(.NOT. l_read_restart) THEN
-     bksks%lastdone_ks = k_grid%nps
-     bksks%lastdone_kks = k_grid%nps
-     bksks%lastdone_band = qp_bands(n_bands,nspin)
-     CALL solvegfreq_restart_write_q(bksks)
-  ENDIF
+  IF(.NOT. l_read_restart .AND. l_enable_lanczos) &
+  & CALL write_gfreq(d_diago_q,z_body2_ifr_q,pert%nloc,band_group%nloc)
   !
   CALL stop_bar_type( barra, 'glanczos' )
   !

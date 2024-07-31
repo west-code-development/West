@@ -182,7 +182,6 @@ MODULE wfreq_center
   LOGICAL :: l_enable_off_diagonal
   CHARACTER(LEN=1) :: macropol_calculation
   REAL(DP) :: exx_etot
-  REAL(DP) :: o_restart_time
   REAL(DP) :: ecut_spectralf(2)
   INTEGER :: n_spectralf
   !

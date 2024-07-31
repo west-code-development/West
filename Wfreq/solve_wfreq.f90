@@ -35,12 +35,11 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,d_epsm1_ifr,&
-                                 & z_epsm1_rfr,l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,&
-                                 & refreq_list,z_head_rfr,d_head_ifr,o_restart_time,npwqx,&
-                                 & fftdriver,wstat_save_dir,l_frac_occ,occupation,nbnd_occ,&
-                                 & nbnd_occ_full,n_bands,d_epsm1_ifr_a,d_head_ifr_a,z_epsm1_rfr_a,&
-                                 & z_head_rfr_a
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,npwqx,l_macropol,l_frac_occ,&
+                                 & occupation,nbnd_occ,nbnd_occ_full,n_bands,l_enable_lanczos,&
+                                 & iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,wstat_save_dir,&
+                                 & fftdriver,d_epsm1_ifr,z_epsm1_rfr,z_head_rfr,d_head_ifr,&
+                                 & d_epsm1_ifr_a,d_head_ifr_a,z_epsm1_rfr_a,z_head_rfr_a
   USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,npool,&
                                  & inter_bgrp_comm,intra_bgrp_comm,nbgrp,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
@@ -80,7 +79,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !
   ! Workspace
   !
-  LOGICAL :: l_write_restart
   INTEGER :: ip,glob_ip,ig,ir,iv,ivloc,ivloc2,ifloc,iks,iks_g,ipol
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
@@ -128,8 +126,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dmatilda,dlambda,zmatilda,zlambda,dmati,zmatr,dmati_a,zmatr_a
 #endif
-  REAL(DP) :: time_spent(2)
-  REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   REAL(DP) :: this_et,this_occ,docc
   INTEGER,ALLOCATABLE :: l2g(:)
@@ -373,8 +369,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #endif
         !
      ENDIF ! macropol
-     !
-     time_spent(1) = get_clock( 'wlanczos' )
      !
      IF(l_enable_lanczos .AND. .NOT. l_QDET) THEN
 #if defined(__CUDA)
@@ -702,32 +696,6 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
            !
         ENDIF ! l_enable_lanczos
         !
-        time_spent(2) = get_clock( 'wlanczos' )
-        l_write_restart = .FALSE.
-        !
-        IF( o_restart_time >= 0._DP ) THEN
-           IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
-           IF( iv == nbndval ) l_write_restart = .TRUE.
-        ENDIF
-        !
-        ! Write final restart file
-        !
-        IF( iks == k_grid%nps .AND. iv == nbndval ) l_write_restart = .TRUE.
-        !
-        ! But do not write here when using pool or band group
-        !
-        IF( npool*nbgrp > 1 ) l_write_restart = .FALSE.
-        !
-        IF( l_write_restart ) THEN
-           bks%lastdone_ks = iks
-           bks%lastdone_band = iv
-           !$acc update host(dmati,zmatr)
-           CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
-           bks%old_ks = iks
-           bks%old_band = iv
-           time_spent(1) = get_clock( 'wlanczos' )
-        ENDIF
-        !
         CALL update_bar_type( barra, 'wlanczos', 1 )
         !
      ENDDO ! BANDS
@@ -771,23 +739,31 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   !$acc exit data delete(pot3D%sqvc)
   !$acc exit data delete(pot3D)
   !
-  ! Synchronize and write final restart file when using pool or band group
+  ! Synchronize and write final restart file
   !
-  IF(npool*nbgrp > 1 .AND. .NOT. l_read_restart .AND. .NOT. l_QDET) THEN
+  IF(.NOT. l_read_restart .AND. .NOT. l_QDET) THEN
+     IF(npool > 1) THEN
+        CALL mp_sum(dmati,inter_pool_comm)
+        CALL mp_sum(zmatr,inter_pool_comm)
+     ENDIF
+     IF(nbgrp > 1) THEN
+        CALL mp_sum(dmati,inter_bgrp_comm)
+        CALL mp_sum(zmatr,inter_bgrp_comm)
+     ENDIF
      bks%lastdone_ks = k_grid%nps
      bks%lastdone_band = MAXVAL(nbnd_occ)
-     CALL mp_sum(dmati,inter_bgrp_comm)
-     CALL mp_sum(dmati,inter_pool_comm)
-     CALL mp_sum(zmatr,inter_bgrp_comm)
-     CALL mp_sum(zmatr,inter_pool_comm)
      CALL solvewfreq_restart_write(bks,dmati,zmatr,mypara%nglob,mypara%nloc)
   ENDIF
   !
-  IF(npool*nbgrp > 1 .AND. l_QDET) THEN
-     CALL mp_sum(dmati_a,inter_bgrp_comm)
-     CALL mp_sum(dmati_a,inter_pool_comm)
-     CALL mp_sum(zmatr_a,inter_bgrp_comm)
-     CALL mp_sum(zmatr_a,inter_pool_comm)
+  IF(l_QDET) THEN
+     IF(npool > 1) THEN
+        CALL mp_sum(dmati_a,inter_pool_comm)
+        CALL mp_sum(zmatr_a,inter_pool_comm)
+     ENDIF
+     IF(nbgrp > 1) THEN
+        CALL mp_sum(dmati_a,inter_bgrp_comm)
+        CALL mp_sum(zmatr_a,inter_bgrp_comm)
+     ENDIF
   ENDIF
   !
   IF(l_QDET) THEN
@@ -976,10 +952,10 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,l_macropol,z_epsm1_ifr_q,&
-                                 & z_epsm1_rfr_q,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,wfreq_eta,&
-                                 & imfreq_list,refreq_list,z_head_rfr,z_head_ifr,o_restart_time,&
-                                 & npwqx,wstat_save_dir,ngq,igq_q
+  USE westcom,              ONLY : n_pdep_eigen_to_use,n_lanczos,npwq,npwqx,l_macropol,nbnd_occ,&
+                                 & l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,&
+                                 & wstat_save_dir,ngq,igq_q,z_epsm1_ifr_q,z_epsm1_rfr_q,z_head_rfr,&
+                                 & z_head_ifr
   USE mp_global,            ONLY : my_image_id,inter_image_comm,nimage,inter_bgrp_comm,&
                                  & intra_bgrp_comm,nbgrp,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
@@ -1019,7 +995,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   !
   ! Workspace
   !
-  LOGICAL :: l_write_restart
   INTEGER :: ip,glob_ip,ig,ir,iv,ivloc,ivloc2,ifloc,iks,ik,is,iq,ikqs,ikq,ipol
   CHARACTER(LEN=25) :: filepot
   CHARACTER(LEN=:),ALLOCATABLE :: fname
@@ -1070,8 +1045,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   ATTRIBUTES(PINNED) :: zmatilda,zlambda,zmati_q,zmatr_q
 #endif
   LOGICAL :: l_gammaq
-  REAL(DP) :: time_spent(2)
-  REAL(DP),EXTERNAL :: get_clock
   TYPE(bksq_type) :: bksq
   REAL(DP) :: g0(3)
   REAL(DP) :: this_et
@@ -1307,8 +1280,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
 #endif
            !
         ENDIF ! macropol
-        !
-        time_spent(1) = get_clock( 'wlanczos' )
         !
         IF(l_enable_lanczos) THEN
 #if defined(__CUDA)
@@ -1589,34 +1560,6 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
               !
            ENDIF ! l_enable_lanczos
            !
-           time_spent(2) = get_clock( 'wlanczos' )
-           l_write_restart = .FALSE.
-           !
-           IF( o_restart_time >= 0._DP ) THEN
-              IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
-              IF( iv == nbndval ) l_write_restart = .TRUE.
-           ENDIF
-           !
-           ! Write final restart file
-           !
-           IF( iq == q_grid%np .AND. iks == k_grid%nps .AND. iv == nbndval ) l_write_restart = .TRUE.
-           !
-           ! But do not write here when using band group
-           !
-           IF( nbgrp > 1 ) l_write_restart = .FALSE.
-           !
-           IF( l_write_restart ) THEN
-              bksq%lastdone_q = iq
-              bksq%lastdone_ks = iks
-              bksq%lastdone_band = iv
-              !$acc update host(zmati_q,zmatr_q)
-              CALL solvewfreq_restart_write_q(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
-              bksq%old_q = iq
-              bksq%old_ks = iks
-              bksq%old_band = iv
-              time_spent(1) = get_clock( 'wlanczos' )
-           ENDIF
-           !
            CALL update_bar_type( barra, 'wlanczos', 1 )
            !
         ENDDO ! BANDS
@@ -1669,14 +1612,16 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !
-  ! Synchronize and write final restart file when using band group
+  ! Synchronize and write final restart file
   !
-  IF(nbgrp > 1 .AND. .NOT. l_read_restart) THEN
+  IF(.NOT. l_read_restart) THEN
+     IF(nbgrp > 1) THEN
+        CALL mp_sum(zmati_q,inter_bgrp_comm)
+        CALL mp_sum(zmatr_q,inter_bgrp_comm)
+     ENDIF
      bksq%lastdone_q = q_grid%np
      bksq%lastdone_ks = k_grid%nps
      bksq%lastdone_band = nbndval
-     CALL mp_sum(zmati_q,inter_bgrp_comm)
-     CALL mp_sum(zmatr_q,inter_bgrp_comm)
      CALL solvewfreq_restart_write_q(bksq,zmati_q,zmatr_q,mypara%nglob,mypara%nloc)
   ENDIF
   !

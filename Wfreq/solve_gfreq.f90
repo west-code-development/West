@@ -35,11 +35,11 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,nbnd_occ,iuwfc,lrwfc,&
-                                 & o_restart_time,npwqx,fftdriver,wstat_save_dir,l_enable_off_diagonal,&
-                                 & ijpmap,d_body2_ifr,d_diago,d_body2_ifr_full,d_diago_full,d_epsm1_ifr
+  USE westcom,              ONLY : n_lanczos,npwq,npwqx,qp_bands,n_bands,nbnd_occ,l_enable_lanczos,&
+                                 & l_enable_off_diagonal,iuwfc,lrwfc,wstat_save_dir,fftdriver,ijpmap,&
+                                 & d_body2_ifr,d_diago,d_body2_ifr_full,d_diago_full,d_epsm1_ifr
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,npool,&
-                                 & intra_bgrp_comm,nproc_bgrp,nbgrp
+                                 & intra_bgrp_comm,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
@@ -72,7 +72,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! Workspace
   !
-  LOGICAL :: l_write_restart
   INTEGER :: ip,glob_ip,glob_jp,il,ig,ir,ib,ibloc,ib_index,jb,jb_index,im,iks,iks_g,is,ifreq
   INTEGER :: ipair,iloc_pair,nloc_pairs
   CHARACTER(LEN=:),ALLOCATABLE :: fname
@@ -106,8 +105,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: overlap
 #endif
-  REAL(DP) :: time_spent(2)
-  REAL(DP),EXTERNAL :: get_clock
   TYPE(bks_type) :: bks
   INTEGER,ALLOCATABLE :: l2g(:)
   !
@@ -291,8 +288,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
      !
      bks%max_band = nbndval
      bks%min_band = 1
-     !
-     time_spent(1) = get_clock( 'glanczos' )
      !
      ! LOOP over band states
      !
@@ -500,31 +495,6 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
            !
         ENDIF ! l_enable_lanczos
         !
-        time_spent(2) = get_clock( 'glanczos' )
-        l_write_restart = .FALSE.
-        !
-        IF( o_restart_time >= 0._DP ) THEN
-           IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
-           IF( ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
-        ENDIF
-        !
-        ! Write final restart file
-        !
-        IF( iks == k_grid%nps .AND. ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
-        !
-        ! But do not write here when using pool or band group
-        !
-        IF( npool*nbgrp > 1 ) l_write_restart = .FALSE.
-        !
-        IF( l_write_restart ) THEN
-           bks%lastdone_ks = iks
-           bks%lastdone_band = ib
-           CALL solvegfreq_restart_write( bks )
-           bks%old_ks = iks
-           bks%old_band = ib
-           time_spent(1) = get_clock( 'glanczos' )
-        ENDIF
-        !
      ENDDO ! BANDS
      !
   ENDDO ! KPOINT-SPIN
@@ -571,17 +541,20 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
   !
   ! Synchronize and write final restart file when using pool or band group
   !
-  IF(npool > 1 .AND. l_enable_lanczos) THEN
-     IF(l_enable_off_diagonal) THEN
-        CALL mp_sum(d_body2_ifr_full,inter_pool_comm)
-        CALL mp_sum(d_diago_full,inter_pool_comm)
-     ELSE
-        CALL mp_sum(d_body2_ifr,inter_pool_comm)
-        CALL mp_sum(d_diago,inter_pool_comm)
+  IF(.NOT. l_read_restart) THEN
+     IF(l_enable_lanczos) THEN
+        IF(l_enable_off_diagonal) THEN
+           IF(npool > 1) THEN
+              CALL mp_sum(d_body2_ifr_full,inter_pool_comm)
+              CALL mp_sum(d_diago_full,inter_pool_comm)
+           ENDIF
+        ELSE
+           IF(npool > 1) THEN
+              CALL mp_sum(d_body2_ifr,inter_pool_comm)
+              CALL mp_sum(d_diago,inter_pool_comm)
+           ENDIF
+        ENDIF
      ENDIF
-  ENDIF
-  !
-  IF(npool*nbgrp > 1) THEN
      bks%lastdone_ks = k_grid%nps
      bks%lastdone_band = qp_bands(n_bands,nspin)
      CALL solvegfreq_restart_write(bks)
@@ -596,10 +569,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !-----------------------------------------------------------------------
   !
   USE kinds,                ONLY : DP
-  USE westcom,              ONLY : n_lanczos,npwq,qp_bands,n_bands,l_enable_lanczos,nbnd_occ,iuwfc,&
-                                 & lrwfc,o_restart_time,npwqx,wstat_save_dir,ngq,igq_q,z_body2_ifr_q,&
-                                 & d_diago_q,z_epsm1_ifr_q
-  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,nproc_bgrp,nbgrp
+  USE westcom,              ONLY : n_lanczos,npwq,npwqx,qp_bands,n_bands,nbnd_occ,l_enable_lanczos,&
+                                 & iuwfc,lrwfc,wstat_save_dir,ngq,igq_q,z_body2_ifr_q,d_diago_q,&
+                                 & z_epsm1_ifr_q
+  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,nproc_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk,nspin
@@ -632,7 +605,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   !
   ! Workspace
   !
-  LOGICAL :: l_write_restart
   INTEGER :: ip,glob_ip,glob_jp,il,ig,ir,ib,ibloc,ib_index,im,iks,ik,is,ikks,ikk,iq,ifreq
   INTEGER :: npwk
   CHARACTER(LEN=:),ALLOCATABLE :: fname
@@ -667,8 +639,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: overlap
 #endif
-  REAL(DP) :: time_spent(2)
-  REAL(DP),EXTERNAL :: get_clock
   TYPE(bksks_type) :: bksks
   INTEGER,ALLOCATABLE :: l2g(:)
   !
@@ -811,8 +781,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
         !
         ik = k_grid%ip(iks)
         is = k_grid%is(iks)
-        !
-        time_spent(1) = get_clock( 'glanczos' )
         !
         CALL q_grid%find( k_grid%p_cart(:,ikk) - k_grid%p_cart(:,ik), 'cart', iq, g0 )
         !
@@ -1010,33 +978,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
            ENDIF ! l_enable_lanczos
            !
-           time_spent(2) = get_clock( 'glanczos' )
-           l_write_restart = .FALSE.
-           !
-           IF( o_restart_time >= 0._DP ) THEN
-              IF( time_spent(2)-time_spent(1) >= o_restart_time*60._DP ) l_write_restart = .TRUE.
-              IF( ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
-           ENDIF
-           !
-           ! Write final restart file
-           !
-           IF( ikks == k_grid%nps .AND. iks == k_grid%nps .AND. ib == qp_bands(n_bands,is) ) l_write_restart = .TRUE.
-           !
-           ! But do not write here when using band group
-           !
-           IF( nbgrp > 1 ) l_write_restart = .FALSE.
-           !
-           IF( l_write_restart ) THEN
-              bksks%lastdone_ks = ikks
-              bksks%lastdone_kks = iks
-              bksks%lastdone_band = ib
-              CALL solvegfreq_restart_write_q( bksks )
-              bksks%old_ks = ikks
-              bksks%old_kks = iks
-              bksks%old_band = ib
-              time_spent(1) = get_clock( 'glanczos' )
-           ENDIF
-           !
            CALL update_bar_type( barra, 'glanczos', 1 )
            !
         ENDDO ! BANDS
@@ -1087,9 +1028,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   DEALLOCATE(l2g)
   DEALLOCATE(pertg_all)
   !
-  ! Write final restart file when using band group
+  ! Write final restart file
   !
-  IF(nbgrp > 1) THEN
+  IF(.NOT. l_read_restart) THEN
      bksks%lastdone_ks = k_grid%nps
      bksks%lastdone_kks = k_grid%nps
      bksks%lastdone_band = qp_bands(n_bands,nspin)

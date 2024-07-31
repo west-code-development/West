@@ -23,10 +23,10 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & qlist,wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
-                             & l_qdet_verbose,l_enable_off_diagonal,o_restart_time,ecut_spectralf,&
-                             & n_spectralf,westpp_calculation,westpp_range,westpp_format,&
-                             & westpp_sign,westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,&
-                             & westpp_rmax,westpp_epsinfty,westpp_box,westpp_n_liouville_to_use,&
+                             & l_qdet_verbose,l_enable_off_diagonal,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,westpp_box,westpp_n_liouville_to_use,&
                              & westpp_l_spin_flip,westpp_l_compute_tdm,westpp_wannier_tr_rel,&
                              & westpp_l_dipole_realspace,document,wbse_init_calculation,solver,&
                              & bse_method,localization,wannier_tr_rel,wfc_from_qbox,bisection_info,&
@@ -217,7 +217,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(l_enable_lanczos, 'l_enable_lanczos')
         IERR = return_dict%getitem(l_qdet_verbose, 'l_qdet_verbose')
         IERR = return_dict%getitem(l_enable_off_diagonal, 'l_enable_off_diagonal')
-        IERR = return_dict%getitem(o_restart_time, 'o_restart_time')
         IERR = return_dict%getitem(tmp_obj, 'ecut_spectralf')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%getitem(ecut_spectralf(1), 0) ! Fortran indices start at 1
@@ -488,7 +487,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
      CALL mp_bcast(l_qdet_verbose,root,world_comm)
      CALL mp_bcast(l_enable_off_diagonal,root,world_comm)
-     CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
      !

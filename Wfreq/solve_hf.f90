@@ -62,11 +62,6 @@ SUBROUTINE solve_hf_gamma( )
   !
   CALL writeout_solvehf( sigma_hf, n_bands, k_grid%nps )
   !
-  !DEALLOCATE( sigma_exx  )
-  !DEALLOCATE( sigma_vxcl )
-  !DEALLOCATE( sigma_vxcnl)
-  !DEALLOCATE( sigma_hf   )
-  !
   CALL stop_clock( 'solve_hf' )
   !
 END SUBROUTINE
@@ -102,11 +97,6 @@ SUBROUTINE solve_hf_k( )
   sigma_hf(:,:) = sigma_exx(:,:) - sigma_vxcl(:,:) - sigma_vxcnl(:,:)
   !
   CALL writeout_solvehf( sigma_hf, n_bands, k_grid%nps  )
-  !
-  !DEALLOCATE( sigma_exx  )
-  !DEALLOCATE( sigma_vxcl )
-  !DEALLOCATE( sigma_vxcnl)
-  !DEALLOCATE( sigma_hf   )
   !
   CALL stop_clock( 'solve_hf' )
   !

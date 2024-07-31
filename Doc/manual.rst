@@ -542,11 +542,7 @@ wfreq_control
    * - **Default**
      - 0.0
    * - **Description**
-     - Available options are:
-
-       - If ( o_restart_time == 0 ) A checkpoint is written at every iteration of the W and G loops.
-       - If ( o_restart_time >  0 ) A checkpoint is written every o_restart_time minutes in the W and G loops.
-       - If ( o_restart_time <  0 ) A checkpoint is NEVER written in the W and G loops. Restart will not be possible.
+     - Deprecated parameter.
 
 .. data:: ecut_spectralf
 

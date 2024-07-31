@@ -128,8 +128,8 @@ MODULE wfreq_io
     !
     USE kinds,                ONLY : DP
     USE westcom,              ONLY : wfreq_save_dir
-    USE mp_global,            ONLY : my_image_id,root_image,inter_image_comm,me_bgrp,&
-                                   & root_bgrp,intra_bgrp_comm
+    USE mp_global,            ONLY : my_image_id,root_image,inter_image_comm,me_bgrp,root_bgrp,&
+                                   & intra_bgrp_comm
     USE mp,                   ONLY : mp_bcast
     USE west_io,              ONLY : serial_data_read
     !
@@ -172,8 +172,8 @@ MODULE wfreq_io
     !
     USE kinds,                ONLY : DP
     USE westcom,              ONLY : wfreq_save_dir
-    USE mp_global,            ONLY : my_image_id,root_image,inter_image_comm,me_bgrp,&
-                                   & root_bgrp,intra_bgrp_comm
+    USE mp_global,            ONLY : my_image_id,root_image,inter_image_comm,me_bgrp,root_bgrp,&
+                                   & intra_bgrp_comm
     USE mp,                   ONLY : mp_bcast
     USE west_io,              ONLY : serial_data_read
     !
@@ -318,15 +318,18 @@ MODULE wfreq_io
        ! DMAT
        !
        ALLOCATE(tmp_dmat(npg,npl,ifr%nglob))
-       tmp_dmat = 0._DP
+       !
+       tmp_dmat(:,:,:) = 0._DP
        DO ip = 1,ifr%nloc
           ip_glob = ifr%l2g(ip)
           tmp_dmat(:,:,ip_glob) = dmat(:,:,ip)
        ENDDO
+       !
        CALL mp_sum(tmp_dmat,intra_bgrp_comm)
        !
        fname = TRIM(wfreq_save_dir)//'/dmat_I'//c_image
        lproc = (me_bgrp == 0)
+       !
        CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
        !
        DEALLOCATE(tmp_dmat)
@@ -334,15 +337,18 @@ MODULE wfreq_io
        ! ZMAT
        !
        ALLOCATE(tmp_zmat(npg,npl,rfr%nglob))
-       tmp_zmat = 0._DP
+       !
+       tmp_zmat(:,:,:) = 0._DP
        DO ip = 1,rfr%nloc
           ip_glob = rfr%l2g(ip)
           tmp_zmat(:,:,ip_glob) = zmat(:,:,ip)
        ENDDO
+       !
        CALL mp_sum(tmp_zmat,intra_bgrp_comm)
        !
        fname = TRIM(wfreq_save_dir)//'/zmat_I'//c_image
        lproc = (me_bgrp == 0)
+       !
        CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
        !
        DEALLOCATE(tmp_zmat)
@@ -391,17 +397,20 @@ MODULE wfreq_io
        ! DMAT
        !
        ALLOCATE(tmp_dmat(npg,npl,ifr%nglob,q_grid%np))
-       tmp_dmat = 0._DP
+       !
+       tmp_dmat(:,:,:,:) = 0._DP
        DO iq = 1,q_grid%np
           DO ip = 1,ifr%nloc
              ip_glob = ifr%l2g(ip)
              tmp_dmat(:,:,ip_glob,iq) = dmat(:,:,ip,iq)
           ENDDO
        ENDDO
+       !
        CALL mp_sum(tmp_dmat,intra_bgrp_comm)
        !
        fname = TRIM(wfreq_save_dir)//'/dmat_I'//c_image
        lproc = (me_bgrp == 0)
+       !
        CALL serial_data_write(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
        !
        DEALLOCATE(tmp_dmat)
@@ -409,17 +418,20 @@ MODULE wfreq_io
        ! ZMAT
        !
        ALLOCATE(tmp_zmat(npg,npl,rfr%nglob,q_grid%np))
-       tmp_zmat = 0._DP
+       !
+       tmp_zmat(:,:,:,:) = 0._DP
        DO iq = 1,q_grid%np
           DO ip = 1,rfr%nloc
              ip_glob = rfr%l2g(ip)
              tmp_zmat(:,:,ip_glob,iq) = zmat(:,:,ip,iq)
           ENDDO
        ENDDO
+       !
        CALL mp_sum(tmp_zmat,intra_bgrp_comm)
        !
        fname = TRIM(wfreq_save_dir)//'/zmat_I'//c_image
        lproc = (me_bgrp == 0)
+       !
        CALL serial_data_write(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
        !
        DEALLOCATE(tmp_zmat)
@@ -471,13 +483,16 @@ MODULE wfreq_io
        !
        fname = TRIM(wfreq_save_dir)//'/dmat_I'//c_image
        lproc = (me_bgrp==0)
+       !
        CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob)
        !
        CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
+       !
        DO ip = 1,ifr%nloc
           ip_glob = ifr%l2g(ip)
           dmat(:,:,ip) = tmp_dmat(:,:,ip_glob)
        ENDDO
+       !
        DEALLOCATE(tmp_dmat)
        !
        ! ZMAT
@@ -486,13 +501,16 @@ MODULE wfreq_io
        !
        fname = TRIM(wfreq_save_dir)//'/zmat_I'//c_image
        lproc = (me_bgrp==0)
+       !
        CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob)
        !
        CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
+       !
        DO ip = 1,rfr%nloc
           ip_glob = rfr%l2g(ip)
           zmat(:,:,ip) = tmp_zmat(:,:,ip_glob)
        ENDDO
+       !
        DEALLOCATE(tmp_zmat)
        !
     ENDIF
@@ -548,15 +566,18 @@ MODULE wfreq_io
        !
        fname = TRIM(wfreq_save_dir)//'/dmat_I'//c_image
        lproc = (me_bgrp==0)
+       !
        CALL serial_data_read(lproc,fname,tmp_dmat,npg,npl,ifr%nglob,q_grid%np)
        !
        CALL mp_bcast(tmp_dmat,0,intra_bgrp_comm)
+       !
        DO iq = 1,q_grid%np
           DO ip = 1,ifr%nloc
              ip_glob = ifr%l2g(ip)
              dmat(:,:,ip,iq) = tmp_dmat(:,:,ip_glob,iq)
           ENDDO
        ENDDO
+       !
        DEALLOCATE(tmp_dmat)
        !
        ! ZMAT
@@ -565,15 +586,18 @@ MODULE wfreq_io
        !
        fname = TRIM(wfreq_save_dir)//'/zmat_I'//c_image
        lproc = (me_bgrp==0)
+       !
        CALL serial_data_read(lproc,fname,tmp_zmat,npg,npl,rfr%nglob,q_grid%np)
        !
        CALL mp_bcast(tmp_zmat,0,intra_bgrp_comm)
+       !
        DO iq = 1,q_grid%np
           DO ip = 1,rfr%nloc
              ip_glob = rfr%l2g(ip)
              zmat(:,:,ip,iq) = tmp_zmat(:,:,ip_glob,iq)
           ENDDO
        ENDDO
+       !
        DEALLOCATE(tmp_zmat)
        !
     ENDIF
@@ -592,8 +616,11 @@ MODULE wfreq_io
     !------------------------------------------------------------------------
     !
     USE kinds,                ONLY : DP
-    USE westcom,              ONLY : n_lanczos
+    USE westcom,              ONLY : n_lanczos,wfreq_save_dir
+    USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,intra_bgrp_comm
+    USE mp,                   ONLY : mp_sum
     USE distribution_center,  ONLY : ifr
+    USE west_io,              ONLY : serial_data_write
     USE types_bz_grid,        ONLY : k_grid
     !
     IMPLICIT NONE
@@ -604,7 +631,53 @@ MODULE wfreq_io
     REAL(DP),INTENT(IN) :: d_diago(n_lanczos,npl,nbl,k_grid%nps)
     REAL(DP),INTENT(IN) :: d_body2(n_lanczos,npl,ifr%nloc,nbl,k_grid%nps)
     !
+    ! Workspace
+    !
+    CHARACTER(LEN=6) :: c_image
+    CHARACTER(LEN=6) :: c_bgrp
+    CHARACTER(LEN=512) :: fname
+    INTEGER :: iks,ib,ip,ip_glob
+    REAL(DP),ALLOCATABLE :: tmp_body2(:,:,:,:,:)
+    LOGICAL :: lproc
+    !
     CALL start_clock('write_g')
+    !
+    IF(my_pool_id == 0) THEN
+       !
+       WRITE(c_image,'(i6.6)') my_image_id
+       WRITE(c_bgrp,'(i6.6)') my_bgrp_id
+       !
+       ! DIAGO
+       !
+       fname = TRIM(wfreq_save_dir)//'/d_diago_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_write(lproc,fname,d_diago,n_lanczos,npl,nbl,k_grid%nps)
+       !
+       ! BODY2
+       !
+       ALLOCATE(tmp_body2(n_lanczos,npl,ifr%nglob,nbl,k_grid%nps))
+       !
+       tmp_body2(:,:,:,:,:) = 0._DP
+       DO iks = 1,k_grid%nps
+          DO ib = 1,nbl
+             DO ip = 1,ifr%nloc
+                ip_glob = ifr%l2g(ip)
+                tmp_body2(:,:,ip_glob,ib,iks) = d_body2(:,:,ip,ib,iks)
+             ENDDO
+          ENDDO
+       ENDDO
+       !
+       CALL mp_sum(tmp_body2,intra_bgrp_comm)
+       !
+       fname = TRIM(wfreq_save_dir)//'/d_body2_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_write(lproc,fname,tmp_body2,n_lanczos,npl,ifr%nglob,nbl,k_grid%nps)
+       !
+       DEALLOCATE(tmp_body2)
+       !
+    ENDIF
     !
     CALL stop_clock('write_g')
     !
@@ -615,8 +688,11 @@ MODULE wfreq_io
     !------------------------------------------------------------------------
     !
     USE kinds,                ONLY : DP
-    USE westcom,              ONLY : n_lanczos
+    USE westcom,              ONLY : n_lanczos,wfreq_save_dir
+    USE mp_global,            ONLY : my_image_id,my_pool_id,my_bgrp_id,me_bgrp,intra_bgrp_comm
+    USE mp,                   ONLY : mp_sum
     USE distribution_center,  ONLY : ifr
+    USE west_io,              ONLY : serial_data_write
     USE types_bz_grid,        ONLY : k_grid,q_grid
     !
     IMPLICIT NONE
@@ -627,7 +703,55 @@ MODULE wfreq_io
     REAL(DP),INTENT(IN) :: d_diago(n_lanczos,npl,nbl,k_grid%nps,q_grid%nps)
     COMPLEX(DP),INTENT(IN) :: z_body2(n_lanczos,npl,ifr%nloc,nbl,k_grid%nps,q_grid%nps)
     !
+    ! Workspace
+    !
+    CHARACTER(LEN=6) :: c_image
+    CHARACTER(LEN=6) :: c_bgrp
+    CHARACTER(LEN=512) :: fname
+    INTEGER :: iq,iks,ib,ip,ip_glob
+    COMPLEX(DP),ALLOCATABLE :: tmp_body2(:,:,:,:,:,:)
+    LOGICAL :: lproc
+    !
     CALL start_clock('write_g')
+    !
+    IF(my_pool_id == 0) THEN
+       !
+       WRITE(c_image,'(i6.6)') my_image_id
+       WRITE(c_bgrp,'(i6.6)') my_bgrp_id
+       !
+       ! DIAGO
+       !
+       fname = TRIM(wfreq_save_dir)//'/d_diago_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_write(lproc,fname,d_diago,n_lanczos,npl,nbl,k_grid%nps,q_grid%nps)
+       !
+       ! BODY2
+       !
+       ALLOCATE(tmp_body2(n_lanczos,npl,ifr%nglob,nbl,k_grid%nps,q_grid%nps))
+       !
+       tmp_body2(:,:,:,:,:,:) = 0._DP
+       DO iq = 1,q_grid%nps
+          DO iks = 1,k_grid%nps
+             DO ib = 1,nbl
+                DO ip = 1,ifr%nloc
+                   ip_glob = ifr%l2g(ip)
+                   tmp_body2(:,:,ip_glob,ib,iks,iq) = z_body2(:,:,ip,ib,iks,iq)
+                ENDDO
+             ENDDO
+          ENDDO
+       ENDDO
+       !
+       CALL mp_sum(tmp_body2,intra_bgrp_comm)
+       !
+       fname = TRIM(wfreq_save_dir)//'/z_body2_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_write(lproc,fname,tmp_body2,n_lanczos,npl,ifr%nglob,nbl,k_grid%nps,q_grid%nps)
+       !
+       DEALLOCATE(tmp_body2)
+       !
+    ENDIF
     !
     CALL stop_clock('write_g')
     !
@@ -638,8 +762,12 @@ MODULE wfreq_io
     !------------------------------------------------------------------------
     !
     USE kinds,                ONLY : DP
-    USE westcom,              ONLY : n_lanczos
+    USE westcom,              ONLY : n_lanczos,wfreq_save_dir
+    USE mp_global,            ONLY : my_image_id,my_pool_id,inter_pool_comm,my_bgrp_id,me_bgrp,&
+                                   & intra_bgrp_comm
+    USE mp,                   ONLY : mp_bcast
     USE distribution_center,  ONLY : ifr
+    USE west_io,              ONLY : serial_data_read
     USE types_bz_grid,        ONLY : k_grid
     !
     IMPLICIT NONE
@@ -650,7 +778,57 @@ MODULE wfreq_io
     REAL(DP),INTENT(OUT) :: d_diago(n_lanczos,npl,nbl,k_grid%nps)
     REAL(DP),INTENT(OUT) :: d_body2(n_lanczos,npl,ifr%nloc,nbl,k_grid%nps)
     !
+    ! Workspace
+    !
+    CHARACTER(LEN=6) :: c_image
+    CHARACTER(LEN=6) :: c_bgrp
+    CHARACTER(LEN=512) :: fname
+    INTEGER :: iks,ib,ip,ip_glob
+    REAL(DP),ALLOCATABLE :: tmp_body2(:,:,:,:,:)
+    LOGICAL :: lproc
+    !
     CALL start_clock('read_g')
+    !
+    IF(my_pool_id == 0) THEN
+       !
+       WRITE(c_image,'(i6.6)') my_image_id
+       WRITE(c_bgrp,'(i6.6)') my_bgrp_id
+       !
+       ! DIAGO
+       !
+       fname = TRIM(wfreq_save_dir)//'/d_diago_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_read(lproc,fname,d_diago,n_lanczos,npl,nbl,k_grid%nps)
+       !
+       CALL mp_bcast(d_diago,0,intra_bgrp_comm)
+       !
+       ! BODY2
+       !
+       ALLOCATE(tmp_body2(n_lanczos,npl,ifr%nglob,nbl,k_grid%nps))
+       !
+       fname = TRIM(wfreq_save_dir)//'/d_body2_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_read(lproc,fname,tmp_body2,n_lanczos,npl,ifr%nglob,nbl,k_grid%nps)
+       !
+       CALL mp_bcast(tmp_body2,0,intra_bgrp_comm)
+       !
+       DO iks = 1,k_grid%nps
+          DO ib = 1,nbl
+             DO ip = 1,ifr%nloc
+                ip_glob = ifr%l2g(ip)
+                d_body2(:,:,ip,ib,iks) = tmp_body2(:,:,ip_glob,ib,iks)
+             ENDDO
+          ENDDO
+       ENDDO
+       !
+       DEALLOCATE(tmp_body2)
+       !
+    ENDIF
+    !
+    CALL mp_bcast(d_diago,0,inter_pool_comm)
+    CALL mp_bcast(d_body2,0,inter_pool_comm)
     !
     CALL stop_clock('read_g')
     !
@@ -661,8 +839,12 @@ MODULE wfreq_io
     !------------------------------------------------------------------------
     !
     USE kinds,                ONLY : DP
-    USE westcom,              ONLY : n_lanczos
+    USE westcom,              ONLY : n_lanczos,wfreq_save_dir
+    USE mp_global,            ONLY : my_image_id,my_pool_id,inter_pool_comm,my_bgrp_id,me_bgrp,&
+                                   & intra_bgrp_comm
+    USE mp,                   ONLY : mp_bcast
     USE distribution_center,  ONLY : ifr
+    USE west_io,              ONLY : serial_data_read
     USE types_bz_grid,        ONLY : k_grid,q_grid
     !
     IMPLICIT NONE
@@ -673,7 +855,59 @@ MODULE wfreq_io
     REAL(DP),INTENT(OUT) :: d_diago(n_lanczos,npl,nbl,k_grid%nps,q_grid%nps)
     COMPLEX(DP),INTENT(OUT) :: z_body2(n_lanczos,npl,ifr%nloc,nbl,k_grid%nps,q_grid%nps)
     !
+    ! Workspace
+    !
+    CHARACTER(LEN=6) :: c_image
+    CHARACTER(LEN=6) :: c_bgrp
+    CHARACTER(LEN=512) :: fname
+    INTEGER :: iq,iks,ib,ip,ip_glob
+    COMPLEX(DP),ALLOCATABLE :: tmp_body2(:,:,:,:,:,:)
+    LOGICAL :: lproc
+    !
     CALL start_clock('read_g')
+    !
+    IF(my_pool_id == 0) THEN
+       !
+       WRITE(c_image,'(i6.6)') my_image_id
+       WRITE(c_bgrp,'(i6.6)') my_bgrp_id
+       !
+       ! DIAGO
+       !
+       fname = TRIM(wfreq_save_dir)//'/d_diago_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_read(lproc,fname,d_diago,n_lanczos,npl,nbl,k_grid%nps,q_grid%nps)
+       !
+       CALL mp_bcast(d_diago,0,intra_bgrp_comm)
+       !
+       ! BODY2
+       !
+       ALLOCATE(tmp_body2(n_lanczos,npl,ifr%nglob,nbl,k_grid%nps,q_grid%nps))
+       !
+       fname = TRIM(wfreq_save_dir)//'/z_body2_I'//c_image//'B'//c_bgrp
+       lproc = (me_bgrp == 0)
+       !
+       CALL serial_data_read(lproc,fname,tmp_body2,n_lanczos,npl,ifr%nglob,nbl,k_grid%nps,q_grid%nps)
+       !
+       CALL mp_bcast(tmp_body2,0,intra_bgrp_comm)
+       !
+       DO iq = 1,q_grid%nps
+          DO iks = 1,k_grid%nps
+             DO ib = 1,nbl
+                DO ip = 1,ifr%nloc
+                   ip_glob = ifr%l2g(ip)
+                   z_body2(:,:,ip,ib,iks,iq) = tmp_body2(:,:,ip_glob,ib,iks,iq)
+                ENDDO
+             ENDDO
+          ENDDO
+       ENDDO
+       !
+       DEALLOCATE(tmp_body2)
+       !
+    ENDIF
+    !
+    CALL mp_bcast(d_diago,0,inter_pool_comm)
+    CALL mp_bcast(z_body2,0,inter_pool_comm)
     !
     CALL stop_clock('read_g')
     !

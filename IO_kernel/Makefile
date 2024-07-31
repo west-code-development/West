@@ -18,7 +18,6 @@ IO_KERNEL_OBJS = \
 cubefile.o \
 function3d.o \
 mod_west_io.o \
-mpiio.o \
 pdep_db.o \
 pdep_io.o \
 plep_db.o \

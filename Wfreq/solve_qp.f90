@@ -142,7 +142,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ALLOCATE( overlap_loc(pert%nloc,nbnd ) )
   ALLOCATE( dtemp2( nbnd, ifr%nloc ) )
   ALLOCATE( ztemp2( nbnd, rfr%nloc ) )
-  !$acc enter data create(overlap,overlap_loc,dtemp2,ztemp2) copyin(qp_bands,d_epsm1_ifr)
+  !$acc enter data create(overlap,overlap_loc,dtemp2,ztemp2) copyin(qp_bands)
   ALLOCATE( d_epsm1_ifr_trans( pert%nloc, pert%nglob, ifr%nloc ) )
   ALLOCATE( z_epsm1_rfr_trans( pert%nloc, pert%nglob, rfr%nloc ) )
   d_epsm1_ifr_trans(:,:,:) = RESHAPE( d_epsm1_ifr, [pert%nloc,pert%nglob,ifr%nloc], ORDER=[2,1,3] )
@@ -233,7 +233,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
         !
         !$acc update device(overlap)
         !
-        !$acc parallel loop collapse(2) present(overlap_loc,overlap)
+        !$acc parallel loop collapse(2) present(overlap_loc,overlap,l2g)
         DO im = 1, nbnd
            DO ip = 1, pert_nloc
               overlap_loc(ip,im) = overlap(l2g(ip),im)
@@ -410,8 +410,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   CALL stop_bar_type( barra, 'coll_gw' )
   !
-  !$acc exit data delete(qp_bands,d_epsm1_ifr)
-  !$acc exit data delete(l2g,overlap,overlap_loc,dtemp2,ztemp2,d_epsm1_ifr_trans,z_epsm1_rfr_trans)
+  !$acc exit data delete(l2g,overlap,overlap_loc,dtemp2,ztemp2,qp_bands,d_epsm1_ifr_trans,z_epsm1_rfr_trans)
   DEALLOCATE( l2g )
   DEALLOCATE( overlap )
   DEALLOCATE( overlap_loc )
@@ -717,8 +716,8 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ATTRIBUTES(PINNED) :: overlap
 #endif
   COMPLEX(DP),ALLOCATABLE :: overlap_loc(:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_trans_q(:,:,:,:)
-  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_trans_q(:,:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_ifr_trans_q(:,:,:)
+  COMPLEX(DP), ALLOCATABLE :: z_epsm1_rfr_trans_q(:,:,:)
   TYPE(bar_type) :: barra
   INTEGER :: barra_load
   COMPLEX(DP) :: reduce
@@ -770,12 +769,9 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ALLOCATE( z_body1_ifr_q( aband%nloc, ifr%nloc, band_group%nloc, k_grid%nps, q_grid%nps ) )
   ALLOCATE( z_body_rfr_q( aband%nloc, rfr%nloc, band_group%nloc, k_grid%nps, q_grid%nps ) )
   ALLOCATE( ztemp2( nbnd, MAX(ifr%nloc,rfr%nloc) ) )
-  !$acc enter data create(overlap,overlap_loc,ztemp2) copyin(z_epsm1_ifr_q)
-  ALLOCATE( z_epsm1_ifr_trans_q( pert%nloc, pert%nglob, ifr%nloc, q_grid%np ) )
-  ALLOCATE( z_epsm1_rfr_trans_q( pert%nloc, pert%nglob, rfr%nloc, q_grid%np ) )
-  z_epsm1_ifr_trans_q = RESHAPE( z_epsm1_ifr_q, [pert%nloc,pert%nglob,ifr%nloc,q_grid%np], ORDER=[2,1,3,4] )
-  z_epsm1_rfr_trans_q = RESHAPE( z_epsm1_rfr_q, [pert%nloc,pert%nglob,rfr%nloc,q_grid%np], ORDER=[2,1,3,4] )
-  !$acc enter data copyin(z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
+  ALLOCATE( z_epsm1_ifr_trans_q( pert%nloc, pert%nglob, ifr%nloc ) )
+  ALLOCATE( z_epsm1_rfr_trans_q( pert%nloc, pert%nglob, rfr%nloc ) )
+  !$acc enter data create(overlap,overlap_loc,ztemp2,z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
   !
   pert_nloc = pert%nloc
   ifr_nloc = ifr%nloc
@@ -825,11 +821,18 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            !
            CALL q_grid%find( k_grid%p_cart(:,ik) - k_grid%p_cart(:,ikk), 'cart', iq, g0 )
            !
+           z_epsm1_ifr_trans_q(:,:,:) = RESHAPE( z_epsm1_ifr_q(:,:,:,iq), &
+                                               & [pert%nloc,pert%nglob,ifr%nloc], ORDER=[2,1,3] )
+           z_epsm1_rfr_trans_q(:,:,:) = RESHAPE( z_epsm1_rfr_q(:,:,:,iq), &
+                                               & [pert%nloc,pert%nglob,rfr%nloc], ORDER=[2,1,3] )
+           !
+           !$acc update device(z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
+           !
            CALL readin_overlap( 'g', kpt_pool%l2g(iks), kpt_pool%l2g(ikks), ib, overlap, pert%nglob, nbnd )
            !
            !$acc update device(overlap)
            !
-           !$acc parallel loop collapse(2) present(overlap_loc,overlap)
+           !$acc parallel loop collapse(2) present(overlap_loc,overlap,l2g)
            DO im = 1, nbnd
               DO ip = 1, pert_nloc
                  overlap_loc(ip,im) = overlap(l2g(ip),im)
@@ -850,7 +853,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
                  DO glob_jp = 1, n_pdep_eigen_to_use
                     DO ip = 1, pert_nloc
                        reduce = reduce+CONJG(overlap(glob_jp,im))*overlap_loc(ip,im) &
-                       & *z_epsm1_ifr_trans_q(ip,glob_jp,ifreq,iq)
+                       & *z_epsm1_ifr_trans_q(ip,glob_jp,ifreq)
                     ENDDO
                  ENDDO
                  ztemp2(im,ifreq) = reduce
@@ -882,7 +885,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
                  DO glob_jp = 1, n_pdep_eigen_to_use
                     DO ip = 1, pert_nloc
                        reduce = reduce+CONJG(overlap(glob_jp,im))*overlap_loc(ip,im) &
-                       & *z_epsm1_rfr_trans_q(ip,glob_jp,ifreq,iq)
+                       & *z_epsm1_rfr_trans_q(ip,glob_jp,ifreq)
                     ENDDO
                  ENDDO
                  ztemp2(im,ifreq) = reduce
@@ -915,7 +918,7 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   !
   CALL stop_bar_type( barra, 'coll_gw' )
   !
-  !$acc exit data delete(l2g,overlap,overlap_loc,ztemp2,z_epsm1_ifr_q,z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
+  !$acc exit data delete(l2g,overlap,overlap_loc,ztemp2,z_epsm1_ifr_trans_q,z_epsm1_rfr_trans_q)
   DEALLOCATE( l2g )
   DEALLOCATE( overlap )
   DEALLOCATE( overlap_loc )

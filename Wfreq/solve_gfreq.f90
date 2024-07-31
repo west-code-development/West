@@ -731,8 +731,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   ENDIF
 #endif
   !
-  !$acc enter data copyin(z_epsm1_ifr_q)
-  !
   dffts_nnr = dffts%nnr
   pert_nloc = pert%nloc
   pert_nglob = pert%nglob
@@ -989,10 +987,10 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               !
               d_diago_q(:,:,ibloc,ikks,iq) = diago
               !
-              !$acc enter data create(z_body2_ifr_q(:,:,:,ibloc,ikks,iq))
+              !$acc enter data create(z_body2_ifr_q(:,:,:,ibloc,ikks,iq)) copyin(z_epsm1_ifr_q(:,:,:,iq))
               !$acc update device(braket)
               !
-              !$acc parallel present(braket,z_epsm1_ifr_q,z_body2_ifr_q(:,:,:,ibloc,ikks,iq))
+              !$acc parallel present(braket,z_epsm1_ifr_q(:,:,:,iq),z_body2_ifr_q(:,:,:,ibloc,ikks,iq))
               !$acc loop collapse(3)
               DO ifreq = 1,ifr_nloc
                  DO ip = 1,pert_nloc
@@ -1008,7 +1006,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
               ENDDO
               !$acc end parallel
               !
-              !$acc exit data copyout(z_body2_ifr_q(:,:,:,ibloc,ikks,iq))
+              !$acc exit data delete(z_epsm1_ifr_q(:,:,:,iq)) copyout(z_body2_ifr_q(:,:,:,ibloc,ikks,iq))
               !
            ENDIF ! l_enable_lanczos
            !
@@ -1057,8 +1055,6 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
      CALL deallocate_lanczos_gpu()
   ENDIF
 #endif
-  !
-  !$acc exit data delete(z_epsm1_ifr_q)
   !
   IF(noncolin) THEN
      !$acc exit data delete(psick_nc)

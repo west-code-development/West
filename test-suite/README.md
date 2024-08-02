@@ -29,6 +29,7 @@
 25. O2 molecule, spin-flip TDDFT (PBE) forces, Gamma only
 26. O2 molecule, spin-flip TDDFT (PBE0) forces, Gamma only
 27. SiH4 molecule, QDET `n_pdep_eigen_off_diagonal`, Gamma only
+28. Formaldehyde molecule, westpp excited state decomposition, Gamma only
 
 ## Executing tests
 

@@ -293,14 +293,14 @@ wfreq_control
      - Available options are:
 
        - "XWGQ" : Compute the QP corrections.
-       - "XwGQ" : Compute the QP corrections, restart from an interrupted / just read W run.
-       - "XwgQ" : Compute the QP corrections, restart from an interrupted / just read G run.
+       - "XwGQ" : Restart an interrupted "XWGQ" run if "W" has finished but "G" and "Q" have not.
+       - "XwgQ" : Restart an interrupted "XWGQ" run if "W" and "G" have finished but "Q" has not.
        - "XWGQH" : Compute the QP corrections and parameters of QDET effective Hamiltonian. Only available for Gamma-point sampling.
-       - "XwGQH" : Compute the QP corrections and parameters of QDET effective Hamiltonian, restart from interrupted / just read W run. Only available for Gamma-point sampling.
+       - "XwGQH" : Restart an interrupted "XWGQH" run if "W" has finished but "G", "Q", and "H" have not.
        - "X" : Compute the HF corrections.
        - "XWO" : Compute the optical properties.
        - "XWGQP" : Compute the QP corrections, and plot spectral functions.
-       - "XWGQOP" : Compute all.
+       - "XWGQOP" : Compute the QP corrections and optical properties, and plot spectral functions.
 
 .. data:: n_pdep_eigen_to_use
 
@@ -313,7 +313,7 @@ wfreq_control
    * - **Default**
      - dynamically set to match the number of electrons
    * - **Description**
-     - Number of PDEP eigenvectors to use in Wfreq. They are read from previous Wstat run. This value cannot exceed n_pdep_eigen (defined in wstat_control) and is used to check the convergence of the calculation.
+     - Number of PDEP eigenvectors to use in wfreq. They are read from previous wstat run. This value cannot exceed n_pdep_eigen (defined in wstat_control) and is used to check the convergence of the calculation.
 
 .. data:: qp_bandrange
 
@@ -613,7 +613,7 @@ westpp_control
    * - **Default**
      - [1,2]
    * - **Description**
-     - Range for W, E, S, D, L, X, and P run.
+     - Range for W, E, S, D, L, X, P, B, C, or M run.
 
 .. data:: westpp_format
 
@@ -658,7 +658,7 @@ westpp_control
    * - **Default**
      - 1
    * - **Description**
-     - Number of PDEP eigenpotentials to read/use.
+     - Number of PDEP eigenpotentials to read/use. Used only when westpp_calculation = "E".
 
 .. data:: westpp_r0
 
@@ -710,7 +710,7 @@ westpp_control
    * - **Default**
      - 1.0
    * - **Description**
-     - Macroscopic relative dielectric constant. Used in the "S" runlevel.
+     - Macroscopic relative dielectric constant. Used only when westpp_calculation = "S".
 
 .. data:: westpp_box
 
@@ -725,6 +725,19 @@ westpp_control
    * - **Description**
      - Box [x_0, x_1, y_0, y_1, z_0, z_1] (in a.u.) within which the localization factor is computed (the "L" runlevel).
 
+.. data:: westpp_n_liouville_to_use
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - 1
+   * - **Description**
+     - Number of Liouville eigenvectors to read/use. Used only when westpp_calculation = "X", "P", "C", or "M".
+
 .. data:: westpp_l_spin_flip
 
 .. list-table::
@@ -738,19 +751,6 @@ westpp_control
    * - **Description**
      - If (True), then a spin-flip calculation is performed. Used only when westpp_calculation = "C" or "M" and nspin = 2.
 
-.. data:: westpp_wannier_tr_rel
-
-.. list-table::
-   :widths: 10 90
-   :stub-columns: 0
-
-   * - **Type**
-     - float
-   * - **Default**
-     - 1e-6
-   * - **Description**
-     - Relative convergence threshold for Wannier localization. Used only when westpp_calculation = "B".
-
 .. data:: westpp_l_compute_tdm
 
 .. list-table::
@@ -763,6 +763,19 @@ westpp_control
      - False
    * - **Description**
      - If (True), then the transition dipole moment is computed. Used only when westpp_calculation = "C".
+
+.. data:: westpp_wannier_tr_rel
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - float
+   * - **Default**
+     - 1e-6
+   * - **Description**
+     - Relative convergence threshold for Wannier localization. Used only when westpp_calculation = "B".
 
 .. data:: westpp_l_dipole_realspace
 
@@ -854,6 +867,19 @@ wbse_init_control
 
        - "PDEP" : Use the PDEP eigenpotentials to compute screened exchange integrals.
        - "FF_QBOX" : Use the finite field method with Qbox coupling to compute screened exchange integrals.
+
+.. data:: n_pdep_eigen_to_use
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - int
+   * - **Default**
+     - dynamically set to match the number of electrons
+   * - **Description**
+     - Number of PDEP eigenvectors to use in wbse_init. They are read from previous wstat run. This value cannot exceed n_pdep_eigen (defined in wstat_control) and is used to check the convergence of the calculation.
 
 .. data:: localization
 
@@ -996,7 +1022,7 @@ wbse_control
      - Available options are:
 
        - "None" : Quasiparticle corrections are not added.
-       - Specify the name of the Wfreq output file (in JSON format) from which quasiparticle corrections are read.
+       - Specify the name of the wfreq output file (in JSON format) from which quasiparticle corrections are read.
 
 .. data:: scissor_ope
 

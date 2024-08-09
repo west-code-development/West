@@ -23,23 +23,22 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & qlist,wfreq_calculation,n_pdep_eigen_to_use,qp_bandrange,qp_bands,&
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
-                             & l_qdet_verbose,l_enable_off_diagonal,n_pdep_eigen_off_diagonal,&
-                             & o_restart_time,ecut_spectralf,n_spectralf,westpp_calculation,&
-                             & westpp_range,westpp_format,westpp_sign,westpp_n_pdep_eigen_to_use,&
-                             & westpp_r0,westpp_nr,westpp_rmax,westpp_epsinfty,westpp_box,&
-                             & westpp_n_liouville_to_use,westpp_l_spin_flip,westpp_l_compute_tdm,&
-                             & westpp_wannier_tr_rel,westpp_l_dipole_realspace,document,&
-                             & wbse_init_calculation,solver,bse_method,localization,wannier_tr_rel,&
-                             & wfc_from_qbox,bisection_info,chi_kernel,overlap_thr,spin_channel,&
-                             & n_trunc_bands,wbse_calculation,qp_correction,scissor_ope,&
-                             & n_liouville_eigen,n_liouville_times,n_liouville_maxiter,&
-                             & n_liouville_read_from_file,trev_liouville,trev_liouville_rel,&
-                             & wbse_ipol,l_dipole_realspace,wbse_epsinfty,spin_excitation,&
-                             & l_preconditioning,l_pre_shift,l_spin_flip,l_spin_flip_kernel,&
-                             & l_spin_flip_alda0,l_print_spin_flip_kernel,spin_flip_cut,l_forces,&
-                             & forces_state,forces_zeq_cg_tr,forces_zeq_n_cg_maxiter,&
-                             & ddvxc_fd_coeff,forces_inexact_krylov,forces_inexact_krylov_tr,&
-                             & main_input_file,logfile
+                             & l_qdet_verbose,l_enable_off_diagonal,ecut_spectralf,n_spectralf,&
+                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
+                             & westpp_epsinfty,westpp_box,westpp_n_liouville_to_use,&
+                             & westpp_l_spin_flip,westpp_l_compute_tdm,westpp_wannier_tr_rel,&
+                             & westpp_l_dipole_realspace,document,wbse_init_calculation,solver,&
+                             & bse_method,localization,wannier_tr_rel,wfc_from_qbox,bisection_info,&
+                             & chi_kernel,overlap_thr,spin_channel,n_trunc_bands,wbse_calculation,&
+                             & qp_correction,scissor_ope,n_liouville_eigen,n_liouville_times,&
+                             & n_liouville_maxiter,n_liouville_read_from_file,trev_liouville,&
+                             & trev_liouville_rel,wbse_ipol,l_dipole_realspace,wbse_epsinfty,&
+                             & spin_excitation,l_preconditioning,l_pre_shift,l_spin_flip,&
+                             & l_spin_flip_kernel,l_spin_flip_alda0,l_print_spin_flip_kernel,&
+                             & spin_flip_cut,l_forces,forces_state,forces_zeq_cg_tr,&
+                             & forces_zeq_n_cg_maxiter,ddvxc_fd_coeff,forces_inexact_krylov,&
+                             & forces_inexact_krylov_tr,main_input_file,logfile
   USE kinds,            ONLY : DP
   USE io_files,         ONLY : tmp_dir,prefix
   USE mp,               ONLY : mp_bcast
@@ -218,8 +217,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         IERR = return_dict%getitem(l_enable_lanczos, 'l_enable_lanczos')
         IERR = return_dict%getitem(l_qdet_verbose, 'l_qdet_verbose')
         IERR = return_dict%getitem(l_enable_off_diagonal, 'l_enable_off_diagonal')
-        IERR = return_dict%get(n_pdep_eigen_off_diagonal, 'n_pdep_eigen_off_diagonal', DUMMY_DEFAULT)
-        IERR = return_dict%getitem(o_restart_time, 'o_restart_time')
         IERR = return_dict%getitem(tmp_obj, 'ecut_spectralf')
         IERR = cast(tmp_list,tmp_obj)
         IERR = tmp_list%getitem(ecut_spectralf(1), 0) ! Fortran indices start at 1
@@ -490,8 +487,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(l_enable_lanczos,root,world_comm)
      CALL mp_bcast(l_qdet_verbose,root,world_comm)
      CALL mp_bcast(l_enable_off_diagonal,root,world_comm)
-     CALL mp_bcast(n_pdep_eigen_off_diagonal,root,world_comm)
-     CALL mp_bcast(o_restart_time,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
      !
@@ -527,7 +522,6 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      IF(n_imfreq == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_imfreq',1)
      IF(n_refreq == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_refreq',1)
      IF(n_secant_maxiter == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_secant_maxiter',1)
-     IF(n_pdep_eigen_off_diagonal == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_pdep_eigen_off_diagonal',1)
      IF(n_spectralf == DUMMY_DEFAULT) CALL errore('fetch_input','Err: cannot fetch n_spectralf',1)
      !
      SELECT CASE(macropol_calculation)

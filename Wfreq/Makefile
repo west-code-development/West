@@ -32,7 +32,6 @@ solve_qp.o \
 solve_wfreq.o \
 wfreq.o \
 wfreq_memory_report.o \
-wfreq_restart.o \
 wfreq_setup.o
 
 PWOBJS = ../../PW/src/libpw.a

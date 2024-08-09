@@ -291,21 +291,21 @@ def test_totalEnergy(testdir):
     read_and_test_total_energies(testdir+'/test.save/data-file-schema.xml',testdir+'/ref/pw.xml',float(parameters['tolerance']['total_energy']))
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012','test013','test014','test016','test017','test019','test027'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test005','test006','test007','test009','test010','test011','test012','test013','test014','test016','test017','test019'])
 def test_pdepEigen(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wstat_eigenvalues(testdir+'/test.wstat.save/wstat.json',testdir+'/ref/wstat.json',float(parameters['tolerance']['pdep_eigenvalue']))
 
 
-@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test006','test007','test009','test010','test011','test012','test013','test014','test019','test027'])
+@pytest.mark.parametrize('testdir',['test001','test002','test003','test004','test006','test007','test009','test010','test011','test012','test013','test014','test019'])
 def test_singleparticleEnergy(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
     read_and_test_wfreq_energies(testdir+'/test.wfreq.save/wfreq.json',testdir+'/ref/wfreq.json',float(parameters['tolerance']['singleparticle_energy']))
 
 
-@pytest.mark.parametrize('testdir',['test012','test013','test014','test027'])
+@pytest.mark.parametrize('testdir',['test012','test013','test014'])
 def test_qdet(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)
@@ -320,7 +320,7 @@ def test_bseSpectrum(testdir):
     read_and_test_wbse_lanczos(testdir+'/test.wbse.save/wbse.json',testdir+'/ref/wbse.json',float(parameters['tolerance']['bse']))
 
 
-@pytest.mark.parametrize('testdir',['test017','test020','test021','test022','test023','test024','test025','test026'])
+@pytest.mark.parametrize('testdir',['test017','test020','test021','test022','test023','test024','test025','test026','test027'])
 def test_bseEigen(testdir):
     with open('parameters.json','r') as f:
         parameters = json.load(f)

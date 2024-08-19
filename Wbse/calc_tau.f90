@@ -212,7 +212,7 @@ SUBROUTINE calc_tau_single_q(current_spin,nbndval)
         !
         ovl_value = ovl_matrix(ibnd,jbnd)
         !
-        IF(ovl_value >= overlap_thr) THEN
+        IF(.NOT. l_local_repr .OR. ovl_value >= overlap_thr) THEN
            IF(jbnd >= ibnd) THEN
               do_idx = do_idx+1
               !

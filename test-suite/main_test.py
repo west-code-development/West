@@ -143,8 +143,8 @@ def read_wbse_lanczos(fileName):
     with open(fileName,'r') as f:
         data = json.load(f)
 
-    beta = np.array(data['output']['lanczos']['K000001']['XX']['beta'],dtype='f8')
-    zeta = np.array(data['output']['lanczos']['K000001']['XX']['zeta'],dtype='f8')
+    beta = np.array(data['output']['lanczos']['XX']['beta'],dtype='f8')
+    zeta = np.array(data['output']['lanczos']['XX']['zeta'],dtype='f8')
 
     return beta,zeta
 

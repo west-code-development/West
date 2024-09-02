@@ -95,9 +95,9 @@ MODULE lanczos_restart
          offset = 1
          WRITE(iun,POS=offset) header
          offset = offset+SIZEOF(header)
-         WRITE(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input,1:nspin)
+         WRITE(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input)
          offset = offset+SIZEOF(beta_store)
-         WRITE(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input,1:nspin)
+         WRITE(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input)
          CLOSE(iun)
          !
       ENDIF
@@ -251,9 +251,9 @@ MODULE lanczos_restart
          ENDIF
          !
          offset = offset+SIZEOF(header)
-         READ(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input,1:nspin)
+         READ(iun,POS=offset) beta_store(1:n_lanczos,1:nipol_input)
          offset = offset+SIZEOF(beta_store)
-         READ(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input,1:nspin)
+         READ(iun,POS=offset) zeta_store(1:n_lanczos,1:3,1:nipol_input)
          CLOSE(iun)
          !
       ENDIF
@@ -308,7 +308,6 @@ MODULE lanczos_restart
       USE kinds,               ONLY : DP
       USE mp_world,            ONLY : mpime,root
       USE westcom,             ONLY : logfile,n_lanczos,beta_store,zeta_store
-      USE lsda_mod,            ONLY : nspin
       USE json_module,         ONLY : json_file
       !
       IMPLICIT NONE
@@ -320,8 +319,7 @@ MODULE lanczos_restart
       !
       ! Workspace
       !
-      CHARACTER(LEN=6) :: labels
-      INTEGER :: iun,is
+      INTEGER :: iun
       TYPE(json_file) :: json
       !
       IF(mpime == root) THEN
@@ -329,13 +327,9 @@ MODULE lanczos_restart
          CALL json%initialize()
          CALL json%load(filename=TRIM(logfile))
          !
-         DO is = 1,nspin
-            WRITE(labels,'(I6.6)') is
-            CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.beta',&
-            & beta_store(:,ipol_iter,is))
-            CALL json%add('output.lanczos.K'//labels//'.'//TRIM(ipol_label)//'.zeta',&
-            & RESHAPE(zeta_store(:,:,ipol_iter,is),[n_lanczos*3]))
-         ENDDO
+         CALL json%add('output.lanczos.'//TRIM(ipol_label)//'.beta',beta_store(:,ipol_iter))
+         CALL json%add('output.lanczos.'//TRIM(ipol_label)//'.zeta',&
+         & RESHAPE(zeta_store(:,:,ipol_iter),[n_lanczos*3]))
          !
          OPEN(NEWUNIT=iun,FILE=TRIM(logfile))
          CALL json%print(iun)

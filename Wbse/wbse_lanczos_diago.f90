@@ -44,14 +44,14 @@ SUBROUTINE wbse_lanczos_diago()
   LOGICAL :: l_from_scratch
   INTEGER :: lp,ip,iip,pol_index,nipol_input
   INTEGER :: iter
-  INTEGER :: iks,is,nbndval,ig,lbnd,ibnd
+  INTEGER :: iks,nbndval,ig,lbnd,ibnd
   INTEGER :: ilan_restart,ilan_stopped,ipol_restart,ipol_stopped
   INTEGER :: nbnd_do
   INTEGER, PARAMETER :: n_ipol = 3
   INTEGER, ALLOCATABLE :: pol_index_input(:)
   CHARACTER(LEN=3), ALLOCATABLE :: pol_label_input(:)
   REAL(DP) :: factor
-  REAL(DP) :: beta(nspin)
+  REAL(DP) :: beta
   COMPLEX(DP) :: dotp(nspin)
   COMPLEX(DP), ALLOCATABLE :: evc1(:,:,:),evc1_old(:,:,:),evc1_new(:,:,:)
   TYPE(bar_type) :: barra
@@ -118,11 +118,11 @@ SUBROUTINE wbse_lanczos_diago()
   !
   CALL solve_e_psi()
   !
-  ALLOCATE(beta_store(n_lanczos,nipol_input,nspin))
-  ALLOCATE(zeta_store(n_lanczos,n_ipol,nipol_input,nspin))
+  ALLOCATE(beta_store(n_lanczos,nipol_input))
+  ALLOCATE(zeta_store(n_lanczos,n_ipol,nipol_input))
   !
-  beta_store(:,:,:) = 0._DP
-  zeta_store(:,:,:,:) = 0._DP
+  beta_store(:,:) = 0._DP
+  zeta_store(:,:,:) = 0._DP
   !
   ALLOCATE(evc1(npwx,band_group%nlocx,kpt_pool%nloc))
   ALLOCATE(evc1_old(npwx,band_group%nlocx,kpt_pool%nloc))
@@ -204,19 +204,17 @@ SUBROUTINE wbse_lanczos_diago()
         !
         CALL wbse_dot(evc1,evc1_new,band_group%nlocx,dotp)
         !
-        beta(:) = REAL(dotp,KIND=DP)
+        beta = REAL(SUM(dotp),KIND=DP)
         !
         ! beta<0 is a serious error for the pseudo-Hermitian algorithm
         !
-        DO is = 1,nspin
-           IF(beta(is) < 0._DP) THEN
-              CALL errore('wbse_lanczos_diago','negative beta',1)
-           ELSE
-              beta(is) = SQRT(beta(is))
-           ENDIF
-        ENDDO
+        IF(beta < 0._DP) THEN
+           CALL errore('wbse_lanczos_diago','negative beta',1)
+        ELSE
+           beta = SQRT(beta)
+        ENDIF
         !
-        beta_store(iter,ip,:) = beta
+        beta_store(iter,ip) = beta
         !
         ! Renormalize q(i) and Lq(i)
         !
@@ -224,7 +222,7 @@ SUBROUTINE wbse_lanczos_diago()
            !
            npw = ngk(iks)
            current_spin = isk(iks)
-           factor = 1._DP/beta(current_spin)
+           factor = 1._DP/beta
            nbnd_do = band_group%nlocx
            !
            !$acc parallel loop collapse(2) present(evc1)
@@ -252,11 +250,11 @@ SUBROUTINE wbse_lanczos_diago()
            DO iip = 1,n_ipol
               CALL wbse_dot(d0psi(:,:,:,iip),evc1,band_group%nlocx,dotp)
               !
-              zeta_store(iter,iip,ip,:) = dotp
+              zeta_store(iter,iip,ip) = SUM(dotp)
            ENDDO
         ELSE
            DO iip = 1,n_ipol
-              zeta_store(iter,iip,ip,:) = 0._DP
+              zeta_store(iter,iip,ip) = 0._DP
            ENDDO
         ENDIF
         !
@@ -264,7 +262,7 @@ SUBROUTINE wbse_lanczos_diago()
            !
            npw = ngk(iks)
            current_spin = isk(iks)
-           factor = beta(current_spin)
+           factor = beta
            nbnd_do = band_group%nlocx
            !
            !$acc parallel loop collapse(2) present(evc1_new,evc1_old)

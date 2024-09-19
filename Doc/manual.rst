@@ -203,7 +203,7 @@ wstat_control
    * - **Type**
      - float
    * - **Default**
-     - 1.e-12
+     - 1.e-16
    * - **Description**
      - Convergence threshold in DFPT. Note that in the first PDEP iterations a reduced threshold for DFPT could be used by the code in order to speed up the computation.
 

@@ -373,7 +373,7 @@ SUBROUTINE compute_d0psi_dfpt()
      !
      ALLOCATE(phi_tmp(npwx*npol,n_ipol))
      !
-     tr2_dfpt = 1.E-12_DP
+     tr2_dfpt = 1.E-16_DP
      n_dfpt_maxiter = 250
      l_kinetic_only = .FALSE.
      !

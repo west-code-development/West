@@ -85,7 +85,7 @@ def read_wfreq_energies(fileName):
                 en[ik][key] = np.array(data['output']['Q'][kindex][key]['re'],dtype='c16')
                 en[ik][key] += 1j*np.array(data['output']['Q'][kindex][key]['im'],dtype='c16')
             else:
-                if key != 'occupation':
+                if key != 'occupation' and key != 'sigma_diff':
                     en[ik][key] = np.array(data['output']['Q'][kindex][key],dtype='f8')
 
     return en

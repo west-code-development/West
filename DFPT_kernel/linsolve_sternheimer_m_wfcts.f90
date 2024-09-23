@@ -131,10 +131,10 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
      CALL mp_sum( rho(1:lbnd) , intra_bgrp_comm )
      !
      DO ibnd = m, 1, -1
-        IF (is_conv(ibnd) ) CYCLE
-        rho(ibnd)=rho(lbnd)
+        IF (is_conv(ibnd)) CYCLE
+        rho(ibnd) = rho(lbnd)
         lbnd = lbnd -1
-        anorm = SQRT (rho (ibnd) )
+        anorm = rho(ibnd)
         IF (anorm < tr2) is_conv (ibnd) = .TRUE.
      ENDDO
      !
@@ -390,7 +390,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         IF(is_conv(ibnd)) CYCLE
         rho(ibnd) = rho(lbnd)
         lbnd = lbnd-1
-        anorm = SQRT(rho(ibnd))
+        anorm = rho(ibnd)
         IF(anorm < tr2) THEN
            is_conv(ibnd) = .TRUE.
         ELSE

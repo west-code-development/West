@@ -29,7 +29,7 @@ SUBROUTINE do_dip()
   USE cell_base,            ONLY : bg
   USE buffers,              ONLY : get_buffer
   USE types_bz_grid,        ONLY : k_grid
-  USE json_module,          ONLY : json_file,json_core,json_value
+  USE json_module,          ONLY : json_file
   USE uspp,                 ONLY : vkb,nkb
   USE wavefunctions,        ONLY : evc
 #if defined(__CUDA)
@@ -44,24 +44,16 @@ SUBROUTINE do_dip()
   INTEGER :: iks
   INTEGER :: ipol
   INTEGER :: icart
-  INTEGER :: istate
-  INTEGER :: jstate
   INTEGER :: nstate
-  INTEGER :: iaux
   INTEGER :: iunit
-  INTEGER :: trans(2)
-  REAL(DP) :: aux_r(3)
   REAL(DP), ALLOCATABLE :: dip_cryst_r(:,:,:)
   REAL(DP), ALLOCATABLE :: dip_cart_r(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: dip_cryst_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: dip_cart_c(:,:,:)
   COMPLEX(DP), ALLOCATABLE :: Hx_psi(:,:)
   CHARACTER(LEN=6) :: label_k
-  CHARACTER(LEN=9) :: label_d
   TYPE(bar_type) :: barra
   TYPE(json_file) :: json
-  TYPE(json_core) :: jcor
-  TYPE(json_value), POINTER :: jval
   !
   IF(nspin == 4) CALL errore('do_dip','nspin 4 not yet implemented',1)
   IF(westpp_range(2) > nbnd) CALL errore('do_dip','westpp_range(2) > nbnd',1)
@@ -168,32 +160,27 @@ SUBROUTINE do_dip()
         CALL json%add('output.D.K'//label_k//'.weight',k_grid%weight(iks))
         CALL json%add('output.D.K'//label_k//'.energies',et(:,iks))
         !
-        CALL jcor%create_array(jval,'dipole')
-        CALL json%add('output.D.K'//label_k//'.dipole',jval)
-        !
-        iaux = 0
-        trans = 0
-        DO jstate = 1,nstate
-           trans(2) = jstate+westpp_range(1)-1
-           DO istate = 1,nstate
-              trans(1) = istate+westpp_range(1)-1
-              iaux = iaux+1
-              WRITE(label_d,'(I9)') iaux
-              !
-              CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').trans',trans)
-              IF(gamma_only) THEN
-                 aux_r = dip_cart_r(istate,jstate,:)
-                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').re',aux_r)
-                 aux_r = 0._DP
-                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').im',aux_r)
-              ELSE
-                 aux_r = REAL(dip_cart_c(istate,jstate,:),KIND=DP)
-                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').re',aux_r)
-                 aux_r = AIMAG(dip_cart_c(istate,jstate,:))
-                 CALL json%add('output.D.K'//label_k//'.dipole('//label_d//').im',aux_r)
-              ENDIF
-           ENDDO
-        ENDDO
+        IF(gamma_only) THEN
+           CALL json%add('output.D.K'//label_k//'.dipole.x',&
+           & RESHAPE(dip_cart_r(:,:,1),[nstate*nstate]))
+           CALL json%add('output.D.K'//label_k//'.dipole.y',&
+           & RESHAPE(dip_cart_r(:,:,2),[nstate*nstate]))
+           CALL json%add('output.D.K'//label_k//'.dipole.z',&
+           & RESHAPE(dip_cart_r(:,:,3),[nstate*nstate]))
+        ELSE
+           CALL json%add('output.D.K'//label_k//'.dipole.x.re',&
+           & REAL(RESHAPE(dip_cart_c(:,:,1),[nstate*nstate]),KIND=DP))
+           CALL json%add('output.D.K'//label_k//'.dipole.x.im',&
+           & AIMAG(RESHAPE(dip_cart_c(:,:,1),[nstate*nstate])))
+           CALL json%add('output.D.K'//label_k//'.dipole.y.re',&
+           & REAL(RESHAPE(dip_cart_c(:,:,2),[nstate*nstate]),KIND=DP))
+           CALL json%add('output.D.K'//label_k//'.dipole.y.im',&
+           & AIMAG(RESHAPE(dip_cart_c(:,:,2),[nstate*nstate])))
+           CALL json%add('output.D.K'//label_k//'.dipole.z.re',&
+           & REAL(RESHAPE(dip_cart_c(:,:,3),[nstate*nstate]),KIND=DP))
+           CALL json%add('output.D.K'//label_k//'.dipole.z.im',&
+           & AIMAG(RESHAPE(dip_cart_c(:,:,3),[nstate*nstate])))
+        ENDIF
         !
      ENDIF
      !

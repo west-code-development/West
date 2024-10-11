@@ -65,7 +65,7 @@ input_west:
 
 westpp_control:
   westpp_calculation: C
-  westpp_range: [1,16]
+  westpp_range: [1,4]
   westpp_n_liouville_to_use: 4
   westpp_l_compute_tdm: True
 EOF

@@ -15,7 +15,7 @@ SUBROUTINE dump_r ( auxr, fname )
   !----------------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE westcom,               ONLY : westpp_format,westpp_r0, westpp_nr, westpp_rmax
+  USE westcom,               ONLY : westpp_format,westpp_r0,westpp_nr,westpp_rmax
   USE fft_base,              ONLY : dffts
   USE cubefile,              ONLY : write_wfc_cube_r
   USE fft_at_gamma,          ONLY : single_fwfft_gamma

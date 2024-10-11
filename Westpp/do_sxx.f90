@@ -68,6 +68,9 @@ SUBROUTINE do_sxx ( )
   INTEGER :: iunit
   LOGICAL :: l_print_pdep_read
   !
+  IF(westpp_n_pdep_eigen_to_use < 1) CALL errore('do_sxx','westpp_n_pdep_eigen_to_use < 1',1)
+  IF(westpp_range(2) > nbnd) CALL errore('do_sxx','westpp_range(2) > nbnd',1)
+  !
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !

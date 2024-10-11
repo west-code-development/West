@@ -44,6 +44,10 @@ SUBROUTINE do_eigenpot2 ( )
   CHARACTER(LEN=6) :: labelq
   LOGICAL :: l_print_pdep_read
   !
+  IF(westpp_n_pdep_eigen_to_use < 1) CALL errore('do_eigenpot2','westpp_n_pdep_eigen_to_use < 1',1)
+  IF(westpp_range(2) > westpp_n_pdep_eigen_to_use) &
+     CALL errore('do_eigenpot2','westpp_range(2) > westpp_n_pdep_eigen_to_use',1)
+  !
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !

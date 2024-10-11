@@ -50,6 +50,10 @@ SUBROUTINE do_exc()
   TYPE(bar_type) :: barra
   INTEGER, PARAMETER :: n_ipol = 3
   !
+  IF(westpp_n_liouville_to_use < 1) CALL errore('do_exc','westpp_n_liouville_to_use < 1',1)
+  IF(westpp_range(2) > westpp_n_liouville_to_use) &
+     CALL errore('do_exc','westpp_range(2) > westpp_n_liouville_to_use',1)
+  !
 #if defined(__CUDA)
   CALL allocate_gpu()
 #endif

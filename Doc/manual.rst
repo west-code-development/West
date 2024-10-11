@@ -613,7 +613,7 @@ westpp_control
    * - **Default**
      - [1,2]
    * - **Description**
-     - Range for W, E, S, D, L, X, P, B, C, or M run.
+     - Range of bands in W, S, D, L, or B run. Range of PDEP eigenpotentials in E run. Range of excited states in X, P, C, or M run.
 
 .. data:: westpp_format
 

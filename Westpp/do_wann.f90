@@ -24,7 +24,7 @@ SUBROUTINE do_wann()
   USE mp_global,            ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : double_invfft_gamma,single_invfft_gamma
-  USE pwcom,                ONLY : npw,npwx,current_k,ngk
+  USE pwcom,                ONLY : npw,npwx,current_k,ngk,nbnd
   USE buffers,              ONLY : get_buffer
   USE types_bz_grid,        ONLY : k_grid
   USE wann_loc_wfc,         ONLY : wann_calc_proj,wann_jade
@@ -61,6 +61,8 @@ SUBROUTINE do_wann()
   TYPE(json_file) :: json
   TYPE(json_core) :: jcor
   TYPE(json_value), POINTER :: jval
+  !
+  IF(westpp_range(2) > nbnd) CALL errore('do_wann','westpp_range(2) > nbnd',1)
   !
   IF(mpime == root) THEN
      CALL json%initialize()

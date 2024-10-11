@@ -20,7 +20,8 @@ SUBROUTINE do_dip()
   USE mp_world,             ONLY : mpime,root
   USE mp_global,            ONLY : my_image_id,inter_image_comm,intra_bgrp_comm
   USE mp,                   ONLY : mp_bcast,mp_sum
-  USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,lsda,igk_k,current_k,ngk,nspin,et
+  USE pwcom,                ONLY : npw,npwx,nbnd,current_spin,isk,xk,lsda,igk_k,current_k,ngk,&
+                                 & nspin,et
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE uspp_init,            ONLY : init_us_2
   USE io_push,              ONLY : io_push_title
@@ -63,6 +64,7 @@ SUBROUTINE do_dip()
   TYPE(json_value), POINTER :: jval
   !
   IF(nspin == 4) CALL errore('do_dip','nspin 4 not yet implemented',1)
+  IF(westpp_range(2) > nbnd) CALL errore('do_dip','westpp_range(2) > nbnd',1)
   !
   nstate = westpp_range(2)-westpp_range(1)+1
   IF(gamma_only) THEN

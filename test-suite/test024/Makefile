@@ -29,5 +29,5 @@ title:
 
 description:
 	@echo
-	@echo "O2 molecule gamma_only spin-flip TDDFT (LDA) forces"
+	@echo "O2 molecule gamma_only spin-flip TDDFT (PBE) forces"
 	@echo

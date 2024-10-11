@@ -20,7 +20,6 @@ nspin             = 2
 ecutwfc           = 25
 nbnd              = 16
 tot_magnetization = 2.
-input_dft         = 'LDA'
 /
 &electrons
 diago_full_acc = .true.

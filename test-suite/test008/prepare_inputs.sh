@@ -55,7 +55,7 @@ input_west:
   outdir: ./
 
 westpp_control:
-  westpp_calculation: L
-  westpp_range: [50,80]
+  westpp_calculation: LBD
+  westpp_range: [61,80]
   westpp_box: [4.015, 12.045, 4.015, 12.045, 0.00, 8.03]
 EOF

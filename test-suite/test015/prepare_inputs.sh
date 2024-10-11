@@ -18,8 +18,9 @@ celldm(1)       = 20
 nat             = 5
 ntyp            = 2
 ecutwfc         = 25.0
-nbnd            = 10
+nbnd            = 30
 assume_isolated = 'mp'
+input_dft       = 'pbe0'
 /
 &electrons
 diago_full_acc = .true.
@@ -37,13 +38,37 @@ K_POINTS {gamma}
 EOF
 
 
-cat > westpp.in << EOF
+cat > wstat.in << EOF
 input_west:
   qe_prefix: test
   west_prefix: test
   outdir: ./
 
-westpp_control:
-  westpp_calculation: B
-  westpp_range: [3,10]
+wstat_control:
+  wstat_calculation: S
+  n_pdep_eigen: 30
+  l_minimize_exx_if_active: True
+  n_exx_lowrank: 0
+EOF
+
+
+cat > wfreq.in << EOF
+input_west:
+  qe_prefix: test
+  west_prefix: test
+  outdir: ./
+
+wstat_control:
+  wstat_calculation: S
+  n_pdep_eigen: 30
+  l_minimize_exx_if_active: True
+  n_exx_lowrank: 0
+
+wfreq_control:
+  wfreq_calculation: XWGQ
+  macropol_calculation: N
+  n_pdep_eigen_to_use: 30
+  qp_bandrange: [1,5]
+  n_refreq: 300
+  ecut_refreq: 2.0
 EOF

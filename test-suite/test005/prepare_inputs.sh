@@ -61,6 +61,7 @@ wstat_control:
 
 westpp_control:
   westpp_calculation: E
+  westpp_n_pdep_eigen_to_use: 10
   westpp_range: [1,2]
   westpp_format: C
   westpp_sign: True

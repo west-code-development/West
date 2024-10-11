@@ -9,26 +9,25 @@
 5. SiH4 molecule, westpp output PDEP, Gamma only
 6. SiH4 molecule, GW hybrid ACE, Gamma only
 7. Si bulk, GW hybrid ACE, k-mesh 1x1x2
-8. MgO, westpp localization factor, Gamma only
+8. MgO, westpp localization factor, Wannier localization, dipole moment, Gamma only
 9. O2 molecule, GW fractional occupation, Gamma only
 10. SiH4 molecule, GW `l_off_diagonal`, Gamma only
 11. SiH4 molecule, GW `qp_bands`, Gamma only
 12. SiH4 molecule, QDET, Gamma only
 13. SiH4 molecule, QDET verbosity, Gamma only
 14. NV- diamond, spin-polarized QDET, Gamma only
-15. SiH4 molecule, westpp Wannier localization, Gamma only
+15. SiH4 molecule, GW hybrid no ACE, Gamma only
 16. SiH4 molecule, BSE Lanczos, Gamma only
 17. SiH4 molecule, BSE Davidson, Gamma only
 18. SiH4 molecule, TDDFT (PBE0) Lanczos, Gamma only
-19. SiH4 molecule, GW hybrid no ACE, Gamma only
-20. Formaldehyde molecule, TDDFT (PBE) forces, Gamma only
-21. NV- diamond spin-polarized TDDFT (PBE) forces, Gamma only
-22. Formaldehyde molecule, TDDFT (PBE0) forces, Gamma only
-23. NV- diamond spin-polarized TDDFT (DDH) forces, Gamma only
-24. O2 molecule, spin-flip TDDFT (LDA) forces, Gamma only
-25. O2 molecule, spin-flip TDDFT (PBE) forces, Gamma only
-26. O2 molecule, spin-flip TDDFT (PBE0) forces, Gamma only
-27. Formaldehyde molecule, westpp excited state decomposition, Gamma only
+19. Formaldehyde molecule, TDDFT (PBE) forces, Gamma only
+20. NV- diamond spin-polarized TDDFT (PBE) forces, Gamma only
+21. Formaldehyde molecule, TDDFT (PBE0) forces, Gamma only
+22. NV- diamond spin-polarized TDDFT (DDH) forces, Gamma only
+23. O2 molecule, spin-flip TDDFT (LDA) forces, Gamma only
+24. O2 molecule, spin-flip TDDFT (PBE) forces, Gamma only
+25. O2 molecule, spin-flip TDDFT (PBE0) forces, Gamma only
+26. Formaldehyde molecule, westpp excited state decomposition, Gamma only
 
 ## Executing tests
 

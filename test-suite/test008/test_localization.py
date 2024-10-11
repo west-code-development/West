@@ -38,7 +38,7 @@ def test_localization():
     np.testing.assert_almost_equal(
         ref_loc,
         test_loc,
-        decimal=-np.log10(float(parameters["tolerance"]["localization"])),
+        decimal=-np.log10(float(parameters["tolerance"]["westpp"])),
     )
 
 
@@ -56,5 +56,5 @@ def test_ipr():
     np.testing.assert_almost_equal(
         ref_ipr,
         test_ipr,
-        decimal=-np.log10(float(parameters["tolerance"]["localization"])),
+        decimal=-np.log10(float(parameters["tolerance"]["westpp"])),
     )

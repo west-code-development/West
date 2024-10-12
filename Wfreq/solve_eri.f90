@@ -275,9 +275,8 @@ SUBROUTINE compute_braket(braket)
            !$acc end parallel
            !
            IF(gstart == 2) THEN
-              !$acc serial present(rho_g,phi) copy(reduce)
+              !$acc update host(rho_g(1),phi(1))
               reduce = reduce - 0.5_DP*REAL(rho_g(1),KIND=DP)*REAL(phi(1),KIND=DP)
-              !$acc end serial
            ENDIF
            !
            braket(p1,s_g,m) = 2._DP*reduce

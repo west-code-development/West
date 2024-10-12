@@ -522,10 +522,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !$acc end parallel
               !
               IF(gstart == 2) THEN
-                 !$acc serial present(evc,aux_g) copy(reduce,reduce2)
+                 !$acc update host(aux_g(1,1:2))
                  reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
                  reduce2 = reduce2 - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
-                 !$acc end serial
               ENDIF
               !
               dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
@@ -559,9 +558,8 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
               !$acc end parallel
               !
               IF(gstart == 2) THEN
-                 !$acc serial present(evc,aux_g) copy(reduce)
+                 !$acc update host(aux_g(1,1))
                  reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
-                 !$acc end serial
               ENDIF
               !
               dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
@@ -762,10 +760,9 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  !$acc end parallel
                  !
                  IF(gstart == 2) THEN
-                    !$acc serial present(evc,aux_g) copy(reduce,reduce2)
+                    !$acc update host(aux_g(1,1:2))
                     reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
                     reduce2 = reduce2 - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,2),KIND=DP)
-                    !$acc end serial
                  ENDIF
                  !
                  dv_vv_mat(jbnd,lbnd) = 2._DP * reduce
@@ -799,9 +796,8 @@ SUBROUTINE rhs_zvector_part2( dvg_exc_tmp, z_rhs_vec )
                  !$acc end parallel
                  !
                  IF(gstart == 2) THEN
-                    !$acc serial present(evc,aux_g) copy(reduce)
+                    !$acc update host(aux_g(1,1))
                     reduce = reduce - 0.5_DP * REAL(evc(1,ibndp),KIND=DP) * REAL(aux_g(1,1),KIND=DP)
-                    !$acc end serial
                  ENDIF
                  !
                  dv_vv_mat(jbnd,lbnd) = 2._DP * reduce

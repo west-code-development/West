@@ -43,8 +43,6 @@ MODULE west_gpu
    REAL(DP), ALLOCATABLE :: e_pol(:)
    COMPLEX(DP), ALLOCATABLE :: phi(:,:)
    REAL(DP), ALLOCATABLE :: gk(:,:)
-   REAL(DP), ALLOCATABLE :: deff(:,:,:)
-   COMPLEX(DP), ALLOCATABLE :: deff_nc(:,:,:,:)
    COMPLEX(DP), ALLOCATABLE :: ps2(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: psc(:,:,:,:)
    COMPLEX(DP), ALLOCATABLE :: dvkb(:,:)
@@ -506,13 +504,9 @@ MODULE west_gpu
       ALLOCATE(work(npwx,nkb))
       !$acc enter data create(work)
       IF(noncolin) THEN
-         ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
-         !$acc enter data create(deff_nc)
          ALLOCATE(psc(nkb,npol,m,2))
          !$acc enter data create(psc)
       ELSE
-         ALLOCATE(deff(nhm,nhm,nat))
-         !$acc enter data create(deff)
          ALLOCATE(ps2(nkb,m,2))
          !$acc enter data create(ps2)
       ENDIF
@@ -560,17 +554,9 @@ MODULE west_gpu
       !$acc exit data delete(work)
       DEALLOCATE(work)
    ENDIF
-   IF(ALLOCATED(deff_nc)) THEN
-      !$acc exit data delete(deff_nc)
-      DEALLOCATE(deff_nc)
-   ENDIF
    IF(ALLOCATED(psc)) THEN
       !$acc exit data delete(psc)
       DEALLOCATE(psc)
-   ENDIF
-   IF(ALLOCATED(deff)) THEN
-      !$acc exit data delete(deff)
-      DEALLOCATE(deff)
    ENDIF
    IF(ALLOCATED(ps2)) THEN
       !$acc exit data delete(ps2)

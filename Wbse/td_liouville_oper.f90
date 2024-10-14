@@ -215,7 +215,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ENDIF
      !
      ! use h_psi_, i.e. h_psi without band parallelization, as west
-     ! handles band parallelization separately
+     ! handles band parallelization by itself
      !
 #if defined(__CUDA)
      !$acc host_data use_device(evc1,hevc1)

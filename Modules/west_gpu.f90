@@ -74,6 +74,10 @@ MODULE west_gpu
    !
    ! Lanczos
    !
+   REAL(DP), ALLOCATABLE :: alpha(:)
+   ATTRIBUTES(PINNED) :: alpha
+   REAL(DP), ALLOCATABLE :: beta(:)
+   ATTRIBUTES(PINNED) :: beta
    COMPLEX(DP), ALLOCATABLE :: r(:,:)
    !
    ! BSE
@@ -398,6 +402,10 @@ MODULE west_gpu
    !
    INTEGER, INTENT(IN) :: nloc
    !
+   ALLOCATE(alpha(nloc))
+   !$acc enter data create(alpha)
+   ALLOCATE(beta(nloc))
+   !$acc enter data create(beta)
    ALLOCATE(r(npwx*npol,nloc))
    !$acc enter data create(r)
    ALLOCATE(tmp_r(nloc))
@@ -415,6 +423,14 @@ MODULE west_gpu
    !
    IMPLICIT NONE
    !
+   IF(ALLOCATED(alpha)) THEN
+      !$acc exit data delete(alpha)
+      DEALLOCATE(alpha)
+   ENDIF
+   IF(ALLOCATED(beta)) THEN
+      !$acc exit data delete(beta)
+      DEALLOCATE(beta)
+   ENDIF
    IF(ALLOCATED(r)) THEN
       !$acc exit data delete(r)
       DEALLOCATE(r)

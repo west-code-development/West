@@ -39,7 +39,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
                                  & l_enable_off_diagonal,iuwfc,lrwfc,wstat_save_dir,fftdriver,ijpmap,&
                                  & d_body2_ifr,d_diago,d_body2_ifr_full,d_diago_full,d_epsm1_ifr
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,npool,&
-                                 & intra_bgrp_comm,nproc_bgrp
+                                 & intra_bgrp_comm
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
@@ -317,11 +317,9 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         CALL glbrak_gamma(evc,dvpsi,ps_r,npw,npwx,nbnd,pert%nloc,nbnd,npol)
         !
-        IF(nproc_bgrp > 1) THEN
-           !$acc host_data use_device(ps_r)
-           CALL mp_sum(ps_r,intra_bgrp_comm)
-           !$acc end host_data
-        ENDIF
+        !$acc host_data use_device(ps_r)
+        CALL mp_sum(ps_r,intra_bgrp_comm)
+        !$acc end host_data
         !
         !$acc kernels present(overlap)
         overlap(:,:) = 0._DP
@@ -348,11 +346,7 @@ SUBROUTINE solve_gfreq_gamma(l_read_restart)
         !
         IF(l_enable_lanczos) THEN
            !
-#if defined(__CUDA)
-           CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
-#else
            CALL solve_deflated_lanczos_w_full_ortho(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
-#endif
            !
            DO jb_index = 1,n_bands
               !
@@ -547,7 +541,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
   USE westcom,              ONLY : n_lanczos,npwq,npwqx,qp_bands,n_bands,nbnd_occ,l_enable_lanczos,&
                                  & iuwfc,lrwfc,wstat_save_dir,ngq,igq_q,z_body2_ifr_q,d_diago_q,&
                                  & z_epsm1_ifr_q
-  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm,nproc_bgrp
+  USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,intra_bgrp_comm
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE fft_base,             ONLY : dffts
   USE pwcom,                ONLY : npw,npwx,current_spin,isk,xk,nbnd,lsda,igk_k,current_k,ngk
@@ -846,11 +840,9 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            CALL glbrak_k(evc,dvpsi,ps_c,npw,npwx,nbnd,pert%nloc,nbnd,npol)
            !
-           IF(nproc_bgrp > 1) THEN
-              !$acc host_data use_device(ps_c)
-              CALL mp_sum(ps_c,intra_bgrp_comm)
-              !$acc end host_data
-           ENDIF
+           !$acc host_data use_device(ps_c)
+           CALL mp_sum(ps_c,intra_bgrp_comm)
+           !$acc end host_data
            !
            !$acc kernels present(overlap)
            overlap(:,:) = 0._DP
@@ -877,11 +869,7 @@ SUBROUTINE solve_gfreq_k(l_read_restart)
            !
            IF(l_enable_lanczos) THEN
               !
-#if defined(__CUDA)
-              CALL solve_deflated_lanczos_w_full_ortho_gpu(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
-#else
               CALL solve_deflated_lanczos_w_full_ortho(nbnd,pert%nloc,n_lanczos,dvpsi,diago,subdiago,q_s,bnorm)
-#endif
               CALL get_brak_hyper_parallel_complex(dvpsi,pert%nloc,n_lanczos,q_s,braket,pert)
               !
               DO ip = 1,pert%nloc

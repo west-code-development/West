@@ -100,11 +100,7 @@ SUBROUTINE linsolve_commut_Hx(iks,m,e,fin,fout)
   !$acc end kernels
   !
   CALL precondition_m_wfcts(3,phi,fout,ep_pol)
-#if defined(__CUDA)
-  CALL linsolve_sternheimer_m_wfcts_gpu(m,3,phi,fout,e_pol,ep_pol,tr2_dfpt,ierr)
-#else
   CALL linsolve_sternheimer_m_wfcts(m,3,phi,fout,e_pol,ep_pol,tr2_dfpt,ierr)
-#endif
   !
   IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
   !

@@ -22,7 +22,7 @@ MODULE west_gpu
    ! Linsolve
    !
    LOGICAL, ALLOCATABLE :: is_conv(:)
-   INTEGER, ALLOCATABLE :: ibnd_todo(:)
+   INTEGER, ALLOCATABLE :: l2i_map(:)
    REAL(DP), ALLOCATABLE :: eu(:)
    REAL(DP), ALLOCATABLE :: a(:)
    REAL(DP), ALLOCATABLE :: c(:)
@@ -253,8 +253,8 @@ MODULE west_gpu
    !
    ALLOCATE(is_conv(nbndloc))
    !$acc enter data create(is_conv)
-   ALLOCATE(ibnd_todo(nbndloc))
-   !$acc enter data create(ibnd_todo)
+   ALLOCATE(l2i_map(nbndloc))
+   !$acc enter data create(l2i_map)
    ALLOCATE(eu(nbndloc))
    !$acc enter data create(eu)
    ALLOCATE(a(nbndloc))
@@ -284,9 +284,9 @@ MODULE west_gpu
       !$acc exit data delete(is_conv)
       DEALLOCATE(is_conv)
    ENDIF
-   IF(ALLOCATED(ibnd_todo)) THEN
-      !$acc exit data delete(ibnd_todo)
-      DEALLOCATE(ibnd_todo)
+   IF(ALLOCATED(l2i_map)) THEN
+      !$acc exit data delete(l2i_map)
+      DEALLOCATE(l2i_map)
    ENDIF
    IF(ALLOCATED(eu)) THEN
       !$acc exit data delete(eu)

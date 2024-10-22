@@ -13,13 +13,14 @@ Perlmutter is an HPE Cray EX supercomputer located at National Energy Research S
 Building WEST (GPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on January 20, 2024):
+WEST executables can be compiled using the following script (tested on October 22, 2024):
 
 .. code-block:: bash
 
    $ cat build_west.sh
    #!/bin/bash
 
+   module unload darshan
    module load PrgEnv-nvidia
    module load nvidia/23.9
    module load cudatoolkit/12.2
@@ -78,6 +79,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --gpus-per-node=4
    #SBATCH --cpus-per-task=32
 
+   module unload darshan
    module load PrgEnv-nvidia
    module load nvidia/23.9
    module load cudatoolkit/12.2
@@ -101,13 +103,14 @@ Job submission is done with the following:
 Building WEST (CPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on January 20, 2024):
+WEST executables can be compiled using the following script (tested on October 22, 2024):
 
 .. code-block:: bash
 
    $ cat build_west.sh
    #!/bin/bash
 
+   module unload darshan
    module load cpu
    module load cray-fftw/3.3.10.6
    module load cray-python/3.11.5
@@ -166,6 +169,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --ntasks-per-node=128
    #SBATCH --cpus-per-task=2
 
+   module unload darshan
    module load cpu
    module load cray-fftw/3.3.10.6
    module load cray-python/3.11.5

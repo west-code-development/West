@@ -22,6 +22,7 @@ Intro tutorials:
    tutorials/basic/basic_010.ipynb
    tutorials/basic/basic_011.ipynb
    tutorials/basic/basic_012.ipynb
+   tutorials/basic/basic_013.ipynb
 
 Advanced tutorials:
 

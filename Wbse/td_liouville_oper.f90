@@ -218,9 +218,7 @@ SUBROUTINE west_apply_liouvillian(evc1,evc1_new,sf)
      ! handles band parallelization by itself
      !
 #if defined(__CUDA)
-     !$acc host_data use_device(evc1,hevc1)
      CALL h_psi__gpu(npwx,npw,nbnd_do,evc1(:,:,iks),hevc1)
-     !$acc end host_data
 #else
      CALL h_psi_(npwx,npw,nbnd_do,evc1(:,:,iks),hevc1)
 #endif

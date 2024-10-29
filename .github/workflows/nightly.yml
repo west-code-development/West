@@ -5,7 +5,7 @@ on:
   - cron: "0 4 * * *"
 
 env:
-  QE_VERSION: qe-7.3
+  QE_VERSION: qe-7.4
 
 jobs:
   test:

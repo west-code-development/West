@@ -138,12 +138,11 @@ SUBROUTINE solve_deflated_lanczos_w_full_ortho(nbnd_to_deflate, NRHS, NLSTEPS, b
      ! handles band parallelization by itself
      !
 #if defined(__CUDA)
-     !$acc host_data use_device(q_s,r)
      CALL h_psi__gpu(npwx,npw,NRHS,q_s(:,:,il),r)
-     !$acc end host_data
 #else
      CALL h_psi_(npwx,npw,NRHS,q_s(:,:,il),r)
 #endif
+     !
      CALL apply_alpha_pc_to_m_wfcs(nbnd_to_deflate,NRHS,r,(1.0_DP,0.0_DP))
      !
      ! use beta

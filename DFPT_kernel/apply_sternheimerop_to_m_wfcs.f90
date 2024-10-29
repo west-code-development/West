@@ -55,9 +55,7 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
      ! handles band parallelization by itself
      !
 #if defined(__CUDA)
-     !$acc host_data use_device(psi,hpsi)
      CALL h_psi__gpu( npwx, npw, m, psi, hpsi )
-     !$acc end host_data
 #else
      CALL h_psi_( npwx, npw, m, psi, hpsi )
 #endif

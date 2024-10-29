@@ -353,11 +353,7 @@ MODULE dfpt_module
                ! The Hamiltonian is evaluated at the k-point current_k in h_psi
                ! (see also PHonon/PH/cch_psi_all.f90, where H_(k+q) is evaluated)
                !
-#if defined(__CUDA)
-               CALL linsolve_sternheimer_m_wfcts_gpu( nbndval, band_group%nloc, dvpsi, dpsi, et_loc, eprec_loc, tr2, ierr )
-#else
                CALL linsolve_sternheimer_m_wfcts( nbndval, band_group%nloc, dvpsi, dpsi, et_loc, eprec_loc, tr2, ierr )
-#endif
                !
                IF(ierr /= 0) &
                   WRITE(stdout, '(7X,"** WARNING : PERT ",I8," iks ",I8," not converged, ierr = ",I8)') ipert,iks,ierr

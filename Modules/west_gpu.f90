@@ -22,7 +22,7 @@ MODULE west_gpu
    ! Linsolve
    !
    LOGICAL, ALLOCATABLE :: is_conv(:)
-   INTEGER, ALLOCATABLE :: ibnd_todo(:)
+   INTEGER, ALLOCATABLE :: l2i_map(:)
    REAL(DP), ALLOCATABLE :: eu(:)
    REAL(DP), ALLOCATABLE :: a(:)
    REAL(DP), ALLOCATABLE :: c(:)
@@ -43,8 +43,6 @@ MODULE west_gpu
    REAL(DP), ALLOCATABLE :: e_pol(:)
    COMPLEX(DP), ALLOCATABLE :: phi(:,:)
    REAL(DP), ALLOCATABLE :: gk(:,:)
-   REAL(DP), ALLOCATABLE :: deff(:,:,:)
-   COMPLEX(DP), ALLOCATABLE :: deff_nc(:,:,:,:)
    COMPLEX(DP), ALLOCATABLE :: ps2(:,:,:)
    COMPLEX(DP), ALLOCATABLE :: psc(:,:,:,:)
    COMPLEX(DP), ALLOCATABLE :: dvkb(:,:)
@@ -76,6 +74,10 @@ MODULE west_gpu
    !
    ! Lanczos
    !
+   REAL(DP), ALLOCATABLE :: alpha(:)
+   ATTRIBUTES(PINNED) :: alpha
+   REAL(DP), ALLOCATABLE :: beta(:)
+   ATTRIBUTES(PINNED) :: beta
    COMPLEX(DP), ALLOCATABLE :: r(:,:)
    !
    ! BSE
@@ -251,8 +253,8 @@ MODULE west_gpu
    !
    ALLOCATE(is_conv(nbndloc))
    !$acc enter data create(is_conv)
-   ALLOCATE(ibnd_todo(nbndloc))
-   !$acc enter data create(ibnd_todo)
+   ALLOCATE(l2i_map(nbndloc))
+   !$acc enter data create(l2i_map)
    ALLOCATE(eu(nbndloc))
    !$acc enter data create(eu)
    ALLOCATE(a(nbndloc))
@@ -282,9 +284,9 @@ MODULE west_gpu
       !$acc exit data delete(is_conv)
       DEALLOCATE(is_conv)
    ENDIF
-   IF(ALLOCATED(ibnd_todo)) THEN
-      !$acc exit data delete(ibnd_todo)
-      DEALLOCATE(ibnd_todo)
+   IF(ALLOCATED(l2i_map)) THEN
+      !$acc exit data delete(l2i_map)
+      DEALLOCATE(l2i_map)
    ENDIF
    IF(ALLOCATED(eu)) THEN
       !$acc exit data delete(eu)
@@ -400,6 +402,10 @@ MODULE west_gpu
    !
    INTEGER, INTENT(IN) :: nloc
    !
+   ALLOCATE(alpha(nloc))
+   !$acc enter data create(alpha)
+   ALLOCATE(beta(nloc))
+   !$acc enter data create(beta)
    ALLOCATE(r(npwx*npol,nloc))
    !$acc enter data create(r)
    ALLOCATE(tmp_r(nloc))
@@ -417,6 +423,14 @@ MODULE west_gpu
    !
    IMPLICIT NONE
    !
+   IF(ALLOCATED(alpha)) THEN
+      !$acc exit data delete(alpha)
+      DEALLOCATE(alpha)
+   ENDIF
+   IF(ALLOCATED(beta)) THEN
+      !$acc exit data delete(beta)
+      DEALLOCATE(beta)
+   ENDIF
    IF(ALLOCATED(r)) THEN
       !$acc exit data delete(r)
       DEALLOCATE(r)
@@ -506,13 +520,9 @@ MODULE west_gpu
       ALLOCATE(work(npwx,nkb))
       !$acc enter data create(work)
       IF(noncolin) THEN
-         ALLOCATE(deff_nc(nhm,nhm,nat,nspin))
-         !$acc enter data create(deff_nc)
          ALLOCATE(psc(nkb,npol,m,2))
          !$acc enter data create(psc)
       ELSE
-         ALLOCATE(deff(nhm,nhm,nat))
-         !$acc enter data create(deff)
          ALLOCATE(ps2(nkb,m,2))
          !$acc enter data create(ps2)
       ENDIF
@@ -560,17 +570,9 @@ MODULE west_gpu
       !$acc exit data delete(work)
       DEALLOCATE(work)
    ENDIF
-   IF(ALLOCATED(deff_nc)) THEN
-      !$acc exit data delete(deff_nc)
-      DEALLOCATE(deff_nc)
-   ENDIF
    IF(ALLOCATED(psc)) THEN
       !$acc exit data delete(psc)
       DEALLOCATE(psc)
-   ENDIF
-   IF(ALLOCATED(deff)) THEN
-      !$acc exit data delete(deff)
-      DEALLOCATE(deff)
    ENDIF
    IF(ALLOCATED(ps2)) THEN
       !$acc exit data delete(ps2)

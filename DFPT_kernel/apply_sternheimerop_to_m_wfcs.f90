@@ -51,8 +51,8 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
      CALL k_psi( npwx, npw, m, psi, hpsi )
   ELSE
      !
-     ! use h_psi_, i.e. h_psi without band parallelization, as wstat
-     ! handles band parallelization separately in dfpt_module
+     ! use h_psi_, i.e. h_psi without band parallelization, as west
+     ! handles band parallelization by itself
      !
 #if defined(__CUDA)
      !$acc host_data use_device(psi,hpsi)

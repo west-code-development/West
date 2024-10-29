@@ -181,7 +181,6 @@ MODULE wfreq_center
   LOGICAL :: l_enable_lanczos
   LOGICAL :: l_enable_off_diagonal
   CHARACTER(LEN=1) :: macropol_calculation
-  REAL(DP) :: exx_etot
   REAL(DP) :: ecut_spectralf(2)
   INTEGER :: n_spectralf
   !
@@ -191,6 +190,8 @@ MODULE wfreq_center
   CHARACTER(LEN=512) :: wfreq_restart_dir
   LOGICAL, PARAMETER :: l_skip_nl_part_of_hcomr = .FALSE.
   LOGICAL :: l_macropol
+  INTEGER, ALLOCATABLE :: na_ikb(:)
+  INTEGER, ALLOCATABLE :: ijkb0_ikb(:)
   !
   ! re freq
   !
@@ -219,14 +220,6 @@ MODULE wfreq_center
 #endif
   COMPLEX(DP), ALLOCATABLE :: eri_w(:,:,:,:)
   LOGICAL :: l_qdet_verbose
-  !
-  ! gw_etot
-  !
-  REAL(DP) :: dft_etot
-  REAL(DP) :: dft_exc
-  REAL(DP) :: gw_ecorr
-  REAL(DP) :: gw_exx
-  REAL(DP) :: gw_exc
   !
   ! output
   !

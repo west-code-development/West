@@ -11,7 +11,7 @@
 ! Marco Govoni
 !
 !-----------------------------------------------------------------------
-SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr )
+SUBROUTINE linsolve_sternheimer_m_wfcts(nbndval,m,b,x,e,eprec,tr2,ierr)
   !----------------------------------------------------------------------
   !
   !     iterative solution of the linear system:
@@ -55,236 +55,74 @@ SUBROUTINE linsolve_sternheimer_m_wfcts ( nbndval, m, b, x, e, eprec, tr2, ierr 
   USE westcom,              ONLY : n_dfpt_maxiter,alphapv_dfpt
   USE pwcom,                ONLY : npw,npwx
   USE noncollin_module,     ONLY : npol,noncolin
+  USE wvfct,                ONLY : g2kin
+#if defined(__CUDA)
+  USE west_gpu,             ONLY : is_conv,l2i_map,eu,a,c,rho,rhoold,g,t,h
+#endif
   !
   IMPLICIT NONE
   !
   ! I/O
   !
-  INTEGER,INTENT(IN)  :: nbndval, m
-  REAL(DP),INTENT(IN)  :: e(m), eprec(m)
-  COMPLEX(DP),INTENT(IN)  :: b (npwx*npol, m)
-  COMPLEX(DP),INTENT(INOUT) :: x (npwx*npol, m)
+  INTEGER,INTENT(IN) :: nbndval
+  INTEGER,INTENT(IN) :: m
+  REAL(DP),INTENT(IN) :: e(m)
+  REAL(DP),INTENT(IN) :: eprec(m)
+  COMPLEX(DP),INTENT(INOUT) :: b(npwx*npol,m)
+  COMPLEX(DP),INTENT(INOUT) :: x(npwx*npol,m)
   REAL(DP),INTENT(IN) :: tr2
   INTEGER, INTENT(OUT) :: ierr
   !
   ! Workspace
   !
-  INTEGER :: iter, ibnd, lbnd
-  COMPLEX(DP),ALLOCATABLE :: g(:,:), t(:,:), h(:,:), hold(:,:)
-  COMPLEX(DP) ::  dcgamma, dclambda
-  REAL(DP),ALLOCATABLE :: rho(:), rhoold(:), eu(:), a(:), c(:)
-  REAL(DP) :: anorm
-  LOGICAL,ALLOCATABLE :: is_conv(:)
-  REAL(DP),EXTERNAL :: DDOT
-  COMPLEX(DP),EXTERNAL :: ZDOTC
-  !
-  CALL start_clock ('linstern')
-  !
-  ! Zeros
-  !
-  ALLOCATE( g(npwx*npol,m), t(npwx*npol,m), h(npwx*npol,m), hold(npwx*npol,m) )
-  ALLOCATE( rho(m), rhoold(m), eu(m), a(m), c(m), is_conv(m) )
-  !
-  g = 0.0_DP
-  t = 0.0_DP
-  h = 0.0_DP
-  hold = 0.0_DP
-  is_conv=.FALSE.
-  ierr=0
-  !
-  ! Step 1, initialization of the loop
-  !
-  CALL apply_sternheimerop_to_m_wfcs(nbndval, x, g, e, alphapv_dfpt, m)
-  !
-  DO ibnd=1,m
-     CALL ZAXPY(npw,(-1._DP,0._DP),b(1,ibnd),1,g(1,ibnd),1)
-  ENDDO
-  IF(noncolin) THEN
-     DO ibnd=1,m
-        CALL ZAXPY(npw,(-1._DP,0._DP),b(npwx+1,ibnd),1,g(npwx+1,ibnd),1)
-     ENDDO
-  ENDIF
-  !
-  ! Loop
-  !
-  DO iter = 1, n_dfpt_maxiter
-     !
-     lbnd = 0
-     DO ibnd = 1, m
-        IF (is_conv (ibnd) ) CYCLE
-        lbnd = lbnd+1
-        !
-        CALL precondition_m_wfcts( 1, g(1,ibnd), h(1,ibnd), eprec(ibnd) )
-        !
-        IF (gamma_only) THEN
-           rho(lbnd)=2.0_DP * DDOT(2*npw,h(1,ibnd),1,g(1,ibnd),1)
-           IF(gstart==2) THEN
-              rho(lbnd)=rho(lbnd)-REAL(h(1,ibnd),KIND=DP)*REAL(g(1,ibnd),KIND=DP)
-           ENDIF
-        ELSE
-           rho(lbnd) = ZDOTC (npw, h(1,ibnd), 1, g(1,ibnd), 1)
-           IF(noncolin) rho(lbnd) = rho(lbnd) + ZDOTC (npw, h(1+npwx,ibnd), 1, g(1+npwx,ibnd), 1)
-        ENDIF
-        !
-     ENDDO
-     !
-     CALL mp_sum( rho(1:lbnd) , intra_bgrp_comm )
-     !
-     DO ibnd = m, 1, -1
-        IF (is_conv(ibnd)) CYCLE
-        rho(ibnd) = rho(lbnd)
-        lbnd = lbnd -1
-        anorm = rho(ibnd)
-        IF (anorm < tr2) is_conv (ibnd) = .TRUE.
-     ENDDO
-     !
-     !
-     IF (ALL(is_conv(:))) EXIT
-     !
-     !
-     lbnd = 0
-     DO ibnd = 1, m
-        IF (is_conv (ibnd) ) CYCLE
-        !
-        !
-        CALL DSCAL (2*npwx*npol, - 1._DP, h (1, ibnd), 1)
-        IF (iter /= 1) THEN
-           dcgamma = CMPLX( rho (ibnd) / rhoold (ibnd), 0.0_DP, KIND=DP)
-           CALL ZAXPY (npwx*npol, dcgamma, hold (1, ibnd), 1, h (1, ibnd), 1)
-        ENDIF
-        !
-        lbnd = lbnd+1
-        CALL ZCOPY(npwx*npol, h (1, ibnd), 1, hold (1, lbnd), 1)
-        eu ( lbnd ) = e (ibnd )
-        !
-     ENDDO
-     !
-     !
-     CALL apply_sternheimerop_to_m_wfcs(nbndval, hold, t, eu, alphapv_dfpt, lbnd)
-     !
-     lbnd=0
-     DO ibnd = 1, m
-        IF ( is_conv (ibnd) ) CYCLE
-        lbnd=lbnd+1
-        IF (gamma_only) THEN
-           a(lbnd) = 2.0_DP * DDOT(2*npw,h(1,ibnd),1,g(1,ibnd),1)
-           c(lbnd) = 2.0_DP * DDOT(2*npw,h(1,ibnd),1,t(1,lbnd),1)
-           IF (gstart == 2) THEN
-              a(lbnd)=a(lbnd)-REAL(h(1,ibnd),KIND=DP)*REAL(g(1,ibnd),KIND=DP)
-              c(lbnd)=c(lbnd)-REAL(h(1,ibnd),KIND=DP)*REAL(t(1,lbnd),KIND=DP)
-           ENDIF
-        ELSE
-           a(lbnd) = ZDOTC (npw, h(1,ibnd), 1, g(1,ibnd), 1)
-           c(lbnd) = ZDOTC (npw, h(1,ibnd), 1, t(1,lbnd), 1)
-           IF(noncolin) THEN
-              a(lbnd) = a(lbnd) + ZDOTC (npw, h(1+npwx,ibnd), 1, g(1+npwx,ibnd), 1)
-              c(lbnd) = c(lbnd) + ZDOTC (npw, h(1+npwx,ibnd), 1, t(1+npwx,lbnd), 1)
-           ENDIF
-        ENDIF
-     ENDDO
-     !
-     CALL mp_sum(  a(1:lbnd), intra_bgrp_comm )
-     CALL mp_sum(  c(1:lbnd), intra_bgrp_comm )
-     !
-     lbnd=0
-     DO ibnd = 1, m
-        IF ( is_conv (ibnd) ) CYCLE
-        lbnd=lbnd+1
-        dclambda = CMPLX( - a(lbnd) / c(lbnd), 0.0_DP, KIND=DP)
-        !
-        CALL ZAXPY(npwx*npol, dclambda, h(1,ibnd), 1, x(1,ibnd), 1)
-        !
-        CALL ZAXPY(npwx*npol, dclambda, t(1,lbnd), 1, g(1,ibnd), 1)
-        !
-        CALL ZCOPY(npwx*npol, h(1,ibnd), 1, hold(1,ibnd), 1)
-        rhoold (ibnd) = rho (ibnd)
-        !
-     ENDDO ! on bands
-     !
-  ENDDO ! on iterations
-  !
-  DEALLOCATE( g, t, h, hold )
-  DEALLOCATE( rho, rhoold, eu, a, c)
-  !
-  ierr=m-COUNT( is_conv(:) )
-  !
-  DEALLOCATE( is_conv )
-  !
-  CALL stop_clock ('linstern')
-  !
-END SUBROUTINE
-!
-#if defined(__CUDA)
-!-----------------------------------------------------------------------
-SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
-  !----------------------------------------------------------------------
-  !
-  !     iterative solution of the linear system:
-  !
-  !                 A * | x_i > = | b_i >       i=(1:m)
-  !
-  !     with :      A = ( H - E_i + alpha * P_v )
-  !
-  !                 where H is a complex hermitean matrix (H_{SCF}), E_v is a real scalar (energy of band v)
-  !                 x and b are complex vectors
-  !
-  !     on input:
-  !
-  !                 nbndval  integer  number of valence bands.
-  !
-  !                 m        integer  number of wfcts to process.
-  !
-  !                 b        contains the right hand side vector
-  !                          of the system.
-  !
-  !                 x        contains an estimate of the solution
-  !                          vector.
-  !
-  !                 e        real     unperturbed eigenvalues.
-  !
-  !                 eprec    real     preconditioned energies.
-  !
-  !                 tr2      real     threshold
-  !
-  !     on output:  x        contains the refined estimate of the
-  !                          solution vector.
-  !
-  !                 ierr     integer  error (if /=0 something went wrong)
-  !
-  !
-  USE kinds,                ONLY : DP
-  USE mp_global,            ONLY : intra_bgrp_comm,nproc_bgrp
-  USE mp,                   ONLY : mp_sum
-  USE gvect,                ONLY : gstart
-  USE control_flags,        ONLY : gamma_only
-  USE westcom,              ONLY : n_dfpt_maxiter,alphapv_dfpt
-  USE pwcom,                ONLY : npw,npwx
-  USE noncollin_module,     ONLY : npol,noncolin
-  USE wvfct,                ONLY : g2kin
-  USE west_gpu,             ONLY : is_conv,ibnd_todo,eu,a,c,rho,rhoold,g,t,h
-  !
-  IMPLICIT NONE
-  !
-  ! I/O
-  !
-  INTEGER, INTENT(IN) :: nbndval
-  INTEGER, INTENT(IN) :: m
-  REAL(DP), INTENT(IN) :: e(m)
-  REAL(DP), INTENT(IN) :: eprec(m)
-  COMPLEX(DP), INTENT(INOUT) :: b(npwx*npol,m)
-  COMPLEX(DP), INTENT(INOUT) :: x(npwx*npol,m)
-  REAL(DP), INTENT(IN) :: tr2
-  INTEGER, INTENT(OUT) :: ierr
-  !
-  ! Workspace
-  !
-  INTEGER :: ig, iter, ibnd, lbnd, nbnd_todo, not_conv
+  INTEGER :: ig, iter, ibnd, lbnd, not_conv
   REAL(DP) :: anorm
   REAL(DP) :: tmp_r, tmp2_r
+#if !defined(__CUDA)
+  COMPLEX(DP),ALLOCATABLE :: g(:,:),t(:,:),h(:,:)
+  REAL(DP),ALLOCATABLE :: rho(:),rhoold(:),eu(:),a(:),c(:)
+  INTEGER,ALLOCATABLE :: l2i_map(:)
+  LOGICAL,ALLOCATABLE :: is_conv(:)
+#endif
   !
+#if defined(__CUDA)
   CALL start_clock_gpu('linstern')
+#else
+  CALL start_clock('linstern')
+#endif
+  !
+#if !defined(__CUDA)
+  ALLOCATE(g(npwx*npol,m))
+  ALLOCATE(t(npwx*npol,m))
+  ALLOCATE(h(npwx*npol,m))
+  ALLOCATE(rho(m))
+  ALLOCATE(rhoold(m))
+  ALLOCATE(eu(m))
+  ALLOCATE(a(m))
+  ALLOCATE(c(m))
+  ALLOCATE(l2i_map(m))
+  ALLOCATE(is_conv(m))
+#endif
+  !
+#if defined(__CUDA)
+  CALL start_clock_gpu('linstern')
+#else
+  CALL start_clock('linstern')
+#endif
   !
   ierr = 0
+  !
+  !$acc kernels present(g)
+  g(:,:) = 0._DP
+  !$acc end kernels
+  !
+  !$acc kernels present(t)
+  t(:,:) = 0._DP
+  !$acc end kernels
+  !
+  !$acc kernels present(h)
+  h(:,:) = 0._DP
+  !$acc end kernels
   !
   !$acc kernels present(is_conv)
   is_conv(:) = .FALSE.
@@ -307,7 +145,7 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   !
   ! From now on b is no longer needed, use it to store hold
   !
-  CALL precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
+  CALL map_lbnd2ibnd(m,is_conv,not_conv,l2i_map)
   !
   ! Loop
   !
@@ -315,30 +153,23 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      !
      ! Preconditioning
      !
-     !$acc parallel loop collapse(2) present(ibnd_todo,h,g,g2kin,eprec)
-     DO lbnd = 1,nbnd_todo
-        DO ig = 1,npwx
-           ibnd = ibnd_todo(lbnd)
-           IF(ig <= npwx) THEN
-              h(ig,ibnd) = g(ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
-              IF(noncolin) THEN
-                 h(npwx+ig,ibnd) = g(npwx+ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
-              ENDIF
-           ELSE
-              h(ig,ibnd) = 0._DP
-              IF(noncolin) THEN
-                 h(npwx+ig,ibnd) = 0._DP
-              ENDIF
+     !$acc parallel loop collapse(2) present(l2i_map,h,g,g2kin,eprec)
+     DO lbnd = 1,not_conv
+        DO ig = 1,npw
+           ibnd = l2i_map(lbnd)
+           h(ig,ibnd) = g(ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
+           IF(noncolin) THEN
+              h(npwx+ig,ibnd) = g(npwx+ig,ibnd)/MAX(1._DP,g2kin(ig)/eprec(ibnd))
            ENDIF
         ENDDO
      ENDDO
      !$acc end parallel
      !
      IF(gamma_only) THEN
-        !$acc parallel present(ibnd_todo,h,g,rho)
+        !$acc parallel present(l2i_map,h,g,rho)
         !$acc loop
-        DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_todo(lbnd)
+        DO lbnd = 1,not_conv
+           ibnd = l2i_map(lbnd)
            tmp_r = 0._DP
            !
            !$acc loop reduction(+:tmp_r)
@@ -355,10 +186,10 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         ENDDO
         !$acc end parallel
      ELSE
-        !$acc parallel present(ibnd_todo,h,g,rho)
+        !$acc parallel present(l2i_map,h,g,rho)
         !$acc loop
-        DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_todo(lbnd)
+        DO lbnd = 1,not_conv
+           ibnd = l2i_map(lbnd)
            tmp_r = 0._DP
            !
            !$acc loop reduction(+:tmp_r)
@@ -376,14 +207,11 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         !$acc end parallel
      ENDIF
      !
-     IF(nproc_bgrp > 1) THEN
-        !$acc host_data use_device(rho)
-        CALL mp_sum(rho(1:nbnd_todo),intra_bgrp_comm)
-        !$acc end host_data
-     ENDIF
+     !$acc host_data use_device(rho)
+     CALL mp_sum(rho(1:not_conv),intra_bgrp_comm)
+     !$acc end host_data
      !
-     lbnd = nbnd_todo
-     not_conv = 0
+     lbnd = not_conv
      !
      !$acc serial present(is_conv,rho) copy(lbnd,not_conv)
      DO ibnd = m,1,-1
@@ -391,24 +219,20 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         rho(ibnd) = rho(lbnd)
         lbnd = lbnd-1
         anorm = rho(ibnd)
-        IF(anorm < tr2) THEN
-           is_conv(ibnd) = .TRUE.
-        ELSE
-           not_conv = not_conv+1
-        ENDIF
+        IF(anorm < tr2) is_conv(ibnd) = .TRUE.
      ENDDO
      !$acc end serial
      !
-     IF(not_conv == 0) EXIT
+     CALL map_lbnd2ibnd(m,is_conv,not_conv,l2i_map)
      !
-     CALL precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
+     IF(not_conv == 0) EXIT
      !
      ! hold stored in b
      !
-     DO lbnd = 1,nbnd_todo
-        !$acc parallel loop present(ibnd_todo,h,rho,rhoold,b)
+     DO lbnd = 1,not_conv
+        !$acc parallel loop present(l2i_map,h,rho,rhoold,b)
         DO ig = 1,npwx*npol
-           ibnd = ibnd_todo(lbnd)
+           ibnd = l2i_map(lbnd)
            !
            IF(iter /= 1) THEN
               h(ig,ibnd) = -h(ig,ibnd)+rho(ibnd)/rhoold(ibnd)*b(ig,ibnd)
@@ -421,22 +245,22 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         !$acc end parallel
      ENDDO
      !
-     !$acc parallel loop present(ibnd_todo,eu,e)
-     DO lbnd = 1,nbnd_todo
-        ibnd = ibnd_todo(lbnd)
+     !$acc parallel loop present(l2i_map,eu,e)
+     DO lbnd = 1,not_conv
+        ibnd = l2i_map(lbnd)
         eu(lbnd) = e(ibnd)
      ENDDO
      !$acc end parallel
      !
      ! hold stored in b
      !
-     CALL apply_sternheimerop_to_m_wfcs(nbndval,b,t,eu,alphapv_dfpt,nbnd_todo)
+     CALL apply_sternheimerop_to_m_wfcs(nbndval,b,t,eu,alphapv_dfpt,not_conv)
      !
      IF(gamma_only) THEN
-        !$acc parallel present(ibnd_todo,h,g,t,a,c)
+        !$acc parallel present(l2i_map,h,g,t,a,c)
         !$acc loop
-        DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_todo(lbnd)
+        DO lbnd = 1,not_conv
+           ibnd = l2i_map(lbnd)
            tmp_r = 0._DP
            tmp2_r = 0._DP
            !
@@ -458,10 +282,10 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         ENDDO
         !$acc end parallel
      ELSE
-        !$acc parallel present(ibnd_todo,h,g,t,a,c)
+        !$acc parallel present(l2i_map,h,g,t,a,c)
         !$acc loop
-        DO lbnd = 1,nbnd_todo
-           ibnd = ibnd_todo(lbnd)
+        DO lbnd = 1,not_conv
+           ibnd = l2i_map(lbnd)
            tmp_r = 0._DP
            tmp2_r = 0._DP
            !
@@ -485,19 +309,17 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
         !$acc end parallel
      ENDIF
      !
-     IF(nproc_bgrp > 1) THEN
-        !$acc host_data use_device(a,c)
-        CALL mp_sum(a(1:nbnd_todo),intra_bgrp_comm)
-        CALL mp_sum(c(1:nbnd_todo),intra_bgrp_comm)
-        !$acc end host_data
-     ENDIF
+     !$acc host_data use_device(a,c)
+     CALL mp_sum(a(1:not_conv),intra_bgrp_comm)
+     CALL mp_sum(c(1:not_conv),intra_bgrp_comm)
+     !$acc end host_data
      !
      ! hold stored in b
      !
-     !$acc parallel loop collapse(2) present(ibnd_todo,x,a,c,h,g,t,b)
-     DO lbnd = 1,nbnd_todo
+     !$acc parallel loop collapse(2) present(l2i_map,x,a,c,h,g,t,b)
+     DO lbnd = 1,not_conv
         DO ig = 1,npwx*npol
-           ibnd = ibnd_todo(lbnd)
+           ibnd = l2i_map(lbnd)
            x(ig,ibnd) = x(ig,ibnd)-a(lbnd)/c(lbnd)*h(ig,ibnd)
            g(ig,ibnd) = g(ig,ibnd)-a(lbnd)/c(lbnd)*t(ig,lbnd)
            b(ig,ibnd) = h(ig,ibnd)
@@ -505,9 +327,9 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
      ENDDO
      !$acc end parallel
      !
-     !$acc parallel loop present(ibnd_todo,rhoold,rho)
-     DO lbnd = 1,nbnd_todo
-        ibnd = ibnd_todo(lbnd)
+     !$acc parallel loop present(l2i_map,rhoold,rho)
+     DO lbnd = 1,not_conv
+        ibnd = l2i_map(lbnd)
         rhoold(ibnd) = rho(ibnd)
      ENDDO
      !$acc end parallel
@@ -515,12 +337,29 @@ SUBROUTINE linsolve_sternheimer_m_wfcts_gpu(nbndval,m,b,x,e,eprec,tr2,ierr)
   !
   ierr = not_conv
   !
+#if !defined(__CUDA)
+  DEALLOCATE(g)
+  DEALLOCATE(t)
+  DEALLOCATE(h)
+  DEALLOCATE(rho)
+  DEALLOCATE(rhoold)
+  DEALLOCATE(eu)
+  DEALLOCATE(a)
+  DEALLOCATE(c)
+  DEALLOCATE(l2i_map)
+  DEALLOCATE(is_conv)
+#endif
+  !
+#if defined(__CUDA)
   CALL stop_clock_gpu('linstern')
+#else
+  CALL stop_clock('linstern')
+#endif
   !
 END SUBROUTINE
 !
 !-----------------------------------------------------------------------
-SUBROUTINE precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
+SUBROUTINE map_lbnd2ibnd(m,is_conv,not_conv,l2i_map)
   !----------------------------------------------------------------------
   !
   IMPLICIT NONE
@@ -529,22 +368,21 @@ SUBROUTINE precompute_lbnd(m,is_conv,nbnd_todo,ibnd_todo)
   !
   INTEGER, INTENT(IN) :: m
   LOGICAL, INTENT(IN) :: is_conv(m)
-  INTEGER, INTENT(OUT) :: nbnd_todo
-  INTEGER, INTENT(OUT) :: ibnd_todo(m)
+  INTEGER, INTENT(OUT) :: not_conv
+  INTEGER, INTENT(OUT) :: l2i_map(m)
   !
   ! Workspace
   !
   INTEGER :: ibnd
   !
-  nbnd_todo = 0
+  not_conv = 0
   !
-  !$acc serial present(is_conv,ibnd_todo) copy(nbnd_todo)
+  !$acc serial present(is_conv,l2i_map) copy(not_conv)
   DO ibnd = 1, m
      IF(is_conv(ibnd)) CYCLE
-     nbnd_todo = nbnd_todo+1
-     ibnd_todo(nbnd_todo) = ibnd
+     not_conv = not_conv+1
+     l2i_map(not_conv) = ibnd
   ENDDO
   !$acc end serial
   !
 END SUBROUTINE
-#endif

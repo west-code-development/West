@@ -18,8 +18,11 @@ SUBROUTINE linsolve_commut_Hx(iks,m,e,fin,fout)
   USE westcom,              ONLY : tr2_dfpt,l_skip_nl_part_of_hcomr
   USE io_global,            ONLY : stdout
   USE cell_base,            ONLY : bg
-  USE pwcom,                ONLY : npwx
-  USE noncollin_module,     ONLY : npol
+  USE pwcom,                ONLY : npw,npwx
+  USE noncollin_module,     ONLY : noncolin,npol
+  USE wvfct,                ONLY : g2kin
+  USE mp,                   ONLY : mp_sum
+  USE mp_global,            ONLY : intra_bgrp_comm
 #if defined(__CUDA)
   USE west_gpu,             ONLY : ep_pol,e_pol,phi
 #endif
@@ -38,11 +41,13 @@ SUBROUTINE linsolve_commut_Hx(iks,m,e,fin,fout)
   !
   INTEGER :: ig,ipol
   INTEGER :: ierr
+  REAL(DP) :: ep
 #if !defined(__CUDA)
   REAL(DP),ALLOCATABLE :: ep_pol(:)
   REAL(DP),ALLOCATABLE :: e_pol(:)
   COMPLEX(DP),ALLOCATABLE :: phi(:,:)
 #endif
+  REAL(DP),PARAMETER :: factor = 1.35_DP
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('linHx')
@@ -72,21 +77,30 @@ SUBROUTINE linsolve_commut_Hx(iks,m,e,fin,fout)
   !
   CALL apply_alpha_pc_to_m_wfcs(m,3,phi,(1._DP,0._DP))
   !
-  CALL set_eprec(1,fin,ep_pol(1))
-  !
-  !$acc serial present(ep_pol,e_pol)
-  DO ipol = 1,3
-     ep_pol(ipol) = ep_pol(1)
-     e_pol(ipol) = e
+  ep = 0._DP
+  !$acc parallel loop reduction(+:ep) present(fin,g2kin) copy(ep)
+  DO ig = 1,npw
+     ep = ep+CONJG(fin(ig))*fin(ig)*g2kin(ig)
+     IF(noncolin) THEN
+        ep = ep+CONJG(fin(ig+npwx))*fin(ig+npwx)*g2kin(ig)
+     ENDIF
   ENDDO
-  !$acc end serial
+  !$acc end parallel
+  !
+  ep = ep*factor
+  !
+  CALL mp_sum(ep,intra_bgrp_comm)
+  !
+  !$acc kernels present(ep_pol)
+  ep_pol(:) = ep
+  !$acc end kernels
+  !
+  !$acc kernels present(e_pol)
+  e_pol(:) = e
+  !$acc end kernels
   !
   CALL precondition_m_wfcts(3,phi,fout,ep_pol)
-#if defined(__CUDA)
-  CALL linsolve_sternheimer_m_wfcts_gpu(m,3,phi,fout,e_pol,ep_pol,tr2_dfpt,ierr)
-#else
   CALL linsolve_sternheimer_m_wfcts(m,3,phi,fout,e_pol,ep_pol,tr2_dfpt,ierr)
-#endif
   !
   IF(ierr /= 0) WRITE(stdout,'(7X,"** WARNING : MACROPOL not converged, ierr = ",I8)') ierr
   !

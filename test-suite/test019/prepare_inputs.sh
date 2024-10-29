@@ -1,7 +1,8 @@
 #!/bin/bash
 
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/C_ONCV_PBE-1.0.upf
 ${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/H_ONCV_PBE-1.0.upf
-${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/Si_ONCV_PBE-1.1.upf
+${WGET} http://www.quantum-simulation.org/potentials/sg15_oncv/upf/O_ONCV_PBE-1.0.upf
 
 cat > pw.in << EOF
 &control
@@ -15,60 +16,44 @@ wf_collect   = .true.
 &system
 ibrav           = 1
 celldm(1)       = 20
-nat             = 5
-ntyp            = 2
-ecutwfc         = 25.0
-nbnd            = 30
-assume_isolated = 'mp'
-input_dft       = 'pbe0'
+nat             = 4
+ntyp            = 3
+ecutwfc         = 25
+nbnd            = 16
 /
 &electrons
 diago_full_acc = .true.
 /
 ATOMIC_SPECIES
-Si 28.0855  Si_ONCV_PBE-1.1.upf
-H  1.00794   H_ONCV_PBE-1.0.upf
-ATOMIC_POSITIONS bohr
-Si      10.000000   10.000000  10.000000
-H       11.614581   11.614581  11.614581
-H        8.385418    8.385418  11.614581
-H        8.385418   11.614581   8.385418
-H       11.614581    8.385418   8.385418
-K_POINTS {gamma}
+C 12.0107  C_ONCV_PBE-1.0.upf
+H 1.0079  H_ONCV_PBE-1.0.upf
+O 16.00  O_ONCV_PBE-1.0.upf
+ATOMIC_POSITIONS crystal
+C        0.452400000   0.500000000   0.500000000
+H        0.397141530   0.411608770   0.500000000
+H        0.397141530   0.588391230   0.500000000
+O        0.565022174   0.500000000   0.500000000
+K_POINTS gamma
 EOF
 
 
-cat > wstat.in << EOF
+cat > wbse.in << EOF
 input_west:
   qe_prefix: test
   west_prefix: test
   outdir: ./
 
-wstat_control:
-  wstat_calculation: S
-  n_pdep_eigen: 30
-  l_minimize_exx_if_active: True
-  n_exx_lowrank: 0
-EOF
+wbse_init_control:
+  wbse_init_calculation: S
+  solver: TDDFT
 
-
-cat > wfreq.in << EOF
-input_west:
-  qe_prefix: test
-  west_prefix: test
-  outdir: ./
-
-wstat_control:
-  wstat_calculation: S
-  n_pdep_eigen: 30
-  l_minimize_exx_if_active: True
-  n_exx_lowrank: 0
-
-wfreq_control:
-  wfreq_calculation: XWGQ
-  macropol_calculation: N
-  n_pdep_eigen_to_use: 30
-  qp_bandrange: [1,5]
-  n_refreq: 300
-  ecut_refreq: 2.0
+wbse_control:
+  wbse_calculation: D
+  n_liouville_eigen: 4
+  n_liouville_times: 10
+  trev_liouville: 0.00000001
+  trev_liouville_rel: 0.000001
+  l_pre_shift: True
+  l_forces: True
+  forces_state: 1
 EOF

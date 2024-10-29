@@ -15,7 +15,7 @@ SUBROUTINE write_wfc_1D_r ( dfft, fname, wfc_distr, ipol)
   ! -------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE cell_base,             ONLY : celldm, at
+  USE cell_base,             ONLY : celldm,at
   USE scatter_mod,           ONLY : gather_grid
   USE fft_types,             ONLY : fft_type_descriptor
   !
@@ -115,7 +115,7 @@ END SUBROUTINE
 !
 SUBROUTINE calc_int_x(func,nr1,nr2,nr3,integral)
   !
-  USE kinds,  ONLY : DP
+  USE kinds,                 ONLY : DP
   !
   IMPLICIT NONE
   !
@@ -141,7 +141,7 @@ END SUBROUTINE
 !
 SUBROUTINE calc_int_y(func,nr1,nr2,nr3,integral)
   !
-  USE kinds,  ONLY : DP
+  USE kinds,                 ONLY : DP
   !
   IMPLICIT NONE
   !
@@ -167,7 +167,7 @@ END SUBROUTINE
 !
 SUBROUTINE calc_int_z(func,nr1,nr2,nr3,integral)
   !
-  USE kinds,  ONLY : DP
+  USE kinds,                 ONLY : DP
   !
   IMPLICIT NONE
   !

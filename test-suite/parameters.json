@@ -3,7 +3,7 @@
     "total_energy": "1e-6",
     "pdep_eigenvalue": "1e-4",
     "singleparticle_energy": "1e-4",
-    "localization": "1e-6",
+    "westpp": "1e-6",
     "qdet": "1e-4",
     "bse": "1e-4",
     "forces": "1e-5"

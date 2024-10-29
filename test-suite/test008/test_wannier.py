@@ -32,13 +32,13 @@ def test_trans_matrix():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_trans = read_trans_matrix_from_json("./test015/ref/westpp.json")
-    test_trans = read_trans_matrix_from_json("./test015/test.westpp.save/westpp.json")
+    ref_trans = read_trans_matrix_from_json("./test008/ref/westpp.json")
+    test_trans = read_trans_matrix_from_json("./test008/test.westpp.save/westpp.json")
 
     np.testing.assert_almost_equal(
         np.abs(ref_trans),
         np.abs(test_trans),
-        decimal=-np.log10(float(parameters["tolerance"]["localization"])),
+        decimal=-np.log10(float(parameters["tolerance"]["westpp"])),
     )
 
 
@@ -50,11 +50,11 @@ def test_wannier_center():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_wanc = read_wannier_center_from_json("./test015/ref/westpp.json")
-    test_wanc = read_wannier_center_from_json("./test015/test.westpp.save/westpp.json")
+    ref_wanc = read_wannier_center_from_json("./test008/ref/westpp.json")
+    test_wanc = read_wannier_center_from_json("./test008/test.westpp.save/westpp.json")
 
     np.testing.assert_almost_equal(
         ref_wanc,
         test_wanc,
-        decimal=-np.log10(float(parameters["tolerance"]["localization"])),
+        decimal=-np.log10(float(parameters["tolerance"]["westpp"])),
     )

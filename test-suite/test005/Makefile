@@ -32,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "SiH4 molecule gamma_only westpp"
+	@echo "SiH4 molecule gamma_only output eigenpotential"
 	@echo

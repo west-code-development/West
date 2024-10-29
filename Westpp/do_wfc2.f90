@@ -15,7 +15,7 @@ SUBROUTINE do_wfc2 ( )
   !----------------------------------------------------------------------------
   !
   USE kinds,                 ONLY : DP
-  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk
+  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk,nbnd
   USE io_push,               ONLY : io_push_title
   USE westcom,               ONLY : westpp_sign,iuwfc,lrwfc,westpp_range,westpp_save_dir
   USE mp_global,             ONLY : inter_image_comm,my_image_id
@@ -43,6 +43,8 @@ SUBROUTINE do_wfc2 ( )
   CHARACTER(LEN=512) :: fname
   TYPE(bar_type) :: barra
   CHARACTER(LEN=6) :: labelb,labelk
+  !
+  IF(westpp_range(2) > nbnd) CALL errore('do_wfc2','westpp_range(2) > nbnd',1)
   !
   aband = idistribute()
   CALL aband%init(westpp_range(2)-westpp_range(1)+1,'i','westpp_range',.TRUE.)

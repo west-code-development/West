@@ -47,6 +47,7 @@ SUBROUTINE do_exc_comp()
   INTEGER :: naux,iaux
   INTEGER :: nbndx_occ,nbndx_emp
   INTEGER :: nbndval,flnbndval
+  INTEGER :: barra_load
   CHARACTER(6) :: label_exc,label_k
   REAL(DP) :: reduce
   REAL(DP), ALLOCATABLE :: projection_matrix(:,:,:,:),transition_dipole(:,:)
@@ -60,20 +61,11 @@ SUBROUTINE do_exc_comp()
   nbndx_occ = MAXVAL(nbnd_occ)
   nbndx_emp = nbnd - MINVAL(nbnd_occ)
   !
-  IF(nbndx_emp < 1) &
-     CALL errore('do_exc_comp', 'decomposition of eigenvectors needs empty states, rerun pwscf with nbnd > nbnd_occ', 1)
-  !
-  IF(westpp_range(1) > nbndx_occ) &
-     CALL errore('do_exc_comp', 'westpp_range(1) should not exceed the number of occupied bands', 1)
-  !
-  IF(westpp_range(2) <= nbndx_occ) &
-     CALL errore('do_exc_comp', 'westpp_range(2) should be greater than the number of occupied bands', 1)
-  !
-  IF(westpp_range(2) > nbnd) &
-     CALL errore('do_exc_comp', 'westpp_range(2) should not exceed the number of bands', 1)
-  !
-  IF(.NOT. gamma_only) &
-     CALL errore('do_exc_comp', 'decomposition of eigenvectors requires gamma_only', 1)
+  IF(westpp_n_liouville_to_use < 1) CALL errore('do_exc_comp','westpp_n_liouville_to_use < 1',1)
+  IF(westpp_range(2) > westpp_n_liouville_to_use) &
+     CALL errore('do_exc_comp','westpp_range(2) > westpp_n_liouville_to_use',1)
+  IF(nbndx_emp < 1) CALL errore('do_exc_comp','no empty states found, rerun pwscf with nbnd > nbnd_occ',1)
+  IF(.NOT. gamma_only) CALL errore('do_exc_comp','exciton decomposition requires gamma_only',1)
   !
   ! ... DISTRIBUTE
   !
@@ -110,12 +102,12 @@ SUBROUTINE do_exc_comp()
      !
      CALL solve_e_psi()
      !
-     ALLOCATE(transition_dipole(3,westpp_n_liouville_to_use))
+     ALLOCATE(transition_dipole(3,westpp_range(1):westpp_range(2)))
      transition_dipole(:,:) = 0._DP
      !
   ENDIF
   !
-  ALLOCATE(projection_matrix(nbndx_emp,nbndx_occ,nks,westpp_n_liouville_to_use))
+  ALLOCATE(projection_matrix(nbndx_emp,nbndx_occ,nks,westpp_range(1):westpp_range(2)))
   !$acc enter data create(projection_matrix) copyin(dvg_exc)
   !
   !$acc kernels present(projection_matrix)
@@ -123,6 +115,13 @@ SUBROUTINE do_exc_comp()
   !$acc end kernels
   !
   CALL io_push_title('BSE/TDDFT Excited State De(C)omposition')
+  !
+  barra_load = 0
+  DO lexc = 1,pert%nloc
+     iexc = pert%l2g(lexc)
+     IF(iexc < westpp_range(1) .OR. iexc > westpp_range(2)) CYCLE
+     barra_load = barra_load+1
+  ENDDO
   !
   CALL start_bar_type(barra,'westpp',pert%nloc*k_grid%nps)
   !
@@ -149,7 +148,7 @@ SUBROUTINE do_exc_comp()
         !
         ! CYCLE here because of mp_bcast above
         !
-        IF(iexc > westpp_n_liouville_to_use) CYCLE
+        IF(iexc < westpp_range(1) .OR. iexc > westpp_range(2)) CYCLE
         !
         IF(westpp_l_spin_flip) THEN
            iks_do = flks(iks)
@@ -185,6 +184,8 @@ SUBROUTINE do_exc_comp()
         ! local -> global
         !
         iexc = pert%l2g(lexc)
+        !
+        IF(iexc < westpp_range(1) .OR. iexc > westpp_range(2)) CYCLE
         !
         DO ipol = 1, 3
            !
@@ -242,7 +243,7 @@ SUBROUTINE do_exc_comp()
   !
   WRITE(stdout, "(/,5x,'*-------------* THE PRINCIPLE PROJECTED COMPONENTS *-------------*')")
   !
-  DO iexc = 1,westpp_n_liouville_to_use
+  DO iexc = westpp_range(1),westpp_range(2)
      !
      WRITE(stdout, "(/, 5x, '#     Exciton :   ', i8,' |','   ','Excitation energy :   ', f12.6)") iexc, ev(iexc)
      WRITE(stdout, "(   5x, '#     Transition_from      |   Transition_to       |    Coeffcient')")
@@ -278,7 +279,7 @@ SUBROUTINE do_exc_comp()
   !
   IF(mpime == root) THEN
      !
-     DO iexc = 1,westpp_n_liouville_to_use
+     DO iexc = westpp_range(1),westpp_range(2)
         !
         WRITE(label_exc,'(I6.6)') iexc
         !
@@ -300,13 +301,13 @@ SUBROUTINE do_exc_comp()
            CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.from_spin',iks_do)
            CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.to_spin',iks)
            !
-           from_bands(1) = westpp_range(1)
+           from_bands(1) = 1
            from_bands(2) = nbnd_occ(iks_do)
            !
            CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.from_bandrange',from_bands)
            !
            to_bands(1) = nbnd_occ(iks)+1
-           to_bands(2) = westpp_range(2)
+           to_bands(2) = nbnd
            !
            CALL json%add('output.E'//label_exc//'.K'//label_k//'.projection.to_bandrange',to_bands)
            !
@@ -318,8 +319,8 @@ SUBROUTINE do_exc_comp()
            ! Pack
            !
            iaux = 0
-           DO iocc = westpp_range(1),nbnd_occ(iks_do)
-              DO iemp = 1,(westpp_range(2) - nbnd_occ(iks))
+           DO iocc = 1,nbnd_occ(iks_do)
+              DO iemp = 1,nbnd - nbnd_occ(iks)
                  iaux = iaux+1
                  aux(iaux) = projection_matrix(iemp,iocc,iks,iexc)
               ENDDO

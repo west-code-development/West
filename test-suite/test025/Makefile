@@ -9,12 +9,15 @@ all: prepare_inputs run
 prepare_inputs:
 	bash prepare_inputs.sh
 
-run: pw wbse
+run: pw wbse_init wbse
 
 pw:
 	${PARA_PREFIX_QE} ${BINDIR}/pw.x -i pw.in > pw.out 2> pw.err
 
-wbse: pw
+wbse_init: pw
+	${PARA_PREFIX} ${BINDIR}/wbse_init.x -nimage ${NIMAGE} -npool ${NPOOL} -nband ${NBAND} -i wbse_init.in > wbse_init.out 2> wbse_init.err
+
+wbse: wbse_init
 	${PARA_PREFIX} ${BINDIR}/wbse.x -nimage ${NIMAGE} -nband ${NBAND} -i wbse.in > wbse.out 2> wbse.err
 
 clean:
@@ -29,5 +32,5 @@ title:
 
 description:
 	@echo
-	@echo "O2 molecule gamma_only spin-flip TDDFT (PBE) forces"
+	@echo "O2 molecule gamma_only spin-flip TDDFT (PBE0) forces"
 	@echo

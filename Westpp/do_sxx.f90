@@ -68,6 +68,9 @@ SUBROUTINE do_sxx ( )
   INTEGER :: iunit
   LOGICAL :: l_print_pdep_read
   !
+  IF(westpp_n_pdep_eigen_to_use < 1) CALL errore('do_sxx','westpp_n_pdep_eigen_to_use < 1',1)
+  IF(westpp_range(2) > nbnd) CALL errore('do_sxx','westpp_range(2) > nbnd',1)
+  !
   pert = idistribute()
   CALL pert%init(westpp_n_pdep_eigen_to_use,'i','npdep',.TRUE.)
   !
@@ -329,15 +332,14 @@ SUBROUTINE do_sxx ( )
   WRITE(stdout,'(5X,a)') 'K       B            Eks [eV]        Sx [eV]       Sxx [eV]         Sxx/Sx'
   CALL io_push_bar()
   !
-  ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,5))
+  ALLOCATE(out_tab(westpp_range(2)-westpp_range(1)+1,4))
   !
   DO iks = 1, k_grid%nps
      DO ib = westpp_range(1), westpp_range(2)
-        out_tab( ib - westpp_range(1) + 1, 1) = REAL( ib, KIND=DP)
-        out_tab( ib - westpp_range(1) + 1, 2) = et(ib,iks) * rytoev
-        out_tab( ib - westpp_range(1) + 1, 3) = sigma_exx(ib,iks) * rytoev
-        out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) * rytoev
-        out_tab( ib - westpp_range(1) + 1, 5) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
+        out_tab( ib - westpp_range(1) + 1, 1) = et(ib,iks) * rytoev
+        out_tab( ib - westpp_range(1) + 1, 2) = sigma_exx(ib,iks) * rytoev
+        out_tab( ib - westpp_range(1) + 1, 3) = sigma_sxx(ib,iks) * rytoev
+        out_tab( ib - westpp_range(1) + 1, 4) = sigma_sxx(ib,iks) / sigma_exx(ib,iks)
         WRITE(stdout,'(5X,i6.6,2X,i6.6,X,f14.6,X,f14.6,X,f14.6,X,f14.6)') &
         & iks, ib, et(ib,iks)*rytoev, sigma_exx(ib,iks)*rytoev, sigma_sxx(ib,iks)*rytoev, sigma_sxx(ib,iks)/sigma_exx(ib,iks)
      ENDDO
@@ -346,11 +348,10 @@ SUBROUTINE do_sxx ( )
      !
      IF(mpime==root) THEN
         !
-        CALL json%add('output.S.K'//label_k//'.bandmap',out_tab(:,1))
-        CALL json%add('output.S.K'//label_k//'.eks',out_tab(:,2))
-        CALL json%add('output.S.K'//label_k//'.sx',out_tab(:,3))
-        CALL json%add('output.S.K'//label_k//'.sxx',out_tab(:,4))
-        CALL json%add('output.S.K'//label_k//'.fraction',out_tab(:,5))
+        CALL json%add('output.S.K'//label_k//'.eks',out_tab(:,1))
+        CALL json%add('output.S.K'//label_k//'.sx',out_tab(:,2))
+        CALL json%add('output.S.K'//label_k//'.sxx',out_tab(:,3))
+        CALL json%add('output.S.K'//label_k//'.fraction',out_tab(:,4))
         !
      ENDIF
   ENDDO

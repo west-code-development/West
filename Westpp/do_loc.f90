@@ -16,7 +16,7 @@ SUBROUTINE do_loc ( )
   !
   USE kinds,                 ONLY : DP
   USE constants,             ONLY : fpi
-  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk,nspin
+  USE pwcom,                 ONLY : igk_k,npw,npwx,current_k,ngk,nspin,nbnd
   USE noncollin_module,      ONLY : npol
   USE gvect,                 ONLY : ngm
   USE io_push,               ONLY : io_push_title
@@ -47,7 +47,7 @@ SUBROUTINE do_loc ( )
   ! ... LOCAL variables
   !
   LOGICAL :: l_box
-  INTEGER :: ig, ir, i, iks, ib, ib_g, ib2_g, jb, ir1, ir2, ir3, n_points, nbnd_, iunit
+  INTEGER :: ig, ir, i, iks, ib, ib_g, ib2_g, jb, ir1, ir2, ir3, npt, nstate, iunit
   INTEGER :: dffts_nnr
   REAL(DP), ALLOCATABLE :: local_fac(:,:), ipr(:,:)
   REAL(DP), ALLOCATABLE :: filter(:), filter_loc(:)
@@ -65,9 +65,11 @@ SUBROUTINE do_loc ( )
   TYPE(json_core) :: jcor
   TYPE(json_value), POINTER :: jval
   !
-  nbnd_ = westpp_range(2) - westpp_range(1) + 1
+  IF(westpp_range(2) > nbnd) CALL errore('do_loc','westpp_range(2) > nbnd',1)
+  !
+  nstate = westpp_range(2) - westpp_range(1) + 1
   aband = idistribute()
-  CALL aband%init(nbnd_,'i','westpp_range',.TRUE.)
+  CALL aband%init(nstate,'i','westpp_range',.TRUE.)
   !
 #if defined(__CUDA)
   CALL allocate_gpu()
@@ -90,11 +92,11 @@ SUBROUTINE do_loc ( )
      ALLOCATE(spav(westpp_nr+1))
      !$acc enter data create(auxc,auxg,spav)
   ENDIF
-  ALLOCATE(local_fac(nbnd_,k_grid%nps))
-  ALLOCATE(ipr(nbnd_,k_grid%nps))
+  ALLOCATE(local_fac(nstate,k_grid%nps))
+  ALLOCATE(ipr(nstate,k_grid%nps))
   IF(gamma_only .AND. nspin == 2) THEN
-     ALLOCATE(evc_tmp(npwx,nbnd_,nspin))
-     ALLOCATE(ovlp_ab(nbnd_,nbnd_))
+     ALLOCATE(evc_tmp(npwx,nstate,nspin))
+     ALLOCATE(ovlp_ab(nstate,nstate))
      !$acc enter data create(evc_tmp,ovlp_ab)
   ENDIF
   !
@@ -111,7 +113,7 @@ SUBROUTINE do_loc ( )
         ! for each point of FFT grid, the filter is ONE when point is in box, ZERO if not
         !
         filter(:) = 0._DP
-        n_points = 0
+        npt = 0
         ir = 0
         DO ir3 = 1, dffts%nr3
            DO ir2 = 1, dffts%nr2
@@ -131,7 +133,7 @@ SUBROUTINE do_loc ( )
                  IF((r_vec(1) > westpp_box(1)) .AND. (r_vec(1) < westpp_box(2)) .AND. &
                   & (r_vec(2) > westpp_box(3)) .AND. (r_vec(2) < westpp_box(4)) .AND. &
                   & (r_vec(3) > westpp_box(5)) .AND. (r_vec(3) < westpp_box(6))) THEN
-                    n_points = n_points + 1
+                    npt = npt + 1
                     filter(ir) = 1._DP
                  ENDIF
               ENDDO
@@ -146,9 +148,9 @@ SUBROUTINE do_loc ( )
      !
      ! broadcast the number of points in box to all FFT processes
      !
-     CALL mp_bcast(n_points, root_bgrp, intra_bgrp_comm)
+     CALL mp_bcast(npt, root_bgrp, intra_bgrp_comm)
      !
-     IF(n_points == 0) CALL errore('do_loc','no point found in integration volume',1)
+     IF(npt == 0) CALL errore('do_loc','no point found in integration volume',1)
      !
   ELSE
      !
@@ -285,7 +287,7 @@ SUBROUTINE do_loc ( )
   !
   IF(gamma_only .AND. nspin == 2) THEN
      !
-     CALL glbrak_gamma(evc_tmp(:,:,2),evc_tmp(:,:,1),ovlp_ab,npw,npwx,nbnd_,nbnd_,nbnd_,npol)
+     CALL glbrak_gamma(evc_tmp(:,:,2),evc_tmp(:,:,1),ovlp_ab,npw,npwx,nstate,nstate,nstate,npol)
      !
      !$acc update host(ovlp_ab)
      !
@@ -313,7 +315,7 @@ SUBROUTINE do_loc ( )
         CALL jcor%create_array(jval,'overlap_ab')
         CALL json%add('output.L.overlap_ab',jval)
         !
-        DO ib = 1, nbnd_
+        DO ib = 1, nstate
            !
            jb = MAXLOC(ABS(ovlp_ab(:,ib)),DIM=1)
            !

@@ -30,12 +30,12 @@ def test_proj_matrix():
     with open("./parameters.json", "r") as f:
         parameters = json.load(f)
 
-    ref_proj = read_proj_matrix_from_json("./test027/ref/westpp.json")
-    test_proj = read_proj_matrix_from_json("./test027/test.westpp.save/westpp.json")
+    ref_proj = read_proj_matrix_from_json("./test026/ref/westpp.json")
+    test_proj = read_proj_matrix_from_json("./test026/test.westpp.save/westpp.json")
 
     for iexc in ref_proj:
         np.testing.assert_almost_equal(
             np.abs(ref_proj[iexc]),
             np.abs(test_proj[iexc]),
-            decimal=-np.log10(float(parameters["tolerance"]["localization"])),
+            decimal=-np.log10(float(parameters["tolerance"]["westpp"])),
         )

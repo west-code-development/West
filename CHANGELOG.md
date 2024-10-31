@@ -1,6 +1,26 @@
 Change Log
 ==========
 
+v6.1.0 (2024/10/31)
+-------------------
+
+- Code updated for compatibility with Quantum ESPRESSO 7.4. QE must be compiled without CMake.
+- Improved the performance of JSON output in `wfreq` and `westpp` for large systems.
+- Reduced file system usage in `wfreq` for large systems.
+- Reduced memory usage in `wbse_init` when using hybrid functionals.
+- Bug fix. Avoid overflow in `IO_kernel/wfreq_io.f90` in calculations of the off-diagonal terms of the self-energy when the number of bands exceeds 446.
+- Bug fix. Fixed `wbse_init` when `overlap_thr` is specified in the input with `localization: N`.
+- Bug fix. Fixed `wbse` Lanczos for spin-polarized systems.
+- Bug fix. Fixed `westpp` when computing the electron density with fractional occupations.
+- Bug fix. Fixed a potential MPI hang in `westpp`.
+- Bug fix. Print an error message and stop if the code fails to read input files.
+- Refactored code to work around issues with the NVIDIA nvfortran compiler.
+- Updated library dependency to Json-Fortran 9.0.2.
+- Updated build. Now the code builds with `use mpi` in addition to the deprecated `#include mpif.h`.
+- Updated build. Updated deprecated usage of `setup.py`.
+- Updated CI/CD. Added tests to cover the new functionalities.
+- Updated documentation. Updated build instructions for ALCF/Polaris and NERSC/Perlmutter. Added build instructions for CINECA/Leonardo. Added more tutorials. Updated manual.
+
 v6.0.0 (2024/02/01)
 -------------------
 
@@ -86,7 +106,7 @@ v5.0.0 (2022/05/13)
 - Updated library dependency to Json-Fortran 8.3.0.
 - Bug fix. Print an error message when the code fails to read the restart files.
 - Bug fix. Fixed the `XwgQ` restart mode of `wfreq`, i.e., computing Q from previously completed W and G.
-- Bug fix. Avoid overflow in `IO_kernel/wfreqio.f90` in large-scale runs.
+- Bug fix. Avoid overflow in `IO_kernel/wfreq_io.f90` in large-scale runs.
 - Bug fix. Check that the mandatory logicals `nosym` and `noinv` are set to true for systems with k-points.
 - To avoid overwriting JSON files when files with the same name already exist, a suffix is appended to the name of the new file.
 - Updated CI/CD. Adapted nightly tests to cover OpenMP and ScaLAPACK.

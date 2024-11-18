@@ -33,7 +33,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                                  & d_head_ifr,z_head_rfr,d_body1_ifr,d_body2_ifr,d_diago,&
                                  & z_body_rfr,l_enable_off_diagonal,ijpmap,d_body1_ifr_full,&
                                  & d_body2_ifr_full,d_diago_full,z_body_rfr_full,sigma_corr_full,&
-                                 & l_frac_occ,occupation,nbnd_occ,nbnd_occ_full
+                                 & l_frac_occ,occupation,nbnd_occ,nbnd_occ_full,l_dc2025,&
+                                 & d_head_ifr_dc,z_head_rfr_dc
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
   USE io_push,              ONLY : io_push_bar,io_push_title
   USE distribution_center,  ONLY : pert,kpt_pool,band_group,ifr,rfr,aband
@@ -138,7 +139,11 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
               !
               DO ifreq = 1,ifr%nloc
                  enrg = et(ib,iks) - energy(ib_index,iks_g)
-                 partial_h = partial_h + d_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
+                 IF (l_QDET .AND. l_dc2025) THEN
+                    partial_h = partial_h + d_head_ifr_dc(ifreq)*integrate_imfreq(ifreq,enrg)
+                 ELSE
+                    partial_h = partial_h + d_head_ifr(ifreq)*integrate_imfreq(ifreq,enrg)
+                 ENDIF
               ENDDO
               !
            ENDIF
@@ -300,8 +305,13 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                     !
                     IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
                     !
-                    IF(glob_im==ib.AND.l_macropol.AND.jb==ib) residues_h = residues_h &
-                    & + peso * segno * z_head_rfr(ifreq)
+                    IF(glob_im == ib .AND. l_macropol .AND. jb == ib) THEN
+                       IF (l_QDET .AND. l_dc2025) THEN
+                          residues_h = residues_h + peso * segno * z_head_rfr_dc(ifreq)
+                       ELSE
+                          residues_h = residues_h + peso * segno * z_head_rfr(ifreq)
+                       ENDIF
+                    ENDIF
                     !
                     IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                     & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN
@@ -331,8 +341,13 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                        !
                        IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
                        !
-                       IF(glob_im == ib .AND. l_macropol .AND. jb == ib) &
-                       & residues_h = residues_h + (1.0 - peso) * segno * z_head_rfr(ifreq)
+                       IF(glob_im == ib .AND. l_macropol .AND. jb == ib) THEN
+                          IF (l_QDET .AND. l_dc2025) THEN
+                             residues_h = residues_h + (1.0 - peso) * segno * z_head_rfr_dc(ifreq)
+                          ELSE
+                             residues_h = residues_h + (1.0 - peso) * segno * z_head_rfr(ifreq)
+                          ENDIF
+                       ENDIF
                        !
                        IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                        & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN

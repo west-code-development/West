@@ -570,6 +570,23 @@ wfreq_control
    * - **Description**
      - Number of frequecies used to plot the spectral function (the "P" runlevel), sampling the interval [ecut_spectralf[0],ecut_spectralf[1]].
 
+.. data:: qdet_dc
+
+.. list-table::
+   :widths: 10 90
+   :stub-columns: 0
+
+   * - **Type**
+     - string
+   * - **Default**
+     - "DC2025"
+   * - **Description**
+     - Controls how the QDET double counting is treated. Used only when wfreq_calculation contains "H".
+
+       - "DC2025" : 2025 version of refined double counting.
+       - "DC2022" : 2022 version of double counting.
+       - "HFDC" : Hartree-Fock double counting.
+
 |
 
 

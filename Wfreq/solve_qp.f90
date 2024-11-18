@@ -45,7 +45,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
                                  & sigma_z,sigma_eqplin,sigma_eqpsec,sigma_sc_eks,sigma_sc_eqplin,&
                                  & sigma_sc_eqpsec,sigma_diff,sigma_spectralf,sigma_freq,&
                                  & l_enable_off_diagonal,ijpmap,d_body1_ifr_full,z_body_rfr_full,&
-                                 & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full
+                                 & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,&
+                                 & l_dc2025,d_epsm1_ifr_dc,z_epsm1_rfr_dc
   USE mp_global,            ONLY : inter_image_comm,nimage,my_image_id,inter_pool_comm,my_pool_id,&
                                  & intra_bgrp_comm
   USE mp,                   ONLY : mp_sum,mp_bcast
@@ -143,8 +144,13 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !$acc enter data create(overlap,overlap_loc,dtemp2,ztemp2) copyin(qp_bands)
   ALLOCATE( d_epsm1_ifr_trans( pert%nloc, pert%nglob, ifr%nloc ) )
   ALLOCATE( z_epsm1_rfr_trans( pert%nloc, pert%nglob, rfr%nloc ) )
-  d_epsm1_ifr_trans(:,:,:) = RESHAPE( d_epsm1_ifr, [pert%nloc,pert%nglob,ifr%nloc], ORDER=[2,1,3] )
-  z_epsm1_rfr_trans(:,:,:) = RESHAPE( z_epsm1_rfr, [pert%nloc,pert%nglob,rfr%nloc], ORDER=[2,1,3] )
+  IF (l_QDET .AND. l_dc2025) THEN
+     d_epsm1_ifr_trans(:,:,:) = RESHAPE( d_epsm1_ifr_dc, [pert%nloc,pert%nglob,ifr%nloc], ORDER=[2,1,3] )
+     z_epsm1_rfr_trans(:,:,:) = RESHAPE( z_epsm1_rfr_dc, [pert%nloc,pert%nglob,rfr%nloc], ORDER=[2,1,3] )
+  ELSE
+     d_epsm1_ifr_trans(:,:,:) = RESHAPE( d_epsm1_ifr, [pert%nloc,pert%nglob,ifr%nloc], ORDER=[2,1,3] )
+     z_epsm1_rfr_trans(:,:,:) = RESHAPE( z_epsm1_rfr, [pert%nloc,pert%nglob,rfr%nloc], ORDER=[2,1,3] )
+  ENDIF
   !$acc enter data copyin(d_epsm1_ifr_trans,z_epsm1_rfr_trans)
   IF( l_enable_off_diagonal ) THEN
      !

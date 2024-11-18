@@ -24,7 +24,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
                              & macropol_calculation,n_lanczos,n_imfreq,n_refreq,ecut_imfreq,&
                              & ecut_refreq,wfreq_eta,n_secant_maxiter,trev_secant,l_enable_lanczos,&
                              & l_qdet_verbose,l_enable_off_diagonal,ecut_spectralf,n_spectralf,&
-                             & westpp_calculation,westpp_range,westpp_format,westpp_sign,&
+                             & qdet_dc,westpp_calculation,westpp_range,westpp_format,westpp_sign,&
                              & westpp_n_pdep_eigen_to_use,westpp_r0,westpp_nr,westpp_rmax,&
                              & westpp_epsinfty,westpp_box,westpp_n_liouville_to_use,&
                              & westpp_l_spin_flip,westpp_l_compute_tdm,westpp_wannier_tr_rel,&
@@ -224,6 +224,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
         CALL tmp_list%destroy
         CALL tmp_obj%destroy
         IERR = return_dict%get(n_spectralf, 'n_spectralf', DUMMY_DEFAULT)
+        IERR = return_dict%getitem(cvalue, 'qdet_dc'); qdet_dc = TRIM(ADJUSTL(cvalue))
         !
         CALL return_dict%destroy
         !
@@ -489,6 +490,7 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CALL mp_bcast(l_enable_off_diagonal,root,world_comm)
      CALL mp_bcast(ecut_spectralf,root,world_comm)
      CALL mp_bcast(n_spectralf,root,world_comm)
+     CALL mp_bcast(qdet_dc,root,world_comm)
      !
      ! CHECKS
      !
@@ -529,6 +531,12 @@ SUBROUTINE fetch_input_yml(num_drivers, driver, verbose)
      CASE('N','n','C','c')
      CASE DEFAULT
         CALL errore('fetch_input','Err: macropol_calculation/=(N,C)',1)
+     END SELECT
+     !
+     SELECT CASE(qdet_dc)
+     CASE('DC2025','dc2025','DC2022','dc2022','HFDC','hfdc')
+     CASE DEFAULT
+        CALL errore('fetch_input','Err: qdet_dc/=(DC2025,DC2022,HFDC)',1)
      END SELECT
      !
   ENDIF

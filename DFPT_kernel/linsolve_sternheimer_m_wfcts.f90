@@ -104,12 +104,6 @@ SUBROUTINE linsolve_sternheimer_m_wfcts(nbndval,m,b,x,e,eprec,tr2,ierr)
   ALLOCATE(is_conv(m))
 #endif
   !
-#if defined(__CUDA)
-  CALL start_clock_gpu('linstern')
-#else
-  CALL start_clock('linstern')
-#endif
-  !
   ierr = 0
   !
   !$acc kernels present(g)

@@ -37,7 +37,6 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   ! Workspace
   !
   INTEGER :: ibnd,ig
-  COMPLEX(DP) :: za
   !
 #if defined(__CUDA)
   CALL start_clock_gpu('stern')
@@ -63,7 +62,6 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
   !
   ! then we compute the operator H-epsilon S
   !
-#if defined(__CUDA)
   !$acc parallel loop collapse(2) present(hpsi,e,psi)
   DO ibnd = 1,m
      DO ig = 1,npw
@@ -74,15 +72,6 @@ SUBROUTINE apply_sternheimerop_to_m_wfcs(nbndval, psi, hpsi, e, alpha, m)
      ENDDO
   ENDDO
   !$acc end parallel
-#else
-  DO ibnd = 1,m
-     za = -e(ibnd)
-     CALL ZAXPY(npw,za,psi(1,ibnd),1,hpsi(1,ibnd),1)
-     IF(noncolin) THEN
-        CALL ZAXPY(npw,za,psi(npwx+1,ibnd),1,hpsi(npwx+1,ibnd),1)
-     ENDIF
-  ENDDO
-#endif
   !
   CALL apply_alpha_pv_to_m_wfcs(nbndval,m,psi,hpsi,alpha)
   !

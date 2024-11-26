@@ -38,7 +38,7 @@ Start an interactive job and ssh to a compute node. The <project_name> must be r
    $ export http_proxy=http://theta-proxy.tmi.alcf.anl.gov:3128
    $ export https_proxy=http://theta-proxy.tmi.alcf.anl.gov:3128
 
-**Important**: The `ELPA eigensolver library <https://elpa.mpcdf.mpg.de/>`_ is found to greatly improve the performance of Quantum ESPRESSO on Theta. ELPA can be installed following these steps (tested on February 3, 2023):
+**Important**: The `ELPA eigensolver library <https://elpa.mpcdf.mpg.de/>`_ is found to greatly improve the performance of Quantum ESPRESSO on Theta. ELPA can be installed following these steps:
 
 .. code-block:: bash
 
@@ -67,7 +67,7 @@ Start an interactive job and ssh to a compute node. The <project_name> must be r
    make -j 8
    make install
 
-WEST executables can be compiled using the following script (tested on February 3, 2023):
+WEST executables can be compiled using the following script:
 
 .. code-block:: bash
 

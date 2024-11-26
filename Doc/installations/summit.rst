@@ -4,7 +4,7 @@
 OLCF-Summit
 ===========
 
-Summit is a GPU-accelerated supercomputer located at Oak Ridge National Laboratory, maintained by `OLCF <https://www.olcf.ornl.gov/>`_.
+Summit (**retired** on November 15, 2024) was a GPU-accelerated supercomputer located at Oak Ridge National Laboratory, maintained by `OLCF <https://www.olcf.ornl.gov/>`_.
 
 .. code-block:: bash
 
@@ -13,7 +13,7 @@ Summit is a GPU-accelerated supercomputer located at Oak Ridge National Laborato
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on August 9, 2022):
+WEST executables can be compiled using the following script:
 
 .. code-block:: bash
 

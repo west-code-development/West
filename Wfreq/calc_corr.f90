@@ -331,8 +331,8 @@ SUBROUTINE calc_corr_gamma( sigma_corr, energy, l_verbose, l_full, l_QDET )
                        !
                        IF( rfr%l2g(ifreq) /= glob_ifreq ) CYCLE
                        !
-                       IF(glob_im==ib.AND.l_macropol) residues_h = residues_h &
-                       & + (1.0 - peso) * segno * z_head_rfr(ifreq)
+                       IF(glob_im == ib .AND. l_macropol .AND. jb == ib) &
+                       & residues_h = residues_h + (1.0 - peso) * segno * z_head_rfr(ifreq)
                        !
                        IF((l_enable_off_diagonal .AND. l_full .AND. jb <= ib) &
                        & .OR. (l_enable_off_diagonal .AND. .NOT. l_full .AND. jb == ib)) THEN

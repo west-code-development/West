@@ -226,7 +226,7 @@ SUBROUTINE davidson_diago_gamma ( )
         mloc = mloc + 1
      ENDDO
      !
-     pccg_res_tr2 = MIN(0.01_DP,1000000._DP*tr2_dfpt)
+     pccg_res_tr2 = MIN(1.E-4_DP,1.E8_DP*tr2_dfpt)
      CALL apply_operator ( mloc, dvg(1,mstart), dng(1,mstart), pccg_res_tr2, 1 )
      !
      ! </ EXTRA STEP >

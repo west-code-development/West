@@ -13,7 +13,7 @@ Perlmutter is an HPE Cray EX supercomputer located at National Energy Research S
 Building WEST (GPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on October 22, 2024):
+WEST executables can be compiled using the following script (tested on February 21, 2025):
 
 .. code-block:: bash
 
@@ -25,7 +25,7 @@ WEST executables can be compiled using the following script (tested on October 2
    module load nvidia/23.9
    module load cudatoolkit/12.2
    module load craype-accel-nvidia80
-   module load cray-python/3.11.5
+   module load cray-python/3.11.7
 
    ./configure --with-cuda=$CUDA_HOME --with-cuda-runtime=12.2 --with-cuda-cc=80 --with-cuda-mpi=yes
 
@@ -62,7 +62,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    export ROMIO_FSTYPE_FORCE="ufs:"
 
-**Important**: It is recommended to run the calculation from the Lustre file system (`$PSCRATCH` instead of `/home`).
+**Important**: It is recommended to run the calculation from the Lustre file system (`$SCRATCH` instead of `/home`).
 
 .. code-block:: bash
 
@@ -84,9 +84,9 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    module load nvidia/23.9
    module load cudatoolkit/12.2
    module load craype-accel-nvidia80
-   module load cray-python/3.11.5
+   module load cray-python/3.11.7
 
-   export LD_LIBRARY_PATH=/opt/cray/pe/python/3.11.5/lib:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=/opt/cray/pe/python/3.11.7/lib:$LD_LIBRARY_PATH
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
    export MPICH_GPU_SUPPORT_ENABLED=1
@@ -103,7 +103,7 @@ Job submission is done with the following:
 Building WEST (CPU)
 ~~~~~~~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on October 22, 2024):
+WEST executables can be compiled using the following script (tested on February 21, 2025):
 
 .. code-block:: bash
 
@@ -112,10 +112,9 @@ WEST executables can be compiled using the following script (tested on October 2
 
    module unload darshan
    module load cpu
-   module load cray-fftw/3.3.10.6
-   module load cray-python/3.11.5
+   module load cray-fftw/3.3.10.8
+   module load cray-python/3.11.7
 
-   export CRAYPE_LINK_TYPE=dynamic
    export MPIF90=ftn
    export F90=ftn
    export CC=cc
@@ -124,8 +123,8 @@ WEST executables can be compiled using the following script (tested on October 2
 
    # Manually edit make.inc:
 
-   # DFLAGS = -D__FFTW3 -D__MPI -D__SCALAPACK
-   # IFLAGS = -I. -I$(TOPDIR)/include -I$(TOPDIR)/FoX/finclude -I/opt/cray/pe/fftw/3.3.10.6/x86_milan/include
+   # DFLAGS = -D__FFTW3 -D__MPI -D__MPI_MODULE -D__SCALAPACK
+   # IFLAGS = -I. -I$(TOPDIR)/include -I/opt/cray/pe/fftw/3.3.10.8/x86_milan/include
    # BLAS_LIBS = # leave blank
    # LAPACK_LIBS = # leave blank
 
@@ -153,7 +152,7 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    export ROMIO_FSTYPE_FORCE="ufs:"
 
-**Important**: It is recommended to run the calculation from the Lustre file system (`$PSCRATCH` instead of `/home`).
+**Important**: It is recommended to run the calculation from the Lustre file system (`$SCRATCH` instead of `/home`).
 
 .. code-block:: bash
 
@@ -171,10 +170,10 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
 
    module unload darshan
    module load cpu
-   module load cray-fftw/3.3.10.6
-   module load cray-python/3.11.5
+   module load cray-fftw/3.3.10.8
+   module load cray-python/3.11.7
 
-   export LD_LIBRARY_PATH=/opt/cray/pe/python/3.11.5/lib:$LD_LIBRARY_PATH
+   export LD_LIBRARY_PATH=/opt/cray/pe/python/3.11.7/lib:$LD_LIBRARY_PATH
    export OMP_NUM_THREADS=1
    export SLURM_CPU_BIND=cores
    export ROMIO_FSTYPE_FORCE="ufs:"

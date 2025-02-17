@@ -62,7 +62,7 @@ SUBROUTINE do_eigenpot2 ( )
   !
   CALL io_push_title('(E)igenpotentials')
   !
-  CALL start_bar_type( barra, 'westpp', pert%nloc*q_grid%np)
+  CALL start_bar_type( barra, 'westpp', pert%nloc*q_grid%np )
   !
   DO iq = 1, q_grid%np
      !
@@ -88,31 +88,42 @@ SUBROUTINE do_eigenpot2 ( )
         IF( global_j < westpp_range(1) .OR. global_j > westpp_range(2) ) CYCLE
         !
         IF( gamma_only ) THEN
+           !
            CALL single_invfft_gamma(dffts,npwq,npwqx,dvg(:,local_j),psic,TRIM(fftdriver))
+           !
+           IF( westpp_sign ) THEN
+              !$acc parallel loop present(auxr)
+              DO ir = 1, dffts_nnr
+                 auxr(ir) = REAL(psic(ir), KIND=DP) * ABS(REAL(psic(ir), KIND=DP))
+              ENDDO
+              !$acc end parallel loop
+           ELSE
+              !$acc parallel loop present(auxr)
+              DO ir = 1, dffts_nnr
+                 auxr(ir) = REAL(psic(ir), KIND=DP) * REAL(psic(ir), KIND=DP)
+              ENDDO
+              !$acc end parallel loop
+           ENDIF
+           !
         ELSE
+           !
            CALL single_invfft_k(dffts,npwq,npwqx,dvg(:,local_j),psic,'Wave',igq_q(:,iq))
-        ENDIF
-        IF( westpp_sign ) THEN
+           !
            !$acc parallel loop present(auxr)
            DO ir = 1, dffts_nnr
-              auxr(ir) = REAL( psic(ir), KIND=DP) *  ABS( REAL( psic(ir), KIND=DP) )
+              auxr(ir) = REAL(CONJG(psic(ir)) * psic(ir), KIND=DP)
            ENDDO
            !$acc end parallel loop
-        ELSE
-           !$acc parallel loop present(auxr)
-           DO ir = 1, dffts_nnr
-              auxr(ir) = REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP)
-           ENDDO
-           !$acc end parallel loop
+           !
         ENDIF
         !
         WRITE(labeli,'(i6.6)') global_j
         WRITE(labelq,'(i6.6)') iq
         fname = TRIM( westpp_save_dir ) // '/eigQ'//labelq//'I'//labeli
         !$acc update host(auxr)
-        CALL dump_r( auxr, fname)
+        CALL dump_r( auxr, fname )
         !
-        CALL update_bar_type( barra,'westpp', 1 )
+        CALL update_bar_type( barra, 'westpp', 1 )
         !
      ENDDO
      !

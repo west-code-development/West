@@ -28,7 +28,8 @@ SUBROUTINE exx_go()
   USE io_files,               ONLY : nwordwfc,iunwfc,tmp_dir,wfc_dir
   USE buffers,                ONLY : open_buffer,close_buffer
   USE control_flags,          ONLY : io_level
-  USE westcom,                ONLY : l_minimize_exx_if_active,n_exx_lowrank
+  USE westcom,                ONLY : l_minimize_exx_if_active,n_exx_lowrank,westpp_l_compute_tdm,&
+                                   & westpp_l_spin_flip,westpp_l_dipole_realspace
   USE mp_global,              ONLY : inter_image_comm,my_image_id,intra_bgrp_comm
   USE mp_exx,                 ONLY : mp_start_exx
   USE mp,                     ONLY : mp_bcast
@@ -58,6 +59,8 @@ SUBROUTINE exx_go()
   !
   IF(is_westpp .OR. is_wbse_init) THEN
      do_exxinit = .FALSE.
+     IF(is_westpp .AND. westpp_l_compute_tdm .AND. (.NOT. westpp_l_spin_flip) &
+     & .AND. (.NOT. westpp_l_dipole_realspace)) do_exxinit = .TRUE.
   ELSE
      do_exxinit = .TRUE.
   ENDIF

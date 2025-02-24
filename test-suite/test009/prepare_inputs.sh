@@ -9,7 +9,6 @@ restart_mode = 'from_scratch'
 pseudo_dir   = './'
 outdir       = './'
 prefix       = 'test'
-wf_collect   = .true.
 /
 &system
 ibrav           = 1
@@ -29,7 +28,7 @@ O 15.9994 O_ONCV_PBE-1.0.upf
 ATOMIC_POSITIONS angstrom
 O    6.25001033  6.25001033  5.64063432
 O    6.25001033  6.25001033  6.84863432
-K_POINTS {gamma}
+K_POINTS gamma
 OCCUPATIONS
 2.00  2.00  2.00  2.00  2.00  1.00  1.00  0.00  0.00  0.00
 0.00  0.00

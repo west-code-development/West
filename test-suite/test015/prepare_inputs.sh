@@ -10,7 +10,6 @@ restart_mode = 'from_scratch'
 pseudo_dir   = './'
 outdir       = './'
 prefix       = 'test'
-wf_collect   = .true.
 /
 &system
 ibrav           = 1
@@ -34,7 +33,7 @@ H       11.614581   11.614581  11.614581
 H        8.385418    8.385418  11.614581
 H        8.385418   11.614581   8.385418
 H       11.614581    8.385418   8.385418
-K_POINTS {gamma}
+K_POINTS gamma
 EOF
 
 

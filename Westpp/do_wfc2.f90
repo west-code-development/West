@@ -84,22 +84,33 @@ SUBROUTINE do_wfc2 ( )
         global_ib = aband%l2g(local_ib)+westpp_range(1)-1
         !
         IF( gamma_only ) THEN
+           !
            CALL single_invfft_gamma(dffts,npw,npwx,evc(:,global_ib),psic,'Wave')
+           !
+           IF( westpp_sign ) THEN
+              !$acc parallel loop present(auxr)
+              DO ir = 1, dffts_nnr
+                 auxr(ir) = REAL(psic(ir), KIND=DP) * ABS(REAL(psic(ir), KIND=DP))
+              ENDDO
+              !$acc end parallel loop
+           ELSE
+              !$acc parallel loop present(auxr)
+              DO ir = 1, dffts_nnr
+                 auxr(ir) = REAL(psic(ir), KIND=DP) * REAL(psic(ir), KIND=DP)
+              ENDDO
+              !$acc end parallel loop
+           ENDIF
+           !
         ELSE
+           !
            CALL single_invfft_k(dffts,npw,npwx,evc(:,global_ib),psic,'Wave',igk_k(:,current_k))
-        ENDIF
-        IF( westpp_sign ) THEN
+           !
            !$acc parallel loop present(auxr)
            DO ir = 1, dffts_nnr
-              auxr(ir) = REAL( psic(ir), KIND=DP) *  ABS( REAL( psic(ir), KIND=DP) )
+              auxr(ir) = REAL(CONJG(psic(ir)) * psic(ir), KIND=DP)
            ENDDO
            !$acc end parallel loop
-        ELSE
-           !$acc parallel loop present(auxr)
-           DO ir = 1, dffts_nnr
-              auxr(ir) = REAL( psic(ir), KIND=DP) *  REAL( psic(ir), KIND=DP)
-           ENDDO
-           !$acc end parallel loop
+           !
         ENDIF
         !
         WRITE(labelb,'(i6.6)') global_ib
@@ -108,7 +119,7 @@ SUBROUTINE do_wfc2 ( )
         !$acc update host(auxr)
         CALL dump_r( auxr, fname )
         !
-        CALL update_bar_type( barra,'westpp', 1 )
+        CALL update_bar_type( barra, 'westpp', 1 )
         !
      ENDDO
      !

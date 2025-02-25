@@ -9,7 +9,6 @@ restart_mode = 'from_scratch'
 pseudo_dir   = './'
 outdir       = './'
 prefix       = 'test'
-wf_collect   = .true.
 /
 &system
 ibrav   = 2
@@ -27,10 +26,10 @@ conv_thr       = 1.e-12
 /
 ATOMIC_SPECIES
 Si 28.085   Si_ONCV_PBE-1.1.upf
-ATOMIC_POSITIONS (crystal)
+ATOMIC_POSITIONS crystal
 Si  0.0000  0.0000  0.0000
 Si  0.2500  0.2500  0.2500
-K_POINTS (automatic)
+K_POINTS automatic
 1 1 2   0 0 0
 EOF
 

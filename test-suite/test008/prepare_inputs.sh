@@ -10,7 +10,6 @@ restart_mode = 'from_scratch'
 pseudo_dir   = './'
 outdir       = './'
 prefix       = 'test'
-wf_collect   = .true.
 /
 &system
 ibrav   = 0
@@ -40,7 +39,7 @@ O        0.750000000   0.250000000   0.250000000
 O        0.750000000   0.250000000   0.750000000
 O        0.750000000   0.750000000   0.250000000
 O        0.750000000   0.750000000   0.750000000
-K_POINTS {gamma}
+K_POINTS gamma
 CELL_PARAMETERS angstrom
 0.000000 4.249236 4.249236
 4.249236 0.000000 4.249236

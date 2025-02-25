@@ -4,16 +4,17 @@
 macOS
 =====
 
-The following instructions have been tested on macOS 12.3 (with Intel chip).
+The following instructions have been tested on macOS 15.3 (with Apple M4).
 
 Requirements:
 
-- C and Fortran compilers (e.g. gcc/gfortran in GCC 11)
-- MPI (e.g. OpenMPI)
-- BLAS/LAPACK
-- ScaLAPACK (optional)
-- FFTW3
+- C and Fortran compilers (e.g. gcc/gfortran in `GCC <https://gcc.gnu.org/>`_)
+- MPI (e.g. `OpenMPI <https://www.open-mpi.org/>`_)
+- BLAS/LAPACK (e.g. `Apple Accelerate <https://developer.apple.com/documentation/accelerate/>`_)
+- `FFTW3 <https://www.fftw.org/>`_
 - Python3
+
+The dependencies can be installed via `Homebrew <https://brew.sh/>`_ or compiled manually from source.
 
 Building WEST
 ~~~~~~~~~~~~~
@@ -25,19 +26,16 @@ WEST executables can be compiled using the following script:
    $ cat build_west.sh
    #!/bin/bash
 
-   export MY_LIB_PATH=/Users/myname/LIBRARIES
+   export MPIF90=mpif90
+   export F90=gfortran
+   export CC=gcc
+   export BLAS_LIBS="-framework Accelerate"
+   export LAPACK_LIBS="-framework Accelerate"
+   export LIBDIRS="-L/PATH/TO/FFTW3/lib"
 
-   export CPP='cpp-11'
-   export CC='gcc-11'
-   export MPIF90='mpif90'
-   export F90='mpif90'
-   export BLAS_LIBS=${MY_LIB_PATH}/BLAS/libblas.a
-   export LAPACK_LIBS=${MY_LIB_PATH}/LAPACK/liblapack.a
-   export SCALAPACK_LIBS=${MY_LIB_PATH}/SCALAPACK/libscalapack.a
-   export FFT_LIBS="${MY_LIB_PATH}/FFTW3/lib/libfftw3.a ${MY_LIB_PATH}/FFTW3/lib/libfftw3_omp.a"
+   ./configure
 
-   ./configure --enable-openmp --with-scalapack
-
+   # Add -I/PATH/TO/FFTW3/include to IFLAGS if needed
    make -j 4 pw
 
    cd West

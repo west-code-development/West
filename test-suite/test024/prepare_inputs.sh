@@ -9,7 +9,6 @@ restart_mode = 'from_scratch'
 pseudo_dir   = './'
 outdir       = './'
 prefix       = 'test'
-wf_collect   = .true.
 /
 &system
 ibrav             = 1

@@ -109,6 +109,7 @@ SUBROUTINE wfreq_setup
   ALLOCATE(sigma_eqplin (n_bands,k_grid%nps))
   ALLOCATE(sigma_eqpsec (n_bands,k_grid%nps))
   ALLOCATE(sigma_diff   (n_bands,k_grid%nps))
+  ALLOCATE(sigma_sc_eks (n_bands,k_grid%nps))
   sigma_exx = 0._DP
   sigma_vxcl = 0._DP
   sigma_vxcnl = 0._DP
@@ -117,6 +118,7 @@ SUBROUTINE wfreq_setup
   sigma_eqplin = 0._DP
   sigma_eqpsec = 0._DP
   sigma_diff = 0._DP
+  sigma_sc_eks = 0._DP
   !
   l_QDET = .FALSE.
   DO i = 1,9
@@ -139,10 +141,8 @@ SUBROUTINE wfreq_setup
   ENDIF
   !
   IF(.NOT. l_enable_off_diagonal) THEN
-     ALLOCATE(sigma_sc_eks    (n_bands,k_grid%nps))
      ALLOCATE(sigma_sc_eqplin (n_bands,k_grid%nps))
      ALLOCATE(sigma_sc_eqpsec (n_bands,k_grid%nps))
-     sigma_sc_eks = 0._DP
      sigma_sc_eqplin = 0._DP
      sigma_sc_eqpsec = 0._DP
   ELSE

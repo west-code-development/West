@@ -66,9 +66,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   ! Workspace
   !
   REAL(DP),ALLOCATABLE :: sigma_hf(:,:)
-  COMPLEX(DP),ALLOCATABLE :: sigma_cor_in(:,:)
   COMPLEX(DP),ALLOCATABLE :: sigma_cor_out(:,:)
-  REAL(DP),ALLOCATABLE :: z_in(:,:)
   REAL(DP),ALLOCATABLE :: qp_energy(:,:)
   COMPLEX(DP),ALLOCATABLE :: sc(:,:,:)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
@@ -107,7 +105,7 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
   !
   CALL band_group%init(n_bands,'b','band_group',.FALSE.)
   !
-  IF ( .NOT. l_QDET ) THEN
+  IF( .NOT. l_QDET ) THEN
      ALLOCATE( imfreq_list_integrate( 2, ifr%nloc ) )
   ENDIF
   ALLOCATE( dtemp( n_imfreq ) )
@@ -433,30 +431,26 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      ALLOCATE( en(n_bands,k_grid%nps,2) )
      ALLOCATE( sc(n_bands,k_grid%nps,2) )
      ALLOCATE( l_conv(n_bands,k_grid%nps) )
-     ALLOCATE( sigma_cor_in (n_bands,k_grid%nps) )
-     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
-     ALLOCATE( z_in (n_bands,k_grid%nps) )
      ALLOCATE( qp_energy (n_bands,k_grid%nps) )
      !
-     en(:,:,:) = 0._DP
+     ! 1st step of secant solver
+     ! en 1 = E_KS - 0.5 * eshift
+     ! en 2 = E_KS + 0.5 * eshift
      !
-     ! 1st step of secant solver : E_KS - 0.5 * eshift
-     ! 1st step of secant solver : E_KS + 0.5 * eshift
-     !
-     DO iks = 1, kpt_pool%nloc
-        !
-        iks_g = kpt_pool%l2g(iks)
-        is = k_grid%is(iks_g)
-        !
-        DO ib = 1, n_bands
-           en(ib,iks_g,1) = et(qp_bands(ib,is),iks) - eshift*0.5_DP
-           en(ib,iks_g,2) = et(qp_bands(ib,is),iks) + eshift*0.5_DP
+     IF( my_pool_id == 0 ) THEN
+        DO iks = 1, k_grid%nps
+           is = k_grid%is(iks)
+           DO ib = 1, n_bands
+              en(ib,iks,1) = et(qp_bands(ib,is),iks) - eshift*0.5_DP
+              en(ib,iks,2) = et(qp_bands(ib,is),iks) + eshift*0.5_DP
+           ENDDO
+           !
         ENDDO
-        !
-     ENDDO
-     CALL mp_sum(en,inter_pool_comm)
+     ENDIF
      !
-     IF (l_enable_off_diagonal) THEN
+     CALL mp_bcast(en,0,inter_pool_comm)
+     !
+     IF(l_enable_off_diagonal) THEN
         CALL calc_corr_gamma( sc(:,:,1), en(:,:,1), .TRUE., .TRUE., .FALSE.)
         sigma_sc_eks_full(:,:) = sigma_corr_full
         CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.)
@@ -466,38 +460,43 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
         CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .FALSE., .FALSE.)
      ENDIF
      !
-     ! Stage sigma_corr_in
+     ! Stage sigma_sc_eks
      !
      DO iks = 1, k_grid%nps
         DO ib = 1, n_bands
-           sigma_cor_in(ib,iks) = ( sc(ib,iks,2) + sc(ib,iks,1) ) * 0.5_DP
+           sigma_sc_eks(ib,iks) = ( sc(ib,iks,2) + sc(ib,iks,1) ) * 0.5_DP
         ENDDO
      ENDDO
      !
-     ! Stage z_in
+     ! Stage sigma_z
      !
      DO iks = 1, k_grid%nps
         DO ib = 1, n_bands
-           z_in(ib,iks) = 1._DP / ( 1._DP-REAL( sc(ib,iks,2)-sc(ib,iks,1), KIND=DP ) / eshift  )
+           sigma_z(ib,iks) = 1._DP / ( 1._DP - REAL(sc(ib,iks,2)-sc(ib,iks,1),KIND=DP ) / eshift )
         ENDDO
      ENDDO
      !
-     ! en 1 = EKS, sc 1 = sigma_corr_in
-     ! en 2 = EKS + Z * ( sigmax - vxc + sigmacorrin)
+     ! en 1 = EKS
+     ! sc 1 = sigma_sc_eks
+     ! en 2 = EKS + Z * ( sigmax - vxc + sigma_sc_eks)
      !
-     DO iks = 1, k_grid%nps
-        is = k_grid%is(iks)
-        DO ib = 1, n_bands
-           en(ib,iks,1) = et(qp_bands(ib,is),iks)
-           sc(ib,iks,1) = sigma_cor_in(ib,iks)
-           en(ib,iks,2) = et(qp_bands(ib,is),iks) + z_in(ib,iks) &
-           & * ( sigma_hf(ib,iks) + REAL( sigma_cor_in(ib,iks),KIND=DP) )
+     IF( my_pool_id == 0 ) THEN
+        DO iks = 1, k_grid%nps
+           is = k_grid%is(iks)
+           DO ib = 1, n_bands
+              en(ib,iks,1) = et(qp_bands(ib,is),iks)
+              sc(ib,iks,1) = sigma_sc_eks(ib,iks)
+              en(ib,iks,2) = et(qp_bands(ib,is),iks) + sigma_z(ib,iks) &
+              & * ( sigma_hf(ib,iks) + REAL(sigma_sc_eks(ib,iks),KIND=DP) )
+           ENDDO
         ENDDO
-     ENDDO
-     sigma_z(:,:) = z_in
+     ENDIF
+     !
+     CALL mp_bcast(en,0,inter_pool_comm)
+     CALL mp_bcast(sc(:,:,1),0,inter_pool_comm)
+     !
      sigma_eqplin(:,:) = en(:,:,2)
-     IF (.NOT. l_enable_off_diagonal) sigma_sc_eks(:,:) = sigma_cor_in
-     CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
+     CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_sc_eks(:,:))
      !
      ! nth step of the secant solver
      !
@@ -506,6 +505,14 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
      DO ifixed = 1, n_secant_maxiter
         !
         CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., l_enable_off_diagonal, .FALSE. )
+        !
+        IF( ifixed == 1 ) THEN
+           IF(l_enable_off_diagonal) THEN
+              sigma_sc_eqplin_full(:,:) = sigma_corr_full
+           ELSE
+              sigma_sc_eqplin(:,:) = sc(:,:,2)
+           ENDIF
+        ENDIF
         !
         IF( my_pool_id == 0 ) THEN
            !
@@ -516,8 +523,8 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
               DO ib = 1, n_bands
                   IF( .NOT. l_conv(ib,iks) ) THEN
                      qp_energy(ib,iks) = en(ib,iks,2) &
-                     & +(et(qp_bands(ib,is),iks)+sigma_hf(ib,iks)+REAL(sc(ib,iks,2),KIND=DP)-en(ib,iks,2)) &
-                     & /(1._DP-REAL(sc(ib,iks,2)-sc(ib,iks,1),KIND=DP)/(en(ib,iks,2)-en(ib,iks,1)))
+                     & + (et(qp_bands(ib,is),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2)) &
+                     & / (1._DP - REAL(sc(ib,iks,2) - sc(ib,iks,1),KIND=DP) / (en(ib,iks,2) - en(ib,iks,1)))
                   ENDIF
               ENDDO
            ENDDO
@@ -530,27 +537,17 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
               ENDDO
            ENDDO
            !
-           ! Count the number of notconverged QP energies
+           ! Count the number of not converged QP energies
            !
            notconv = 0
            DO iks = 1, k_grid%nps
               DO ib = 1, n_bands
-                 IF( .NOT.l_conv(ib,iks) ) notconv = notconv + 1
+                 IF( .NOT. l_conv(ib,iks) ) notconv = notconv + 1
               ENDDO
            ENDDO
            !
-           IF( ifixed == 1 ) THEN
-              IF (l_enable_off_diagonal) THEN
-                 sigma_sc_eqplin_full(:,:) = sigma_corr_full
-              ELSE
-                 sigma_sc_eqplin(:,:) = sc(:,:,2)
-              ENDIF
-           ENDIF
-           !
         ENDIF
         !
-        CALL mp_bcast(en(:,:,2),0,inter_pool_comm)
-        CALL mp_bcast(sc(:,:,2),0,inter_pool_comm)
         CALL mp_bcast(qp_energy,0,inter_pool_comm)
         CALL mp_bcast(notconv,0,inter_pool_comm)
         !
@@ -574,26 +571,19 @@ SUBROUTINE solve_qp_gamma(l_secant,l_generate_plot,l_QDET)
         !
      ENDDO
      !
-     sigma_cor_out(:,:) = sc(:,:,2)
-     !
-     IF (l_enable_off_diagonal) CALL calc_corr_gamma( sc(:,:,2), en(:,:,2), .TRUE., .TRUE., .FALSE.)
-     !
      DEALLOCATE( en, sc, l_conv )
      !
      IF( notconv /= 0 ) THEN
         CALL io_push_title('CONVERGENCE **NOT** ACHIEVED !!!')
      ENDIF
      !
-     DEALLOCATE( sigma_cor_in )
-     DEALLOCATE( sigma_cor_out )
-     DEALLOCATE( z_in )
      DEALLOCATE( qp_energy )
      !
   ENDIF
   !
-  IF (l_QDET) THEN
+  IF(l_QDET) THEN
      !
-     IF (l_enable_off_diagonal) THEN
+     IF(l_enable_off_diagonal) THEN
         !
         ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
         !
@@ -694,9 +684,6 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
   ! Workspace
   !
   REAL(DP),ALLOCATABLE :: sigma_hf(:,:)
-  COMPLEX(DP),ALLOCATABLE :: sigma_cor_in(:,:)
-  COMPLEX(DP),ALLOCATABLE :: sigma_cor_out(:,:)
-  REAL(DP),ALLOCATABLE :: z_in(:,:)
   REAL(DP),ALLOCATABLE :: qp_energy(:,:)
   COMPLEX(DP),ALLOCATABLE :: sc(:,:,:)
   REAL(DP),ALLOCATABLE :: en(:,:,:)
@@ -942,13 +929,11 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      ALLOCATE( en(n_bands,k_grid%nps,2) )
      ALLOCATE( sc(n_bands,k_grid%nps,2) )
      ALLOCATE( l_conv(n_bands,k_grid%nps) )
-     ALLOCATE( sigma_cor_in (n_bands,k_grid%nps) )
-     ALLOCATE( sigma_cor_out(n_bands,k_grid%nps) )
-     ALLOCATE( z_in (n_bands,k_grid%nps) )
      ALLOCATE( qp_energy (n_bands,k_grid%nps) )
      !
-     ! 1st step of secant solver : E_KS - 0.5 * eshift
-     ! 1st step of secant solver : E_KS + 0.5 * eshift
+     ! 1st step of secant solver
+     ! en 1 = E_KS - 0.5 * eshift
+     ! en 2 = E_KS + 0.5 * eshift
      !
      DO iks = 1, k_grid%nps
         is = k_grid%is(iks)
@@ -961,57 +946,60 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
      CALL calc_corr_k( sc(:,:,1), en(:,:,1), .TRUE.)
      CALL calc_corr_k( sc(:,:,2), en(:,:,2), .TRUE.)
      !
-     ! Stage sigma_corr_in
+     ! Stage sigma_sc_eks
      !
      DO iks = 1, k_grid%nps
         DO ib = 1, n_bands
-           sigma_cor_in(ib,iks) = ( sc(ib,iks,2) + sc(ib,iks,1) ) * 0.5_DP
+           sigma_sc_eks(ib,iks) = ( sc(ib,iks,2) + sc(ib,iks,1) ) * 0.5_DP
         ENDDO
      ENDDO
      !
-     ! Stage z_in
+     ! Stage sigma_z
      !
      DO iks = 1, k_grid%nps
         DO ib = 1, n_bands
-           z_in(ib,iks) = 1._DP / ( 1._DP-REAL( sc(ib,iks,2)-sc(ib,iks,1), KIND=DP ) / eshift  )
+           sigma_z(ib,iks) = 1._DP / ( 1._DP - REAL(sc(ib,iks,2)-sc(ib,iks,1),KIND=DP) / eshift )
         ENDDO
      ENDDO
      !
-     ! en 1 = EKS, sc 1 = sigma_corr_in
-     ! en 2 = EKS + Z * ( sigmax - vxc + sigmacorrin)
+     ! en 1 = EKS
+     ! sc 1 = sigma_sc_eks
+     ! en 2 = EKS + Z * ( sigmax - vxc + sigma_sc_eks)
      !
      DO iks = 1, k_grid%nps
         is = k_grid%is(iks)
         DO ib = 1, n_bands
            en(ib,iks,1) = et(qp_bands(ib,is),iks)
-           sc(ib,iks,1) = sigma_cor_in(ib,iks)
-           en(ib,iks,2) = et(qp_bands(ib,is),iks) + z_in(ib,iks) &
-           & * ( sigma_hf(ib,iks) + REAL( sigma_cor_in(ib,iks),KIND=DP) )
+           sc(ib,iks,1) = sigma_sc_eks(ib,iks)
+           en(ib,iks,2) = et(qp_bands(ib,is),iks) + sigma_z(ib,iks) &
+           & * ( sigma_hf(ib,iks) + REAL(sigma_sc_eks(ib,iks),KIND=DP) )
         ENDDO
      ENDDO
-     sigma_z(:,:) = z_in
      sigma_eqplin(:,:) = en(:,:,2)
-     sigma_sc_eks(:,:) = sigma_cor_in
-     CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_cor_in(:,:))
+     CALL output_eqp_report(0,en(:,:,1),en(:,:,2),sigma_sc_eks(:,:))
      !
      ! nth step of the secant solver
      !
      l_conv(:,:) = .FALSE.
-     notconv =  k_grid%nps * n_bands
+     notconv = k_grid%nps * n_bands
      DO ifixed = 1, n_secant_maxiter
         !
         CALL calc_corr_k( sc(:,:,2), en(:,:,2), .TRUE.)
+        !
+        IF( ifixed == 1 ) THEN
+           sigma_sc_eqplin(:,:) = sc(:,:,2)
+        ENDIF
         !
         ! Resulting new energy:
         !
         DO iks = 1, k_grid%nps
            is = k_grid%is(iks)
            DO ib = 1, n_bands
-               IF( .NOT. l_conv(ib,iks) ) THEN
-                  qp_energy(ib,iks) = en(ib,iks,2) + &
-                  & ( et(qp_bands(ib,is),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2) ) / &
-                  & ( 1._DP - REAL( sc(ib,iks,2) - sc(ib,iks,1), KIND=DP ) / ( en(ib,iks,2) - en(ib,iks,1) ) )
-               ENDIF
+              IF( .NOT. l_conv(ib,iks) ) THEN
+                 qp_energy(ib,iks) = en(ib,iks,2) &
+                 & + (et(qp_bands(ib,is),iks) + sigma_hf(ib,iks) + REAL(sc(ib,iks,2),KIND=DP) - en(ib,iks,2)) &
+                 & / (1._DP - REAL(sc(ib,iks,2) - sc(ib,iks,1), KIND=DP) / (en(ib,iks,2) - en(ib,iks,1)))
+              ENDIF
            ENDDO
         ENDDO
         !
@@ -1023,18 +1011,14 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
            ENDDO
         ENDDO
         !
-        ! Count the number of notconverged QP energies
+        ! Count the number of not converged QP energies
         !
         notconv = 0
         DO iks = 1, k_grid%nps
            DO ib = 1, n_bands
-              IF( .NOT.l_conv(ib,iks) ) notconv = notconv + 1
+              IF( .NOT. l_conv(ib,iks) ) notconv = notconv + 1
            ENDDO
         ENDDO
-        !
-        IF( ifixed == 1 ) THEN
-           sigma_sc_eqplin(:,:) = sc(:,:,2)
-        ENDIF
         !
         sigma_eqpsec(:,:) = qp_energy
         sigma_sc_eqpsec(:,:) = sc(:,:,2)
@@ -1056,16 +1040,12 @@ SUBROUTINE solve_qp_k(l_secant,l_generate_plot)
         !
      ENDDO
      !
-     sigma_cor_out(:,:) = sc(:,:,2)
      DEALLOCATE( en, sc, l_conv )
      !
      IF( notconv /= 0 ) THEN
         CALL io_push_title('CONVERGENCE **NOT** ACHIEVED !!!')
      ENDIF
      !
-     DEALLOCATE( sigma_cor_in )
-     DEALLOCATE( sigma_cor_out )
-     DEALLOCATE( z_in )
      DEALLOCATE( qp_energy )
      !
   ENDIF
@@ -1175,7 +1155,7 @@ SUBROUTINE output_eqp_report(iteration,en1,en2,sc1)
            symb(1), en2(ib,k_grid%ipis2ips(ik,2))*rytoev, symb(2)
         ENDDO
      ENDIF
-     IF (k_grid%np>1.AND.ik<k_grid%np)  WRITE(stdout,'(5X, 33(A))') '---------------------------------'
+     IF(k_grid%np > 1 .AND. ik < k_grid%np) WRITE(stdout,'(5X, 33(A))') '---------------------------------'
   ENDDO
   CALL io_push_bar()
   !

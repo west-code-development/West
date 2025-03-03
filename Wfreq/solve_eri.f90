@@ -313,8 +313,9 @@ SUBROUTINE compute_eri_vc(eri_vc)
   USE kinds,                ONLY : DP
   USE pwcom,                ONLY : nspin
   USE westcom,              ONLY : n_pairs,pijmap,proj_c,npwq,npwqx
-  USE mp_global,            ONLY : intra_bgrp_comm,inter_pool_comm,inter_image_comm
-  USE distribution_center,  ONLY : kpt_pool,bandpair
+  USE mp_global,            ONLY : my_bgrp_id,intra_bgrp_comm,inter_bgrp_comm,inter_pool_comm,&
+                                 & inter_image_comm
+  USE distribution_center,  ONLY : kpt_pool,band_group,bandpair
   USE fft_base,             ONLY : dffts
   USE fft_at_gamma,         ONLY : single_fwfft_gamma,double_invfft_gamma
   USE bar,                  ONLY : bar_type,start_bar_type,update_bar_type,stop_bar_type
@@ -331,7 +332,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   COMPLEX(DP),ALLOCATABLE :: rho_g1(:), rho_g2(:), rho_r(:)
   !
-  INTEGER :: i, j, k, l, p1, p1loc, p2, s1, s1_g, s2
+  INTEGER :: i, j, k, l, p1, p1loc, p2, p2loc, s1, s1_g, s2
   INTEGER :: ir, ig
   INTEGER :: dffts_nnr
   TYPE(bar_type) :: barra
@@ -396,15 +397,19 @@ SUBROUTINE compute_eri_vc(eri_vc)
         ENDDO
         !$acc end parallel
         !
-        eri_vc(p1,p1,s1_g,s1_g) = eri_vc(p1,p1,s1_g,s1_g) + 2._DP*reduce/omega
-        IF(i==j .AND. gstart==2) THEN
-           eri_vc(p1,p1,s1_g,s1_g) = eri_vc(p1,p1,s1_g,s1_g) + pot3D%div
+        IF(my_bgrp_id == 0) THEN
+           eri_vc(p1,p1,s1_g,s1_g) = eri_vc(p1,p1,s1_g,s1_g) + 2._DP*reduce/omega
+           IF(i == j .AND. gstart == 2) &
+           & eri_vc(p1,p1,s1_g,s1_g) = eri_vc(p1,p1,s1_g,s1_g) + pot3D%div
         ENDIF
         !
         ! (s1 = s2); (p2 > p1)
         !
-        DO p2 = p1+1, n_pairs
+        CALL band_group%init(n_pairs-p1,'b','n_pairs',.FALSE.)
+        !
+        DO p2loc = 1, band_group%nloc
            !
+           p2 = band_group%l2g(p2loc) + p1
            k = pijmap(1,p2)
            l = pijmap(2,p2)
            !
@@ -433,9 +438,8 @@ SUBROUTINE compute_eri_vc(eri_vc)
            !$acc end parallel
            !
            eri_vc(p1,p2,s1_g,s1_g) = eri_vc(p1,p2,s1_g,s1_g) + 2._DP*reduce/omega
-           IF(i==j .AND. k==l .AND. gstart==2) THEN
-              eri_vc(p1,p2,s1_g,s1_g) = eri_vc(p1,p2,s1_g,s1_g) + pot3D%div
-           ENDIF
+           IF(i == j .AND. k == l .AND. gstart == 2) &
+           & eri_vc(p1,p2,s1_g,s1_g) = eri_vc(p1,p2,s1_g,s1_g) + pot3D%div
            !
            ! Apply symmetry
            !
@@ -455,7 +459,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   !
   ! eri_vc with DIFFERENT SPIN --> compute only s2>s1, obtain s2<s1 by symmetry
   !
-  IF (nspin==2) THEN
+  IF (nspin == 2) THEN
      !
      CALL io_push_title('Pair density')
      !
@@ -488,8 +492,11 @@ SUBROUTINE compute_eri_vc(eri_vc)
         !
         ! (s1 < s2)
         !
-        DO p2 = 1, n_pairs
+        CALL band_group%init(n_pairs,'b','n_pairs',.FALSE.)
+        !
+        DO p2loc = 1, band_group%nloc
            !
+           p2 = band_group%l2g(p2loc)
            k = pijmap(1,p2)
            l = pijmap(2,p2)
            !
@@ -518,9 +525,8 @@ SUBROUTINE compute_eri_vc(eri_vc)
            !$acc end parallel
            !
            eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + 2._DP*reduce/omega
-           IF(i==j .AND. k==l .AND. gstart==2) THEN
-              eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + pot3D%div
-           ENDIF
+           IF(i == j .AND. k == l .AND. gstart == 2) &
+           & eri_vc(p1,p2,s1,s2) = eri_vc(p1,p2,s1,s2) + pot3D%div
            !
            ! Apply symmetry
            !
@@ -537,6 +543,7 @@ SUBROUTINE compute_eri_vc(eri_vc)
   ENDIF
   !
   CALL mp_sum( eri_vc, intra_bgrp_comm )
+  CALL mp_sum( eri_vc, inter_bgrp_comm )
   CALL mp_sum( eri_vc, inter_image_comm )
   !
   !$acc exit data delete(rho_r,rho_g1,rho_g2)
@@ -633,9 +640,8 @@ SUBROUTINE compute_eri_wp(braket, chi_head, chi_body, eri_wp)
                  ENDDO
               ENDDO ! iterate over m, n
               !
-              IF(l_macropol .AND. my_image_id == 0 .AND. i == j .AND. k == l) THEN
-                 reduce = reduce + chi_head*div
-              ENDIF
+              IF(l_macropol .AND. my_image_id == 0 .AND. i == j .AND. k == l) &
+              & reduce = reduce + chi_head*div
               !
               eri_wp(p1,p2,s1,s2) = reduce
               !

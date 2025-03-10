@@ -13,7 +13,7 @@ Leonardo is a GPU-accelerated supercomputer located at `CINECA <https://www.cine
 Building WEST
 ~~~~~~~~~~~~~
 
-WEST executables can be compiled using the following script (tested on April 19, 2024):
+WEST executables can be compiled using the following script (tested on March 10, 2025):
 
 .. code-block:: bash
 
@@ -63,9 +63,9 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    #SBATCH --qos=boost_qos_dbg
    #SBATCH --nodes=1
    #SBATCH --ntasks-per-node=4
+   #SBATCH --gres=gpu:4
    #SBATCH --cpus-per-task=8
-   #SBATCH --gpus-per-node=4
-   #SBATCH --gpu-bind=none
+   #SBATCH --threads-per-core=1
 
    module load anaconda3/2023.09-0
    module load nvhpc/23.11
@@ -73,11 +73,14 @@ The following is an example executable script `run_west.sh` to run the `wstat.x`
    module load fftw/3.3.10--openmpi--4.1.6--nvhpc--23.11
    module load openblas/0.3.24--nvhpc--23.11
 
-   export OMP_NUM_THREADS=1
-   export SLURM_CPU_BIND=cores
+   export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+   export OMP_PLACES=cores
+   export OMP_PROC_BIND=close
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NVHPC_HOME/Linux_x86_64/23.11/cuda/12.3/lib64
 
-   mpirun -n 4 ./wstat.x -i wstat.in > wstat.out
+   mpirun -np $SLURM_NTASKS --map-by socket:PE=$SLURM_CPUS_PER_TASK --rank-by core \
+        wstat.x -i wstat.in > wstat.out
+
 
 Job submission is done with the following:
 

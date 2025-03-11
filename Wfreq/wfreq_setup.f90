@@ -23,7 +23,8 @@ SUBROUTINE wfreq_setup
                                    & sigma_sc_eqplin,sigma_sc_eqpsec,sigma_diff,sigma_spectralf,&
                                    & sigma_freq,n_spectralf,l_enable_off_diagonal,ijpmap,pijmap,n_pairs,&
                                    & sigma_exx_full,sigma_vxcl_full,sigma_vxcnl_full,sigma_hf_full,&
-                                   & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,proj_c
+                                   & sigma_sc_eks_full,sigma_sc_eqplin_full,sigma_corr_full,proj_c,&
+                                   & qdet_dc,l_dc2025
   USE wavefunctions,          ONLY : evc
   USE buffers,                ONLY : get_buffer
   USE pwcom,                  ONLY : nbnd,nkstot,nks,npw,npwx,nspin,ngk
@@ -89,6 +90,13 @@ SUBROUTINE wfreq_setup
      l_macropol = .TRUE.
   CASE('n','N')
      l_macropol = .FALSE.
+  END SELECT
+  !
+  SELECT CASE(qdet_dc)
+  CASE('DC2025','dc2025')
+     l_dc2025 = .TRUE.
+  CASE DEFAULT
+     l_dc2025 = .FALSE.
   END SELECT
   !
   IF(xclib_dft_is('hybrid')) THEN

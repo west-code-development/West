@@ -64,6 +64,7 @@ default["wfreq_control"]["l_qdet_verbose"] = False
 default["wfreq_control"]["l_enable_off_diagonal"] = False
 default["wfreq_control"]["ecut_spectralf"] = [-2.0, 1.0]
 default["wfreq_control"]["n_spectralf"] = 204
+default["wfreq_control"]["qdet_dc"] = "DC2025"
 # westpp_control
 default["westpp_control"] = {}
 default["westpp_control"]["westpp_calculation"] = "R"

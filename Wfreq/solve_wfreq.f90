@@ -42,7 +42,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
                                  & d_epsm1_ifr_a,d_head_ifr_a,z_epsm1_rfr_a,z_head_rfr_a,l_dc2025,&
                                  & d_epsm1_ifr_dc,d_head_ifr_dc,z_epsm1_rfr_dc,z_head_rfr_dc
   USE mp_global,            ONLY : inter_image_comm,my_image_id,nimage,inter_pool_comm,npool,&
-                                 & inter_bgrp_comm,intra_bgrp_comm,nbgrp
+                                 & inter_bgrp_comm,nbgrp,intra_bgrp_comm,me_bgrp
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts
@@ -118,6 +118,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   REAL(DP) :: mwo,ecv,dfactor,frequency,dhead
   COMPLEX(DP) :: zmwo,zfactor,zm,zp,zhead
   INTEGER :: glob_jp,ic,ifreq,il
+  INTEGER :: who
   REAL(DP),ALLOCATABLE :: dmatilda(:,:),dlambda(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dmatilda,dlambda
@@ -130,6 +131,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   COMPLEX(DP),ALLOCATABLE :: zmatr(:,:,:)
   REAL(DP),ALLOCATABLE :: dmati_a(:,:,:)
   COMPLEX(DP),ALLOCATABLE :: zmatr_a(:,:,:)
+  REAL(DP),ALLOCATABLE :: dmati_freq0(:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatr_freq0(:,:)
+  REAL(DP),ALLOCATABLE :: dmati_a_freq0(:,:)
+  COMPLEX(DP),ALLOCATABLE :: zmatr_a_freq0(:,:)
 #if defined(__CUDA)
   ATTRIBUTES(PINNED) :: dmati,zmatr,dmati_a,zmatr_a
 #endif
@@ -757,6 +762,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      IF(l_dc2025) THEN
         ALLOCATE(d_epsm1_ifr_dc(pert%nglob,pert%nloc,ifr%nloc))
         d_epsm1_ifr_dc(:,:,:) = 0._DP
+        ALLOCATE(dmati_freq0(mypara%nglob,mypara%nloc))
+        ALLOCATE(dmati_a_freq0(mypara%nglob,mypara%nloc))
      ENDIF
   ELSE
      ALLOCATE(d_epsm1_ifr(pert%nglob,pert%nloc,ifr%nloc))
@@ -781,6 +788,20 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #endif
   !
   CALL band_group%init(ifr%nloc,'b','band_group',.FALSE.)
+  !
+  IF(l_QDET .AND. l_dc2025) THEN
+     !
+     CALL ifr%g2l(1,ifloc,who)
+     !
+     IF(me_bgrp == who) THEN
+        dmati_freq0(:,:) = dmati(:,:,1)
+        dmati_a_freq0(:,:) = dmati_a(:,:,1)
+     ENDIF
+     !
+     CALL mp_bcast(dmati_freq0,who,intra_bgrp_comm)
+     CALL mp_bcast(dmati_a_freq0,who,intra_bgrp_comm)
+     !
+  ENDIF
   !
   DO ifloc = 1,band_group%nloc
      !
@@ -823,7 +844,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         dmatilda(:,:) = 0._DP
         DO ip = 1,mypara%nloc
            glob_ip = mypara%l2g(ip)
-           dmatilda(:,glob_ip) = dmati(:,ip,1)-dmati_a(:,ip,1)+dmati_a(:,ip,ifreq)
+           dmatilda(:,glob_ip) = dmati_freq0(:,ip)-dmati_a_freq0(:,ip)+dmati_a(:,ip,ifreq)
         ENDDO
         !
         CALL mp_sum(dmatilda,inter_image_comm)
@@ -849,6 +870,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   DEALLOCATE(dmatilda)
   DEALLOCATE(dmati)
   IF(l_QDET) DEALLOCATE(dmati_a)
+  IF(l_QDET .AND. l_dc2025) THEN
+     DEALLOCATE(dmati_freq0)
+     DEALLOCATE(dmati_a_freq0)
+  ENDIF
   !
   IF(l_QDET) THEN
      CALL mp_sum(d_epsm1_ifr_a,inter_bgrp_comm)
@@ -873,6 +898,8 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
      IF(l_dc2025) THEN
         ALLOCATE(z_epsm1_rfr_dc(pert%nglob,pert%nloc,rfr%nloc))
         z_epsm1_rfr_dc(:,:,:) = 0._DP
+        ALLOCATE(zmatr_freq0(mypara%nglob,mypara%nloc))
+        ALLOCATE(zmatr_a_freq0(mypara%nglob,mypara%nloc))
      ENDIF
   ELSE
      ALLOCATE(z_epsm1_rfr(pert%nglob,pert%nloc,rfr%nloc))
@@ -897,6 +924,20 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
 #endif
   !
   CALL band_group%init(rfr%nloc,'b','band_group',.FALSE.)
+  !
+  IF(l_QDET .AND. l_dc2025) THEN
+     !
+     CALL rfr%g2l(1,ifloc,who)
+     !
+     IF(me_bgrp == who) THEN
+        zmatr_freq0(:,:) = zmatr(:,:,1)
+        zmatr_a_freq0(:,:) = zmatr_a(:,:,1)
+     ENDIF
+     !
+     CALL mp_bcast(zmatr_freq0,who,intra_bgrp_comm)
+     CALL mp_bcast(zmatr_a_freq0,who,intra_bgrp_comm)
+     !
+  ENDIF
   !
   DO ifloc = 1,band_group%nloc
      !
@@ -939,7 +980,7 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
         zmatilda(:,:) = 0._DP
         DO ip = 1,mypara%nloc
            glob_ip = mypara%l2g(ip)
-           zmatilda(:,glob_ip) = zmatr(:,ip,1)-zmatr_a(:,ip,1)+zmatr_a(:,ip,ifreq)
+           zmatilda(:,glob_ip) = zmatr_freq0(:,ip)-zmatr_a_freq0(:,ip)+zmatr_a(:,ip,ifreq)
         ENDDO
         !
         CALL mp_sum(zmatilda,inter_image_comm)
@@ -965,6 +1006,10 @@ SUBROUTINE solve_wfreq_gamma(l_read_restart,l_generate_plot,l_QDET)
   DEALLOCATE(zmatilda)
   DEALLOCATE(zmatr)
   IF(l_QDET) DEALLOCATE(zmatr_a)
+  IF(l_QDET .AND. l_dc2025) THEN
+     DEALLOCATE(zmatr_freq0)
+     DEALLOCATE(zmatr_a_freq0)
+  ENDIF
   !
   IF(l_QDET) THEN
      CALL mp_sum(z_epsm1_rfr_a,inter_bgrp_comm)
@@ -995,8 +1040,8 @@ SUBROUTINE solve_wfreq_k(l_read_restart,l_generate_plot)
                                  & l_enable_lanczos,iuwfc,lrwfc,wfreq_eta,imfreq_list,refreq_list,&
                                  & wstat_save_dir,ngq,igq_q,z_epsm1_ifr_q,z_epsm1_rfr_q,z_head_rfr,&
                                  & z_head_ifr
-  USE mp_global,            ONLY : my_image_id,inter_image_comm,nimage,inter_bgrp_comm,&
-                                 & intra_bgrp_comm,nbgrp
+  USE mp_global,            ONLY : my_image_id,inter_image_comm,nimage,inter_bgrp_comm,nbgrp,&
+                                 & intra_bgrp_comm
   USE mp,                   ONLY : mp_bcast,mp_sum
   USE cell_base,            ONLY : omega
   USE fft_base,             ONLY : dffts

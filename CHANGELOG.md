@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-v6.2.0 (2025/03/xx)
+v6.2.0 (2025/03/15)
 -------------------
 
 - Code updated for compatibility with Quantum ESPRESSO 7.4.1. QE must be compiled without CMake.

@@ -9,6 +9,7 @@ This file lists the authors of the WEST code as well as the known contributors.
 
 The current list of developers, in alphabetical order:
 
+- Siyuan Chen (University of Chicago)
 - Marco Govoni (University of Modena and Reggio Emilia, Argonne National Lab, University of Chicago)
 - Yu Jin (University of Chicago)
 - Victor Yu (Argonne National Lab)
